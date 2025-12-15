@@ -13,13 +13,17 @@ import {
   Text,
   Badge,
   Card,
+  ActionIcon,
   SimpleGrid,
   Switch,
-  ActionIcon,
-  Menu,
   ThemeIcon,
   Divider,
+  Stepper,
   MultiSelect,
+  Timeline,
+  Drawer,
+  ScrollArea,
+  Alert,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
@@ -28,360 +32,609 @@ import {
   IconRobot,
   IconEdit,
   IconTrash,
-  IconDotsVertical,
   IconPlayerPlay,
   IconPlayerPause,
-  IconMail,
-  IconBell,
-  IconCalendarEvent,
-  IconCreditCard,
-  IconUser,
-  IconClipboard,
-  IconArrowRight,
   IconCopy,
+  IconBolt,
+  IconMail,
+  IconMessage,
+  IconCalendarEvent,
+  IconUser,
+  IconCreditCard,
+  IconClockHour4,
+  IconArrowRight,
+  IconCheck,
+  IconAlertCircle,
+  IconGitBranch,
+  IconSettings,
+  IconBell,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { EmptyState } from '../../components/common/EmptyState'
+
+interface AutomationTrigger {
+  type: string
+  config: Record<string, any>
+}
+
+interface AutomationAction {
+  id: string
+  type: string
+  config: Record<string, any>
+  delay?: number
+  delayUnit?: 'minutes' | 'hours' | 'days'
+}
 
 interface Automation {
   id: string
   name: string
   description?: string
-  trigger_type: string
-  actions: { type: string; config: object }[]
+  trigger: AutomationTrigger
+  actions: AutomationAction[]
   is_active: boolean
-  stats: {
-    total_runs: number
-    successful_runs: number
-    last_run_at?: string
-  }
+  last_run?: string
+  run_count: number
 }
 
+const triggerTypes = [
+  { value: 'client_created', label: 'Nuevo cliente creado', icon: IconUser, color: 'blue' },
+  { value: 'booking_created', label: 'Nueva reserva creada', icon: IconCalendarEvent, color: 'green' },
+  { value: 'booking_reminder', label: 'Recordatorio de reserva', icon: IconClockHour4, color: 'orange' },
+  { value: 'payment_received', label: 'Pago recibido', icon: IconCreditCard, color: 'teal' },
+  { value: 'payment_failed', label: 'Pago fallido', icon: IconAlertCircle, color: 'red' },
+  { value: 'subscription_renewal', label: 'Renovación próxima', icon: IconBolt, color: 'grape' },
+  { value: 'client_inactive', label: 'Cliente inactivo', icon: IconClockHour4, color: 'yellow' },
+  { value: 'form_submitted', label: 'Formulario enviado', icon: IconCheck, color: 'cyan' },
+]
+
+const actionTypes = [
+  { value: 'send_email', label: 'Enviar email', icon: IconMail, color: 'blue' },
+  { value: 'send_notification', label: 'Enviar notificación', icon: IconBell, color: 'orange' },
+  { value: 'send_message', label: 'Enviar mensaje', icon: IconMessage, color: 'green' },
+  { value: 'assign_form', label: 'Asignar formulario', icon: IconCheck, color: 'teal' },
+  { value: 'assign_program', label: 'Asignar programa', icon: IconGitBranch, color: 'grape' },
+  { value: 'create_task', label: 'Crear tarea', icon: IconSettings, color: 'cyan' },
+  { value: 'update_tags', label: 'Actualizar etiquetas', icon: IconUser, color: 'pink' },
+]
+
+const mockAutomations: Automation[] = [
+  {
+    id: '1',
+    name: 'Onboarding de Nuevo Cliente',
+    description: 'Secuencia de bienvenida para nuevos clientes',
+    trigger: { type: 'client_created', config: {} },
+    actions: [
+      { id: 'a1', type: 'send_email', config: { template: 'welcome' } },
+      { id: 'a2', type: 'assign_form', config: { form: 'par_q' }, delay: 1, delayUnit: 'hours' },
+      { id: 'a3', type: 'send_message', config: { message: 'Bienvenido!' }, delay: 1, delayUnit: 'days' },
+    ],
+    is_active: true,
+    last_run: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    run_count: 45,
+  },
+  {
+    id: '2',
+    name: 'Recordatorio de Sesión',
+    description: 'Envía recordatorio 24h antes de la sesión',
+    trigger: { type: 'booking_reminder', config: { hours_before: 24 } },
+    actions: [
+      { id: 'a1', type: 'send_email', config: { template: 'booking_reminder' } },
+      { id: 'a2', type: 'send_notification', config: { title: 'Sesión mañana' } },
+    ],
+    is_active: true,
+    last_run: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    run_count: 230,
+  },
+  {
+    id: '3',
+    name: 'Reactivación de Cliente Inactivo',
+    description: 'Contacta clientes sin actividad en 30 días',
+    trigger: { type: 'client_inactive', config: { days: 30 } },
+    actions: [
+      { id: 'a1', type: 'send_email', config: { template: 'reactivation' } },
+      { id: 'a2', type: 'update_tags', config: { add: ['inactivo'] }, delay: 7, delayUnit: 'days' },
+    ],
+    is_active: false,
+    run_count: 12,
+  },
+]
+
 export function AutomationsPage() {
-  const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false)
-  
-  // Mock data
-  const automations: Automation[] = [
-    {
-      id: '1',
-      name: 'Bienvenida a nuevos clientes',
-      description: 'Envía email de bienvenida y asigna formulario PAR-Q cuando se crea un cliente',
-      trigger_type: 'client_created',
-      actions: [
-        { type: 'send_email', config: { template: 'welcome' } },
-        { type: 'send_form', config: { form_id: 'parq' } },
-      ],
-      is_active: true,
-      stats: { total_runs: 45, successful_runs: 44, last_run_at: '2024-01-14T10:30:00Z' },
-    },
-    {
-      id: '2',
-      name: 'Recordatorio de sesión (24h)',
-      description: 'Envía recordatorio por email 24 horas antes de la sesión',
-      trigger_type: 'booking_reminder',
-      actions: [
-        { type: 'send_email', config: { template: 'booking_reminder' } },
-      ],
-      is_active: true,
-      stats: { total_runs: 230, successful_runs: 228, last_run_at: '2024-01-15T08:00:00Z' },
-    },
-    {
-      id: '3',
-      name: 'Reactivación de clientes inactivos',
-      description: 'Envía mensaje cuando un cliente no tiene actividad en 14 días',
-      trigger_type: 'client_inactive',
-      actions: [
-        { type: 'send_email', config: { template: 'reactivation' } },
-        { type: 'create_task', config: { title: 'Seguimiento cliente inactivo' } },
-      ],
-      is_active: false,
-      stats: { total_runs: 12, successful_runs: 12, last_run_at: '2024-01-10T09:00:00Z' },
-    },
-    {
-      id: '4',
-      name: 'Aviso de renovación de suscripción',
-      description: 'Notifica 7 días antes del vencimiento de la suscripción',
-      trigger_type: 'subscription_renewal',
-      actions: [
-        { type: 'send_email', config: { template: 'renewal_reminder' } },
-        { type: 'send_in_app', config: { message: 'Tu suscripción vence pronto' } },
-      ],
-      is_active: true,
-      stats: { total_runs: 18, successful_runs: 18, last_run_at: '2024-01-13T06:00:00Z' },
-    },
-  ]
-  
+  const [automations, setAutomations] = useState<Automation[]>(mockAutomations)
+  const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false)
+  const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null)
+  const [activeStep, setActiveStep] = useState(0)
+  const [selectedTrigger, setSelectedTrigger] = useState<string | null>(null)
+  const [actions, setActions] = useState<AutomationAction[]>([])
+
   const form = useForm({
     initialValues: {
       name: '',
       description: '',
       trigger_type: '',
-      actions: [] as string[],
+      trigger_config: {} as Record<string, any>,
     },
     validate: {
       name: (value) => (value.length < 2 ? 'Nombre requerido' : null),
-      trigger_type: (value) => (!value ? 'Trigger requerido' : null),
+      trigger_type: (value) => (!value ? 'Selecciona un disparador' : null),
     },
   })
-  
-  const handleCreate = (values: typeof form.values) => {
-    console.log('Create automation:', values)
-    closeModal()
+
+  const openAutomationBuilder = (automation?: Automation) => {
+    if (automation) {
+      setEditingAutomation(automation)
+      form.setValues({
+        name: automation.name,
+        description: automation.description || '',
+        trigger_type: automation.trigger.type,
+        trigger_config: automation.trigger.config,
+      })
+      setSelectedTrigger(automation.trigger.type)
+      setActions(automation.actions)
+    } else {
+      setEditingAutomation(null)
+      form.reset()
+      setSelectedTrigger(null)
+      setActions([])
+    }
+    setActiveStep(0)
+    openBuilder()
+  }
+
+  const addAction = (type: string) => {
+    const newAction: AutomationAction = {
+      id: `action-${Date.now()}`,
+      type,
+      config: {},
+    }
+    setActions([...actions, newAction])
+  }
+
+  const removeAction = (actionId: string) => {
+    setActions(actions.filter(a => a.id !== actionId))
+  }
+
+  const updateAction = (actionId: string, updates: Partial<AutomationAction>) => {
+    setActions(actions.map(a => a.id === actionId ? { ...a, ...updates } : a))
+  }
+
+  const handleSaveAutomation = () => {
+    const values = form.values
+    if (!values.name || !values.trigger_type) return
+
+    const newAutomation: Automation = {
+      id: editingAutomation?.id || `auto-${Date.now()}`,
+      name: values.name,
+      description: values.description,
+      trigger: {
+        type: values.trigger_type,
+        config: values.trigger_config,
+      },
+      actions,
+      is_active: editingAutomation?.is_active ?? true,
+      run_count: editingAutomation?.run_count ?? 0,
+    }
+
+    if (editingAutomation) {
+      setAutomations(autos => autos.map(a => a.id === editingAutomation.id ? newAutomation : a))
+    } else {
+      setAutomations(autos => [...autos, newAutomation])
+    }
+
+    closeBuilder()
     form.reset()
+    setActions([])
+    setSelectedTrigger(null)
+    setEditingAutomation(null)
   }
-  
-  const handleToggle = (id: string, isActive: boolean) => {
-    console.log('Toggle automation:', id, isActive)
+
+  const toggleAutomation = (automationId: string) => {
+    setAutomations(autos =>
+      autos.map(a => a.id === automationId ? { ...a, is_active: !a.is_active } : a)
+    )
   }
-  
-  const getTriggerIcon = (type: string) => {
-    switch (type) {
-      case 'client_created': return <IconUser size={18} />
-      case 'client_inactive': return <IconUser size={18} />
-      case 'booking_created': return <IconCalendarEvent size={18} />
-      case 'booking_reminder': return <IconCalendarEvent size={18} />
-      case 'booking_cancelled': return <IconCalendarEvent size={18} />
-      case 'payment_received': return <IconCreditCard size={18} />
-      case 'payment_failed': return <IconCreditCard size={18} />
-      case 'subscription_renewal': return <IconCreditCard size={18} />
-      case 'form_submitted': return <IconClipboard size={18} />
-      default: return <IconRobot size={18} />
-    }
+
+  const deleteAutomation = (automationId: string) => {
+    setAutomations(autos => autos.filter(a => a.id !== automationId))
   }
-  
-  const getTriggerLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      client_created: 'Cliente creado',
-      client_inactive: 'Cliente inactivo',
-      booking_created: 'Reserva creada',
-      booking_reminder: 'Recordatorio de reserva',
-      booking_cancelled: 'Reserva cancelada',
-      payment_received: 'Pago recibido',
-      payment_failed: 'Pago fallido',
-      subscription_renewal: 'Renovación de suscripción',
-      form_submitted: 'Formulario enviado',
-      workout_completed: 'Entrenamiento completado',
-    }
-    return labels[type] || type
+
+  const getTriggerInfo = (type: string) => {
+    return triggerTypes.find(t => t.value === type)
   }
-  
-  const getActionIcon = (type: string) => {
-    switch (type) {
-      case 'send_email': return <IconMail size={14} />
-      case 'send_in_app': return <IconBell size={14} />
-      case 'create_task': return <IconClipboard size={14} />
-      default: return <IconArrowRight size={14} />
-    }
+
+  const getActionInfo = (type: string) => {
+    return actionTypes.find(a => a.value === type)
   }
-  
-  const getActionLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      send_email: 'Enviar email',
-      send_in_app: 'Notificación in-app',
-      send_sms: 'Enviar SMS',
-      create_task: 'Crear tarea',
-      update_tag: 'Actualizar etiqueta',
-      webhook: 'Webhook',
-    }
-    return labels[type] || type
-  }
-  
+
   return (
     <Container size="xl" py="xl">
       <PageHeader
         title="Automatizaciones"
-        description="Configura flujos automáticos para ahorrar tiempo"
+        description="Configura workflows automáticos para tu negocio"
         action={{
           label: 'Nueva Automatización',
-          onClick: openModal,
+          onClick: () => openAutomationBuilder(),
         }}
       />
-      
+
       {automations.length > 0 ? (
         <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-          {automations.map((automation) => (
-            <Card key={automation.id} withBorder radius="lg" padding="lg">
-              <Group justify="space-between" mb="md">
-                <Group gap="sm">
-                  <ThemeIcon
-                    size="lg"
-                    radius="md"
-                    color={automation.is_active ? 'primary' : 'gray'}
-                    variant="light"
-                  >
-                    {getTriggerIcon(automation.trigger_type)}
-                  </ThemeIcon>
-                  <Box>
-                    <Text fw={600}>{automation.name}</Text>
-                    <Badge size="xs" variant="light" color={automation.is_active ? 'green' : 'gray'}>
-                      {automation.is_active ? 'Activa' : 'Pausada'}
-                    </Badge>
-                  </Box>
-                </Group>
-                <Group gap="xs">
+          {automations.map((automation) => {
+            const triggerInfo = getTriggerInfo(automation.trigger.type)
+            const TriggerIcon = triggerInfo?.icon || IconBolt
+
+            return (
+              <Card key={automation.id} withBorder radius="lg" padding="lg">
+                <Group justify="space-between" mb="md">
+                  <Group gap="sm">
+                    <ThemeIcon
+                      size="lg"
+                      radius="md"
+                      variant="light"
+                      color={triggerInfo?.color || 'gray'}
+                    >
+                      <TriggerIcon size={18} />
+                    </ThemeIcon>
+                    <Box>
+                      <Text fw={600}>{automation.name}</Text>
+                      <Text size="xs" c="dimmed">{triggerInfo?.label}</Text>
+                    </Box>
+                  </Group>
                   <Switch
                     checked={automation.is_active}
-                    onChange={(e) => handleToggle(automation.id, e.currentTarget.checked)}
-                    size="sm"
+                    onChange={() => toggleAutomation(automation.id)}
+                    color="green"
                   />
-                  <Menu position="bottom-end" withArrow>
-                    <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray">
-                        <IconDotsVertical size={16} />
-                      </ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                      <Menu.Item leftSection={<IconEdit size={14} />}>
-                        Editar
-                      </Menu.Item>
-                      <Menu.Item leftSection={<IconCopy size={14} />}>
-                        Duplicar
-                      </Menu.Item>
-                      <Menu.Item leftSection={<IconPlayerPlay size={14} />}>
-                        Ejecutar ahora
-                      </Menu.Item>
-                      <Menu.Divider />
-                      <Menu.Item leftSection={<IconTrash size={14} />} color="red">
-                        Eliminar
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
                 </Group>
-              </Group>
-              
-              <Text size="sm" c="dimmed" mb="md" lineClamp={2}>
-                {automation.description}
-              </Text>
-              
-              {/* Trigger */}
-              <Box mb="md">
-                <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">
-                  Cuando
-                </Text>
-                <Badge variant="outline" leftSection={getTriggerIcon(automation.trigger_type)}>
-                  {getTriggerLabel(automation.trigger_type)}
-                </Badge>
-              </Box>
-              
-              {/* Actions */}
-              <Box mb="md">
-                <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">
-                  Entonces
-                </Text>
-                <Group gap="xs">
-                  {automation.actions.map((action, index) => (
-                    <Badge
-                      key={index}
-                      variant="light"
-                      leftSection={getActionIcon(action.type)}
-                    >
-                      {getActionLabel(action.type)}
-                    </Badge>
-                  ))}
-                </Group>
-              </Box>
-              
-              <Divider my="sm" />
-              
-              {/* Stats */}
-              <Group justify="space-between">
-                <Text size="xs" c="dimmed">
-                  {automation.stats.total_runs} ejecuciones ({automation.stats.successful_runs} exitosas)
-                </Text>
-                {automation.stats.last_run_at && (
-                  <Text size="xs" c="dimmed">
-                    Última: {new Date(automation.stats.last_run_at).toLocaleDateString('es-ES')}
+
+                {automation.description && (
+                  <Text size="sm" c="dimmed" mb="md" lineClamp={2}>
+                    {automation.description}
                   </Text>
                 )}
-              </Group>
-            </Card>
-          ))}
+
+                <Box mb="md">
+                  <Text size="xs" c="dimmed" mb="xs">Acciones ({automation.actions.length})</Text>
+                  <Group gap="xs">
+                    {automation.actions.slice(0, 4).map((action, index) => {
+                      const actionInfo = getActionInfo(action.type)
+                      const ActionIcon = actionInfo?.icon || IconBolt
+                      return (
+                        <ThemeIcon
+                          key={action.id}
+                          size="sm"
+                          radius="md"
+                          variant="light"
+                          color={actionInfo?.color || 'gray'}
+                        >
+                          <ActionIcon size={12} />
+                        </ThemeIcon>
+                      )
+                    })}
+                    {automation.actions.length > 4 && (
+                      <Badge size="xs" variant="light">
+                        +{automation.actions.length - 4}
+                      </Badge>
+                    )}
+                  </Group>
+                </Box>
+
+                <Divider mb="md" />
+
+                <Group justify="space-between">
+                  <Group gap="xs">
+                    <Badge
+                      size="sm"
+                      variant={automation.is_active ? 'filled' : 'outline'}
+                      color={automation.is_active ? 'green' : 'gray'}
+                    >
+                      {automation.is_active ? 'Activa' : 'Inactiva'}
+                    </Badge>
+                    <Text size="xs" c="dimmed">
+                      {automation.run_count} ejecuciones
+                    </Text>
+                  </Group>
+                  <Group gap="xs">
+                    <ActionIcon
+                      variant="light"
+                      color="blue"
+                      onClick={() => openAutomationBuilder(automation)}
+                    >
+                      <IconEdit size={16} />
+                    </ActionIcon>
+                    <ActionIcon variant="light" color="gray">
+                      <IconCopy size={16} />
+                    </ActionIcon>
+                    <ActionIcon
+                      variant="light"
+                      color="red"
+                      onClick={() => deleteAutomation(automation.id)}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Group>
+                </Group>
+              </Card>
+            )
+          })}
         </SimpleGrid>
       ) : (
         <EmptyState
           icon={<IconRobot size={40} />}
           title="No hay automatizaciones"
-          description="Crea tu primera automatización para ahorrar tiempo en tareas repetitivas."
+          description="Crea tu primera automatización para optimizar tu negocio."
           actionLabel="Crear Automatización"
-          onAction={openModal}
+          onAction={() => openAutomationBuilder()}
         />
       )}
-      
-      {/* Modal para crear automatización */}
-      <Modal
-        opened={modalOpened}
-        onClose={closeModal}
-        title="Nueva Automatización"
-        size="lg"
+
+      {/* Automation Builder Drawer */}
+      <Drawer
+        opened={builderOpened}
+        onClose={closeBuilder}
+        title={editingAutomation ? 'Editar Automatización' : 'Nueva Automatización'}
+        size="xl"
+        position="right"
       >
-        <form onSubmit={form.onSubmit(handleCreate)}>
-          <Stack>
-            <TextInput
-              label="Nombre"
-              placeholder="Bienvenida a nuevos clientes"
-              required
-              {...form.getInputProps('name')}
-            />
-            
-            <Textarea
-              label="Descripción"
-              placeholder="Describe qué hace esta automatización..."
-              minRows={2}
-              {...form.getInputProps('description')}
-            />
-            
-            <Select
-              label="Trigger (Cuando...)"
-              placeholder="Selecciona el evento que dispara la automatización"
-              required
-              data={[
-                { group: 'Clientes', items: [
-                  { value: 'client_created', label: 'Se crea un cliente' },
-                  { value: 'client_inactive', label: 'Cliente inactivo (X días)' },
-                ]},
-                { group: 'Reservas', items: [
-                  { value: 'booking_created', label: 'Se crea una reserva' },
-                  { value: 'booking_reminder', label: 'Recordatorio de reserva' },
-                  { value: 'booking_cancelled', label: 'Se cancela una reserva' },
-                ]},
-                { group: 'Pagos', items: [
-                  { value: 'payment_received', label: 'Pago recibido' },
-                  { value: 'payment_failed', label: 'Pago fallido' },
-                  { value: 'subscription_renewal', label: 'Renovación próxima' },
-                ]},
-                { group: 'Otros', items: [
-                  { value: 'form_submitted', label: 'Formulario enviado' },
-                  { value: 'workout_completed', label: 'Entrenamiento completado' },
-                ]},
-              ]}
-              {...form.getInputProps('trigger_type')}
-            />
-            
-            <MultiSelect
-              label="Acciones (Entonces...)"
-              placeholder="Selecciona las acciones a ejecutar"
-              data={[
-                { value: 'send_email', label: 'Enviar email' },
-                { value: 'send_in_app', label: 'Enviar notificación in-app' },
-                { value: 'create_task', label: 'Crear tarea' },
-                { value: 'update_tag', label: 'Actualizar etiqueta del cliente' },
-                { value: 'webhook', label: 'Llamar webhook externo' },
-              ]}
-              {...form.getInputProps('actions')}
-            />
-            
-            <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeModal}>
-                Cancelar
+        <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
+          <Stepper active={activeStep} onStepClick={setActiveStep} mb="xl">
+            <Stepper.Step label="Información" description="Nombre y descripción">
+              <Stack mt="md">
+                <TextInput
+                  label="Nombre de la automatización"
+                  placeholder="Ej: Onboarding de nuevos clientes"
+                  required
+                  {...form.getInputProps('name')}
+                />
+                <Textarea
+                  label="Descripción"
+                  placeholder="Describe qué hace esta automatización..."
+                  minRows={2}
+                  {...form.getInputProps('description')}
+                />
+              </Stack>
+            </Stepper.Step>
+
+            <Stepper.Step label="Disparador" description="Cuándo se activa">
+              <Stack mt="md">
+                <Text size="sm" fw={500} mb="xs">¿Cuándo debe activarse esta automatización?</Text>
+                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                  {triggerTypes.map((trigger) => {
+                    const TriggerIcon = trigger.icon
+                    const isSelected = selectedTrigger === trigger.value
+                    return (
+                      <Card
+                        key={trigger.value}
+                        withBorder
+                        padding="sm"
+                        radius="md"
+                        style={{
+                          cursor: 'pointer',
+                          borderColor: isSelected ? `var(--mantine-color-${trigger.color}-5)` : undefined,
+                          backgroundColor: isSelected ? `var(--mantine-color-${trigger.color}-0)` : undefined,
+                        }}
+                        onClick={() => {
+                          setSelectedTrigger(trigger.value)
+                          form.setFieldValue('trigger_type', trigger.value)
+                        }}
+                      >
+                        <Group gap="sm">
+                          <ThemeIcon
+                            size="md"
+                            radius="md"
+                            variant={isSelected ? 'filled' : 'light'}
+                            color={trigger.color}
+                          >
+                            <TriggerIcon size={16} />
+                          </ThemeIcon>
+                          <Text size="sm" fw={isSelected ? 600 : 400}>
+                            {trigger.label}
+                          </Text>
+                        </Group>
+                      </Card>
+                    )
+                  })}
+                </SimpleGrid>
+
+                {selectedTrigger === 'booking_reminder' && (
+                  <Select
+                    label="¿Cuánto tiempo antes?"
+                    data={[
+                      { value: '1', label: '1 hora antes' },
+                      { value: '2', label: '2 horas antes' },
+                      { value: '24', label: '24 horas antes' },
+                      { value: '48', label: '48 horas antes' },
+                    ]}
+                    mt="md"
+                  />
+                )}
+
+                {selectedTrigger === 'client_inactive' && (
+                  <Select
+                    label="¿Después de cuántos días?"
+                    data={[
+                      { value: '7', label: '7 días' },
+                      { value: '14', label: '14 días' },
+                      { value: '30', label: '30 días' },
+                      { value: '60', label: '60 días' },
+                    ]}
+                    mt="md"
+                  />
+                )}
+              </Stack>
+            </Stepper.Step>
+
+            <Stepper.Step label="Acciones" description="Qué hacer">
+              <Stack mt="md">
+                <Text size="sm" fw={500}>Acciones a ejecutar</Text>
+
+                {actions.length > 0 && (
+                  <Timeline active={actions.length} bulletSize={24} lineWidth={2}>
+                    {actions.map((action, index) => {
+                      const actionInfo = getActionInfo(action.type)
+                      const ActionIcon = actionInfo?.icon || IconBolt
+                      return (
+                        <Timeline.Item
+                          key={action.id}
+                          bullet={
+                            <ThemeIcon
+                              size={24}
+                              radius="xl"
+                              color={actionInfo?.color || 'gray'}
+                            >
+                              <ActionIcon size={12} />
+                            </ThemeIcon>
+                          }
+                          title={
+                            <Group justify="space-between">
+                              <Text size="sm" fw={500}>{actionInfo?.label}</Text>
+                              <ActionIcon
+                                size="xs"
+                                color="red"
+                                variant="subtle"
+                                onClick={() => removeAction(action.id)}
+                              >
+                                <IconTrash size={12} />
+                              </ActionIcon>
+                            </Group>
+                          }
+                        >
+                          <Stack gap="xs" mt="xs">
+                            {action.type === 'send_email' && (
+                              <Select
+                                size="xs"
+                                placeholder="Selecciona plantilla"
+                                data={[
+                                  { value: 'welcome', label: 'Bienvenida' },
+                                  { value: 'booking_reminder', label: 'Recordatorio de reserva' },
+                                  { value: 'payment_reminder', label: 'Recordatorio de pago' },
+                                  { value: 'reactivation', label: 'Reactivación' },
+                                ]}
+                                value={action.config.template}
+                                onChange={(v) => updateAction(action.id, { config: { ...action.config, template: v } })}
+                              />
+                            )}
+                            {action.type === 'send_message' && (
+                              <Textarea
+                                size="xs"
+                                placeholder="Escribe el mensaje..."
+                                minRows={2}
+                                value={action.config.message || ''}
+                                onChange={(e) => updateAction(action.id, { config: { ...action.config, message: e.target.value } })}
+                              />
+                            )}
+                            {index > 0 && (
+                              <Group gap="xs">
+                                <Text size="xs" c="dimmed">Esperar</Text>
+                                <Select
+                                  size="xs"
+                                  w={80}
+                                  data={[
+                                    { value: '0', label: '0' },
+                                    { value: '1', label: '1' },
+                                    { value: '2', label: '2' },
+                                    { value: '5', label: '5' },
+                                    { value: '10', label: '10' },
+                                    { value: '24', label: '24' },
+                                  ]}
+                                  value={String(action.delay || 0)}
+                                  onChange={(v) => updateAction(action.id, { delay: Number(v) })}
+                                />
+                                <Select
+                                  size="xs"
+                                  w={100}
+                                  data={[
+                                    { value: 'minutes', label: 'minutos' },
+                                    { value: 'hours', label: 'horas' },
+                                    { value: 'days', label: 'días' },
+                                  ]}
+                                  value={action.delayUnit || 'hours'}
+                                  onChange={(v) => updateAction(action.id, { delayUnit: v as any })}
+                                />
+                              </Group>
+                            )}
+                          </Stack>
+                        </Timeline.Item>
+                      )
+                    })}
+                  </Timeline>
+                )}
+
+                <Divider label="Añadir acción" labelPosition="center" />
+
+                <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
+                  {actionTypes.map((action) => {
+                    const ActionIcon = action.icon
+                    return (
+                      <Button
+                        key={action.value}
+                        variant="light"
+                        color={action.color}
+                        leftSection={<ActionIcon size={16} />}
+                        onClick={() => addAction(action.value)}
+                        size="sm"
+                      >
+                        {action.label}
+                      </Button>
+                    )
+                  })}
+                </SimpleGrid>
+              </Stack>
+            </Stepper.Step>
+
+            <Stepper.Completed>
+              <Alert color="green" title="¡Automatización lista!" icon={<IconCheck />} mt="md">
+                Tu automatización está configurada. Revisa los detalles y guárdala.
+              </Alert>
+
+              <Paper withBorder p="md" radius="md" mt="md">
+                <Stack gap="sm">
+                  <Group justify="space-between">
+                    <Text size="sm" c="dimmed">Nombre</Text>
+                    <Text size="sm" fw={500}>{form.values.name || '-'}</Text>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text size="sm" c="dimmed">Disparador</Text>
+                    <Text size="sm" fw={500}>
+                      {getTriggerInfo(form.values.trigger_type)?.label || '-'}
+                    </Text>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text size="sm" c="dimmed">Acciones</Text>
+                    <Text size="sm" fw={500}>{actions.length} acciones</Text>
+                  </Group>
+                </Stack>
+              </Paper>
+            </Stepper.Completed>
+          </Stepper>
+        </ScrollArea>
+
+        <Group justify="space-between" mt="md" p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}>
+          <Button
+            variant="default"
+            onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+            disabled={activeStep === 0}
+          >
+            Anterior
+          </Button>
+          <Group>
+            <Button variant="default" onClick={closeBuilder}>
+              Cancelar
+            </Button>
+            {activeStep < 3 ? (
+              <Button onClick={() => setActiveStep(Math.min(3, activeStep + 1))}>
+                Siguiente
               </Button>
-              <Button type="submit">
-                Crear Automatización
+            ) : (
+              <Button onClick={handleSaveAutomation} color="green">
+                {editingAutomation ? 'Guardar Cambios' : 'Crear Automatización'}
               </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
+            )}
+          </Group>
+        </Group>
+      </Drawer>
     </Container>
   )
 }
 
+export default AutomationsPage

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   Container,
-  Grid,
   Paper,
   Group,
   Button,
@@ -15,11 +14,13 @@ import {
   Text,
   Badge,
   Card,
-  Image,
   ActionIcon,
   SimpleGrid,
   MultiSelect,
   NumberInput,
+  Drawer,
+  ScrollArea,
+  Divider,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
@@ -32,9 +33,11 @@ import {
   IconTrash,
   IconCopy,
   IconPlayerPlay,
+  IconEye,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { EmptyState } from '../../components/common/EmptyState'
+import { WorkoutBuilder } from '../../components/workouts/WorkoutBuilder'
 import {
   useExercises,
   useWorkoutPrograms,
@@ -42,13 +45,30 @@ import {
   useCreateWorkoutProgram,
 } from '../../hooks/useWorkouts'
 
+// Mock exercises data
+const mockExercises = [
+  { id: '1', name: 'Press de Banca', muscle_groups: ['pecho', 'tríceps'], equipment: ['barra', 'banco'], image_url: '' },
+  { id: '2', name: 'Sentadilla', muscle_groups: ['cuádriceps', 'glúteos'], equipment: ['barra'], image_url: '' },
+  { id: '3', name: 'Peso Muerto', muscle_groups: ['espalda', 'isquiotibiales'], equipment: ['barra'], image_url: '' },
+  { id: '4', name: 'Dominadas', muscle_groups: ['espalda', 'bíceps'], equipment: ['barra de dominadas'], image_url: '' },
+  { id: '5', name: 'Press Militar', muscle_groups: ['hombros', 'tríceps'], equipment: ['barra'], image_url: '' },
+  { id: '6', name: 'Curl de Bíceps', muscle_groups: ['bíceps'], equipment: ['mancuernas'], image_url: '' },
+  { id: '7', name: 'Extensión de Tríceps', muscle_groups: ['tríceps'], equipment: ['mancuernas'], image_url: '' },
+  { id: '8', name: 'Zancadas', muscle_groups: ['cuádriceps', 'glúteos'], equipment: ['mancuernas'], image_url: '' },
+  { id: '9', name: 'Plancha', muscle_groups: ['core'], equipment: ['ninguno'], image_url: '' },
+  { id: '10', name: 'Remo con Barra', muscle_groups: ['espalda', 'bíceps'], equipment: ['barra'], image_url: '' },
+]
+
 export function WorkoutsPage() {
   const [activeTab, setActiveTab] = useState<string | null>('programs')
   const [exerciseModalOpened, { open: openExerciseModal, close: closeExerciseModal }] = useDisclosure(false)
   const [programModalOpened, { open: openProgramModal, close: closeProgramModal }] = useDisclosure(false)
+  const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false)
   const [searchExercise, setSearchExercise] = useState('')
+  const [workoutBlocks, setWorkoutBlocks] = useState<any[]>([])
+  const [editingProgram, setEditingProgram] = useState<any>(null)
   
-  const { data: exercises, isLoading: loadingExercises } = useExercises({ search: searchExercise })
+  const { data: exercises = mockExercises, isLoading: loadingExercises } = useExercises({ search: searchExercise })
   const { data: programs, isLoading: loadingPrograms } = useWorkoutPrograms(true)
   const createExercise = useCreateExercise()
   const createProgram = useCreateWorkoutProgram()
@@ -95,13 +115,52 @@ export function WorkoutsPage() {
     try {
       await createProgram.mutateAsync({
         ...values,
-        template: { weeks: [] },
+        template: { weeks: [], blocks: workoutBlocks },
         is_template: true,
       })
       closeProgramModal()
       programForm.reset()
+      setWorkoutBlocks([])
     } catch {
       // Error handled by mutation
+    }
+  }
+
+  const openProgramBuilder = (program?: any) => {
+    if (program) {
+      setEditingProgram(program)
+      setWorkoutBlocks(program.template?.blocks || [])
+      programForm.setValues({
+        name: program.name,
+        description: program.description || '',
+        duration_weeks: program.duration_weeks,
+        difficulty: program.difficulty,
+        tags: program.tags || [],
+      })
+    } else {
+      setEditingProgram(null)
+      setWorkoutBlocks([])
+      programForm.reset()
+    }
+    openBuilder()
+  }
+
+  const handleSaveProgram = async () => {
+    const values = programForm.values
+    if (!values.name) return
+
+    try {
+      await createProgram.mutateAsync({
+        ...values,
+        template: { blocks: workoutBlocks },
+        is_template: true,
+      })
+      closeBuilder()
+      programForm.reset()
+      setWorkoutBlocks([])
+      setEditingProgram(null)
+    } catch {
+      // Error handled
     }
   }
   
@@ -128,6 +187,11 @@ export function WorkoutsPage() {
     { value: 'banco', label: 'Banco' },
     { value: 'barra de dominadas', label: 'Barra de dominadas' },
   ]
+
+  const filteredExercises = (exercises || mockExercises).filter((e: any) =>
+    e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+    e.muscle_groups?.some((m: string) => m.toLowerCase().includes(searchExercise.toLowerCase()))
+  )
   
   return (
     <Container size="xl" py="xl">
@@ -136,7 +200,7 @@ export function WorkoutsPage() {
         description="Gestiona ejercicios y programas de entrenamiento"
         action={{
           label: activeTab === 'exercises' ? 'Nuevo Ejercicio' : 'Nuevo Programa',
-          onClick: activeTab === 'exercises' ? openExerciseModal : openProgramModal,
+          onClick: activeTab === 'exercises' ? openExerciseModal : () => openProgramBuilder(),
         }}
       />
       
@@ -153,7 +217,7 @@ export function WorkoutsPage() {
         <Tabs.Panel value="programs">
           {programs && programs.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-              {programs.map((program: { id: string; name: string; description?: string; duration_weeks: number; difficulty: string; tags: string[] }) => (
+              {programs.map((program: any) => (
                 <Card key={program.id} withBorder radius="lg" padding="lg">
                   <Card.Section withBorder inheritPadding py="sm">
                     <Group justify="space-between">
@@ -186,9 +250,13 @@ export function WorkoutsPage() {
                       size="xs"
                       leftSection={<IconEdit size={14} />}
                       flex={1}
+                      onClick={() => openProgramBuilder(program)}
                     >
                       Editar
                     </Button>
+                    <ActionIcon variant="light" color="blue">
+                      <IconEye size={16} />
+                    </ActionIcon>
                     <ActionIcon variant="light" color="gray">
                       <IconCopy size={16} />
                     </ActionIcon>
@@ -205,7 +273,7 @@ export function WorkoutsPage() {
               title="No hay programas"
               description="Crea tu primer programa de entrenamiento para asignarlo a tus clientes."
               actionLabel="Crear Programa"
-              onAction={openProgramModal}
+              onAction={() => openProgramBuilder()}
             />
           ) : null}
         </Tabs.Panel>
@@ -219,9 +287,9 @@ export function WorkoutsPage() {
             onChange={(e) => setSearchExercise(e.target.value)}
           />
           
-          {exercises && exercises.length > 0 ? (
+          {filteredExercises.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
-              {exercises.map((exercise: { id: string; name: string; description?: string; muscle_groups: string[]; difficulty: string; image_url?: string }) => (
+              {filteredExercises.map((exercise: any) => (
                 <Card key={exercise.id} withBorder radius="md" padding="sm">
                   <Card.Section>
                     <Box
@@ -233,20 +301,13 @@ export function WorkoutsPage() {
                         justifyContent: 'center',
                       }}
                     >
-                      {exercise.image_url ? (
-                        <Image src={exercise.image_url} h={120} fit="cover" />
-                      ) : (
-                        <IconBarbell size={40} color="var(--mantine-color-primary-6)" />
-                      )}
+                      <IconBarbell size={40} color="var(--mantine-color-primary-6)" />
                     </Box>
                   </Card.Section>
                   
                   <Box mt="sm">
                     <Text fw={600} size="sm" lineClamp={1}>
                       {exercise.name}
-                    </Text>
-                    <Text size="xs" c="dimmed" lineClamp={2} mt={4}>
-                      {exercise.description || 'Sin descripción'}
                     </Text>
                     <Group gap={4} mt="xs">
                       {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
@@ -350,74 +411,87 @@ export function WorkoutsPage() {
         </form>
       </Modal>
       
-      {/* Modal para crear programa */}
-      <Modal
-        opened={programModalOpened}
-        onClose={closeProgramModal}
-        title="Nuevo Programa"
-        size="md"
+      {/* Drawer para el constructor de programas */}
+      <Drawer
+        opened={builderOpened}
+        onClose={closeBuilder}
+        title={editingProgram ? 'Editar Programa' : 'Nuevo Programa'}
+        size="xl"
+        position="right"
       >
-        <form onSubmit={programForm.onSubmit(handleCreateProgram)}>
+        <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
           <Stack>
-            <TextInput
-              label="Nombre"
-              placeholder="Programa de Hipertrofia"
-              required
-              {...programForm.getInputProps('name')}
+            <Paper withBorder p="md" radius="md">
+              <Stack gap="sm">
+                <TextInput
+                  label="Nombre del programa"
+                  placeholder="Programa de Hipertrofia"
+                  required
+                  {...programForm.getInputProps('name')}
+                />
+                
+                <Textarea
+                  label="Descripción"
+                  placeholder="Describe el programa..."
+                  minRows={2}
+                  {...programForm.getInputProps('description')}
+                />
+                
+                <Group grow>
+                  <NumberInput
+                    label="Duración (semanas)"
+                    min={1}
+                    max={52}
+                    {...programForm.getInputProps('duration_weeks')}
+                  />
+                  <Select
+                    label="Dificultad"
+                    data={[
+                      { value: 'beginner', label: 'Principiante' },
+                      { value: 'intermediate', label: 'Intermedio' },
+                      { value: 'advanced', label: 'Avanzado' },
+                    ]}
+                    {...programForm.getInputProps('difficulty')}
+                  />
+                </Group>
+                
+                <MultiSelect
+                  label="Etiquetas"
+                  placeholder="Añade etiquetas"
+                  data={[
+                    { value: 'hipertrofia', label: 'Hipertrofia' },
+                    { value: 'fuerza', label: 'Fuerza' },
+                    { value: 'pérdida de peso', label: 'Pérdida de peso' },
+                    { value: 'tonificación', label: 'Tonificación' },
+                    { value: 'resistencia', label: 'Resistencia' },
+                  ]}
+                  searchable
+                  {...programForm.getInputProps('tags')}
+                />
+              </Stack>
+            </Paper>
+
+            <Divider label="Constructor de Entrenamiento" labelPosition="center" />
+
+            <WorkoutBuilder
+              blocks={workoutBlocks}
+              onChange={setWorkoutBlocks}
+              availableExercises={mockExercises}
             />
-            
-            <Textarea
-              label="Descripción"
-              placeholder="Describe el programa..."
-              minRows={3}
-              {...programForm.getInputProps('description')}
-            />
-            
-            <Group grow>
-              <NumberInput
-                label="Duración (semanas)"
-                min={1}
-                max={52}
-                {...programForm.getInputProps('duration_weeks')}
-              />
-              <Select
-                label="Dificultad"
-                data={[
-                  { value: 'beginner', label: 'Principiante' },
-                  { value: 'intermediate', label: 'Intermedio' },
-                  { value: 'advanced', label: 'Avanzado' },
-                ]}
-                {...programForm.getInputProps('difficulty')}
-              />
-            </Group>
-            
-            <MultiSelect
-              label="Etiquetas"
-              placeholder="Añade etiquetas"
-              data={[
-                { value: 'hipertrofia', label: 'Hipertrofia' },
-                { value: 'fuerza', label: 'Fuerza' },
-                { value: 'pérdida de peso', label: 'Pérdida de peso' },
-                { value: 'tonificación', label: 'Tonificación' },
-                { value: 'resistencia', label: 'Resistencia' },
-              ]}
-              searchable
-              creatable
-              getCreateLabel={(query) => `+ Crear "${query}"`}
-              {...programForm.getInputProps('tags')}
-            />
-            
-            <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeProgramModal}>
-                Cancelar
-              </Button>
-              <Button type="submit" loading={createProgram.isPending}>
-                Crear Programa
-              </Button>
-            </Group>
           </Stack>
-        </form>
-      </Modal>
+        </ScrollArea>
+
+        <Group justify="flex-end" mt="md" p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}>
+          <Button variant="default" onClick={closeBuilder}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSaveProgram} loading={createProgram.isPending}>
+            {editingProgram ? 'Guardar Cambios' : 'Crear Programa'}
+          </Button>
+        </Group>
+      </Drawer>
     </Container>
   )
 }
+
+export default WorkoutsPage

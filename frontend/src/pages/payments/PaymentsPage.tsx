@@ -8,17 +8,21 @@ import {
   TextInput,
   Select,
   Stack,
+  Textarea,
   Tabs,
   Box,
   Text,
   Badge,
-  SimpleGrid,
-  NumberInput,
-  Alert,
-  ThemeIcon,
-  Table,
+  Card,
   ActionIcon,
-  Menu,
+  SimpleGrid,
+  Table,
+  ThemeIcon,
+  Progress,
+  Divider,
+  NumberInput,
+  Switch,
+  RingProgress,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
@@ -26,289 +30,372 @@ import {
   IconPlus,
   IconCreditCard,
   IconReceipt,
-  IconChartLine,
-  IconAlertCircle,
-  IconDotsVertical,
-  IconEye,
+  IconCash,
   IconRefresh,
-  IconBan,
   IconDownload,
-  IconBrandStripe,
+  IconEye,
+  IconSend,
   IconCheck,
+  IconX,
+  IconClock,
+  IconAlertCircle,
+  IconTrendingUp,
+  IconUsers,
+  IconCalendarEvent,
+  IconArrowUpRight,
+  IconArrowDownRight,
+  IconBrandStripe,
+  IconPackage,
+  IconDiscount,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { StatsCard } from '../../components/common/StatsCard'
-import { StatusBadge } from '../../components/common/DataTable'
+
+interface Payment {
+  id: string
+  client_name: string
+  description: string
+  amount: number
+  currency: string
+  status: 'completed' | 'pending' | 'failed' | 'refunded'
+  payment_type: 'subscription' | 'one_time' | 'package'
+  created_at: string
+  paid_at?: string
+}
+
+interface Subscription {
+  id: string
+  client_name: string
+  plan_name: string
+  amount: number
+  currency: string
+  status: 'active' | 'cancelled' | 'past_due' | 'trialing'
+  current_period_end: string
+  cancel_at_period_end: boolean
+}
+
+interface Product {
+  id: string
+  name: string
+  description?: string
+  price: number
+  currency: string
+  type: 'subscription' | 'one_time' | 'package'
+  sessions_included?: number
+  is_active: boolean
+}
+
+const mockPayments: Payment[] = [
+  { id: '1', client_name: 'María García', description: 'Plan Premium - Julio', amount: 120, currency: 'EUR', status: 'completed', payment_type: 'subscription', created_at: '2024-07-20', paid_at: '2024-07-20' },
+  { id: '2', client_name: 'Carlos López', description: 'Bono 10 Sesiones', amount: 450, currency: 'EUR', status: 'completed', payment_type: 'package', created_at: '2024-07-19', paid_at: '2024-07-19' },
+  { id: '3', client_name: 'Ana Martínez', description: 'Plan Premium - Julio', amount: 120, currency: 'EUR', status: 'pending', payment_type: 'subscription', created_at: '2024-07-18' },
+  { id: '4', client_name: 'Pedro Sánchez', description: 'Sesión Individual', amount: 50, currency: 'EUR', status: 'completed', payment_type: 'one_time', created_at: '2024-07-17', paid_at: '2024-07-17' },
+  { id: '5', client_name: 'Laura Fernández', description: 'Plan Básico - Julio', amount: 80, currency: 'EUR', status: 'failed', payment_type: 'subscription', created_at: '2024-07-16' },
+]
+
+const mockSubscriptions: Subscription[] = [
+  { id: '1', client_name: 'María García', plan_name: 'Plan Premium', amount: 120, currency: 'EUR', status: 'active', current_period_end: '2024-08-20', cancel_at_period_end: false },
+  { id: '2', client_name: 'Carlos López', plan_name: 'Plan Básico', amount: 80, currency: 'EUR', status: 'active', current_period_end: '2024-08-15', cancel_at_period_end: false },
+  { id: '3', client_name: 'Ana Martínez', plan_name: 'Plan Premium', amount: 120, currency: 'EUR', status: 'past_due', current_period_end: '2024-07-18', cancel_at_period_end: false },
+  { id: '4', client_name: 'Pedro Sánchez', plan_name: 'Plan Básico', amount: 80, currency: 'EUR', status: 'trialing', current_period_end: '2024-07-25', cancel_at_period_end: false },
+  { id: '5', client_name: 'Laura Fernández', plan_name: 'Plan Premium', amount: 120, currency: 'EUR', status: 'cancelled', current_period_end: '2024-07-31', cancel_at_period_end: true },
+]
+
+const mockProducts: Product[] = [
+  { id: '1', name: 'Plan Básico', description: '4 sesiones al mes + seguimiento', price: 80, currency: 'EUR', type: 'subscription', is_active: true },
+  { id: '2', name: 'Plan Premium', description: '8 sesiones al mes + nutrición + chat', price: 120, currency: 'EUR', type: 'subscription', is_active: true },
+  { id: '3', name: 'Plan VIP', description: 'Sesiones ilimitadas + todo incluido', price: 200, currency: 'EUR', type: 'subscription', is_active: true },
+  { id: '4', name: 'Bono 5 Sesiones', description: 'Válido por 2 meses', price: 225, currency: 'EUR', type: 'package', sessions_included: 5, is_active: true },
+  { id: '5', name: 'Bono 10 Sesiones', description: 'Válido por 4 meses', price: 450, currency: 'EUR', type: 'package', sessions_included: 10, is_active: true },
+  { id: '6', name: 'Sesión Individual', description: 'Sesión suelta de entrenamiento', price: 50, currency: 'EUR', type: 'one_time', is_active: true },
+]
 
 export function PaymentsPage() {
   const [activeTab, setActiveTab] = useState<string | null>('overview')
-  const [subscriptionModalOpened, { open: openSubscriptionModal, close: closeSubscriptionModal }] = useDisclosure(false)
-  
-  // Mock data
-  const stripeConnected = true
-  
-  const subscriptions = [
-    { id: '1', client: 'María García', plan: 'Plan Premium', amount: 99, status: 'active', next_billing: '2024-02-15' },
-    { id: '2', client: 'Carlos López', plan: 'Plan Básico', amount: 49, status: 'active', next_billing: '2024-02-20' },
-    { id: '3', client: 'Ana Martínez', plan: 'Plan Premium', amount: 99, status: 'past_due', next_billing: '2024-02-10' },
-    { id: '4', client: 'Pedro Sánchez', plan: 'Plan Básico', amount: 49, status: 'cancelled', next_billing: null },
-  ]
-  
-  const payments = [
-    { id: '1', client: 'María García', description: 'Plan Premium - Febrero', amount: 99, status: 'succeeded', date: '2024-01-15' },
-    { id: '2', client: 'Carlos López', description: 'Plan Básico - Febrero', amount: 49, status: 'succeeded', date: '2024-01-20' },
-    { id: '3', client: 'Ana Martínez', description: 'Plan Premium - Febrero', amount: 99, status: 'failed', date: '2024-01-10' },
-    { id: '4', client: 'Pedro Sánchez', description: 'Sesión Individual', amount: 35, status: 'succeeded', date: '2024-01-08' },
-    { id: '5', client: 'Laura Fernández', description: 'Plan Premium - Enero', amount: 99, status: 'refunded', date: '2024-01-05' },
-  ]
-  
-  const subscriptionForm = useForm({
+  const [productModalOpened, { open: openProductModal, close: closeProductModal }] = useDisclosure(false)
+  const [chargeModalOpened, { open: openChargeModal, close: closeChargeModal }] = useDisclosure(false)
+
+  const productForm = useForm({
     initialValues: {
-      client_id: '',
-      plan_name: '',
-      amount: 49,
-      interval: 'month',
+      name: '',
+      description: '',
+      price: 0,
+      type: 'subscription',
+      sessions_included: 0,
     },
     validate: {
-      client_id: (value) => (!value ? 'Cliente requerido' : null),
-      plan_name: (value) => (value.length < 2 ? 'Nombre del plan requerido' : null),
+      name: (value) => (value.length < 2 ? 'Nombre requerido' : null),
+      price: (value) => (value <= 0 ? 'Precio debe ser mayor a 0' : null),
     },
   })
-  
-  const handleCreateSubscription = async (values: typeof subscriptionForm.values) => {
-    console.log('Create subscription:', values)
-    closeSubscriptionModal()
-    subscriptionForm.reset()
+
+  const chargeForm = useForm({
+    initialValues: {
+      client_id: '',
+      product_id: '',
+      amount: 0,
+      description: '',
+    },
+  })
+
+  const kpis = {
+    mrr: 6800,
+    mrrChange: 9.7,
+    activeSubscriptions: 45,
+    pendingPayments: 3,
+    pendingAmount: 360,
+    thisMonthRevenue: 8500,
+    revenueChange: 12,
   }
-  
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(value)
-  }
-  
-  const getPaymentStatusColor = (status: string) => {
+
+  const getStatusColor = (status: Payment['status'] | Subscription['status']) => {
     switch (status) {
-      case 'succeeded': return 'green'
-      case 'pending': return 'yellow'
-      case 'failed': return 'red'
-      case 'refunded': return 'gray'
+      case 'completed':
+      case 'active': return 'green'
+      case 'pending':
+      case 'trialing': return 'yellow'
+      case 'failed':
+      case 'past_due': return 'red'
+      case 'refunded':
+      case 'cancelled': return 'gray'
       default: return 'gray'
     }
   }
-  
-  const getPaymentStatusLabel = (status: string) => {
+
+  const getStatusLabel = (status: Payment['status'] | Subscription['status']) => {
     switch (status) {
-      case 'succeeded': return 'Completado'
+      case 'completed': return 'Completado'
       case 'pending': return 'Pendiente'
       case 'failed': return 'Fallido'
       case 'refunded': return 'Reembolsado'
+      case 'active': return 'Activa'
+      case 'trialing': return 'Prueba'
+      case 'past_due': return 'Vencida'
+      case 'cancelled': return 'Cancelada'
       default: return status
     }
   }
-  
+
+  const getPaymentTypeIcon = (type: Payment['payment_type']) => {
+    switch (type) {
+      case 'subscription': return IconRefresh
+      case 'package': return IconPackage
+      case 'one_time': return IconCash
+      default: return IconCreditCard
+    }
+  }
+
   return (
     <Container size="xl" py="xl">
       <PageHeader
-        title="Pagos"
-        description="Gestiona suscripciones y pagos de tus clientes"
+        title="Pagos y Suscripciones"
+        description="Gestiona ingresos, suscripciones y productos"
         action={{
-          label: 'Nueva Suscripción',
-          onClick: openSubscriptionModal,
+          label: 'Nuevo Cobro',
+          onClick: openChargeModal,
+        }}
+        secondaryAction={{
+          label: 'Nuevo Producto',
+          icon: <IconPlus size={16} />,
+          onClick: openProductModal,
+          variant: 'default',
         }}
       />
-      
-      {!stripeConnected && (
-        <Alert
-          icon={<IconAlertCircle size={16} />}
-          title="Conecta tu cuenta de Stripe"
-          color="yellow"
-          mb="lg"
-        >
-          Para poder recibir pagos, necesitas conectar tu cuenta de Stripe.
-          <Button
-            variant="light"
-            color="yellow"
-            size="xs"
-            mt="sm"
-            leftSection={<IconBrandStripe size={16} />}
-          >
-            Conectar Stripe
-          </Button>
-        </Alert>
-      )}
-      
+
+      {/* KPI Cards */}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md" mb="xl">
+        <StatsCard
+          title="MRR"
+          value={`€${kpis.mrr.toLocaleString()}`}
+          icon={<IconTrendingUp size={24} />}
+          change={kpis.mrrChange}
+          changeLabel="vs mes anterior"
+          color="green"
+        />
+        <StatsCard
+          title="Ingresos del Mes"
+          value={`€${kpis.thisMonthRevenue.toLocaleString()}`}
+          icon={<IconCash size={24} />}
+          change={kpis.revenueChange}
+          changeLabel="vs mes anterior"
+          color="blue"
+        />
+        <StatsCard
+          title="Suscripciones Activas"
+          value={kpis.activeSubscriptions}
+          icon={<IconUsers size={24} />}
+          change={5}
+          changeLabel="nuevas este mes"
+          color="grape"
+        />
+        <Paper p="lg" radius="lg" withBorder>
+          <Group justify="space-between" align="flex-start">
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>
+                Pagos Pendientes
+              </Text>
+              <Text size="xl" fw={700} style={{ fontSize: '1.75rem', lineHeight: 1.2 }}>
+                {kpis.pendingPayments}
+              </Text>
+              <Text size="sm" c="orange" fw={500} mt={8}>
+                €{kpis.pendingAmount} por cobrar
+              </Text>
+            </Box>
+            <ThemeIcon size={48} radius="xl" color="orange" variant="light">
+              <IconClock size={24} />
+            </ThemeIcon>
+          </Group>
+        </Paper>
+      </SimpleGrid>
+
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List mb="lg">
-          <Tabs.Tab value="overview" leftSection={<IconChartLine size={14} />}>
+          <Tabs.Tab value="overview" leftSection={<IconCreditCard size={14} />}>
             Resumen
           </Tabs.Tab>
-          <Tabs.Tab value="subscriptions" leftSection={<IconCreditCard size={14} />}>
+          <Tabs.Tab value="payments" leftSection={<IconReceipt size={14} />}>
+            Historial
+          </Tabs.Tab>
+          <Tabs.Tab value="subscriptions" leftSection={<IconRefresh size={14} />}>
             Suscripciones
           </Tabs.Tab>
-          <Tabs.Tab value="payments" leftSection={<IconReceipt size={14} />}>
-            Historial de Pagos
+          <Tabs.Tab value="products" leftSection={<IconPackage size={14} />}>
+            Productos
           </Tabs.Tab>
         </Tabs.List>
-        
+
         <Tabs.Panel value="overview">
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg" mb="xl">
-            <StatsCard
-              title="MRR"
-              value={formatCurrency(2940)}
-              icon={<IconChartLine size={24} />}
-              change={12}
-              changeLabel="vs mes anterior"
-              color="green"
-            />
-            <StatsCard
-              title="Suscripciones Activas"
-              value={subscriptions.filter(s => s.status === 'active').length}
-              icon={<IconCreditCard size={24} />}
-              color="blue"
-            />
-            <StatsCard
-              title="Ingresos Este Mes"
-              value={formatCurrency(3240)}
-              icon={<IconReceipt size={24} />}
-              change={8}
-              changeLabel="vs mes anterior"
-              color="primary"
-            />
-            <StatsCard
-              title="Tasa de Impago"
-              value="3.2%"
-              icon={<IconAlertCircle size={24} />}
-              change={-1.5}
-              changeLabel="vs mes anterior"
-              color="red"
-            />
+          <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
+            {/* Revenue Distribution */}
+            <Paper withBorder radius="lg" p="lg">
+              <Text fw={600} mb="lg">Distribución de Ingresos</Text>
+              <Group justify="center" mb="md">
+                <RingProgress
+                  size={180}
+                  thickness={20}
+                  roundCaps
+                  sections={[
+                    { value: 65, color: 'blue', tooltip: 'Suscripciones: 65%' },
+                    { value: 25, color: 'green', tooltip: 'Bonos: 25%' },
+                    { value: 10, color: 'orange', tooltip: 'Sesiones: 10%' },
+                  ]}
+                  label={
+                    <Box ta="center">
+                      <Text size="lg" fw={700}>€8,500</Text>
+                      <Text size="xs" c="dimmed">Este mes</Text>
+                    </Box>
+                  }
+                />
+              </Group>
+              <SimpleGrid cols={3} spacing="sm">
+                <Group gap="xs" justify="center">
+                  <Box w={12} h={12} style={{ borderRadius: '50%', backgroundColor: 'var(--mantine-color-blue-6)' }} />
+                  <Text size="xs">Suscripciones (65%)</Text>
+                </Group>
+                <Group gap="xs" justify="center">
+                  <Box w={12} h={12} style={{ borderRadius: '50%', backgroundColor: 'var(--mantine-color-green-6)' }} />
+                  <Text size="xs">Bonos (25%)</Text>
+                </Group>
+                <Group gap="xs" justify="center">
+                  <Box w={12} h={12} style={{ borderRadius: '50%', backgroundColor: 'var(--mantine-color-orange-6)' }} />
+                  <Text size="xs">Sesiones (10%)</Text>
+                </Group>
+              </SimpleGrid>
+            </Paper>
+
+            {/* Recent Payments */}
+            <Paper withBorder radius="lg" p="lg">
+              <Group justify="space-between" mb="lg">
+                <Text fw={600}>Pagos Recientes</Text>
+                <Button variant="subtle" size="xs" rightSection={<IconArrowUpRight size={14} />}>
+                  Ver todos
+                </Button>
+              </Group>
+              <Stack gap="sm">
+                {mockPayments.slice(0, 5).map((payment) => {
+                  const PaymentIcon = getPaymentTypeIcon(payment.payment_type)
+                  return (
+                    <Group key={payment.id} justify="space-between">
+                      <Group gap="sm">
+                        <ThemeIcon
+                          size="md"
+                          radius="md"
+                          variant="light"
+                          color={getStatusColor(payment.status)}
+                        >
+                          <PaymentIcon size={14} />
+                        </ThemeIcon>
+                        <Box>
+                          <Text size="sm" fw={500}>{payment.client_name}</Text>
+                          <Text size="xs" c="dimmed">{payment.description}</Text>
+                        </Box>
+                      </Group>
+                      <Box ta="right">
+                        <Text size="sm" fw={600}>€{payment.amount}</Text>
+                        <Badge size="xs" variant="light" color={getStatusColor(payment.status)}>
+                          {getStatusLabel(payment.status)}
+                        </Badge>
+                      </Box>
+                    </Group>
+                  )
+                })}
+              </Stack>
+            </Paper>
+
+            {/* Upcoming Renewals */}
+            <Paper withBorder radius="lg" p="lg">
+              <Text fw={600} mb="lg">Próximas Renovaciones</Text>
+              <Stack gap="sm">
+                {mockSubscriptions
+                  .filter(s => s.status === 'active')
+                  .slice(0, 4)
+                  .map((sub) => (
+                    <Group key={sub.id} justify="space-between">
+                      <Box>
+                        <Text size="sm" fw={500}>{sub.client_name}</Text>
+                        <Text size="xs" c="dimmed">{sub.plan_name}</Text>
+                      </Box>
+                      <Box ta="right">
+                        <Text size="sm" fw={600}>€{sub.amount}</Text>
+                        <Text size="xs" c="dimmed">{sub.current_period_end}</Text>
+                      </Box>
+                    </Group>
+                  ))}
+              </Stack>
+            </Paper>
+
+            {/* Stripe Integration */}
+            <Paper withBorder radius="lg" p="lg">
+              <Group justify="space-between" mb="lg">
+                <Group gap="sm">
+                  <ThemeIcon size="lg" radius="md" variant="light" color="violet">
+                    <IconBrandStripe size={20} />
+                  </ThemeIcon>
+                  <Box>
+                    <Text fw={600}>Stripe Connect</Text>
+                    <Text size="xs" c="dimmed">Gestiona tu cuenta de pagos</Text>
+                  </Box>
+                </Group>
+                <Badge color="green" variant="light">Conectado</Badge>
+              </Group>
+              <Stack gap="sm">
+                <Group justify="space-between">
+                  <Text size="sm" c="dimmed">Balance disponible</Text>
+                  <Text size="sm" fw={600}>€2,450.00</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="sm" c="dimmed">Pendiente de liquidación</Text>
+                  <Text size="sm" fw={600}>€680.00</Text>
+                </Group>
+                <Divider my="xs" />
+                <Button variant="light" fullWidth>
+                  Ir al Dashboard de Stripe
+                </Button>
+              </Stack>
+            </Paper>
           </SimpleGrid>
-          
-          <Paper withBorder radius="lg" p="lg">
-            <Group justify="space-between" mb="lg">
-              <Text fw={600}>Pagos Recientes</Text>
-              <Button variant="subtle" size="xs">
-                Ver todos
-              </Button>
-            </Group>
-            
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Descripción</Table.Th>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Importe</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {payments.slice(0, 5).map((payment) => (
-                  <Table.Tr key={payment.id}>
-                    <Table.Td>
-                      <Text size="sm" fw={500}>{payment.client}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed">{payment.description}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{new Date(payment.date).toLocaleDateString('es-ES')}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" fw={500}>{formatCurrency(payment.amount)}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={getPaymentStatusColor(payment.status)} variant="light" size="sm">
-                        {getPaymentStatusLabel(payment.status)}
-                      </Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
         </Tabs.Panel>
-        
-        <Tabs.Panel value="subscriptions">
-          <Paper withBorder radius="lg">
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Plan</Table.Th>
-                  <Table.Th>Importe</Table.Th>
-                  <Table.Th>Próximo Cobro</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                  <Table.Th style={{ width: 60 }}></Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {subscriptions.map((sub) => (
-                  <Table.Tr key={sub.id}>
-                    <Table.Td>
-                      <Text size="sm" fw={500}>{sub.client}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{sub.plan}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" fw={500}>{formatCurrency(sub.amount)}/mes</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">
-                        {sub.next_billing
-                          ? new Date(sub.next_billing).toLocaleDateString('es-ES')
-                          : '-'}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge
-                        color={
-                          sub.status === 'active' ? 'green' :
-                          sub.status === 'past_due' ? 'yellow' :
-                          sub.status === 'cancelled' ? 'red' : 'gray'
-                        }
-                        variant="light"
-                        size="sm"
-                      >
-                        {sub.status === 'active' ? 'Activa' :
-                         sub.status === 'past_due' ? 'Vencida' :
-                         sub.status === 'cancelled' ? 'Cancelada' : sub.status}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Menu position="bottom-end" withArrow>
-                        <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray">
-                            <IconDotsVertical size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item leftSection={<IconEye size={14} />}>
-                            Ver detalles
-                          </Menu.Item>
-                          {sub.status === 'past_due' && (
-                            <Menu.Item leftSection={<IconRefresh size={14} />}>
-                              Reintentar cobro
-                            </Menu.Item>
-                          )}
-                          {sub.status === 'active' && (
-                            <Menu.Item leftSection={<IconBan size={14} />} color="red">
-                              Cancelar suscripción
-                            </Menu.Item>
-                          )}
-                        </Menu.Dropdown>
-                      </Menu>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
-        </Tabs.Panel>
-        
+
         <Tabs.Panel value="payments">
           <Paper withBorder radius="lg">
             <Table>
@@ -316,53 +403,116 @@ export function PaymentsPage() {
                 <Table.Tr>
                   <Table.Th>Cliente</Table.Th>
                   <Table.Th>Descripción</Table.Th>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Importe</Table.Th>
+                  <Table.Th>Tipo</Table.Th>
                   <Table.Th>Estado</Table.Th>
-                  <Table.Th style={{ width: 60 }}></Table.Th>
+                  <Table.Th>Fecha</Table.Th>
+                  <Table.Th ta="right">Importe</Table.Th>
+                  <Table.Th ta="right">Acciones</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {payments.map((payment) => (
-                  <Table.Tr key={payment.id}>
+                {mockPayments.map((payment) => {
+                  const PaymentIcon = getPaymentTypeIcon(payment.payment_type)
+                  return (
+                    <Table.Tr key={payment.id}>
+                      <Table.Td>
+                        <Text size="sm" fw={500}>{payment.client_name}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{payment.description}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ThemeIcon size="sm" variant="light" color="gray">
+                            <PaymentIcon size={12} />
+                          </ThemeIcon>
+                          <Text size="xs">
+                            {payment.payment_type === 'subscription' ? 'Suscripción' :
+                             payment.payment_type === 'package' ? 'Bono' : 'Puntual'}
+                          </Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" color={getStatusColor(payment.status)}>
+                          {getStatusLabel(payment.status)}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">{payment.created_at}</Text>
+                      </Table.Td>
+                      <Table.Td ta="right">
+                        <Text size="sm" fw={600}>€{payment.amount}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs" justify="flex-end">
+                          <ActionIcon variant="subtle" color="blue">
+                            <IconEye size={16} />
+                          </ActionIcon>
+                          <ActionIcon variant="subtle" color="gray">
+                            <IconDownload size={16} />
+                          </ActionIcon>
+                          {payment.status === 'pending' && (
+                            <ActionIcon variant="subtle" color="green">
+                              <IconSend size={16} />
+                            </ActionIcon>
+                          )}
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  )
+                })}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="subscriptions">
+          <Paper withBorder radius="lg">
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Cliente</Table.Th>
+                  <Table.Th>Plan</Table.Th>
+                  <Table.Th>Estado</Table.Th>
+                  <Table.Th>Próxima renovación</Table.Th>
+                  <Table.Th ta="right">Importe</Table.Th>
+                  <Table.Th ta="right">Acciones</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {mockSubscriptions.map((sub) => (
+                  <Table.Tr key={sub.id}>
                     <Table.Td>
-                      <Text size="sm" fw={500}>{payment.client}</Text>
+                      <Text size="sm" fw={500}>{sub.client_name}</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm" c="dimmed">{payment.description}</Text>
+                      <Text size="sm">{sub.plan_name}</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm">{new Date(payment.date).toLocaleDateString('es-ES')}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" fw={500}>{formatCurrency(payment.amount)}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={getPaymentStatusColor(payment.status)} variant="light" size="sm">
-                        {getPaymentStatusLabel(payment.status)}
+                      <Badge variant="light" color={getStatusColor(sub.status)}>
+                        {getStatusLabel(sub.status)}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      <Menu position="bottom-end" withArrow>
-                        <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray">
-                            <IconDotsVertical size={16} />
+                      <Text size="sm" c="dimmed">{sub.current_period_end}</Text>
+                      {sub.cancel_at_period_end && (
+                        <Text size="xs" c="red">Cancela al finalizar</Text>
+                      )}
+                    </Table.Td>
+                    <Table.Td ta="right">
+                      <Text size="sm" fw={600}>€{sub.amount}/mes</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs" justify="flex-end">
+                        <ActionIcon variant="subtle" color="blue">
+                          <IconEye size={16} />
+                        </ActionIcon>
+                        {sub.status === 'active' && (
+                          <ActionIcon variant="subtle" color="red">
+                            <IconX size={16} />
                           </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item leftSection={<IconEye size={14} />}>
-                            Ver detalles
-                          </Menu.Item>
-                          <Menu.Item leftSection={<IconDownload size={14} />}>
-                            Descargar factura
-                          </Menu.Item>
-                          {payment.status === 'succeeded' && (
-                            <Menu.Item leftSection={<IconRefresh size={14} />} color="red">
-                              Reembolsar
-                            </Menu.Item>
-                          )}
-                        </Menu.Dropdown>
-                      </Menu>
+                        )}
+                      </Group>
                     </Table.Td>
                   </Table.Tr>
                 ))}
@@ -370,16 +520,129 @@ export function PaymentsPage() {
             </Table>
           </Paper>
         </Tabs.Panel>
+
+        <Tabs.Panel value="products">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+            {mockProducts.map((product) => (
+              <Card key={product.id} withBorder radius="lg" padding="lg">
+                <Group justify="space-between" mb="sm">
+                  <Badge
+                    variant="light"
+                    color={product.type === 'subscription' ? 'blue' :
+                           product.type === 'package' ? 'green' : 'orange'}
+                  >
+                    {product.type === 'subscription' ? 'Suscripción' :
+                     product.type === 'package' ? 'Bono' : 'Puntual'}
+                  </Badge>
+                  <Switch size="sm" checked={product.is_active} color="green" />
+                </Group>
+
+                <Text fw={600} size="lg" mb="xs">{product.name}</Text>
+                <Text size="sm" c="dimmed" mb="md">
+                  {product.description}
+                </Text>
+
+                {product.sessions_included && (
+                  <Badge variant="outline" mb="md">
+                    {product.sessions_included} sesiones incluidas
+                  </Badge>
+                )}
+
+                <Divider mb="md" />
+
+                <Group justify="space-between" align="flex-end">
+                  <Box>
+                    <Text size="xl" fw={700}>€{product.price}</Text>
+                    <Text size="xs" c="dimmed">
+                      {product.type === 'subscription' ? '/mes' : ''}
+                    </Text>
+                  </Box>
+                  <Group gap="xs">
+                    <ActionIcon variant="light" color="blue">
+                      <IconEdit size={16} />
+                    </ActionIcon>
+                    <ActionIcon variant="light" color="red">
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Group>
+                </Group>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Tabs.Panel>
       </Tabs>
-      
-      {/* Modal para crear suscripción */}
+
+      {/* New Product Modal */}
       <Modal
-        opened={subscriptionModalOpened}
-        onClose={closeSubscriptionModal}
-        title="Nueva Suscripción"
+        opened={productModalOpened}
+        onClose={closeProductModal}
+        title="Nuevo Producto"
         size="md"
       >
-        <form onSubmit={subscriptionForm.onSubmit(handleCreateSubscription)}>
+        <form onSubmit={productForm.onSubmit((values) => console.log(values))}>
+          <Stack>
+            <TextInput
+              label="Nombre"
+              placeholder="Plan Premium"
+              required
+              {...productForm.getInputProps('name')}
+            />
+
+            <Textarea
+              label="Descripción"
+              placeholder="Describe el producto..."
+              minRows={2}
+              {...productForm.getInputProps('description')}
+            />
+
+            <Group grow>
+              <NumberInput
+                label="Precio (€)"
+                placeholder="0"
+                min={0}
+                required
+                {...productForm.getInputProps('price')}
+              />
+              <Select
+                label="Tipo"
+                data={[
+                  { value: 'subscription', label: 'Suscripción' },
+                  { value: 'package', label: 'Bono/Paquete' },
+                  { value: 'one_time', label: 'Pago único' },
+                ]}
+                {...productForm.getInputProps('type')}
+              />
+            </Group>
+
+            {productForm.values.type === 'package' && (
+              <NumberInput
+                label="Sesiones incluidas"
+                placeholder="0"
+                min={1}
+                {...productForm.getInputProps('sessions_included')}
+              />
+            )}
+
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={closeProductModal}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Crear Producto
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
+
+      {/* New Charge Modal */}
+      <Modal
+        opened={chargeModalOpened}
+        onClose={closeChargeModal}
+        title="Nuevo Cobro"
+        size="md"
+      >
+        <form onSubmit={chargeForm.onSubmit((values) => console.log(values))}>
           <Stack>
             <Select
               label="Cliente"
@@ -390,42 +653,35 @@ export function PaymentsPage() {
                 { value: '3', label: 'Ana Martínez' },
               ]}
               searchable
-              required
-              {...subscriptionForm.getInputProps('client_id')}
+              {...chargeForm.getInputProps('client_id')}
             />
-            
-            <TextInput
-              label="Nombre del plan"
-              placeholder="Plan Premium"
-              required
-              {...subscriptionForm.getInputProps('plan_name')}
+
+            <Select
+              label="Producto"
+              placeholder="Selecciona un producto"
+              data={mockProducts.map(p => ({ value: p.id, label: `${p.name} - €${p.price}` }))}
+              {...chargeForm.getInputProps('product_id')}
             />
-            
-            <Group grow>
-              <NumberInput
-                label="Importe"
-                prefix="€ "
-                min={0}
-                decimalScale={2}
-                {...subscriptionForm.getInputProps('amount')}
-              />
-              <Select
-                label="Intervalo"
-                data={[
-                  { value: 'week', label: 'Semanal' },
-                  { value: 'month', label: 'Mensual' },
-                  { value: 'year', label: 'Anual' },
-                ]}
-                {...subscriptionForm.getInputProps('interval')}
-              />
-            </Group>
-            
+
+            <NumberInput
+              label="Importe (€)"
+              placeholder="0"
+              min={0}
+              {...chargeForm.getInputProps('amount')}
+            />
+
+            <Textarea
+              label="Descripción"
+              placeholder="Descripción del cobro..."
+              {...chargeForm.getInputProps('description')}
+            />
+
             <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeSubscriptionModal}>
+              <Button variant="default" onClick={closeChargeModal}>
                 Cancelar
               </Button>
-              <Button type="submit">
-                Crear Suscripción
+              <Button type="submit" leftSection={<IconCreditCard size={16} />}>
+                Crear Cobro
               </Button>
             </Group>
           </Stack>
@@ -434,3 +690,5 @@ export function PaymentsPage() {
     </Container>
   )
 }
+
+export default PaymentsPage

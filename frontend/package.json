@@ -22,6 +22,7 @@
     "@tanstack/react-table": "^8.11.0",
     "axios": "^1.6.5",
     "dayjs": "^1.11.10",
+    "@hello-pangea/dnd": "^16.5.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.1",
