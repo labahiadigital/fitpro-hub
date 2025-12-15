@@ -7,32 +7,38 @@ interface BreadcrumbItem {
   href?: string
 }
 
+interface ActionButton {
+  label: string
+  icon?: React.ReactNode
+  onClick: () => void
+}
+
 interface PageHeaderProps {
   title: string
   description?: string
+  subtitle?: string // Alias for description
   breadcrumbs?: BreadcrumbItem[]
-  action?: {
-    label: string
-    icon?: React.ReactNode
-    onClick: () => void
-  }
-  secondaryAction?: {
-    label: string
-    icon?: React.ReactNode
-    onClick: () => void
-    variant?: string
-  }
+  action?: ActionButton | React.ReactNode
+  secondaryAction?: ActionButton & { variant?: string }
   children?: React.ReactNode
 }
 
 export function PageHeader({
   title,
   description,
+  subtitle,
   breadcrumbs,
   action,
   secondaryAction,
   children,
 }: PageHeaderProps) {
+  const displayDescription = description || subtitle
+
+  // Check if action is a React element or an action object
+  const isActionElement = action && typeof action === 'object' && 'type' in action
+  const actionButton = !isActionElement ? action as ActionButton | undefined : undefined
+  const actionElement = isActionElement ? action as React.ReactNode : undefined
+
   return (
     <Box mb="xl">
       {breadcrumbs && breadcrumbs.length > 0 && (
@@ -62,9 +68,9 @@ export function PageHeader({
           <Title order={2} fw={700}>
             {title}
           </Title>
-          {description && (
+          {displayDescription && (
             <Text size="sm" c="dimmed" mt={4}>
-              {description}
+              {displayDescription}
             </Text>
           )}
         </Box>
@@ -79,12 +85,13 @@ export function PageHeader({
               {secondaryAction.label}
             </Button>
           )}
-          {action && (
+          {actionElement}
+          {actionButton && (
             <Button
-              leftSection={action.icon || <IconPlus size={16} />}
-              onClick={action.onClick}
+              leftSection={actionButton.icon || <IconPlus size={16} />}
+              onClick={actionButton.onClick}
             >
-              {action.label}
+              {actionButton.label}
             </Button>
           )}
         </Group>
@@ -94,4 +101,3 @@ export function PageHeader({
     </Box>
   )
 }
-

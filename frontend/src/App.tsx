@@ -27,6 +27,7 @@ import { FormsPage } from './pages/forms/FormsPage'
 import { AutomationsPage } from './pages/automations/AutomationsPage'
 import { ReportsPage } from './pages/reports/ReportsPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
+import { PackagesPage } from './pages/packages/PackagesPage'
 
 // Mantine styles
 import '@mantine/core/styles.css'
@@ -89,6 +90,7 @@ export default function App() {
                 <Route path="/forms" element={<FormsPage />} />
                 <Route path="/chat" element={<ChatPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
+                <Route path="/packages" element={<PackagesPage />} />
                 <Route path="/automations" element={<AutomationsPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

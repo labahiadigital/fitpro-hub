@@ -7,23 +7,57 @@ import {
   IconChartBar,
   IconArrowUpRight,
 } from '@tabler/icons-react'
+import { useNavigate } from 'react-router-dom'
 import { StatsCard } from '../../components/common/StatsCard'
+import { RevenueChart } from '../../components/dashboard/RevenueChart'
+import { ClientGrowthChart } from '../../components/dashboard/ClientGrowthChart'
+import { AlertsWidget } from '../../components/dashboard/AlertsWidget'
+import { UpcomingSessionsWidget } from '../../components/dashboard/UpcomingSessionsWidget'
+import { QuickActionsWidget } from '../../components/dashboard/QuickActionsWidget'
 import { useKPIs } from '../../hooks/useReports'
 import { useAuthStore } from '../../stores/auth'
 
 export function DashboardPage() {
+  const navigate = useNavigate()
   const { user, currentWorkspace } = useAuthStore()
   const { data: kpis } = useKPIs()
   
-  // Datos de ejemplo para próximas sesiones
-  const upcomingSessions = [
-    { id: 1, client: 'María García', time: '09:00', type: 'Personal Training', status: 'confirmed' },
-    { id: 2, client: 'Carlos López', time: '10:30', type: 'Nutrición', status: 'pending' },
-    { id: 3, client: 'Ana Martínez', time: '12:00', type: 'Personal Training', status: 'confirmed' },
-    { id: 4, client: 'Pedro Sánchez', time: '16:00', type: 'Evaluación', status: 'confirmed' },
+  // Datos de ejemplo para gráficos
+  const revenueData = [
+    { month: 'Jul', revenue: 3200, subscriptions: 2800, oneTime: 400 },
+    { month: 'Ago', revenue: 3500, subscriptions: 3000, oneTime: 500 },
+    { month: 'Sep', revenue: 3800, subscriptions: 3200, oneTime: 600 },
+    { month: 'Oct', revenue: 4100, subscriptions: 3500, oneTime: 600 },
+    { month: 'Nov', revenue: 4400, subscriptions: 3800, oneTime: 600 },
+    { month: 'Dic', revenue: 4850, subscriptions: 4200, oneTime: 650 },
+  ]
+
+  const clientGrowthData = [
+    { month: 'Jul', total: 42, new: 5, churned: 2 },
+    { month: 'Ago', total: 45, new: 6, churned: 3 },
+    { month: 'Sep', total: 48, new: 5, churned: 2 },
+    { month: 'Oct', total: 52, new: 7, churned: 3 },
+    { month: 'Nov', total: 56, new: 6, churned: 2 },
+    { month: 'Dic', total: 62, new: 8, churned: 2 },
+  ]
+
+  // Alertas de ejemplo
+  const alerts = [
+    { id: '1', type: 'payment_due' as const, title: 'Pago pendiente', description: 'María García - Suscripción vencida hace 3 días', severity: 'error' as const },
+    { id: '2', type: 'inactive_client' as const, title: 'Cliente inactivo', description: 'Carlos López - Sin actividad hace 14 días', severity: 'warning' as const },
+    { id: '3', type: 'renewal_soon' as const, title: 'Renovación próxima', description: 'Ana Martínez - Renueva en 5 días', severity: 'info' as const },
+    { id: '4', type: 'form_pending' as const, title: 'Formulario pendiente', description: 'Pedro Sánchez - PAR-Q sin completar', severity: 'warning' as const },
   ]
   
-  // Datos de ejemplo para clientes recientes
+  // Próximas sesiones
+  const upcomingSessions = [
+    { id: '1', title: 'Entrenamiento Personal', clientName: 'María García', startTime: new Date().toISOString(), endTime: new Date(Date.now() + 3600000).toISOString(), type: 'individual' as const, modality: 'in_person' as const, status: 'confirmed' as const, location: 'Sala 1' },
+    { id: '2', title: 'Consulta Nutricional', clientName: 'Carlos López', startTime: new Date(Date.now() + 5400000).toISOString(), endTime: new Date(Date.now() + 7200000).toISOString(), type: 'individual' as const, modality: 'online' as const, status: 'pending' as const },
+    { id: '3', title: 'HIIT Grupal', clientName: 'Grupo A', startTime: new Date(Date.now() + 10800000).toISOString(), endTime: new Date(Date.now() + 14400000).toISOString(), type: 'group' as const, modality: 'in_person' as const, status: 'confirmed' as const, location: 'Sala Grande' },
+    { id: '4', title: 'Evaluación Inicial', clientName: 'Pedro Sánchez', startTime: new Date(Date.now() + 86400000).toISOString(), endTime: new Date(Date.now() + 90000000).toISOString(), type: 'individual' as const, modality: 'in_person' as const, status: 'confirmed' as const },
+  ]
+  
+  // Clientes recientes
   const recentClients = [
     { id: 1, name: 'Laura Fernández', joinedDays: 2, progress: 15 },
     { id: 2, name: 'Miguel Torres', joinedDays: 5, progress: 35 },
@@ -48,12 +82,17 @@ export function DashboardPage() {
           Aquí tienes un resumen de {currentWorkspace?.name || 'tu negocio'} hoy
         </Text>
       </Box>
+
+      {/* Quick Actions */}
+      <Box mb="xl">
+        <QuickActionsWidget />
+      </Box>
       
       {/* KPIs */}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg" mb="xl">
         <StatsCard
           title="Clientes Activos"
-          value={kpis?.active_clients || 0}
+          value={kpis?.active_clients || 62}
           icon={<IconUsers size={24} />}
           change={12}
           changeLabel="vs mes anterior"
@@ -61,21 +100,21 @@ export function DashboardPage() {
         />
         <StatsCard
           title="Sesiones Hoy"
-          value={kpis?.upcoming_sessions || 0}
+          value={kpis?.upcoming_sessions || 4}
           icon={<IconCalendarEvent size={24} />}
           color="blue"
         />
         <StatsCard
           title="Ingresos Mensuales"
-          value={formatCurrency(kpis?.revenue_this_month || 0)}
+          value={formatCurrency(kpis?.revenue_this_month || 4850)}
           icon={<IconCurrencyEuro size={24} />}
-          change={kpis?.revenue_last_month ? Math.round(((kpis?.revenue_this_month || 0) - kpis.revenue_last_month) / kpis.revenue_last_month * 100) : 0}
+          change={kpis?.revenue_last_month ? Math.round(((kpis?.revenue_this_month || 0) - kpis.revenue_last_month) / kpis.revenue_last_month * 100) : 10}
           changeLabel="vs mes anterior"
           color="green"
         />
         <StatsCard
           title="MRR"
-          value={formatCurrency(kpis?.mrr || 0)}
+          value={formatCurrency(kpis?.mrr || 4200)}
           icon={<IconTrendingUp size={24} />}
           change={8}
           changeLabel="crecimiento"
@@ -84,72 +123,50 @@ export function DashboardPage() {
       </SimpleGrid>
       
       <Grid gutter="lg">
+        {/* Gráfico de ingresos */}
+        <Grid.Col span={{ base: 12, lg: 8 }}>
+          <RevenueChart 
+            data={revenueData}
+            currentMRR={4200}
+            previousMRR={3800}
+          />
+        </Grid.Col>
+
+        {/* Alertas */}
+        <Grid.Col span={{ base: 12, lg: 4 }}>
+          <AlertsWidget 
+            alerts={alerts}
+            onAlertClick={(alert) => {
+              if (alert.type === 'payment_due') navigate('/payments')
+              else if (alert.type === 'inactive_client') navigate('/clients')
+              else if (alert.type === 'form_pending') navigate('/forms')
+            }}
+          />
+        </Grid.Col>
+
+        {/* Gráfico de clientes */}
+        <Grid.Col span={{ base: 12, lg: 6 }}>
+          <ClientGrowthChart
+            data={clientGrowthData}
+            totalClients={62}
+            newThisMonth={8}
+            churnedThisMonth={2}
+          />
+        </Grid.Col>
+
         {/* Próximas sesiones */}
-        <Grid.Col span={{ base: 12, md: 8 }}>
-          <Paper withBorder radius="lg" p="lg" h="100%">
-            <Group justify="space-between" mb="lg">
-              <Box>
-                <Title order={4} fw={600}>
-                  Sesiones de Hoy
-                </Title>
-                <Text size="sm" c="dimmed">
-                  {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </Text>
-              </Box>
-              <Badge size="lg" variant="light" color="primary">
-                {upcomingSessions.length} sesiones
-              </Badge>
-            </Group>
-            
-            <Stack gap="sm">
-              {upcomingSessions.map((session) => (
-                <Paper
-                  key={session.id}
-                  withBorder
-                  p="md"
-                  radius="md"
-                  style={{
-                    borderColor: session.status === 'pending' ? 'var(--mantine-color-yellow-4)' : 'var(--mantine-color-gray-2)',
-                    background: session.status === 'pending' ? 'var(--mantine-color-yellow-0)' : undefined,
-                  }}
-                >
-                  <Group justify="space-between">
-                    <Group>
-                      <Avatar radius="xl" color="primary">
-                        {session.client.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Text fw={500} size="sm">
-                          {session.client}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {session.type}
-                        </Text>
-                      </Box>
-                    </Group>
-                    <Group>
-                      <Text fw={600} size="sm">
-                        {session.time}
-                      </Text>
-                      <Badge
-                        size="sm"
-                        variant="light"
-                        color={session.status === 'confirmed' ? 'green' : 'yellow'}
-                      >
-                        {session.status === 'confirmed' ? 'Confirmada' : 'Pendiente'}
-                      </Badge>
-                    </Group>
-                  </Group>
-                </Paper>
-              ))}
-            </Stack>
-          </Paper>
+        <Grid.Col span={{ base: 12, lg: 6 }}>
+          <UpcomingSessionsWidget
+            sessions={upcomingSessions}
+            onSessionClick={() => navigate('/calendar')}
+            onViewAll={() => navigate('/calendar')}
+          />
         </Grid.Col>
         
         {/* Clientes recientes */}
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Paper withBorder radius="lg" p="lg" h="100%">
-            <Title order={4} fw={600} mb="lg">
+            <Title order={5} fw={600} mb="lg">
               Nuevos Clientes
             </Title>
             
@@ -182,11 +199,11 @@ export function DashboardPage() {
         </Grid.Col>
         
         {/* Métricas rápidas */}
-        <Grid.Col span={12}>
+        <Grid.Col span={{ base: 12, md: 8 }}>
           <Paper withBorder radius="lg" p="lg">
             <Group justify="space-between" mb="lg">
               <Box>
-                <Title order={4} fw={600}>
+                <Title order={5} fw={600}>
                   Resumen del Mes
                 </Title>
                 <Text size="sm" c="dimmed">
@@ -203,7 +220,7 @@ export function DashboardPage() {
                 </Text>
                 <Group gap="xs" mt={4}>
                   <Text size="xl" fw={700}>
-                    {kpis?.completed_sessions_month || 0}
+                    {kpis?.completed_sessions_month || 87}
                   </Text>
                   <Badge size="xs" color="green" variant="light">
                     <Group gap={2}>
@@ -235,7 +252,7 @@ export function DashboardPage() {
                 </Text>
                 <Group gap="xs" mt={4}>
                   <Text size="xl" fw={700}>
-                    {formatCurrency(kpis?.arpa || 0)}
+                    {formatCurrency(kpis?.arpa || 68)}
                   </Text>
                 </Group>
               </Box>
@@ -245,7 +262,7 @@ export function DashboardPage() {
                 </Text>
                 <Group gap="xs" mt={4}>
                   <Text size="xl" fw={700}>
-                    {100 - (kpis?.churn_rate || 0)}%
+                    {100 - (kpis?.churn_rate || 3)}%
                   </Text>
                   <Badge size="xs" color="green" variant="light">
                     Excelente
