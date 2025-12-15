@@ -18,15 +18,13 @@ import {
   Card,
   ThemeIcon,
   Divider,
-  Avatar,
   Switch,
   NumberInput,
 } from '@mantine/core'
-import { DateTimePicker, TimeInput } from '@mantine/dates'
+import { DateTimePicker } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconPlus,
   IconChevronLeft,
   IconChevronRight,
   IconCalendarEvent,
@@ -37,12 +35,11 @@ import {
   IconUsers,
   IconCheck,
   IconX,
-  IconDots,
   IconRepeat,
   IconAlertCircle,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
-import { useBookings, useCreateBooking } from '../../hooks/useBookings'
+import { useCreateBooking } from '../../hooks/useBookings'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 
@@ -107,12 +104,14 @@ export function CalendarPage() {
     try {
       await createBooking.mutateAsync({
         ...values,
+        session_type: values.session_type as 'individual' | 'group',
+        modality: values.modality as 'in_person' | 'online',
         start_time: values.start_time.toISOString(),
         end_time: values.end_time.toISOString(),
         location: {
           type: values.modality,
-          address: values.modality === 'in_person' ? values.location : null,
-          online_link: values.modality === 'online' ? values.location : null,
+          address: values.modality === 'in_person' ? values.location : undefined,
+          online_link: values.modality === 'online' ? values.location : undefined,
         },
       })
       closeModal()

@@ -12,18 +12,14 @@ import {
   Avatar,
   SimpleGrid,
   Table,
-  Progress,
   ActionIcon,
   Menu,
   ThemeIcon,
   Timeline,
   Divider,
-  TextInput,
-  Textarea,
 } from '@mantine/core'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  IconArrowLeft,
   IconEdit,
   IconTrash,
   IconDotsVertical,
@@ -37,19 +33,14 @@ import {
   IconPhone,
   IconMail,
   IconUser,
-  IconTarget,
-  IconNotes,
   IconHistory,
   IconPlus,
-  IconSend,
-  IconCheck,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
-import { StatsCard } from '../../components/common/StatsCard'
 
 export function ClientDetailPage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
+  useParams()
+  useNavigate()
   const [activeTab, setActiveTab] = useState<string | null>('overview')
   
   // Mock client data

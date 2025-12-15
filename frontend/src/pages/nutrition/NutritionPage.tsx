@@ -8,7 +8,6 @@ import {
   TextInput,
   Select,
   Stack,
-  Textarea,
   Tabs,
   Box,
   Text,
@@ -21,12 +20,11 @@ import {
   ScrollArea,
   Divider,
   ThemeIcon,
-  Progress,
+  Textarea,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconPlus,
   IconApple,
   IconTemplate,
   IconSearch,
@@ -42,7 +40,7 @@ import {
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { EmptyState } from '../../components/common/EmptyState'
-import { MealPlanBuilder } from '../../components/nutrition/MealPlanBuilder'
+import { MealPlanBuilder, DayPlan, Meal } from '../../components/nutrition/MealPlanBuilder'
 
 // Mock foods data
 const mockFoods = [
@@ -86,14 +84,14 @@ const mockMealPlans = [
   },
 ]
 
-const initialDays = [
-  { id: 'day-1', day: 1, dayName: 'Lunes', meals: [], notes: '' },
-  { id: 'day-2', day: 2, dayName: 'Martes', meals: [], notes: '' },
-  { id: 'day-3', day: 3, dayName: 'Miércoles', meals: [], notes: '' },
-  { id: 'day-4', day: 4, dayName: 'Jueves', meals: [], notes: '' },
-  { id: 'day-5', day: 5, dayName: 'Viernes', meals: [], notes: '' },
-  { id: 'day-6', day: 6, dayName: 'Sábado', meals: [], notes: '' },
-  { id: 'day-7', day: 7, dayName: 'Domingo', meals: [], notes: '' },
+const initialDays: DayPlan[] = [
+  { id: 'day-1', day: 1, dayName: 'Lunes', meals: [] as Meal[], notes: '' },
+  { id: 'day-2', day: 2, dayName: 'Martes', meals: [] as Meal[], notes: '' },
+  { id: 'day-3', day: 3, dayName: 'Miércoles', meals: [] as Meal[], notes: '' },
+  { id: 'day-4', day: 4, dayName: 'Jueves', meals: [] as Meal[], notes: '' },
+  { id: 'day-5', day: 5, dayName: 'Viernes', meals: [] as Meal[], notes: '' },
+  { id: 'day-6', day: 6, dayName: 'Sábado', meals: [] as Meal[], notes: '' },
+  { id: 'day-7', day: 7, dayName: 'Domingo', meals: [] as Meal[], notes: '' },
 ]
 
 export function NutritionPage() {

@@ -42,7 +42,6 @@ import {
   IconUpload,
   IconCheck,
   IconAlertCircle,
-  IconMail,
   IconCalendar,
   IconLock,
 } from '@tabler/icons-react'

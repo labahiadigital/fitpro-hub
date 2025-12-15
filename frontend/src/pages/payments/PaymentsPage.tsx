@@ -18,7 +18,6 @@ import {
   SimpleGrid,
   Table,
   ThemeIcon,
-  Progress,
   Divider,
   NumberInput,
   Switch,
@@ -35,18 +34,15 @@ import {
   IconDownload,
   IconEye,
   IconSend,
-  IconCheck,
   IconX,
   IconClock,
-  IconAlertCircle,
   IconTrendingUp,
   IconUsers,
-  IconCalendarEvent,
   IconArrowUpRight,
-  IconArrowDownRight,
   IconBrandStripe,
   IconPackage,
-  IconDiscount,
+  IconEdit,
+  IconTrash,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { StatsCard } from '../../components/common/StatsCard'

@@ -12,7 +12,6 @@ import {
   Stack,
   ScrollArea,
   Badge,
-  Divider,
   ThemeIcon,
 } from '@mantine/core'
 import {

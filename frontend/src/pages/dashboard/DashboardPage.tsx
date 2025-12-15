@@ -13,7 +13,7 @@ import { useAuthStore } from '../../stores/auth'
 
 export function DashboardPage() {
   const { user, currentWorkspace } = useAuthStore()
-  const { data: kpis, isLoading } = useKPIs()
+  const { data: kpis } = useKPIs()
   
   // Datos de ejemplo para próximas sesiones
   const upcomingSessions = [

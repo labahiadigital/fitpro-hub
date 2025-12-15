@@ -12,7 +12,6 @@ import {
   Box,
   Badge,
   Tooltip,
-  useMantineTheme,
 } from '@mantine/core'
 import {
   IconLayoutDashboard,

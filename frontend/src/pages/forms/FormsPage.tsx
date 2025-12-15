@@ -22,15 +22,12 @@ import {
   Drawer,
   ScrollArea,
   FileButton,
-  Progress,
   Table,
   Checkbox,
-  NumberInput,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconPlus,
   IconForms,
   IconEdit,
   IconTrash,
@@ -39,12 +36,10 @@ import {
   IconUpload,
   IconFile,
   IconFileText,
-  IconFilePdf,
   IconFileSpreadsheet,
   IconFolder,
   IconDownload,
   IconSend,
-  IconCheck,
   IconGripVertical,
   IconTextSize,
   IconNumber,
@@ -53,6 +48,7 @@ import {
   IconList,
   IconMail,
   IconPhone,
+  IconCheck,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { EmptyState } from '../../components/common/EmptyState'
@@ -157,7 +153,7 @@ const mockDocuments: Document[] = [
 export function FormsPage() {
   const [activeTab, setActiveTab] = useState<string | null>('forms')
   const [forms, setForms] = useState<FormTemplate[]>(mockForms)
-  const [documents, setDocuments] = useState<Document[]>(mockDocuments)
+  const [documents] = useState<Document[]>(mockDocuments)
   const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false)
   const [uploadModalOpened, { open: openUploadModal, close: closeUploadModal }] = useDisclosure(false)
   const [editingForm, setEditingForm] = useState<FormTemplate | null>(null)
@@ -274,7 +270,7 @@ export function FormsPage() {
 
   const getFileIcon = (type: string) => {
     switch (type) {
-      case 'pdf': return IconFilePdf
+      case 'pdf': return IconFileText
       case 'xlsx':
       case 'xls': return IconFileSpreadsheet
       default: return IconFile
@@ -484,8 +480,8 @@ export function FormsPage() {
                   { client: 'Carlos López', form: 'Consentimiento', status: 'completed', date: '2024-07-19' },
                   { client: 'Ana Martínez', form: 'Historial de Salud', status: 'pending', date: '2024-07-18' },
                   { client: 'Pedro Sánchez', form: 'PAR-Q', status: 'completed', date: '2024-07-17' },
-                ].map((submission, index) => (
-                  <Table.Tr key={index}>
+                ].map((submission, idx) => (
+                  <Table.Tr key={idx}>
                     <Table.Td>
                       <Text size="sm" fw={500}>{submission.client}</Text>
                     </Table.Td>
@@ -572,7 +568,7 @@ export function FormsPage() {
 
             {formFields.length > 0 && (
               <Stack gap="sm">
-                {formFields.map((field, index) => {
+                {formFields.map((field) => {
                   const FieldIcon = getFieldIcon(field.type)
                   return (
                     <Paper key={field.id} withBorder p="md" radius="md">

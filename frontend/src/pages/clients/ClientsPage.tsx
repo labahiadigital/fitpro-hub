@@ -5,20 +5,15 @@ import {
   Button,
   Modal,
   TextInput,
-  Select,
   Stack,
   Textarea,
   ColorInput,
   Tabs,
-  Badge,
-  Avatar,
-  Box,
   Text,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconPlus,
   IconUsers,
   IconTag,
   IconDownload,
@@ -32,10 +27,10 @@ export function ClientsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [clientModalOpened, { open: openClientModal, close: closeClientModal }] = useDisclosure(false)
-  const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false)
+  const [tagModalOpened, { close: closeTagModal }] = useDisclosure(false)
   
   const { data: clientsData, isLoading } = useClients({ page, search })
-  const { data: tags } = useClientTags()
+  useClientTags()
   const createClient = useCreateClient()
   const createTag = useCreateClientTag()
   

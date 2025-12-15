@@ -25,14 +25,12 @@ import {
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconPlus,
   IconBarbell,
   IconTemplate,
   IconSearch,
   IconEdit,
   IconTrash,
   IconCopy,
-  IconPlayerPlay,
   IconEye,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
@@ -62,7 +60,7 @@ const mockExercises = [
 export function WorkoutsPage() {
   const [activeTab, setActiveTab] = useState<string | null>('programs')
   const [exerciseModalOpened, { open: openExerciseModal, close: closeExerciseModal }] = useDisclosure(false)
-  const [programModalOpened, { open: openProgramModal, close: closeProgramModal }] = useDisclosure(false)
+  useDisclosure(false)
   const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false)
   const [searchExercise, setSearchExercise] = useState('')
   const [workoutBlocks, setWorkoutBlocks] = useState<any[]>([])
@@ -111,20 +109,6 @@ export function WorkoutsPage() {
     }
   }
   
-  const handleCreateProgram = async (values: typeof programForm.values) => {
-    try {
-      await createProgram.mutateAsync({
-        ...values,
-        template: { weeks: [], blocks: workoutBlocks },
-        is_template: true,
-      })
-      closeProgramModal()
-      programForm.reset()
-      setWorkoutBlocks([])
-    } catch {
-      // Error handled by mutation
-    }
-  }
 
   const openProgramBuilder = (program?: any) => {
     if (program) {
@@ -152,7 +136,19 @@ export function WorkoutsPage() {
     try {
       await createProgram.mutateAsync({
         ...values,
-        template: { blocks: workoutBlocks },
+        template: { 
+          weeks: workoutBlocks.map(block => ({
+            days: block.days || [{
+              exercises: block.exercises?.map((ex: any) => ({
+                exercise_id: ex.exercise_id,
+                sets: ex.sets,
+                reps: ex.reps,
+                rest_seconds: ex.rest_seconds,
+                notes: ex.notes,
+              })) || []
+            }]
+          }))
+        },
         is_template: true,
       })
       closeBuilder()

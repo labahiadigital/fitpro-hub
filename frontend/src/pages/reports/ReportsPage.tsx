@@ -3,9 +3,7 @@ import {
   Container,
   Paper,
   Group,
-  Button,
   Select,
-  Stack,
   Box,
   Text,
   Badge,
@@ -17,6 +15,7 @@ import {
   Table,
   ActionIcon,
   Tooltip,
+  Stack,
 } from '@mantine/core'
 import {
   IconDownload,
@@ -24,7 +23,6 @@ import {
   IconCreditCard,
   IconCalendarEvent,
   IconTrendingUp,
-  IconTrendingDown,
   IconArrowUpRight,
   IconArrowDownRight,
   IconChartBar,
@@ -412,7 +410,7 @@ export function ReportsPage() {
             <Text fw={600} mb="lg">Evolución de Ingresos</Text>
             <Box h={300}>
               <Group gap={8} align="flex-end" h="100%">
-                {revenueData.map((item, index) => (
+                {revenueData.map((item) => (
                   <Box key={item.month} style={{ flex: 1 }}>
                     <Tooltip label={`€${item.revenue}`} withArrow>
                       <Box

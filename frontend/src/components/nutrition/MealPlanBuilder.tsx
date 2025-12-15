@@ -11,7 +11,6 @@ import {
   Card,
   NumberInput,
   TextInput,
-  Select,
   Tabs,
   SimpleGrid,
   Modal,
@@ -19,28 +18,22 @@ import {
   ThemeIcon,
   Progress,
   Divider,
-  Textarea,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
   IconPlus,
   IconTrash,
-  IconEdit,
   IconSearch,
   IconApple,
   IconMeat,
-  IconEgg,
   IconCoffee,
   IconSalad,
   IconCookie,
-  IconMilk,
-  IconBread,
-  IconCheck,
   IconShoppingCart,
   IconCopy,
 } from '@tabler/icons-react'
 
-interface Food {
+export interface Food {
   id: string
   name: string
   calories: number
@@ -51,7 +44,7 @@ interface Food {
   category: string
 }
 
-interface MealItem {
+export interface MealItem {
   id: string
   food_id: string
   food: Food
@@ -60,7 +53,7 @@ interface MealItem {
   notes?: string
 }
 
-interface Meal {
+export interface Meal {
   id: string
   name: string
   time: string
@@ -68,7 +61,7 @@ interface Meal {
   items: MealItem[]
 }
 
-interface DayPlan {
+export interface DayPlan {
   id: string
   day: number
   dayName: string
@@ -520,7 +513,7 @@ export function MealPlanBuilder({
           leftSection={<IconSearch size={16} />}
           mb="md"
           value={foodSearch}
-          onChange={(e) => setFoodSearch(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFoodSearch(e.target.value)}
         />
         <ScrollArea h={400}>
           <Stack gap="xs">

@@ -4,7 +4,6 @@ import {
   Paper,
   Group,
   Button,
-  Modal,
   TextInput,
   Select,
   Stack,
@@ -19,7 +18,6 @@ import {
   ThemeIcon,
   Divider,
   Stepper,
-  MultiSelect,
   Timeline,
   Drawer,
   ScrollArea,
@@ -28,12 +26,9 @@ import {
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconPlus,
   IconRobot,
   IconEdit,
   IconTrash,
-  IconPlayerPlay,
-  IconPlayerPause,
   IconCopy,
   IconBolt,
   IconMail,
@@ -42,7 +37,6 @@ import {
   IconUser,
   IconCreditCard,
   IconClockHour4,
-  IconArrowRight,
   IconCheck,
   IconAlertCircle,
   IconGitBranch,
@@ -296,9 +290,9 @@ export function AutomationsPage() {
                 <Box mb="md">
                   <Text size="xs" c="dimmed" mb="xs">Acciones ({automation.actions.length})</Text>
                   <Group gap="xs">
-                    {automation.actions.slice(0, 4).map((action, index) => {
+                    {automation.actions.slice(0, 4).map((action) => {
                       const actionInfo = getActionInfo(action.type)
-                      const ActionIcon = actionInfo?.icon || IconBolt
+                      const ActionIconComponent = actionInfo?.icon || IconBolt
                       return (
                         <ThemeIcon
                           key={action.id}
@@ -307,7 +301,7 @@ export function AutomationsPage() {
                           variant="light"
                           color={actionInfo?.color || 'gray'}
                         >
-                          <ActionIcon size={12} />
+                          <ActionIconComponent size={12} />
                         </ThemeIcon>
                       )
                     })}
@@ -470,9 +464,9 @@ export function AutomationsPage() {
 
                 {actions.length > 0 && (
                   <Timeline active={actions.length} bulletSize={24} lineWidth={2}>
-                    {actions.map((action, index) => {
+                    {actions.map((action, actionIndex) => {
                       const actionInfo = getActionInfo(action.type)
-                      const ActionIcon = actionInfo?.icon || IconBolt
+                      const ActionIconComponent = actionInfo?.icon || IconBolt
                       return (
                         <Timeline.Item
                           key={action.id}
@@ -482,7 +476,7 @@ export function AutomationsPage() {
                               radius="xl"
                               color={actionInfo?.color || 'gray'}
                             >
-                              <ActionIcon size={12} />
+                              <ActionIconComponent size={12} />
                             </ThemeIcon>
                           }
                           title={
@@ -523,7 +517,7 @@ export function AutomationsPage() {
                                 onChange={(e) => updateAction(action.id, { config: { ...action.config, message: e.target.value } })}
                               />
                             )}
-                            {index > 0 && (
+                            {actionIndex > 0 && (
                               <Group gap="xs">
                                 <Text size="xs" c="dimmed">Esperar</Text>
                                 <Select

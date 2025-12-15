@@ -42,7 +42,7 @@ const demoUser: User = {
   id: 'demo-user-1',
   email: 'demo@fitprohub.com',
   full_name: 'Usuario Demo',
-  avatar_url: null,
+  avatar_url: undefined,
   is_active: true,
   role: 'owner',
 }
@@ -51,7 +51,7 @@ const demoWorkspace: Workspace = {
   id: 'demo-workspace-1',
   name: 'FitPro Demo',
   slug: 'fitpro-demo',
-  logo_url: null,
+  logo_url: undefined,
   branding: {
     primary_color: '#2D6A4F',
     secondary_color: '#40916C',
