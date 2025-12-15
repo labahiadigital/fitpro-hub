@@ -1,0 +1,343 @@
+[
+  {
+    "id": 1,
+    "title": "Core Infrastructure and Authentication Setup",
+    "status": "pending",
+    "details": "Set up Supabase PostgreSQL database with Row-Level Security policies for multi-tenant isolation. Implement Supabase Auth integration with JWT tokens containing workspace_id and role information. Create FastAPI backend with RBAC middleware for endpoint protection. Set up SQLAlchemy 2.x with Alembic for database migrations. Configure basic workspace creation and user management endpoints. Implement Redis for caching and session management. This task establishes the security foundation that all other features will depend on.",
+    "priority": "high",
+    "subtasks": [
+      {
+        "id": 1,
+        "title": "Database Setup with Multi-Tenant Row-Level Security",
+        "status": "pending",
+        "details": "Initialize Supabase project and configure PostgreSQL database. Create core tables (workspaces, users, workspace_users) with proper foreign key relationships. Implement RLS policies using workspace_id for tenant isolation. Set up database functions for workspace context switching. Configure connection pooling and performance optimization settings. Create initial database schema with proper indexing strategy.",
+        "description": "Set up Supabase PostgreSQL database with comprehensive Row-Level Security policies to ensure complete tenant isolation across all data access patterns",
+        "dependencies": [],
+        "testStrategy": "Unit tests for RLS policy enforcement across different user roles and workspace scenarios. Test data isolation between tenants with concurrent access patterns."
+      },
+      {
+        "id": 2,
+        "title": "Authentication System with JWT and Workspace Context",
+        "status": "pending",
+        "details": "Configure Supabase Auth with custom JWT claims including workspace_id and user roles. Implement authentication middleware to extract and validate workspace context from tokens. Create user registration/login flows with workspace assignment. Set up refresh token handling and session management. Implement workspace switching functionality for users with multiple workspace access.",
+        "description": "Implement Supabase Auth integration with custom JWT tokens that include workspace_id and role information for multi-tenant access control",
+        "dependencies": [
+          1
+        ],
+        "testStrategy": "Integration tests for complete authentication flows including registration, login, token refresh, and workspace switching. Security testing for token validation and workspace isolation."
+      },
+      {
+        "id": 3,
+        "title": "FastAPI Backend with RBAC Middleware",
+        "status": "pending",
+        "details": "Set up FastAPI application with proper project structure and configuration management. Implement RBAC middleware that validates JWT tokens and enforces role-based permissions. Create decorators for endpoint protection with granular permission checking. Set up request/response models with Pydantic. Configure CORS, logging, and error handling middleware. Implement health check and monitoring endpoints.",
+        "description": "Create FastAPI application framework with Role-Based Access Control middleware for protecting endpoints based on user roles and workspace context",
+        "dependencies": [
+          2
+        ],
+        "testStrategy": "Unit tests for RBAC middleware with various role combinations. Integration tests for endpoint protection across different user roles and workspace contexts."
+      },
+      {
+        "id": 4,
+        "title": "Database ORM and Migration System",
+        "status": "pending",
+        "details": "Set up SQLAlchemy 2.x with async support and configure database models with proper relationships. Implement repository pattern for data access with workspace context filtering. Configure Alembic for database migrations with multi-tenant considerations. Create base model classes with common fields (created_at, updated_at, workspace_id). Set up database session management with proper connection pooling and transaction handling.",
+        "description": "Configure SQLAlchemy 2.x with Alembic for database operations and implement migration system for schema evolution",
+        "dependencies": [
+          1,
+          3
+        ],
+        "testStrategy": "Unit tests for database models and repository methods. Migration testing with rollback scenarios. Performance testing for database queries with workspace filtering."
+      },
+      {
+        "id": 5,
+        "title": "Workspace Management and Redis Caching",
+        "status": "pending",
+        "details": "Create REST endpoints for workspace CRUD operations with proper validation and authorization. Implement user invitation system with email notifications and role assignment. Set up Redis for caching frequently accessed data (user sessions, workspace metadata, permissions). Implement cache invalidation strategies for data consistency. Create workspace user management endpoints (invite, remove, role updates). Set up background tasks for cleanup and maintenance operations.",
+        "description": "Implement workspace creation, user management endpoints, and Redis caching system for session management and performance optimization",
+        "dependencies": [
+          3,
+          4
+        ],
+        "testStrategy": "Integration tests for complete workspace management flows. Load testing for concurrent multi-tenant access with caching. Cache consistency testing with data updates and invalidation scenarios."
+      }
+    ],
+    "description": "Establish the foundational infrastructure including database setup with multi-tenant Row-Level Security, authentication system, and basic API framework",
+    "dependencies": [],
+    "testStrategy": "Unit tests for RLS policies across different roles and workspaces. Integration tests for authentication flows. Load testing for concurrent multi-tenant access. Security testing for workspace isolation."
+  },
+  {
+    "id": 2,
+    "title": "Client CRM and Profile Management System",
+    "status": "pending",
+    "details": "Develop client profile management with health consents, PAR-Q forms, and custom tags for segmentation. Implement full activity history tracking across sessions, payments, and communications. Create custom form builder for onboarding and health assessments. Set up file upload system using Supabase Storage for documents and images. Build internal notes system for coaches with proper access controls. Include GDPR compliance features like data export and deletion workflows. Implement audit logging for all client data modifications.",
+    "priority": "high",
+    "subtasks": [
+      {
+        "id": 1,
+        "title": "Core Client Profile Data Model and Database Schema",
+        "status": "pending",
+        "details": "Create database tables for clients, health_consents, par_q_forms, client_tags, audit_logs, and related junction tables. Implement proper indexing, foreign key constraints, and data validation rules. Set up multi-tenant data isolation with row-level security policies. Include GDPR-compliant fields for consent timestamps and data retention policies.",
+        "description": "Design and implement the foundational database schema for client profiles, including personal information, health data, consent tracking, and audit logging capabilities",
+        "dependencies": [],
+        "testStrategy": "Database schema validation tests, constraint verification, multi-tenant isolation tests, and data integrity checks"
+      },
+      {
+        "id": 2,
+        "title": "Client Profile CRUD Operations and API Endpoints",
+        "status": "pending",
+        "details": "Implement REST API endpoints for client management including profile creation, updates, health consent management, and PAR-Q form handling. Add input validation, sanitization, and proper error handling. Implement role-based access controls ensuring coaches can only access their assigned clients. Include audit logging for all data modifications.",
+        "description": "Build comprehensive API endpoints for creating, reading, updating, and deleting client profiles with proper validation and security controls",
+        "dependencies": [
+          1
+        ],
+        "testStrategy": "API endpoint testing for all CRUD operations, validation testing, access control verification, and audit log generation tests"
+      },
+      {
+        "id": 3,
+        "title": "File Upload System and Document Management",
+        "status": "pending",
+        "details": "Set up Supabase Storage buckets with proper security policies for client documents. Implement file upload endpoints with validation for file types, sizes, and virus scanning. Create document association system linking files to client profiles. Add file versioning and secure access controls with temporary signed URLs for downloads.",
+        "description": "Implement secure file upload system using Supabase Storage for client documents, images, and health assessment files",
+        "dependencies": [
+          2
+        ],
+        "testStrategy": "File upload integration tests, storage security policy verification, file type validation tests, and access control testing"
+      },
+      {
+        "id": 4,
+        "title": "Activity Tracking and History System",
+        "status": "pending",
+        "details": "Create activity_logs table and API endpoints to track client sessions, payment transactions, communication events, and profile changes. Implement timeline view component showing chronological activity history. Add filtering and search capabilities by activity type, date range, and keywords. Include automated activity logging triggers for system events.",
+        "description": "Build comprehensive activity tracking system to log and display client interactions, sessions, payments, and communications history",
+        "dependencies": [
+          2
+        ],
+        "testStrategy": "Activity logging verification tests, timeline display functionality tests, filtering and search capability tests, and automated trigger validation"
+      },
+      {
+        "id": 5,
+        "title": "GDPR Compliance and Data Management Features",
+        "status": "pending",
+        "details": "Build data export functionality generating comprehensive client data packages in JSON/PDF formats. Implement secure data deletion workflows with cascade operations across all related tables and file storage. Create consent management interface for tracking and updating various consent types. Add data retention policy enforcement and automated cleanup processes.",
+        "description": "Implement GDPR compliance features including data export, deletion workflows, consent management, and privacy controls",
+        "dependencies": [
+          3,
+          4
+        ],
+        "testStrategy": "GDPR compliance testing for data export completeness, deletion workflow verification, consent tracking accuracy tests, and data retention policy enforcement validation"
+      }
+    ],
+    "description": "Build comprehensive client relationship management system with profiles, health consents, tagging, and activity tracking",
+    "dependencies": [
+      1
+    ],
+    "testStrategy": "CRUD operation tests for all client data entities. GDPR compliance testing for data export/deletion. File upload and storage integration tests. Multi-tenant data isolation verification."
+  },
+  {
+    "id": 3,
+    "title": "Calendar, Booking and Scheduling System",
+    "status": "pending",
+    "details": "Build calendar system with daily/weekly/monthly views supporting 1:1 and group sessions. Implement client self-service booking with capacity management and waitlists. Create recurring session templates and availability management for multiple staff members. Integrate Brevo for automated email reminders and notifications. Set up Celery + Redis + Beat for background job processing of reminders and booking confirmations. Include cancellation policies and rescheduling workflows. Build mobile-responsive calendar interface for both coaches and clients.",
+    "priority": "medium",
+    "subtasks": [
+      {
+        "id": 1,
+        "title": "Core Calendar Models and Database Schema",
+        "status": "pending",
+        "details": "Create Django models for Calendar, Session, Booking, Availability, Staff, and Client entities. Implement proper foreign key relationships, constraints for capacity management, and indexes for performance. Include fields for session types (1:1, group), recurring patterns, cancellation policies, and booking status tracking. Set up database migrations and seed data for testing.",
+        "description": "Design and implement the foundational database models for the calendar system including sessions, bookings, availability, and staff management with proper relationships and constraints",
+        "dependencies": [],
+        "testStrategy": "Unit tests for model validation, constraint testing, and database migration testing"
+      },
+      {
+        "id": 2,
+        "title": "Calendar Views and UI Components",
+        "status": "pending",
+        "details": "Implement React/Vue components for calendar grid layouts with drag-and-drop functionality. Create separate views for coaches (full scheduling control) and clients (booking interface). Include session details popover, availability indicators, and mobile-responsive design. Integrate with backend APIs for real-time data fetching and updates.",
+        "description": "Build responsive calendar interface with daily, weekly, and monthly views supporting both coach and client perspectives with session display and interaction capabilities",
+        "dependencies": [
+          1
+        ],
+        "testStrategy": "UI component testing, responsive design testing across devices, and calendar view performance testing with large datasets"
+      },
+      {
+        "id": 3,
+        "title": "Booking Management System and Self-Service Portal",
+        "status": "pending",
+        "details": "Build booking API endpoints with validation for capacity limits, time conflicts, and availability checks. Create client booking interface with session selection, time slot picking, and waitlist enrollment. Implement cancellation policies with automated refund/credit logic and rescheduling workflows with availability matching. Include booking confirmation and status tracking.",
+        "description": "Implement comprehensive booking workflow including client self-service booking, capacity management, waitlist functionality, and cancellation/rescheduling processes",
+        "dependencies": [
+          1,
+          2
+        ],
+        "testStrategy": "End-to-end booking flow testing including edge cases like overbooking, cancellations, and waitlist management"
+      },
+      {
+        "id": 4,
+        "title": "Staff Availability and Recurring Session Templates",
+        "status": "pending",
+        "details": "Build staff availability management with time slot definition, recurring patterns, and exception handling. Create session templates for different service types with default durations, pricing, and capacity settings. Implement automated recurring session creation with conflict detection and staff assignment logic. Include bulk availability updates and template management interface.",
+        "description": "Create availability management system for multiple staff members with recurring session templates and automated scheduling capabilities",
+        "dependencies": [
+          1
+        ],
+        "testStrategy": "Availability conflict testing, recurring session generation testing, and staff assignment validation"
+      },
+      {
+        "id": 5,
+        "title": "Automated Notifications and Background Job Processing",
+        "status": "pending",
+        "details": "Set up Celery with Redis broker and Beat scheduler for background job processing. Integrate Brevo API for email sending with template management for confirmations, reminders, and cancellations. Create scheduled tasks for reminder emails (24h, 1h before sessions) and booking follow-ups. Implement job retry logic, failure handling, and notification preferences management.",
+        "description": "Integrate Brevo email service with Celery/Redis/Beat for automated booking confirmations, reminders, and notification workflows",
+        "dependencies": [
+          3,
+          4
+        ],
+        "testStrategy": "Background job testing for automated reminders, email delivery testing, and integration testing with Brevo service"
+      }
+    ],
+    "description": "Implement comprehensive scheduling system with calendar views, booking management, and automated notifications",
+    "dependencies": [
+      1,
+      2
+    ],
+    "testStrategy": "Booking flow end-to-end tests including edge cases like overbooking and cancellations. Background job testing for automated reminders. Calendar view performance testing with large datasets. Integration testing with email service."
+  },
+  {
+    "id": 4,
+    "title": "Workout and Nutrition Management Modules",
+    "status": "pending",
+    "details": "Create drag-and-drop workout builder with exercise library, supersets, and program blocks. Implement video/image upload and attachment system for exercises. Build program templates for bulk client assignments and progress tracking with customizable charts. Develop nutrition module with meal plan builder, basic food database stub, and auto-generated shopping lists. Include client compliance logging and adherence tracking for both workouts and nutrition. Set up progress visualization and reporting for client achievements. Integrate with calendar system for scheduled workouts and meal plans.",
+    "priority": "medium",
+    "subtasks": [
+      {
+        "id": 1,
+        "title": "Exercise Library and Media Management System",
+        "status": "pending",
+        "details": "Build exercise model with fields for name, description, muscle groups, equipment, difficulty level. Implement file upload system supporting video (MP4, MOV) and image (JPG, PNG) formats with cloud storage integration. Create media processing pipeline for thumbnail generation and compression. Design exercise search and filtering functionality by muscle group, equipment type, and difficulty. Include exercise categorization and tagging system.",
+        "description": "Create comprehensive exercise database with video/image upload capabilities and media attachment system for workout exercises",
+        "dependencies": [],
+        "testStrategy": "File upload tests for various formats and sizes, media processing verification, exercise search and filter functionality tests"
+      },
+      {
+        "id": 2,
+        "title": "Drag-and-Drop Workout Builder Interface",
+        "status": "pending",
+        "details": "Implement React-based drag-and-drop interface using libraries like react-beautiful-dnd. Create workout structure with exercises, sets, reps, rest periods, and superset groupings. Build program block system for organizing workout phases (warm-up, main, cool-down). Include exercise substitution suggestions and workout duration estimation. Add workout preview and validation features to ensure proper structure.",
+        "description": "Develop interactive workout builder with drag-and-drop functionality for creating custom workouts with exercises, supersets, and program blocks",
+        "dependencies": [
+          1
+        ],
+        "testStrategy": "Drag-and-drop functionality tests, workout structure validation, superset creation and modification tests"
+      },
+      {
+        "id": 3,
+        "title": "Program Templates and Client Assignment System",
+        "status": "pending",
+        "details": "Create program template model with multi-week structures, progression schemes, and customizable parameters. Implement template library with categorization (beginner, intermediate, advanced, sport-specific). Build bulk assignment interface for applying templates to multiple clients with individual customizations. Include template versioning and update propagation to assigned clients. Add template sharing and import/export functionality.",
+        "description": "Build program template system for creating reusable workout programs and bulk client assignment functionality",
+        "dependencies": [
+          2
+        ],
+        "testStrategy": "Template creation and modification tests, bulk assignment functionality verification, template versioning and update propagation tests"
+      },
+      {
+        "id": 4,
+        "title": "Nutrition Planning and Meal Management Module",
+        "status": "pending",
+        "details": "Create meal plan builder with drag-and-drop interface for organizing meals by day and time. Implement basic food database with nutritional information (calories, macros, micronutrients). Build recipe system with ingredient scaling and nutritional calculation. Develop automated shopping list generation based on meal plans with ingredient consolidation. Include meal plan templates and dietary restriction filtering (vegetarian, keto, gluten-free).",
+        "description": "Develop comprehensive nutrition module with meal plan builder, food database integration, and automated shopping list generation",
+        "dependencies": [],
+        "testStrategy": "Meal plan creation tests, nutritional calculation accuracy verification, shopping list generation and consolidation tests"
+      },
+      {
+        "id": 5,
+        "title": "Progress Tracking and Compliance Monitoring System",
+        "status": "pending",
+        "details": "Build progress tracking dashboard with customizable charts for weight, body measurements, strength gains, and nutrition adherence. Implement client check-in system for logging workout completion, nutrition compliance, and subjective feedback. Create automated progress reports with visual charts and achievement milestones. Integrate calendar system for scheduling workouts and meal plans with reminder notifications. Include progress photo upload and comparison tools.",
+        "description": "Implement comprehensive progress tracking with customizable charts, client compliance logging, and achievement reporting for both workouts and nutrition",
+        "dependencies": [
+          3,
+          4
+        ],
+        "testStrategy": "Progress data accuracy tests, chart generation and customization verification, compliance tracking functionality tests, calendar integration tests"
+      }
+    ],
+    "description": "Develop workout builder, program templates, nutrition planning, and client progress tracking systems",
+    "dependencies": [
+      1,
+      2
+    ],
+    "testStrategy": "Workout builder functionality tests including complex program structures. File upload and media handling tests. Progress tracking accuracy verification. Nutrition plan generation and shopping list automation tests."
+  },
+  {
+    "id": 5,
+    "title": "Payments, Chat, and Automation Engine",
+    "status": "pending",
+    "details": "Integrate Stripe for subscriptions, session packages, and one-time payments with webhook handling for payment events. Implement 1:1 and group chat system with polling-based refresh, supporting text, images, and voice notes. Build automation engine with rule-based workflows for client onboarding, reminders, and follow-ups using customizable email templates. Create reporting dashboard with KPIs (MRR, ARPA, churn, active clients) and custom report builder with CSV/Excel export. Set up workspace branding system with logo upload and color customization. Implement broadcast messaging and scheduled communications.",
+    "priority": "medium",
+    "subtasks": [
+      {
+        "id": 1,
+        "title": "Implement Stripe Payment Processing System",
+        "status": "pending",
+        "details": "Set up Stripe SDK integration with payment intent creation, subscription management, and webhook endpoint configuration. Implement payment models for different payment types, handle webhook events for payment success/failure/cancellation, ensure idempotency for webhook processing, and create payment history tracking. Include error handling for failed payments and retry mechanisms.",
+        "description": "Integrate Stripe payment gateway for handling subscriptions, session packages, and one-time payments with comprehensive webhook event processing",
+        "dependencies": [],
+        "testStrategy": "Test payment flows for all payment types, webhook idempotency verification, edge cases like network failures, and payment dispute handling"
+      },
+      {
+        "id": 2,
+        "title": "Build Real-time Chat and Messaging System",
+        "status": "pending",
+        "details": "Create chat models for conversations, messages, and participants. Implement message types for text, images, and voice notes with file upload handling. Build polling-based message refresh mechanism, conversation management (create, join, leave), message history retrieval, and real-time status indicators. Include message encryption and content moderation features.",
+        "description": "Develop comprehensive chat system supporting 1:1 and group conversations with multimedia message support and polling-based updates",
+        "dependencies": [],
+        "testStrategy": "Performance testing for message delivery, concurrent user handling, file upload limits, and message polling efficiency"
+      },
+      {
+        "id": 3,
+        "title": "Develop Automation Engine and Workflow System",
+        "status": "pending",
+        "details": "Build workflow engine with trigger conditions, action definitions, and rule evaluation system. Implement email template management with variable substitution, automated client onboarding sequences, reminder systems for appointments/payments, and follow-up campaigns. Include workflow scheduling, execution logging, and performance analytics. Integrate with payment system for payment-triggered workflows.",
+        "description": "Create rule-based automation engine for client onboarding, reminders, and follow-ups with customizable email templates and scheduling",
+        "dependencies": [
+          1
+        ],
+        "testStrategy": "Workflow execution verification, template rendering accuracy, scheduling reliability, and trigger condition testing"
+      },
+      {
+        "id": 4,
+        "title": "Create Reporting Dashboard and Analytics System",
+        "status": "pending",
+        "details": "Develop dashboard with key metrics display (MRR, ARPA, churn rate, active clients), custom report builder with filtering and grouping options, data visualization components (charts, graphs, tables), and export functionality for CSV/Excel formats. Implement data aggregation services, caching for performance, and scheduled report generation. Include date range filtering and comparative analytics.",
+        "description": "Build comprehensive reporting dashboard with KPI tracking, custom report builder, and data export functionality",
+        "dependencies": [
+          1,
+          2
+        ],
+        "testStrategy": "Report generation accuracy verification, export functionality testing, performance testing for large datasets, and data integrity validation"
+      },
+      {
+        "id": 5,
+        "title": "Implement Workspace Branding and Broadcast Messaging",
+        "status": "pending",
+        "details": "Create branding system with logo upload functionality, color scheme customization, and workspace theme management. Implement broadcast messaging system for sending messages to multiple recipients, scheduled communication features, message templates for broadcasts, and delivery tracking. Include recipient list management, message scheduling interface, and delivery status reporting.",
+        "description": "Develop workspace customization system with branding options and broadcast messaging capabilities with scheduling features",
+        "dependencies": [
+          2,
+          3
+        ],
+        "testStrategy": "Branding customization testing, broadcast message delivery verification, scheduling accuracy, and recipient targeting validation"
+      }
+    ],
+    "description": "Integrate payment processing, messaging system, automation workflows, and reporting dashboard",
+    "dependencies": [
+      1,
+      2,
+      3
+    ],
+    "testStrategy": "Stripe integration testing including webhook idempotency and payment flow edge cases. Chat system performance and message delivery testing. Automation workflow execution verification. Report generation accuracy and export functionality testing."
+  }
+]

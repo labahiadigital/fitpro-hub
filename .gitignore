@@ -104,8 +104,7 @@ celerybeat.pid
 # Alembic
 alembic/versions/*.pyc
 
-# Documentation downloads
-documentation/
+# Temporary files
 response.tmp
 
 # Docker
