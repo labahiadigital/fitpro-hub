@@ -1,0 +1,199 @@
+"""Notification endpoints."""
+from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, update
+
+from app.core.database import get_db
+from app.middleware.auth import get_current_user
+from app.models.notification import Notification, NotificationPreference
+from app.models.user import User
+from app.schemas.notification import (
+    NotificationCreate, NotificationUpdate, NotificationResponse, NotificationList,
+    NotificationMarkRead, NotificationMarkAllRead,
+    NotificationPreferenceUpdate, NotificationPreferenceResponse,
+)
+
+router = APIRouter()
+
+
+# ==================== Notifications ====================
+
+@router.get("/", response_model=NotificationList)
+async def list_notifications(
+    category: Optional[str] = None,
+    is_read: Optional[bool] = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List notifications for the current user."""
+    query = select(Notification).where(Notification.user_id == current_user.id)
+    
+    if category:
+        query = query.where(Notification.category == category)
+    if is_read is not None:
+        query = query.where(Notification.is_read == is_read)
+    
+    # Order by newest first
+    query = query.order_by(Notification.created_at.desc())
+    
+    # Count total
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(count_query)
+    
+    # Count unread
+    unread_query = select(func.count()).where(
+        Notification.user_id == current_user.id,
+        Notification.is_read == False,
+    )
+    unread_count = await db.scalar(unread_query) or 0
+    
+    # Apply pagination
+    query = query.offset((page - 1) * size).limit(size)
+    result = await db.execute(query)
+    notifications = result.scalars().all()
+    
+    return NotificationList(
+        items=[NotificationResponse.model_validate(n) for n in notifications],
+        total=total or 0,
+        unread_count=unread_count,
+        page=page,
+        size=size,
+    )
+
+
+@router.get("/unread-count")
+async def get_unread_count(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get count of unread notifications."""
+    count = await db.scalar(
+        select(func.count()).where(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False,
+        )
+    )
+    return {"unread_count": count or 0}
+
+
+@router.post("/mark-read", status_code=status.HTTP_200_OK)
+async def mark_notifications_read(
+    data: NotificationMarkRead,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark specific notifications as read."""
+    await db.execute(
+        update(Notification)
+        .where(
+            Notification.id.in_(data.notification_ids),
+            Notification.user_id == current_user.id,
+        )
+        .values(is_read=True, read_at=datetime.utcnow().isoformat())
+    )
+    await db.commit()
+    return {"message": "Notifications marked as read"}
+
+
+@router.post("/mark-all-read", status_code=status.HTTP_200_OK)
+async def mark_all_notifications_read(
+    data: NotificationMarkAllRead,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark all notifications as read."""
+    query = (
+        update(Notification)
+        .where(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False,
+        )
+        .values(is_read=True, read_at=datetime.utcnow().isoformat())
+    )
+    
+    if data.category:
+        query = query.where(Notification.category == data.category)
+    
+    await db.execute(query)
+    await db.commit()
+    return {"message": "All notifications marked as read"}
+
+
+@router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_notification(
+    notification_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a notification."""
+    result = await db.execute(
+        select(Notification).where(
+            Notification.id == notification_id,
+            Notification.user_id == current_user.id,
+        )
+    )
+    notification = result.scalar_one_or_none()
+    
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    await db.delete(notification)
+    await db.commit()
+
+
+# ==================== Notification Preferences ====================
+
+@router.get("/preferences", response_model=NotificationPreferenceResponse)
+async def get_notification_preferences(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get notification preferences for the current user."""
+    result = await db.execute(
+        select(NotificationPreference).where(
+            NotificationPreference.user_id == current_user.id
+        )
+    )
+    preferences = result.scalar_one_or_none()
+    
+    if not preferences:
+        # Create default preferences
+        preferences = NotificationPreference(user_id=current_user.id)
+        db.add(preferences)
+        await db.commit()
+        await db.refresh(preferences)
+    
+    return NotificationPreferenceResponse.model_validate(preferences)
+
+
+@router.patch("/preferences", response_model=NotificationPreferenceResponse)
+async def update_notification_preferences(
+    data: NotificationPreferenceUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update notification preferences."""
+    result = await db.execute(
+        select(NotificationPreference).where(
+            NotificationPreference.user_id == current_user.id
+        )
+    )
+    preferences = result.scalar_one_or_none()
+    
+    if not preferences:
+        preferences = NotificationPreference(user_id=current_user.id)
+        db.add(preferences)
+    
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(preferences, field, value)
+    
+    await db.commit()
+    await db.refresh(preferences)
+    return NotificationPreferenceResponse.model_validate(preferences)
+

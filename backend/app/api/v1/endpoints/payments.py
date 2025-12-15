@@ -1,0 +1,324 @@
+from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from pydantic import BaseModel
+import stripe
+
+from app.core.config import settings
+from app.core.database import get_db
+from app.models.payment import StripeAccount, Subscription, Payment, SubscriptionStatus, PaymentStatus
+from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
+
+router = APIRouter()
+
+# Initialize Stripe
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+# ============ SCHEMAS ============
+
+class StripeConnectRequest(BaseModel):
+    return_url: str
+    refresh_url: str
+
+
+class SubscriptionCreate(BaseModel):
+    client_id: UUID
+    name: str
+    description: Optional[str] = None
+    amount: float
+    currency: str = "EUR"
+    interval: str = "month"
+    stripe_price_id: Optional[str] = None
+
+
+class SubscriptionResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    client_id: UUID
+    name: str
+    description: Optional[str]
+    status: SubscriptionStatus
+    amount: float
+    currency: str
+    interval: str
+    current_period_start: Optional[datetime]
+    current_period_end: Optional[datetime]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class PaymentResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    client_id: UUID
+    description: Optional[str]
+    amount: float
+    currency: str
+    status: PaymentStatus
+    payment_type: str
+    paid_at: Optional[datetime]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# ============ STRIPE CONNECT ============
+
+@router.post("/connect")
+async def connect_stripe_account(
+    data: StripeConnectRequest,
+    current_user: CurrentUser = Depends(require_owner),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Iniciar proceso de conexión de cuenta Stripe.
+    """
+    try:
+        # Check if already connected
+        result = await db.execute(
+            select(StripeAccount).where(
+                StripeAccount.workspace_id == current_user.workspace_id
+            )
+        )
+        existing = result.scalar_one_or_none()
+        
+        if existing and existing.onboarding_complete == "Y":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ya tienes una cuenta Stripe conectada"
+            )
+        
+        # Create or get Stripe Connect account
+        if existing:
+            account_id = existing.stripe_account_id
+        else:
+            account = stripe.Account.create(
+                type="express",
+                country="ES",
+                capabilities={
+                    "card_payments": {"requested": True},
+                    "transfers": {"requested": True},
+                },
+            )
+            account_id = account.id
+            
+            # Save to database
+            stripe_account = StripeAccount(
+                workspace_id=current_user.workspace_id,
+                stripe_account_id=account_id
+            )
+            db.add(stripe_account)
+            await db.commit()
+        
+        # Create account link for onboarding
+        account_link = stripe.AccountLink.create(
+            account=account_id,
+            refresh_url=data.refresh_url,
+            return_url=data.return_url,
+            type="account_onboarding",
+        )
+        
+        return {"url": account_link.url}
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error de Stripe: {str(e)}"
+        )
+
+
+@router.get("/connect/status")
+async def get_stripe_status(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verificar estado de conexión de Stripe.
+    """
+    result = await db.execute(
+        select(StripeAccount).where(
+            StripeAccount.workspace_id == current_user.workspace_id
+        )
+    )
+    stripe_account = result.scalar_one_or_none()
+    
+    if not stripe_account:
+        return {"connected": False, "onboarding_complete": False}
+    
+    # Check account status with Stripe
+    try:
+        account = stripe.Account.retrieve(stripe_account.stripe_account_id)
+        
+        onboarding_complete = account.charges_enabled and account.payouts_enabled
+        
+        if onboarding_complete and stripe_account.onboarding_complete != "Y":
+            stripe_account.onboarding_complete = "Y"
+            await db.commit()
+        
+        return {
+            "connected": True,
+            "onboarding_complete": onboarding_complete,
+            "charges_enabled": account.charges_enabled,
+            "payouts_enabled": account.payouts_enabled
+        }
+        
+    except stripe.error.StripeError:
+        return {"connected": True, "onboarding_complete": False}
+
+
+# ============ SUBSCRIPTIONS ============
+
+@router.get("/subscriptions", response_model=List[SubscriptionResponse])
+async def list_subscriptions(
+    client_id: Optional[UUID] = None,
+    status: Optional[SubscriptionStatus] = None,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Listar suscripciones del workspace.
+    """
+    query = select(Subscription).where(
+        Subscription.workspace_id == current_user.workspace_id
+    )
+    
+    if client_id:
+        query = query.where(Subscription.client_id == client_id)
+    
+    if status:
+        query = query.where(Subscription.status == status)
+    
+    result = await db.execute(query.order_by(Subscription.created_at.desc()))
+    return result.scalars().all()
+
+
+@router.post("/subscriptions", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+async def create_subscription(
+    data: SubscriptionCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Crear una nueva suscripción.
+    """
+    subscription = Subscription(
+        workspace_id=current_user.workspace_id,
+        client_id=data.client_id,
+        name=data.name,
+        description=data.description,
+        amount=data.amount,
+        currency=data.currency,
+        interval=data.interval,
+        stripe_price_id=data.stripe_price_id,
+        status=SubscriptionStatus.ACTIVE,
+        current_period_start=datetime.utcnow()
+    )
+    db.add(subscription)
+    await db.commit()
+    await db.refresh(subscription)
+    return subscription
+
+
+@router.delete("/subscriptions/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_subscription(
+    subscription_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Cancelar una suscripción.
+    """
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.id == subscription_id,
+            Subscription.workspace_id == current_user.workspace_id
+        )
+    )
+    subscription = result.scalar_one_or_none()
+    
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Suscripción no encontrada"
+        )
+    
+    subscription.status = SubscriptionStatus.CANCELLED
+    subscription.cancelled_at = datetime.utcnow()
+    await db.commit()
+
+
+# ============ PAYMENTS ============
+
+@router.get("/payments", response_model=List[PaymentResponse])
+async def list_payments(
+    client_id: Optional[UUID] = None,
+    status: Optional[PaymentStatus] = None,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Listar pagos del workspace.
+    """
+    query = select(Payment).where(
+        Payment.workspace_id == current_user.workspace_id
+    )
+    
+    if client_id:
+        query = query.where(Payment.client_id == client_id)
+    
+    if status:
+        query = query.where(Payment.status == status)
+    
+    result = await db.execute(query.order_by(Payment.created_at.desc()))
+    return result.scalars().all()
+
+
+# ============ WEBHOOKS ============
+
+@router.post("/webhook")
+async def stripe_webhook(
+    request: Request,
+    stripe_signature: str = Header(None, alias="Stripe-Signature"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Manejar webhooks de Stripe.
+    """
+    payload = await request.body()
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, stripe_signature, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    
+    # Handle the event
+    if event.type == "payment_intent.succeeded":
+        payment_intent = event.data.object
+        # Update payment status in database
+        # TODO: Find and update payment record
+        
+    elif event.type == "payment_intent.payment_failed":
+        payment_intent = event.data.object
+        # Handle failed payment
+        
+    elif event.type == "customer.subscription.updated":
+        subscription = event.data.object
+        # Update subscription status
+        
+    elif event.type == "customer.subscription.deleted":
+        subscription = event.data.object
+        # Handle subscription cancellation
+    
+    return {"status": "ok"}
+
