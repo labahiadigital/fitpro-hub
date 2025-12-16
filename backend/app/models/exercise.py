@@ -1,18 +1,17 @@
 """Exercise and Food library models."""
 from sqlalchemy import Column, String, Text, Numeric, Integer, Boolean, ForeignKey, ARRAY
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declared_attr
 import uuid
 
-from .base import Base, TimestampMixin, WorkspaceMixin
+from app.models.base import BaseModel
 
 
-class ExerciseCategory(Base, TimestampMixin):
+class ExerciseCategory(BaseModel):
     """Exercise category model."""
     
     __tablename__ = "exercise_categories"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(100), nullable=False)
     description = Column(Text)
     icon = Column(String(50))
@@ -21,15 +20,15 @@ class ExerciseCategory(Base, TimestampMixin):
     
     # Relationships
     exercises = relationship("Exercise", back_populates="category")
-    children = relationship("ExerciseCategory", backref="parent", remote_side=[id])
+    children = relationship("ExerciseCategory", backref="parent", remote_side="ExerciseCategory.id")
 
 
-class Exercise(Base, TimestampMixin, WorkspaceMixin):
+class Exercise(BaseModel):
     """Exercise library model."""
     
     __tablename__ = "exercises"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey('exercise_categories.id', ondelete='SET NULL'))
     name = Column(String(255), nullable=False)
     description = Column(Text)
@@ -47,12 +46,11 @@ class Exercise(Base, TimestampMixin, WorkspaceMixin):
     category = relationship("ExerciseCategory", back_populates="exercises")
 
 
-class FoodCategory(Base, TimestampMixin):
+class FoodCategory(BaseModel):
     """Food category model."""
     
     __tablename__ = "food_categories"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(100), nullable=False)
     description = Column(Text)
     icon = Column(String(50))
@@ -61,15 +59,15 @@ class FoodCategory(Base, TimestampMixin):
     
     # Relationships
     foods = relationship("Food", back_populates="category")
-    children = relationship("FoodCategory", backref="parent", remote_side=[id])
+    children = relationship("FoodCategory", backref="parent", remote_side="FoodCategory.id")
 
 
-class Food(Base, TimestampMixin, WorkspaceMixin):
+class Food(BaseModel):
     """Food library model."""
     
     __tablename__ = "foods"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey('food_categories.id', ondelete='SET NULL'))
     name = Column(String(255), nullable=False)
     brand = Column(String(100))
@@ -92,12 +90,11 @@ class Food(Base, TimestampMixin, WorkspaceMixin):
     category = relationship("FoodCategory", back_populates="foods")
 
 
-class ClientMeasurement(Base, TimestampMixin):
+class ClientMeasurement(BaseModel):
     """Client body measurements and progress tracking."""
     
     __tablename__ = "client_measurements"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     client_id = Column(UUID(as_uuid=True), ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
     measured_at = Column(String, nullable=False)
     weight_kg = Column(Numeric(5, 2))
@@ -111,12 +108,12 @@ class ClientMeasurement(Base, TimestampMixin):
     client = relationship("Client", back_populates="measurements")
 
 
-class ClientTask(Base, TimestampMixin, WorkspaceMixin):
+class ClientTask(BaseModel):
     """Tasks/Activities assigned to clients."""
     
     __tablename__ = "client_tasks"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     client_id = Column(UUID(as_uuid=True), ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
     assigned_by = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'))
     title = Column(String(255), nullable=False)
@@ -132,4 +129,3 @@ class ClientTask(Base, TimestampMixin, WorkspaceMixin):
     # Relationships
     client = relationship("Client", back_populates="tasks")
     assigned_by_user = relationship("User")
-

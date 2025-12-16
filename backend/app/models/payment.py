@@ -48,6 +48,7 @@ class Subscription(BaseModel):
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     
     # Stripe subscription
     stripe_subscription_id = Column(String(255), unique=True, nullable=True)
@@ -71,6 +72,9 @@ class Subscription(BaseModel):
     
     # Extra data
     extra_data = Column(JSONB, default={})
+    
+    # Relationships
+    product = relationship("Product", back_populates="subscriptions")
     
     def __repr__(self):
         return f"<Subscription {self.name}>"

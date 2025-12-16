@@ -1,4 +1,4 @@
-from app.models.base import Base, BaseModel, TimestampMixin, WorkspaceMixin
+from app.models.base import Base, BaseModel, TimestampMixin
 from app.models.workspace import Workspace
 from app.models.user import User, UserRole
 from app.models.client import Client, ClientTag
@@ -18,7 +18,6 @@ __all__ = [
     "Base",
     "BaseModel",
     "TimestampMixin",
-    "WorkspaceMixin",
     "Workspace",
     "User",
     "UserRole",

@@ -4,15 +4,15 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
 
-from .base import Base, TimestampMixin, WorkspaceMixin
+from app.models.base import BaseModel
 
 
-class Product(Base, TimestampMixin, WorkspaceMixin):
+class Product(BaseModel):
     """Product/Service model for subscriptions and one-time purchases."""
     
     __tablename__ = "products"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
     product_type = Column(String(50), nullable=False, default='subscription')  # subscription, one_time, package
@@ -31,12 +31,12 @@ class Product(Base, TimestampMixin, WorkspaceMixin):
     subscriptions = relationship("Subscription", back_populates="product")
 
 
-class SessionPackage(Base, TimestampMixin, WorkspaceMixin):
+class SessionPackage(BaseModel):
     """Session package (bonos) model."""
     
     __tablename__ = "session_packages"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     product_id = Column(UUID(as_uuid=True), ForeignKey('products.id', ondelete='SET NULL'))
     name = Column(String(255), nullable=False)
     description = Column(Text)
@@ -52,12 +52,12 @@ class SessionPackage(Base, TimestampMixin, WorkspaceMixin):
     client_packages = relationship("ClientPackage", back_populates="package")
 
 
-class ClientPackage(Base, TimestampMixin, WorkspaceMixin):
+class ClientPackage(BaseModel):
     """Client purchased package model."""
     
     __tablename__ = "client_packages"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     client_id = Column(UUID(as_uuid=True), ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
     package_id = Column(UUID(as_uuid=True), ForeignKey('session_packages.id', ondelete='CASCADE'), nullable=False)
     payment_id = Column(UUID(as_uuid=True), ForeignKey('payments.id', ondelete='SET NULL'))
@@ -72,12 +72,12 @@ class ClientPackage(Base, TimestampMixin, WorkspaceMixin):
     package = relationship("SessionPackage", back_populates="client_packages")
 
 
-class Coupon(Base, TimestampMixin, WorkspaceMixin):
+class Coupon(BaseModel):
     """Discount coupon model."""
     
     __tablename__ = "coupons"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     code = Column(String(50), nullable=False)
     description = Column(Text)
     discount_type = Column(String(20), nullable=False, default='percentage')  # percentage, fixed
@@ -88,4 +88,3 @@ class Coupon(Base, TimestampMixin, WorkspaceMixin):
     valid_until = Column(String)
     applicable_products = Column(ARRAY(UUID(as_uuid=True)), default=[])
     is_active = Column(Boolean, default=True)
-

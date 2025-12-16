@@ -4,15 +4,15 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
 
-from .base import Base, TimestampMixin, WorkspaceMixin
+from app.models.base import BaseModel
 
 
-class Notification(Base, TimestampMixin, WorkspaceMixin):
+class Notification(BaseModel):
     """In-app notification model."""
     
     __tablename__ = "notifications"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
@@ -28,12 +28,11 @@ class Notification(Base, TimestampMixin, WorkspaceMixin):
     user = relationship("User", back_populates="notifications")
 
 
-class NotificationPreference(Base, TimestampMixin):
+class NotificationPreference(BaseModel):
     """User notification preferences."""
     
     __tablename__ = "notification_preferences"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
     
     # Email notifications
@@ -61,12 +60,12 @@ class NotificationPreference(Base, TimestampMixin):
     user = relationship("User", back_populates="notification_preferences")
 
 
-class EmailTemplate(Base, TimestampMixin, WorkspaceMixin):
+class EmailTemplate(BaseModel):
     """Custom email templates for workspace."""
     
     __tablename__ = "email_templates"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     name = Column(String(100), nullable=False)
     slug = Column(String(100), nullable=False)  # welcome, booking_confirmation, payment_receipt, etc.
     subject = Column(String(255), nullable=False)
@@ -76,12 +75,12 @@ class EmailTemplate(Base, TimestampMixin, WorkspaceMixin):
     is_active = Column(Boolean, default=True)
 
 
-class ScheduledNotification(Base, TimestampMixin, WorkspaceMixin):
+class ScheduledNotification(BaseModel):
     """Scheduled notifications for automation."""
     
     __tablename__ = "scheduled_notifications"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     recipient_type = Column(String(20), nullable=False)  # user, client
     recipient_id = Column(UUID(as_uuid=True), nullable=False)
     channel = Column(String(20), nullable=False)  # email, push, inapp
@@ -98,4 +97,3 @@ class ScheduledNotification(Base, TimestampMixin, WorkspaceMixin):
     # Relationships
     template = relationship("EmailTemplate")
     automation = relationship("Automation")
-
