@@ -26,11 +26,12 @@ ENV PATH=/root/.local/bin:$PATH
 EXPOSE 8000
 
 # Health check with longer start period for app initialization
-HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=5 \
+HEALTHCHECK --interval=10s --timeout=10s --start-period=60s --retries=10 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application with gunicorn for production
-# - Using 2 workers instead of 4 to reduce memory usage
+# - Using 1 worker to minimize memory usage on small servers
 # - Timeout of 120s to allow for slow startup with Supabase connections
 # - Graceful timeout for clean shutdowns
-CMD ["gunicorn", "app.main:app", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--timeout", "120", "--graceful-timeout", "30"]
+# - Preload app to catch startup errors early
+CMD ["gunicorn", "app.main:app", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--timeout", "120", "--graceful-timeout", "30", "--preload"]
