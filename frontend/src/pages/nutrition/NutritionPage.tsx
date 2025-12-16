@@ -26,6 +26,7 @@ import {
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
+import { notifications } from '@mantine/notifications'
 import {
   IconApple,
   IconTemplate,
@@ -39,11 +40,20 @@ import {
   IconBread,
   IconMilk,
   IconEgg,
+  IconCheck,
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { EmptyState } from '../../components/common/EmptyState'
 import { MealPlanBuilder, DayPlan, Meal, Food } from '../../components/nutrition/MealPlanBuilder'
-import { useSupabaseFoods } from '../../hooks/useSupabaseData'
+import { 
+  useSupabaseFoods, 
+  useSupabaseMealPlans,
+  useCreateMealPlan,
+  useUpdateMealPlan,
+  useDeleteMealPlan,
+  useCreateFood,
+  useDeleteFood,
+} from '../../hooks/useSupabaseData'
 
 // Función para mapear categoría de la BD a categoría del frontend
 function mapCategory(dbCategory: string | null): string {
@@ -59,31 +69,20 @@ function mapCategory(dbCategory: string | null): string {
   return 'Otros'
 }
 
-// Mock meal plans (estos se cargarán de Supabase en el futuro)
-const mockMealPlans = [
-  {
-    id: '1',
-    name: 'Plan Pérdida de Peso',
-    description: 'Plan nutricional diseñado para déficit calórico controlado',
-    duration_days: 7,
-    target_calories: 1800,
-    target_protein: 140,
-    target_carbs: 180,
-    target_fat: 60,
-    tags: ['déficit', 'proteína alta'],
-  },
-  {
-    id: '2',
-    name: 'Plan Ganancia Muscular',
-    description: 'Plan con superávit calórico para hipertrofia',
-    duration_days: 7,
-    target_calories: 2800,
-    target_protein: 180,
-    target_carbs: 320,
-    target_fat: 90,
-    tags: ['superávit', 'masa muscular'],
-  },
-]
+// Función para mapear categoría del frontend a la BD
+function categoryToDb(category: string): string {
+  const mapping: Record<string, string> = {
+    'Proteínas': 'en:meats',
+    'Carbohidratos': 'en:cereals-and-potatoes',
+    'Verduras': 'en:vegetables',
+    'Frutas': 'en:fruits',
+    'Lácteos': 'en:dairies',
+    'Grasas': 'en:fats',
+    'Frutos Secos': 'en:nuts',
+    'Otros': 'en:other',
+  }
+  return mapping[category] || category
+}
 
 const initialDays: DayPlan[] = [
   { id: 'day-1', day: 1, dayName: 'Lunes', meals: [] as Meal[], notes: '' },
@@ -102,10 +101,17 @@ export function NutritionPage() {
   const [searchFood, setSearchFood] = useState('')
   const [mealPlanDays, setMealPlanDays] = useState(initialDays)
   const [editingPlan, setEditingPlan] = useState<any>(null)
-  const [mealPlans, setMealPlans] = useState(mockMealPlans)
   
-  // Cargar alimentos desde Supabase
+  // Cargar datos desde Supabase
   const { data: supabaseFoods, isLoading: isLoadingFoods } = useSupabaseFoods()
+  const { data: supabaseMealPlans, isLoading: isLoadingPlans } = useSupabaseMealPlans()
+  
+  // Mutations
+  const createMealPlan = useCreateMealPlan()
+  const updateMealPlan = useUpdateMealPlan()
+  const deleteMealPlan = useDeleteMealPlan()
+  const createFood = useCreateFood()
+  const deleteFood = useDeleteFood()
   
   // Mapear los datos de Supabase al formato del frontend
   const foods: Food[] = useMemo(() => {
@@ -121,6 +127,26 @@ export function NutritionPage() {
       category: mapCategory(food.category),
     }))
   }, [supabaseFoods])
+
+  // Mapear planes nutricionales
+  const mealPlans = useMemo(() => {
+    if (!supabaseMealPlans) return []
+    return supabaseMealPlans.map((plan: any) => ({
+      id: plan.id,
+      name: plan.name,
+      description: plan.description,
+      duration_days: plan.duration_days || 7,
+      target_calories: plan.target_calories || 2000,
+      target_protein: plan.target_protein || 150,
+      target_carbs: plan.target_carbs || 200,
+      target_fat: plan.target_fat || 70,
+      dietary_tags: plan.dietary_tags || [],
+      plan: plan.plan || { days: [] },
+      client_name: plan.clients 
+        ? `${plan.clients.first_name} ${plan.clients.last_name}`
+        : null,
+    }))
+  }, [supabaseMealPlans])
   
   const foodForm = useForm({
     initialValues: {
@@ -146,7 +172,7 @@ export function NutritionPage() {
       target_protein: 150,
       target_carbs: 200,
       target_fat: 70,
-      tags: [] as string[],
+      dietary_tags: [] as string[],
     },
     validate: {
       name: (value) => (value.length < 2 ? 'Nombre requerido' : null),
@@ -154,9 +180,48 @@ export function NutritionPage() {
   })
   
   const handleCreateFood = async (values: typeof foodForm.values) => {
-    console.log('Creating food:', values)
-    closeFoodModal()
-    foodForm.reset()
+    try {
+      await createFood.mutateAsync({
+        name: values.name,
+        category: categoryToDb(values.category),
+        calories: values.calories,
+        protein_g: values.protein,
+        carbs_g: values.carbs,
+        fat_g: values.fat,
+        quantity: values.serving_size,
+      })
+      notifications.show({
+        title: 'Alimento creado',
+        message: `${values.name} se ha añadido a tu biblioteca`,
+        color: 'green',
+        icon: <IconCheck size={16} />,
+      })
+      closeFoodModal()
+      foodForm.reset()
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo crear el alimento',
+        color: 'red',
+      })
+    }
+  }
+
+  const handleDeleteFood = async (foodId: string, foodName: string) => {
+    try {
+      await deleteFood.mutateAsync(foodId)
+      notifications.show({
+        title: 'Alimento eliminado',
+        message: `${foodName} se ha eliminado de tu biblioteca`,
+        color: 'green',
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo eliminar el alimento',
+        color: 'red',
+      })
+    }
   }
 
   const openPlanBuilder = (plan?: any) => {
@@ -170,8 +235,14 @@ export function NutritionPage() {
         target_protein: plan.target_protein,
         target_carbs: plan.target_carbs,
         target_fat: plan.target_fat,
-        tags: plan.tags || [],
+        dietary_tags: plan.dietary_tags || [],
       })
+      // Cargar los días del plan si existen
+      if (plan.plan?.days?.length > 0) {
+        setMealPlanDays(plan.plan.days)
+      } else {
+        setMealPlanDays(initialDays)
+      }
     } else {
       setEditingPlan(null)
       setMealPlanDays(initialDays)
@@ -180,26 +251,99 @@ export function NutritionPage() {
     openBuilder()
   }
 
-  const handleSavePlan = () => {
+  const handleSavePlan = async () => {
     const values = planForm.values
     if (!values.name) return
 
-    const newPlan = {
-      id: editingPlan?.id || `plan-${Date.now()}`,
-      ...values,
-      days: mealPlanDays,
-    }
+    try {
+      const planData = {
+        name: values.name,
+        description: values.description,
+        duration_days: values.duration_days,
+        target_calories: values.target_calories,
+        target_protein: values.target_protein,
+        target_carbs: values.target_carbs,
+        target_fat: values.target_fat,
+        dietary_tags: values.dietary_tags,
+        plan: { days: mealPlanDays },
+        is_template: true,
+      }
 
-    if (editingPlan) {
-      setMealPlans(plans => plans.map(p => p.id === editingPlan.id ? newPlan : p))
-    } else {
-      setMealPlans(plans => [...plans, newPlan])
-    }
+      if (editingPlan) {
+        await updateMealPlan.mutateAsync({ id: editingPlan.id, ...planData })
+        notifications.show({
+          title: 'Plan actualizado',
+          message: `${values.name} se ha actualizado correctamente`,
+          color: 'green',
+          icon: <IconCheck size={16} />,
+        })
+      } else {
+        await createMealPlan.mutateAsync(planData)
+        notifications.show({
+          title: 'Plan creado',
+          message: `${values.name} se ha creado correctamente`,
+          color: 'green',
+          icon: <IconCheck size={16} />,
+        })
+      }
 
-    closeBuilder()
-    planForm.reset()
-    setMealPlanDays(initialDays)
-    setEditingPlan(null)
+      closeBuilder()
+      planForm.reset()
+      setMealPlanDays(initialDays)
+      setEditingPlan(null)
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo guardar el plan',
+        color: 'red',
+      })
+    }
+  }
+
+  const handleDeletePlan = async (planId: string, planName: string) => {
+    try {
+      await deleteMealPlan.mutateAsync(planId)
+      notifications.show({
+        title: 'Plan eliminado',
+        message: `${planName} se ha eliminado correctamente`,
+        color: 'green',
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo eliminar el plan',
+        color: 'red',
+      })
+    }
+  }
+
+  const handleDuplicatePlan = async (plan: any) => {
+    try {
+      await createMealPlan.mutateAsync({
+        name: `${plan.name} (copia)`,
+        description: plan.description,
+        duration_days: plan.duration_days,
+        target_calories: plan.target_calories,
+        target_protein: plan.target_protein,
+        target_carbs: plan.target_carbs,
+        target_fat: plan.target_fat,
+        dietary_tags: plan.dietary_tags,
+        plan: plan.plan,
+        is_template: true,
+      })
+      notifications.show({
+        title: 'Plan duplicado',
+        message: `Se ha creado una copia de ${plan.name}`,
+        color: 'green',
+        icon: <IconCheck size={16} />,
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo duplicar el plan',
+        color: 'red',
+      })
+    }
   }
 
   const getCategoryIcon = (category: string) => {
@@ -246,15 +390,19 @@ export function NutritionPage() {
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List mb="lg">
           <Tabs.Tab value="plans" leftSection={<IconTemplate size={14} />}>
-            Planes Nutricionales
+            Planes Nutricionales {mealPlans.length > 0 && <Badge size="xs" ml="xs">{mealPlans.length}</Badge>}
           </Tabs.Tab>
           <Tabs.Tab value="foods" leftSection={<IconApple size={14} />}>
-            Biblioteca de Alimentos
+            Biblioteca de Alimentos {foods.length > 0 && <Badge size="xs" ml="xs">{foods.length}</Badge>}
           </Tabs.Tab>
         </Tabs.List>
         
         <Tabs.Panel value="plans">
-          {mealPlans.length > 0 ? (
+          {isLoadingPlans ? (
+            <Center py="xl">
+              <Loader size="lg" />
+            </Center>
+          ) : mealPlans.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
               {mealPlans.map((plan) => (
                 <Card key={plan.id} withBorder radius="lg" padding="lg">
@@ -271,6 +419,12 @@ export function NutritionPage() {
                     {plan.description || 'Sin descripción'}
                   </Text>
 
+                  {plan.client_name && (
+                    <Badge size="sm" variant="outline" color="blue" mt="sm">
+                      Asignado a: {plan.client_name}
+                    </Badge>
+                  )}
+
                   <Stack gap="xs" mt="md">
                     <Group justify="space-between">
                       <Text size="xs" c="dimmed">Calorías objetivo</Text>
@@ -284,7 +438,7 @@ export function NutritionPage() {
                   </Stack>
                   
                   <Group gap="xs" mt="md">
-                    {plan.tags?.slice(0, 2).map((tag: string) => (
+                    {plan.dietary_tags?.slice(0, 2).map((tag: string) => (
                       <Badge key={tag} size="sm" variant="outline">
                         {tag}
                       </Badge>
@@ -304,10 +458,20 @@ export function NutritionPage() {
                     <ActionIcon variant="light" color="blue">
                       <IconEye size={16} />
                     </ActionIcon>
-                    <ActionIcon variant="light" color="gray">
+                    <ActionIcon 
+                      variant="light" 
+                      color="gray"
+                      onClick={() => handleDuplicatePlan(plan)}
+                      loading={createMealPlan.isPending}
+                    >
                       <IconCopy size={16} />
                     </ActionIcon>
-                    <ActionIcon variant="light" color="red">
+                    <ActionIcon 
+                      variant="light" 
+                      color="red"
+                      onClick={() => handleDeletePlan(plan.id, plan.name)}
+                      loading={deleteMealPlan.isPending}
+                    >
                       <IconTrash size={16} />
                     </ActionIcon>
                   </Group>
@@ -340,7 +504,7 @@ export function NutritionPage() {
             </Center>
           ) : filteredFoods.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
-              {filteredFoods.map((food) => {
+              {filteredFoods.slice(0, 100).map((food) => {
                 const CategoryIcon = getCategoryIcon(food.category)
                 return (
                   <Card key={food.id} withBorder radius="md" padding="sm">
@@ -361,6 +525,14 @@ export function NutritionPage() {
                           {food.category}
                         </Badge>
                       </Box>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        size="sm"
+                        onClick={() => handleDeleteFood(food.id, food.name)}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
                     </Group>
 
                     <Divider mb="sm" />
@@ -396,6 +568,12 @@ export function NutritionPage() {
               actionLabel="Añadir Alimento"
               onAction={openFoodModal}
             />
+          )}
+          
+          {filteredFoods.length > 100 && (
+            <Text size="sm" c="dimmed" ta="center" mt="lg">
+              Mostrando 100 de {filteredFoods.length} alimentos. Usa el buscador para filtrar.
+            </Text>
           )}
         </Tabs.Panel>
       </Tabs>
@@ -450,18 +628,21 @@ export function NutritionPage() {
                 label="Proteína (g)"
                 placeholder="0"
                 min={0}
+                decimalScale={1}
                 {...foodForm.getInputProps('protein')}
               />
               <NumberInput
                 label="Carbohidratos (g)"
                 placeholder="0"
                 min={0}
+                decimalScale={1}
                 {...foodForm.getInputProps('carbs')}
               />
               <NumberInput
                 label="Grasas (g)"
                 placeholder="0"
                 min={0}
+                decimalScale={1}
                 {...foodForm.getInputProps('fat')}
               />
             </Group>
@@ -470,7 +651,7 @@ export function NutritionPage() {
               <Button variant="default" onClick={closeFoodModal}>
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button type="submit" loading={createFood.isPending}>
                 Crear Alimento
               </Button>
             </Group>
@@ -561,7 +742,10 @@ export function NutritionPage() {
           <Button variant="default" onClick={closeBuilder}>
             Cancelar
           </Button>
-          <Button onClick={handleSavePlan}>
+          <Button 
+            onClick={handleSavePlan}
+            loading={createMealPlan.isPending || updateMealPlan.isPending}
+          >
             {editingPlan ? 'Guardar Cambios' : 'Crear Plan'}
           </Button>
         </Group>

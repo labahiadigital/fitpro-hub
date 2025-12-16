@@ -152,6 +152,153 @@ export function useSupabaseMealPlans() {
   })
 }
 
+// Hook para crear un plan nutricional
+export function useCreateMealPlan() {
+  const queryClient = useQueryClient()
+  const { isDemoMode, currentWorkspace, user } = useAuthStore()
+  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+
+  return useMutation({
+    mutationFn: async (data: {
+      name: string
+      description?: string
+      duration_days?: number
+      target_calories?: number
+      target_protein?: number
+      target_carbs?: number
+      target_fat?: number
+      dietary_tags?: string[]
+      plan?: object
+      is_template?: boolean
+    }) => {
+      const { data: plan, error } = await supabase
+        .from('meal_plans')
+        .insert({
+          ...data,
+          workspace_id: workspaceId,
+          created_by: user?.id,
+          is_template: data.is_template ?? true,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return plan
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supabase-meal-plans'] })
+    },
+  })
+}
+
+// Hook para actualizar un plan nutricional
+export function useUpdateMealPlan() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: {
+      id: string
+      name?: string
+      description?: string
+      duration_days?: number
+      target_calories?: number
+      target_protein?: number
+      target_carbs?: number
+      target_fat?: number
+      dietary_tags?: string[]
+      plan?: object
+      is_template?: boolean
+    }) => {
+      const { data: plan, error } = await supabase
+        .from('meal_plans')
+        .update({ ...data, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return plan
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supabase-meal-plans'] })
+    },
+  })
+}
+
+// Hook para eliminar un plan nutricional
+export function useDeleteMealPlan() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('meal_plans')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supabase-meal-plans'] })
+    },
+  })
+}
+
+// Hook para crear un alimento
+export function useCreateFood() {
+  const queryClient = useQueryClient()
+  const { isDemoMode, currentWorkspace } = useAuthStore()
+  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+
+  return useMutation({
+    mutationFn: async (data: {
+      name: string
+      category?: string
+      calories?: number
+      protein_g?: number
+      carbs_g?: number
+      fat_g?: number
+      quantity?: string
+      brand?: string
+    }) => {
+      const { data: food, error } = await supabase
+        .from('foods')
+        .insert({
+          ...data,
+          workspace_id: workspaceId,
+          is_global: false,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return food
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supabase-foods'] })
+    },
+  })
+}
+
+// Hook para eliminar un alimento
+export function useDeleteFood() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('foods')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supabase-foods'] })
+    },
+  })
+}
+
 // Hook para obtener tags de clientes
 export function useSupabaseClientTags() {
   const { isDemoMode, currentWorkspace } = useAuthStore()
