@@ -2,13 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../services/supabase'
 import { useAuthStore } from '../stores/auth'
 
-// Demo workspace ID para pruebas
+// Demo workspace ID para pruebas - usado como fallback cuando no hay workspace
 const DEMO_WORKSPACE_ID = '11111111-1111-1111-1111-111111111111'
+
+// Helper para obtener el workspace ID, siempre fallback a demo
+function useWorkspaceId() {
+  const { isDemoMode, currentWorkspace } = useAuthStore()
+  // Siempre usar demo workspace si no hay workspace definido
+  return isDemoMode || !currentWorkspace?.id ? DEMO_WORKSPACE_ID : currentWorkspace.id
+}
 
 // Hook para obtener clientes desde Supabase
 export function useSupabaseClients() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-clients', workspaceId],
@@ -37,8 +43,7 @@ export function useSupabaseClients() {
 
 // Hook para obtener reservas desde Supabase
 export function useSupabaseBookings() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-bookings', workspaceId],
@@ -66,8 +71,7 @@ export function useSupabaseBookings() {
 
 // Hook para obtener ejercicios desde Supabase
 export function useSupabaseExercises() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-exercises', workspaceId],
@@ -87,8 +91,7 @@ export function useSupabaseExercises() {
 
 // Hook para obtener alimentos desde Supabase
 export function useSupabaseFoods() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-foods', workspaceId],
@@ -108,8 +111,7 @@ export function useSupabaseFoods() {
 
 // Hook para obtener programas de entrenamiento desde Supabase
 export function useSupabaseWorkoutPrograms() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-workout-programs', workspaceId],
@@ -131,8 +133,7 @@ export function useSupabaseWorkoutPrograms() {
 
 // Hook para obtener planes nutricionales desde Supabase
 export function useSupabaseMealPlans() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-meal-plans', workspaceId],
@@ -155,8 +156,8 @@ export function useSupabaseMealPlans() {
 // Hook para crear un plan nutricional
 export function useCreateMealPlan() {
   const queryClient = useQueryClient()
-  const { isDemoMode, currentWorkspace, user } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const { user } = useAuthStore()
+  const workspaceId = useWorkspaceId()
 
   return useMutation({
     mutationFn: async (data: {
@@ -247,8 +248,7 @@ export function useDeleteMealPlan() {
 // Hook para crear un alimento
 export function useCreateFood() {
   const queryClient = useQueryClient()
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useMutation({
     mutationFn: async (data: {
@@ -301,8 +301,7 @@ export function useDeleteFood() {
 
 // Hook para obtener tags de clientes
 export function useSupabaseClientTags() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-client-tags', workspaceId],
@@ -325,8 +324,8 @@ export function useSupabaseClientTags() {
 // Hook para crear un cliente
 export function useCreateSupabaseClient() {
   const queryClient = useQueryClient()
-  const { isDemoMode, currentWorkspace, user } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const { user } = useAuthStore()
+  const workspaceId = useWorkspaceId()
 
   return useMutation({
     mutationFn: async (data: {
@@ -358,8 +357,7 @@ export function useCreateSupabaseClient() {
 
 // Hook para obtener KPIs del dashboard
 export function useSupabaseKPIs() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-kpis', workspaceId],
@@ -415,8 +413,7 @@ export function useSupabaseKPIs() {
 
 // Hook para obtener el workspace actual
 export function useSupabaseWorkspace() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
-  const workspaceId = isDemoMode ? DEMO_WORKSPACE_ID : currentWorkspace?.id
+  const workspaceId = useWorkspaceId()
 
   return useQuery({
     queryKey: ['supabase-workspace', workspaceId],
