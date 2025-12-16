@@ -89,7 +89,7 @@ export function useSupabaseExercises() {
   })
 }
 
-// Hook para obtener alimentos desde Supabase
+// Hook para obtener alimentos desde Supabase (sin paginación - para compatibilidad)
 export function useSupabaseFoods() {
   const workspaceId = useWorkspaceId()
 
@@ -101,9 +101,67 @@ export function useSupabaseFoods() {
         .select('*')
         .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
         .order('name', { ascending: true })
+        .limit(1000) // Límite explícito
 
       if (error) throw error
       return data || []
+    },
+    enabled: true,
+  })
+}
+
+// Hook para obtener alimentos con paginación
+export function useSupabaseFoodsPaginated(page: number = 1, pageSize: number = 50, search: string = '') {
+  const workspaceId = useWorkspaceId()
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  return useQuery({
+    queryKey: ['supabase-foods-paginated', workspaceId, page, pageSize, search],
+    queryFn: async () => {
+      let query = supabase
+        .from('foods')
+        .select('*', { count: 'exact' })
+        .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
+
+      // Aplicar búsqueda si existe
+      if (search.trim()) {
+        query = query.ilike('name', `%${search}%`)
+      }
+
+      const { data, error, count } = await query
+        .order('name', { ascending: true })
+        .range(from, to)
+
+      if (error) throw error
+      
+      return {
+        items: data || [],
+        total: count || 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count || 0) / pageSize),
+      }
+    },
+    enabled: true,
+    placeholderData: (previousData) => previousData, // Mantener datos anteriores mientras carga
+  })
+}
+
+// Hook para obtener solo el conteo total de alimentos
+export function useSupabaseFoodsCount() {
+  const workspaceId = useWorkspaceId()
+
+  return useQuery({
+    queryKey: ['supabase-foods-count', workspaceId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('foods')
+        .select('*', { count: 'exact', head: true })
+        .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
+
+      if (error) throw error
+      return count || 0
     },
     enabled: true,
   })

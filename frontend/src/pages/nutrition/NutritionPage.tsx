@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   Container,
   Paper,
@@ -23,7 +23,9 @@ import {
   Textarea,
   Loader,
   Center,
+  Pagination,
 } from '@mantine/core'
+import { useDebouncedValue } from '@mantine/hooks'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -47,6 +49,8 @@ import { EmptyState } from '../../components/common/EmptyState'
 import { MealPlanBuilder, DayPlan, Meal, Food } from '../../components/nutrition/MealPlanBuilder'
 import { 
   useSupabaseFoods, 
+  useSupabaseFoodsPaginated,
+  useSupabaseFoodsCount,
   useSupabaseMealPlans,
   useCreateMealPlan,
   useUpdateMealPlan,
@@ -94,17 +98,29 @@ const initialDays: DayPlan[] = [
   { id: 'day-7', day: 7, dayName: 'Domingo', meals: [] as Meal[], notes: '' },
 ]
 
+const FOODS_PER_PAGE = 50
+
 export function NutritionPage() {
   const [activeTab, setActiveTab] = useState<string | null>('plans')
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] = useDisclosure(false)
   const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false)
   const [searchFood, setSearchFood] = useState('')
+  const [debouncedSearch] = useDebouncedValue(searchFood, 300)
+  const [currentPage, setCurrentPage] = useState(1)
   const [mealPlanDays, setMealPlanDays] = useState(initialDays)
   const [editingPlan, setEditingPlan] = useState<any>(null)
   
   // Cargar datos desde Supabase
-  const { data: supabaseFoods, isLoading: isLoadingFoods } = useSupabaseFoods()
+  const { data: supabaseFoods } = useSupabaseFoods() // Para el MealPlanBuilder (todos los alimentos)
+  const { data: paginatedFoods, isLoading: isLoadingPaginatedFoods, isFetching: isFetchingFoods } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch)
+  const { data: totalFoodsCount } = useSupabaseFoodsCount()
   const { data: supabaseMealPlans, isLoading: isLoadingPlans } = useSupabaseMealPlans()
+  
+  // Resetear página cuando cambia la búsqueda
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchFood(value)
+    setCurrentPage(1)
+  }, [])
   
   // Mutations
   const createMealPlan = useCreateMealPlan()
@@ -371,10 +387,20 @@ export function NutritionPage() {
     }
   }
 
-  const filteredFoods = foods.filter(f =>
-    f.name.toLowerCase().includes(searchFood.toLowerCase()) ||
-    f.category.toLowerCase().includes(searchFood.toLowerCase())
-  )
+  // Mapear alimentos paginados para la vista
+  const paginatedFoodsList: Food[] = useMemo(() => {
+    if (!paginatedFoods?.items) return []
+    return paginatedFoods.items.map((food: any) => ({
+      id: food.id,
+      name: food.name || 'Sin nombre',
+      calories: food.calories || 0,
+      protein: food.protein_g || 0,
+      carbs: food.carbs_g || 0,
+      fat: food.fat_g || 0,
+      serving_size: food.quantity || '100g',
+      category: mapCategory(food.category),
+    }))
+  }, [paginatedFoods])
   
   return (
     <Container size="xl" py="xl">
@@ -393,7 +419,7 @@ export function NutritionPage() {
             Planes Nutricionales {mealPlans.length > 0 && <Badge size="xs" ml="xs">{mealPlans.length}</Badge>}
           </Tabs.Tab>
           <Tabs.Tab value="foods" leftSection={<IconApple size={14} />}>
-            Biblioteca de Alimentos {foods.length > 0 && <Badge size="xs" ml="xs">{foods.length}</Badge>}
+            Biblioteca de Alimentos {(totalFoodsCount ?? 0) > 0 && <Badge size="xs" ml="xs">{totalFoodsCount?.toLocaleString()}</Badge>}
           </Tabs.Tab>
         </Tabs.List>
         
@@ -495,71 +521,104 @@ export function NutritionPage() {
             leftSection={<IconSearch size={16} />}
             mb="lg"
             value={searchFood}
-            onChange={(e) => setSearchFood(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
           
-          {isLoadingFoods ? (
+          {isLoadingPaginatedFoods ? (
             <Center py="xl">
               <Loader size="lg" />
             </Center>
-          ) : filteredFoods.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
-              {filteredFoods.slice(0, 100).map((food) => {
-                const CategoryIcon = getCategoryIcon(food.category)
-                return (
-                  <Card key={food.id} withBorder radius="md" padding="sm">
-                    <Group gap="sm" mb="sm">
-                      <ThemeIcon
-                        size="lg"
-                        radius="md"
-                        variant="light"
-                        color={getCategoryColor(food.category)}
-                      >
-                        <CategoryIcon size={18} />
-                      </ThemeIcon>
-                      <Box style={{ flex: 1 }}>
-                        <Text fw={600} size="sm" lineClamp={1}>
-                          {food.name}
-                        </Text>
-                        <Badge size="xs" variant="light" color={getCategoryColor(food.category)}>
-                          {food.category}
-                        </Badge>
-                      </Box>
-                      <ActionIcon
-                        variant="subtle"
-                        color="red"
-                        size="sm"
-                        onClick={() => handleDeleteFood(food.id, food.name)}
-                      >
-                        <IconTrash size={14} />
-                      </ActionIcon>
-                    </Group>
+          ) : paginatedFoodsList.length > 0 ? (
+            <>
+              {/* Info de resultados */}
+              <Group justify="space-between" mb="md">
+                <Text size="sm" c="dimmed">
+                  Mostrando {((currentPage - 1) * FOODS_PER_PAGE) + 1} - {Math.min(currentPage * FOODS_PER_PAGE, paginatedFoods?.total || 0)} de {paginatedFoods?.total?.toLocaleString()} alimentos
+                  {debouncedSearch && ` (filtrado por "${debouncedSearch}")`}
+                </Text>
+                {isFetchingFoods && <Loader size="xs" />}
+              </Group>
 
-                    <Divider mb="sm" />
+              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
+                {paginatedFoodsList.map((food) => {
+                  const CategoryIcon = getCategoryIcon(food.category)
+                  return (
+                    <Card key={food.id} withBorder radius="md" padding="sm">
+                      <Group gap="sm" mb="sm">
+                        <ThemeIcon
+                          size="lg"
+                          radius="md"
+                          variant="light"
+                          color={getCategoryColor(food.category)}
+                        >
+                          <CategoryIcon size={18} />
+                        </ThemeIcon>
+                        <Box style={{ flex: 1 }}>
+                          <Text fw={600} size="sm" lineClamp={1}>
+                            {food.name}
+                          </Text>
+                          <Badge size="xs" variant="light" color={getCategoryColor(food.category)}>
+                            {food.category}
+                          </Badge>
+                        </Box>
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          size="sm"
+                          onClick={() => handleDeleteFood(food.id, food.name)}
+                        >
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      </Group>
 
-                    <Group justify="space-between" mb="xs">
-                      <Text size="xs" c="dimmed">Por {food.serving_size}</Text>
-                      <Badge variant="filled" color="blue">{food.calories?.toFixed(0) || 0} kcal</Badge>
-                    </Group>
+                      <Divider mb="sm" />
 
-                    <SimpleGrid cols={3} spacing="xs">
-                      <Box ta="center">
-                        <Text size="xs" c="dimmed">Proteína</Text>
-                        <Text size="sm" fw={500} c="green">{food.protein?.toFixed(1) || 0}g</Text>
-                      </Box>
-                      <Box ta="center">
-                        <Text size="xs" c="dimmed">Carbos</Text>
-                        <Text size="sm" fw={500} c="orange">{food.carbs?.toFixed(1) || 0}g</Text>
-                      </Box>
-                      <Box ta="center">
-                        <Text size="xs" c="dimmed">Grasas</Text>
-                        <Text size="sm" fw={500} c="grape">{food.fat?.toFixed(1) || 0}g</Text>
-                      </Box>
-                    </SimpleGrid>
-                  </Card>
-                )
-              })}
-            </SimpleGrid>
+                      <Group justify="space-between" mb="xs">
+                        <Text size="xs" c="dimmed">Por {food.serving_size}</Text>
+                        <Badge variant="filled" color="blue">{food.calories?.toFixed(0) || 0} kcal</Badge>
+                      </Group>
+
+                      <SimpleGrid cols={3} spacing="xs">
+                        <Box ta="center">
+                          <Text size="xs" c="dimmed">Proteína</Text>
+                          <Text size="sm" fw={500} c="green">{food.protein?.toFixed(1) || 0}g</Text>
+                        </Box>
+                        <Box ta="center">
+                          <Text size="xs" c="dimmed">Carbos</Text>
+                          <Text size="sm" fw={500} c="orange">{food.carbs?.toFixed(1) || 0}g</Text>
+                        </Box>
+                        <Box ta="center">
+                          <Text size="xs" c="dimmed">Grasas</Text>
+                          <Text size="sm" fw={500} c="grape">{food.fat?.toFixed(1) || 0}g</Text>
+                        </Box>
+                      </SimpleGrid>
+                    </Card>
+                  )
+                })}
+              </SimpleGrid>
+
+              {/* Paginación */}
+              {(paginatedFoods?.totalPages || 0) > 1 && (
+                <Center mt="xl">
+                  <Pagination
+                    total={paginatedFoods?.totalPages || 1}
+                    value={currentPage}
+                    onChange={setCurrentPage}
+                    withEdges
+                    siblings={1}
+                    boundaries={1}
+                  />
+                </Center>
+              )}
+            </>
+          ) : debouncedSearch ? (
+            <EmptyState
+              icon={<IconSearch size={40} />}
+              title="Sin resultados"
+              description={`No se encontraron alimentos que coincidan con "${debouncedSearch}"`}
+              actionLabel="Limpiar búsqueda"
+              onAction={() => handleSearchChange('')}
+            />
           ) : (
             <EmptyState
               icon={<IconApple size={40} />}
@@ -568,12 +627,6 @@ export function NutritionPage() {
               actionLabel="Añadir Alimento"
               onAction={openFoodModal}
             />
-          )}
-          
-          {filteredFoods.length > 100 && (
-            <Text size="sm" c="dimmed" ta="center" mt="lg">
-              Mostrando 100 de {filteredFoods.length} alimentos. Usa el buscador para filtrar.
-            </Text>
           )}
         </Tabs.Panel>
       </Tabs>
