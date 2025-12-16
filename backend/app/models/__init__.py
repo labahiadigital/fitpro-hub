@@ -1,4 +1,4 @@
-from app.models.base import BaseModel, TimestampMixin
+from app.models.base import Base, BaseModel, TimestampMixin, WorkspaceMixin
 from app.models.workspace import Workspace
 from app.models.user import User, UserRole
 from app.models.client import Client, ClientTag
@@ -15,8 +15,10 @@ from app.models.exercise import Exercise, ExerciseCategory, Food, FoodCategory, 
 from app.models.notification import Notification, NotificationPreference, EmailTemplate, ScheduledNotification
 
 __all__ = [
+    "Base",
     "BaseModel",
     "TimestampMixin",
+    "WorkspaceMixin",
     "Workspace",
     "User",
     "UserRole",
