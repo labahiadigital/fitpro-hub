@@ -28,11 +28,17 @@ import { AutomationsPage } from './pages/automations/AutomationsPage'
 import { ReportsPage } from './pages/reports/ReportsPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
 import { PackagesPage } from './pages/packages/PackagesPage'
+import { CommunityPage } from './pages/community/CommunityPage'
+
+// Public Pages
+import { LandingPage } from './pages/public/LandingPage'
+import { ClientOnboardingPage } from './pages/onboarding/ClientOnboardingPage'
 
 // Mantine styles
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
 import '@mantine/dates/styles.css'
+import '@mantine/charts/styles.css'
 import 'dayjs/locale/es'
 
 const queryClient = new QueryClient({
@@ -73,7 +79,13 @@ export default function App() {
           <Notifications position="top-right" />
           <BrowserRouter>
             <Routes>
-              {/* Public routes */}
+              {/* Public Landing Page */}
+              <Route path="/" element={<LandingPage />} />
+              
+              {/* Client Onboarding (public) */}
+              <Route path="/onboarding/:workspaceSlug" element={<ClientOnboardingPage />} />
+              
+              {/* Auth routes */}
               <Route element={<PublicRoute><AuthLayout /></PublicRoute>}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
@@ -91,16 +103,14 @@ export default function App() {
                 <Route path="/chat" element={<ChatPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/packages" element={<PackagesPage />} />
+                <Route path="/community" element={<CommunityPage />} />
                 <Route path="/automations" element={<AutomationsPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
               
-              {/* Redirect root to dashboard or login */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              
               {/* 404 */}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
         </DatesProvider>

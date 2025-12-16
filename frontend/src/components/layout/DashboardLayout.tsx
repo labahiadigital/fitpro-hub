@@ -31,6 +31,7 @@ import {
   IconRobot,
   IconChartBar,
   IconPackage,
+  IconTrophy,
 } from '@tabler/icons-react'
 import { useAuthStore } from '../../stores/auth'
 
@@ -93,6 +94,7 @@ export function DashboardLayout() {
     { icon: <IconMessage size={20} />, label: 'Chat', to: '/chat', badge: 3 },
     { icon: <IconCreditCard size={20} />, label: 'Pagos', to: '/payments' },
     { icon: <IconPackage size={20} />, label: 'Bonos', to: '/packages' },
+    { icon: <IconTrophy size={20} />, label: 'Comunidad', to: '/community' },
     { icon: <IconRobot size={20} />, label: 'Automatizaciones', to: '/automations' },
     { icon: <IconChartBar size={20} />, label: 'Reportes', to: '/reports' },
     { icon: <IconSettings size={20} />, label: 'Configuración', to: '/settings' },
