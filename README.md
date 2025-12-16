@@ -233,6 +233,35 @@ pnpm build
 # El build se genera en frontend/dist/
 ```
 
+## 🚀 Despliegue en Coolify
+
+Ver la guía completa de despliegue en [DEPLOYMENT.md](DEPLOYMENT.md).
+
+### Resumen rápido:
+
+1. **Crear nuevo recurso** en Coolify → Docker Compose
+2. **Conectar repositorio** de GitHub
+3. **Seleccionar** `docker-compose.prod.yml`
+4. **Configurar variables de entorno**
+5. **Configurar dominios**
+6. **Deploy**
+
+### Variables de entorno necesarias:
+
+```env
+# Frontend
+VITE_API_URL=https://api.tu-dominio.com
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=xxx
+
+# Backend
+DATABASE_URL=postgresql+asyncpg://...
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_KEY=xxx
+REDIS_URL=redis://redis:6379/0
+STRIPE_SECRET_KEY=sk_live_xxx
+```
+
 ## 🤝 Contribuir
 
 1. Fork el proyecto
