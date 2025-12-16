@@ -1,6 +1,6 @@
 # 🚀 Guía de Despliegue - FitPro Hub en Coolify
 
-Esta guía te ayudará a desplegar FitPro Hub en Coolify.
+Esta guía te ayudará a desplegar FitPro Hub en Coolify con recursos separados.
 
 ## 📋 Prerrequisitos
 
@@ -12,249 +12,287 @@ Esta guía te ayudará a desplegar FitPro Hub en Coolify.
 
 ---
 
-## 🏗️ Opción 1: Despliegue con Docker Compose (Recomendado)
+## 🏗️ Arquitectura de Despliegue
 
-### Paso 1: Crear nuevo proyecto en Coolify
+Crearemos **3 recursos separados** en Coolify:
 
-1. Ve a tu panel de Coolify
-2. Click en **"New Resource"** → **"Docker Compose"**
-3. Selecciona **"GitHub"** como fuente
-4. Conecta tu repositorio: `https://github.com/labahiadigital/fitpro-hub`
+1. **Frontend** (React + Nginx) - Puerto 80
+2. **Backend** (FastAPI + Gunicorn) - Puerto 8000
+3. **Redis** (Base de datos) - Puerto 6379
 
-### Paso 2: Configurar Docker Compose
+---
 
-En la configuración del recurso:
+## 📦 Paso 1: Crear Redis
 
-- **Docker Compose Location**: `docker-compose.prod.yml`
-- **Build Pack**: Docker Compose
+1. En Coolify, click en **"New Resource"**
+2. Selecciona **"Database"** → **"Redis"**
+3. Configura:
+   - **Name**: `fitprohub-redis`
+   - **Version**: `7-alpine`
+4. Click **"Start"**
+5. **Anota la URL de conexión** (la necesitarás para el backend)
+   - Formato: `redis://fitprohub-redis:6379`
 
-### Paso 3: Configurar Variables de Entorno
+---
 
-Ve a la sección **"Environment Variables"** y añade:
+## 🔧 Paso 2: Desplegar Backend (FastAPI)
+
+### 2.1 Crear el recurso
+
+1. Click en **"New Resource"** → **"Public Repository"**
+2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+3. **Branch**: `master`
+4. **Build Pack**: `Dockerfile`
+5. **Base Directory**: `backend`
+6. **Dockerfile Location**: `Dockerfile`
+7. **Port Exposes**: `8000`
+
+### 2.2 Configurar Variables de Entorno
+
+Ve a la pestaña **"Environment Variables"** y añade:
 
 ```env
-# Frontend (Build-time)
-VITE_API_URL=https://api.tu-dominio.com
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-anon-key
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_xxx
+# Base de datos (Supabase)
+DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 
-# Backend
-DATABASE_URL=postgresql+asyncpg://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_SERVICE_KEY=tu-service-role-key
-SUPABASE_JWT_SECRET=tu-jwt-secret
-REDIS_URL=redis://redis:6379/0
-SECRET_KEY=tu-clave-secreta-muy-larga-32-chars
+# Supabase
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_JWT_SECRET=tu-jwt-secret-de-supabase
+
+# Redis (usa la URL del paso 1)
+REDIS_URL=redis://fitprohub-redis:6379/0
+
+# Seguridad
+SECRET_KEY=genera-una-clave-secreta-muy-larga-de-al-menos-32-caracteres
+
+# Stripe
 STRIPE_SECRET_KEY=sk_live_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Brevo (Email)
 BREVO_API_KEY=tu-brevo-api-key
+
+# Entorno
 ENVIRONMENT=production
 ```
 
-### Paso 4: Configurar Dominios
+### 2.3 Configurar Dominio
 
-1. **Frontend**: Configura tu dominio principal (ej: `app.tu-dominio.com`)
-2. **Backend**: Configura subdominio API (ej: `api.tu-dominio.com`)
+1. Ve a la pestaña **"Domains"**
+2. Añade: `api.tu-dominio.com`
+3. Habilita **HTTPS**
 
-En Coolify, ve a **"Domains"** y añade:
-- Frontend: `app.tu-dominio.com` → Puerto `80`
-- Backend: `api.tu-dominio.com` → Puerto `8000`
+### 2.4 Desplegar
 
-### Paso 5: Desplegar
-
-Click en **"Deploy"** y espera a que se complete.
+Click en **"Deploy"**
 
 ---
 
-## 🎯 Opción 2: Despliegue Separado (Frontend + Backend)
+## 🎨 Paso 3: Desplegar Frontend (React)
 
-### Frontend (React)
+### 3.1 Crear el recurso
 
-1. **New Resource** → **"Dockerfile"**
-2. Repositorio: `https://github.com/labahiadigital/fitpro-hub`
-3. **Base Directory**: `frontend`
-4. **Dockerfile**: `Dockerfile.prod`
-5. **Port**: `80`
+1. Click en **"New Resource"** → **"Public Repository"**
+2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+3. **Branch**: `master`
+4. **Build Pack**: `Dockerfile`
+5. **Base Directory**: `frontend`
+6. **Dockerfile Location**: `Dockerfile`
+7. **Port Exposes**: `80`
 
-Variables de entorno (Build Arguments):
+### 3.2 Configurar Build Arguments
+
+⚠️ **IMPORTANTE**: Las variables de Vite son de **build-time**, así que deben ir como **Build Arguments**.
+
+Ve a la pestaña **"Build"** o **"Environment Variables"** y añade como **Build Arguments**:
+
 ```env
 VITE_API_URL=https://api.tu-dominio.com
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-anon-key
+VITE_SUPABASE_URL=https://[PROJECT-REF].supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 VITE_STRIPE_PUBLISHABLE_KEY=pk_live_xxx
 ```
 
-### Backend (FastAPI)
+> 💡 En Coolify, busca la sección "Build Arguments" o "Docker Build Args"
 
-1. **New Resource** → **"Dockerfile"**
-2. Repositorio: `https://github.com/labahiadigital/fitpro-hub`
-3. **Base Directory**: `backend`
-4. **Dockerfile**: `Dockerfile.prod`
-5. **Port**: `8000`
+### 3.3 Configurar Dominio
 
-Variables de entorno:
-```env
-DATABASE_URL=postgresql+asyncpg://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_SERVICE_KEY=tu-service-role-key
-SUPABASE_JWT_SECRET=tu-jwt-secret
-REDIS_URL=redis://tu-redis-host:6379/0
-SECRET_KEY=tu-clave-secreta-muy-larga-32-chars
-STRIPE_SECRET_KEY=sk_live_xxx
-STRIPE_WEBHOOK_SECRET=whsec_xxx
-BREVO_API_KEY=tu-brevo-api-key
-ENVIRONMENT=production
-```
+1. Ve a la pestaña **"Domains"**
+2. Añade: `app.tu-dominio.com` (o tu dominio principal)
+3. Habilita **HTTPS**
 
-### Redis
+### 3.4 Desplegar
 
-1. **New Resource** → **"Database"** → **"Redis"**
-2. Anota la URL de conexión para usarla en el backend
+Click en **"Deploy"**
 
 ---
 
-## 🔧 Configuración de Supabase
+## 🔐 Obtener Credenciales de Supabase
 
-### 1. Obtener credenciales
+### URL y Claves API
 
-En tu proyecto de Supabase, ve a **Settings** → **API**:
+1. Ve a tu proyecto en [Supabase Dashboard](https://supabase.com/dashboard)
+2. **Settings** → **API**
+3. Copia:
+   - **Project URL** → `SUPABASE_URL` y `VITE_SUPABASE_URL`
+   - **anon public** → `VITE_SUPABASE_ANON_KEY`
+   - **service_role** → `SUPABASE_SERVICE_KEY` (⚠️ mantener secreto)
 
-- `SUPABASE_URL`: URL del proyecto
-- `SUPABASE_ANON_KEY`: anon/public key
-- `SUPABASE_SERVICE_KEY`: service_role key (¡mantener secreto!)
-- `SUPABASE_JWT_SECRET`: JWT Secret (en Settings → API → JWT Settings)
+### JWT Secret
 
-### 2. Configurar Base de Datos
+1. **Settings** → **API** → **JWT Settings**
+2. Copia el **JWT Secret** → `SUPABASE_JWT_SECRET`
 
-La URL de conexión la encuentras en **Settings** → **Database**:
+### Database URL
 
+1. **Settings** → **Database**
+2. Copia la **Connection string** (URI)
+3. Cambia `postgresql://` por `postgresql+asyncpg://`
+
+Ejemplo:
 ```
-postgresql+asyncpg://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
-```
-
-### 3. Ejecutar Migraciones
-
-Después del primer despliegue, ejecuta las migraciones:
-
-```bash
-# Conectar al contenedor del backend
-docker exec -it fitprohub-backend-1 bash
-
-# Ejecutar migraciones
-alembic upgrade head
+postgresql+asyncpg://postgres:TU_PASSWORD@db.abcdefgh.supabase.co:5432/postgres
 ```
 
 ---
 
-## 🔐 Configuración de Stripe
+## 💳 Configurar Stripe
 
-### 1. Obtener claves
+### Claves API
 
-En tu dashboard de Stripe:
-- `STRIPE_SECRET_KEY`: Developers → API Keys → Secret key
-- `STRIPE_PUBLISHABLE_KEY`: Developers → API Keys → Publishable key
+1. Ve a [Stripe Dashboard](https://dashboard.stripe.com)
+2. **Developers** → **API Keys**
+3. Copia:
+   - **Publishable key** → `VITE_STRIPE_PUBLISHABLE_KEY`
+   - **Secret key** → `STRIPE_SECRET_KEY`
 
-### 2. Configurar Webhook
+### Webhook
 
-1. Ve a **Developers** → **Webhooks**
-2. Click **"Add endpoint"**
-3. URL: `https://api.tu-dominio.com/api/v1/payments/webhook`
-4. Eventos a escuchar:
+1. **Developers** → **Webhooks** → **Add endpoint**
+2. **Endpoint URL**: `https://api.tu-dominio.com/api/v1/payments/webhook`
+3. **Events to send**:
    - `checkout.session.completed`
    - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
    - `invoice.paid`
    - `invoice.payment_failed`
-5. Copia el **Webhook signing secret** → `STRIPE_WEBHOOK_SECRET`
+4. Copia **Signing secret** → `STRIPE_WEBHOOK_SECRET`
 
 ---
 
-## 🌐 Configuración de DNS
+## 🌐 Configuración DNS
 
-Configura estos registros DNS:
+Añade estos registros en tu proveedor de DNS:
 
 | Tipo | Nombre | Valor |
 |------|--------|-------|
-| A | app | IP de tu servidor |
-| A | api | IP de tu servidor |
+| A | app | IP de tu servidor Coolify |
+| A | api | IP de tu servidor Coolify |
 | CNAME | www | app.tu-dominio.com |
 
 ---
 
 ## ✅ Verificación Post-Despliegue
 
-### 1. Verificar Frontend
+### Verificar Frontend
 ```bash
 curl https://app.tu-dominio.com/health
-# Debe responder: healthy
+# Respuesta esperada: healthy
 ```
 
-### 2. Verificar Backend
+### Verificar Backend
 ```bash
 curl https://api.tu-dominio.com/health
-# Debe responder: {"status": "healthy"}
+# Respuesta esperada: {"status":"healthy"}
 ```
 
-### 3. Verificar API
-```bash
-curl https://api.tu-dominio.com/api/v1/
-# Debe responder información de la API
-```
+### Verificar API Docs
+Abre en el navegador: `https://api.tu-dominio.com/docs`
 
 ---
 
-## 🔄 Actualizaciones
+## 🔄 Actualizaciones Automáticas
 
-Para actualizar la aplicación:
+### Configurar Auto Deploy
 
-1. Haz push de los cambios a GitHub
-2. En Coolify, click en **"Redeploy"**
+En cada recurso de Coolify:
 
-O configura **Auto Deploy** en Coolify para despliegues automáticos en cada push.
+1. Ve a **"Settings"**
+2. Habilita **"Auto Deploy"**
+3. Configura el **webhook de GitHub** (Coolify te da la URL)
+
+Ahora cada push a `master` desplegará automáticamente.
 
 ---
 
 ## 📊 Monitorización
 
-### Logs
+### Ver Logs
 
-En Coolify, ve a **"Logs"** para ver los logs de cada servicio.
+En Coolify, cada recurso tiene una pestaña **"Logs"** donde puedes ver:
+- Logs de build
+- Logs de aplicación
+- Errores
 
 ### Health Checks
 
 Los health checks están configurados automáticamente:
-- Frontend: `/health`
-- Backend: `/health`
-- Redis: `redis-cli ping`
+- **Frontend**: `GET /health` → `healthy`
+- **Backend**: `GET /health` → `{"status":"healthy"}`
 
 ---
 
 ## 🆘 Solución de Problemas
 
-### Error: "Cannot connect to database"
-- Verifica `DATABASE_URL`
-- Asegúrate de que la IP del servidor está permitida en Supabase
-
-### Error: "Redis connection refused"
-- Verifica que Redis está corriendo
-- Verifica `REDIS_URL`
-
-### Error: "CORS error"
-- Verifica que `VITE_API_URL` apunta al backend correcto
-- El backend ya tiene CORS configurado para permitir todos los orígenes
-
 ### Frontend en blanco
-- Verifica las variables de entorno del build
-- Revisa los logs del contenedor
+
+1. Verifica que los **Build Arguments** están configurados
+2. Revisa los logs del build en Coolify
+3. Asegúrate de que `VITE_API_URL` apunta al backend correcto
+
+### Error de conexión a base de datos
+
+1. Verifica `DATABASE_URL` (debe usar `postgresql+asyncpg://`)
+2. En Supabase, verifica que no hay restricciones de IP
+3. Revisa los logs del backend
+
+### Error de CORS
+
+El backend ya tiene CORS configurado para permitir todos los orígenes. Si hay problemas:
+1. Verifica que `VITE_API_URL` no tiene `/` al final
+2. Revisa los logs del backend
+
+### Redis no conecta
+
+1. Verifica que Redis está corriendo en Coolify
+2. Usa el nombre del servicio en la URL: `redis://fitprohub-redis:6379/0`
+3. Ambos servicios deben estar en la misma red de Coolify
+
+### Build falla en el frontend
+
+1. Verifica que `pnpm-lock.yaml` existe en el repo
+2. Revisa los logs de build para ver el error específico
+
+---
+
+## 📁 Resumen de Recursos en Coolify
+
+| Recurso | Tipo | Puerto | Dominio |
+|---------|------|--------|---------|
+| fitprohub-redis | Database (Redis) | 6379 | - |
+| fitprohub-backend | Dockerfile | 8000 | api.tu-dominio.com |
+| fitprohub-frontend | Dockerfile | 80 | app.tu-dominio.com |
 
 ---
 
 ## 📞 Soporte
 
-Si tienes problemas:
-1. Revisa los logs en Coolify
-2. Verifica las variables de entorno
-3. Consulta la documentación de Coolify: https://coolify.io/docs
+- **Coolify Docs**: https://coolify.io/docs
+- **Supabase Docs**: https://supabase.com/docs
+- **Stripe Docs**: https://stripe.com/docs
 
+---
+
+¡Listo! Tu FitPro Hub debería estar funcionando en producción 🎉
