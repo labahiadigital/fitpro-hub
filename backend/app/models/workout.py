@@ -5,34 +5,6 @@ from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 
 
-class Exercise(BaseModel):
-    __tablename__ = "exercises"
-    
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
-    
-    # Exercise details
-    name = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
-    instructions = Column(Text, nullable=True)
-    
-    # Categorization
-    muscle_groups = Column(ARRAY(String), default=[])
-    equipment = Column(ARRAY(String), default=[])
-    difficulty = Column(String(50), default="intermediate")  # beginner, intermediate, advanced
-    category = Column(String(100), nullable=True)  # strength, cardio, flexibility, etc.
-    
-    # Media
-    video_url = Column(String(500), nullable=True)
-    image_url = Column(String(500), nullable=True)
-    thumbnail_url = Column(String(500), nullable=True)
-    
-    # Global exercise (null workspace_id) or workspace-specific
-    is_global = Column(String(1), default="N")  # Y/N
-    
-    def __repr__(self):
-        return f"<Exercise {self.name}>"
-
-
 class WorkoutProgram(BaseModel):
     __tablename__ = "workout_programs"
     
@@ -89,4 +61,3 @@ class WorkoutLog(BaseModel):
     
     def __repr__(self):
         return f"<WorkoutLog for {self.client_id}>"
-
