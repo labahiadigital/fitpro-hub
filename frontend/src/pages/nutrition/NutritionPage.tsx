@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Container,
   Paper,
@@ -21,6 +21,8 @@ import {
   Divider,
   ThemeIcon,
   Textarea,
+  Loader,
+  Center,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
@@ -40,25 +42,24 @@ import {
 } from '@tabler/icons-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { EmptyState } from '../../components/common/EmptyState'
-import { MealPlanBuilder, DayPlan, Meal } from '../../components/nutrition/MealPlanBuilder'
+import { MealPlanBuilder, DayPlan, Meal, Food } from '../../components/nutrition/MealPlanBuilder'
+import { useSupabaseFoods } from '../../hooks/useSupabaseData'
 
-// Mock foods data
-const mockFoods = [
-  { id: '1', name: 'Pechuga de Pollo', calories: 165, protein: 31, carbs: 0, fat: 3.6, serving_size: '100g', category: 'Proteínas' },
-  { id: '2', name: 'Arroz Integral', calories: 112, protein: 2.6, carbs: 23, fat: 0.9, serving_size: '100g', category: 'Carbohidratos' },
-  { id: '3', name: 'Brócoli', calories: 34, protein: 2.8, carbs: 7, fat: 0.4, serving_size: '100g', category: 'Verduras' },
-  { id: '4', name: 'Huevos', calories: 155, protein: 13, carbs: 1.1, fat: 11, serving_size: '2 unidades', category: 'Proteínas' },
-  { id: '5', name: 'Avena', calories: 389, protein: 17, carbs: 66, fat: 7, serving_size: '100g', category: 'Carbohidratos' },
-  { id: '6', name: 'Salmón', calories: 208, protein: 20, carbs: 0, fat: 13, serving_size: '100g', category: 'Proteínas' },
-  { id: '7', name: 'Aguacate', calories: 160, protein: 2, carbs: 9, fat: 15, serving_size: '100g', category: 'Grasas' },
-  { id: '8', name: 'Plátano', calories: 89, protein: 1.1, carbs: 23, fat: 0.3, serving_size: '1 unidad', category: 'Frutas' },
-  { id: '9', name: 'Yogur Griego', calories: 97, protein: 9, carbs: 3.6, fat: 5, serving_size: '100g', category: 'Lácteos' },
-  { id: '10', name: 'Almendras', calories: 579, protein: 21, carbs: 22, fat: 50, serving_size: '100g', category: 'Frutos Secos' },
-  { id: '11', name: 'Batata', calories: 86, protein: 1.6, carbs: 20, fat: 0.1, serving_size: '100g', category: 'Carbohidratos' },
-  { id: '12', name: 'Espinacas', calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4, serving_size: '100g', category: 'Verduras' },
-]
+// Función para mapear categoría de la BD a categoría del frontend
+function mapCategory(dbCategory: string | null): string {
+  if (!dbCategory) return 'Otros'
+  const cat = dbCategory.toLowerCase()
+  if (cat.includes('carne') || cat.includes('pollo') || cat.includes('pescado') || cat.includes('huevo') || cat.includes('protein')) return 'Proteínas'
+  if (cat.includes('arroz') || cat.includes('pasta') || cat.includes('pan') || cat.includes('cereal') || cat.includes('patata') || cat.includes('carbohidrat')) return 'Carbohidratos'
+  if (cat.includes('verdura') || cat.includes('vegetal') || cat.includes('ensalada') || cat.includes('hortaliza')) return 'Verduras'
+  if (cat.includes('fruta') || cat.includes('fruit')) return 'Frutas'
+  if (cat.includes('leche') || cat.includes('queso') || cat.includes('yogur') || cat.includes('lácteo') || cat.includes('dairy')) return 'Lácteos'
+  if (cat.includes('aceite') || cat.includes('grasa') || cat.includes('mantequilla') || cat.includes('oil')) return 'Grasas'
+  if (cat.includes('fruto seco') || cat.includes('almendra') || cat.includes('nuez') || cat.includes('nut')) return 'Frutos Secos'
+  return 'Otros'
+}
 
-// Mock meal plans
+// Mock meal plans (estos se cargarán de Supabase en el futuro)
 const mockMealPlans = [
   {
     id: '1',
@@ -102,6 +103,24 @@ export function NutritionPage() {
   const [mealPlanDays, setMealPlanDays] = useState(initialDays)
   const [editingPlan, setEditingPlan] = useState<any>(null)
   const [mealPlans, setMealPlans] = useState(mockMealPlans)
+  
+  // Cargar alimentos desde Supabase
+  const { data: supabaseFoods, isLoading: isLoadingFoods } = useSupabaseFoods()
+  
+  // Mapear los datos de Supabase al formato del frontend
+  const foods: Food[] = useMemo(() => {
+    if (!supabaseFoods) return []
+    return supabaseFoods.map((food: any) => ({
+      id: food.id,
+      name: food.name || 'Sin nombre',
+      calories: food.calories || 0,
+      protein: food.protein_g || 0,
+      carbs: food.carbs_g || 0,
+      fat: food.fat_g || 0,
+      serving_size: food.quantity || '100g',
+      category: mapCategory(food.category),
+    }))
+  }, [supabaseFoods])
   
   const foodForm = useForm({
     initialValues: {
@@ -203,11 +222,12 @@ export function NutritionPage() {
       case 'Frutas': return 'yellow'
       case 'Lácteos': return 'blue'
       case 'Grasas': return 'grape'
+      case 'Frutos Secos': return 'teal'
       default: return 'gray'
     }
   }
 
-  const filteredFoods = mockFoods.filter(f =>
+  const filteredFoods = foods.filter(f =>
     f.name.toLowerCase().includes(searchFood.toLowerCase()) ||
     f.category.toLowerCase().includes(searchFood.toLowerCase())
   )
@@ -314,7 +334,11 @@ export function NutritionPage() {
             onChange={(e) => setSearchFood(e.target.value)}
           />
           
-          {filteredFoods.length > 0 ? (
+          {isLoadingFoods ? (
+            <Center py="xl">
+              <Loader size="lg" />
+            </Center>
+          ) : filteredFoods.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
               {filteredFoods.map((food) => {
                 const CategoryIcon = getCategoryIcon(food.category)
@@ -343,21 +367,21 @@ export function NutritionPage() {
 
                     <Group justify="space-between" mb="xs">
                       <Text size="xs" c="dimmed">Por {food.serving_size}</Text>
-                      <Badge variant="filled" color="blue">{food.calories} kcal</Badge>
+                      <Badge variant="filled" color="blue">{food.calories?.toFixed(0) || 0} kcal</Badge>
                     </Group>
 
                     <SimpleGrid cols={3} spacing="xs">
                       <Box ta="center">
                         <Text size="xs" c="dimmed">Proteína</Text>
-                        <Text size="sm" fw={500} c="green">{food.protein}g</Text>
+                        <Text size="sm" fw={500} c="green">{food.protein?.toFixed(1) || 0}g</Text>
                       </Box>
                       <Box ta="center">
                         <Text size="xs" c="dimmed">Carbos</Text>
-                        <Text size="sm" fw={500} c="orange">{food.carbs}g</Text>
+                        <Text size="sm" fw={500} c="orange">{food.carbs?.toFixed(1) || 0}g</Text>
                       </Box>
                       <Box ta="center">
                         <Text size="xs" c="dimmed">Grasas</Text>
-                        <Text size="sm" fw={500} c="grape">{food.fat}g</Text>
+                        <Text size="sm" fw={500} c="grape">{food.fat?.toFixed(1) || 0}g</Text>
                       </Box>
                     </SimpleGrid>
                   </Card>
@@ -524,7 +548,7 @@ export function NutritionPage() {
             <MealPlanBuilder
               days={mealPlanDays}
               onChange={setMealPlanDays}
-              availableFoods={mockFoods}
+              availableFoods={foods}
               targetCalories={planForm.values.target_calories}
               targetProtein={planForm.values.target_protein}
               targetCarbs={planForm.values.target_carbs}
