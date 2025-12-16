@@ -1,42 +1,67 @@
-from sqlalchemy import Column, String, Text, ForeignKey, Float
+"""Nutrition and Food models."""
+from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
 
 
+class FoodCategory(BaseModel):
+    """Food category model."""
+    
+    __tablename__ = "food_categories"
+    
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    icon = Column(String(50))
+    parent_id = Column(UUID(as_uuid=True), ForeignKey('food_categories.id', ondelete='SET NULL'))
+    is_system = Column(Boolean, default=False)
+    
+    # Relationships
+    foods = relationship("Food", back_populates="category")
+    children = relationship("FoodCategory", backref="parent", remote_side="FoodCategory.id")
+
+
 class Food(BaseModel):
+    """Food library model."""
+    
     __tablename__ = "foods"
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    category_id = Column(UUID(as_uuid=True), ForeignKey('food_categories.id', ondelete='SET NULL'))
     
     # Food details
     name = Column(String(255), nullable=False)
     brand = Column(String(255), nullable=True)
-    category = Column(String(100), nullable=True)  # protein, carbs, vegetables, etc.
     
-    # Nutritional info (per 100g)
-    calories = Column(Float, default=0)
-    protein_g = Column(Float, default=0)
-    carbs_g = Column(Float, default=0)
-    fat_g = Column(Float, default=0)
-    fiber_g = Column(Float, default=0)
+    # Nutritional info (per serving)
+    serving_size = Column(Numeric(10, 2), default=100)
+    serving_unit = Column(String(20), default='g')
+    calories = Column(Numeric(10, 2))
+    protein = Column(Numeric(10, 2))
+    carbs = Column(Numeric(10, 2))
+    fat = Column(Numeric(10, 2))
+    fiber = Column(Numeric(10, 2))
+    sugar = Column(Numeric(10, 2))
+    sodium = Column(Numeric(10, 2))
+    micronutrients = Column(JSONB, default={})
+    allergens = Column(ARRAY(String), default=[])
     
-    # Additional nutrients
-    nutrients = Column(JSONB, default={})
+    # Visibility
+    is_public = Column(Boolean, default=False)
+    is_system = Column(Boolean, default=False)
+    barcode = Column(String(50))
     
-    # Serving info
-    serving_size = Column(Float, default=100)
-    serving_unit = Column(String(50), default="g")
-    
-    # Global food (null workspace_id) or workspace-specific
-    is_global = Column(String(1), default="N")  # Y/N
+    # Relationships
+    category = relationship("FoodCategory", back_populates="foods")
     
     def __repr__(self):
         return f"<Food {self.name}>"
 
 
 class MealPlan(BaseModel):
+    """Meal plan model."""
+    
     __tablename__ = "meal_plans"
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -48,7 +73,7 @@ class MealPlan(BaseModel):
     description = Column(Text, nullable=True)
     
     # Dietary preferences
-    dietary_tags = Column(ARRAY(String), default=[])  # vegetarian, keto, gluten-free, etc.
+    dietary_tags = Column(ARRAY(String), default=[])
     
     # Target macros
     target_calories = Column(Float, nullable=True)
@@ -56,24 +81,17 @@ class MealPlan(BaseModel):
     target_carbs = Column(Float, nullable=True)
     target_fat = Column(Float, nullable=True)
     
-    # Plan structure
-    # Contains: days -> meals -> foods with portions
-    plan = Column(JSONB, default={
-        "days": []
-    })
+    # Plan structure (days -> meals -> foods with portions)
+    plan = Column(JSONB, default={"days": []})
     
     # Shopping list (auto-generated)
-    shopping_list = Column(JSONB, default={
-        "items": []
-    })
+    shopping_list = Column(JSONB, default={"items": []})
     
     # Is this a template or assigned plan
-    is_template = Column(String(1), default="Y")  # Y/N
+    is_template = Column(String(1), default="Y")
     
     # Adherence tracking
-    adherence = Column(JSONB, default={
-        "logs": []
-    })
+    adherence = Column(JSONB, default={"logs": []})
     
     # Relationships
     workspace = relationship("Workspace", back_populates="meal_plans")
@@ -81,4 +99,3 @@ class MealPlan(BaseModel):
     
     def __repr__(self):
         return f"<MealPlan {self.name}>"
-

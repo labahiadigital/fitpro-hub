@@ -7,7 +7,7 @@ from sqlalchemy import select, func, or_
 
 from app.core.database import get_db
 from app.middleware.auth import get_current_user, require_roles
-from app.models.exercise import Food, FoodCategory
+from app.models.nutrition import Food, FoodCategory
 from app.models.user import User
 from app.schemas.exercise import (
     FoodCreate, FoodUpdate, FoodResponse, FoodList,
