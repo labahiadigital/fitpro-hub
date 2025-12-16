@@ -33,12 +33,20 @@ class Settings(BaseSettings):
     FROM_EMAIL: str = "noreply@fitprohub.com"
     FROM_NAME: str = "FitPro Hub"
     
-    # CORS
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    # CORS (comma-separated list of allowed origins)
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.fitprohub.com"
     
-    # Celery
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    # Celery (uses REDIS_URL by default)
+    CELERY_BROKER_URL: str = ""
+    CELERY_RESULT_BACKEND: str = ""
+    
+    @property
+    def celery_broker(self) -> str:
+        return self.CELERY_BROKER_URL or self.REDIS_URL
+    
+    @property
+    def celery_backend(self) -> str:
+        return self.CELERY_RESULT_BACKEND or self.REDIS_URL
     
     @property
     def cors_origins_list(self) -> List[str]:

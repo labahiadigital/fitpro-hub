@@ -14,11 +14,15 @@ Esta guía te ayudará a desplegar FitPro Hub en Coolify con recursos separados.
 
 ## 🏗️ Arquitectura de Despliegue
 
-Crearemos **3 recursos separados** en Coolify:
+Crearemos **5 recursos separados** en Coolify:
 
-1. **Frontend** (React + Nginx) - Puerto 80
-2. **Backend** (FastAPI + Gunicorn) - Puerto 8000
-3. **Redis** (Base de datos) - Puerto 6379
+| # | Recurso | Descripción |
+|---|---------|-------------|
+| 1 | **Redis** | Cache y broker para Celery |
+| 2 | **Backend API** | FastAPI + Gunicorn |
+| 3 | **Celery Worker** | Procesamiento de tareas en background |
+| 4 | **Celery Beat** | Scheduler para tareas programadas |
+| 5 | **Frontend** | React + Nginx |
 
 ---
 
@@ -30,12 +34,11 @@ Crearemos **3 recursos separados** en Coolify:
    - **Name**: `fitprohub-redis`
    - **Version**: `7-alpine`
 4. Click **"Start"**
-5. **Anota la URL de conexión** (la necesitarás para el backend)
-   - Formato: `redis://fitprohub-redis:6379`
+5. **Anota la URL de conexión**: `redis://fitprohub-redis:6379`
 
 ---
 
-## 🔧 Paso 2: Desplegar Backend (FastAPI)
+## 🔧 Paso 2: Desplegar Backend API (FastAPI)
 
 ### 2.1 Crear el recurso
 
@@ -60,7 +63,7 @@ SUPABASE_URL=https://[PROJECT-REF].supabase.co
 SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_JWT_SECRET=tu-jwt-secret-de-supabase
 
-# Redis (usa la URL del paso 1)
+# Redis (usa el nombre del servicio de Coolify)
 REDIS_URL=redis://fitprohub-redis:6379/0
 
 # Seguridad
@@ -89,9 +92,91 @@ Click en **"Deploy"**
 
 ---
 
-## 🎨 Paso 3: Desplegar Frontend (React)
+## ⚙️ Paso 3: Desplegar Celery Worker
+
+El worker procesa tareas en background como:
+- Envío de emails
+- Notificaciones
+- Procesamiento de pagos
+- Generación de reportes
 
 ### 3.1 Crear el recurso
+
+1. Click en **"New Resource"** → **"Public Repository"**
+2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+3. **Branch**: `master`
+4. **Build Pack**: `Dockerfile`
+5. **Base Directory**: `backend`
+6. **Dockerfile Location**: `Dockerfile.celery`
+
+### 3.2 Configurar Variables de Entorno
+
+**Las mismas que el Backend API:**
+
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+REDIS_URL=redis://fitprohub-redis:6379/0
+SECRET_KEY=la-misma-clave-que-el-backend
+STRIPE_SECRET_KEY=sk_live_xxx
+BREVO_API_KEY=tu-brevo-api-key
+ENVIRONMENT=production
+```
+
+### 3.3 Sin dominio necesario
+
+El worker no expone ningún puerto, solo procesa tareas internas.
+
+### 3.4 Desplegar
+
+Click en **"Deploy"**
+
+---
+
+## ⏰ Paso 4: Desplegar Celery Beat (Scheduler)
+
+El scheduler ejecuta tareas programadas como:
+- Recordatorios de sesiones
+- Renovaciones de suscripciones
+- Reportes diarios/semanales
+- Limpieza de datos
+
+### 4.1 Crear el recurso
+
+1. Click en **"New Resource"** → **"Public Repository"**
+2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+3. **Branch**: `master`
+4. **Build Pack**: `Dockerfile`
+5. **Base Directory**: `backend`
+6. **Dockerfile Location**: `Dockerfile.beat`
+
+### 4.2 Configurar Variables de Entorno
+
+**Las mismas que el Celery Worker:**
+
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+REDIS_URL=redis://fitprohub-redis:6379/0
+SECRET_KEY=la-misma-clave-que-el-backend
+ENVIRONMENT=production
+```
+
+### 4.3 Sin dominio necesario
+
+El scheduler no expone ningún puerto.
+
+### 4.4 Desplegar
+
+Click en **"Deploy"**
+
+---
+
+## 🎨 Paso 5: Desplegar Frontend (React)
+
+### 5.1 Crear el recurso
 
 1. Click en **"New Resource"** → **"Public Repository"**
 2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
@@ -101,11 +186,11 @@ Click en **"Deploy"**
 6. **Dockerfile Location**: `Dockerfile`
 7. **Port Exposes**: `80`
 
-### 3.2 Configurar Build Arguments
+### 5.2 Configurar Build Arguments
 
-⚠️ **IMPORTANTE**: Las variables de Vite son de **build-time**, así que deben ir como **Build Arguments**.
+⚠️ **IMPORTANTE**: Las variables de Vite son de **build-time**, deben ir como **Build Arguments**.
 
-Ve a la pestaña **"Build"** o **"Environment Variables"** y añade como **Build Arguments**:
+Ve a la sección **"Build Arguments"** y añade:
 
 ```env
 VITE_API_URL=https://api.tu-dominio.com
@@ -114,15 +199,13 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 VITE_STRIPE_PUBLISHABLE_KEY=pk_live_xxx
 ```
 
-> 💡 En Coolify, busca la sección "Build Arguments" o "Docker Build Args"
-
-### 3.3 Configurar Dominio
+### 5.3 Configurar Dominio
 
 1. Ve a la pestaña **"Domains"**
 2. Añade: `app.tu-dominio.com` (o tu dominio principal)
 3. Habilita **HTTPS**
 
-### 3.4 Desplegar
+### 5.4 Desplegar
 
 Click en **"Deploy"**
 
@@ -211,88 +294,80 @@ curl https://api.tu-dominio.com/health
 ### Verificar API Docs
 Abre en el navegador: `https://api.tu-dominio.com/docs`
 
----
+### Verificar Celery Worker
+En los logs del worker deberías ver:
+```
+[celery.worker.consumer] Connected to redis://fitprohub-redis:6379/0
+[celery.worker.consumer] mingle: searching for neighbors
+[celery.worker.consumer] ready.
+```
 
-## 🔄 Actualizaciones Automáticas
-
-### Configurar Auto Deploy
-
-En cada recurso de Coolify:
-
-1. Ve a **"Settings"**
-2. Habilita **"Auto Deploy"**
-3. Configura el **webhook de GitHub** (Coolify te da la URL)
-
-Ahora cada push a `master` desplegará automáticamente.
-
----
-
-## 📊 Monitorización
-
-### Ver Logs
-
-En Coolify, cada recurso tiene una pestaña **"Logs"** donde puedes ver:
-- Logs de build
-- Logs de aplicación
-- Errores
-
-### Health Checks
-
-Los health checks están configurados automáticamente:
-- **Frontend**: `GET /health` → `healthy`
-- **Backend**: `GET /health` → `{"status":"healthy"}`
-
----
-
-## 🆘 Solución de Problemas
-
-### Frontend en blanco
-
-1. Verifica que los **Build Arguments** están configurados
-2. Revisa los logs del build en Coolify
-3. Asegúrate de que `VITE_API_URL` apunta al backend correcto
-
-### Error de conexión a base de datos
-
-1. Verifica `DATABASE_URL` (debe usar `postgresql+asyncpg://`)
-2. En Supabase, verifica que no hay restricciones de IP
-3. Revisa los logs del backend
-
-### Error de CORS
-
-El backend ya tiene CORS configurado para permitir todos los orígenes. Si hay problemas:
-1. Verifica que `VITE_API_URL` no tiene `/` al final
-2. Revisa los logs del backend
-
-### Redis no conecta
-
-1. Verifica que Redis está corriendo en Coolify
-2. Usa el nombre del servicio en la URL: `redis://fitprohub-redis:6379/0`
-3. Ambos servicios deben estar en la misma red de Coolify
-
-### Build falla en el frontend
-
-1. Verifica que `pnpm-lock.yaml` existe en el repo
-2. Revisa los logs de build para ver el error específico
+### Verificar Celery Beat
+En los logs del beat deberías ver:
+```
+[celery.beat] beat: Starting...
+[celery.beat] Scheduler: Sending due task...
+```
 
 ---
 
 ## 📁 Resumen de Recursos en Coolify
 
-| Recurso | Tipo | Puerto | Dominio |
-|---------|------|--------|---------|
-| fitprohub-redis | Database (Redis) | 6379 | - |
-| fitprohub-backend | Dockerfile | 8000 | api.tu-dominio.com |
-| fitprohub-frontend | Dockerfile | 80 | app.tu-dominio.com |
+| Recurso | Tipo | Puerto | Dominio | Dockerfile |
+|---------|------|--------|---------|------------|
+| fitprohub-redis | Database (Redis) | 6379 | - | - |
+| fitprohub-backend | Dockerfile | 8000 | api.tu-dominio.com | `Dockerfile` |
+| fitprohub-celery-worker | Dockerfile | - | - | `Dockerfile.celery` |
+| fitprohub-celery-beat | Dockerfile | - | - | `Dockerfile.beat` |
+| fitprohub-frontend | Dockerfile | 80 | app.tu-dominio.com | `Dockerfile` |
+
+---
+
+## 🔄 Orden de Despliegue
+
+Es importante seguir este orden:
+
+1. **Redis** (primero, los demás dependen de él)
+2. **Backend API** (necesita Redis)
+3. **Celery Worker** (necesita Redis y misma config que backend)
+4. **Celery Beat** (necesita Redis)
+5. **Frontend** (necesita que el backend esté listo)
+
+---
+
+## 🆘 Solución de Problemas
+
+### Celery Worker no conecta a Redis
+
+1. Verifica que Redis está corriendo
+2. Verifica que `REDIS_URL` usa el nombre correcto del servicio
+3. Asegúrate de que están en la misma red de Coolify
+
+### Tareas no se ejecutan
+
+1. Revisa los logs del Celery Worker
+2. Verifica que el worker está conectado a Redis
+3. Comprueba que las tareas están registradas
+
+### Celery Beat no programa tareas
+
+1. Revisa los logs del Beat
+2. Verifica la configuración de `celery_app.conf.beat_schedule`
+
+### Frontend en blanco
+
+1. Verifica que los **Build Arguments** están configurados
+2. Revisa los logs del build
+3. Asegúrate de que `VITE_API_URL` apunta al backend correcto
 
 ---
 
 ## 📞 Soporte
 
 - **Coolify Docs**: https://coolify.io/docs
+- **Celery Docs**: https://docs.celeryq.dev
 - **Supabase Docs**: https://supabase.com/docs
-- **Stripe Docs**: https://stripe.com/docs
 
 ---
 
-¡Listo! Tu FitPro Hub debería estar funcionando en producción 🎉
+¡Listo! Tu FitPro Hub completo debería estar funcionando en producción 🎉
