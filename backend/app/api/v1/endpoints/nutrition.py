@@ -1,12 +1,13 @@
 from typing import List, Optional
 from uuid import UUID
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models.nutrition import Food, MealPlan
+from app.models.nutrition import Food, FoodCategory, MealPlan
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 
 router = APIRouter()
@@ -17,29 +18,34 @@ router = APIRouter()
 class FoodCreate(BaseModel):
     name: str
     brand: Optional[str] = None
-    category: Optional[str] = None
-    calories: float = 0
-    protein_g: float = 0
-    carbs_g: float = 0
-    fat_g: float = 0
-    fiber_g: float = 0
-    nutrients: dict = {}
+    category_id: Optional[UUID] = None
     serving_size: float = 100
     serving_unit: str = "g"
+    calories: Optional[float] = None
+    protein: Optional[float] = None
+    carbs: Optional[float] = None
+    fat: Optional[float] = None
+    fiber: Optional[float] = None
+    sugar: Optional[float] = None
+    sodium: Optional[float] = None
+    micronutrients: dict = {}
+    allergens: List[str] = []
 
 
 class FoodResponse(BaseModel):
     id: UUID
     name: str
     brand: Optional[str]
-    category: Optional[str]
-    calories: float
-    protein_g: float
-    carbs_g: float
-    fat_g: float
-    fiber_g: float
-    serving_size: float
-    serving_unit: str
+    category_id: Optional[UUID]
+    serving_size: Optional[Decimal]
+    serving_unit: Optional[str]
+    calories: Optional[Decimal]
+    protein: Optional[Decimal]
+    carbs: Optional[Decimal]
+    fat: Optional[Decimal]
+    fiber: Optional[Decimal]
+    is_public: bool
+    is_system: bool
     
     class Config:
         from_attributes = True
@@ -72,7 +78,6 @@ class MealPlanResponse(BaseModel):
     plan: dict
     shopping_list: dict
     is_template: str
-    created_at: str
     
     class Config:
         from_attributes = True
@@ -83,23 +88,26 @@ class MealPlanResponse(BaseModel):
 @router.get("/foods", response_model=List[FoodResponse])
 async def list_foods(
     search: Optional[str] = None,
-    category: Optional[str] = None,
+    category_id: Optional[UUID] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar alimentos (globales y del workspace).
+    Listar alimentos (públicos, del sistema, y del workspace).
     """
     query = select(Food).where(
-        (Food.workspace_id == current_user.workspace_id) |
-        (Food.is_global == "Y")
+        or_(
+            Food.workspace_id == current_user.workspace_id,
+            Food.is_public == True,
+            Food.is_system == True
+        )
     )
     
     if search:
         query = query.where(Food.name.ilike(f"%{search}%"))
     
-    if category:
-        query = query.where(Food.category == category)
+    if category_id:
+        query = query.where(Food.category_id == category_id)
     
     result = await db.execute(query.order_by(Food.name))
     return result.scalars().all()
@@ -118,16 +126,20 @@ async def create_food(
         workspace_id=current_user.workspace_id,
         name=data.name,
         brand=data.brand,
-        category=data.category,
-        calories=data.calories,
-        protein_g=data.protein_g,
-        carbs_g=data.carbs_g,
-        fat_g=data.fat_g,
-        fiber_g=data.fiber_g,
-        nutrients=data.nutrients,
+        category_id=data.category_id,
         serving_size=data.serving_size,
         serving_unit=data.serving_unit,
-        is_global="N"
+        calories=data.calories,
+        protein=data.protein,
+        carbs=data.carbs,
+        fat=data.fat,
+        fiber=data.fiber,
+        sugar=data.sugar,
+        sodium=data.sodium,
+        micronutrients=data.micronutrients,
+        allergens=data.allergens,
+        is_public=False,
+        is_system=False
     )
     db.add(food)
     await db.commit()
@@ -305,4 +317,3 @@ def generate_shopping_list(plan: dict) -> dict:
                     }
     
     return {"items": list(items.values())}
-

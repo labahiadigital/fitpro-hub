@@ -2,11 +2,12 @@ from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models.workout import Exercise, WorkoutProgram, WorkoutLog
+from app.models.workout import WorkoutProgram, WorkoutLog
+from app.models.exercise import Exercise
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 
 router = APIRouter()
@@ -21,9 +22,9 @@ class ExerciseCreate(BaseModel):
     muscle_groups: List[str] = []
     equipment: List[str] = []
     difficulty: str = "intermediate"
-    category: Optional[str] = None
+    category_id: Optional[UUID] = None
     video_url: Optional[str] = None
-    image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
 
 class ExerciseResponse(BaseModel):
@@ -34,9 +35,11 @@ class ExerciseResponse(BaseModel):
     muscle_groups: List[str]
     equipment: List[str]
     difficulty: str
-    category: Optional[str]
+    category_id: Optional[UUID]
     video_url: Optional[str]
-    image_url: Optional[str]
+    thumbnail_url: Optional[str]
+    is_public: bool
+    is_system: bool
     
     class Config:
         from_attributes = True
@@ -62,7 +65,6 @@ class WorkoutProgramResponse(BaseModel):
     template: dict
     tags: List[str]
     is_template: str
-    created_at: str
     
     class Config:
         from_attributes = True
@@ -79,7 +81,6 @@ class WorkoutLogResponse(BaseModel):
     program_id: UUID
     client_id: UUID
     log: dict
-    created_at: str
     
     class Config:
         from_attributes = True
@@ -91,16 +92,19 @@ class WorkoutLogResponse(BaseModel):
 async def list_exercises(
     search: Optional[str] = None,
     muscle_group: Optional[str] = None,
-    category: Optional[str] = None,
+    category_id: Optional[UUID] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar ejercicios (globales y del workspace).
+    Listar ejercicios (públicos, del sistema, y del workspace).
     """
     query = select(Exercise).where(
-        (Exercise.workspace_id == current_user.workspace_id) |
-        (Exercise.is_global == "Y")
+        or_(
+            Exercise.workspace_id == current_user.workspace_id,
+            Exercise.is_public == True,
+            Exercise.is_system == True
+        )
     )
     
     if search:
@@ -109,8 +113,8 @@ async def list_exercises(
     if muscle_group:
         query = query.where(Exercise.muscle_groups.contains([muscle_group]))
     
-    if category:
-        query = query.where(Exercise.category == category)
+    if category_id:
+        query = query.where(Exercise.category_id == category_id)
     
     result = await db.execute(query.order_by(Exercise.name))
     return result.scalars().all()
@@ -133,10 +137,11 @@ async def create_exercise(
         muscle_groups=data.muscle_groups,
         equipment=data.equipment,
         difficulty=data.difficulty,
-        category=data.category,
+        category_id=data.category_id,
         video_url=data.video_url,
-        image_url=data.image_url,
-        is_global="N"
+        thumbnail_url=data.thumbnail_url,
+        is_public=False,
+        is_system=False
     )
     db.add(exercise)
     await db.commit()
@@ -316,4 +321,3 @@ async def get_client_logs(
     
     result = await db.execute(query.order_by(WorkoutLog.created_at.desc()))
     return result.scalars().all()
-
