@@ -9,8 +9,25 @@ class Base(DeclarativeBase):
     pass
 
 
+def get_async_database_url(url: str) -> str:
+    """Convert database URL to async version using asyncpg driver."""
+    if not url:
+        return "postgresql+asyncpg://localhost/fitprohub"
+    
+    # Replace postgresql:// with postgresql+asyncpg://
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    
+    return url
+
+
+# Get the async database URL
+DATABASE_URL = get_async_database_url(settings.DATABASE_URL)
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    DATABASE_URL,
     echo=settings.DEBUG,
     pool_pre_ping=True,
     pool_size=10,
