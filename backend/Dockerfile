@@ -1,5 +1,5 @@
-# Build stage
-FROM python:3.11-slim AS builder
+# Single stage build for better compatibility with Coolify
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -7,32 +7,20 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-RUN pip install --no-cache-dir --user gunicorn
-
-# Production stage
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
-
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir gunicorn
 
 # Copy application code
 COPY . .
+
+# Make sure scripts are usable
+ENV PATH=/root/.local/bin:$PATH
 
 # Expose port
 EXPOSE 8000
