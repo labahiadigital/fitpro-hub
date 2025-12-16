@@ -1,4 +1,3 @@
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,29 +25,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS - Build allowed origins list
-cors_origins = settings.cors_origins_list.copy()
-
-# Add Coolify domains if running in Coolify environment
-coolify_fqdn = os.environ.get("COOLIFY_FQDN", "")
-if coolify_fqdn:
-    # Add both http and https variants of the Coolify domain
-    cors_origins.append(f"http://{coolify_fqdn}")
-    cors_origins.append(f"https://{coolify_fqdn}")
-
-# Add wildcard for sslip.io domains in development/staging
-# This allows any Coolify-deployed frontend to access the API
-cors_origins.extend([
-    "http://v4sw4gwko4gg8448cokswkgg.157.90.237.126.sslip.io",
-    "https://v4sw4gwko4gg8448cokswkgg.157.90.237.126.sslip.io",
-])
-
+# CORS - Allow all origins in development/staging
+# In production, this should be restricted to specific domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["*"],  # Allow all origins for now
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include API routes
