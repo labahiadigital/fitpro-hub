@@ -1,4 +1,5 @@
 # Build stage
+# Build version: 2025-12-16-v2 (force rebuild - fix workspace_id undefined)
 FROM node:20-alpine AS builder
 
 WORKDIR /app

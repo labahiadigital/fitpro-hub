@@ -1,4 +1,5 @@
 # Single stage build for better compatibility with Coolify
+# Build version: 2025-12-16-v2 (force rebuild)
 FROM python:3.11-slim
 
 WORKDIR /app
