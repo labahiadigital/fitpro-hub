@@ -24,7 +24,7 @@ class Product(Base, TimestampMixin, WorkspaceMixin):
     interval_count = Column(Integer, default=1)
     trial_days = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    metadata = Column(JSONB, default={})
+    extra_data = Column(JSONB, default={})
     
     # Relationships
     session_packages = relationship("SessionPackage", back_populates="product")

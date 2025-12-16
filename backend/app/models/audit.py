@@ -23,8 +23,8 @@ class AuditLog(BaseModel):
     ip_address = Column(String(50), nullable=True)
     user_agent = Column(Text, nullable=True)
     
-    # Additional metadata
-    metadata = Column(JSONB, default={})
+    # Additional extra data
+    extra_data = Column(JSONB, default={})
     
     def __repr__(self):
         return f"<AuditLog {self.action} on {self.table_name}>"

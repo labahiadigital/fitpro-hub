@@ -41,7 +41,7 @@ class Exercise(Base, TimestampMixin, WorkspaceMixin):
     difficulty = Column(String(20), default='intermediate')  # beginner, intermediate, advanced
     is_public = Column(Boolean, default=False)  # If True, visible to all workspaces
     is_system = Column(Boolean, default=False)  # True for default exercises
-    metadata = Column(JSONB, default={})
+    extra_data = Column(JSONB, default={})
     
     # Relationships
     category = relationship("ExerciseCategory", back_populates="exercises")

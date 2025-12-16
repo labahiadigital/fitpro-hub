@@ -22,7 +22,7 @@ class Notification(Base, TimestampMixin, WorkspaceMixin):
     read_at = Column(String)
     action_url = Column(String(500))
     action_label = Column(String(100))
-    metadata = Column(JSONB, default={})
+    extra_data = Column(JSONB, default={})
     
     # Relationships
     user = relationship("User", back_populates="notifications")
@@ -92,7 +92,7 @@ class ScheduledNotification(Base, TimestampMixin, WorkspaceMixin):
     sent_at = Column(String)
     status = Column(String(20), default='pending')  # pending, sent, failed, cancelled
     error_message = Column(Text)
-    metadata = Column(JSONB, default={})
+    extra_data = Column(JSONB, default={})
     automation_id = Column(UUID(as_uuid=True), ForeignKey('automations.id', ondelete='SET NULL'))
     
     # Relationships

@@ -69,8 +69,8 @@ class Subscription(BaseModel):
     current_period_end = Column(DateTime(timezone=True), nullable=True)
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Metadata
-    metadata = Column(JSONB, default={})
+    # Extra data
+    extra_data = Column(JSONB, default={})
     
     def __repr__(self):
         return f"<Subscription {self.name}>"
@@ -100,8 +100,8 @@ class Payment(BaseModel):
     paid_at = Column(DateTime(timezone=True), nullable=True)
     refunded_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Metadata
-    metadata = Column(JSONB, default={})
+    # Extra data
+    extra_data = Column(JSONB, default={})
     
     def __repr__(self):
         return f"<Payment {self.amount} {self.currency}>"
