@@ -143,7 +143,7 @@ export function useAutomation(id: string) {
       if (isDemoMode) {
         return {
           id,
-          workspace_id: 'demo-workspace-1',
+          workspace_id: '11111111-1111-1111-1111-111111111111',
           name: 'Bienvenida a nuevos clientes',
           description: 'Envía email de bienvenida y asigna formulario PAR-Q cuando se crea un cliente',
           trigger_type: 'client_created',

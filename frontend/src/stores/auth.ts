@@ -37,9 +37,9 @@ interface AuthState {
   loginDemo: () => void
 }
 
-// Demo user and workspace for testing
+// Demo user and workspace for testing - IDs must match Supabase data
 const demoUser: User = {
-  id: 'demo-user-1',
+  id: '22222222-2222-2222-2222-222222222222',
   email: 'demo@fitprohub.com',
   full_name: 'Usuario Demo',
   avatar_url: undefined,
@@ -48,7 +48,7 @@ const demoUser: User = {
 }
 
 const demoWorkspace: Workspace = {
-  id: 'demo-workspace-1',
+  id: '11111111-1111-1111-1111-111111111111',
   name: 'FitPro Demo',
   slug: 'fitpro-demo',
   logo_url: undefined,
