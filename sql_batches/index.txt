@@ -1,0 +1,3 @@
+Total batches: 224
+Total productos: 5588
+Productos por batch: 25

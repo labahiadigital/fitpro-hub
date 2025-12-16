@@ -26,7 +26,7 @@ ENV PATH=/root/.local/bin:$PATH
 EXPOSE 8000
 
 # Health check with longer start period for app initialization
-HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=5 \
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=5 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application with gunicorn for production
