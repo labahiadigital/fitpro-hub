@@ -32,6 +32,8 @@ import {
   IconChartBar,
   IconPackage,
   IconTrophy,
+  IconFileText,
+  IconUsersGroup,
 } from '@tabler/icons-react'
 import { useAuthStore } from '../../stores/auth'
 
@@ -91,10 +93,12 @@ export function DashboardLayout() {
     { icon: <IconBarbell size={20} />, label: 'Entrenamientos', to: '/workouts' },
     { icon: <IconSalad size={20} />, label: 'Nutrición', to: '/nutrition' },
     { icon: <IconForms size={20} />, label: 'Formularios', to: '/forms' },
+    { icon: <IconFileText size={20} />, label: 'Documentos', to: '/documents' },
     { icon: <IconMessage size={20} />, label: 'Chat', to: '/chat', badge: 3 },
     { icon: <IconCreditCard size={20} />, label: 'Pagos', to: '/payments' },
     { icon: <IconPackage size={20} />, label: 'Bonos', to: '/packages' },
     { icon: <IconTrophy size={20} />, label: 'Comunidad', to: '/community' },
+    { icon: <IconUsersGroup size={20} />, label: 'Equipo', to: '/team' },
     { icon: <IconRobot size={20} />, label: 'Automatizaciones', to: '/automations' },
     { icon: <IconChartBar size={20} />, label: 'Reportes', to: '/reports' },
     { icon: <IconSettings size={20} />, label: 'Configuración', to: '/settings' },

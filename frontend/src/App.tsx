@@ -29,6 +29,8 @@ import { ReportsPage } from './pages/reports/ReportsPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
 import { PackagesPage } from './pages/packages/PackagesPage'
 import { CommunityPage } from './pages/community/CommunityPage'
+import { DocumentsPage } from './pages/documents/DocumentsPage'
+import { TeamPage } from './pages/team/TeamPage'
 
 // Public Pages
 import { LandingPage } from './pages/public/LandingPage'
@@ -104,6 +106,8 @@ export default function App() {
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/packages" element={<PackagesPage />} />
                 <Route path="/community" element={<CommunityPage />} />
+                <Route path="/documents" element={<DocumentsPage />} />
+                <Route path="/team" element={<TeamPage />} />
                 <Route path="/automations" element={<AutomationsPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
