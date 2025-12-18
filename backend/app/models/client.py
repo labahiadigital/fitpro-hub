@@ -73,6 +73,7 @@ class Client(BaseModel):
     workout_logs = relationship("WorkoutLog", back_populates="client", cascade="all, delete-orphan")
     meal_plans = relationship("MealPlan", back_populates="client", cascade="all, delete-orphan")
     form_submissions = relationship("FormSubmission", back_populates="client", cascade="all, delete-orphan")
+    conversations = relationship("Conversation", back_populates="client")
     
     @property
     def full_name(self) -> str:

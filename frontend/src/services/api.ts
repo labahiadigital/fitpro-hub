@@ -32,8 +32,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expired, logout user
+    const isDemoMode = useAuthStore.getState().isDemoMode
+    
+    if (error.response?.status === 401 && !isDemoMode) {
+      // Token expired, logout user (only if not in demo mode)
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }

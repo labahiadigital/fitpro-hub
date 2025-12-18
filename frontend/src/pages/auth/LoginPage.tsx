@@ -12,10 +12,12 @@ import {
   Divider,
   Alert,
   Group,
+  Box,
+  ThemeIcon,
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { Link, useNavigate } from 'react-router-dom'
-import { IconAlertCircle, IconPlayerPlay } from '@tabler/icons-react'
+import { IconAlertCircle, IconBarbell, IconUser, IconSparkles } from '@tabler/icons-react'
 import { useAuthStore } from '../../stores/auth'
 import { supabase } from '../../services/supabase'
 
@@ -23,7 +25,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
-  const { setUser, setTokens, loginDemo } = useAuthStore()
+  const { setUser, setTokens, loginDemoTrainer, loginDemoClient } = useAuthStore()
   
   const form = useForm({
     initialValues: {
@@ -66,8 +68,13 @@ export function LoginPage() {
     }
   }
   
-  const handleDemoLogin = () => {
-    loginDemo()
+  const handleDemoTrainer = () => {
+    loginDemoTrainer()
+    navigate('/dashboard')
+  }
+  
+  const handleDemoClient = () => {
+    loginDemoClient()
     navigate('/dashboard')
   }
   
@@ -117,17 +124,74 @@ export function LoginPage() {
               Iniciar Sesión
             </Button>
             
-            <Divider label="o" labelPosition="center" />
+            <Divider 
+              label={
+                <Group gap={6}>
+                  <IconSparkles size={14} />
+                  <Text size="xs">Prueba la demo</Text>
+                </Group>
+              } 
+              labelPosition="center" 
+            />
             
-            <Button
-              variant="light"
-              color="green"
-              fullWidth
-              leftSection={<IconPlayerPlay size={18} />}
-              onClick={handleDemoLogin}
-            >
-              Probar Modo Demo
-            </Button>
+            {/* Demo buttons */}
+            <Stack gap="xs">
+              <Button
+                variant="light"
+                color="teal"
+                fullWidth
+                leftSection={
+                  <ThemeIcon variant="light" color="teal" size="sm" radius="xl">
+                    <IconBarbell size={14} />
+                  </ThemeIcon>
+                }
+                onClick={handleDemoTrainer}
+                styles={{
+                  root: {
+                    height: 'auto',
+                    padding: '10px 16px',
+                  },
+                  inner: {
+                    justifyContent: 'flex-start',
+                  },
+                }}
+              >
+                <Box>
+                  <Text size="sm" fw={600}>Demo Entrenador</Text>
+                  <Text size="xs" c="dimmed">
+                    Gestiona clientes, entrenamientos y pagos
+                  </Text>
+                </Box>
+              </Button>
+              
+              <Button
+                variant="light"
+                color="violet"
+                fullWidth
+                leftSection={
+                  <ThemeIcon variant="light" color="violet" size="sm" radius="xl">
+                    <IconUser size={14} />
+                  </ThemeIcon>
+                }
+                onClick={handleDemoClient}
+                styles={{
+                  root: {
+                    height: 'auto',
+                    padding: '10px 16px',
+                  },
+                  inner: {
+                    justifyContent: 'flex-start',
+                  },
+                }}
+              >
+                <Box>
+                  <Text size="sm" fw={600}>Demo Cliente</Text>
+                  <Text size="xs" c="dimmed">
+                    Ve tus entrenamientos, progreso y más
+                  </Text>
+                </Box>
+              </Button>
+            </Stack>
             
             <Text c="dimmed" size="sm" ta="center">
               ¿No tienes cuenta?{' '}

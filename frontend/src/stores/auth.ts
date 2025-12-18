@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type DemoRole = 'trainer' | 'client' | null
+
 interface User {
   id: string
   email: string
@@ -29,22 +31,35 @@ interface AuthState {
   currentWorkspace: Workspace | null
   isAuthenticated: boolean
   isDemoMode: boolean
+  demoRole: DemoRole
   
   setUser: (user: User | null) => void
   setTokens: (accessToken: string, refreshToken?: string) => void
   setWorkspace: (workspace: Workspace | null) => void
   logout: () => void
-  loginDemo: () => void
+  loginDemo: (role?: DemoRole) => void
+  loginDemoTrainer: () => void
+  loginDemoClient: () => void
 }
 
-// Demo user and workspace for testing - IDs must match Supabase data
-const demoUser: User = {
+// Demo trainer user - Full access to all features
+const demoTrainerUser: User = {
   id: '22222222-2222-2222-2222-222222222222',
-  email: 'demo@fitprohub.com',
-  full_name: 'Usuario Demo',
+  email: 'entrenador@fitprohub.com',
+  full_name: 'Carlos Fitness',
   avatar_url: undefined,
   is_active: true,
   role: 'owner',
+}
+
+// Demo client user - Limited access, client perspective
+const demoClientUser: User = {
+  id: '33333333-3333-3333-3333-333333333333',
+  email: 'cliente@fitprohub.com',
+  full_name: 'María García',
+  avatar_url: undefined,
+  is_active: true,
+  role: 'client',
 }
 
 const demoWorkspace: Workspace = {
@@ -68,6 +83,7 @@ export const useAuthStore = create<AuthState>()(
       currentWorkspace: null,
       isAuthenticated: false,
       isDemoMode: false,
+      demoRole: null,
       
       setUser: (user) => 
         set({ user, isAuthenticated: !!user }),
@@ -86,16 +102,43 @@ export const useAuthStore = create<AuthState>()(
           currentWorkspace: null,
           isAuthenticated: false,
           isDemoMode: false,
+          demoRole: null,
         }),
       
-      loginDemo: () =>
+      // Legacy demo login (defaults to trainer)
+      loginDemo: (role: DemoRole = 'trainer') =>
         set({
-          user: demoUser,
+          user: role === 'client' ? demoClientUser : demoTrainerUser,
           accessToken: 'demo-token',
           refreshToken: 'demo-refresh-token',
           currentWorkspace: demoWorkspace,
           isAuthenticated: true,
           isDemoMode: true,
+          demoRole: role,
+        }),
+      
+      // Demo login as trainer/admin
+      loginDemoTrainer: () =>
+        set({
+          user: demoTrainerUser,
+          accessToken: 'demo-token',
+          refreshToken: 'demo-refresh-token',
+          currentWorkspace: demoWorkspace,
+          isAuthenticated: true,
+          isDemoMode: true,
+          demoRole: 'trainer',
+        }),
+      
+      // Demo login as client
+      loginDemoClient: () =>
+        set({
+          user: demoClientUser,
+          accessToken: 'demo-token',
+          refreshToken: 'demo-refresh-token',
+          currentWorkspace: demoWorkspace,
+          isAuthenticated: true,
+          isDemoMode: true,
+          demoRole: 'client',
         }),
     }),
     {
@@ -106,6 +149,7 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         currentWorkspace: state.currentWorkspace,
         isDemoMode: state.isDemoMode,
+        demoRole: state.demoRole,
       }),
     }
   )

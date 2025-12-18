@@ -34,6 +34,8 @@ import {
   IconTrophy,
   IconFileText,
   IconUsersGroup,
+  IconProgress,
+  IconHistory,
 } from '@tabler/icons-react'
 import { useAuthStore } from '../../stores/auth'
 
@@ -82,27 +84,46 @@ function NavItem({ icon, label, to, badge }: NavItemProps) {
   )
 }
 
+// Navigation items for trainer/admin view
+const trainerNavItems: NavItemProps[] = [
+  { icon: <IconLayoutDashboard size={20} />, label: 'Dashboard', to: '/dashboard' },
+  { icon: <IconUsers size={20} />, label: 'Clientes', to: '/clients' },
+  { icon: <IconCalendarEvent size={20} />, label: 'Calendario', to: '/calendar' },
+  { icon: <IconBarbell size={20} />, label: 'Entrenamientos', to: '/workouts' },
+  { icon: <IconSalad size={20} />, label: 'Nutrición', to: '/nutrition' },
+  { icon: <IconForms size={20} />, label: 'Formularios', to: '/forms' },
+  { icon: <IconFileText size={20} />, label: 'Documentos', to: '/documents' },
+  { icon: <IconMessage size={20} />, label: 'Chat', to: '/chat', badge: 3 },
+  { icon: <IconCreditCard size={20} />, label: 'Pagos', to: '/payments' },
+  { icon: <IconPackage size={20} />, label: 'Bonos', to: '/packages' },
+  { icon: <IconTrophy size={20} />, label: 'Comunidad', to: '/community' },
+  { icon: <IconUsersGroup size={20} />, label: 'Equipo', to: '/team' },
+  { icon: <IconRobot size={20} />, label: 'Automatizaciones', to: '/automations' },
+  { icon: <IconChartBar size={20} />, label: 'Reportes', to: '/reports' },
+  { icon: <IconSettings size={20} />, label: 'Configuración', to: '/settings' },
+]
+
+// Navigation items for client view
+const clientNavItems: NavItemProps[] = [
+  { icon: <IconLayoutDashboard size={20} />, label: 'Mi Panel', to: '/dashboard' },
+  { icon: <IconBarbell size={20} />, label: 'Mis Entrenamientos', to: '/workouts' },
+  { icon: <IconSalad size={20} />, label: 'Mi Nutrición', to: '/nutrition' },
+  { icon: <IconProgress size={20} />, label: 'Mi Progreso', to: '/progress' },
+  { icon: <IconCalendarEvent size={20} />, label: 'Mis Citas', to: '/calendar' },
+  { icon: <IconHistory size={20} />, label: 'Historial', to: '/history' },
+  { icon: <IconMessage size={20} />, label: 'Chat', to: '/chat', badge: 1 },
+  { icon: <IconTrophy size={20} />, label: 'Comunidad', to: '/community' },
+  { icon: <IconFileText size={20} />, label: 'Documentos', to: '/documents' },
+  { icon: <IconSettings size={20} />, label: 'Mi Perfil', to: '/settings' },
+]
+
 export function DashboardLayout() {
-  const { user, currentWorkspace, logout } = useAuthStore()
+  const { user, currentWorkspace, logout, demoRole, isDemoMode } = useAuthStore()
   const [darkMode, setDarkMode] = useState(false)
   
-  const navItems: NavItemProps[] = [
-    { icon: <IconLayoutDashboard size={20} />, label: 'Dashboard', to: '/dashboard' },
-    { icon: <IconUsers size={20} />, label: 'Clientes', to: '/clients' },
-    { icon: <IconCalendarEvent size={20} />, label: 'Calendario', to: '/calendar' },
-    { icon: <IconBarbell size={20} />, label: 'Entrenamientos', to: '/workouts' },
-    { icon: <IconSalad size={20} />, label: 'Nutrición', to: '/nutrition' },
-    { icon: <IconForms size={20} />, label: 'Formularios', to: '/forms' },
-    { icon: <IconFileText size={20} />, label: 'Documentos', to: '/documents' },
-    { icon: <IconMessage size={20} />, label: 'Chat', to: '/chat', badge: 3 },
-    { icon: <IconCreditCard size={20} />, label: 'Pagos', to: '/payments' },
-    { icon: <IconPackage size={20} />, label: 'Bonos', to: '/packages' },
-    { icon: <IconTrophy size={20} />, label: 'Comunidad', to: '/community' },
-    { icon: <IconUsersGroup size={20} />, label: 'Equipo', to: '/team' },
-    { icon: <IconRobot size={20} />, label: 'Automatizaciones', to: '/automations' },
-    { icon: <IconChartBar size={20} />, label: 'Reportes', to: '/reports' },
-    { icon: <IconSettings size={20} />, label: 'Configuración', to: '/settings' },
-  ]
+  // Determine which navigation to show based on role
+  const isClientView = isDemoMode && demoRole === 'client'
+  const navItems = isClientView ? clientNavItems : trainerNavItems
   
   return (
     <AppShell
@@ -120,7 +141,9 @@ export function DashboardLayout() {
               w={40}
               h={40}
               style={{
-                background: 'linear-gradient(135deg, var(--mantine-color-primary-6) 0%, var(--mantine-color-primary-8) 100%)',
+                background: isClientView 
+                  ? 'linear-gradient(135deg, var(--mantine-color-violet-6) 0%, var(--mantine-color-violet-8) 100%)'
+                  : 'linear-gradient(135deg, var(--mantine-color-primary-6) 0%, var(--mantine-color-primary-8) 100%)',
                 borderRadius: 10,
                 display: 'flex',
                 alignItems: 'center',
@@ -135,6 +158,33 @@ export function DashboardLayout() {
             </Box>
           </Group>
         </Box>
+        
+        {/* Demo Mode Indicator */}
+        {isDemoMode && (
+          <Box 
+            mb="md" 
+            p="xs" 
+            style={{ 
+              borderRadius: 8,
+              background: isClientView 
+                ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)'
+                : 'linear-gradient(135deg, rgba(45, 106, 79, 0.1) 0%, rgba(45, 106, 79, 0.05) 100%)',
+              border: isClientView 
+                ? '1px solid var(--mantine-color-violet-2)'
+                : '1px solid var(--mantine-color-teal-2)',
+            }}
+          >
+            <Group gap="xs" justify="center">
+              <Badge 
+                size="sm" 
+                variant="light" 
+                color={isClientView ? 'violet' : 'teal'}
+              >
+                {isClientView ? '👤 Vista Cliente' : '💪 Vista Entrenador'}
+              </Badge>
+            </Group>
+          </Box>
+        )}
         
         {/* Navigation */}
         <Stack gap={4} flex={1}>
