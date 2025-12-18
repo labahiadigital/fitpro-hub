@@ -1,125 +1,153 @@
-import { useState } from 'react'
 import {
-  Container,
-  Paper,
-  Group,
-  Stack,
-  Text,
+  ActionIcon,
+  Avatar,
   Badge,
   Button,
-  Avatar,
-  ActionIcon,
+  Card,
+  Container,
+  Divider,
+  Group,
+  Menu,
   Modal,
-  TextInput,
+  Paper,
   Select,
   SimpleGrid,
-  Card,
-  ThemeIcon,
-  Menu,
+  Stack,
   Switch,
-  Divider,
+  Text,
+  TextInput,
+  ThemeIcon,
   Tooltip,
-} from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
-import { useForm } from '@mantine/form'
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useDisclosure } from "@mantine/hooks";
 import {
-  IconUsers,
-  IconUserPlus,
+  IconCalendarEvent,
+  IconCheck,
+  IconCurrencyEuro,
   IconDotsVertical,
   IconEdit,
-  IconTrash,
   IconMail,
-  IconCalendarEvent,
-  IconCurrencyEuro,
-  IconCheck,
+  IconTrash,
+  IconUserPlus,
+  IconUsers,
   IconX,
-} from '@tabler/icons-react'
-import { PageHeader } from '../../components/common/PageHeader'
+} from "@tabler/icons-react";
+import { useState } from "react";
+import { PageHeader } from "../../components/common/PageHeader";
 
 interface TeamMember {
-  id: string
-  name: string
-  email: string
-  role: 'owner' | 'admin' | 'trainer' | 'receptionist'
-  avatar?: string
-  status: 'active' | 'pending' | 'inactive'
+  id: string;
+  name: string;
+  email: string;
+  role: "owner" | "admin" | "trainer" | "receptionist";
+  avatar?: string;
+  status: "active" | "pending" | "inactive";
   permissions: {
-    clients: boolean
-    calendar: boolean
-    payments: boolean
-    reports: boolean
-    settings: boolean
-  }
+    clients: boolean;
+    calendar: boolean;
+    payments: boolean;
+    reports: boolean;
+    settings: boolean;
+  };
   stats: {
-    clients: number
-    sessionsThisMonth: number
-    revenue: number
-  }
+    clients: number;
+    sessionsThisMonth: number;
+    revenue: number;
+  };
 }
 
 const roleLabels: Record<string, string> = {
-  owner: 'Propietario',
-  admin: 'Administrador',
-  trainer: 'Entrenador',
-  receptionist: 'Recepcionista',
-}
+  owner: "Propietario",
+  admin: "Administrador",
+  trainer: "Entrenador",
+  receptionist: "Recepcionista",
+};
 
 const roleColors: Record<string, string> = {
-  owner: 'violet',
-  admin: 'blue',
-  trainer: 'green',
-  receptionist: 'gray',
-}
+  owner: "violet",
+  admin: "blue",
+  trainer: "green",
+  receptionist: "gray",
+};
 
 export function TeamPage() {
-  const [inviteModalOpened, { open: openInviteModal, close: closeInviteModal }] = useDisclosure(false)
-  const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false)
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
+  const [
+    inviteModalOpened,
+    { open: openInviteModal, close: closeInviteModal },
+  ] = useDisclosure(false);
+  const [editModalOpened, { open: openEditModal, close: closeEditModal }] =
+    useDisclosure(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
   // Mock data
   const [teamMembers] = useState<TeamMember[]>([
     {
-      id: '1',
-      name: 'Juan García',
-      email: 'juan@fitprohub.com',
-      role: 'owner',
-      status: 'active',
-      permissions: { clients: true, calendar: true, payments: true, reports: true, settings: true },
+      id: "1",
+      name: "Juan García",
+      email: "juan@fitprohub.com",
+      role: "owner",
+      status: "active",
+      permissions: {
+        clients: true,
+        calendar: true,
+        payments: true,
+        reports: true,
+        settings: true,
+      },
       stats: { clients: 45, sessionsThisMonth: 120, revenue: 8500 },
     },
     {
-      id: '2',
-      name: 'María López',
-      email: 'maria@fitprohub.com',
-      role: 'trainer',
-      status: 'active',
-      permissions: { clients: true, calendar: true, payments: false, reports: false, settings: false },
+      id: "2",
+      name: "María López",
+      email: "maria@fitprohub.com",
+      role: "trainer",
+      status: "active",
+      permissions: {
+        clients: true,
+        calendar: true,
+        payments: false,
+        reports: false,
+        settings: false,
+      },
       stats: { clients: 25, sessionsThisMonth: 80, revenue: 4200 },
     },
     {
-      id: '3',
-      name: 'Carlos Rodríguez',
-      email: 'carlos@fitprohub.com',
-      role: 'trainer',
-      status: 'active',
-      permissions: { clients: true, calendar: true, payments: false, reports: false, settings: false },
+      id: "3",
+      name: "Carlos Rodríguez",
+      email: "carlos@fitprohub.com",
+      role: "trainer",
+      status: "active",
+      permissions: {
+        clients: true,
+        calendar: true,
+        payments: false,
+        reports: false,
+        settings: false,
+      },
       stats: { clients: 18, sessionsThisMonth: 65, revenue: 3100 },
     },
     {
-      id: '4',
-      name: 'Ana Martínez',
-      email: 'ana@fitprohub.com',
-      role: 'receptionist',
-      status: 'pending',
-      permissions: { clients: true, calendar: true, payments: false, reports: false, settings: false },
+      id: "4",
+      name: "Ana Martínez",
+      email: "ana@fitprohub.com",
+      role: "receptionist",
+      status: "pending",
+      permissions: {
+        clients: true,
+        calendar: true,
+        payments: false,
+        reports: false,
+        settings: false,
+      },
       stats: { clients: 0, sessionsThisMonth: 0, revenue: 0 },
     },
-  ])
+  ]);
 
   const inviteForm = useForm({
     initialValues: {
-      email: '',
-      role: 'trainer',
+      email: "",
+      role: "trainer",
       permissions: {
         clients: true,
         calendar: true,
@@ -128,65 +156,78 @@ export function TeamPage() {
         settings: false,
       },
     },
-  })
+  });
 
-  const totalMembers = teamMembers.length
-  const activeMembers = teamMembers.filter(m => m.status === 'active').length
-  const totalRevenue = teamMembers.reduce((sum, m) => sum + m.stats.revenue, 0)
+  const totalMembers = teamMembers.length;
+  const activeMembers = teamMembers.filter((m) => m.status === "active").length;
+  const totalRevenue = teamMembers.reduce((sum, m) => sum + m.stats.revenue, 0);
 
   const handleEditMember = (member: TeamMember) => {
-    setSelectedMember(member)
-    openEditModal()
-  }
+    setSelectedMember(member);
+    openEditModal();
+  };
 
   return (
-    <Container size="xl" py="xl">
+    <Container py="xl" size="xl">
       <PageHeader
-        title="Equipo"
-        description="Gestiona los miembros de tu equipo y sus permisos"
         action={{
-          label: 'Invitar Miembro',
+          label: "Invitar Miembro",
           icon: <IconUserPlus size={16} />,
           onClick: openInviteModal,
         }}
+        description="Gestiona los miembros de tu equipo y sus permisos"
+        title="Equipo"
       />
 
       {/* Stats */}
-      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg" mb="xl">
-        <Card withBorder radius="md" p="md">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl" spacing="lg">
+        <Card p="md" radius="md" withBorder>
           <Group justify="space-between">
             <div>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Miembros del Equipo</Text>
-              <Text size="xl" fw={700}>{totalMembers}</Text>
+              <Text c="dimmed" fw={600} size="xs" tt="uppercase">
+                Miembros del Equipo
+              </Text>
+              <Text fw={700} size="xl">
+                {totalMembers}
+              </Text>
             </div>
-            <ThemeIcon size="lg" radius="md" color="blue" variant="light">
+            <ThemeIcon color="blue" radius="md" size="lg" variant="light">
               <IconUsers size={20} />
             </ThemeIcon>
           </Group>
-          <Text size="xs" c="dimmed" mt="xs">
+          <Text c="dimmed" mt="xs" size="xs">
             {activeMembers} activos, {totalMembers - activeMembers} pendientes
           </Text>
         </Card>
-        <Card withBorder radius="md" p="md">
+        <Card p="md" radius="md" withBorder>
           <Group justify="space-between">
             <div>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Sesiones Este Mes</Text>
-              <Text size="xl" fw={700}>
-                {teamMembers.reduce((sum, m) => sum + m.stats.sessionsThisMonth, 0)}
+              <Text c="dimmed" fw={600} size="xs" tt="uppercase">
+                Sesiones Este Mes
+              </Text>
+              <Text fw={700} size="xl">
+                {teamMembers.reduce(
+                  (sum, m) => sum + m.stats.sessionsThisMonth,
+                  0
+                )}
               </Text>
             </div>
-            <ThemeIcon size="lg" radius="md" color="green" variant="light">
+            <ThemeIcon color="green" radius="md" size="lg" variant="light">
               <IconCalendarEvent size={20} />
             </ThemeIcon>
           </Group>
         </Card>
-        <Card withBorder radius="md" p="md">
+        <Card p="md" radius="md" withBorder>
           <Group justify="space-between">
             <div>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Ingresos del Equipo</Text>
-              <Text size="xl" fw={700}>€{totalRevenue.toLocaleString()}</Text>
+              <Text c="dimmed" fw={600} size="xs" tt="uppercase">
+                Ingresos del Equipo
+              </Text>
+              <Text fw={700} size="xl">
+                €{totalRevenue.toLocaleString()}
+              </Text>
             </div>
-            <ThemeIcon size="lg" radius="md" color="violet" variant="light">
+            <ThemeIcon color="violet" radius="md" size="lg" variant="light">
               <IconCurrencyEuro size={20} />
             </ThemeIcon>
           </Group>
@@ -196,75 +237,126 @@ export function TeamPage() {
       {/* Team Members */}
       <Stack gap="md">
         {teamMembers.map((member) => (
-          <Paper key={member.id} withBorder radius="md" p="lg">
+          <Paper key={member.id} p="lg" radius="md" withBorder>
             <Group justify="space-between">
               <Group gap="md">
-                <Avatar size="lg" radius="xl" color={roleColors[member.role]}>
-                  {member.name.split(' ').map(n => n[0]).join('')}
+                <Avatar color={roleColors[member.role]} radius="xl" size="lg">
+                  {member.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                 </Avatar>
                 <div>
                   <Group gap="xs">
                     <Text fw={600}>{member.name}</Text>
-                    <Badge size="sm" color={roleColors[member.role]} variant="light">
+                    <Badge
+                      color={roleColors[member.role]}
+                      size="sm"
+                      variant="light"
+                    >
                       {roleLabels[member.role]}
                     </Badge>
-                    {member.status === 'pending' && (
-                      <Badge size="sm" color="yellow" variant="light">
+                    {member.status === "pending" && (
+                      <Badge color="yellow" size="sm" variant="light">
                         Pendiente
                       </Badge>
                     )}
                   </Group>
-                  <Text size="sm" c="dimmed">{member.email}</Text>
+                  <Text c="dimmed" size="sm">
+                    {member.email}
+                  </Text>
                 </div>
               </Group>
 
               <Group gap="xl">
                 {/* Stats */}
                 <Group gap="lg" visibleFrom="md">
-                  <div style={{ textAlign: 'center' }}>
-                    <Text size="lg" fw={700}>{member.stats.clients}</Text>
-                    <Text size="xs" c="dimmed">Clientes</Text>
+                  <div style={{ textAlign: "center" }}>
+                    <Text fw={700} size="lg">
+                      {member.stats.clients}
+                    </Text>
+                    <Text c="dimmed" size="xs">
+                      Clientes
+                    </Text>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <Text size="lg" fw={700}>{member.stats.sessionsThisMonth}</Text>
-                    <Text size="xs" c="dimmed">Sesiones</Text>
+                  <div style={{ textAlign: "center" }}>
+                    <Text fw={700} size="lg">
+                      {member.stats.sessionsThisMonth}
+                    </Text>
+                    <Text c="dimmed" size="xs">
+                      Sesiones
+                    </Text>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <Text size="lg" fw={700}>€{member.stats.revenue}</Text>
-                    <Text size="xs" c="dimmed">Ingresos</Text>
+                  <div style={{ textAlign: "center" }}>
+                    <Text fw={700} size="lg">
+                      €{member.stats.revenue}
+                    </Text>
+                    <Text c="dimmed" size="xs">
+                      Ingresos
+                    </Text>
                   </div>
                 </Group>
 
                 {/* Permissions Icons */}
                 <Group gap={4}>
-                  <Tooltip label={member.permissions.clients ? 'Puede ver clientes' : 'Sin acceso a clientes'}>
+                  <Tooltip
+                    label={
+                      member.permissions.clients
+                        ? "Puede ver clientes"
+                        : "Sin acceso a clientes"
+                    }
+                  >
                     <ThemeIcon
-                      size="sm"
+                      color={member.permissions.clients ? "green" : "gray"}
                       radius="xl"
-                      color={member.permissions.clients ? 'green' : 'gray'}
+                      size="sm"
                       variant="light"
                     >
-                      {member.permissions.clients ? <IconCheck size={12} /> : <IconX size={12} />}
+                      {member.permissions.clients ? (
+                        <IconCheck size={12} />
+                      ) : (
+                        <IconX size={12} />
+                      )}
                     </ThemeIcon>
                   </Tooltip>
-                  <Tooltip label={member.permissions.payments ? 'Puede ver pagos' : 'Sin acceso a pagos'}>
+                  <Tooltip
+                    label={
+                      member.permissions.payments
+                        ? "Puede ver pagos"
+                        : "Sin acceso a pagos"
+                    }
+                  >
                     <ThemeIcon
-                      size="sm"
+                      color={member.permissions.payments ? "green" : "gray"}
                       radius="xl"
-                      color={member.permissions.payments ? 'green' : 'gray'}
+                      size="sm"
                       variant="light"
                     >
-                      {member.permissions.payments ? <IconCheck size={12} /> : <IconX size={12} />}
+                      {member.permissions.payments ? (
+                        <IconCheck size={12} />
+                      ) : (
+                        <IconX size={12} />
+                      )}
                     </ThemeIcon>
                   </Tooltip>
-                  <Tooltip label={member.permissions.settings ? 'Puede ver configuración' : 'Sin acceso a configuración'}>
+                  <Tooltip
+                    label={
+                      member.permissions.settings
+                        ? "Puede ver configuración"
+                        : "Sin acceso a configuración"
+                    }
+                  >
                     <ThemeIcon
-                      size="sm"
+                      color={member.permissions.settings ? "green" : "gray"}
                       radius="xl"
-                      color={member.permissions.settings ? 'green' : 'gray'}
+                      size="sm"
                       variant="light"
                     >
-                      {member.permissions.settings ? <IconCheck size={12} /> : <IconX size={12} />}
+                      {member.permissions.settings ? (
+                        <IconCheck size={12} />
+                      ) : (
+                        <IconX size={12} />
+                      )}
                     </ThemeIcon>
                   </Tooltip>
                 </Group>
@@ -272,7 +364,7 @@ export function TeamPage() {
                 {/* Actions */}
                 <Menu shadow="md" width={180}>
                   <Menu.Target>
-                    <ActionIcon variant="subtle" color="gray">
+                    <ActionIcon color="gray" variant="subtle">
                       <IconDotsVertical size={18} />
                     </ActionIcon>
                   </Menu.Target>
@@ -283,15 +375,18 @@ export function TeamPage() {
                     >
                       Editar Permisos
                     </Menu.Item>
-                    {member.status === 'pending' && (
+                    {member.status === "pending" && (
                       <Menu.Item leftSection={<IconMail size={14} />}>
                         Reenviar Invitación
                       </Menu.Item>
                     )}
-                    {member.role !== 'owner' && (
+                    {member.role !== "owner" && (
                       <>
                         <Menu.Divider />
-                        <Menu.Item leftSection={<IconTrash size={14} />} color="red">
+                        <Menu.Item
+                          color="red"
+                          leftSection={<IconTrash size={14} />}
+                        >
                           Eliminar del Equipo
                         </Menu.Item>
                       </>
@@ -305,58 +400,77 @@ export function TeamPage() {
       </Stack>
 
       {/* Invite Modal */}
-      <Modal opened={inviteModalOpened} onClose={closeInviteModal} title="Invitar Miembro" centered>
-        <form onSubmit={inviteForm.onSubmit((values) => {
-          console.log(values)
-          closeInviteModal()
-        })}>
+      <Modal
+        centered
+        onClose={closeInviteModal}
+        opened={inviteModalOpened}
+        title="Invitar Miembro"
+      >
+        <form
+          onSubmit={inviteForm.onSubmit((values) => {
+            console.log(values);
+            closeInviteModal();
+          })}
+        >
           <Stack>
             <TextInput
               label="Email"
-              placeholder="email@ejemplo.com"
               leftSection={<IconMail size={14} />}
-              {...inviteForm.getInputProps('email')}
+              placeholder="email@ejemplo.com"
+              {...inviteForm.getInputProps("email")}
             />
             <Select
-              label="Rol"
               data={[
-                { value: 'admin', label: 'Administrador' },
-                { value: 'trainer', label: 'Entrenador' },
-                { value: 'receptionist', label: 'Recepcionista' },
+                { value: "admin", label: "Administrador" },
+                { value: "trainer", label: "Entrenador" },
+                { value: "receptionist", label: "Recepcionista" },
               ]}
-              {...inviteForm.getInputProps('role')}
+              label="Rol"
+              {...inviteForm.getInputProps("role")}
             />
             <Divider label="Permisos" labelPosition="center" />
             <Stack gap="xs">
               <Switch
-                label="Gestión de Clientes"
                 description="Ver y editar clientes"
-                {...inviteForm.getInputProps('permissions.clients', { type: 'checkbox' })}
+                label="Gestión de Clientes"
+                {...inviteForm.getInputProps("permissions.clients", {
+                  type: "checkbox",
+                })}
               />
               <Switch
-                label="Calendario"
                 description="Ver y gestionar reservas"
-                {...inviteForm.getInputProps('permissions.calendar', { type: 'checkbox' })}
+                label="Calendario"
+                {...inviteForm.getInputProps("permissions.calendar", {
+                  type: "checkbox",
+                })}
               />
               <Switch
-                label="Pagos"
                 description="Ver pagos y suscripciones"
-                {...inviteForm.getInputProps('permissions.payments', { type: 'checkbox' })}
+                label="Pagos"
+                {...inviteForm.getInputProps("permissions.payments", {
+                  type: "checkbox",
+                })}
               />
               <Switch
-                label="Reportes"
                 description="Ver estadísticas y reportes"
-                {...inviteForm.getInputProps('permissions.reports', { type: 'checkbox' })}
+                label="Reportes"
+                {...inviteForm.getInputProps("permissions.reports", {
+                  type: "checkbox",
+                })}
               />
               <Switch
-                label="Configuración"
                 description="Modificar ajustes del workspace"
-                {...inviteForm.getInputProps('permissions.settings', { type: 'checkbox' })}
+                label="Configuración"
+                {...inviteForm.getInputProps("permissions.settings", {
+                  type: "checkbox",
+                })}
               />
             </Stack>
             <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeInviteModal}>Cancelar</Button>
-              <Button type="submit" leftSection={<IconMail size={14} />}>
+              <Button onClick={closeInviteModal} variant="default">
+                Cancelar
+              </Button>
+              <Button leftSection={<IconMail size={14} />} type="submit">
                 Enviar Invitación
               </Button>
             </Group>
@@ -366,59 +480,60 @@ export function TeamPage() {
 
       {/* Edit Modal */}
       <Modal
-        opened={editModalOpened}
-        onClose={closeEditModal}
-        title={`Editar Permisos - ${selectedMember?.name}`}
         centered
+        onClose={closeEditModal}
+        opened={editModalOpened}
+        title={`Editar Permisos - ${selectedMember?.name}`}
       >
         {selectedMember && (
           <Stack>
             <Select
-              label="Rol"
               data={[
-                { value: 'admin', label: 'Administrador' },
-                { value: 'trainer', label: 'Entrenador' },
-                { value: 'receptionist', label: 'Recepcionista' },
+                { value: "admin", label: "Administrador" },
+                { value: "trainer", label: "Entrenador" },
+                { value: "receptionist", label: "Recepcionista" },
               ]}
+              disabled={selectedMember.role === "owner"}
+              label="Rol"
               value={selectedMember.role}
-              disabled={selectedMember.role === 'owner'}
             />
             <Divider label="Permisos" labelPosition="center" />
             <Stack gap="xs">
               <Switch
-                label="Gestión de Clientes"
                 checked={selectedMember.permissions.clients}
-                disabled={selectedMember.role === 'owner'}
+                disabled={selectedMember.role === "owner"}
+                label="Gestión de Clientes"
               />
               <Switch
-                label="Calendario"
                 checked={selectedMember.permissions.calendar}
-                disabled={selectedMember.role === 'owner'}
+                disabled={selectedMember.role === "owner"}
+                label="Calendario"
               />
               <Switch
-                label="Pagos"
                 checked={selectedMember.permissions.payments}
-                disabled={selectedMember.role === 'owner'}
+                disabled={selectedMember.role === "owner"}
+                label="Pagos"
               />
               <Switch
-                label="Reportes"
                 checked={selectedMember.permissions.reports}
-                disabled={selectedMember.role === 'owner'}
+                disabled={selectedMember.role === "owner"}
+                label="Reportes"
               />
               <Switch
-                label="Configuración"
                 checked={selectedMember.permissions.settings}
-                disabled={selectedMember.role === 'owner'}
+                disabled={selectedMember.role === "owner"}
+                label="Configuración"
               />
             </Stack>
             <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeEditModal}>Cancelar</Button>
+              <Button onClick={closeEditModal} variant="default">
+                Cancelar
+              </Button>
               <Button onClick={closeEditModal}>Guardar Cambios</Button>
             </Group>
           </Stack>
         )}
       </Modal>
     </Container>
-  )
+  );
 }
-

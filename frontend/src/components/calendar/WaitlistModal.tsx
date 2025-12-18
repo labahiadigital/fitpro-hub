@@ -1,84 +1,96 @@
-import { Modal, Stack, Text, Group, Avatar, Badge, Button, ActionIcon, Paper } from '@mantine/core'
-import { IconTrash, IconCheck, IconClock } from '@tabler/icons-react'
+import {
+  ActionIcon,
+  Avatar,
+  Badge,
+  Button,
+  Group,
+  Modal,
+  Paper,
+  Stack,
+  Text,
+} from "@mantine/core";
+import { IconCheck, IconClock, IconTrash } from "@tabler/icons-react";
 
 interface WaitlistEntry {
-  id: string
-  clientName: string
-  clientEmail: string
-  addedAt: string
-  position: number
+  id: string;
+  clientName: string;
+  clientEmail: string;
+  addedAt: string;
+  position: number;
 }
 
 interface WaitlistModalProps {
-  opened: boolean
-  onClose: () => void
-  sessionTitle: string
-  waitlist: WaitlistEntry[]
-  onPromote: (entryId: string) => void
-  onRemove: (entryId: string) => void
+  opened: boolean;
+  onClose: () => void;
+  sessionTitle: string;
+  waitlist: WaitlistEntry[];
+  onPromote: (entryId: string) => void;
+  onRemove: (entryId: string) => void;
 }
 
-export function WaitlistModal({ 
-  opened, 
-  onClose, 
-  sessionTitle, 
-  waitlist, 
-  onPromote, 
-  onRemove 
+export function WaitlistModal({
+  opened,
+  onClose,
+  sessionTitle,
+  waitlist,
+  onPromote,
+  onRemove,
 }: WaitlistModalProps) {
   return (
     <Modal
-      opened={opened}
       onClose={onClose}
-      title={`Lista de Espera - ${sessionTitle}`}
+      opened={opened}
       size="md"
+      title={`Lista de Espera - ${sessionTitle}`}
     >
       {waitlist.length === 0 ? (
-        <Text c="dimmed" ta="center" py="xl">
+        <Text c="dimmed" py="xl" ta="center">
           No hay nadie en la lista de espera
         </Text>
       ) : (
         <Stack gap="sm">
           {waitlist.map((entry) => (
-            <Paper key={entry.id} withBorder p="sm" radius="md">
+            <Paper key={entry.id} p="sm" radius="md" withBorder>
               <Group justify="space-between">
                 <Group gap="sm">
-                  <Badge size="lg" circle variant="light" color="gray">
+                  <Badge circle color="gray" size="lg" variant="light">
                     {entry.position}
                   </Badge>
-                  <Avatar size="sm" radius="xl" color="blue">
+                  <Avatar color="blue" radius="xl" size="sm">
                     {entry.clientName.charAt(0)}
                   </Avatar>
                   <div>
-                    <Text size="sm" fw={500}>{entry.clientName}</Text>
+                    <Text fw={500} size="sm">
+                      {entry.clientName}
+                    </Text>
                     <Group gap={4}>
                       <IconClock size={12} style={{ opacity: 0.5 }} />
-                      <Text size="xs" c="dimmed">
-                        {new Date(entry.addedAt).toLocaleDateString('es-ES', { 
-                          day: 'numeric', 
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
+                      <Text c="dimmed" size="xs">
+                        {new Date(entry.addedAt).toLocaleDateString("es-ES", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </Text>
                     </Group>
                   </div>
                 </Group>
                 <Group gap="xs">
-                  <Button 
-                    size="xs" 
-                    variant="light" 
+                  <Button
                     color="green"
                     leftSection={<IconCheck size={14} />}
                     onClick={() => onPromote(entry.id)}
+                    size="xs"
+                    variant="light"
                   >
                     Confirmar
                   </Button>
-                  <ActionIcon 
-                    size="sm" 
-                    color="red" 
-                    variant="subtle"
+                  <ActionIcon
+                    color="red"
                     onClick={() => onRemove(entry.id)}
+                    size="sm"
+                    variant="subtle"
                   >
                     <IconTrash size={14} />
                   </ActionIcon>
@@ -89,6 +101,5 @@ export function WaitlistModal({
         </Stack>
       )}
     </Modal>
-  )
+  );
 }
-

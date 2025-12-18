@@ -1,81 +1,81 @@
-import { Paper, Group, Text, ThemeIcon, Box } from '@mantine/core'
-import { IconArrowUpRight, IconArrowDownRight } from '@tabler/icons-react'
+import { Box, Group, Paper, Text, ThemeIcon } from "@mantine/core";
+import { IconArrowDownRight, IconArrowUpRight } from "@tabler/icons-react";
 
 interface StatsCardProps {
-  title: string
-  value: string | number
-  icon: React.ReactNode
-  change?: number
-  changeLabel?: string
-  color?: string
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  change?: number;
+  changeLabel?: string;
+  color?: string;
 }
 
-export function StatsCard({ 
-  title, 
-  value, 
-  icon, 
-  change, 
+export function StatsCard({
+  title,
+  value,
+  icon,
+  change,
   changeLabel,
-  color = 'primary' 
+  color = "primary",
 }: StatsCardProps) {
-  const isPositive = change && change > 0
-  const isNegative = change && change < 0
-  
+  const isPositive = change && change > 0;
+  const isNegative = change && change < 0;
+
   return (
-    <Paper 
-      p="lg" 
-      radius="lg" 
-      withBorder
+    <Paper
+      p="lg"
+      radius="lg"
       style={{
-        borderColor: 'var(--mantine-color-gray-2)',
-        background: 'linear-gradient(135deg, var(--mantine-color-white) 0%, var(--mantine-color-gray-0) 100%)',
+        borderColor: "var(--mantine-color-gray-2)",
+        background:
+          "linear-gradient(135deg, var(--mantine-color-white) 0%, var(--mantine-color-gray-0) 100%)",
       }}
+      withBorder
     >
-      <Group justify="space-between" align="flex-start">
+      <Group align="flex-start" justify="space-between">
         <Box>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>
+          <Text c="dimmed" fw={600} mb={4} size="xs" tt="uppercase">
             {title}
           </Text>
-          <Text size="xl" fw={700} style={{ fontSize: '1.75rem', lineHeight: 1.2 }}>
+          <Text
+            fw={700}
+            size="xl"
+            style={{ fontSize: "1.75rem", lineHeight: 1.2 }}
+          >
             {value}
           </Text>
           {change !== undefined && (
             <Group gap={4} mt={8}>
               {isPositive && (
-                <ThemeIcon size="xs" color="green" variant="light" radius="xl">
+                <ThemeIcon color="green" radius="xl" size="xs" variant="light">
                   <IconArrowUpRight size={12} />
                 </ThemeIcon>
               )}
               {isNegative && (
-                <ThemeIcon size="xs" color="red" variant="light" radius="xl">
+                <ThemeIcon color="red" radius="xl" size="xs" variant="light">
                   <IconArrowDownRight size={12} />
                 </ThemeIcon>
               )}
-              <Text 
-                size="xs" 
-                c={isPositive ? 'green' : isNegative ? 'red' : 'dimmed'}
+              <Text
+                c={isPositive ? "green" : isNegative ? "red" : "dimmed"}
                 fw={500}
+                size="xs"
               >
-                {isPositive && '+'}{change}%
+                {isPositive && "+"}
+                {change}%
               </Text>
               {changeLabel && (
-                <Text size="xs" c="dimmed">
+                <Text c="dimmed" size="xs">
                   {changeLabel}
                 </Text>
               )}
             </Group>
           )}
         </Box>
-        <ThemeIcon 
-          size={48} 
-          radius="xl" 
-          color={color}
-          variant="light"
-        >
+        <ThemeIcon color={color} radius="xl" size={48} variant="light">
           {icon}
         </ThemeIcon>
       </Group>
     </Paper>
-  )
+  );
 }
-

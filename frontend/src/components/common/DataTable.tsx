@@ -1,54 +1,54 @@
-import { useState } from 'react'
 import {
-  Table,
+  ActionIcon,
+  Avatar,
+  Badge,
+  Box,
   Checkbox,
   Group,
-  Text,
-  ActionIcon,
   Menu,
   Pagination,
-  TextInput,
   Paper,
-  Box,
-  Badge,
-  Avatar,
   Skeleton,
-} from '@mantine/core'
+  Table,
+  Text,
+  TextInput,
+} from "@mantine/core";
 import {
-  IconSearch,
   IconDotsVertical,
   IconEdit,
-  IconTrash,
   IconEye,
-} from '@tabler/icons-react'
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
+import { useState } from "react";
 
 interface Column<T> {
-  key: string
-  title: string
-  render?: (item: T) => React.ReactNode
-  sortable?: boolean
-  width?: number
+  key: string;
+  title: string;
+  render?: (item: T) => React.ReactNode;
+  sortable?: boolean;
+  width?: number;
 }
 
 interface DataTableProps<T> {
-  data: T[]
-  columns: Column<T>[]
-  loading?: boolean
-  selectable?: boolean
-  searchable?: boolean
-  searchPlaceholder?: string
-  onSearch?: (query: string) => void
-  onRowClick?: (item: T) => void
-  onEdit?: (item: T) => void
-  onDelete?: (item: T) => void
-  onView?: (item: T) => void
+  data: T[];
+  columns: Column<T>[];
+  loading?: boolean;
+  selectable?: boolean;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  onSearch?: (query: string) => void;
+  onRowClick?: (item: T) => void;
+  onEdit?: (item: T) => void;
+  onDelete?: (item: T) => void;
+  onView?: (item: T) => void;
   pagination?: {
-    page: number
-    pageSize: number
-    total: number
-    onChange: (page: number) => void
-  }
-  emptyMessage?: string
+    page: number;
+    pageSize: number;
+    total: number;
+    onChange: (page: number) => void;
+  };
+  emptyMessage?: string;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -57,86 +57,93 @@ export function DataTable<T extends { id: string }>({
   loading = false,
   selectable = false,
   searchable = false,
-  searchPlaceholder = 'Buscar...',
+  searchPlaceholder = "Buscar...",
   onSearch,
   onRowClick,
   onEdit,
   onDelete,
   onView,
   pagination,
-  emptyMessage = 'No hay datos disponibles',
+  emptyMessage = "No hay datos disponibles",
 }: DataTableProps<T>) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const toggleRow = (id: string) => {
     setSelectedIds((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
         : [...current, id]
-    )
-  }
+    );
+  };
 
   const toggleAll = () => {
     setSelectedIds((current) =>
       current.length === data.length ? [] : data.map((item) => item.id)
-    )
-  }
+    );
+  };
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query)
-    onSearch?.(query)
-  }
+    setSearchQuery(query);
+    onSearch?.(query);
+  };
 
-  const hasActions = onEdit || onDelete || onView
+  const hasActions = onEdit || onDelete || onView;
 
   if (loading) {
     return (
-      <Paper withBorder radius="md" p="md">
+      <Paper p="md" radius="md" withBorder>
         {searchable && <Skeleton height={36} mb="md" />}
         <Skeleton height={40} mb="sm" />
         {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} height={50} mb="xs" />
+          <Skeleton height={50} key={i} mb="xs" />
         ))}
       </Paper>
-    )
+    );
   }
 
   return (
-    <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
+    <Paper radius="md" style={{ overflow: "hidden" }} withBorder>
       {searchable && (
-        <Box p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+        <Box
+          p="md"
+          style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+        >
           <TextInput
-            placeholder={searchPlaceholder}
             leftSection={<IconSearch size={16} />}
-            value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
+            placeholder={searchPlaceholder}
             styles={{
               input: {
-                backgroundColor: 'var(--mantine-color-gray-0)',
-                border: 'none',
+                backgroundColor: "var(--mantine-color-gray-0)",
+                border: "none",
               },
             }}
+            value={searchQuery}
           />
         </Box>
       )}
 
       <Table.ScrollContainer minWidth={800}>
-        <Table verticalSpacing="sm" highlightOnHover>
+        <Table highlightOnHover verticalSpacing="sm">
           <Table.Thead>
             <Table.Tr>
               {selectable && (
                 <Table.Th style={{ width: 40 }}>
                   <Checkbox
-                    checked={selectedIds.length === data.length && data.length > 0}
-                    indeterminate={selectedIds.length > 0 && selectedIds.length < data.length}
+                    checked={
+                      selectedIds.length === data.length && data.length > 0
+                    }
+                    indeterminate={
+                      selectedIds.length > 0 && selectedIds.length < data.length
+                    }
                     onChange={toggleAll}
                   />
                 </Table.Th>
               )}
               {columns.map((column) => (
                 <Table.Th key={column.key} style={{ width: column.width }}>
-                  <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">
                     {column.title}
                   </Text>
                 </Table.Th>
@@ -148,9 +155,11 @@ export function DataTable<T extends { id: string }>({
             {data.length === 0 ? (
               <Table.Tr>
                 <Table.Td
-                  colSpan={columns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)}
+                  colSpan={
+                    columns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)
+                  }
                 >
-                  <Text ta="center" c="dimmed" py="xl">
+                  <Text c="dimmed" py="xl" ta="center">
                     {emptyMessage}
                   </Text>
                 </Table.Td>
@@ -159,8 +168,8 @@ export function DataTable<T extends { id: string }>({
               data.map((item) => (
                 <Table.Tr
                   key={item.id}
-                  style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                   onClick={() => onRowClick?.(item)}
+                  style={{ cursor: onRowClick ? "pointer" : "default" }}
                 >
                   {selectable && (
                     <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -174,14 +183,16 @@ export function DataTable<T extends { id: string }>({
                     <Table.Td key={column.key}>
                       {column.render
                         ? column.render(item)
-                        : (item as Record<string, unknown>)[column.key]?.toString()}
+                        : (item as Record<string, unknown>)[
+                            column.key
+                          ]?.toString()}
                     </Table.Td>
                   ))}
                   {hasActions && (
                     <Table.Td onClick={(e) => e.stopPropagation()}>
                       <Menu position="bottom-end" withArrow>
                         <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray">
+                          <ActionIcon color="gray" variant="subtle">
                             <IconDotsVertical size={16} />
                           </ActionIcon>
                         </Menu.Target>
@@ -204,8 +215,8 @@ export function DataTable<T extends { id: string }>({
                           )}
                           {onDelete && (
                             <Menu.Item
-                              leftSection={<IconTrash size={14} />}
                               color="red"
+                              leftSection={<IconTrash size={14} />}
                               onClick={() => onDelete(item)}
                             >
                               Eliminar
@@ -223,80 +234,95 @@ export function DataTable<T extends { id: string }>({
       </Table.ScrollContainer>
 
       {pagination && pagination.total > pagination.pageSize && (
-        <Group justify="center" p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}>
+        <Group
+          justify="center"
+          p="md"
+          style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+        >
           <Pagination
-            value={pagination.page}
             onChange={pagination.onChange}
-            total={Math.ceil(pagination.total / pagination.pageSize)}
             size="sm"
+            total={Math.ceil(pagination.total / pagination.pageSize)}
+            value={pagination.page}
           />
         </Group>
       )}
     </Paper>
-  )
+  );
 }
 
 // Helper components for common column renders
-export function ClientCell({ name, email, avatarUrl }: { name: string; email: string; avatarUrl?: string }) {
+export function ClientCell({
+  name,
+  email,
+  avatarUrl,
+}: {
+  name: string;
+  email: string;
+  avatarUrl?: string;
+}) {
   return (
     <Group gap="sm">
-      <Avatar src={avatarUrl} radius="xl" size="sm">
+      <Avatar radius="xl" size="sm" src={avatarUrl}>
         {name.charAt(0)}
       </Avatar>
       <Box>
-        <Text size="sm" fw={500}>
+        <Text fw={500} size="sm">
           {name}
         </Text>
-        <Text size="xs" c="dimmed">
+        <Text c="dimmed" size="xs">
           {email}
         </Text>
       </Box>
     </Group>
-  )
+  );
 }
 
 export function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    active: 'green',
-    inactive: 'gray',
-    pending: 'yellow',
-    confirmed: 'blue',
-    cancelled: 'red',
-    completed: 'green',
-    no_show: 'orange',
-  }
+    active: "green",
+    inactive: "gray",
+    pending: "yellow",
+    confirmed: "blue",
+    cancelled: "red",
+    completed: "green",
+    no_show: "orange",
+  };
 
   const labels: Record<string, string> = {
-    active: 'Activo',
-    inactive: 'Inactivo',
-    pending: 'Pendiente',
-    confirmed: 'Confirmado',
-    cancelled: 'Cancelado',
-    completed: 'Completado',
-    no_show: 'No asistió',
-  }
+    active: "Activo",
+    inactive: "Inactivo",
+    pending: "Pendiente",
+    confirmed: "Confirmado",
+    cancelled: "Cancelado",
+    completed: "Completado",
+    no_show: "No asistió",
+  };
 
   return (
-    <Badge color={colors[status] || 'gray'} variant="light" size="sm">
+    <Badge color={colors[status] || "gray"} size="sm" variant="light">
       {labels[status] || status}
     </Badge>
-  )
+  );
 }
 
-export function TagsList({ tags }: { tags: Array<{ name: string; color: string }> }) {
+export function TagsList({
+  tags,
+}: {
+  tags: Array<{ name: string; color: string }>;
+}) {
   return (
     <Group gap={4}>
       {tags.slice(0, 3).map((tag, index) => (
-        <Badge key={index} color={tag.color} variant="light" size="xs">
+        <Badge color={tag.color} key={index} size="xs" variant="light">
           {tag.name}
         </Badge>
       ))}
       {tags.length > 3 && (
-        <Badge color="gray" variant="light" size="xs">
+        <Badge color="gray" size="xs" variant="light">
           +{tags.length - 3}
         </Badge>
       )}
     </Group>
-  )
+  );
 }
-

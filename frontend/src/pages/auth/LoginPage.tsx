@@ -1,201 +1,222 @@
-import { useState } from 'react'
 import {
-  Paper,
-  TextInput,
-  PasswordInput,
-  Checkbox,
-  Button,
-  Title,
-  Text,
-  Anchor,
-  Stack,
-  Divider,
   Alert,
-  Group,
+  Anchor,
   Box,
+  Button,
+  Checkbox,
+  Divider,
+  Group,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
   ThemeIcon,
-} from '@mantine/core'
-import { useForm } from '@mantine/form'
-import { Link, useNavigate } from 'react-router-dom'
-import { IconAlertCircle, IconBarbell, IconUser, IconSparkles } from '@tabler/icons-react'
-import { useAuthStore } from '../../stores/auth'
-import { supabase } from '../../services/supabase'
+  Title,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import {
+  IconAlertCircle,
+  IconBarbell,
+  IconSparkles,
+  IconUser,
+} from "@tabler/icons-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../../services/supabase";
+import { useAuthStore } from "../../stores/auth";
 
 export function LoginPage() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()
-  const { setUser, setTokens, loginDemoTrainer, loginDemoClient } = useAuthStore()
-  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { setUser, setTokens, loginDemoTrainer, loginDemoClient } =
+    useAuthStore();
+
   const form = useForm({
     initialValues: {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       remember: true,
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Email inválido'),
-      password: (value) => (value.length >= 6 ? null : 'Mínimo 6 caracteres'),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      password: (value) => (value.length >= 6 ? null : "Mínimo 6 caracteres"),
     },
-  })
-  
+  });
+
   const handleSubmit = async (values: typeof form.values) => {
-    setLoading(true)
-    setError(null)
-    
+    setLoading(true);
+    setError(null);
+
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      })
-      
-      if (authError) throw authError
-      
+      const { data, error: authError } = await supabase.auth.signInWithPassword(
+        {
+          email: values.email,
+          password: values.password,
+        }
+      );
+
+      if (authError) throw authError;
+
       if (data.user && data.session) {
         setUser({
           id: data.user.id,
           email: data.user.email!,
           full_name: data.user.user_metadata?.full_name,
           is_active: true,
-        })
-        setTokens(data.session.access_token, data.session.refresh_token)
-        navigate('/dashboard')
+        });
+        setTokens(data.session.access_token, data.session.refresh_token);
+        navigate("/dashboard");
       }
     } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión')
+      setError(err.message || "Error al iniciar sesión");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-  
+  };
+
   const handleDemoTrainer = () => {
-    loginDemoTrainer()
-    navigate('/dashboard')
-  }
-  
+    loginDemoTrainer();
+    navigate("/dashboard");
+  };
+
   const handleDemoClient = () => {
-    loginDemoClient()
-    navigate('/dashboard')
-  }
-  
+    loginDemoClient();
+    navigate("/dashboard");
+  };
+
   return (
-    <Paper radius="md" p="xl" withBorder={false} bg="transparent">
+    <Paper bg="transparent" p="xl" radius="md" withBorder={false}>
       <Stack gap="md">
-        <Title order={2} ta="center" fw={700}>
+        <Title fw={700} order={2} ta="center">
           Inicia sesión
         </Title>
         <Text c="dimmed" size="sm" ta="center">
           Accede a tu cuenta de FitPro Hub
         </Text>
-        
+
         {error && (
-          <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
+          <Alert
+            color="red"
+            icon={<IconAlertCircle size={16} />}
+            variant="light"
+          >
             {error}
           </Alert>
         )}
-        
+
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
             <TextInput
               label="Email"
               placeholder="tu@email.com"
               required
-              {...form.getInputProps('email')}
+              {...form.getInputProps("email")}
             />
-            
+
             <PasswordInput
               label="Contraseña"
               placeholder="Tu contraseña"
               required
-              {...form.getInputProps('password')}
+              {...form.getInputProps("password")}
             />
-            
+
             <Group justify="space-between">
               <Checkbox
                 label="Recordarme"
-                {...form.getInputProps('remember', { type: 'checkbox' })}
+                {...form.getInputProps("remember", { type: "checkbox" })}
               />
-              <Anchor component={Link} to="/forgot-password" size="sm">
+              <Anchor component={Link} size="sm" to="/forgot-password">
                 ¿Olvidaste tu contraseña?
               </Anchor>
             </Group>
-            
-            <Button type="submit" fullWidth loading={loading}>
+
+            <Button fullWidth loading={loading} type="submit">
               Iniciar Sesión
             </Button>
-            
-            <Divider 
+
+            <Divider
               label={
                 <Group gap={6}>
                   <IconSparkles size={14} />
                   <Text size="xs">Prueba la demo</Text>
                 </Group>
-              } 
-              labelPosition="center" 
+              }
+              labelPosition="center"
             />
-            
+
             {/* Demo buttons */}
             <Stack gap="xs">
               <Button
-                variant="light"
                 color="teal"
                 fullWidth
                 leftSection={
-                  <ThemeIcon variant="light" color="teal" size="sm" radius="xl">
+                  <ThemeIcon color="teal" radius="xl" size="sm" variant="light">
                     <IconBarbell size={14} />
                   </ThemeIcon>
                 }
                 onClick={handleDemoTrainer}
                 styles={{
                   root: {
-                    height: 'auto',
-                    padding: '10px 16px',
+                    height: "auto",
+                    padding: "10px 16px",
                   },
                   inner: {
-                    justifyContent: 'flex-start',
+                    justifyContent: "flex-start",
                   },
                 }}
+                variant="light"
               >
                 <Box>
-                  <Text size="sm" fw={600}>Demo Entrenador</Text>
-                  <Text size="xs" c="dimmed">
+                  <Text fw={600} size="sm">
+                    Demo Entrenador
+                  </Text>
+                  <Text c="dimmed" size="xs">
                     Gestiona clientes, entrenamientos y pagos
                   </Text>
                 </Box>
               </Button>
-              
+
               <Button
-                variant="light"
                 color="violet"
                 fullWidth
                 leftSection={
-                  <ThemeIcon variant="light" color="violet" size="sm" radius="xl">
+                  <ThemeIcon
+                    color="violet"
+                    radius="xl"
+                    size="sm"
+                    variant="light"
+                  >
                     <IconUser size={14} />
                   </ThemeIcon>
                 }
                 onClick={handleDemoClient}
                 styles={{
                   root: {
-                    height: 'auto',
-                    padding: '10px 16px',
+                    height: "auto",
+                    padding: "10px 16px",
                   },
                   inner: {
-                    justifyContent: 'flex-start',
+                    justifyContent: "flex-start",
                   },
                 }}
+                variant="light"
               >
                 <Box>
-                  <Text size="sm" fw={600}>Demo Cliente</Text>
-                  <Text size="xs" c="dimmed">
+                  <Text fw={600} size="sm">
+                    Demo Cliente
+                  </Text>
+                  <Text c="dimmed" size="xs">
                     Ve tus entrenamientos, progreso y más
                   </Text>
                 </Box>
               </Button>
             </Stack>
-            
+
             <Text c="dimmed" size="sm" ta="center">
-              ¿No tienes cuenta?{' '}
-              <Anchor component={Link} to="/register" fw={500}>
+              ¿No tienes cuenta?{" "}
+              <Anchor component={Link} fw={500} to="/register">
                 Regístrate
               </Anchor>
             </Text>
@@ -203,5 +224,5 @@ export function LoginPage() {
         </form>
       </Stack>
     </Paper>
-  )
+  );
 }

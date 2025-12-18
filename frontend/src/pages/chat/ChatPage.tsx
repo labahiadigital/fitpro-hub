@@ -1,149 +1,167 @@
-import { useState, useRef, useEffect } from 'react'
 import {
+  ActionIcon,
+  Avatar,
+  Badge,
+  Box,
   Container,
   Grid,
-  Paper,
   Group,
-  TextInput,
-  ActionIcon,
-  Box,
-  Text,
-  Avatar,
-  Stack,
-  ScrollArea,
-  Badge,
-  ThemeIcon,
-  Menu,
-  Tooltip,
   Loader,
+  Menu,
+  Paper,
+  ScrollArea,
   SegmentedControl,
-} from '@mantine/core'
+  Stack,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Tooltip,
+} from "@mantine/core";
 import {
-  IconSend,
-  IconSearch,
-  IconPaperclip,
-  IconMoodSmile,
-  IconMessages,
+  IconBrandWhatsapp,
   IconCheck,
   IconChecks,
-  IconBrandWhatsapp,
-  IconMessage,
-  IconDotsVertical,
-  IconPhone,
-  IconVideo,
-  IconInfoCircle,
   IconClock,
-} from '@tabler/icons-react'
-import { PageHeader } from '../../components/common/PageHeader'
-import { useAuthStore } from '../../stores/auth'
+  IconDotsVertical,
+  IconInfoCircle,
+  IconMessage,
+  IconMessages,
+  IconMoodSmile,
+  IconPaperclip,
+  IconPhone,
+  IconSearch,
+  IconSend,
+  IconVideo,
+} from "@tabler/icons-react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import { useEffect, useRef, useState } from "react";
+import { PageHeader } from "../../components/common/PageHeader";
 import {
-  useConversations,
-  useMessages,
-  useSendMessage,
-  useMarkConversationRead,
   type Conversation,
   type Message,
   type MessageSource,
-} from '../../hooks/useChat'
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
-import 'dayjs/locale/es'
+  useConversations,
+  useMarkConversationRead,
+  useMessages,
+  useSendMessage,
+} from "../../hooks/useChat";
+import { useAuthStore } from "../../stores/auth";
+import "dayjs/locale/es";
 
-dayjs.extend(relativeTime)
-dayjs.locale('es')
+dayjs.extend(relativeTime);
+dayjs.locale("es");
 
 // Message status indicator
 function MessageStatus({ message }: { message: Message }) {
-  if (message.direction === 'inbound') return null
-  
-  const { external_status } = message
-  
-  if (external_status === 'pending') {
-    return <IconClock size={14} style={{ opacity: 0.7 }} />
+  if (message.direction === "inbound") return null;
+
+  const { external_status } = message;
+
+  if (external_status === "pending") {
+    return <IconClock size={14} style={{ opacity: 0.7 }} />;
   }
-  if (external_status === 'sent') {
-    return <IconCheck size={14} style={{ opacity: 0.7 }} />
+  if (external_status === "sent") {
+    return <IconCheck size={14} style={{ opacity: 0.7 }} />;
   }
-  if (external_status === 'delivered') {
-    return <IconChecks size={14} style={{ opacity: 0.7 }} />
+  if (external_status === "delivered") {
+    return <IconChecks size={14} style={{ opacity: 0.7 }} />;
   }
-  if (external_status === 'read') {
-    return <IconChecks size={14} color="var(--mantine-color-blue-4)" />
+  if (external_status === "read") {
+    return <IconChecks color="var(--mantine-color-blue-4)" size={14} />;
   }
-  return null
+  return null;
 }
 
 // Conversation list item
-function ConversationItem({ 
-  conversation, 
-  isSelected, 
-  onClick 
-}: { 
-  conversation: Conversation
-  isSelected: boolean
-  onClick: () => void 
+function ConversationItem({
+  conversation,
+  isSelected,
+  onClick,
+}: {
+  conversation: Conversation;
+  isSelected: boolean;
+  onClick: () => void;
 }) {
   return (
     <Box
+      onClick={onClick}
       p="md"
       style={{
-        cursor: 'pointer',
-        backgroundColor: isSelected ? 'var(--mantine-color-primary-0)' : undefined,
-        borderBottom: '1px solid var(--mantine-color-gray-1)',
-        transition: 'background-color 0.15s ease',
+        cursor: "pointer",
+        backgroundColor: isSelected
+          ? "var(--mantine-color-primary-0)"
+          : undefined,
+        borderBottom: "1px solid var(--mantine-color-gray-1)",
+        transition: "background-color 0.15s ease",
       }}
-      onClick={onClick}
     >
       <Group justify="space-between" wrap="nowrap">
-        <Group gap="sm" wrap="nowrap" style={{ flex: 1, overflow: 'hidden' }}>
+        <Group gap="sm" style={{ flex: 1, overflow: "hidden" }} wrap="nowrap">
           <Box pos="relative">
-            <Avatar radius="xl" color="primary">
-              {conversation.client_name?.charAt(0) || conversation.name?.charAt(0) || '?'}
+            <Avatar color="primary" radius="xl">
+              {conversation.client_name?.charAt(0) ||
+                conversation.name?.charAt(0) ||
+                "?"}
             </Avatar>
             {/* Channel indicator */}
             {conversation.whatsapp_phone && (
-              <ThemeIcon 
-                size={16} 
-                radius="xl" 
-                color="green" 
-                style={{ 
-                  position: 'absolute', 
-                  bottom: -2, 
+              <ThemeIcon
+                color="green"
+                radius="xl"
+                size={16}
+                style={{
+                  position: "absolute",
+                  bottom: -2,
                   right: -2,
-                  border: '2px solid white',
+                  border: "2px solid white",
                 }}
               >
                 <IconBrandWhatsapp size={10} />
               </ThemeIcon>
             )}
           </Box>
-          <Box style={{ flex: 1, overflow: 'hidden' }}>
+          <Box style={{ flex: 1, overflow: "hidden" }}>
             <Group justify="space-between" wrap="nowrap">
-              <Text fw={conversation.unread_count > 0 ? 600 : 500} size="sm" truncate>
+              <Text
+                fw={conversation.unread_count > 0 ? 600 : 500}
+                size="sm"
+                truncate
+              >
                 {conversation.client_name || conversation.name}
               </Text>
-              <Text size="xs" c="dimmed">
-                {conversation.last_message_at ? dayjs(conversation.last_message_at).fromNow() : ''}
+              <Text c="dimmed" size="xs">
+                {conversation.last_message_at
+                  ? dayjs(conversation.last_message_at).fromNow()
+                  : ""}
               </Text>
             </Group>
-            <Group justify="space-between" wrap="nowrap" gap="xs">
-              <Group gap={4} wrap="nowrap" style={{ flex: 1, overflow: 'hidden' }}>
+            <Group gap="xs" justify="space-between" wrap="nowrap">
+              <Group
+                gap={4}
+                style={{ flex: 1, overflow: "hidden" }}
+                wrap="nowrap"
+              >
                 {/* Show source icon for last message */}
-                {conversation.last_message_source === 'whatsapp' && (
-                  <IconBrandWhatsapp size={12} color="var(--mantine-color-green-6)" style={{ flexShrink: 0 }} />
+                {conversation.last_message_source === "whatsapp" && (
+                  <IconBrandWhatsapp
+                    color="var(--mantine-color-green-6)"
+                    size={12}
+                    style={{ flexShrink: 0 }}
+                  />
                 )}
                 <Text
-                  size="xs"
-                  c={conversation.unread_count > 0 ? undefined : 'dimmed'}
+                  c={conversation.unread_count > 0 ? undefined : "dimmed"}
                   fw={conversation.unread_count > 0 ? 500 : 400}
-                  truncate
+                  size="xs"
                   style={{ flex: 1 }}
+                  truncate
                 >
                   {conversation.last_message_preview}
                 </Text>
               </Group>
               {conversation.unread_count > 0 && (
-                <Badge size="xs" circle color="primary">
+                <Badge circle color="primary" size="xs">
                   {conversation.unread_count}
                 </Badge>
               )}
@@ -152,155 +170,194 @@ function ConversationItem({
         </Group>
       </Group>
     </Box>
-  )
+  );
 }
 
 // Chat message bubble
-function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
-  const isWhatsApp = message.source === 'whatsapp'
-  
+function MessageBubble({
+  message,
+  isOwn,
+}: {
+  message: Message;
+  isOwn: boolean;
+}) {
+  const isWhatsApp = message.source === "whatsapp";
+
   return (
     <Box
       style={{
-        display: 'flex',
-        justifyContent: isOwn ? 'flex-end' : 'flex-start',
+        display: "flex",
+        justifyContent: isOwn ? "flex-end" : "flex-start",
       }}
     >
       <Box
-        p="sm"
         maw="70%"
+        p="sm"
         style={{
           backgroundColor: isOwn
-            ? isWhatsApp 
-              ? 'var(--mantine-color-green-6)' 
-              : 'var(--mantine-color-primary-6)'
-            : 'white',
-          color: isOwn ? 'white' : undefined,
-          borderRadius: isOwn
-            ? '16px 16px 4px 16px'
-            : '16px 16px 16px 4px',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            ? isWhatsApp
+              ? "var(--mantine-color-green-6)"
+              : "var(--mantine-color-primary-6)"
+            : "white",
+          color: isOwn ? "white" : undefined,
+          borderRadius: isOwn ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
         }}
       >
         {/* Source indicator for incoming messages */}
         {!isOwn && (
           <Group gap={4} mb={4}>
             {isWhatsApp ? (
-              <IconBrandWhatsapp size={12} color="var(--mantine-color-green-6)" />
+              <IconBrandWhatsapp
+                color="var(--mantine-color-green-6)"
+                size={12}
+              />
             ) : (
-              <IconMessage size={12} color="var(--mantine-color-blue-6)" />
+              <IconMessage color="var(--mantine-color-blue-6)" size={12} />
             )}
-            <Text size="xs" c="dimmed">
-              {isWhatsApp ? 'WhatsApp' : 'Plataforma'}
+            <Text c="dimmed" size="xs">
+              {isWhatsApp ? "WhatsApp" : "Plataforma"}
             </Text>
           </Group>
         )}
-        
+
         <Text size="sm">{message.content}</Text>
-        
+
         <Group gap={4} justify="flex-end" mt={4}>
           {/* Source indicator for outgoing messages */}
           {isOwn && isWhatsApp && (
             <IconBrandWhatsapp size={12} style={{ opacity: 0.7 }} />
           )}
-          <Text size="xs" c={isOwn ? 'white' : 'dimmed'} style={{ opacity: 0.7 }}>
-            {dayjs(message.created_at).format('HH:mm')}
+          <Text
+            c={isOwn ? "white" : "dimmed"}
+            size="xs"
+            style={{ opacity: 0.7 }}
+          >
+            {dayjs(message.created_at).format("HH:mm")}
           </Text>
           <MessageStatus message={message} />
         </Group>
       </Box>
     </Box>
-  )
+  );
 }
 
 export function ChatPage() {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
-  const [message, setMessage] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sendVia, setSendVia] = useState<MessageSource>('platform')
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  
-  const { isDemoMode, demoRole } = useAuthStore()
-  const isClientView = isDemoMode && demoRole === 'client'
-  
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | null
+  >(null);
+  const [message, setMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sendVia, setSendVia] = useState<MessageSource>("platform");
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const { isDemoMode, demoRole } = useAuthStore();
+  const isClientView = isDemoMode && demoRole === "client";
+
   // Queries
-  const { data: conversations = [], isLoading: loadingConversations } = useConversations()
-  const { data: messages = [], isLoading: loadingMessages } = useMessages(selectedConversationId)
-  const sendMessageMutation = useSendMessage()
-  const markReadMutation = useMarkConversationRead()
-  
-  const selectedConversation = conversations.find(c => c.id === selectedConversationId)
-  
+  const { data: conversations = [], isLoading: loadingConversations } =
+    useConversations();
+  const { data: messages = [], isLoading: loadingMessages } = useMessages(
+    selectedConversationId
+  );
+  const sendMessageMutation = useSendMessage();
+  const markReadMutation = useMarkConversationRead();
+
+  const selectedConversation = conversations.find(
+    (c) => c.id === selectedConversationId
+  );
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, [messages])
-  
+  }, [messages]);
+
   // Mark conversation as read when selected
   useEffect(() => {
-    if (selectedConversationId && (selectedConversation?.unread_count ?? 0) > 0) {
-      markReadMutation.mutate(selectedConversationId)
+    if (
+      selectedConversationId &&
+      (selectedConversation?.unread_count ?? 0) > 0
+    ) {
+      markReadMutation.mutate(selectedConversationId);
     }
-  }, [selectedConversationId])
-  
+  }, [selectedConversationId]);
+
   // Update send channel based on conversation preference
   useEffect(() => {
     if (selectedConversation) {
-      setSendVia(selectedConversation.preferred_channel)
+      setSendVia(selectedConversation.preferred_channel);
     }
-  }, [selectedConversation])
-  
+  }, [selectedConversation]);
+
   const handleSendMessage = () => {
-    if (!message.trim() || !selectedConversationId) return
-    
+    if (!(message.trim() && selectedConversationId)) return;
+
     sendMessageMutation.mutate({
       conversation_id: selectedConversationId,
       content: message.trim(),
       send_via: sendVia,
-    })
-    
-    setMessage('')
-  }
-  
+    });
+
+    setMessage("");
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
-  }
-  
-  const filteredConversations = conversations.filter(c => 
-    (c.client_name || c.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  )
-  
+  };
+
+  const filteredConversations = conversations.filter((c) =>
+    (c.client_name || c.name || "")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <Container size="xl" py="xl" h="calc(100vh - 100px)">
+    <Container h="calc(100vh - 100px)" py="xl" size="xl">
       <PageHeader
+        description={
+          isClientView
+            ? "Comunícate con tu entrenador"
+            : "Comunícate con tus clientes"
+        }
         title="Chat"
-        description={isClientView ? 'Comunícate con tu entrenador' : 'Comunícate con tus clientes'}
       />
-      
-      <Paper withBorder radius="lg" h="calc(100% - 80px)" style={{ overflow: 'hidden' }}>
-        <Grid h="100%" gutter={0}>
+
+      <Paper
+        h="calc(100% - 80px)"
+        radius="lg"
+        style={{ overflow: "hidden" }}
+        withBorder
+      >
+        <Grid gutter={0} h="100%">
           {/* Lista de conversaciones */}
-          <Grid.Col span={4} h="100%" style={{ borderRight: '1px solid var(--mantine-color-gray-2)' }}>
-            <Box p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+          <Grid.Col
+            h="100%"
+            span={4}
+            style={{ borderRight: "1px solid var(--mantine-color-gray-2)" }}
+          >
+            <Box
+              p="md"
+              style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+            >
               <TextInput
-                placeholder="Buscar conversaciones..."
                 leftSection={<IconSearch size={16} />}
-                value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar conversaciones..."
                 styles={{
                   input: {
-                    backgroundColor: 'var(--mantine-color-gray-0)',
-                    border: 'none',
+                    backgroundColor: "var(--mantine-color-gray-0)",
+                    border: "none",
                   },
                 }}
+                value={searchQuery}
               />
             </Box>
-            
+
             <ScrollArea h="calc(100% - 70px)">
               {loadingConversations ? (
                 <Box p="xl" ta="center">
@@ -308,43 +365,53 @@ export function ChatPage() {
                 </Box>
               ) : filteredConversations.length === 0 ? (
                 <Box p="xl" ta="center">
-                  <Text c="dimmed" size="sm">No hay conversaciones</Text>
+                  <Text c="dimmed" size="sm">
+                    No hay conversaciones
+                  </Text>
                 </Box>
               ) : (
                 filteredConversations.map((conv) => (
                   <ConversationItem
-                    key={conv.id}
                     conversation={conv}
                     isSelected={selectedConversationId === conv.id}
+                    key={conv.id}
                     onClick={() => setSelectedConversationId(conv.id)}
                   />
                 ))
               )}
             </ScrollArea>
           </Grid.Col>
-          
+
           {/* Área de chat */}
-          <Grid.Col span={8} h="100%">
+          <Grid.Col h="100%" span={8}>
             {selectedConversation ? (
-              <Box h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
+              <Box
+                h="100%"
+                style={{ display: "flex", flexDirection: "column" }}
+              >
                 {/* Header del chat */}
-                <Box p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
+                <Box
+                  p="md"
+                  style={{
+                    borderBottom: "1px solid var(--mantine-color-gray-2)",
+                  }}
+                >
                   <Group justify="space-between">
                     <Group>
                       <Box pos="relative">
-                        <Avatar radius="xl" color="primary">
-                          {selectedConversation.client_name?.charAt(0) || '?'}
+                        <Avatar color="primary" radius="xl">
+                          {selectedConversation.client_name?.charAt(0) || "?"}
                         </Avatar>
                         {selectedConversation.whatsapp_phone && (
-                          <ThemeIcon 
-                            size={16} 
-                            radius="xl" 
-                            color="green" 
-                            style={{ 
-                              position: 'absolute', 
-                              bottom: -2, 
+                          <ThemeIcon
+                            color="green"
+                            radius="xl"
+                            size={16}
+                            style={{
+                              position: "absolute",
+                              bottom: -2,
                               right: -2,
-                              border: '2px solid white',
+                              border: "2px solid white",
                             }}
                           >
                             <IconBrandWhatsapp size={10} />
@@ -353,39 +420,42 @@ export function ChatPage() {
                       </Box>
                       <Box>
                         <Group gap="xs">
-                          <Text fw={600}>{selectedConversation.client_name || selectedConversation.name}</Text>
+                          <Text fw={600}>
+                            {selectedConversation.client_name ||
+                              selectedConversation.name}
+                          </Text>
                           {selectedConversation.whatsapp_phone && (
-                            <Badge size="xs" variant="light" color="green">
+                            <Badge color="green" size="xs" variant="light">
                               {selectedConversation.whatsapp_phone}
                             </Badge>
                           )}
                         </Group>
-                        <Text size="xs" c="dimmed">
-                          {selectedConversation.preferred_channel === 'whatsapp' 
-                            ? 'Conectado por WhatsApp' 
-                            : 'Chat de plataforma'}
+                        <Text c="dimmed" size="xs">
+                          {selectedConversation.preferred_channel === "whatsapp"
+                            ? "Conectado por WhatsApp"
+                            : "Chat de plataforma"}
                         </Text>
                       </Box>
                     </Group>
                     <Group gap="xs">
                       <Tooltip label="Llamar">
-                        <ActionIcon variant="subtle" color="gray" size="lg">
+                        <ActionIcon color="gray" size="lg" variant="subtle">
                           <IconPhone size={18} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Videollamada">
-                        <ActionIcon variant="subtle" color="gray" size="lg">
+                        <ActionIcon color="gray" size="lg" variant="subtle">
                           <IconVideo size={18} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Info">
-                        <ActionIcon variant="subtle" color="gray" size="lg">
+                        <ActionIcon color="gray" size="lg" variant="subtle">
                           <IconInfoCircle size={18} />
                         </ActionIcon>
                       </Tooltip>
                       <Menu position="bottom-end">
                         <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray" size="lg">
+                          <ActionIcon color="gray" size="lg" variant="subtle">
                             <IconDotsVertical size={18} />
                           </ActionIcon>
                         </Menu.Target>
@@ -393,102 +463,111 @@ export function ChatPage() {
                           <Menu.Item>Ver perfil del cliente</Menu.Item>
                           <Menu.Item>Archivar conversación</Menu.Item>
                           <Menu.Divider />
-                          <Menu.Item color="red">Eliminar conversación</Menu.Item>
+                          <Menu.Item color="red">
+                            Eliminar conversación
+                          </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
                     </Group>
                   </Group>
                 </Box>
-                
+
                 {/* Mensajes */}
                 <ScrollArea
                   flex={1}
                   p="md"
+                  style={{ backgroundColor: "var(--mantine-color-gray-0)" }}
                   viewportRef={scrollAreaRef}
-                  style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}
                 >
                   {loadingMessages ? (
-                    <Box ta="center" py="xl">
+                    <Box py="xl" ta="center">
                       <Loader size="sm" />
                     </Box>
                   ) : messages.length === 0 ? (
-                    <Box ta="center" py="xl">
-                      <Text c="dimmed" size="sm">No hay mensajes aún</Text>
-                      <Text c="dimmed" size="xs">Envía el primer mensaje para iniciar la conversación</Text>
+                    <Box py="xl" ta="center">
+                      <Text c="dimmed" size="sm">
+                        No hay mensajes aún
+                      </Text>
+                      <Text c="dimmed" size="xs">
+                        Envía el primer mensaje para iniciar la conversación
+                      </Text>
                     </Box>
                   ) : (
                     <Stack gap="md">
                       {messages.map((msg) => (
                         <MessageBubble
+                          isOwn={msg.direction === "outbound"}
                           key={msg.id}
                           message={msg}
-                          isOwn={msg.direction === 'outbound'}
                         />
                       ))}
                     </Stack>
                   )}
                 </ScrollArea>
-                
+
                 {/* Input de mensaje */}
-                <Box p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}>
+                <Box
+                  p="md"
+                  style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+                >
                   {/* Channel selector */}
                   {selectedConversation.whatsapp_phone && (
-                    <Group mb="xs" justify="center">
+                    <Group justify="center" mb="xs">
                       <SegmentedControl
-                        size="xs"
-                        value={sendVia}
-                        onChange={(value) => setSendVia(value as MessageSource)}
                         data={[
-                          { 
-                            value: 'platform', 
+                          {
+                            value: "platform",
                             label: (
                               <Group gap={4}>
                                 <IconMessage size={14} />
                                 <span>Plataforma</span>
                               </Group>
-                            )
+                            ),
                           },
-                          { 
-                            value: 'whatsapp', 
+                          {
+                            value: "whatsapp",
                             label: (
                               <Group gap={4}>
                                 <IconBrandWhatsapp size={14} />
                                 <span>WhatsApp</span>
                               </Group>
-                            )
+                            ),
                           },
                         ]}
+                        onChange={(value) => setSendVia(value as MessageSource)}
+                        size="xs"
+                        value={sendVia}
                       />
                     </Group>
                   )}
-                  
+
                   <Group gap="sm">
-                    <ActionIcon variant="subtle" color="gray" size="lg">
+                    <ActionIcon color="gray" size="lg" variant="subtle">
                       <IconPaperclip size={20} />
                     </ActionIcon>
                     <TextInput
-                      placeholder={`Escribe un mensaje${sendVia === 'whatsapp' ? ' por WhatsApp' : ''}...`}
-                      value={message}
+                      flex={1}
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
-                      flex={1}
+                      placeholder={`Escribe un mensaje${sendVia === "whatsapp" ? " por WhatsApp" : ""}...`}
                       styles={{
                         input: {
-                          backgroundColor: 'var(--mantine-color-gray-0)',
-                          border: 'none',
+                          backgroundColor: "var(--mantine-color-gray-0)",
+                          border: "none",
                         },
                       }}
+                      value={message}
                     />
-                    <ActionIcon variant="subtle" color="gray" size="lg">
+                    <ActionIcon color="gray" size="lg" variant="subtle">
                       <IconMoodSmile size={20} />
                     </ActionIcon>
                     <ActionIcon
-                      variant="filled"
-                      color={sendVia === 'whatsapp' ? 'green' : 'primary'}
-                      size="lg"
-                      onClick={handleSendMessage}
+                      color={sendVia === "whatsapp" ? "green" : "primary"}
                       disabled={!message.trim()}
                       loading={sendMessageMutation.isPending}
+                      onClick={handleSendMessage}
+                      size="lg"
+                      variant="filled"
                     >
                       <IconSend size={18} />
                     </ActionIcon>
@@ -499,23 +578,29 @@ export function ChatPage() {
               <Box
                 h="100%"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
                 }}
               >
-                <ThemeIcon size={80} radius="xl" variant="light" color="gray" mb="md">
+                <ThemeIcon
+                  color="gray"
+                  mb="md"
+                  radius="xl"
+                  size={80}
+                  variant="light"
+                >
                   <IconMessages size={40} />
                 </ThemeIcon>
-                <Text size="lg" fw={500} c="dimmed">
+                <Text c="dimmed" fw={500} size="lg">
                   Selecciona una conversación
                 </Text>
-                <Text size="sm" c="dimmed">
+                <Text c="dimmed" size="sm">
                   Elige un chat de la lista para empezar a conversar
                 </Text>
                 {!isClientView && (
-                  <Text size="xs" c="dimmed" mt="md">
+                  <Text c="dimmed" mt="md" size="xs">
                     💡 Los mensajes de WhatsApp y plataforma se unifican aquí
                   </Text>
                 )}
@@ -525,5 +610,5 @@ export function ChatPage() {
         </Grid>
       </Paper>
     </Container>
-  )
+  );
 }

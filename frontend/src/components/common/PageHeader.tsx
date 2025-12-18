@@ -1,26 +1,34 @@
-import { Group, Title, Text, Button, Box, Breadcrumbs, Anchor } from '@mantine/core'
-import { IconPlus } from '@tabler/icons-react'
-import { Link } from 'react-router-dom'
+import {
+  Anchor,
+  Box,
+  Breadcrumbs,
+  Button,
+  Group,
+  Text,
+  Title,
+} from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
+import { Link } from "react-router-dom";
 
 interface BreadcrumbItem {
-  label: string
-  href?: string
+  label: string;
+  href?: string;
 }
 
 interface ActionButton {
-  label: string
-  icon?: React.ReactNode
-  onClick: () => void
+  label: string;
+  icon?: React.ReactNode;
+  onClick: () => void;
 }
 
 interface PageHeaderProps {
-  title: string
-  description?: string
-  subtitle?: string // Alias for description
-  breadcrumbs?: BreadcrumbItem[]
-  action?: ActionButton | React.ReactNode
-  secondaryAction?: ActionButton & { variant?: string }
-  children?: React.ReactNode
+  title: string;
+  description?: string;
+  subtitle?: string; // Alias for description
+  breadcrumbs?: BreadcrumbItem[];
+  action?: ActionButton | React.ReactNode;
+  secondaryAction?: ActionButton & { variant?: string };
+  children?: React.ReactNode;
 }
 
 export function PageHeader({
@@ -32,55 +40,62 @@ export function PageHeader({
   secondaryAction,
   children,
 }: PageHeaderProps) {
-  const displayDescription = description || subtitle
+  const displayDescription = description || subtitle;
 
   // Check if action is a React element or an action object
-  const isActionElement = action && typeof action === 'object' && 'type' in action
-  const actionButton = !isActionElement ? action as ActionButton | undefined : undefined
-  const actionElement = isActionElement ? action as React.ReactNode : undefined
+  const isActionElement =
+    action && typeof action === "object" && "type" in action;
+  const actionButton = isActionElement
+    ? undefined
+    : (action as ActionButton | undefined);
+  const actionElement = isActionElement
+    ? (action as React.ReactNode)
+    : undefined;
 
   return (
     <Box mb="xl">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Breadcrumbs mb="sm" separator="›">
-          {breadcrumbs.map((item, index) => (
+          {breadcrumbs.map((item, index) =>
             item.href ? (
               <Anchor
-                key={index}
-                component={Link}
-                to={item.href}
-                size="sm"
                 c="dimmed"
+                component={Link}
+                key={index}
+                size="sm"
+                to={item.href}
               >
                 {item.label}
               </Anchor>
             ) : (
-              <Text key={index} size="sm" c="dimmed">
+              <Text c="dimmed" key={index} size="sm">
                 {item.label}
               </Text>
             )
-          ))}
+          )}
         </Breadcrumbs>
       )}
-      
-      <Group justify="space-between" align="flex-start">
+
+      <Group align="flex-start" justify="space-between">
         <Box>
-          <Title order={2} fw={700}>
+          <Title fw={700} order={2}>
             {title}
           </Title>
           {displayDescription && (
-            <Text size="sm" c="dimmed" mt={4}>
+            <Text c="dimmed" mt={4} size="sm">
               {displayDescription}
             </Text>
           )}
         </Box>
-        
+
         <Group gap="sm">
           {secondaryAction && (
             <Button
-              variant={secondaryAction.variant as 'default' | 'outline' || 'default'}
               leftSection={secondaryAction.icon}
               onClick={secondaryAction.onClick}
+              variant={
+                (secondaryAction.variant as "default" | "outline") || "default"
+              }
             >
               {secondaryAction.label}
             </Button>
@@ -96,8 +111,8 @@ export function PageHeader({
           )}
         </Group>
       </Group>
-      
+
       {children && <Box mt="md">{children}</Box>}
     </Box>
-  )
+  );
 }

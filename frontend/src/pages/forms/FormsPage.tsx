@@ -1,313 +1,373 @@
-import { useState } from 'react'
 import {
-  Container,
-  Paper,
-  Group,
-  Button,
-  Modal,
-  TextInput,
-  Select,
-  Stack,
-  Textarea,
-  Tabs,
-  Box,
-  Text,
-  Badge,
-  Card,
   ActionIcon,
-  SimpleGrid,
-  Switch,
-  ThemeIcon,
+  Badge,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  Container,
   Divider,
   Drawer,
-  ScrollArea,
   FileButton,
+  Group,
+  Modal,
+  Paper,
+  ScrollArea,
+  Select,
+  SimpleGrid,
+  Stack,
+  Switch,
   Table,
-  Checkbox,
-} from '@mantine/core'
-import { useForm } from '@mantine/form'
-import { useDisclosure } from '@mantine/hooks'
+  Tabs,
+  Text,
+  Textarea,
+  TextInput,
+  ThemeIcon,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useDisclosure } from "@mantine/hooks";
 import {
-  IconForms,
-  IconEdit,
-  IconTrash,
-  IconCopy,
-  IconEye,
-  IconUpload,
-  IconFile,
-  IconFileText,
-  IconFileSpreadsheet,
-  IconFolder,
-  IconDownload,
-  IconSend,
-  IconGripVertical,
-  IconTextSize,
-  IconNumber,
   IconCalendar,
+  IconCheck,
   IconCheckbox,
+  IconCopy,
+  IconDownload,
+  IconEdit,
+  IconEye,
+  IconFile,
+  IconFileSpreadsheet,
+  IconFileText,
+  IconFolder,
+  IconForms,
+  IconGripVertical,
   IconList,
   IconMail,
+  IconNumber,
   IconPhone,
-  IconCheck,
-} from '@tabler/icons-react'
-import { PageHeader } from '../../components/common/PageHeader'
-import { EmptyState } from '../../components/common/EmptyState'
+  IconSend,
+  IconTextSize,
+  IconTrash,
+  IconUpload,
+} from "@tabler/icons-react";
+import { useState } from "react";
+import { EmptyState } from "../../components/common/EmptyState";
+import { PageHeader } from "../../components/common/PageHeader";
 
 interface FormField {
-  id: string
-  type: 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'select' | 'checkbox' | 'radio'
-  label: string
-  placeholder?: string
-  required: boolean
-  options?: string[]
-  order: number
+  id: string;
+  type:
+    | "text"
+    | "textarea"
+    | "number"
+    | "email"
+    | "phone"
+    | "date"
+    | "select"
+    | "checkbox"
+    | "radio";
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[];
+  order: number;
 }
 
 interface FormTemplate {
-  id: string
-  name: string
-  description?: string
-  type: 'custom' | 'par_q' | 'consent' | 'health' | 'feedback'
-  fields: FormField[]
-  is_active: boolean
-  send_on_onboarding: boolean
-  submissions_count: number
-  created_at: string
+  id: string;
+  name: string;
+  description?: string;
+  type: "custom" | "par_q" | "consent" | "health" | "feedback";
+  fields: FormField[];
+  is_active: boolean;
+  send_on_onboarding: boolean;
+  submissions_count: number;
+  created_at: string;
 }
 
 interface Document {
-  id: string
-  name: string
-  type: string
-  size: number
-  uploaded_at: string
-  folder?: string
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  uploaded_at: string;
+  folder?: string;
 }
 
 const fieldTypes = [
-  { value: 'text', label: 'Texto corto', icon: IconTextSize },
-  { value: 'textarea', label: 'Texto largo', icon: IconFileText },
-  { value: 'number', label: 'Número', icon: IconNumber },
-  { value: 'email', label: 'Email', icon: IconMail },
-  { value: 'phone', label: 'Teléfono', icon: IconPhone },
-  { value: 'date', label: 'Fecha', icon: IconCalendar },
-  { value: 'select', label: 'Desplegable', icon: IconList },
-  { value: 'checkbox', label: 'Casillas', icon: IconCheckbox },
-  { value: 'radio', label: 'Opción única', icon: IconList },
-]
+  { value: "text", label: "Texto corto", icon: IconTextSize },
+  { value: "textarea", label: "Texto largo", icon: IconFileText },
+  { value: "number", label: "Número", icon: IconNumber },
+  { value: "email", label: "Email", icon: IconMail },
+  { value: "phone", label: "Teléfono", icon: IconPhone },
+  { value: "date", label: "Fecha", icon: IconCalendar },
+  { value: "select", label: "Desplegable", icon: IconList },
+  { value: "checkbox", label: "Casillas", icon: IconCheckbox },
+  { value: "radio", label: "Opción única", icon: IconList },
+];
 
 const mockForms: FormTemplate[] = [
   {
-    id: '1',
-    name: 'PAR-Q (Cuestionario de Aptitud Física)',
-    description: 'Cuestionario estándar de preparación para actividad física',
-    type: 'par_q',
+    id: "1",
+    name: "PAR-Q (Cuestionario de Aptitud Física)",
+    description: "Cuestionario estándar de preparación para actividad física",
+    type: "par_q",
     fields: [],
     is_active: true,
     send_on_onboarding: true,
     submissions_count: 45,
-    created_at: '2024-01-15',
+    created_at: "2024-01-15",
   },
   {
-    id: '2',
-    name: 'Consentimiento Informado',
-    description: 'Documento de consentimiento para servicios de entrenamiento',
-    type: 'consent',
+    id: "2",
+    name: "Consentimiento Informado",
+    description: "Documento de consentimiento para servicios de entrenamiento",
+    type: "consent",
     fields: [],
     is_active: true,
     send_on_onboarding: true,
     submissions_count: 42,
-    created_at: '2024-01-15',
+    created_at: "2024-01-15",
   },
   {
-    id: '3',
-    name: 'Historial de Salud',
-    description: 'Información médica y de salud del cliente',
-    type: 'health',
+    id: "3",
+    name: "Historial de Salud",
+    description: "Información médica y de salud del cliente",
+    type: "health",
     fields: [],
     is_active: true,
     send_on_onboarding: false,
     submissions_count: 38,
-    created_at: '2024-02-01',
+    created_at: "2024-02-01",
   },
   {
-    id: '4',
-    name: 'Encuesta de Satisfacción',
-    description: 'Feedback sobre los servicios recibidos',
-    type: 'feedback',
+    id: "4",
+    name: "Encuesta de Satisfacción",
+    description: "Feedback sobre los servicios recibidos",
+    type: "feedback",
     fields: [],
     is_active: false,
     send_on_onboarding: false,
     submissions_count: 12,
-    created_at: '2024-03-10',
+    created_at: "2024-03-10",
   },
-]
+];
 
 const mockDocuments: Document[] = [
-  { id: '1', name: 'Guía de Nutrición.pdf', type: 'pdf', size: 2500000, uploaded_at: '2024-07-15', folder: 'Recursos' },
-  { id: '2', name: 'Plan de Entrenamiento Template.xlsx', type: 'xlsx', size: 150000, uploaded_at: '2024-07-10', folder: 'Plantillas' },
-  { id: '3', name: 'Contrato de Servicios.pdf', type: 'pdf', size: 500000, uploaded_at: '2024-06-20', folder: 'Legal' },
-  { id: '4', name: 'Política de Privacidad.pdf', type: 'pdf', size: 320000, uploaded_at: '2024-06-15', folder: 'Legal' },
-]
+  {
+    id: "1",
+    name: "Guía de Nutrición.pdf",
+    type: "pdf",
+    size: 2_500_000,
+    uploaded_at: "2024-07-15",
+    folder: "Recursos",
+  },
+  {
+    id: "2",
+    name: "Plan de Entrenamiento Template.xlsx",
+    type: "xlsx",
+    size: 150_000,
+    uploaded_at: "2024-07-10",
+    folder: "Plantillas",
+  },
+  {
+    id: "3",
+    name: "Contrato de Servicios.pdf",
+    type: "pdf",
+    size: 500_000,
+    uploaded_at: "2024-06-20",
+    folder: "Legal",
+  },
+  {
+    id: "4",
+    name: "Política de Privacidad.pdf",
+    type: "pdf",
+    size: 320_000,
+    uploaded_at: "2024-06-15",
+    folder: "Legal",
+  },
+];
 
 export function FormsPage() {
-  const [activeTab, setActiveTab] = useState<string | null>('forms')
-  const [forms, setForms] = useState<FormTemplate[]>(mockForms)
-  const [documents] = useState<Document[]>(mockDocuments)
-  const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false)
-  const [uploadModalOpened, { open: openUploadModal, close: closeUploadModal }] = useDisclosure(false)
-  const [editingForm, setEditingForm] = useState<FormTemplate | null>(null)
-  const [formFields, setFormFields] = useState<FormField[]>([])
+  const [activeTab, setActiveTab] = useState<string | null>("forms");
+  const [forms, setForms] = useState<FormTemplate[]>(mockForms);
+  const [documents] = useState<Document[]>(mockDocuments);
+  const [builderOpened, { open: openBuilder, close: closeBuilder }] =
+    useDisclosure(false);
+  const [
+    uploadModalOpened,
+    { open: openUploadModal, close: closeUploadModal },
+  ] = useDisclosure(false);
+  const [editingForm, setEditingForm] = useState<FormTemplate | null>(null);
+  const [formFields, setFormFields] = useState<FormField[]>([]);
 
   const form = useForm({
     initialValues: {
-      name: '',
-      description: '',
-      type: 'custom',
+      name: "",
+      description: "",
+      type: "custom",
       send_on_onboarding: false,
     },
     validate: {
-      name: (value) => (value.length < 2 ? 'Nombre requerido' : null),
+      name: (value) => (value.length < 2 ? "Nombre requerido" : null),
     },
-  })
+  });
 
   const openFormBuilder = (formTemplate?: FormTemplate) => {
     if (formTemplate) {
-      setEditingForm(formTemplate)
+      setEditingForm(formTemplate);
       form.setValues({
         name: formTemplate.name,
-        description: formTemplate.description || '',
+        description: formTemplate.description || "",
         type: formTemplate.type,
         send_on_onboarding: formTemplate.send_on_onboarding,
-      })
-      setFormFields(formTemplate.fields)
+      });
+      setFormFields(formTemplate.fields);
     } else {
-      setEditingForm(null)
-      form.reset()
-      setFormFields([])
+      setEditingForm(null);
+      form.reset();
+      setFormFields([]);
     }
-    openBuilder()
-  }
+    openBuilder();
+  };
 
-  const addField = (type: FormField['type']) => {
+  const addField = (type: FormField["type"]) => {
     const newField: FormField = {
       id: `field-${Date.now()}`,
       type,
-      label: '',
+      label: "",
       required: false,
       order: formFields.length,
-    }
-    setFormFields([...formFields, newField])
-  }
+    };
+    setFormFields([...formFields, newField]);
+  };
 
   const updateField = (fieldId: string, updates: Partial<FormField>) => {
-    setFormFields(fields =>
-      fields.map(f => f.id === fieldId ? { ...f, ...updates } : f)
-    )
-  }
+    setFormFields((fields) =>
+      fields.map((f) => (f.id === fieldId ? { ...f, ...updates } : f))
+    );
+  };
 
   const removeField = (fieldId: string) => {
-    setFormFields(fields => fields.filter(f => f.id !== fieldId))
-  }
+    setFormFields((fields) => fields.filter((f) => f.id !== fieldId));
+  };
 
   const handleSaveForm = () => {
-    const values = form.values
-    if (!values.name) return
+    const values = form.values;
+    if (!values.name) return;
 
     const newForm: FormTemplate = {
       id: editingForm?.id || `form-${Date.now()}`,
       name: values.name,
       description: values.description,
-      type: values.type as FormTemplate['type'],
+      type: values.type as FormTemplate["type"],
       fields: formFields,
       is_active: editingForm?.is_active ?? true,
       send_on_onboarding: values.send_on_onboarding,
       submissions_count: editingForm?.submissions_count ?? 0,
-      created_at: editingForm?.created_at || new Date().toISOString().split('T')[0],
-    }
+      created_at:
+        editingForm?.created_at || new Date().toISOString().split("T")[0],
+    };
 
     if (editingForm) {
-      setForms(f => f.map(item => item.id === editingForm.id ? newForm : item))
+      setForms((f) =>
+        f.map((item) => (item.id === editingForm.id ? newForm : item))
+      );
     } else {
-      setForms(f => [...f, newForm])
+      setForms((f) => [...f, newForm]);
     }
 
-    closeBuilder()
-    form.reset()
-    setFormFields([])
-    setEditingForm(null)
-  }
+    closeBuilder();
+    form.reset();
+    setFormFields([]);
+    setEditingForm(null);
+  };
 
   const toggleFormActive = (formId: string) => {
-    setForms(f =>
-      f.map(item => item.id === formId ? { ...item, is_active: !item.is_active } : item)
-    )
-  }
+    setForms((f) =>
+      f.map((item) =>
+        item.id === formId ? { ...item, is_active: !item.is_active } : item
+      )
+    );
+  };
 
   const deleteForm = (formId: string) => {
-    setForms(f => f.filter(item => item.id !== formId))
-  }
+    setForms((f) => f.filter((item) => item.id !== formId));
+  };
 
-  const getFormTypeColor = (type: FormTemplate['type']) => {
+  const getFormTypeColor = (type: FormTemplate["type"]) => {
     switch (type) {
-      case 'par_q': return 'blue'
-      case 'consent': return 'green'
-      case 'health': return 'red'
-      case 'feedback': return 'orange'
-      default: return 'gray'
+      case "par_q":
+        return "blue";
+      case "consent":
+        return "green";
+      case "health":
+        return "red";
+      case "feedback":
+        return "orange";
+      default:
+        return "gray";
     }
-  }
+  };
 
-  const getFormTypeLabel = (type: FormTemplate['type']) => {
+  const getFormTypeLabel = (type: FormTemplate["type"]) => {
     switch (type) {
-      case 'par_q': return 'PAR-Q'
-      case 'consent': return 'Consentimiento'
-      case 'health': return 'Salud'
-      case 'feedback': return 'Feedback'
-      default: return 'Personalizado'
+      case "par_q":
+        return "PAR-Q";
+      case "consent":
+        return "Consentimiento";
+      case "health":
+        return "Salud";
+      case "feedback":
+        return "Feedback";
+      default:
+        return "Personalizado";
     }
-  }
+  };
 
   const getFileIcon = (type: string) => {
     switch (type) {
-      case 'pdf': return IconFileText
-      case 'xlsx':
-      case 'xls': return IconFileSpreadsheet
-      default: return IconFile
+      case "pdf":
+        return IconFileText;
+      case "xlsx":
+      case "xls":
+        return IconFileSpreadsheet;
+      default:
+        return IconFile;
     }
-  }
+  };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
-  const getFieldIcon = (type: FormField['type']) => {
-    const fieldType = fieldTypes.find(f => f.value === type)
-    return fieldType?.icon || IconTextSize
-  }
+  const getFieldIcon = (type: FormField["type"]) => {
+    const fieldType = fieldTypes.find((f) => f.value === type);
+    return fieldType?.icon || IconTextSize;
+  };
 
   return (
-    <Container size="xl" py="xl">
+    <Container py="xl" size="xl">
       <PageHeader
-        title="Formularios y Documentos"
-        description="Gestiona formularios, cuestionarios y documentos compartidos"
         action={{
-          label: activeTab === 'forms' ? 'Nuevo Formulario' : 'Subir Documento',
-          onClick: activeTab === 'forms' ? () => openFormBuilder() : openUploadModal,
+          label: activeTab === "forms" ? "Nuevo Formulario" : "Subir Documento",
+          onClick:
+            activeTab === "forms" ? () => openFormBuilder() : openUploadModal,
         }}
+        description="Gestiona formularios, cuestionarios y documentos compartidos"
+        title="Formularios y Documentos"
       />
 
-      <Tabs value={activeTab} onChange={setActiveTab}>
+      <Tabs onChange={setActiveTab} value={activeTab}>
         <Tabs.List mb="lg">
-          <Tabs.Tab value="forms" leftSection={<IconForms size={14} />}>
+          <Tabs.Tab leftSection={<IconForms size={14} />} value="forms">
             Formularios
           </Tabs.Tab>
-          <Tabs.Tab value="documents" leftSection={<IconFolder size={14} />}>
+          <Tabs.Tab leftSection={<IconFolder size={14} />} value="documents">
             Documentos
           </Tabs.Tab>
-          <Tabs.Tab value="submissions" leftSection={<IconCheck size={14} />}>
+          <Tabs.Tab leftSection={<IconCheck size={14} />} value="submissions">
             Respuestas
           </Tabs.Tab>
         </Tabs.List>
@@ -316,30 +376,32 @@ export function FormsPage() {
           {forms.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
               {forms.map((formTemplate) => (
-                <Card key={formTemplate.id} withBorder radius="lg" padding="lg">
+                <Card key={formTemplate.id} padding="lg" radius="lg" withBorder>
                   <Group justify="space-between" mb="sm">
                     <Badge
-                      variant="light"
                       color={getFormTypeColor(formTemplate.type)}
+                      variant="light"
                     >
                       {getFormTypeLabel(formTemplate.type)}
                     </Badge>
                     <Switch
-                      size="sm"
                       checked={formTemplate.is_active}
-                      onChange={() => toggleFormActive(formTemplate.id)}
                       color="green"
+                      onChange={() => toggleFormActive(formTemplate.id)}
+                      size="sm"
                     />
                   </Group>
 
-                  <Text fw={600} mb="xs">{formTemplate.name}</Text>
-                  <Text size="sm" c="dimmed" lineClamp={2} mb="md">
-                    {formTemplate.description || 'Sin descripción'}
+                  <Text fw={600} mb="xs">
+                    {formTemplate.name}
+                  </Text>
+                  <Text c="dimmed" lineClamp={2} mb="md" size="sm">
+                    {formTemplate.description || "Sin descripción"}
                   </Text>
 
                   <Group gap="xs" mb="md">
                     {formTemplate.send_on_onboarding && (
-                      <Badge size="xs" variant="outline" color="blue">
+                      <Badge color="blue" size="xs" variant="outline">
                         Onboarding
                       </Badge>
                     )}
@@ -352,27 +414,27 @@ export function FormsPage() {
 
                   <Group gap="xs">
                     <Button
-                      variant="light"
-                      size="xs"
-                      leftSection={<IconEdit size={14} />}
                       flex={1}
+                      leftSection={<IconEdit size={14} />}
                       onClick={() => openFormBuilder(formTemplate)}
+                      size="xs"
+                      variant="light"
                     >
                       Editar
                     </Button>
-                    <ActionIcon variant="light" color="blue">
+                    <ActionIcon color="blue" variant="light">
                       <IconEye size={16} />
                     </ActionIcon>
-                    <ActionIcon variant="light" color="green">
+                    <ActionIcon color="green" variant="light">
                       <IconSend size={16} />
                     </ActionIcon>
-                    <ActionIcon variant="light" color="gray">
+                    <ActionIcon color="gray" variant="light">
                       <IconCopy size={16} />
                     </ActionIcon>
                     <ActionIcon
-                      variant="light"
                       color="red"
                       onClick={() => deleteForm(formTemplate.id)}
+                      variant="light"
                     >
                       <IconTrash size={16} />
                     </ActionIcon>
@@ -382,18 +444,18 @@ export function FormsPage() {
             </SimpleGrid>
           ) : (
             <EmptyState
-              icon={<IconForms size={40} />}
-              title="No hay formularios"
-              description="Crea tu primer formulario para recoger información de tus clientes."
               actionLabel="Crear Formulario"
+              description="Crea tu primer formulario para recoger información de tus clientes."
+              icon={<IconForms size={40} />}
               onAction={() => openFormBuilder()}
+              title="No hay formularios"
             />
           )}
         </Tabs.Panel>
 
         <Tabs.Panel value="documents">
           {documents.length > 0 ? (
-            <Paper withBorder radius="lg">
+            <Paper radius="lg" withBorder>
               <Table>
                 <Table.Thead>
                   <Table.Tr>
@@ -406,64 +468,72 @@ export function FormsPage() {
                 </Table.Thead>
                 <Table.Tbody>
                   {documents.map((doc) => {
-                    const FileIcon = getFileIcon(doc.type)
+                    const FileIcon = getFileIcon(doc.type);
                     return (
                       <Table.Tr key={doc.id}>
                         <Table.Td>
                           <Group gap="sm">
                             <ThemeIcon
-                              size="md"
+                              color={doc.type === "pdf" ? "red" : "green"}
                               radius="md"
+                              size="md"
                               variant="light"
-                              color={doc.type === 'pdf' ? 'red' : 'green'}
                             >
                               <FileIcon size={16} />
                             </ThemeIcon>
-                            <Text size="sm" fw={500}>{doc.name}</Text>
+                            <Text fw={500} size="sm">
+                              {doc.name}
+                            </Text>
                           </Group>
                         </Table.Td>
                         <Table.Td>
                           <Badge variant="light">{doc.folder}</Badge>
                         </Table.Td>
                         <Table.Td>
-                          <Text size="sm" c="dimmed">{formatFileSize(doc.size)}</Text>
+                          <Text c="dimmed" size="sm">
+                            {formatFileSize(doc.size)}
+                          </Text>
                         </Table.Td>
                         <Table.Td>
-                          <Text size="sm" c="dimmed">{doc.uploaded_at}</Text>
+                          <Text c="dimmed" size="sm">
+                            {doc.uploaded_at}
+                          </Text>
                         </Table.Td>
                         <Table.Td>
                           <Group gap="xs" justify="flex-end">
-                            <ActionIcon variant="subtle" color="blue">
+                            <ActionIcon color="blue" variant="subtle">
                               <IconDownload size={16} />
                             </ActionIcon>
-                            <ActionIcon variant="subtle" color="gray">
+                            <ActionIcon color="gray" variant="subtle">
                               <IconEye size={16} />
                             </ActionIcon>
-                            <ActionIcon variant="subtle" color="red">
+                            <ActionIcon color="red" variant="subtle">
                               <IconTrash size={16} />
                             </ActionIcon>
                           </Group>
                         </Table.Td>
                       </Table.Tr>
-                    )
+                    );
                   })}
                 </Table.Tbody>
               </Table>
             </Paper>
           ) : (
             <EmptyState
-              icon={<IconFolder size={40} />}
-              title="No hay documentos"
-              description="Sube documentos para compartir con tus clientes."
               actionLabel="Subir Documento"
+              description="Sube documentos para compartir con tus clientes."
+              icon={<IconFolder size={40} />}
               onAction={openUploadModal}
+              title="No hay documentos"
             />
           )}
         </Tabs.Panel>
 
         <Tabs.Panel value="submissions">
-          <Paper withBorder radius="lg" p="lg">
-            <Text fw={600} mb="md">Respuestas Recientes</Text>
+          <Paper p="lg" radius="lg" withBorder>
+            <Text fw={600} mb="md">
+              Respuestas Recientes
+            </Text>
             <Table>
               <Table.Thead>
                 <Table.Tr>
@@ -476,35 +546,63 @@ export function FormsPage() {
               </Table.Thead>
               <Table.Tbody>
                 {[
-                  { client: 'María García', form: 'PAR-Q', status: 'completed', date: '2024-07-20' },
-                  { client: 'Carlos López', form: 'Consentimiento', status: 'completed', date: '2024-07-19' },
-                  { client: 'Ana Martínez', form: 'Historial de Salud', status: 'pending', date: '2024-07-18' },
-                  { client: 'Pedro Sánchez', form: 'PAR-Q', status: 'completed', date: '2024-07-17' },
+                  {
+                    client: "María García",
+                    form: "PAR-Q",
+                    status: "completed",
+                    date: "2024-07-20",
+                  },
+                  {
+                    client: "Carlos López",
+                    form: "Consentimiento",
+                    status: "completed",
+                    date: "2024-07-19",
+                  },
+                  {
+                    client: "Ana Martínez",
+                    form: "Historial de Salud",
+                    status: "pending",
+                    date: "2024-07-18",
+                  },
+                  {
+                    client: "Pedro Sánchez",
+                    form: "PAR-Q",
+                    status: "completed",
+                    date: "2024-07-17",
+                  },
                 ].map((submission, idx) => (
                   <Table.Tr key={idx}>
                     <Table.Td>
-                      <Text size="sm" fw={500}>{submission.client}</Text>
+                      <Text fw={500} size="sm">
+                        {submission.client}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">{submission.form}</Text>
                     </Table.Td>
                     <Table.Td>
                       <Badge
+                        color={
+                          submission.status === "completed" ? "green" : "yellow"
+                        }
                         variant="light"
-                        color={submission.status === 'completed' ? 'green' : 'yellow'}
                       >
-                        {submission.status === 'completed' ? 'Completado' : 'Pendiente'}
+                        {submission.status === "completed"
+                          ? "Completado"
+                          : "Pendiente"}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm" c="dimmed">{submission.date}</Text>
+                      <Text c="dimmed" size="sm">
+                        {submission.date}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs" justify="flex-end">
-                        <ActionIcon variant="subtle" color="blue">
+                        <ActionIcon color="blue" variant="subtle">
                           <IconEye size={16} />
                         </ActionIcon>
-                        <ActionIcon variant="subtle" color="green">
+                        <ActionIcon color="green" variant="subtle">
                           <IconDownload size={16} />
                         </ActionIcon>
                       </Group>
@@ -519,47 +617,49 @@ export function FormsPage() {
 
       {/* Form Builder Drawer */}
       <Drawer
-        opened={builderOpened}
         onClose={closeBuilder}
-        title={editingForm ? 'Editar Formulario' : 'Nuevo Formulario'}
-        size="xl"
+        opened={builderOpened}
         position="right"
+        size="xl"
+        title={editingForm ? "Editar Formulario" : "Nuevo Formulario"}
       >
         <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
           <Stack>
-            <Paper withBorder p="md" radius="md">
+            <Paper p="md" radius="md" withBorder>
               <Stack gap="sm">
                 <TextInput
                   label="Nombre del formulario"
                   placeholder="Ej: Cuestionario de Salud"
                   required
-                  {...form.getInputProps('name')}
+                  {...form.getInputProps("name")}
                 />
 
                 <Textarea
                   label="Descripción"
-                  placeholder="Describe el propósito del formulario..."
                   minRows={2}
-                  {...form.getInputProps('description')}
+                  placeholder="Describe el propósito del formulario..."
+                  {...form.getInputProps("description")}
                 />
 
                 <Group grow>
                   <Select
-                    label="Tipo de formulario"
                     data={[
-                      { value: 'custom', label: 'Personalizado' },
-                      { value: 'par_q', label: 'PAR-Q' },
-                      { value: 'consent', label: 'Consentimiento' },
-                      { value: 'health', label: 'Historial de Salud' },
-                      { value: 'feedback', label: 'Feedback' },
+                      { value: "custom", label: "Personalizado" },
+                      { value: "par_q", label: "PAR-Q" },
+                      { value: "consent", label: "Consentimiento" },
+                      { value: "health", label: "Historial de Salud" },
+                      { value: "feedback", label: "Feedback" },
                     ]}
-                    {...form.getInputProps('type')}
+                    label="Tipo de formulario"
+                    {...form.getInputProps("type")}
                   />
                 </Group>
 
                 <Switch
                   label="Enviar automáticamente en el onboarding"
-                  {...form.getInputProps('send_on_onboarding', { type: 'checkbox' })}
+                  {...form.getInputProps("send_on_onboarding", {
+                    type: "checkbox",
+                  })}
                 />
               </Stack>
             </Paper>
@@ -569,26 +669,32 @@ export function FormsPage() {
             {formFields.length > 0 && (
               <Stack gap="sm">
                 {formFields.map((field) => {
-                  const FieldIcon = getFieldIcon(field.type)
+                  const FieldIcon = getFieldIcon(field.type);
                   return (
-                    <Paper key={field.id} withBorder p="md" radius="md">
+                    <Paper key={field.id} p="md" radius="md" withBorder>
                       <Group justify="space-between" mb="sm">
                         <Group gap="sm">
-                          <Box style={{ cursor: 'grab' }}>
-                            <IconGripVertical size={16} color="var(--mantine-color-gray-5)" />
+                          <Box style={{ cursor: "grab" }}>
+                            <IconGripVertical
+                              color="var(--mantine-color-gray-5)"
+                              size={16}
+                            />
                           </Box>
-                          <ThemeIcon size="sm" variant="light" color="blue">
+                          <ThemeIcon color="blue" size="sm" variant="light">
                             <FieldIcon size={12} />
                           </ThemeIcon>
-                          <Text size="sm" fw={500}>
-                            {fieldTypes.find(f => f.value === field.type)?.label}
+                          <Text fw={500} size="sm">
+                            {
+                              fieldTypes.find((f) => f.value === field.type)
+                                ?.label
+                            }
                           </Text>
                         </Group>
                         <ActionIcon
-                          variant="subtle"
                           color="red"
-                          size="sm"
                           onClick={() => removeField(field.id)}
+                          size="sm"
+                          variant="subtle"
                         >
                           <IconTrash size={14} />
                         </ActionIcon>
@@ -596,35 +702,51 @@ export function FormsPage() {
 
                       <Stack gap="xs">
                         <TextInput
-                          size="sm"
+                          onChange={(e) =>
+                            updateField(field.id, { label: e.target.value })
+                          }
                           placeholder="Etiqueta del campo"
+                          size="sm"
                           value={field.label}
-                          onChange={(e) => updateField(field.id, { label: e.target.value })}
                         />
                         <TextInput
-                          size="sm"
+                          onChange={(e) =>
+                            updateField(field.id, {
+                              placeholder: e.target.value,
+                            })
+                          }
                           placeholder="Texto de ayuda (opcional)"
-                          value={field.placeholder || ''}
-                          onChange={(e) => updateField(field.id, { placeholder: e.target.value })}
+                          size="sm"
+                          value={field.placeholder || ""}
                         />
-                        {(field.type === 'select' || field.type === 'checkbox' || field.type === 'radio') && (
+                        {(field.type === "select" ||
+                          field.type === "checkbox" ||
+                          field.type === "radio") && (
                           <Textarea
-                            size="sm"
-                            placeholder="Opciones (una por línea)"
                             minRows={2}
-                            value={field.options?.join('\n') || ''}
-                            onChange={(e) => updateField(field.id, { options: e.target.value.split('\n') })}
+                            onChange={(e) =>
+                              updateField(field.id, {
+                                options: e.target.value.split("\n"),
+                              })
+                            }
+                            placeholder="Opciones (una por línea)"
+                            size="sm"
+                            value={field.options?.join("\n") || ""}
                           />
                         )}
                         <Checkbox
-                          size="sm"
-                          label="Campo obligatorio"
                           checked={field.required}
-                          onChange={(e) => updateField(field.id, { required: e.currentTarget.checked })}
+                          label="Campo obligatorio"
+                          onChange={(e) =>
+                            updateField(field.id, {
+                              required: e.currentTarget.checked,
+                            })
+                          }
+                          size="sm"
                         />
                       </Stack>
                     </Paper>
-                  )
+                  );
                 })}
               </Stack>
             )}
@@ -633,57 +755,78 @@ export function FormsPage() {
 
             <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
               {fieldTypes.map((fieldType) => {
-                const FieldIcon = fieldType.icon
+                const FieldIcon = fieldType.icon;
                 return (
                   <Button
                     key={fieldType.value}
-                    variant="light"
                     leftSection={<FieldIcon size={16} />}
-                    onClick={() => addField(fieldType.value as FormField['type'])}
+                    onClick={() =>
+                      addField(fieldType.value as FormField["type"])
+                    }
                     size="sm"
+                    variant="light"
                   >
                     {fieldType.label}
                   </Button>
-                )
+                );
               })}
             </SimpleGrid>
           </Stack>
         </ScrollArea>
 
-        <Group justify="flex-end" mt="md" p="md" style={{ borderTop: '1px solid var(--mantine-color-gray-2)' }}>
-          <Button variant="default" onClick={closeBuilder}>
+        <Group
+          justify="flex-end"
+          mt="md"
+          p="md"
+          style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+        >
+          <Button onClick={closeBuilder} variant="default">
             Cancelar
           </Button>
           <Button onClick={handleSaveForm}>
-            {editingForm ? 'Guardar Cambios' : 'Crear Formulario'}
+            {editingForm ? "Guardar Cambios" : "Crear Formulario"}
           </Button>
         </Group>
       </Drawer>
 
       {/* Upload Document Modal */}
       <Modal
-        opened={uploadModalOpened}
         onClose={closeUploadModal}
-        title="Subir Documento"
+        opened={uploadModalOpened}
         size="md"
+        title="Subir Documento"
       >
         <Stack>
           <Paper
-            withBorder
             p="xl"
             radius="md"
             style={{
-              borderStyle: 'dashed',
-              textAlign: 'center',
-              cursor: 'pointer',
+              borderStyle: "dashed",
+              textAlign: "center",
+              cursor: "pointer",
             }}
+            withBorder
           >
-            <ThemeIcon size={60} radius="xl" variant="light" color="blue" mx="auto" mb="md">
+            <ThemeIcon
+              color="blue"
+              mb="md"
+              mx="auto"
+              radius="xl"
+              size={60}
+              variant="light"
+            >
               <IconUpload size={30} />
             </ThemeIcon>
-            <Text fw={500} mb="xs">Arrastra archivos aquí</Text>
-            <Text size="sm" c="dimmed" mb="md">o haz clic para seleccionar</Text>
-            <FileButton onChange={() => {}} accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx">
+            <Text fw={500} mb="xs">
+              Arrastra archivos aquí
+            </Text>
+            <Text c="dimmed" mb="md" size="sm">
+              o haz clic para seleccionar
+            </Text>
+            <FileButton
+              accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
+              onChange={() => {}}
+            >
               {(props) => (
                 <Button variant="light" {...props}>
                   Seleccionar Archivo
@@ -693,28 +836,26 @@ export function FormsPage() {
           </Paper>
 
           <Select
+            data={[
+              { value: "Recursos", label: "Recursos" },
+              { value: "Plantillas", label: "Plantillas" },
+              { value: "Legal", label: "Legal" },
+              { value: "Otros", label: "Otros" },
+            ]}
             label="Carpeta"
             placeholder="Selecciona una carpeta"
-            data={[
-              { value: 'Recursos', label: 'Recursos' },
-              { value: 'Plantillas', label: 'Plantillas' },
-              { value: 'Legal', label: 'Legal' },
-              { value: 'Otros', label: 'Otros' },
-            ]}
           />
 
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeUploadModal}>
+            <Button onClick={closeUploadModal} variant="default">
               Cancelar
             </Button>
-            <Button>
-              Subir
-            </Button>
+            <Button>Subir</Button>
           </Group>
         </Stack>
       </Modal>
     </Container>
-  )
+  );
 }
 
-export default FormsPage
+export default FormsPage;

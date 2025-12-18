@@ -1,237 +1,252 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../services/supabase'
-import { useAuthStore } from '../stores/auth'
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "../services/supabase";
+import { useAuthStore } from "../stores/auth";
 
 // Demo workspace ID para pruebas - usado como fallback cuando no hay workspace
-const DEMO_WORKSPACE_ID = '11111111-1111-1111-1111-111111111111'
+const DEMO_WORKSPACE_ID = "11111111-1111-1111-1111-111111111111";
 
 // Helper para obtener el workspace ID, siempre fallback a demo
 function useWorkspaceId() {
-  const { isDemoMode, currentWorkspace } = useAuthStore()
+  const { isDemoMode, currentWorkspace } = useAuthStore();
   // Siempre usar demo workspace si no hay workspace definido
-  return isDemoMode || !currentWorkspace?.id ? DEMO_WORKSPACE_ID : currentWorkspace.id
+  return isDemoMode || !currentWorkspace?.id
+    ? DEMO_WORKSPACE_ID
+    : currentWorkspace.id;
 }
 
 // Hook para obtener clientes desde Supabase
 export function useSupabaseClients() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-clients', workspaceId],
+    queryKey: ["supabase-clients", workspaceId],
     queryFn: async () => {
-      if (!workspaceId) return { items: [], total: 0 }
+      if (!workspaceId) return { items: [], total: 0 };
 
       const { data, error, count } = await supabase
-        .from('clients')
-        .select('*, client_tags_association(tag_id, client_tags(id, name, color))', { count: 'exact' })
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
+        .from("clients")
+        .select(
+          "*, client_tags_association(tag_id, client_tags(id, name, color))",
+          { count: "exact" }
+        )
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
 
-      if (error) throw error
+      if (error) throw error;
 
       return {
-        items: data?.map(client => ({
-          ...client,
-          tags: client.client_tags_association?.map((ta: any) => ta.client_tags) || []
-        })) || [],
-        total: count || 0
-      }
+        items:
+          data?.map((client) => ({
+            ...client,
+            tags:
+              client.client_tags_association?.map(
+                (ta: any) => ta.client_tags
+              ) || [],
+          })) || [],
+        total: count || 0,
+      };
     },
     enabled: !!workspaceId,
-  })
+  });
 }
 
 // Hook para obtener reservas desde Supabase
 export function useSupabaseBookings() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-bookings', workspaceId],
+    queryKey: ["supabase-bookings", workspaceId],
     queryFn: async () => {
-      if (!workspaceId) return []
+      if (!workspaceId) return [];
 
       const { data, error } = await supabase
-        .from('bookings')
-        .select('*, clients(first_name, last_name, email)')
-        .eq('workspace_id', workspaceId)
-        .order('start_time', { ascending: true })
+        .from("bookings")
+        .select("*, clients(first_name, last_name, email)")
+        .eq("workspace_id", workspaceId)
+        .order("start_time", { ascending: true });
 
-      if (error) throw error
+      if (error) throw error;
 
-      return data?.map(booking => ({
-        ...booking,
-        client_name: booking.clients 
-          ? `${booking.clients.first_name} ${booking.clients.last_name}`
-          : booking.title
-      })) || []
+      return (
+        data?.map((booking) => ({
+          ...booking,
+          client_name: booking.clients
+            ? `${booking.clients.first_name} ${booking.clients.last_name}`
+            : booking.title,
+        })) || []
+      );
     },
     enabled: !!workspaceId,
-  })
+  });
 }
 
 // Hook para obtener ejercicios desde Supabase
 export function useSupabaseExercises() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-exercises', workspaceId],
+    queryKey: ["supabase-exercises", workspaceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('exercises')
-        .select('*')
+        .from("exercises")
+        .select("*")
         .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
-        .order('name', { ascending: true })
+        .order("name", { ascending: true });
 
-      if (error) throw error
-      return data || []
+      if (error) throw error;
+      return data || [];
     },
     enabled: true,
-  })
+  });
 }
 
 // Hook para obtener alimentos desde Supabase (sin paginación - para compatibilidad)
 export function useSupabaseFoods() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-foods', workspaceId],
+    queryKey: ["supabase-foods", workspaceId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('foods')
-        .select('*')
+        .from("foods")
+        .select("*")
         .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
-        .order('name', { ascending: true })
-        .limit(1000) // Límite explícito
+        .order("name", { ascending: true })
+        .limit(1000); // Límite explícito
 
-      if (error) throw error
-      return data || []
+      if (error) throw error;
+      return data || [];
     },
     enabled: true,
-  })
+  });
 }
 
 // Hook para obtener alimentos con paginación
-export function useSupabaseFoodsPaginated(page: number = 1, pageSize: number = 50, search: string = '') {
-  const workspaceId = useWorkspaceId()
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
+export function useSupabaseFoodsPaginated(
+  page = 1,
+  pageSize = 50,
+  search = ""
+) {
+  const workspaceId = useWorkspaceId();
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   return useQuery({
-    queryKey: ['supabase-foods-paginated', workspaceId, page, pageSize, search],
+    queryKey: ["supabase-foods-paginated", workspaceId, page, pageSize, search],
     queryFn: async () => {
       let query = supabase
-        .from('foods')
-        .select('*', { count: 'exact' })
-        .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
+        .from("foods")
+        .select("*", { count: "exact" })
+        .or(`workspace_id.eq.${workspaceId},is_global.eq.true`);
 
       // Aplicar búsqueda si existe
       if (search.trim()) {
-        query = query.ilike('name', `%${search}%`)
+        query = query.ilike("name", `%${search}%`);
       }
 
       const { data, error, count } = await query
-        .order('name', { ascending: true })
-        .range(from, to)
+        .order("name", { ascending: true })
+        .range(from, to);
 
-      if (error) throw error
-      
+      if (error) throw error;
+
       return {
         items: data || [],
         total: count || 0,
         page,
         pageSize,
         totalPages: Math.ceil((count || 0) / pageSize),
-      }
+      };
     },
     enabled: true,
     placeholderData: (previousData) => previousData, // Mantener datos anteriores mientras carga
-  })
+  });
 }
 
 // Hook para obtener solo el conteo total de alimentos
 export function useSupabaseFoodsCount() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-foods-count', workspaceId],
+    queryKey: ["supabase-foods-count", workspaceId],
     queryFn: async () => {
       const { count, error } = await supabase
-        .from('foods')
-        .select('*', { count: 'exact', head: true })
-        .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
+        .from("foods")
+        .select("*", { count: "exact", head: true })
+        .or(`workspace_id.eq.${workspaceId},is_global.eq.true`);
 
-      if (error) throw error
-      return count || 0
+      if (error) throw error;
+      return count || 0;
     },
     enabled: true,
-  })
+  });
 }
 
 // Hook para obtener programas de entrenamiento desde Supabase
 export function useSupabaseWorkoutPrograms() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-workout-programs', workspaceId],
+    queryKey: ["supabase-workout-programs", workspaceId],
     queryFn: async () => {
-      if (!workspaceId) return []
+      if (!workspaceId) return [];
 
       const { data, error } = await supabase
-        .from('workout_programs')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
+        .from("workout_programs")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
 
-      if (error) throw error
-      return data || []
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!workspaceId,
-  })
+  });
 }
 
 // Hook para obtener planes nutricionales desde Supabase
 export function useSupabaseMealPlans() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-meal-plans', workspaceId],
+    queryKey: ["supabase-meal-plans", workspaceId],
     queryFn: async () => {
-      if (!workspaceId) return []
+      if (!workspaceId) return [];
 
       const { data, error } = await supabase
-        .from('meal_plans')
-        .select('*, clients(first_name, last_name)')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
+        .from("meal_plans")
+        .select("*, clients(first_name, last_name)")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
 
-      if (error) throw error
-      return data || []
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!workspaceId,
-  })
+  });
 }
 
 // Hook para crear un plan nutricional
 export function useCreateMealPlan() {
-  const queryClient = useQueryClient()
-  const { user } = useAuthStore()
-  const workspaceId = useWorkspaceId()
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const workspaceId = useWorkspaceId();
 
   return useMutation({
     mutationFn: async (data: {
-      name: string
-      description?: string
-      duration_days?: number
-      target_calories?: number
-      target_protein?: number
-      target_carbs?: number
-      target_fat?: number
-      dietary_tags?: string[]
-      plan?: object
-      is_template?: boolean
+      name: string;
+      description?: string;
+      duration_days?: number;
+      target_calories?: number;
+      target_protein?: number;
+      target_carbs?: number;
+      target_fat?: number;
+      dietary_tags?: string[];
+      plan?: object;
+      is_template?: boolean;
     }) => {
       const { data: plan, error } = await supabase
-        .from('meal_plans')
+        .from("meal_plans")
         .insert({
           ...data,
           workspace_id: workspaceId,
@@ -239,162 +254,159 @@ export function useCreateMealPlan() {
           is_template: data.is_template ?? true,
         })
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      return plan
+      if (error) throw error;
+      return plan;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supabase-meal-plans'] })
+      queryClient.invalidateQueries({ queryKey: ["supabase-meal-plans"] });
     },
-  })
+  });
 }
 
 // Hook para actualizar un plan nutricional
 export function useUpdateMealPlan() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: {
-      id: string
-      name?: string
-      description?: string
-      duration_days?: number
-      target_calories?: number
-      target_protein?: number
-      target_carbs?: number
-      target_fat?: number
-      dietary_tags?: string[]
-      plan?: object
-      is_template?: boolean
+    mutationFn: async ({
+      id,
+      ...data
+    }: {
+      id: string;
+      name?: string;
+      description?: string;
+      duration_days?: number;
+      target_calories?: number;
+      target_protein?: number;
+      target_carbs?: number;
+      target_fat?: number;
+      dietary_tags?: string[];
+      plan?: object;
+      is_template?: boolean;
     }) => {
       const { data: plan, error } = await supabase
-        .from('meal_plans')
+        .from("meal_plans")
         .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', id)
+        .eq("id", id)
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      return plan
+      if (error) throw error;
+      return plan;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supabase-meal-plans'] })
+      queryClient.invalidateQueries({ queryKey: ["supabase-meal-plans"] });
     },
-  })
+  });
 }
 
 // Hook para eliminar un plan nutricional
 export function useDeleteMealPlan() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('meal_plans')
-        .delete()
-        .eq('id', id)
+      const { error } = await supabase.from("meal_plans").delete().eq("id", id);
 
-      if (error) throw error
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supabase-meal-plans'] })
+      queryClient.invalidateQueries({ queryKey: ["supabase-meal-plans"] });
     },
-  })
+  });
 }
 
 // Hook para crear un alimento
 export function useCreateFood() {
-  const queryClient = useQueryClient()
-  const workspaceId = useWorkspaceId()
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceId();
 
   return useMutation({
     mutationFn: async (data: {
-      name: string
-      category?: string
-      calories?: number
-      protein_g?: number
-      carbs_g?: number
-      fat_g?: number
-      quantity?: string
-      brand?: string
+      name: string;
+      category?: string;
+      calories?: number;
+      protein_g?: number;
+      carbs_g?: number;
+      fat_g?: number;
+      quantity?: string;
+      brand?: string;
     }) => {
       const { data: food, error } = await supabase
-        .from('foods')
+        .from("foods")
         .insert({
           ...data,
           workspace_id: workspaceId,
           is_global: false,
         })
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      return food
+      if (error) throw error;
+      return food;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supabase-foods'] })
+      queryClient.invalidateQueries({ queryKey: ["supabase-foods"] });
     },
-  })
+  });
 }
 
 // Hook para eliminar un alimento
 export function useDeleteFood() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('foods')
-        .delete()
-        .eq('id', id)
+      const { error } = await supabase.from("foods").delete().eq("id", id);
 
-      if (error) throw error
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supabase-foods'] })
+      queryClient.invalidateQueries({ queryKey: ["supabase-foods"] });
     },
-  })
+  });
 }
 
 // Hook para obtener tags de clientes
 export function useSupabaseClientTags() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-client-tags', workspaceId],
+    queryKey: ["supabase-client-tags", workspaceId],
     queryFn: async () => {
-      if (!workspaceId) return []
+      if (!workspaceId) return [];
 
       const { data, error } = await supabase
-        .from('client_tags')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('name', { ascending: true })
+        .from("client_tags")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("name", { ascending: true });
 
-      if (error) throw error
-      return data || []
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!workspaceId,
-  })
+  });
 }
 
 // Hook para crear un cliente
 export function useCreateSupabaseClient() {
-  const queryClient = useQueryClient()
-  const { user } = useAuthStore()
-  const workspaceId = useWorkspaceId()
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const workspaceId = useWorkspaceId();
 
   return useMutation({
     mutationFn: async (data: {
-      first_name: string
-      last_name: string
-      email: string
-      phone?: string
-      goals?: string
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone?: string;
+      goals?: string;
     }) => {
       const { data: client, error } = await supabase
-        .from('clients')
+        .from("clients")
         .insert({
           ...data,
           workspace_id: workspaceId,
@@ -402,57 +414,57 @@ export function useCreateSupabaseClient() {
           is_active: true,
         })
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      return client
+      if (error) throw error;
+      return client;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supabase-clients'] })
+      queryClient.invalidateQueries({ queryKey: ["supabase-clients"] });
     },
-  })
+  });
 }
 
 // Hook para obtener KPIs del dashboard
 export function useSupabaseKPIs() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-kpis', workspaceId],
+    queryKey: ["supabase-kpis", workspaceId],
     queryFn: async () => {
-      if (!workspaceId) return null
+      if (!workspaceId) return null;
 
       // Obtener conteo de clientes
       const { count: clientsCount } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .eq('is_active', true)
+        .from("clients")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .eq("is_active", true);
 
       // Obtener conteo de reservas del mes actual
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      startOfMonth.setHours(0, 0, 0, 0)
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
       const { count: bookingsCount } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .gte('start_time', startOfMonth.toISOString())
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .gte("start_time", startOfMonth.toISOString());
 
       // Obtener reservas confirmadas
       const { count: confirmedBookings } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .eq('status', 'confirmed')
-        .gte('start_time', startOfMonth.toISOString())
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .eq("status", "confirmed")
+        .gte("start_time", startOfMonth.toISOString());
 
       // Obtener programas de entrenamiento
       const { count: programsCount } = await supabase
-        .from('workout_programs')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
+        .from("workout_programs")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId);
 
       return {
         total_clients: clientsCount || 0,
@@ -463,31 +475,30 @@ export function useSupabaseKPIs() {
         mrr: 0, // TODO: calcular desde subscriptions
         client_change: 12,
         booking_change: 8,
-      }
+      };
     },
     enabled: !!workspaceId,
-  })
+  });
 }
 
 // Hook para obtener el workspace actual
 export function useSupabaseWorkspace() {
-  const workspaceId = useWorkspaceId()
+  const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ['supabase-workspace', workspaceId],
+    queryKey: ["supabase-workspace", workspaceId],
     queryFn: async () => {
-      if (!workspaceId) return null
+      if (!workspaceId) return null;
 
       const { data, error } = await supabase
-        .from('workspaces')
-        .select('*')
-        .eq('id', workspaceId)
-        .single()
+        .from("workspaces")
+        .select("*")
+        .eq("id", workspaceId)
+        .single();
 
-      if (error) throw error
-      return data
+      if (error) throw error;
+      return data;
     },
     enabled: !!workspaceId,
-  })
+  });
 }
-

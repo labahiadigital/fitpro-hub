@@ -1,78 +1,78 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-export type DemoRole = 'trainer' | 'client' | null
+export type DemoRole = "trainer" | "client" | null;
 
 interface User {
-  id: string
-  email: string
-  full_name?: string
-  avatar_url?: string
-  is_active: boolean
-  role?: string
+  id: string;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
+  is_active: boolean;
+  role?: string;
 }
 
 interface Workspace {
-  id: string
-  name: string
-  slug: string
-  logo_url?: string
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string;
   branding?: {
-    primary_color: string
-    secondary_color: string
-    accent_color: string
-  }
+    primary_color: string;
+    secondary_color: string;
+    accent_color: string;
+  };
 }
 
 interface AuthState {
-  user: User | null
-  accessToken: string | null
-  refreshToken: string | null
-  currentWorkspace: Workspace | null
-  isAuthenticated: boolean
-  isDemoMode: boolean
-  demoRole: DemoRole
-  
-  setUser: (user: User | null) => void
-  setTokens: (accessToken: string, refreshToken?: string) => void
-  setWorkspace: (workspace: Workspace | null) => void
-  logout: () => void
-  loginDemo: (role?: DemoRole) => void
-  loginDemoTrainer: () => void
-  loginDemoClient: () => void
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  currentWorkspace: Workspace | null;
+  isAuthenticated: boolean;
+  isDemoMode: boolean;
+  demoRole: DemoRole;
+
+  setUser: (user: User | null) => void;
+  setTokens: (accessToken: string, refreshToken?: string) => void;
+  setWorkspace: (workspace: Workspace | null) => void;
+  logout: () => void;
+  loginDemo: (role?: DemoRole) => void;
+  loginDemoTrainer: () => void;
+  loginDemoClient: () => void;
 }
 
 // Demo trainer user - Full access to all features
 const demoTrainerUser: User = {
-  id: '22222222-2222-2222-2222-222222222222',
-  email: 'entrenador@fitprohub.com',
-  full_name: 'Carlos Fitness',
+  id: "22222222-2222-2222-2222-222222222222",
+  email: "entrenador@fitprohub.com",
+  full_name: "Carlos Fitness",
   avatar_url: undefined,
   is_active: true,
-  role: 'owner',
-}
+  role: "owner",
+};
 
 // Demo client user - Limited access, client perspective
 const demoClientUser: User = {
-  id: '33333333-3333-3333-3333-333333333333',
-  email: 'cliente@fitprohub.com',
-  full_name: 'María García',
+  id: "33333333-3333-3333-3333-333333333333",
+  email: "cliente@fitprohub.com",
+  full_name: "María García",
   avatar_url: undefined,
   is_active: true,
-  role: 'client',
-}
+  role: "client",
+};
 
 const demoWorkspace: Workspace = {
-  id: '11111111-1111-1111-1111-111111111111',
-  name: 'FitPro Demo',
-  slug: 'fitpro-demo',
+  id: "11111111-1111-1111-1111-111111111111",
+  name: "FitPro Demo",
+  slug: "fitpro-demo",
   logo_url: undefined,
   branding: {
-    primary_color: '#2D6A4F',
-    secondary_color: '#40916C',
-    accent_color: '#95D5B2',
+    primary_color: "#2D6A4F",
+    secondary_color: "#40916C",
+    accent_color: "#95D5B2",
   },
-}
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -84,16 +84,14 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isDemoMode: false,
       demoRole: null,
-      
-      setUser: (user) => 
-        set({ user, isAuthenticated: !!user }),
-      
+
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
+
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken, isAuthenticated: !!accessToken }),
-      
-      setWorkspace: (currentWorkspace) =>
-        set({ currentWorkspace }),
-      
+
+      setWorkspace: (currentWorkspace) => set({ currentWorkspace }),
+
       logout: () =>
         set({
           user: null,
@@ -104,45 +102,45 @@ export const useAuthStore = create<AuthState>()(
           isDemoMode: false,
           demoRole: null,
         }),
-      
+
       // Legacy demo login (defaults to trainer)
-      loginDemo: (role: DemoRole = 'trainer') =>
+      loginDemo: (role: DemoRole = "trainer") =>
         set({
-          user: role === 'client' ? demoClientUser : demoTrainerUser,
-          accessToken: 'demo-token',
-          refreshToken: 'demo-refresh-token',
+          user: role === "client" ? demoClientUser : demoTrainerUser,
+          accessToken: "demo-token",
+          refreshToken: "demo-refresh-token",
           currentWorkspace: demoWorkspace,
           isAuthenticated: true,
           isDemoMode: true,
           demoRole: role,
         }),
-      
+
       // Demo login as trainer/admin
       loginDemoTrainer: () =>
         set({
           user: demoTrainerUser,
-          accessToken: 'demo-token',
-          refreshToken: 'demo-refresh-token',
+          accessToken: "demo-token",
+          refreshToken: "demo-refresh-token",
           currentWorkspace: demoWorkspace,
           isAuthenticated: true,
           isDemoMode: true,
-          demoRole: 'trainer',
+          demoRole: "trainer",
         }),
-      
+
       // Demo login as client
       loginDemoClient: () =>
         set({
           user: demoClientUser,
-          accessToken: 'demo-token',
-          refreshToken: 'demo-refresh-token',
+          accessToken: "demo-token",
+          refreshToken: "demo-refresh-token",
           currentWorkspace: demoWorkspace,
           isAuthenticated: true,
           isDemoMode: true,
-          demoRole: 'client',
+          demoRole: "client",
         }),
     }),
     {
-      name: 'fitprohub-auth',
+      name: "fitprohub-auth",
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
@@ -153,4 +151,4 @@ export const useAuthStore = create<AuthState>()(
       }),
     }
   )
-)
+);

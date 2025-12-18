@@ -1,77 +1,87 @@
-import { useState } from 'react'
 import {
-  Paper,
-  Title,
-  Text,
-  Stack,
-  Group,
-  Button,
-  TextInput,
-  Textarea,
-  ColorInput,
-  FileInput,
-  Switch,
-  Divider,
-  SimpleGrid,
-  ThemeIcon,
+  Alert,
   Badge,
   Box,
-  Image,
+  Button,
   Card,
-  Alert,
-} from '@mantine/core'
+  ColorInput,
+  Divider,
+  FileInput,
+  Group,
+  Image,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Switch,
+  Text,
+  Textarea,
+  TextInput,
+  ThemeIcon,
+  Title,
+} from "@mantine/core";
 import {
-  IconPalette,
-  IconBrandApple,
-  IconBrandAndroid,
-  IconWorld,
-  IconMail,
-  IconPhoto,
   IconAlertCircle,
+  IconBrandAndroid,
+  IconBrandApple,
   IconCheck,
-} from '@tabler/icons-react'
+  IconMail,
+  IconPalette,
+  IconPhoto,
+  IconWorld,
+} from "@tabler/icons-react";
+import { useState } from "react";
 
 interface BrandingConfig {
-  workspaceName: string
-  tagline: string
-  primaryColor: string
-  secondaryColor: string
-  logoUrl: string | null
-  faviconUrl: string | null
-  customDomain: string
-  supportEmail: string
-  enableWhiteLabel: boolean
-  hideFooterBranding: boolean
-  customEmailFrom: string
-  emailSignature: string
+  workspaceName: string;
+  tagline: string;
+  primaryColor: string;
+  secondaryColor: string;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  customDomain: string;
+  supportEmail: string;
+  enableWhiteLabel: boolean;
+  hideFooterBranding: boolean;
+  customEmailFrom: string;
+  emailSignature: string;
 }
 
 interface BrandingSettingsProps {
-  config: BrandingConfig
-  onChange: (config: BrandingConfig) => void
-  onSave: () => void
-  isPro: boolean
+  config: BrandingConfig;
+  onChange: (config: BrandingConfig) => void;
+  onSave: () => void;
+  isPro: boolean;
 }
 
-export function BrandingSettings({ config, onChange, onSave, isPro }: BrandingSettingsProps) {
-  const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [faviconFile, setFaviconFile] = useState<File | null>(null)
+export function BrandingSettings({
+  config,
+  onChange,
+  onSave,
+  isPro,
+}: BrandingSettingsProps) {
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
 
-  const updateConfig = <K extends keyof BrandingConfig>(key: K, value: BrandingConfig[K]) => {
-    onChange({ ...config, [key]: value })
-  }
+  const updateConfig = <K extends keyof BrandingConfig>(
+    key: K,
+    value: BrandingConfig[K]
+  ) => {
+    onChange({ ...config, [key]: value });
+  };
 
   return (
     <Stack gap="xl">
       {/* Basic Branding */}
-      <Paper withBorder radius="md" p="lg">
+      <Paper p="lg" radius="md" withBorder>
         <Group gap="sm" mb="lg">
-          <ThemeIcon size="lg" radius="md" color="primary" variant="light">
+          <ThemeIcon color="primary" radius="md" size="lg" variant="light">
             <IconPalette size={20} />
           </ThemeIcon>
           <div>
             <Title order={4}>Identidad de Marca</Title>
-            <Text size="sm" c="dimmed">Personaliza la apariencia de tu plataforma</Text>
+            <Text c="dimmed" size="sm">
+              Personaliza la apariencia de tu plataforma
+            </Text>
           </div>
         </Group>
 
@@ -79,32 +89,39 @@ export function BrandingSettings({ config, onChange, onSave, isPro }: BrandingSe
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
               label="Nombre del Negocio"
+              onChange={(e) => updateConfig("workspaceName", e.target.value)}
               placeholder="Mi Estudio Fitness"
               value={config.workspaceName}
-              onChange={(e) => updateConfig('workspaceName', e.target.value)}
             />
             <TextInput
               label="Eslogan"
+              onChange={(e) => updateConfig("tagline", e.target.value)}
               placeholder="Tu mejor versión comienza aquí"
               value={config.tagline}
-              onChange={(e) => updateConfig('tagline', e.target.value)}
             />
           </SimpleGrid>
 
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <ColorInput
               label="Color Principal"
+              onChange={(value) => updateConfig("primaryColor", value)}
               placeholder="#10B981"
+              swatches={[
+                "#10B981",
+                "#3B82F6",
+                "#8B5CF6",
+                "#F59E0B",
+                "#EF4444",
+                "#EC4899",
+              ]}
               value={config.primaryColor}
-              onChange={(value) => updateConfig('primaryColor', value)}
-              swatches={['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899']}
             />
             <ColorInput
               label="Color Secundario"
+              onChange={(value) => updateConfig("secondaryColor", value)}
               placeholder="#1F2937"
+              swatches={["#1F2937", "#374151", "#4B5563", "#6B7280", "#9CA3AF"]}
               value={config.secondaryColor}
-              onChange={(value) => updateConfig('secondaryColor', value)}
-              swatches={['#1F2937', '#374151', '#4B5563', '#6B7280', '#9CA3AF']}
             />
           </SimpleGrid>
 
@@ -113,29 +130,29 @@ export function BrandingSettings({ config, onChange, onSave, isPro }: BrandingSe
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <div>
               <FileInput
-                label="Logo"
-                placeholder="Sube tu logo"
                 accept="image/*"
+                label="Logo"
                 leftSection={<IconPhoto size={14} />}
-                value={logoFile}
                 onChange={setLogoFile}
+                placeholder="Sube tu logo"
+                value={logoFile}
               />
               {config.logoUrl && (
-                <Box mt="xs" p="sm" bg="gray.0" style={{ borderRadius: 8 }}>
-                  <Image src={config.logoUrl} h={60} fit="contain" />
+                <Box bg="gray.0" mt="xs" p="sm" style={{ borderRadius: 8 }}>
+                  <Image fit="contain" h={60} src={config.logoUrl} />
                 </Box>
               )}
             </div>
             <div>
               <FileInput
-                label="Favicon"
-                placeholder="Sube tu favicon"
                 accept="image/*"
+                label="Favicon"
                 leftSection={<IconPhoto size={14} />}
-                value={faviconFile}
                 onChange={setFaviconFile}
+                placeholder="Sube tu favicon"
+                value={faviconFile}
               />
-              <Text size="xs" c="dimmed" mt={4}>
+              <Text c="dimmed" mt={4} size="xs">
                 Recomendado: 32x32px o 64x64px
               </Text>
             </div>
@@ -144,128 +161,142 @@ export function BrandingSettings({ config, onChange, onSave, isPro }: BrandingSe
       </Paper>
 
       {/* White Label */}
-      <Paper withBorder radius="md" p="lg">
+      <Paper p="lg" radius="md" withBorder>
         <Group justify="space-between" mb="lg">
           <Group gap="sm">
-            <ThemeIcon size="lg" radius="md" color="violet" variant="light">
+            <ThemeIcon color="violet" radius="md" size="lg" variant="light">
               <IconWorld size={20} />
             </ThemeIcon>
             <div>
               <Title order={4}>White Label</Title>
-              <Text size="sm" c="dimmed">Elimina el branding de FitPro Hub</Text>
+              <Text c="dimmed" size="sm">
+                Elimina el branding de FitPro Hub
+              </Text>
             </div>
           </Group>
           {!isPro && (
-            <Badge color="yellow" variant="light">Plan Business requerido</Badge>
+            <Badge color="yellow" variant="light">
+              Plan Business requerido
+            </Badge>
           )}
         </Group>
 
-        {!isPro ? (
-          <Alert color="yellow" icon={<IconAlertCircle size={16} />}>
-            Actualiza a Business para acceder a las opciones de white label y personalizar
-            completamente tu plataforma.
-          </Alert>
-        ) : (
+        {isPro ? (
           <Stack gap="md">
             <Switch
-              label="Habilitar White Label"
-              description="Elimina todas las referencias a FitPro Hub"
               checked={config.enableWhiteLabel}
-              onChange={(e) => updateConfig('enableWhiteLabel', e.currentTarget.checked)}
+              description="Elimina todas las referencias a FitPro Hub"
+              label="Habilitar White Label"
+              onChange={(e) =>
+                updateConfig("enableWhiteLabel", e.currentTarget.checked)
+              }
             />
             <Switch
-              label="Ocultar branding en footer"
-              description="Elimina 'Powered by FitPro Hub' del pie de página"
               checked={config.hideFooterBranding}
-              onChange={(e) => updateConfig('hideFooterBranding', e.currentTarget.checked)}
+              description="Elimina 'Powered by FitPro Hub' del pie de página"
               disabled={!config.enableWhiteLabel}
+              label="Ocultar branding en footer"
+              onChange={(e) =>
+                updateConfig("hideFooterBranding", e.currentTarget.checked)
+              }
             />
             <TextInput
-              label="Dominio Personalizado"
-              placeholder="app.tudominio.com"
-              leftSection={<IconWorld size={14} />}
-              value={config.customDomain}
-              onChange={(e) => updateConfig('customDomain', e.target.value)}
               disabled={!config.enableWhiteLabel}
+              label="Dominio Personalizado"
+              leftSection={<IconWorld size={14} />}
+              onChange={(e) => updateConfig("customDomain", e.target.value)}
+              placeholder="app.tudominio.com"
+              value={config.customDomain}
             />
           </Stack>
+        ) : (
+          <Alert color="yellow" icon={<IconAlertCircle size={16} />}>
+            Actualiza a Business para acceder a las opciones de white label y
+            personalizar completamente tu plataforma.
+          </Alert>
         )}
       </Paper>
 
       {/* Email Customization */}
-      <Paper withBorder radius="md" p="lg">
+      <Paper p="lg" radius="md" withBorder>
         <Group gap="sm" mb="lg">
-          <ThemeIcon size="lg" radius="md" color="blue" variant="light">
+          <ThemeIcon color="blue" radius="md" size="lg" variant="light">
             <IconMail size={20} />
           </ThemeIcon>
           <div>
             <Title order={4}>Personalización de Emails</Title>
-            <Text size="sm" c="dimmed">Configura cómo se envían los emails a tus clientes</Text>
+            <Text c="dimmed" size="sm">
+              Configura cómo se envían los emails a tus clientes
+            </Text>
           </div>
         </Group>
 
         <Stack gap="md">
           <TextInput
             label="Email de Soporte"
-            placeholder="soporte@tudominio.com"
             leftSection={<IconMail size={14} />}
+            onChange={(e) => updateConfig("supportEmail", e.target.value)}
+            placeholder="soporte@tudominio.com"
             value={config.supportEmail}
-            onChange={(e) => updateConfig('supportEmail', e.target.value)}
           />
           <TextInput
+            disabled={!isPro}
             label="Remitente de Emails"
+            onChange={(e) => updateConfig("customEmailFrom", e.target.value)}
             placeholder="Tu Nombre <noreply@tudominio.com>"
             value={config.customEmailFrom}
-            onChange={(e) => updateConfig('customEmailFrom', e.target.value)}
-            disabled={!isPro}
           />
           <Textarea
             label="Firma de Email"
-            placeholder="Escribe tu firma personalizada..."
             minRows={3}
+            onChange={(e) => updateConfig("emailSignature", e.target.value)}
+            placeholder="Escribe tu firma personalizada..."
             value={config.emailSignature}
-            onChange={(e) => updateConfig('emailSignature', e.target.value)}
           />
         </Stack>
       </Paper>
 
       {/* Mobile App */}
-      <Paper withBorder radius="md" p="lg">
+      <Paper p="lg" radius="md" withBorder>
         <Group justify="space-between" mb="lg">
           <Group gap="sm">
-            <ThemeIcon size="lg" radius="md" color="gray" variant="light">
+            <ThemeIcon color="gray" radius="md" size="lg" variant="light">
               <IconBrandApple size={20} />
             </ThemeIcon>
             <div>
               <Title order={4}>App Móvil Personalizada</Title>
-              <Text size="sm" c="dimmed">Tu propia app en las tiendas</Text>
+              <Text c="dimmed" size="sm">
+                Tu propia app en las tiendas
+              </Text>
             </div>
           </Group>
-          <Badge color="orange" variant="light">Próximamente</Badge>
+          <Badge color="orange" variant="light">
+            Próximamente
+          </Badge>
         </Group>
 
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
-          <Card withBorder radius="md" p="md">
+          <Card p="md" radius="md" withBorder>
             <Group gap="sm" mb="sm">
               <IconBrandApple size={24} />
               <Text fw={600}>iOS App</Text>
             </Group>
-            <Text size="sm" c="dimmed" mb="md">
+            <Text c="dimmed" mb="md" size="sm">
               Tu app personalizada en la App Store con tu marca y colores.
             </Text>
-            <Button variant="light" fullWidth disabled>
+            <Button disabled fullWidth variant="light">
               Solicitar App iOS
             </Button>
           </Card>
-          <Card withBorder radius="md" p="md">
+          <Card p="md" radius="md" withBorder>
             <Group gap="sm" mb="sm">
               <IconBrandAndroid size={24} />
               <Text fw={600}>Android App</Text>
             </Group>
-            <Text size="sm" c="dimmed" mb="md">
+            <Text c="dimmed" mb="md" size="sm">
               Tu app personalizada en Google Play con tu marca y colores.
             </Text>
-            <Button variant="light" fullWidth disabled>
+            <Button disabled fullWidth variant="light">
               Solicitar App Android
             </Button>
           </Card>
@@ -279,6 +310,5 @@ export function BrandingSettings({ config, onChange, onSave, isPro }: BrandingSe
         </Button>
       </Group>
     </Stack>
-  )
+  );
 }
-
