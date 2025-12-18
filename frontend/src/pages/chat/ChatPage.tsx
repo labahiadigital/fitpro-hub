@@ -44,7 +44,6 @@ import {
   type Conversation,
   type Message,
   type MessageSource,
-  getSourceInfo,
 } from '../../hooks/useChat'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -52,21 +51,6 @@ import 'dayjs/locale/es'
 
 dayjs.extend(relativeTime)
 dayjs.locale('es')
-
-// Source badge component
-function SourceBadge({ source, size = 'xs' }: { source: MessageSource; size?: 'xs' | 'sm' }) {
-  const info = getSourceInfo(source)
-  return (
-    <Badge 
-      size={size} 
-      variant="light" 
-      color={info.color}
-      leftSection={source === 'whatsapp' ? <IconBrandWhatsapp size={10} /> : <IconMessage size={10} />}
-    >
-      {info.label}
-    </Badge>
-  )
-}
 
 // Message status indicator
 function MessageStatus({ message }: { message: Message }) {
@@ -236,7 +220,7 @@ export function ChatPage() {
   const [sendVia, setSendVia] = useState<MessageSource>('platform')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   
-  const { user, isDemoMode, demoRole } = useAuthStore()
+  const { isDemoMode, demoRole } = useAuthStore()
   const isClientView = isDemoMode && demoRole === 'client'
   
   // Queries
@@ -256,7 +240,7 @@ export function ChatPage() {
   
   // Mark conversation as read when selected
   useEffect(() => {
-    if (selectedConversationId && selectedConversation?.unread_count > 0) {
+    if (selectedConversationId && (selectedConversation?.unread_count ?? 0) > 0) {
       markReadMutation.mutate(selectedConversationId)
     }
   }, [selectedConversationId])
