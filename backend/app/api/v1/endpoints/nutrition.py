@@ -55,13 +55,14 @@ class MealPlanCreate(BaseModel):
     name: str
     description: Optional[str] = None
     client_id: Optional[UUID] = None
+    duration_days: int = 7
     dietary_tags: List[str] = []
     target_calories: Optional[float] = None
     target_protein: Optional[float] = None
     target_carbs: Optional[float] = None
     target_fat: Optional[float] = None
     plan: dict = {"days": []}
-    is_template: str = "Y"
+    is_template: bool = True
 
 
 class MealPlanResponse(BaseModel):
@@ -70,6 +71,7 @@ class MealPlanResponse(BaseModel):
     client_id: Optional[UUID]
     name: str
     description: Optional[str]
+    duration_days: int = 7
     dietary_tags: List[str]
     target_calories: Optional[float]
     target_protein: Optional[float]
@@ -77,7 +79,7 @@ class MealPlanResponse(BaseModel):
     target_fat: Optional[float]
     plan: dict
     shopping_list: dict
-    is_template: str
+    is_template: bool
     
     class Config:
         from_attributes = True
