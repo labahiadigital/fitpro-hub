@@ -86,7 +86,7 @@ class HealthMetric(Base):
     source = Column(String, nullable=True)
 
     # Metadatos adicionales
-    metadata = Column(JSONB, default={})
+    extra_data = Column(JSONB, default={})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
