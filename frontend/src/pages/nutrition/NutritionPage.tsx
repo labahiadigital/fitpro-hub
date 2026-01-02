@@ -471,7 +471,7 @@ export function NutritionPage() {
   }, [paginatedFoods]);
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="lg" size="xl">
       <PageHeader
         action={{
           label: activeTab === "foods" ? "Nuevo Alimento" : "Nuevo Plan",
@@ -483,19 +483,19 @@ export function NutritionPage() {
       />
 
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
-          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="plans" style={{ fontWeight: 500 }}>
-            Planes Nutricionales{" "}
+        <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="plans" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Planes{" "}
             {mealPlans.length > 0 && (
-              <Badge ml="xs" size="xs" radius="xl">
+              <Badge ml="xs" size="xs" radius="md" variant="light">
                 {mealPlans.length}
               </Badge>
             )}
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconApple size={14} />} value="foods" style={{ fontWeight: 500 }}>
-            Biblioteca de Alimentos{" "}
+          <Tabs.Tab leftSection={<IconApple size={14} />} value="foods" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Alimentos{" "}
             {(totalFoodsCount ?? 0) > 0 && (
-              <Badge ml="xs" size="xs" radius="xl">
+              <Badge ml="xs" size="xs" radius="md" variant="light">
                 {totalFoodsCount?.toLocaleString()}
               </Badge>
             )}
@@ -505,96 +505,91 @@ export function NutritionPage() {
         <Tabs.Panel value="plans">
           {isLoadingPlans ? (
             <Center py="xl">
-              <Loader size="lg" />
+              <Loader size="md" />
             </Center>
           ) : mealPlans.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg" className="stagger">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" className="stagger">
               {mealPlans.map((plan) => (
-                <Box key={plan.id} className="nv-card" p="lg">
-                  <Group justify="space-between" mb="md">
-                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{plan.name}</Text>
-                    <Badge color="green" variant="light" radius="xl">
-                      {plan.duration_days} días
+                <Box key={plan.id} className="nv-card" p="md">
+                  <Group justify="space-between" mb="sm">
+                    <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{plan.name}</Text>
+                    <Badge color="green" variant="light" radius="md" size="xs">
+                      {plan.duration_days}d
                     </Badge>
                   </Group>
 
-                  <Text c="dimmed" lineClamp={2} size="sm">
+                  <Text c="dimmed" lineClamp={2} size="xs">
                     {plan.description || "Sin descripción"}
                   </Text>
 
                   {plan.client_name && (
-                    <Badge color="blue" mt="sm" size="sm" variant="outline" radius="xl">
-                      Asignado a: {plan.client_name}
+                    <Badge color="blue" mt="xs" size="xs" variant="outline" radius="md">
+                      {plan.client_name}
                     </Badge>
                   )}
 
-                  <Stack gap="xs" mt="md">
+                  <Stack gap={4} mt="sm">
                     <Group justify="space-between">
-                      <Text c="dimmed" size="xs">Calorías objetivo</Text>
-                      <Text fw={500} size="xs" style={{ color: "var(--nv-text-primary)" }}>
+                      <Text c="dimmed" size="xs">Calorías</Text>
+                      <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>
                         {plan.target_calories} kcal
                       </Text>
                     </Group>
-                    <Group gap="xs">
-                      <Badge color="green" size="xs" variant="light" radius="xl">
-                        P: {plan.target_protein}g
+                    <Group gap={4}>
+                      <Badge color="green" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>
+                        P:{plan.target_protein}g
                       </Badge>
-                      <Badge color="orange" size="xs" variant="light" radius="xl">
-                        C: {plan.target_carbs}g
+                      <Badge color="orange" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>
+                        C:{plan.target_carbs}g
                       </Badge>
-                      <Badge color="grape" size="xs" variant="light" radius="xl">
-                        G: {plan.target_fat}g
+                      <Badge color="grape" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>
+                        G:{plan.target_fat}g
                       </Badge>
                     </Group>
                   </Stack>
 
-                  <Group gap="xs" mt="md">
-                    {plan.dietary_tags?.slice(0, 2).map((tag: string) => (
-                      <Badge key={tag} size="sm" variant="outline" radius="xl">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </Group>
+                  <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
 
-                  <Divider my="md" style={{ borderColor: "var(--nv-border)" }} />
-
-                  <Group gap="xs">
+                  <Group gap={6}>
                     <Button
                       flex={1}
-                      leftSection={<IconEdit size={14} />}
+                      leftSection={<IconEdit size={12} />}
                       onClick={() => openPlanBuilder(plan)}
                       size="xs"
                       variant="light"
-                      radius="xl"
-                      style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}
+                      radius="md"
+                      styles={{ root: { height: 28 } }}
                     >
                       Editar
                     </Button>
                     <ActionIcon 
                       color="blue" 
                       variant="light"
-                      radius="xl"
+                      radius="md"
+                      size="sm"
                       onClick={() => navigate(`/nutrition/${plan.id}`)}
                     >
-                      <IconEye size={16} />
+                      <IconEye size={14} />
                     </ActionIcon>
                     <ActionIcon
                       color="gray"
                       loading={createMealPlan.isPending}
                       onClick={() => handleDuplicatePlan(plan)}
                       variant="light"
-                      radius="xl"
+                      radius="md"
+                      size="sm"
                     >
-                      <IconCopy size={16} />
+                      <IconCopy size={14} />
                     </ActionIcon>
                     <ActionIcon
                       color="red"
                       loading={deleteMealPlan.isPending}
                       onClick={() => handleDeletePlan(plan.id, plan.name)}
                       variant="light"
-                      radius="xl"
+                      radius="md"
+                      size="sm"
                     >
-                      <IconTrash size={16} />
+                      <IconTrash size={14} />
                     </ActionIcon>
                   </Group>
                 </Box>
@@ -604,7 +599,7 @@ export function NutritionPage() {
             <EmptyState
               actionLabel="Crear Plan"
               description="Crea tu primer plan nutricional para asignarlo a tus clientes."
-              icon={<IconTemplate size={40} />}
+              icon={<IconTemplate size={36} />}
               onAction={() => openPlanBuilder()}
               title="No hay planes nutricionales"
             />
@@ -613,101 +608,78 @@ export function NutritionPage() {
 
         <Tabs.Panel value="foods">
           <TextInput
-            leftSection={<IconSearch size={16} />}
-            mb="lg"
+            leftSection={<IconSearch size={14} />}
+            mb="md"
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Buscar alimentos..."
             value={searchFood}
-            radius="xl"
+            radius="md"
+            size="sm"
             styles={{
               input: {
                 backgroundColor: "var(--nv-surface)",
-                border: "1px solid var(--nv-border)",
+                border: "1px solid var(--border-subtle)",
               }
             }}
           />
 
           {isLoadingPaginatedFoods ? (
             <Center py="xl">
-              <Loader size="lg" />
+              <Loader size="md" />
             </Center>
           ) : paginatedFoodsList.length > 0 ? (
             <>
               {/* Info de resultados */}
-              <Group justify="space-between" mb="md">
-                <Text c="dimmed" size="sm">
-                  Mostrando {(currentPage - 1) * FOODS_PER_PAGE + 1} -{" "}
-                  {Math.min(
-                    currentPage * FOODS_PER_PAGE,
-                    paginatedFoods?.total || 0
-                  )}{" "}
-                  de {paginatedFoods?.total?.toLocaleString()} alimentos
-                  {debouncedSearch && ` (filtrado por "${debouncedSearch}")`}
+              <Group justify="space-between" mb="sm">
+                <Text c="dimmed" size="xs">
+                  {(currentPage - 1) * FOODS_PER_PAGE + 1} - {Math.min(currentPage * FOODS_PER_PAGE, paginatedFoods?.total || 0)} de {paginatedFoods?.total?.toLocaleString()}
+                  {debouncedSearch && ` • "${debouncedSearch}"`}
                 </Text>
                 {isFetchingFoods && <Loader size="xs" />}
               </Group>
 
-              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
+              <SimpleGrid cols={{ base: 2, sm: 3, lg: 4, xl: 5 }} spacing="sm" className="stagger">
                 {paginatedFoodsList.map((food) => {
                   const CategoryIcon = getCategoryIcon(food.category);
                   return (
-                    <Box key={food.id} className="nv-card" p="sm">
-                      <Group gap="sm" mb="sm">
+                    <Box key={food.id} className="nv-card-compact" p="xs">
+                      <Group gap="xs" mb="xs" wrap="nowrap">
                         <ThemeIcon
                           color={getCategoryColor(food.category)}
-                          radius="xl"
-                          size="lg"
+                          radius="md"
+                          size="md"
                           variant="light"
                         >
-                          <CategoryIcon size={18} />
+                          <CategoryIcon size={14} />
                         </ThemeIcon>
-                        <Box style={{ flex: 1 }}>
-                          <Text fw={600} lineClamp={1} size="sm" style={{ color: "var(--nv-text-primary)" }}>
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
                             {food.name}
                           </Text>
-                          <Badge
-                            color={getCategoryColor(food.category)}
-                            size="xs"
-                            variant="light"
-                            radius="xl"
-                          >
-                            {food.category}
-                          </Badge>
+                          <Text size="xs" c="dimmed">{food.serving_size}</Text>
                         </Box>
                         <ActionIcon
                           color="red"
                           onClick={() => handleDeleteFood(food.id, food.name)}
-                          size="sm"
+                          size="xs"
                           variant="subtle"
-                          radius="xl"
+                          radius="md"
                         >
-                          <IconTrash size={14} />
+                          <IconTrash size={12} />
                         </ActionIcon>
                       </Group>
 
-                      <Divider mb="sm" style={{ borderColor: "var(--nv-border)" }} />
-
                       <Group justify="space-between" mb="xs">
-                        <Text c="dimmed" size="xs">Por {food.serving_size}</Text>
-                        <Badge color="blue" variant="filled" radius="xl">
+                        <Badge color="blue" variant="light" radius="md" size="xs">
                           {food.calories?.toFixed(0) || 0} kcal
                         </Badge>
                       </Group>
 
-                      <SimpleGrid cols={3} spacing="xs">
-                        <Box ta="center">
-                          <Text c="dimmed" size="xs">Proteína</Text>
-                          <Text c="green" fw={500} size="sm">{food.protein?.toFixed(1) || 0}g</Text>
-                        </Box>
-                        <Box ta="center">
-                          <Text c="dimmed" size="xs">Carbos</Text>
-                          <Text c="orange" fw={500} size="sm">{food.carbs?.toFixed(1) || 0}g</Text>
-                        </Box>
-                        <Box ta="center">
-                          <Text c="dimmed" size="xs">Grasas</Text>
-                          <Text c="grape" fw={500} size="sm">{food.fat?.toFixed(1) || 0}g</Text>
-                        </Box>
-                      </SimpleGrid>
+                      <Group gap={4} justify="space-between">
+                        <Text size="xs" c="green" fw={600}>P:{food.protein?.toFixed(0) || 0}g</Text>
+                        <Text size="xs" c="orange" fw={600}>C:{food.carbs?.toFixed(0) || 0}g</Text>
+                        <Text size="xs" c="grape" fw={600}>G:{food.fat?.toFixed(0) || 0}g</Text>
+                      </Group>
                     </Box>
                   );
                 })}

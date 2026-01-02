@@ -50,64 +50,65 @@ export function RevenueChart({
   currency = "€",
 }: RevenueChartProps) {
   return (
-    <Box className="premium-card" p="xl" style={{ height: "100%", minHeight: 400 }}>
+    <Box className="premium-card" p="md" style={{ height: "100%", minHeight: 320 }}>
       {/* Header */}
-      <Group justify="space-between" mb="xl" align="flex-start">
+      <Group justify="space-between" mb="md" align="flex-start" wrap="wrap" gap="sm">
         <Box>
-          <Text className="text-label" mb={4}>Revenue Growth</Text>
-          <Group align="baseline" gap="sm">
-            <Text className="text-display" style={{ fontSize: "2rem" }}>
+          <Text className="stat-label" mb={4}>Crecimiento de Ingresos</Text>
+          <Group align="baseline" gap="xs">
+            <Text className="stat-value" style={{ color: "var(--nv-dark)" }}>
               {currency}{currentMRR.toLocaleString()}
             </Text>
-            <Text className="text-mono" c="var(--nv-slate)" size="sm">
+            <Text size="xs" c="var(--nv-slate)" fw={500}>
               MRR
             </Text>
           </Group>
         </Box>
         
         {/* Legend */}
-        <Group gap="lg">
-          <Group gap="xs">
-            <Box w={8} h={8} style={{ borderRadius: "50%", background: "var(--nv-primary)" }} />
-            <Text size="sm" fw={500}>Subscriptions</Text>
+        <Group gap="md" className="hide-mobile">
+          <Group gap={4}>
+            <Box w={6} h={6} style={{ borderRadius: "50%", background: "var(--nv-primary)" }} />
+            <Text size="xs" fw={500} c="var(--nv-slate)">Suscripciones</Text>
           </Group>
-          <Group gap="xs">
-            <Box w={8} h={8} style={{ borderRadius: "50%", background: "var(--nv-accent)" }} />
-            <Text size="sm" fw={500}>One-time</Text>
+          <Group gap={4}>
+            <Box w={6} h={6} style={{ borderRadius: "50%", background: "var(--nv-accent)" }} />
+            <Text size="xs" fw={500} c="var(--nv-slate)">Únicos</Text>
           </Group>
         </Group>
       </Group>
 
       {/* Chart Area */}
-      <Box h={300} w="100%">
+      <Box h={220} w="100%">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--nv-primary)" stopOpacity={0.3}/>
+                <stop offset="5%" stopColor="var(--nv-primary)" stopOpacity={0.2}/>
                 <stop offset="95%" stopColor="var(--nv-primary)" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
             <XAxis 
               dataKey="month" 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'var(--nv-slate)', fontSize: 12 }} 
-              dy={10}
+              tick={{ fill: 'var(--nv-slate)', fontSize: 11 }} 
+              dy={8}
             />
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'var(--nv-slate)', fontSize: 12 }} 
+              tick={{ fill: 'var(--nv-slate)', fontSize: 11 }} 
               tickFormatter={(value) => `${value / 1000}k`}
+              width={40}
             />
-            <RechartsTooltip content={<CustomTooltip currency={currency} />} cursor={{ stroke: 'var(--nv-slate)', strokeWidth: 1, strokeDasharray: '4 4' }} />
+            <RechartsTooltip content={<CustomTooltip currency={currency} />} cursor={{ stroke: 'var(--nv-slate-light)', strokeWidth: 1, strokeDasharray: '4 4' }} />
             <Area 
               type="monotone" 
               dataKey="revenue" 
               stroke="var(--nv-primary)" 
-              strokeWidth={3}
+              strokeWidth={2}
               fillOpacity={1} 
               fill="url(#colorRevenue)" 
             />

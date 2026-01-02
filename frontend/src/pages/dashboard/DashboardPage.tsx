@@ -1,201 +1,148 @@
 import {
   Avatar,
   Box,
-  Button,
   Grid,
   Group,
-  RingProgress,
   SimpleGrid,
   Stack,
   Text,
-  ThemeIcon,
   UnstyledButton,
 } from "@mantine/core";
 import {
-  IconArrowUpRight,
-  IconCalendarEvent,
-  IconCreditCard,
-  IconDots,
+  IconArrowRight,
+  IconTrendingUp,
   IconUsers,
+  IconClock,
+  IconChartBar,
 } from "@tabler/icons-react";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { SpotlightCard } from "../../components/common/SpotlightCard";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { KPICard } from "../../components/common/StatsCard";
+import { AlertsWidget } from "../../components/dashboard/AlertsWidget";
+import { ClientGrowthChart } from "../../components/dashboard/ClientGrowthChart";
+import { QuickActionsWidget } from "../../components/dashboard/QuickActionsWidget";
+import { RevenueChart } from "../../components/dashboard/RevenueChart";
+import { UpcomingSessionsWidget } from "../../components/dashboard/UpcomingSessionsWidget";
 import { useAuthStore } from "../../stores/auth";
 
-// --- WIDGETS REFINADOS (Light Mode Optimized) ---
+// --- COMPONENTES ULTRA-PREMIUM LOCALES ---
 
-// 1. Hero KPI Refined
+// 1. KPI "Hero" Card - Compact version
 function HeroKPI({ title, value, change, data }: any) {
   return (
-    <SpotlightCard p="xl" style={{ minHeight: 220, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-      <Group justify="space-between" align="flex-start">
-        <Stack gap={4}>
-          <Text c="dimmed" size="xs" tt="uppercase" fw={700} style={{ letterSpacing: "0.1em" }}>
-            {title}
-          </Text>
-          <Text style={{ fontSize: "3rem", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1, color: "var(--text-primary)" }}>
-            {value}
-          </Text>
-        </Stack>
-        <Box
-          style={{
-            background: change > 0 ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-            color: change > 0 ? "#10B981" : "#EF4444",
-            padding: "6px 14px",
-            borderRadius: "50px",
-            fontSize: "13px",
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-          }}
-        >
-          {change > 0 ? <IconArrowUpRight size={14} /> : null}
-          {change}%
+    <Box className="premium-card animate-in" p="md" style={{ position: "relative", overflow: "hidden", minHeight: 140 }}>
+      <Group justify="space-between" align="flex-start" mb="xs">
+        <Text className="stat-label" style={{ fontSize: "10px" }}>
+          {title}
+        </Text>
+        <Box className="pill-badge" style={{
+          background: change > 0 ? "var(--nv-success-bg)" : "var(--nv-error-bg)",
+          color: change > 0 ? "var(--nv-success)" : "var(--nv-error)",
+          fontSize: "10px",
+          padding: "2px 8px"
+        }}>
+          {change > 0 ? "+" : ""}{change}%
         </Box>
       </Group>
+      
+      <Text className="stat-value" style={{ color: "var(--nv-dark)", fontSize: "1.75rem", marginBottom: "8px" }}>
+        {value}
+      </Text>
 
-      {/* Mini Chart - Using Brand Blue for better contrast on white */}
-      <Box style={{ height: 60, marginTop: 20, marginLeft: -20, marginRight: -20, opacity: 0.8 }}>
+      {/* Gráfico ambiental de fondo */}
+      <Box style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50px", opacity: 0.4 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
-              <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#5C80BC" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="#5C80BC" stopOpacity={0} />
+              <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--nv-accent)" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="var(--nv-accent)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#5C80BC"
+              stroke="var(--nv-accent)"
               strokeWidth={2}
-              fill={`url(#gradient-${title})`}
-              isAnimationActive={true}
+              fill="url(#colorGradient)"
             />
           </AreaChart>
         </ResponsiveContainer>
       </Box>
-    </SpotlightCard>
+    </Box>
   );
 }
 
-// 2. Daily Briefing Card (The "Focus" section) - Dark Olive Background for Contrast
-function DailyBriefing() {
-  return (
-    <SpotlightCard p="xl" style={{ background: "var(--bg-sidebar)", color: "white", border: "none" }}>
-      <Group justify="space-between" align="flex-start" mb="lg">
-        <Group gap="md">
-          <ThemeIcon size={48} radius="xl" variant="light" style={{ background: "rgba(231, 226, 71, 0.2)", color: "#E7E247" }}>
-            <IconCreditCard size={24} />
-          </ThemeIcon>
-          <Box>
-            <Text size="lg" fw={700} c="white">Objetivo Mensual</Text>
-            <Text size="sm" c="dimmed">Estás a un 12% de tu meta</Text>
-          </Box>
-        </Group>
-        <Button variant="outline" color="yellow" size="xs" radius="xl" styles={{ root: { borderColor: "#E7E247", color: "#E7E247" } }}>
-          Ver Detalles
-        </Button>
-      </Group>
-      
-      <Box mt="md">
-        <Group justify="space-between" mb="xs">
-          <Text size="sm" fw={600} c="dimmed">Progreso Actual</Text>
-          <Text size="sm" fw={700} c="white">€8,420 / €10,000</Text>
-        </Group>
-        <Box style={{ height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
-          <Box style={{ width: "84%", height: "100%", background: "#E7E247", borderRadius: 4, boxShadow: "0 0 10px rgba(231, 226, 71, 0.3)" }} />
-        </Box>
-      </Box>
-    </SpotlightCard>
-  );
-}
-
-// 3. Activity Feed
-function ActivityFeed() {
-  const activities = [
-    { user: "Ana García", action: "reservó una clase", time: "Hace 2 min", avatar: "A", type: "booking" },
-    { user: "Carlos Ruiz", action: "renovó su plan", time: "Hace 45 min", avatar: "C", type: "payment" },
-    { user: "Laura M.", action: "completó una rutina", time: "Hace 2h", avatar: "L", type: "workout" },
+// 2. Tarjeta de Lista "Glass" - Compact
+function TransactionList() {
+  const items = [
+    { name: "Juan Pérez", amount: "+€149", date: "Hoy, 10:23 AM", icon: "J" },
+    { name: "María Gómez", amount: "+€79", date: "Ayer", icon: "M" },
+    { name: "Carlos Ruiz", amount: "+€29", date: "Ayer", icon: "C" },
   ];
 
   return (
-    <SpotlightCard p="xl" h="100%">
-      <Group justify="space-between" mb="xl">
-        <Text size="lg" fw={700} className="font-heading">Actividad en Vivo</Text>
-        <UnstyledButton>
-          <IconDots size={20} color="var(--text-secondary)" />
+    <Box className="premium-card animate-in delay-1" p="sm">
+      <Group justify="space-between" mb="xs">
+        <Text className="stat-label" style={{ fontSize: "10px" }}>Actividad Reciente</Text>
+        <UnstyledButton style={{ color: "var(--nv-slate-light)" }}>
+          <IconArrowRight size={14} />
         </UnstyledButton>
       </Group>
-      <Stack gap="lg">
-        {activities.map((item, i) => (
-          <Group key={i} wrap="nowrap" align="flex-start">
-            <Box style={{ position: "relative" }}>
-              <Avatar radius="xl" size="sm" src={null} style={{ background: "#F5F5F4", color: "var(--text-primary)", border: "1px solid rgba(0,0,0,0.05)" }}>
-                {item.avatar}
-              </Avatar>
-              <Box 
-                style={{ 
-                  position: "absolute", 
-                  bottom: -2, 
-                  right: -2, 
-                  width: 8, 
-                  height: 8, 
-                  borderRadius: "50%", 
-                  background: item.type === 'payment' ? '#10B981' : '#E7E247',
-                  border: "1px solid white"
-                }} 
-              />
-            </Box>
-            <Box style={{ flex: 1 }}>
-              <Text size="sm" c="var(--text-primary)">
-                <Text span fw={600}>{item.user}</Text> {item.action}
-              </Text>
-              <Text size="xs" c="dimmed">{item.time}</Text>
-            </Box>
+      <Stack gap={4}>
+        {items.map((item, i) => (
+          <Group 
+            key={i} 
+            justify="space-between" 
+            py={6}
+            style={{ borderBottom: i < items.length - 1 ? "1px solid var(--border-subtle)" : "none" }}
+          >
+            <Group gap="xs">
+              <Avatar radius="md" size={28} color="dark" style={{ fontSize: "11px" }}>{item.icon}</Avatar>
+              <Box>
+                <Text size="xs" fw={600} style={{ color: "var(--nv-dark)" }}>{item.name}</Text>
+                <Text size="10px" c="dimmed">{item.date}</Text>
+              </Box>
+            </Group>
+            <Text fw={600} size="xs" style={{ color: "var(--nv-success)" }}>{item.amount}</Text>
           </Group>
         ))}
       </Stack>
-    </SpotlightCard>
+    </Box>
   );
 }
 
-// 4. Quick Actions "Dock"
-function QuickActionDock() {
-  const actions = [
-    { label: "Nuevo Cliente", icon: <IconUsers size={20} />, color: "blue" },
-    { label: "Agendar", icon: <IconCalendarEvent size={20} />, color: "yellow" },
-    { label: "Crear Rutina", icon: <IconCreditCard size={20} />, color: "green" },
-  ];
-
+// 3. Mapa de Calor / Distribución (Visual Only) - Compact version
+function StatsGrid() {
   return (
-    <SimpleGrid cols={3} spacing="md">
-      {actions.map((action) => (
-        <SpotlightCard 
-          key={action.label} 
-          p="md" 
-          style={{ 
-            cursor: "pointer", 
-            display: "flex", 
-            flexDirection: "column", 
-            alignItems: "center", 
-            gap: 12,
-            textAlign: "center"
-          }}
-        >
-          <ThemeIcon 
-            size="xl" 
-            radius="xl" 
-            variant="light" 
-            color={action.color === 'yellow' ? 'yellow' : action.color === 'green' ? 'teal' : 'blue'}
-            style={{ background: action.color === 'yellow' ? 'rgba(231, 226, 71, 0.15)' : undefined }}
-          >
-            {action.icon}
-          </ThemeIcon>
-          <Text size="xs" fw={600} c="var(--text-primary)">{action.label}</Text>
-        </SpotlightCard>
-      ))}
+    <SimpleGrid cols={2} spacing="xs">
+      <Box className="nv-card-compact animate-in delay-2" p="sm" style={{ background: "var(--nv-dark-surface)", color: "white" }}>
+        <Group gap="xs" mb={4}>
+          <IconUsers size={14} color="var(--nv-accent)" />
+          <Text size="10px" className="stat-label" style={{ color: "var(--nv-slate-light)" }}>Usuarios Activos</Text>
+        </Group>
+        <Text size="md" fw={700}>3,420</Text>
+      </Box>
+      <Box className="nv-card-compact animate-in delay-2" p="sm">
+        <Group gap="xs" mb={4}>
+          <IconChartBar size={14} color="var(--nv-primary)" />
+          <Text size="10px" className="stat-label">Conversión</Text>
+        </Group>
+        <Text size="md" fw={700} style={{ color: "var(--nv-dark)" }}>4.2%</Text>
+      </Box>
+      <Box className="nv-card-compact animate-in delay-3" p="sm">
+        <Group gap="xs" mb={4}>
+          <IconClock size={14} color="var(--nv-slate)" />
+          <Text size="10px" className="stat-label">Tiempo Promedio</Text>
+        </Group>
+        <Text size="md" fw={700} style={{ color: "var(--nv-dark)" }}>12m</Text>
+      </Box>
+      <Box className="nv-card-compact animate-in delay-3" p="sm" style={{ background: "var(--nv-accent)", color: "var(--nv-dark)" }}>
+        <Group gap="xs" mb={4}>
+          <IconTrendingUp size={14} />
+          <Text size="10px" style={{ opacity: 0.7 }} tt="uppercase" fw={700} lts="0.08em">Crecimiento</Text>
+        </Group>
+        <Text size="md" fw={700}>+24%</Text>
+      </Box>
     </SimpleGrid>
   );
 }
@@ -204,157 +151,95 @@ function QuickActionDock() {
 
 export function DashboardPage() {
   const { user } = useAuthStore();
-  const chartData1 = [{ value: 30 }, { value: 40 }, { value: 35 }, { value: 50 }, { value: 45 }, { value: 70 }, { value: 90 }];
-  const chartData2 = [{ value: 60 }, { value: 55 }, { value: 70 }, { value: 65 }, { value: 80 }, { value: 75 }, { value: 85 }];
+  const chartData = [
+    { value: 10 }, { value: 25 }, { value: 15 }, { value: 35 }, { value: 30 }, { value: 50 }, { value: 80 }
+  ];
+
+  // Datos para componentes importados
+  const revenueData = [
+    { month: "Ene", revenue: 8200, subscriptions: 7200, oneTime: 1000 },
+    { month: "Feb", revenue: 9500, subscriptions: 8200, oneTime: 1300 },
+    { month: "Mar", revenue: 10200, subscriptions: 8800, oneTime: 1400 },
+    { month: "Abr", revenue: 11100, subscriptions: 9500, oneTime: 1600 },
+    { month: "May", revenue: 11800, subscriptions: 10200, oneTime: 1600 },
+    { month: "Jun", revenue: 12400, subscriptions: 10800, oneTime: 1600 },
+  ];
+
+  const alerts = [
+    { id: "1", type: "payment_due" as const, title: "Pago pendiente", description: "María García - Vencido 3d", severity: "error" as const },
+    { id: "2", type: "inactive_client" as const, title: "Cliente inactivo", description: "Carlos López - 14d", severity: "warning" as const },
+  ];
+
+  const sessions = [
+    { id: "1", title: "Entrenamiento Personal", clientName: "María García", startTime: new Date().toISOString(), endTime: new Date(Date.now() + 3600000).toISOString(), type: "individual" as const, modality: "in_person" as const, status: "confirmed" as const, location: "Sala 1" },
+    { id: "2", title: "Consulta Nutricional", clientName: "Carlos López", startTime: new Date(Date.now() + 7200000).toISOString(), endTime: new Date(Date.now() + 9000000).toISOString(), type: "individual" as const, modality: "online" as const, status: "pending" as const },
+  ];
 
   return (
-    <Box pb={40}>
-      {/* 1. Header Section "Editorial" */}
-      <Box mb={50} pt="md" className="animate-entry">
-        <Text c="dimmed" tt="uppercase" fw={700} size="xs" mb="xs" style={{ letterSpacing: "0.2em" }}>
-          {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+    <Box>
+      {/* Header Text */}
+      <Box mb="xl" className="animate-in">
+        <Text className="page-title" mb="xs">
+          Resumen
         </Text>
-        <Text 
-          className="font-heading"
-          style={{ 
-            fontSize: "clamp(2.5rem, 5vw, 4rem)", 
-            fontWeight: 800, 
-            lineHeight: 1, 
-            color: "var(--text-primary)",
-            maxWidth: 900
-          }}
-        >
-          Buenos días, {user?.full_name?.split(" ")[0] || "Entrenador"}.
-        </Text>
-        <Text size="xl" c="dimmed" mt="md" style={{ maxWidth: 600, fontWeight: 300 }}>
-          Hoy tienes <Text span c="var(--text-primary)" fw={600}>4 sesiones</Text> programadas y <Text span c="var(--text-primary)" fw={600}>2 nuevos clientes</Text> potenciales esperando respuesta.
+        <Text className="page-subtitle">
+          Buenas tardes, {user?.full_name?.split(" ")[0]}. Tu negocio está rindiendo bien esta semana.
         </Text>
       </Box>
 
-      {/* 2. Main Bento Grid */}
+      {/* BENTO GRID LAYOUT */}
       <Grid gutter="lg">
-        
-        {/* Left Column: KPIs & Charts */}
+        {/* Columna Principal (2/3) */}
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <Stack gap="lg">
-            {/* Top Row: Hero KPIs */}
-            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-              <HeroKPI 
-                title="Ingresos Mensuales" 
-                value="€12.4k" 
-                change={14.2} 
-                data={chartData1} 
-              />
-              <HeroKPI 
-                title="Clientes Activos" 
-                value="84" 
-                change={5.1} 
-                data={chartData2} 
-              />
+            {/* Fila de KPIs Gigantes */}
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+              <HeroKPI title="Ingresos Totales" value="€128.4k" change={12.5} data={chartData} />
+              <HeroKPI title="Beneficio Neto" value="€84.2k" change={8.1} data={[{value: 20}, {value:40}, {value:30}, {value:60}, {value:90}]} />
             </SimpleGrid>
-
-            {/* Middle Row: Briefing & Actions */}
-            <Grid gutter="lg">
-              <Grid.Col span={{ base: 12, md: 7 }}>
-                 <DailyBriefing />
-              </Grid.Col>
-              <Grid.Col span={{ base: 12, md: 5 }}>
-                 <QuickActionDock />
-              </Grid.Col>
-            </Grid>
-
-            {/* Bottom: Revenue Chart */}
-            <SpotlightCard p="xl" style={{ minHeight: 300 }}>
-              <Group justify="space-between" mb="lg">
-                <Box>
-                  <Text size="lg" fw={700} c="var(--text-primary)">Análisis de Ingresos</Text>
-                  <Text size="sm" c="dimmed">Comparativa vs mes anterior</Text>
-                </Box>
-                <Group>
-                  <Button variant="subtle" color="gray" size="xs">Semana</Button>
-                  <Button variant="light" color="blue" size="xs" bg="rgba(92, 128, 188, 0.1)" c="#5C80BC">Mes</Button>
-                  <Button variant="subtle" color="gray" size="xs">Año</Button>
-                </Group>
-              </Group>
-              
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={[
-                  { name: 'Lun', curr: 400, prev: 240 },
-                  { name: 'Mar', curr: 300, prev: 139 },
-                  { name: 'Mie', curr: 500, prev: 980 },
-                  { name: 'Jue', curr: 200, prev: 390 },
-                  { name: 'Vie', curr: 600, prev: 480 },
-                  { name: 'Sab', curr: 700, prev: 380 },
-                  { name: 'Dom', curr: 800, prev: 430 },
-                ]}>
-                  <defs>
-                    <linearGradient id="colorCurr" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#5C80BC" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#5C80BC" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" stroke="var(--text-secondary)" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', borderColor: 'rgba(0,0,0,0.1)', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    itemStyle={{ color: '#3D3B30' }}
-                  />
-                  <Area type="monotone" dataKey="curr" stroke="#5C80BC" strokeWidth={3} fillOpacity={1} fill="url(#colorCurr)" />
-                  <Area type="monotone" dataKey="prev" stroke="#4D5061" strokeWidth={2} strokeDasharray="5 5" fill="transparent" opacity={0.3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </SpotlightCard>
+            
+            {/* Gráfico Principal de Ingresos */}
+            <RevenueChart data={revenueData} currentMRR={12400} previousMRR={11800} currency="€" />
           </Stack>
         </Grid.Col>
 
-        {/* Right Column: Activity & Notifications */}
+        {/* Columna Lateral (1/3) */}
         <Grid.Col span={{ base: 12, lg: 4 }}>
-          <Stack gap="lg" h="100%">
-            {/* Notifications */}
-            <SpotlightCard p="xl">
-               <Group justify="space-between" mb="md">
-                 <Text size="md" fw={700} c="var(--text-primary)">Alertas</Text>
-                 <Text size="xs" c="blue" fw={600} style={{ cursor: 'pointer' }}>Ver todas</Text>
-               </Group>
-               <Stack gap="md">
-                 <Group wrap="nowrap">
-                    <ThemeIcon color="red" variant="light" radius="md" bg="rgba(239, 68, 68, 0.1)"><IconCreditCard size={18} /></ThemeIcon>
-                    <Box>
-                      <Text size="sm" fw={600} c="var(--text-primary)">Pago fallido</Text>
-                      <Text size="xs" c="dimmed">Suscripción de Marcos P.</Text>
-                    </Box>
-                 </Group>
-                 <Group wrap="nowrap">
-                    <ThemeIcon color="blue" variant="light" radius="md" bg="rgba(92, 128, 188, 0.1)"><IconCalendarEvent size={18} /></ThemeIcon>
-                    <Box>
-                      <Text size="sm" fw={600} c="var(--text-primary)">Sesión en 30min</Text>
-                      <Text size="xs" c="dimmed">Entrenamiento con Clara</Text>
-                    </Box>
-                 </Group>
-               </Stack>
-            </SpotlightCard>
-
-            <Box style={{ flex: 1 }}>
-              <ActivityFeed />
-            </Box>
-
-            {/* Retention Stat */}
-            <SpotlightCard p="lg" style={{ background: "rgba(16, 185, 129, 0.05)", borderColor: "rgba(16, 185, 129, 0.1)" }}>
-              <Group>
-                <RingProgress
-                  size={60}
-                  thickness={6}
-                  roundCaps
-                  sections={[{ value: 92, color: '#10B981' }]}
-                />
-                <Box>
-                  <Text size="xs" fw={700} tt="uppercase" c="dimmed">Retención</Text>
-                  <Text size="xl" fw={800} c="#10B981">92%</Text>
-                </Box>
-              </Group>
-            </SpotlightCard>
+          <Stack gap="md">
+            {/* Fila de KPIs Pequeños Verticales */}
+            <KPICard
+              title="Clientes Activos"
+              value="16,601"
+              change={12.5}
+              changeType="positive"
+              chartData={[100, 110, 115, 120, 118, 125, 130, 135]}
+            />
+            <KPICard
+              title="Tasa de Cancelación"
+              value="2.1"
+              suffix="%"
+              changeType="stable"
+              changeLabel="Estable vs mes anterior"
+              chartData={[2.5, 2.4, 2.3, 2.2, 2.2, 2.1, 2.1]}
+            />
+            
+            <TransactionList />
+            <StatsGrid />
           </Stack>
         </Grid.Col>
       </Grid>
+
+      {/* Fila Inferior de Widgets Operativos */}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mt="lg" className="animate-in delay-2">
+        <ClientGrowthChart totalClients={16601} newThisMonth={124} churnedThisMonth={12} />
+        <AlertsWidget alerts={alerts} />
+        <UpcomingSessionsWidget sessions={sessions} />
+      </SimpleGrid>
+
+      {/* Fila Final: Quick Actions */}
+      <Box mt="lg" className="animate-in delay-3">
+        <QuickActionsWidget />
+      </Box>
     </Box>
   );
 }

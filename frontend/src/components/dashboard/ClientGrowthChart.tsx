@@ -1,7 +1,7 @@
-import { Box, Group, RingProgress, Text } from "@mantine/core";
+import { Box, Group, RingProgress, Stack, Text } from "@mantine/core";
 
 interface ClientGrowthChartProps {
-  data: any[];
+  data?: any[];
   totalClients: number;
   newThisMonth: number;
   churnedThisMonth: number;
@@ -10,7 +10,6 @@ interface ClientGrowthChartProps {
 export function ClientGrowthChart({
   totalClients,
   newThisMonth,
-  churnedThisMonth,
 }: ClientGrowthChartProps) {
   // Distribution Data Simulation
   const enterprise = 45;
@@ -18,15 +17,16 @@ export function ClientGrowthChart({
   const basic = 20;
 
   return (
-    <Box className="premium-card" p="xl" style={{ height: "100%", minHeight: 400 }}>
-      <Text className="text-label" mb="xl">Customer Segments</Text>
+    <Box className="premium-card" p="md" style={{ height: "100%", minHeight: 280 }}>
+      <Text className="stat-label" mb="sm">Segmentos de Clientes</Text>
 
-      <Group justify="center" align="center" style={{ height: 240, position: "relative" }}>
-        {/* Multi-layered Ring Chart */}
-        <Box style={{ position: "relative" }}>
+      {/* Layout horizontal: gráfico a la izquierda, leyenda a la derecha */}
+      <Group justify="space-between" align="center" gap="md" style={{ height: "calc(100% - 40px)" }}>
+        {/* Ring Chart */}
+        <Box style={{ flex: "0 0 auto" }}>
           <RingProgress
-            size={240}
-            thickness={24}
+            size={140}
+            thickness={14}
             roundCaps
             sections={[
               { value: enterprise, color: "var(--nv-accent)" },
@@ -35,58 +35,43 @@ export function ClientGrowthChart({
             ]}
             label={
               <Box style={{ textAlign: "center" }}>
-                <Text size="xs" c="dimmed" tt="uppercase" ls={1}>Total</Text>
-                <Text className="text-display" style={{ fontSize: "2.5rem" }}>{totalClients}</Text>
-                <Text size="sm" c="var(--nv-success)" fw={600}>+{newThisMonth} new</Text>
+                <Text size="10px" c="dimmed" tt="uppercase" lts="0.05em">Total</Text>
+                <Text fw={800} style={{ fontSize: "1.25rem", color: "var(--nv-dark)", lineHeight: 1.1 }}>
+                  {totalClients.toLocaleString()}
+                </Text>
+                <Text size="xs" c="var(--nv-success)" fw={600}>+{newThisMonth}</Text>
               </Box>
             }
           />
-          
-          {/* Decorative outer glow ring */}
-          <Box 
-            style={{
-              position: "absolute",
-              top: -10, left: -10, right: -10, bottom: -10,
-              border: "1px solid rgba(0,0,0,0.05)",
-              borderRadius: "50%",
-              zIndex: -1
-            }}
-          />
         </Box>
-      </Group>
 
-      {/* Legend Grid */}
-      <Box mt="xl">
-        <Group justify="space-between" px="lg">
-          <Box style={{ textAlign: "center" }}>
-            <Group gap={6} justify="center" mb={4}>
-              <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-accent)" }} />
-              <Text size="sm" fw={600}>Enterprise</Text>
-            </Group>
-            <Text size="xl" fw={700}>{enterprise}%</Text>
-          </Box>
+        {/* Legend - Vertical a la derecha */}
+        <Stack gap="sm" style={{ flex: 1 }}>
+          <Group gap="xs">
+            <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-accent)", flexShrink: 0 }} />
+            <Box style={{ flex: 1 }}>
+              <Text size="xs" fw={500} c="var(--nv-slate)">Premium</Text>
+            </Box>
+            <Text size="sm" fw={700} style={{ color: "var(--nv-dark)" }}>{enterprise}%</Text>
+          </Group>
           
-          <Box style={{ width: 1, height: 40, background: "rgba(0,0,0,0.1)" }} />
+          <Group gap="xs">
+            <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-primary)", flexShrink: 0 }} />
+            <Box style={{ flex: 1 }}>
+              <Text size="xs" fw={500} c="var(--nv-slate)">Pro</Text>
+            </Box>
+            <Text size="sm" fw={700} style={{ color: "var(--nv-dark)" }}>{pro}%</Text>
+          </Group>
 
-          <Box style={{ textAlign: "center" }}>
-            <Group gap={6} justify="center" mb={4}>
-              <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-primary)" }} />
-              <Text size="sm" fw={600}>Pro</Text>
-            </Group>
-            <Text size="xl" fw={700}>{pro}%</Text>
-          </Box>
-
-          <Box style={{ width: 1, height: 40, background: "rgba(0,0,0,0.1)" }} />
-
-          <Box style={{ textAlign: "center" }}>
-            <Group gap={6} justify="center" mb={4}>
-              <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-dark)" }} />
-              <Text size="sm" fw={600}>Basic</Text>
-            </Group>
-            <Text size="xl" fw={700}>{basic}%</Text>
-          </Box>
-        </Group>
-      </Box>
+          <Group gap="xs">
+            <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-dark)", flexShrink: 0 }} />
+            <Box style={{ flex: 1 }}>
+              <Text size="xs" fw={500} c="var(--nv-slate)">Básico</Text>
+            </Box>
+            <Text size="sm" fw={700} style={{ color: "var(--nv-dark)" }}>{basic}%</Text>
+          </Group>
+        </Stack>
+      </Group>
     </Box>
   );
 }

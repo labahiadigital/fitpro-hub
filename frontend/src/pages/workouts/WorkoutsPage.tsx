@@ -261,7 +261,7 @@ export function WorkoutsPage() {
   );
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="lg" size="xl">
       <PageHeader
         action={{
           label:
@@ -276,68 +276,68 @@ export function WorkoutsPage() {
       />
 
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
-          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs" style={{ fontWeight: 500 }}>
+        <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs" style={{ fontWeight: 600, fontSize: "13px" }}>
             Programas
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 500 }}>
-            Biblioteca de Ejercicios
+          <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Ejercicios
           </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="programs">
           {programs && programs.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg" className="stagger">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" className="stagger">
               {programs.map((program: any) => (
-                <Box key={program.id} className="nv-card" p="lg">
-                  <Group justify="space-between" mb="md">
-                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{program.name}</Text>
-                    <Badge color="blue" variant="light" radius="xl">
-                      {program.duration_weeks} semanas
+                <Box key={program.id} className="nv-card" p="md">
+                  <Group justify="space-between" mb="sm">
+                    <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{program.name}</Text>
+                    <Badge color="blue" variant="light" radius="md" size="xs">
+                      {program.duration_weeks}sem
                     </Badge>
                   </Group>
 
-                  <Text c="dimmed" lineClamp={2} size="sm">
+                  <Text c="dimmed" lineClamp={2} size="xs">
                     {program.description || "Sin descripción"}
                   </Text>
 
-                  <Group gap="xs" mt="md">
-                    <Badge size="sm" variant="outline" radius="xl">
+                  <Group gap={4} mt="sm">
+                    <Badge size="xs" variant="outline" radius="md">
                       {program.difficulty === "beginner"
                         ? "Principiante"
                         : program.difficulty === "intermediate"
                           ? "Intermedio"
                           : "Avanzado"}
                     </Badge>
-                    {program.tags?.slice(0, 2).map((tag: string) => (
-                      <Badge key={tag} size="sm" variant="light" radius="xl">
+                    {program.tags?.slice(0, 1).map((tag: string) => (
+                      <Badge key={tag} size="xs" variant="light" radius="md">
                         {tag}
                       </Badge>
                     ))}
                   </Group>
 
-                  <Divider my="md" style={{ borderColor: "var(--nv-border)" }} />
+                  <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
 
-                  <Group gap="xs">
+                  <Group gap={6}>
                     <Button
                       flex={1}
-                      leftSection={<IconEdit size={14} />}
+                      leftSection={<IconEdit size={12} />}
                       onClick={() => openProgramBuilder(program)}
                       size="xs"
                       variant="light"
-                      radius="xl"
-                      style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}
+                      radius="md"
+                      styles={{ root: { height: 28 } }}
                     >
                       Editar
                     </Button>
-                    <ActionIcon color="blue" variant="light" radius="xl">
-                      <IconEye size={16} />
+                    <ActionIcon color="blue" variant="light" radius="md" size="sm">
+                      <IconEye size={14} />
                     </ActionIcon>
-                    <ActionIcon color="gray" variant="light" radius="xl">
-                      <IconCopy size={16} />
+                    <ActionIcon color="gray" variant="light" radius="md" size="sm">
+                      <IconCopy size={14} />
                     </ActionIcon>
-                    <ActionIcon color="red" variant="light" radius="xl">
-                      <IconTrash size={16} />
+                    <ActionIcon color="red" variant="light" radius="md" size="sm">
+                      <IconTrash size={14} />
                     </ActionIcon>
                   </Group>
                 </Box>
@@ -347,7 +347,7 @@ export function WorkoutsPage() {
             <EmptyState
               actionLabel="Crear Programa"
               description="Crea tu primer programa de entrenamiento para asignarlo a tus clientes."
-              icon={<IconTemplate size={40} />}
+              icon={<IconTemplate size={36} />}
               onAction={() => openProgramBuilder()}
               title="No hay programas"
             />
@@ -356,43 +356,44 @@ export function WorkoutsPage() {
 
         <Tabs.Panel value="exercises">
           <TextInput
-            leftSection={<IconSearch size={16} />}
-            mb="lg"
+            leftSection={<IconSearch size={14} />}
+            mb="md"
             onChange={(e) => setSearchExercise(e.target.value)}
             placeholder="Buscar ejercicios..."
             value={searchExercise}
-            radius="xl"
+            radius="md"
+            size="sm"
             styles={{
               input: {
                 backgroundColor: "var(--nv-surface)",
-                border: "1px solid var(--nv-border)",
+                border: "1px solid var(--border-subtle)",
               }
             }}
           />
 
           {filteredExercises.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
+            <SimpleGrid cols={{ base: 2, sm: 3, lg: 4, xl: 5 }} spacing="sm" className="stagger">
               {filteredExercises.map((exercise: any) => (
-                <Box key={exercise.id} className="nv-card" p={0} style={{ overflow: "hidden" }}>
+                <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden" }}>
                   <Box
-                    h={120}
+                    h={80}
                     style={{
-                      background: "linear-gradient(135deg, var(--nv-primary-glow) 0%, var(--nv-surface) 100%)",
+                      background: "linear-gradient(135deg, var(--nv-primary-glow) 0%, var(--nv-surface-subtle) 100%)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <IconBarbell color="var(--nv-primary)" size={40} />
+                    <IconBarbell color="var(--nv-primary)" size={28} />
                   </Box>
 
-                  <Box p="sm">
-                    <Text fw={600} lineClamp={1} size="sm" style={{ color: "var(--nv-text-primary)" }}>
+                  <Box p="xs">
+                    <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
                       {exercise.name}
                     </Text>
-                    <Group gap={4} mt="xs">
+                    <Group gap={4} mt={4}>
                       {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
-                        <Badge key={muscle} size="xs" variant="light" radius="xl">
+                        <Badge key={muscle} size="xs" variant="light" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
                           {muscle}
                         </Badge>
                       ))}
@@ -405,7 +406,7 @@ export function WorkoutsPage() {
             <EmptyState
               actionLabel="Añadir Ejercicio"
               description="Añade ejercicios a tu biblioteca para usarlos en tus programas."
-              icon={<IconBarbell size={40} />}
+              icon={<IconBarbell size={36} />}
               onAction={openExerciseModal}
               title="No hay ejercicios"
             />

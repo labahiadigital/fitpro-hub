@@ -19,29 +19,28 @@ export function EmptyState({
   return (
     <Box 
       className="nv-card animate-in"
-      py={80}
-      px="xl"
+      py={48}
+      px="lg"
       ta="center"
       style={{
-        background: "linear-gradient(180deg, var(--nv-surface) 0%, var(--nv-surface-subtle) 100%)",
-        border: "2px dashed var(--border-medium)",
+        background: "var(--nv-surface)",
+        border: "1px dashed var(--border-medium)",
       }}
     >
-      <Stack align="center" gap="lg">
+      <Stack align="center" gap="md">
         <Box
           style={{
-            width: 100,
-            height: 100,
+            width: 72,
+            height: 72,
             borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--nv-primary-glow) 0%, var(--nv-accent-glow) 100%)",
+            background: "linear-gradient(135deg, var(--nv-primary-glow) 0%, var(--nv-surface-subtle) 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 8px 32px rgba(92, 128, 188, 0.15)",
           }}
         >
           <ThemeIcon
-            size={60}
+            size={40}
             radius="xl"
             variant="transparent"
             style={{ color: "var(--nv-primary)" }}
@@ -53,8 +52,8 @@ export function EmptyState({
         <Box>
           <Text 
             fw={700} 
-            size="xl"
-            mb="xs"
+            size="md"
+            mb={4}
             style={{ 
               color: "var(--nv-dark)",
               fontFamily: "'Space Grotesk', sans-serif"
@@ -63,8 +62,8 @@ export function EmptyState({
             {title}
           </Text>
           <Text 
-            size="md" 
-            maw={400} 
+            size="sm" 
+            maw={320} 
             mx="auto"
             style={{ color: "var(--nv-slate)" }}
           >
@@ -74,21 +73,20 @@ export function EmptyState({
 
         {actionLabel && onAction && (
           <Button
-            leftSection={<IconPlus size={18} stroke={2.5} />}
+            leftSection={<IconPlus size={16} stroke={2.5} />}
             onClick={onAction}
-            size="lg"
-            radius="xl"
+            size="sm"
+            radius="md"
             styles={{
               root: {
                 background: "var(--nv-accent)",
                 color: "var(--nv-dark)",
                 fontWeight: 700,
-                boxShadow: "0 4px 14px rgba(231, 226, 71, 0.3)",
+                boxShadow: "0 2px 8px rgba(231, 226, 71, 0.25)",
                 transition: "all 0.2s",
                 "&:hover": {
                   background: "var(--nv-accent-hover)",
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 6px 20px rgba(231, 226, 71, 0.4)"
+                  boxShadow: "0 4px 12px rgba(231, 226, 71, 0.35)"
                 }
               }
             }}

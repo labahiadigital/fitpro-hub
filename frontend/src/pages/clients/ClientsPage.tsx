@@ -147,19 +147,19 @@ function ClientCard({ client, onView }: { client: any; onView: () => void }) {
   );
 }
 
-// KPI Card
+// KPI Card - Compact
 function KPICard({ title, value, subtitle, color }: { title: string; value: string | number; subtitle?: string; color: string }) {
   return (
-    <Box className="nv-card" p="lg">
-      <Text className="text-label" mb="xs">{title}</Text>
+    <Box className="nv-card-compact" p="sm" style={{ minHeight: "auto" }}>
+      <Text className="stat-label" mb={2} style={{ fontSize: "10px" }}>{title}</Text>
       <Text 
-        className="text-display" 
-        style={{ fontSize: "2rem", color }}
+        fw={800} 
+        style={{ fontSize: "1.25rem", color, lineHeight: 1.1, fontFamily: "'Space Grotesk', sans-serif" }}
       >
         {value}
       </Text>
       {subtitle && (
-        <Text size="xs" c="dimmed" mt="xs">{subtitle}</Text>
+        <Text size="xs" c="dimmed" mt={2} style={{ fontSize: "11px" }}>{subtitle}</Text>
       )}
     </Box>
   );
@@ -296,17 +296,17 @@ export function ClientsPage() {
   };
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="lg" size="xl">
       <PageHeader
         action={{
           label: "Nuevo Cliente",
-          icon: <IconUserPlus size={18} />,
+          icon: <IconUserPlus size={16} />,
           onClick: openClientModal,
         }}
         description="Gestiona tu cartera de clientes y su información"
         secondaryAction={{
           label: "Exportar",
-          icon: <IconDownload size={16} />,
+          icon: <IconDownload size={14} />,
           onClick: () => {},
           variant: "default",
         }}
@@ -314,7 +314,7 @@ export function ClientsPage() {
       />
 
       {/* KPIs */}
-      <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xl" spacing="md" className="stagger">
+      <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg" spacing="sm" className="stagger">
         <KPICard 
           title="Total Clientes" 
           value={stats.total} 
@@ -330,43 +330,43 @@ export function ClientsPage() {
         <KPICard 
           title="Inactivos" 
           value={stats.inactive} 
-          subtitle="Sin actividad reciente"
+          subtitle="Sin actividad"
           color="var(--nv-slate)"
         />
         <KPICard 
-          title="Nuevos este mes" 
+          title="Nuevos" 
           value={stats.newThisMonth} 
-          subtitle="+15% vs mes anterior"
+          subtitle="Este mes"
           color="var(--nv-primary)"
         />
       </SimpleGrid>
 
       {/* Tabs y Filtros */}
-      <Box mb="lg">
+      <Box mb="md">
         <Tabs defaultValue="all">
-          <Group justify="space-between" align="flex-end">
-            <Tabs.List>
-              <Tabs.Tab 
-                leftSection={<IconUsers size={16} />} 
-                value="all"
-              >
-                Todos ({stats.total})
-              </Tabs.Tab>
-              <Tabs.Tab value="active">
-                Activos ({stats.active})
-              </Tabs.Tab>
-              <Tabs.Tab value="inactive">
-                Inactivos ({stats.inactive})
-              </Tabs.Tab>
-              <Tabs.Tab 
-                leftSection={<IconTag size={16} />} 
-                value="tags"
-                onClick={openTagModal}
-              >
-                Etiquetas
-              </Tabs.Tab>
-            </Tabs.List>
-          </Group>
+          <Tabs.List style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+            <Tabs.Tab 
+              leftSection={<IconUsers size={14} />} 
+              value="all"
+              style={{ fontWeight: 600, fontSize: "13px" }}
+            >
+              Todos ({stats.total})
+            </Tabs.Tab>
+            <Tabs.Tab value="active" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Activos ({stats.active})
+            </Tabs.Tab>
+            <Tabs.Tab value="inactive" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Inactivos ({stats.inactive})
+            </Tabs.Tab>
+            <Tabs.Tab 
+              leftSection={<IconTag size={14} />} 
+              value="tags"
+              onClick={openTagModal}
+              style={{ fontWeight: 600, fontSize: "13px" }}
+            >
+              Etiquetas
+            </Tabs.Tab>
+          </Tabs.List>
         </Tabs>
       </Box>
 

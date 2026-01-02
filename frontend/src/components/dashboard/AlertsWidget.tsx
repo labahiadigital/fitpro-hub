@@ -37,23 +37,23 @@ const alertConfig = {
 
 export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
   return (
-    <Box className="premium-card" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Box p="lg" pb="xs">
+    <Box className="premium-card" style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 280 }}>
+      <Box p="md" pb="sm">
          <Group justify="space-between">
-            <Text className="text-label">Action Required</Text>
+            <Text className="stat-label">Acciones Requeridas</Text>
             {alerts.length > 0 && (
                <Box 
                  className="pill-badge" 
-                 style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)" }}
+                 style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)", fontSize: "10px", padding: "2px 8px" }}
                >
-                 {alerts.length} Pending
+                 {alerts.length} Pendientes
                </Box>
             )}
          </Group>
       </Box>
 
-      <ScrollArea flex={1} p="xs">
-        <Stack gap={8}>
+      <ScrollArea flex={1} px="sm" pb="sm">
+        <Stack gap={6}>
           {alerts.map((alert) => {
             const config = alertConfig[alert.type];
             const Icon = config.icon;
@@ -62,22 +62,22 @@ export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
               <Box
                 key={alert.id}
                 onClick={() => onAlertClick?.(alert)}
-                p="sm"
+                p="xs"
                 style={{
-                  borderRadius: "10px",
+                  borderRadius: "8px",
                   cursor: "pointer",
-                  transition: "all 0.2s",
+                  transition: "all 0.15s",
                   border: "1px solid transparent",
                 }}
                 className="alert-item-hover"
               >
-                <Group justify="space-between" wrap="nowrap">
-                  <Group gap="sm" wrap="nowrap">
+                <Group justify="space-between" wrap="nowrap" gap="xs">
+                  <Group gap="xs" wrap="nowrap">
                     <Box
                       style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: "10px",
+                        width: 32,
+                        height: 32,
+                        borderRadius: "8px",
                         backgroundColor: config.bgColor,
                         display: "flex",
                         alignItems: "center",
@@ -85,10 +85,10 @@ export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
                         flexShrink: 0,
                       }}
                     >
-                      <Icon size={18} style={{ color: config.color }} stroke={2} />
+                      <Icon size={16} style={{ color: config.color }} stroke={2} />
                     </Box>
                     <Box style={{ minWidth: 0 }}>
-                      <Text fw={600} size="sm" c="var(--nv-dark)">
+                      <Text fw={600} size="xs" c="var(--nv-dark)" lineClamp={1}>
                         {alert.title}
                       </Text>
                       <Text c="dimmed" size="xs" lineClamp={1}>
@@ -97,7 +97,7 @@ export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
                     </Box>
                   </Group>
                   {onAlertClick && (
-                    <IconChevronRight size={14} color="var(--nv-slate-light)" />
+                    <IconChevronRight size={12} color="var(--nv-slate-light)" style={{ flexShrink: 0 }} />
                   )}
                 </Group>
               </Box>
@@ -109,7 +109,6 @@ export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
          .alert-item-hover:hover {
             background-color: var(--nv-surface-subtle);
             border-color: var(--border-subtle);
-            transform: translateX(4px);
          }
       `}</style>
     </Box>

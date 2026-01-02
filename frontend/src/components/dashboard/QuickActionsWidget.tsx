@@ -36,38 +36,39 @@ export function QuickActionsWidget() {
   const navigate = useNavigate();
 
   return (
-    <Box className="premium-card" p="lg">
-      <Text className="text-label" mb="md">Acciones Rápidas</Text>
+    <Box className="premium-card" p="md">
+      <Text className="stat-label" mb="sm">Acciones Rápidas</Text>
 
-      <SimpleGrid cols={2} spacing="sm">
+      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
         {quickActions.map((action) => (
           <UnstyledButton
             key={action.path}
             onClick={() => navigate(action.path)}
             style={{
-              padding: "12px",
-              borderRadius: "12px",
-              transition: "all 0.2s",
+              padding: "10px",
+              borderRadius: "10px",
+              transition: "all 0.15s",
               backgroundColor: "var(--nv-surface-subtle)",
               border: "1px solid transparent"
             }}
             className="quick-action-btn"
           >
-            <Group gap="sm" wrap="nowrap">
+            <Group gap="xs" wrap="nowrap">
               <Box
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "8px",
+                  width: 28,
+                  height: 28,
+                  borderRadius: "6px",
                   backgroundColor: action.bgColor,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  flexShrink: 0,
                 }}
               >
-                <action.icon size={16} style={{ color: action.color }} />
+                <action.icon size={14} style={{ color: action.color }} />
               </Box>
-              <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>
+              <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }} lineClamp={1}>
                 {action.label}
               </Text>
             </Group>
@@ -78,9 +79,8 @@ export function QuickActionsWidget() {
       <style>{`
         .quick-action-btn:hover {
           background-color: var(--nv-surface) !important;
-          border-color: var(--border-medium) !important;
-          box-shadow: var(--shadow-sm);
-          transform: translateY(-1px);
+          border-color: var(--border-subtle) !important;
+          box-shadow: var(--shadow-xs);
         }
       `}</style>
     </Box>

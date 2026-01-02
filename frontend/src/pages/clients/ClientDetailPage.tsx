@@ -64,7 +64,7 @@ import { useClient } from "../../hooks/useClients";
 import { useClientMealPlans } from "../../hooks/useSupabaseData";
 import { AllergenList } from "../../components/common/AllergenBadge";
 
-// KPI Card Component
+// KPI Card Component - Compact version
 function StatCard({ icon, label, value, color, trend }: { 
   icon: React.ReactNode; 
   label: string; 
@@ -73,35 +73,34 @@ function StatCard({ icon, label, value, color, trend }: {
   trend?: { value: number; positive: boolean };
 }) {
   return (
-    <Box className="nv-card" p="lg">
-      <Group justify="space-between" align="flex-start">
-        <Box>
-          <Text className="text-label" mb="xs">{label}</Text>
-          <Text 
-            className="text-display" 
-            style={{ fontSize: "1.75rem", color }}
+    <Box className="nv-card-compact" p="md">
+      <Group gap="xs" mb={4}>
+        <Text className="text-label" style={{ fontSize: "10px" }}>{label}</Text>
+        {trend && (
+          <Badge 
+            size="xs" 
+            variant="light"
+            color={trend.positive ? "green" : "red"}
+            radius="xl"
+            style={{ padding: "2px 6px" }}
           >
-            {value}
-          </Text>
-          {trend && (
-            <Group gap={4} mt="xs">
-              <Badge 
-                size="sm" 
-                variant="light"
-                color={trend.positive ? "green" : "red"}
-                radius="xl"
-              >
-                {trend.positive ? "+" : ""}{trend.value}%
-              </Badge>
-            </Group>
-          )}
-        </Box>
+            {trend.positive ? "+" : ""}{trend.value}%
+          </Badge>
+        )}
+      </Group>
+      <Group justify="space-between" align="center" gap="xs">
+        <Text 
+          className="text-display" 
+          style={{ fontSize: "1.25rem", color, lineHeight: 1 }}
+        >
+          {value}
+        </Text>
         <ThemeIcon 
-          size={48} 
-          radius="xl" 
+          size={32} 
+          radius="md" 
           variant="light"
           style={{ 
-            backgroundColor: `${color}15`,
+            backgroundColor: `${color}12`,
             color: color
           }}
         >

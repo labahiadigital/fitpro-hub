@@ -93,11 +93,11 @@ export function DataTable<T extends { id: string }>({
 
   if (loading) {
     return (
-      <Box className="nv-card" p="lg">
-        {searchable && <Skeleton height={44} mb="lg" radius="xl" />}
-        <Skeleton height={48} mb="sm" radius="md" />
+      <Box className="nv-card" p="md">
+        {searchable && <Skeleton height={40} mb="md" radius="md" />}
+        <Skeleton height={40} mb="xs" radius="sm" />
         {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton height={64} key={i} mb="xs" radius="md" />
+          <Skeleton height={52} key={i} mb="xs" radius="sm" />
         ))}
       </Box>
     );
@@ -113,54 +113,50 @@ export function DataTable<T extends { id: string }>({
     >
       {searchable && (
         <Box
-          p="lg"
+          p="md"
           style={{ 
             borderBottom: "1px solid var(--border-subtle)",
             background: "var(--nv-surface-subtle)"
           }}
         >
-          <Group justify="space-between">
+          <Group justify="space-between" gap="sm">
             <TextInput
-              leftSection={<IconSearch size={18} color="var(--nv-slate)" />}
+              leftSection={<IconSearch size={16} color="var(--nv-slate)" />}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder={searchPlaceholder}
               value={searchQuery}
-              radius="xl"
-              size="md"
-              style={{ flex: 1, maxWidth: 400 }}
+              radius="md"
+              size="sm"
+              style={{ flex: 1, maxWidth: 360 }}
               styles={{
                 input: {
                   backgroundColor: "var(--nv-surface)",
                   border: "1px solid var(--border-subtle)",
                   fontWeight: 500,
-                  "&:focus": {
-                    borderColor: "var(--nv-primary)",
-                    boxShadow: "0 0 0 3px var(--nv-primary-glow)"
-                  }
                 },
               }}
             />
             <Tooltip label="Filtros avanzados">
               <ActionIcon 
                 variant="default" 
-                size="lg" 
-                radius="xl"
+                size="md" 
+                radius="md"
                 style={{ 
                   borderColor: "var(--border-subtle)",
                   color: "var(--nv-slate)"
                 }}
               >
-                <IconFilter size={18} />
+                <IconFilter size={16} />
               </ActionIcon>
             </Tooltip>
           </Group>
         </Box>
       )}
 
-      <Table.ScrollContainer minWidth={800}>
+      <Table.ScrollContainer minWidth={600}>
         <Table 
-          verticalSpacing="md" 
-          horizontalSpacing="lg"
+          verticalSpacing="sm" 
+          horizontalSpacing="md"
           highlightOnHover
           highlightOnHoverColor="var(--nv-surface-subtle)"
           styles={{
@@ -168,12 +164,12 @@ export function DataTable<T extends { id: string }>({
               backgroundColor: "var(--nv-surface-subtle)",
             },
             th: {
-              borderBottom: "2px solid var(--border-subtle) !important",
-              padding: "16px 20px !important",
+              borderBottom: "1px solid var(--border-medium) !important",
+              padding: "12px 16px !important",
             },
             td: {
               borderBottom: "1px solid var(--border-subtle) !important",
-              padding: "16px 20px !important",
+              padding: "12px 16px !important",
             },
             tr: {
               transition: "background-color 0.15s ease",
@@ -329,24 +325,28 @@ export function DataTable<T extends { id: string }>({
       {pagination && pagination.total > pagination.pageSize && (
         <Group
           justify="space-between"
-          p="lg"
+          p="md"
+          gap="sm"
+          wrap="wrap"
           style={{ 
             borderTop: "1px solid var(--border-subtle)",
             background: "var(--nv-surface-subtle)"
           }}
         >
-          <Text size="sm" c="dimmed">
-            Mostrando {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} de {pagination.total}
+          <Text size="xs" c="dimmed" className="hide-mobile">
+            {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} de {pagination.total}
           </Text>
           <Pagination
             onChange={pagination.onChange}
-            size="sm"
+            size="xs"
             total={Math.ceil(pagination.total / pagination.pageSize)}
             value={pagination.page}
-            radius="xl"
+            radius="md"
             styles={{
               control: {
                 fontWeight: 600,
+                minWidth: 28,
+                height: 28,
                 "&[data-active]": {
                   backgroundColor: "var(--nv-accent)",
                   borderColor: "var(--nv-accent)",
@@ -372,24 +372,25 @@ export function ClientCell({
   avatarUrl?: string;
 }) {
   return (
-    <Group gap="sm" wrap="nowrap">
+    <Group gap="xs" wrap="nowrap">
       <Avatar 
         radius="xl" 
-        size={40} 
+        size={32} 
         src={avatarUrl}
         styles={{
           root: {
-            border: "2px solid var(--border-subtle)"
+            border: "2px solid var(--border-subtle)",
+            flexShrink: 0
           }
         }}
       >
         {name.charAt(0)}
       </Avatar>
-      <Box>
-        <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }}>
+      <Box style={{ minWidth: 0 }}>
+        <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>
           {name}
         </Text>
-        <Text size="xs" style={{ color: "var(--nv-slate)" }}>
+        <Text size="xs" style={{ color: "var(--nv-slate)" }} lineClamp={1}>
           {email}
         </Text>
       </Box>
@@ -412,16 +413,17 @@ export function StatusBadge({ status }: { status: string }) {
 
   return (
     <Badge 
-      size="sm" 
+      size="xs" 
       variant="filled"
-      radius="xl"
+      radius="md"
       styles={{
         root: {
           backgroundColor: cfg.bg,
           color: cfg.color,
           fontWeight: 600,
           textTransform: "capitalize",
-          padding: "4px 12px"
+          padding: "3px 8px",
+          fontSize: "10px"
         }
       }}
     >
