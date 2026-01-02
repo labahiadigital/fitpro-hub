@@ -920,3 +920,133 @@ export function useSupabaseInstructors() {
     enabled: !!workspaceId,
   });
 }
+
+// =====================================================
+// HOOKS ERP - FacturaciÃ³n y Gastos
+// =====================================================
+
+// Hook para obtener facturas
+export function useSupabaseInvoices(status?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-invoices", workspaceId, status],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("invoices")
+        .select("*, invoice_items(*), clients(first_name, last_name)")
+        .eq("workspace_id", workspaceId)
+        .order("issue_date", { ascending: false });
+
+      if (status) {
+        query = query.eq("status", status);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener gastos
+export function useSupabaseExpenses(category?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-expenses", workspaceId, category],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("expenses")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("expense_date", { ascending: false });
+
+      if (category) {
+        query = query.eq("category", category);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener categorÃ­as de gastos
+export function useSupabaseExpenseCategories() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-expense-categories", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("expense_categories")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener presupuestos
+export function useSupabaseQuotes(status?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-quotes", workspaceId, status],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("quotes")
+        .select("*, quote_items(*), clients(first_name, last_name)")
+        .eq("workspace_id", workspaceId)
+        .order("issue_date", { ascending: false });
+
+      if (status) {
+        query = query.eq("status", status);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener configuraciÃ³n de facturaciÃ³n
+export function useSupabaseInvoiceSettings() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-invoice-settings", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return null;
+
+      const { data, error } = await supabase
+        .from("invoice_settings")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      return data;
+    },
+    enabled: !!workspaceId,
+  });
+}

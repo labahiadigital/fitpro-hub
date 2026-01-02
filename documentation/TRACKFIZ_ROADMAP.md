@@ -43,16 +43,18 @@
 | 13 | Notificaciones | ✅ | ✅ `Notification` model | ✅ `notifications` |
 | 14 | Biblioteca de Suplementos | ✅ | ✅ `Supplement` model | ✅ `supplements` |
 
-### 🟡 MÓDULO ERP - EN PROGRESO
+### 🟢 MÓDULO ERP - COMPLETADO
 
 | # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
 |---|--------------|--------|-------------------|----------|
 | 1 | Gestión de Equipo | ✅ | ✅ `User`, `UserRole` | ✅ `users`, `user_roles` |
 | 2 | Roles y Permisos | ✅ | ✅ `CustomRole` | ✅ Pendiente migración |
-| 3 | Facturación | 📋 | 📋 Pendiente | 📋 Pendiente |
-| 4 | Contabilidad Básica | 📋 | 📋 Pendiente | 📋 Pendiente |
-| 5 | Informes Financieros | 📋 | 📋 Pendiente | 📋 Pendiente |
-| 6 | Gestión de Gastos | 📋 | 📋 Pendiente | 📋 Pendiente |
+| 3 | Facturación | ✅ | ✅ `Invoice`, `InvoiceItem` | ✅ `invoices`, `invoice_items` |
+| 4 | Configuración Fiscal | ✅ | ✅ `InvoiceSettings` | ✅ `invoice_settings` |
+| 5 | Gestión de Gastos | ✅ | ✅ `Expense`, `ExpenseCategory` | ✅ `expenses`, `expense_categories` |
+| 6 | Presupuestos | ✅ | ✅ `Quote`, `QuoteItem` | ✅ `quotes`, `quote_items` |
+| 7 | Resumen Financiero | ✅ | ✅ Endpoint `/erp/summary` | - |
+| 8 | Hooks Frontend | ✅ | - | ✅ `useSupabaseInvoices`, etc. |
 
 ### 🟡 MÓDULO LMS - EN PROGRESO
 
