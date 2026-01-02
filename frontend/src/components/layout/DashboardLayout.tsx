@@ -87,7 +87,6 @@ export function DashboardLayout() {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   // Choose nav items based on role (Mocked for now)
-  // In real app, get from store
   const navItems = trainerNavItems;
 
   const toggleDesktop = () => setDesktopCollapsed(!desktopCollapsed);
@@ -123,7 +122,7 @@ export function DashboardLayout() {
         padding={0}
         withCloseButton={false}
         hiddenFrom="sm"
-        styles={{ body: { height: '100%', background: 'var(--bg-deep)' } }}
+        styles={{ body: { height: '100%', background: 'var(--bg-sidebar)' } }}
       >
         <Sidebar navItems={navItems} collapsed={false} onToggle={closeMobile} />
       </Drawer>
@@ -136,10 +135,10 @@ export function DashboardLayout() {
           transition: "margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
           minHeight: "100vh",
           position: "relative",
-          background: "var(--bg-deep)",
+          background: "var(--bg-page)", // Beige
         }}
       >
-        {/* Floating Header */}
+        {/* Floating Header (Light Mode) */}
         <Box
           py="md"
           px="xl"
@@ -147,20 +146,20 @@ export function DashboardLayout() {
             position: "sticky",
             top: 0,
             zIndex: 90,
-            background: "linear-gradient(180deg, var(--bg-deep) 0%, rgba(13, 13, 16, 0.8) 80%, transparent 100%)",
-            backdropFilter: "blur(4px)",
-            maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
+            background: "rgba(233, 237, 222, 0.8)", // Beige Translucent
+            backdropFilter: "blur(12px)",
+            borderBottom: "1px solid rgba(61, 59, 48, 0.05)",
           }}
         >
           <Group justify="space-between">
             <Group>
-              <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" color="white" />
+              <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" color="var(--text-primary)" />
               
               {/* Context Breadcrumbs */}
               <Group gap={8} visibleFrom="xs">
                 <Text c="dimmed" size="sm" fw={500}>App</Text>
                 <Text c="dimmed" size="sm">/</Text>
-                <Text c="white" size="sm" fw={600}>
+                <Text c="var(--text-primary)" size="sm" fw={600}>
                   {navItems.find(i => i.to === location.pathname)?.label || "Panel"}
                 </Text>
               </Group>
@@ -179,8 +178,8 @@ export function DashboardLayout() {
                 style={{
                   width: 400,
                   height: 44,
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  background: "white",
+                  border: "1px solid rgba(61, 59, 48, 0.1)",
                   borderRadius: "12px",
                   display: "flex",
                   alignItems: "center",
@@ -188,6 +187,7 @@ export function DashboardLayout() {
                   gap: 12,
                   transition: "all 0.2s ease",
                   cursor: "text",
+                  boxShadow: "0 2px 8px rgba(61, 59, 48, 0.03)",
                 }}
                 className="search-bar-hover"
               >
@@ -196,15 +196,15 @@ export function DashboardLayout() {
                 <Group gap={4}>
                   <Box 
                     style={{ 
-                      background: "rgba(255,255,255,0.1)", 
+                      background: "rgba(61, 59, 48, 0.05)", 
                       padding: "2px 6px", 
                       borderRadius: "4px",
-                      border: "1px solid rgba(255,255,255,0.05)" 
+                      border: "1px solid rgba(61, 59, 48, 0.05)" 
                     }}
                   >
                     <Group gap={2}>
-                      <IconCommand size={10} color="gray" />
-                      <Text size="10px" fw={700} c="gray">K</Text>
+                      <IconCommand size={10} color="var(--text-secondary)" />
+                      <Text size="10px" fw={700} c="var(--text-secondary)">K</Text>
                     </Group>
                   </Box>
                 </Group>
@@ -221,14 +221,15 @@ export function DashboardLayout() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background: "rgba(255, 255, 255, 0.03)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  background: "white",
+                  border: "1px solid rgba(61, 59, 48, 0.1)",
                   position: "relative",
                   transition: "all 0.2s ease",
+                  boxShadow: "0 2px 8px rgba(61, 59, 48, 0.03)",
                 }}
                 className="action-btn-hover"
               >
-                <IconBell size={20} color="var(--text-secondary)" />
+                <IconBell size={20} color="var(--text-primary)" />
                 <Box
                   style={{
                     position: "absolute",
@@ -238,7 +239,7 @@ export function DashboardLayout() {
                     height: 6,
                     borderRadius: "50%",
                     background: "#EF4444",
-                    boxShadow: "0 0 8px rgba(239, 68, 68, 0.5)",
+                    boxShadow: "0 0 4px rgba(239, 68, 68, 0.3)",
                   }}
                 />
               </UnstyledButton>
@@ -253,12 +254,13 @@ export function DashboardLayout() {
 
       <style>{`
         .search-bar-hover:hover {
-          background: rgba(255, 255, 255, 0.08) !important;
-          border-color: rgba(255, 255, 255, 0.15) !important;
+          border-color: var(--accent-brand) !important;
+          box-shadow: 0 4px 12px rgba(92, 128, 188, 0.1) !important;
         }
         .action-btn-hover:hover {
-          background: rgba(255, 255, 255, 0.08) !important;
+          background: #FAFAF9 !important;
           transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(61, 59, 48, 0.08) !important;
         }
       `}</style>
     </MouseSpotlight>

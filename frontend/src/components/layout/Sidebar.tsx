@@ -10,7 +10,6 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import {
-  IconChevronRight,
   IconLogout,
   IconSettings,
 } from "@tabler/icons-react";
@@ -26,7 +25,7 @@ interface NavItemProps {
   collapsed?: boolean;
 }
 
-// --- Componente NavItem Individual con Spotlight ---
+// --- Componente NavItem Individual ---
 function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
   const location = useLocation();
   const isActive = location.pathname === to;
@@ -39,6 +38,7 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
       transitionProps={{ duration: 0 }}
       disabled={!collapsed}
       offset={20}
+      color="dark"
     >
       <NavLink to={to} style={{ textDecoration: "none", width: "100%" }}>
         <UnstyledButton
@@ -50,9 +50,10 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
             display: "flex",
             alignItems: "center",
             justifyContent: collapsed ? "center" : "flex-start",
-            color: isActive ? "var(--accent-primary)" : "var(--text-secondary)",
+            // Colores específicos para el Sidebar Oscuro
+            color: isActive ? "#E7E247" : "rgba(255, 255, 255, 0.6)", 
             background: isActive 
-              ? "linear-gradient(90deg, rgba(231, 226, 71, 0.05) 0%, transparent 100%)" 
+              ? "rgba(231, 226, 71, 0.1)" 
               : "transparent",
             borderRadius: "12px",
             marginBottom: "4px",
@@ -66,8 +67,8 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
               justifyContent: "center",
               width: 24,
               height: 24,
-              color: isActive ? "var(--accent-primary)" : "currentColor",
-              filter: isActive ? "drop-shadow(0 0 8px rgba(231, 226, 71, 0.4))" : "none",
+              color: isActive ? "#E7E247" : "currentColor",
+              filter: isActive ? "drop-shadow(0 0 8px rgba(231, 226, 71, 0.3))" : "none",
               transition: "all 0.2s ease",
             }}
           >
@@ -81,7 +82,7 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
                 fw={isActive ? 600 : 500}
                 className="truncate"
                 style={{
-                  color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                  color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
                   letterSpacing: "0.01em",
                 }}
               >
@@ -90,8 +91,8 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
               {badge && badge > 0 && (
                 <Box
                   style={{
-                    backgroundColor: "var(--accent-primary)",
-                    color: "black",
+                    backgroundColor: "#E7E247",
+                    color: "#3D3B30",
                     fontSize: "9px",
                     fontWeight: 800,
                     borderRadius: "99px",
@@ -108,7 +109,7 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
             </Group>
           )}
           
-          {/* Active Glow Indicator (Left Bar handled by CSS .dock-item::after) */}
+          {/* Active Indicator Bar (Left) handled by CSS .dock-item.active::after */}
         </UnstyledButton>
       </NavLink>
     </Tooltip>
@@ -132,11 +133,14 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
       style={{
         display: "flex",
         flexDirection: "column",
-        background: "rgba(21, 21, 26, 0.6)", // Glass background
-        backdropFilter: "blur(20px)",
+        backgroundColor: "var(--bg-sidebar)", // #3D3B30 Dark Olive
         borderRight: "1px solid rgba(255, 255, 255, 0.05)",
         width: "100%",
         transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        color: "white",
+        borderRadius: "24px", // Rounded corners for Floating Dock feel
+        boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+        overflow: "hidden"
       }}
     >
       {/* Brand Section */}
@@ -152,13 +156,13 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
               style={{
                 width: 36,
                 height: 36,
-                background: "linear-gradient(135deg, var(--accent-primary) 0%, #D4CF2E 100%)",
+                background: "linear-gradient(135deg, #E7E247 0%, #D4CF2E 100%)",
                 borderRadius: "10px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 boxShadow: "0 0 20px rgba(231, 226, 71, 0.15)",
-                color: "#1A1B1E",
+                color: "#3D3B30",
                 flexShrink: 0,
               }}
             >
@@ -190,8 +194,8 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
             p="xs"
             style={{
               borderRadius: "8px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
             }}
           >
             <Group gap="xs">
@@ -200,8 +204,8 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  background: isClientView ? "#A78BFA" : "var(--accent-primary)",
-                  boxShadow: `0 0 8px ${isClientView ? "#A78BFA" : "var(--accent-primary)"}`,
+                  background: isClientView ? "#A78BFA" : "#E7E247",
+                  boxShadow: `0 0 8px ${isClientView ? "#A78BFA" : "#E7E247"}`,
                 }}
               />
               <Text size="xs" fw={600} c="dimmed" style={{ textTransform: "uppercase", fontSize: "10px" }}>
@@ -217,6 +221,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
         flex={1}
         px={collapsed ? 4 : "md"}
         type="scroll"
+        className="sidebar-scroll"
         style={{
           maskImage: "linear-gradient(to bottom, transparent, black 20px, black 95%, transparent)",
         }}
@@ -264,10 +269,10 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                   alt={user?.full_name}
                   radius="md"
                   size={32}
-                  color="yellow"
                   style={{ 
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    background: "linear-gradient(135deg, #333 0%, #111 100%)"
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    background: "#E7E247",
+                    color: "#3D3B30"
                   }}
                 >
                   {user?.full_name?.charAt(0)}
@@ -282,20 +287,25 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                     </Text>
                   </Box>
                 )}
-                {!collapsed && <IconSettings size={14} style={{ opacity: 0.5 }} />}
+                {!collapsed && <IconSettings size={14} style={{ opacity: 0.5, color: "white" }} />}
               </Group>
             </UnstyledButton>
           </Menu.Target>
-          <Menu.Dropdown style={{ background: "#1A1B1E", borderColor: "rgba(255,255,255,0.1)" }}>
-            <Menu.Label>Mi Cuenta</Menu.Label>
-            <Menu.Item leftSection={<IconSettings size={14} />}>Configuración</Menu.Item>
-            <Menu.Divider />
-            <Menu.Item color="red" leftSection={<IconLogout size={14} />} onClick={logout}>
+          <Menu.Dropdown style={{ background: "#3D3B30", borderColor: "rgba(255,255,255,0.1)", color: "white" }}>
+            <Menu.Label c="dimmed">Mi Cuenta</Menu.Label>
+            <Menu.Item leftSection={<IconSettings size={14} />} className="menu-item-hover">Configuración</Menu.Item>
+            <Menu.Divider style={{ borderColor: "rgba(255,255,255,0.1)" }} />
+            <Menu.Item color="red" leftSection={<IconLogout size={14} />} onClick={logout} className="menu-item-hover">
               Cerrar Sesión
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
       </Box>
+      <style>{`
+        .menu-item-hover:hover {
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
     </Box>
   );
 }
