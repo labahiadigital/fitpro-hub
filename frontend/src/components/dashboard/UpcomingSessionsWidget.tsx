@@ -1,13 +1,11 @@
 import {
   ActionIcon,
   Avatar,
-  Badge,
+  Box,
   Group,
-  Paper,
   ScrollArea,
   Stack,
   Text,
-  Title,
 } from "@mantine/core";
 import {
   IconCalendarEvent,
@@ -42,137 +40,67 @@ export function UpcomingSessionsWidget({
   onSessionClick,
   onViewAll,
 }: UpcomingSessionsWidgetProps) {
-  const today = dayjs();
-
-  const groupedSessions = sessions.reduce(
-    (acc, session) => {
-      const date = dayjs(session.startTime);
-      const key = date.isSame(today, "day")
-        ? "Hoy"
-        : date.isSame(today.add(1, "day"), "day")
-          ? "Mañana"
-          : date.format("dddd, D MMM");
-
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(session);
-      return acc;
-    },
-    {} as Record<string, Session[]>
-  );
-
   return (
-    <Paper p="md" radius="md" withBorder>
-      <Group justify="space-between" mb="md">
-        <Group gap="xs">
-          <IconCalendarEvent size={20} />
-          <Title order={5}>Próximas Sesiones</Title>
+    <Box className="premium-card" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Box p="lg" pb="xs">
+        <Group justify="space-between">
+           <Text className="text-label">Agenda de Hoy</Text>
+           <ActionIcon variant="subtle" color="gray" size="sm" onClick={onViewAll}>
+              <IconChevronRight size={16} />
+           </ActionIcon>
         </Group>
-        {onViewAll && (
-          <Text
-            c="blue"
-            onClick={onViewAll}
-            size="sm"
-            style={{ cursor: "pointer" }}
-          >
-            Ver todas
-          </Text>
-        )}
-      </Group>
+      </Box>
 
-      {sessions.length === 0 ? (
-        <Text c="dimmed" py="xl" size="sm" ta="center">
-          No hay sesiones programadas
-        </Text>
-      ) : (
-        <ScrollArea h={280}>
-          <Stack gap="md">
-            {Object.entries(groupedSessions).map(([date, dateSessions]) => (
-              <div key={date}>
-                <Text c="dimmed" fw={600} mb="xs" size="xs">
-                  {date}
-                </Text>
-                <Stack gap="xs">
-                  {dateSessions.map((session) => (
-                    <Paper
-                      key={session.id}
-                      onClick={() => onSessionClick?.(session)}
-                      p="sm"
-                      radius="sm"
-                      style={{ cursor: onSessionClick ? "pointer" : "default" }}
-                      withBorder
-                    >
-                      <Group justify="space-between" wrap="nowrap">
-                        <Group gap="sm" wrap="nowrap">
-                          <Avatar
-                            color="blue"
-                            radius="xl"
-                            size="sm"
-                            src={session.clientAvatar}
-                          >
-                            {session.clientName.charAt(0)}
-                          </Avatar>
-                          <div style={{ minWidth: 0 }}>
-                            <Group gap={4}>
-                              <Text fw={500} size="sm" truncate>
-                                {session.title}
-                              </Text>
-                              <Badge
-                                color={
-                                  session.status === "confirmed"
-                                    ? "green"
-                                    : "yellow"
-                                }
-                                size="xs"
-                                variant="light"
-                              >
-                                {session.status === "confirmed"
-                                  ? "Confirmada"
-                                  : "Pendiente"}
-                              </Badge>
-                            </Group>
-                            <Group gap="xs" mt={2}>
-                              <Group gap={2}>
-                                <IconClock size={12} style={{ opacity: 0.5 }} />
-                                <Text c="dimmed" size="xs">
-                                  {dayjs(session.startTime).format("HH:mm")} -{" "}
-                                  {dayjs(session.endTime).format("HH:mm")}
-                                </Text>
-                              </Group>
-                              <Group gap={2}>
-                                {session.modality === "online" ? (
-                                  <IconVideo
-                                    size={12}
-                                    style={{ opacity: 0.5 }}
-                                  />
-                                ) : (
-                                  <IconMapPin
-                                    size={12}
-                                    style={{ opacity: 0.5 }}
-                                  />
-                                )}
-                                <Text c="dimmed" size="xs">
-                                  {session.modality === "online"
-                                    ? "Online"
-                                    : session.location || "Presencial"}
-                                </Text>
-                              </Group>
-                            </Group>
-                          </div>
+      <ScrollArea flex={1} p="xs">
+         <Stack gap={8}>
+            {/* Timeline Connector Line Implementation would go here for extra polish */}
+            {sessions.map((session, index) => (
+               <Box 
+                  key={session.id}
+                  p="sm"
+                  style={{
+                     borderRadius: "12px",
+                     border: "1px solid var(--border-subtle)",
+                     position: "relative",
+                     overflow: "hidden"
+                  }}
+               >
+                  {/* Status Indicator Bar */}
+                  <Box 
+                     style={{
+                        position: "absolute",
+                        left: 0, top: 0, bottom: 0, width: 4,
+                        backgroundColor: session.status === "confirmed" ? "var(--nv-success)" : "var(--nv-warning)"
+                     }}
+                  />
+                  
+                  <Group pl="xs" align="flex-start" wrap="nowrap">
+                     <Box style={{ minWidth: 45 }}>
+                        <Text fw={700} size="sm">{dayjs(session.startTime).format("HH:mm")}</Text>
+                        <Text size="xs" c="dimmed">{dayjs(session.endTime).format("HH:mm")}</Text>
+                     </Box>
+                     
+                     <Box style={{ flex: 1 }}>
+                        <Text fw={600} size="sm" lineClamp={1}>{session.title}</Text>
+                        <Group gap={6} mt={2}>
+                           <Avatar size={16} radius="xl" src={session.clientAvatar}>
+                              {session.clientName.charAt(0)}
+                           </Avatar>
+                           <Text size="xs" c="dimmed">{session.clientName}</Text>
                         </Group>
-                        {onSessionClick && (
-                          <ActionIcon size="sm" variant="subtle">
-                            <IconChevronRight size={14} />
-                          </ActionIcon>
-                        )}
-                      </Group>
-                    </Paper>
-                  ))}
-                </Stack>
-              </div>
+                        
+                        <Group gap={8} mt={6}>
+                           <Box className="pill-badge" style={{ backgroundColor: "var(--nv-surface-subtle)", color: "var(--nv-slate)", padding: "2px 8px", fontSize: "10px" }}>
+                              {session.modality === "online" ? <IconVideo size={10} style={{marginRight:4}} /> : <IconMapPin size={10} style={{marginRight:4}} />}
+                              {session.modality === "online" ? "Zoom" : "Studio A"}
+                           </Box>
+                        </Group>
+                     </Box>
+                  </Group>
+               </Box>
             ))}
-          </Stack>
-        </ScrollArea>
-      )}
-    </Paper>
+         </Stack>
+      </ScrollArea>
+    </Box>
   );
 }

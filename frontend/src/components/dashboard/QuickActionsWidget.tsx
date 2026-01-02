@@ -1,10 +1,8 @@
 import {
+  Box,
   Group,
-  Paper,
   SimpleGrid,
   Text,
-  ThemeIcon,
-  Title,
   UnstyledButton,
 } from "@mantine/core";
 import {
@@ -22,118 +20,69 @@ import { useNavigate } from "react-router-dom";
 interface QuickAction {
   icon: React.ElementType;
   label: string;
-  description: string;
   color: string;
+  bgColor: string;
   path: string;
 }
 
 const quickActions: QuickAction[] = [
-  {
-    icon: IconUserPlus,
-    label: "Nuevo Cliente",
-    description: "Añadir cliente",
-    color: "blue",
-    path: "/clients?action=new",
-  },
-  {
-    icon: IconCalendarPlus,
-    label: "Nueva Sesión",
-    description: "Programar sesión",
-    color: "teal",
-    path: "/calendar?action=new",
-  },
-  {
-    icon: IconBarbell,
-    label: "Crear Rutina",
-    description: "Nuevo entrenamiento",
-    color: "orange",
-    path: "/workouts?action=new",
-  },
-  {
-    icon: IconSalad,
-    label: "Plan Nutricional",
-    description: "Crear plan",
-    color: "green",
-    path: "/nutrition?action=new",
-  },
-  {
-    icon: IconMessage,
-    label: "Enviar Mensaje",
-    description: "Chat con cliente",
-    color: "violet",
-    path: "/chat",
-  },
-  {
-    icon: IconCreditCard,
-    label: "Nuevo Pago",
-    description: "Registrar pago",
-    color: "pink",
-    path: "/payments?action=new",
-  },
-  {
-    icon: IconForms,
-    label: "Enviar Formulario",
-    description: "Asignar formulario",
-    color: "cyan",
-    path: "/forms?action=send",
-  },
-  {
-    icon: IconRobot,
-    label: "Automatización",
-    description: "Crear workflow",
-    color: "grape",
-    path: "/automations?action=new",
-  },
+  { icon: IconUserPlus, label: "Nuevo Cliente", color: "var(--nv-primary)", bgColor: "var(--nv-primary-glow)", path: "/clients?action=new" },
+  { icon: IconCalendarPlus, label: "Agendar", color: "var(--nv-success)", bgColor: "var(--nv-success-bg)", path: "/calendar?action=new" },
+  { icon: IconBarbell, label: "Entrenamiento", color: "var(--nv-warning)", bgColor: "var(--nv-warning-bg)", path: "/workouts?action=new" },
+  { icon: IconMessage, label: "Mensaje", color: "#8b5cf6", bgColor: "rgba(139, 92, 246, 0.1)", path: "/chat" },
 ];
 
 export function QuickActionsWidget() {
   const navigate = useNavigate();
 
   return (
-    <Paper p="md" radius="md" withBorder>
-      <Title mb="md" order={5}>
-        Acciones Rápidas
-      </Title>
+    <Box className="premium-card" p="lg">
+      <Text className="text-label" mb="md">Acciones Rápidas</Text>
 
-      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+      <SimpleGrid cols={2} spacing="sm">
         {quickActions.map((action) => (
           <UnstyledButton
             key={action.path}
             onClick={() => navigate(action.path)}
             style={{
-              padding: 12,
-              borderRadius: 8,
-              transition: "background-color 0.2s",
+              padding: "12px",
+              borderRadius: "12px",
+              transition: "all 0.2s",
+              backgroundColor: "var(--nv-surface-subtle)",
+              border: "1px solid transparent"
             }}
-            styles={{
-              root: {
-                "&:hover": {
-                  backgroundColor: "var(--mantine-color-gray-0)",
-                },
-              },
-            }}
+            className="quick-action-btn"
           >
-            <Group gap="xs" wrap="nowrap">
-              <ThemeIcon
-                color={action.color}
-                radius="md"
-                size="lg"
-                variant="light"
+            <Group gap="sm" wrap="nowrap">
+              <Box
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "8px",
+                  backgroundColor: action.bgColor,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <action.icon size={18} />
-              </ThemeIcon>
-              <div>
-                <Text fw={500} size="sm">
-                  {action.label}
-                </Text>
-                <Text c="dimmed" size="xs">
-                  {action.description}
-                </Text>
-              </div>
+                <action.icon size={16} style={{ color: action.color }} />
+              </Box>
+              <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>
+                {action.label}
+              </Text>
             </Group>
           </UnstyledButton>
         ))}
       </SimpleGrid>
-    </Paper>
+
+      <style>{`
+        .quick-action-btn:hover {
+          background-color: var(--nv-surface) !important;
+          border-color: var(--border-medium) !important;
+          box-shadow: var(--shadow-sm);
+          transform: translateY(-1px);
+        }
+      `}</style>
+    </Box>
   );
 }

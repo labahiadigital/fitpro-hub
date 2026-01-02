@@ -1,13 +1,10 @@
 import {
   ActionIcon,
-  Badge,
+  Box,
   Group,
-  Paper,
   ScrollArea,
   Stack,
   Text,
-  ThemeIcon,
-  Title,
 } from "@mantine/core";
 import {
   IconCalendarDue,
@@ -32,83 +29,89 @@ interface AlertsWidgetProps {
 }
 
 const alertConfig = {
-  payment_due: { icon: IconCreditCard, color: "red" },
-  inactive_client: { icon: IconUserOff, color: "orange" },
-  renewal_soon: { icon: IconCalendarDue, color: "yellow" },
-  form_pending: { icon: IconForms, color: "blue" },
+  payment_due: { icon: IconCreditCard, color: "#EF4444", bgColor: "rgba(239, 68, 68, 0.1)" },
+  inactive_client: { icon: IconUserOff, color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.1)" },
+  renewal_soon: { icon: IconCalendarDue, color: "#E7E247", bgColor: "rgba(231, 226, 71, 0.1)" },
+  form_pending: { icon: IconForms, color: "#5C80BC", bgColor: "rgba(92, 128, 188, 0.1)" },
 };
 
 export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
-  if (alerts.length === 0) {
-    return (
-      <Paper p="md" radius="md" withBorder>
-        <Group justify="space-between" mb="md">
-          <Title order={5}>Alertas</Title>
-          <Badge color="green" variant="light">
-            Todo bien
-          </Badge>
-        </Group>
-        <Text c="dimmed" py="xl" size="sm" ta="center">
-          No hay alertas pendientes 🎉
-        </Text>
-      </Paper>
-    );
-  }
-
   return (
-    <Paper p="md" radius="md" withBorder>
-      <Group justify="space-between" mb="md">
-        <Title order={5}>Alertas</Title>
-        <Badge color="red" variant="filled">
-          {alerts.length}
-        </Badge>
-      </Group>
+    <Box className="premium-card" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Box p="lg" pb="xs">
+         <Group justify="space-between">
+            <Text className="text-label">Action Required</Text>
+            {alerts.length > 0 && (
+               <Box 
+                 className="pill-badge" 
+                 style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)" }}
+               >
+                 {alerts.length} Pending
+               </Box>
+            )}
+         </Group>
+      </Box>
 
-      <ScrollArea h={200}>
-        <Stack gap="xs">
+      <ScrollArea flex={1} p="xs">
+        <Stack gap={8}>
           {alerts.map((alert) => {
             const config = alertConfig[alert.type];
             const Icon = config.icon;
 
             return (
-              <Paper
+              <Box
                 key={alert.id}
                 onClick={() => onAlertClick?.(alert)}
                 p="sm"
-                radius="sm"
-                style={{ cursor: onAlertClick ? "pointer" : "default" }}
-                withBorder
+                style={{
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  border: "1px solid transparent",
+                }}
+                className="alert-item-hover"
               >
                 <Group justify="space-between" wrap="nowrap">
                   <Group gap="sm" wrap="nowrap">
-                    <ThemeIcon
-                      color={config.color}
-                      radius="xl"
-                      size="md"
-                      variant="light"
+                    <Box
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "10px",
+                        backgroundColor: config.bgColor,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
                     >
-                      <Icon size={14} />
-                    </ThemeIcon>
-                    <div style={{ minWidth: 0 }}>
-                      <Text fw={500} size="sm" truncate>
+                      <Icon size={18} style={{ color: config.color }} stroke={2} />
+                    </Box>
+                    <Box style={{ minWidth: 0 }}>
+                      <Text fw={600} size="sm" c="var(--nv-dark)">
                         {alert.title}
                       </Text>
-                      <Text c="dimmed" size="xs" truncate>
+                      <Text c="dimmed" size="xs" lineClamp={1}>
                         {alert.description}
                       </Text>
-                    </div>
+                    </Box>
                   </Group>
                   {onAlertClick && (
-                    <ActionIcon size="sm" variant="subtle">
-                      <IconChevronRight size={14} />
-                    </ActionIcon>
+                    <IconChevronRight size={14} color="var(--nv-slate-light)" />
                   )}
                 </Group>
-              </Paper>
+              </Box>
             );
           })}
         </Stack>
       </ScrollArea>
-    </Paper>
+      <style>{`
+         .alert-item-hover:hover {
+            background-color: var(--nv-surface-subtle);
+            border-color: var(--border-subtle);
+            transform: translateX(4px);
+         }
+      `}</style>
+    </Box>
   );
 }

@@ -1,156 +1,94 @@
-import {
-  Badge,
-  Group,
-  Paper,
-  Text,
-  Title,
-  useMantineTheme,
-} from "@mantine/core";
-import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react";
-
-interface GrowthData {
-  month: string;
-  total: number;
-  new: number;
-  churned: number;
-}
+import { Box, Group, RingProgress, Text } from "@mantine/core";
 
 interface ClientGrowthChartProps {
-  data: GrowthData[];
+  data: any[];
   totalClients: number;
   newThisMonth: number;
   churnedThisMonth: number;
 }
 
 export function ClientGrowthChart({
-  data,
   totalClients,
   newThisMonth,
   churnedThisMonth,
 }: ClientGrowthChartProps) {
-  const theme = useMantineTheme();
-  const netGrowth = newThisMonth - churnedThisMonth;
-  const isPositive = netGrowth >= 0;
-
-  const maxClients = Math.max(...data.map((d) => d.total), 1);
+  // Distribution Data Simulation
+  const enterprise = 45;
+  const pro = 35;
+  const basic = 20;
 
   return (
-    <Paper p="md" radius="md" withBorder>
-      <Group justify="space-between" mb="md">
-        <div>
-          <Text c="dimmed" fw={500} size="sm">
-            Clientes Activos
-          </Text>
-          <Group align="baseline" gap="xs">
-            <Title order={2}>{totalClients}</Title>
-            <Badge
-              color={isPositive ? "teal" : "red"}
-              leftSection={
-                isPositive ? (
-                  <IconTrendingUp size={12} />
-                ) : (
-                  <IconTrendingDown size={12} />
-                )
-              }
-              variant="light"
-            >
-              {isPositive ? "+" : ""}
-              {netGrowth} este mes
-            </Badge>
-          </Group>
-        </div>
-        <Group gap="lg">
-          <div style={{ textAlign: "center" }}>
-            <Text c="dimmed" size="xs">
-              Nuevos
-            </Text>
-            <Text c="teal" fw={600} size="lg">
-              +{newThisMonth}
-            </Text>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <Text c="dimmed" size="xs">
-              Bajas
-            </Text>
-            <Text c="red" fw={600} size="lg">
-              -{churnedThisMonth}
-            </Text>
-          </div>
-        </Group>
+    <Box className="premium-card" p="xl" style={{ height: "100%", minHeight: 400 }}>
+      <Text className="text-label" mb="xl">Customer Segments</Text>
+
+      <Group justify="center" align="center" style={{ height: 240, position: "relative" }}>
+        {/* Multi-layered Ring Chart */}
+        <Box style={{ position: "relative" }}>
+          <RingProgress
+            size={240}
+            thickness={24}
+            roundCaps
+            sections={[
+              { value: enterprise, color: "var(--nv-accent)" },
+              { value: pro, color: "var(--nv-primary)" },
+              { value: basic, color: "var(--nv-dark)" },
+            ]}
+            label={
+              <Box style={{ textAlign: "center" }}>
+                <Text size="xs" c="dimmed" tt="uppercase" ls={1}>Total</Text>
+                <Text className="text-display" style={{ fontSize: "2.5rem" }}>{totalClients}</Text>
+                <Text size="sm" c="var(--nv-success)" fw={600}>+{newThisMonth} new</Text>
+              </Box>
+            }
+          />
+          
+          {/* Decorative outer glow ring */}
+          <Box 
+            style={{
+              position: "absolute",
+              top: -10, left: -10, right: -10, bottom: -10,
+              border: "1px solid rgba(0,0,0,0.05)",
+              borderRadius: "50%",
+              zIndex: -1
+            }}
+          />
+        </Box>
       </Group>
 
-      {/* Area chart simulation */}
-      <div style={{ position: "relative", height: 120, marginTop: 16 }}>
-        <svg
-          height="100%"
-          preserveAspectRatio="none"
-          viewBox="0 0 100 100"
-          width="100%"
-        >
-          <defs>
-            <linearGradient
-              id="clientGradient"
-              x1="0%"
-              x2="0%"
-              y1="0%"
-              y2="100%"
-            >
-              <stop
-                offset="0%"
-                stopColor={theme.colors.blue[5]}
-                stopOpacity="0.3"
-              />
-              <stop
-                offset="100%"
-                stopColor={theme.colors.blue[5]}
-                stopOpacity="0"
-              />
-            </linearGradient>
-          </defs>
-          <path
-            d={`M 0 100 ${data
-              .map((d, i) => {
-                const x = (i / (data.length - 1)) * 100;
-                const y = 100 - (d.total / maxClients) * 80;
-                return `L ${x} ${y}`;
-              })
-              .join(" ")} L 100 100 Z`}
-            fill="url(#clientGradient)"
-          />
-          <path
-            d={`M ${data
-              .map((d, i) => {
-                const x = (i / (data.length - 1)) * 100;
-                const y = 100 - (d.total / maxClients) * 80;
-                return `${i === 0 ? "" : "L "}${x} ${y}`;
-              })
-              .join(" ")}`}
-            fill="none"
-            stroke={theme.colors.blue[5]}
-            strokeWidth="2"
-          />
-          {data.map((d, i) => {
-            const x = (i / (data.length - 1)) * 100;
-            const y = 100 - (d.total / maxClients) * 80;
-            return (
-              <circle cx={x} cy={y} fill={theme.colors.blue[5]} key={i} r="3" />
-            );
-          })}
-        </svg>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: 8,
-          }}
-        >
-          {data.map((item, index) => (
-            <Text c="dimmed" key={index} size="xs">
-              {item.month}
-            </Text>
-          ))}
-        </div>
-      </div>
-    </Paper>
+      {/* Legend Grid */}
+      <Box mt="xl">
+        <Group justify="space-between" px="lg">
+          <Box style={{ textAlign: "center" }}>
+            <Group gap={6} justify="center" mb={4}>
+              <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-accent)" }} />
+              <Text size="sm" fw={600}>Enterprise</Text>
+            </Group>
+            <Text size="xl" fw={700}>{enterprise}%</Text>
+          </Box>
+          
+          <Box style={{ width: 1, height: 40, background: "rgba(0,0,0,0.1)" }} />
+
+          <Box style={{ textAlign: "center" }}>
+            <Group gap={6} justify="center" mb={4}>
+              <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-primary)" }} />
+              <Text size="sm" fw={600}>Pro</Text>
+            </Group>
+            <Text size="xl" fw={700}>{pro}%</Text>
+          </Box>
+
+          <Box style={{ width: 1, height: 40, background: "rgba(0,0,0,0.1)" }} />
+
+          <Box style={{ textAlign: "center" }}>
+            <Group gap={6} justify="center" mb={4}>
+              <Box w={8} h={8} style={{ borderRadius: "2px", background: "var(--nv-dark)" }} />
+              <Text size="sm" fw={600}>Basic</Text>
+            </Group>
+            <Text size="xl" fw={700}>{basic}%</Text>
+          </Box>
+        </Group>
+      </Box>
+    </Box>
   );
 }
+
+export const ClientTrendChart = ClientGrowthChart;

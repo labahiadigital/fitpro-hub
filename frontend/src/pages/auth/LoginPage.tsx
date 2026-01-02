@@ -6,7 +6,6 @@ import {
   Checkbox,
   Divider,
   Group,
-  Paper,
   PasswordInput,
   Stack,
   Text,
@@ -18,6 +17,9 @@ import { useForm } from "@mantine/form";
 import {
   IconAlertCircle,
   IconBarbell,
+  IconChevronRight,
+  IconMail,
+  IconLock,
   IconSparkles,
   IconUser,
 } from "@tabler/icons-react";
@@ -86,143 +88,249 @@ export function LoginPage() {
     navigate("/dashboard");
   };
 
+  const inputStyles = {
+    input: {
+      background: "rgba(255, 255, 255, 0.03)",
+      border: "1px solid rgba(255, 255, 255, 0.1)",
+      color: "white",
+      borderRadius: 12,
+      padding: "12px 16px",
+      paddingLeft: 44,
+      height: 48,
+      fontSize: 14,
+      transition: "all 0.2s ease",
+      "&:focus": {
+        borderColor: "var(--nv-accent)",
+        background: "rgba(255, 255, 255, 0.05)",
+      },
+      "&::placeholder": {
+        color: "rgba(255, 255, 255, 0.4)",
+      },
+    },
+    label: {
+      color: "rgba(255, 255, 255, 0.7)",
+      fontSize: 13,
+      fontWeight: 500,
+      marginBottom: 6,
+    },
+    section: {
+      color: "rgba(255, 255, 255, 0.4)",
+    },
+  };
+
   return (
-    <Paper bg="transparent" p="xl" radius="md" withBorder={false}>
-      <Stack gap="md">
-        <Title fw={700} order={2} ta="center">
+    <Stack gap="lg">
+      <Box ta="center">
+        <Title
+          order={2}
+          c="white"
+          fw={700}
+          style={{ letterSpacing: "-0.02em" }}
+        >
           Inicia sesión
         </Title>
-        <Text c="dimmed" size="sm" ta="center">
+        <Text c="gray.5" size="sm" mt={4}>
           Accede a tu cuenta de Trackfiz
         </Text>
+      </Box>
 
-        {error && (
-          <Alert
-            color="red"
-            icon={<IconAlertCircle size={16} />}
-            variant="light"
+      {error && (
+        <Alert
+          color="red"
+          icon={<IconAlertCircle size={16} />}
+          variant="light"
+          radius="lg"
+          style={{
+            background: "rgba(255, 87, 87, 0.1)",
+            border: "1px solid rgba(255, 87, 87, 0.2)",
+          }}
+        >
+          <Text size="sm" c="red.4">{error}</Text>
+        </Alert>
+      )}
+
+      <form onSubmit={form.onSubmit(handleSubmit)}>
+        <Stack gap="md">
+          <TextInput
+            label="Email"
+            placeholder="tu@email.com"
+            required
+            leftSection={<IconMail size={18} />}
+            styles={inputStyles}
+            {...form.getInputProps("email")}
+          />
+
+          <PasswordInput
+            label="Contraseña"
+            placeholder="Tu contraseña"
+            required
+            leftSection={<IconLock size={18} />}
+            styles={inputStyles}
+            {...form.getInputProps("password")}
+          />
+
+          <Group justify="space-between">
+            <Checkbox
+              label="Recordarme"
+              styles={{
+                label: { color: "rgba(255, 255, 255, 0.6)", fontSize: 13 },
+                input: {
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  "&:checked": {
+                    background: "var(--nv-accent)",
+                    borderColor: "var(--nv-accent)",
+                  },
+                },
+              }}
+              {...form.getInputProps("remember", { type: "checkbox" })}
+            />
+            <Anchor
+              component={Link}
+              size="sm"
+              to="/forgot-password"
+              c="var(--nv-accent)"
+              style={{ fontSize: 13 }}
+            >
+              ¿Olvidaste tu contraseña?
+            </Anchor>
+          </Group>
+
+          <Button
+            fullWidth
+            loading={loading}
+            type="submit"
+            size="lg"
+            rightSection={<IconChevronRight size={18} />}
+            style={{
+              background: "var(--nv-accent)",
+              color: "#1a1a2e",
+              fontWeight: 600,
+              height: 48,
+              borderRadius: 12,
+              fontSize: 15,
+              boxShadow: "0 4px 16px rgba(212, 175, 55, 0.25)",
+            }}
           >
-            {error}
-          </Alert>
-        )}
+            Iniciar Sesión
+          </Button>
 
-        <form onSubmit={form.onSubmit(handleSubmit)}>
-          <Stack gap="md">
-            <TextInput
-              label="Email"
-              placeholder="tu@email.com"
-              required
-              {...form.getInputProps("email")}
-            />
+          <Divider
+            label={
+              <Group gap={6}>
+                <IconSparkles size={14} color="var(--nv-accent)" />
+                <Text size="xs" c="gray.5">Prueba la demo</Text>
+              </Group>
+            }
+            labelPosition="center"
+            color="rgba(255, 255, 255, 0.1)"
+            my="xs"
+          />
 
-            <PasswordInput
-              label="Contraseña"
-              placeholder="Tu contraseña"
-              required
-              {...form.getInputProps("password")}
-            />
-
-            <Group justify="space-between">
-              <Checkbox
-                label="Recordarme"
-                {...form.getInputProps("remember", { type: "checkbox" })}
-              />
-              <Anchor component={Link} size="sm" to="/forgot-password">
-                ¿Olvidaste tu contraseña?
-              </Anchor>
-            </Group>
-
-            <Button fullWidth loading={loading} type="submit">
-              Iniciar Sesión
+          {/* Demo buttons */}
+          <Stack gap="sm">
+            <Button
+              fullWidth
+              variant="outline"
+              onClick={handleDemoTrainer}
+              leftSection={
+                <ThemeIcon
+                  radius="xl"
+                  size="md"
+                  style={{
+                    background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                    color: "#1a1a2e",
+                  }}
+                >
+                  <IconBarbell size={14} />
+                </ThemeIcon>
+              }
+              styles={{
+                root: {
+                  height: "auto",
+                  padding: "14px 16px",
+                  borderColor: "rgba(255, 255, 255, 0.1)",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  borderRadius: 12,
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    background: "rgba(67, 233, 123, 0.1)",
+                    borderColor: "rgba(67, 233, 123, 0.3)",
+                  },
+                },
+                inner: {
+                  justifyContent: "flex-start",
+                },
+              }}
+            >
+              <Box>
+                <Text fw={600} size="sm" c="white">
+                  Demo Entrenador
+                </Text>
+                <Text c="gray.5" size="xs">
+                  Gestiona clientes, entrenamientos y pagos
+                </Text>
+              </Box>
             </Button>
 
-            <Divider
-              label={
-                <Group gap={6}>
-                  <IconSparkles size={14} />
-                  <Text size="xs">Prueba la demo</Text>
-                </Group>
+            <Button
+              fullWidth
+              variant="outline"
+              onClick={handleDemoClient}
+              leftSection={
+                <ThemeIcon
+                  radius="xl"
+                  size="md"
+                  style={{
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "white",
+                  }}
+                >
+                  <IconUser size={14} />
+                </ThemeIcon>
               }
-              labelPosition="center"
-            />
-
-            {/* Demo buttons */}
-            <Stack gap="xs">
-              <Button
-                color="teal"
-                fullWidth
-                leftSection={
-                  <ThemeIcon color="teal" radius="xl" size="sm" variant="light">
-                    <IconBarbell size={14} />
-                  </ThemeIcon>
-                }
-                onClick={handleDemoTrainer}
-                styles={{
-                  root: {
-                    height: "auto",
-                    padding: "10px 16px",
+              styles={{
+                root: {
+                  height: "auto",
+                  padding: "14px 16px",
+                  borderColor: "rgba(255, 255, 255, 0.1)",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  borderRadius: 12,
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    background: "rgba(102, 126, 234, 0.1)",
+                    borderColor: "rgba(102, 126, 234, 0.3)",
                   },
-                  inner: {
-                    justifyContent: "flex-start",
-                  },
-                }}
-                variant="light"
-              >
-                <Box>
-                  <Text fw={600} size="sm">
-                    Demo Entrenador
-                  </Text>
-                  <Text c="dimmed" size="xs">
-                    Gestiona clientes, entrenamientos y pagos
-                  </Text>
-                </Box>
-              </Button>
-
-              <Button
-                color="violet"
-                fullWidth
-                leftSection={
-                  <ThemeIcon
-                    color="violet"
-                    radius="xl"
-                    size="sm"
-                    variant="light"
-                  >
-                    <IconUser size={14} />
-                  </ThemeIcon>
-                }
-                onClick={handleDemoClient}
-                styles={{
-                  root: {
-                    height: "auto",
-                    padding: "10px 16px",
-                  },
-                  inner: {
-                    justifyContent: "flex-start",
-                  },
-                }}
-                variant="light"
-              >
-                <Box>
-                  <Text fw={600} size="sm">
-                    Demo Cliente
-                  </Text>
-                  <Text c="dimmed" size="xs">
-                    Ve tus entrenamientos, progreso y más
-                  </Text>
-                </Box>
-              </Button>
-            </Stack>
-
-            <Text c="dimmed" size="sm" ta="center">
-              ¿No tienes cuenta?{" "}
-              <Anchor component={Link} fw={500} to="/register">
-                Regístrate
-              </Anchor>
-            </Text>
+                },
+                inner: {
+                  justifyContent: "flex-start",
+                },
+              }}
+            >
+              <Box>
+                <Text fw={600} size="sm" c="white">
+                  Demo Cliente
+                </Text>
+                <Text c="gray.5" size="xs">
+                  Ve tus entrenamientos, progreso y más
+                </Text>
+              </Box>
+            </Button>
           </Stack>
-        </form>
-      </Stack>
-    </Paper>
+
+          <Text c="gray.5" size="sm" ta="center" mt="xs">
+            ¿No tienes cuenta?{" "}
+            <Anchor
+              component={Link}
+              fw={600}
+              to="/register"
+              c="var(--nv-accent)"
+            >
+              Regístrate
+            </Anchor>
+          </Text>
+        </Stack>
+      </form>
+    </Stack>
   );
 }

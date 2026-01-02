@@ -4,15 +4,14 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   Center,
+  Container,
   Divider,
   Group,
   Loader,
   Menu,
   Modal,
   NumberInput,
-  Paper,
   Progress,
   SegmentedControl,
   Select,
@@ -23,7 +22,6 @@ import {
   TextInput,
   Textarea,
   ThemeIcon,
-  Title,
   Tooltip,
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
@@ -49,7 +47,6 @@ import {
 import dayjs from "dayjs";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
-import { StatsCard } from "../../components/common/StatsCard";
 import { useLiveClasses, useLiveClassStats } from "../../hooks/useLiveClasses";
 
 // Tipos
@@ -111,152 +108,151 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
     (liveClass.current_participants / liveClass.max_participants) * 100;
 
   return (
-    <Card
-      shadow="sm"
-      padding="lg"
-      radius="md"
-      withBorder
-      style={{ height: "100%" }}
+    <Box
+      className="nv-card"
+      style={{ height: "100%", display: "flex", flexDirection: "column" }}
     >
-      <Card.Section>
-        <Box
-          h={120}
-          style={{
-            background: liveClass.thumbnail_url
-              ? `url(${liveClass.thumbnail_url}) center/cover`
-              : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            position: "relative",
-          }}
+      <Box
+        h={120}
+        style={{
+          background: liveClass.thumbnail_url
+            ? `url(${liveClass.thumbnail_url}) center/cover`
+            : "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
+          position: "relative",
+          borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
+        }}
+      >
+        <Badge
+          color={statusColors[liveClass.status]}
+          variant="filled"
+          style={{ position: "absolute", top: 10, right: 10 }}
         >
-          <Badge
-            color={statusColors[liveClass.status]}
-            variant="filled"
-            style={{ position: "absolute", top: 10, right: 10 }}
+          {statusLabels[liveClass.status]}
+        </Badge>
+        {liveClass.status === "live" && (
+          <Box
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              animation: "pulse 2s infinite",
+            }}
           >
-            {statusLabels[liveClass.status]}
-          </Badge>
-          {liveClass.status === "live" && (
-            <Box
-              style={{
-                position: "absolute",
-                top: 10,
-                left: 10,
-                animation: "pulse 2s infinite",
-              }}
-            >
-              <Badge color="red" variant="filled" leftSection={<IconVideo size={12} />}>
-                EN VIVO
-              </Badge>
-            </Box>
-          )}
-        </Box>
-      </Card.Section>
+            <Badge color="red" variant="filled" leftSection={<IconVideo size={12} />}>
+              EN VIVO
+            </Badge>
+          </Box>
+        )}
+      </Box>
 
-      <Stack gap="xs" mt="md">
-        <Group justify="space-between" wrap="nowrap">
-          <Text fw={600} lineClamp={1}>
-            {liveClass.title}
-          </Text>
-          <Menu shadow="md" width={200}>
-            <Menu.Target>
-              <ActionIcon variant="subtle" size="sm">
-                <IconDotsVertical size={16} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item leftSection={<IconEdit size={14} />}>Editar</Menu.Item>
-              {liveClass.meeting_url && (
-                <Menu.Item
-                  leftSection={<IconCopy size={14} />}
-                  onClick={() => {
-                    navigator.clipboard.writeText(liveClass.meeting_url || "");
-                    notifications.show({
-                      title: "Copiado",
-                      message: "Enlace copiado al portapapeles",
-                      color: "green",
-                    });
-                  }}
-                >
-                  Copiar enlace
-                </Menu.Item>
-              )}
-              <Menu.Divider />
-              <Menu.Item color="red" leftSection={<IconTrash size={14} />}>
-                Eliminar
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
-
-        <Group gap="xs">
-          <Badge size="xs" variant="light">
-            {typeLabels[liveClass.class_type]}
-          </Badge>
-          <Badge size="xs" variant="light" color="grape">
-            {difficultyLabels[liveClass.difficulty_level]}
-          </Badge>
-        </Group>
-
-        <Group gap="xs">
-          <IconCalendar size={14} style={{ opacity: 0.7 }} />
-          <Text size="sm" c="dimmed">
-            {dayjs(liveClass.scheduled_start).format("DD MMM YYYY")}
-          </Text>
-          <IconClock size={14} style={{ opacity: 0.7 }} />
-          <Text size="sm" c="dimmed">
-            {dayjs(liveClass.scheduled_start).format("HH:mm")} -{" "}
-            {dayjs(liveClass.scheduled_end).format("HH:mm")}
-          </Text>
-        </Group>
-
-        <Box>
-          <Group justify="space-between" mb={4}>
-            <Text size="xs" c="dimmed">
-              Participantes
+      <Box p="lg" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <Stack gap="xs" style={{ flex: 1 }}>
+          <Group justify="space-between" wrap="nowrap">
+            <Text fw={600} lineClamp={1} style={{ fontFamily: "var(--font-heading)" }}>
+              {liveClass.title}
             </Text>
-            <Text size="xs" fw={500}>
-              {liveClass.current_participants}/{liveClass.max_participants}
+            <Menu shadow="md" width={200}>
+              <Menu.Target>
+                <ActionIcon variant="subtle" size="sm" color="gray">
+                  <IconDotsVertical size={16} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<IconEdit size={14} />}>Editar</Menu.Item>
+                {liveClass.meeting_url && (
+                  <Menu.Item
+                    leftSection={<IconCopy size={14} />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(liveClass.meeting_url || "");
+                      notifications.show({
+                        title: "Copiado",
+                        message: "Enlace copiado al portapapeles",
+                        color: "green",
+                      });
+                    }}
+                  >
+                    Copiar enlace
+                  </Menu.Item>
+                )}
+                <Menu.Divider />
+                <Menu.Item color="red" leftSection={<IconTrash size={14} />}>
+                  Eliminar
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+
+          <Group gap="xs">
+            <Badge size="xs" variant="light" color="var(--nv-primary)">
+              {typeLabels[liveClass.class_type]}
+            </Badge>
+            <Badge size="xs" variant="light" color="grape">
+              {difficultyLabels[liveClass.difficulty_level]}
+            </Badge>
+          </Group>
+
+          <Group gap="xs">
+            <IconCalendar size={14} style={{ opacity: 0.7 }} />
+            <Text size="sm" c="dimmed">
+              {dayjs(liveClass.scheduled_start).format("DD MMM YYYY")}
+            </Text>
+            <IconClock size={14} style={{ opacity: 0.7 }} />
+            <Text size="sm" c="dimmed">
+              {dayjs(liveClass.scheduled_start).format("HH:mm")} -{" "}
+              {dayjs(liveClass.scheduled_end).format("HH:mm")}
             </Text>
           </Group>
-          <Progress
-            value={occupancyPercent}
-            color={occupancyPercent > 80 ? "red" : occupancyPercent > 50 ? "yellow" : "green"}
-            size="sm"
-            radius="xl"
-          />
-        </Box>
 
-        <Divider />
+          <Box>
+            <Group justify="space-between" mb={4}>
+              <Text size="xs" c="dimmed">
+                Participantes
+              </Text>
+              <Text size="xs" fw={500}>
+                {liveClass.current_participants}/{liveClass.max_participants}
+              </Text>
+            </Group>
+            <Progress
+              value={occupancyPercent}
+              color={occupancyPercent > 80 ? "red" : occupancyPercent > 50 ? "yellow" : "var(--nv-success)"}
+              size="sm"
+              radius="xl"
+            />
+          </Box>
 
-        <Group justify="space-between">
-          <Text fw={600} size="lg">
-            {liveClass.is_free ? (
-              <Badge color="green" variant="light">
-                Gratis
-              </Badge>
-            ) : (
-              `${liveClass.price}${liveClass.currency}`
-            )}
-          </Text>
-          {liveClass.status === "live" && liveClass.meeting_url ? (
-            <Button
-              size="xs"
-              color="red"
-              leftSection={<IconVideo size={14} />}
-              component="a"
-              href={liveClass.meeting_url}
-              target="_blank"
-            >
-              Unirse
-            </Button>
-          ) : liveClass.status === "scheduled" ? (
-            <Button size="xs" variant="light">
-              Ver detalles
-            </Button>
-          ) : null}
-        </Group>
-      </Stack>
-    </Card>
+          <Divider />
+
+          <Group justify="space-between">
+            <Text fw={600} size="lg" style={{ color: "var(--nv-primary)" }}>
+              {liveClass.is_free ? (
+                <Badge color="var(--nv-success)" variant="light">
+                  Gratis
+                </Badge>
+              ) : (
+                `${liveClass.price}${liveClass.currency}`
+              )}
+            </Text>
+            {liveClass.status === "live" && liveClass.meeting_url ? (
+              <Button
+                size="xs"
+                color="red"
+                leftSection={<IconVideo size={14} />}
+                component="a"
+                href={liveClass.meeting_url}
+                target="_blank"
+                className="nv-button"
+              >
+                Unirse
+              </Button>
+            ) : liveClass.status === "scheduled" ? (
+              <Button size="xs" variant="light" className="nv-button">
+                Ver detalles
+              </Button>
+            ) : null}
+          </Group>
+        </Stack>
+      </Box>
+    </Box>
   );
 }
 
@@ -279,19 +275,19 @@ function ClassRow({ liveClass }: { liveClass: LiveClass }) {
   };
 
   return (
-    <Paper p="md" withBorder radius="md" mb="sm">
+    <Box className="nv-card" p="md" mb="sm">
       <Group justify="space-between" wrap="nowrap">
         <Group gap="md" wrap="nowrap" style={{ flex: 1 }}>
           <Avatar
             size={50}
             radius="md"
             src={liveClass.thumbnail_url}
-            color="violet"
+            color="var(--nv-primary)"
           >
             <IconVideo size={24} />
           </Avatar>
           <Box style={{ flex: 1 }}>
-            <Text fw={500} lineClamp={1}>
+            <Text fw={500} lineClamp={1} style={{ fontFamily: "var(--font-heading)" }}>
               {liveClass.title}
             </Text>
             <Group gap="xs">
@@ -325,7 +321,7 @@ function ClassRow({ liveClass }: { liveClass: LiveClass }) {
           </Text>
           <Menu shadow="md" width={200}>
             <Menu.Target>
-              <ActionIcon variant="subtle">
+              <ActionIcon variant="subtle" color="gray">
                 <IconDotsVertical size={16} />
               </ActionIcon>
             </Menu.Target>
@@ -344,7 +340,7 @@ function ClassRow({ liveClass }: { liveClass: LiveClass }) {
           </Menu>
         </Group>
       </Group>
-    </Paper>
+    </Box>
   );
 }
 
@@ -389,6 +385,10 @@ function CreateClassModal({
       onClose={onClose}
       title="Nueva Clase en Vivo"
       size="lg"
+      styles={{
+        header: { borderBottom: "1px solid var(--nv-border)" },
+        title: { fontFamily: "var(--font-heading)", fontWeight: 600 },
+      }}
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
@@ -497,10 +497,10 @@ function CreateClassModal({
           />
 
           <Group justify="flex-end" mt="md">
-            <Button variant="light" onClick={onClose}>
+            <Button variant="default" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" leftSection={<IconPlus size={16} />}>
+            <Button type="submit" leftSection={<IconPlus size={16} />} className="nv-button">
               Crear Clase
             </Button>
           </Group>
@@ -602,12 +602,12 @@ export function LiveClassesPage() {
       : displayClasses.filter((c) => c.status === statusFilter);
 
   return (
-    <>
+    <Container py="xl" size="xl">
       <PageHeader
         title="Clases en Vivo"
         description="Gestiona tus clases online y sesiones grupales"
         action={
-          <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
+          <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal} className="nv-button">
             Nueva Clase
           </Button>
         }
@@ -615,34 +615,62 @@ export function LiveClassesPage() {
 
       {/* Estadísticas */}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl">
-        <StatsCard
-          title="Clases Programadas"
-          value={stats?.upcoming_classes || 3}
-          icon={<IconCalendarEvent size={24} />}
-          color="blue"
-        />
-        <StatsCard
-          title="En Vivo Ahora"
-          value={displayClasses.filter((c) => c.status === "live").length}
-          icon={<IconVideo size={24} />}
-          color="red"
-        />
-        <StatsCard
-          title="Participantes Totales"
-          value={stats?.total_participants || 80}
-          icon={<IconUsers size={24} />}
-          color="green"
-        />
-        <StatsCard
-          title="Ingresos del Mes"
-          value={`${stats?.total_revenue || 450}€`}
-          icon={<IconCalendar size={24} />}
-          color="grape"
-        />
+        <Box className="nv-card" p="lg">
+          <Group justify="space-between">
+            <Box>
+              <Text className="text-label" mb="xs">Clases Programadas</Text>
+              <Text className="text-display" style={{ fontSize: "2rem" }}>
+                {stats?.upcoming_classes || 3}
+              </Text>
+            </Box>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}>
+              <IconCalendarEvent size={24} />
+            </ThemeIcon>
+          </Group>
+        </Box>
+        <Box className="nv-card" p="lg">
+          <Group justify="space-between">
+            <Box>
+              <Text className="text-label" mb="xs">En Vivo Ahora</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-error)" }}>
+                {displayClasses.filter((c) => c.status === "live").length}
+              </Text>
+            </Box>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)" }}>
+              <IconVideo size={24} />
+            </ThemeIcon>
+          </Group>
+        </Box>
+        <Box className="nv-card" p="lg">
+          <Group justify="space-between">
+            <Box>
+              <Text className="text-label" mb="xs">Participantes Totales</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
+                {stats?.total_participants || 80}
+              </Text>
+            </Box>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}>
+              <IconUsers size={24} />
+            </ThemeIcon>
+          </Group>
+        </Box>
+        <Box className="nv-card" p="lg">
+          <Group justify="space-between">
+            <Box>
+              <Text className="text-label" mb="xs">Ingresos del Mes</Text>
+              <Text className="text-display" style={{ fontSize: "2rem" }}>
+                {stats?.total_revenue || 450}€
+              </Text>
+            </Box>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" }}>
+              <IconCalendar size={24} />
+            </ThemeIcon>
+          </Group>
+        </Box>
       </SimpleGrid>
 
       {/* Filtros y controles */}
-      <Paper p="md" mb="lg" withBorder radius="md">
+      <Box className="nv-card" p="md" mb="lg">
         <Group justify="space-between">
           <SegmentedControl
             value={statusFilter}
@@ -653,6 +681,9 @@ export function LiveClassesPage() {
               { value: "live", label: "En vivo" },
               { value: "completed", label: "Finalizadas" },
             ]}
+            styles={{
+              root: { backgroundColor: "var(--nv-surface-subtle)" },
+            }}
           />
 
           <Group gap="xs">
@@ -660,6 +691,7 @@ export function LiveClassesPage() {
               <ActionIcon
                 variant={viewMode === "grid" ? "filled" : "light"}
                 onClick={() => setViewMode("grid")}
+                style={{ backgroundColor: viewMode === "grid" ? "var(--nv-primary)" : undefined }}
               >
                 <IconLayoutGrid size={18} />
               </ActionIcon>
@@ -668,34 +700,35 @@ export function LiveClassesPage() {
               <ActionIcon
                 variant={viewMode === "list" ? "filled" : "light"}
                 onClick={() => setViewMode("list")}
+                style={{ backgroundColor: viewMode === "list" ? "var(--nv-primary)" : undefined }}
               >
                 <IconLayoutList size={18} />
               </ActionIcon>
             </Tooltip>
           </Group>
         </Group>
-      </Paper>
+      </Box>
 
       {/* Lista de clases */}
       {isLoading ? (
         <Center h={200}>
-          <Loader size="lg" />
+          <Loader size="lg" color="var(--nv-primary)" />
         </Center>
       ) : filteredClasses.length === 0 ? (
-        <Paper p="xl" withBorder radius="md" ta="center">
+        <Box className="nv-card" p="xl" ta="center">
           <ThemeIcon size={60} radius="xl" variant="light" color="gray" mx="auto" mb="md">
             <IconVideoOff size={30} />
           </ThemeIcon>
-          <Title order={4} mb="xs">
+          <Text fw={600} mb="xs" style={{ fontFamily: "var(--font-heading)" }}>
             No hay clases
-          </Title>
+          </Text>
           <Text c="dimmed" mb="lg">
             No se encontraron clases con los filtros seleccionados
           </Text>
-          <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
+          <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal} className="nv-button">
             Crear Primera Clase
           </Button>
-        </Paper>
+        </Box>
       ) : viewMode === "grid" ? (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
           {filteredClasses.map((liveClass) => (
@@ -722,6 +755,6 @@ export function LiveClassesPage() {
           }
         `}
       </style>
-    </>
+    </Container>
   );
 }

@@ -370,86 +370,110 @@ export function PaymentsPage() {
       />
 
       {/* KPI Cards */}
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl" spacing="md">
-        <StatsCard
-          change={kpis.mrrChange}
-          changeLabel="vs mes anterior"
-          color="green"
-          icon={<IconTrendingUp size={24} />}
-          title="MRR"
-          value={`€${kpis.mrr.toLocaleString()}`}
-        />
-        <StatsCard
-          change={kpis.revenueChange}
-          changeLabel="vs mes anterior"
-          color="blue"
-          icon={<IconCash size={24} />}
-          title="Ingresos del Mes"
-          value={`€${kpis.thisMonthRevenue.toLocaleString()}`}
-        />
-        <StatsCard
-          change={5}
-          changeLabel="nuevas este mes"
-          color="grape"
-          icon={<IconUsers size={24} />}
-          title="Suscripciones Activas"
-          value={kpis.activeSubscriptions}
-        />
-        <Paper p="lg" radius="lg" withBorder>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl" spacing="md" className="stagger">
+        <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text c="dimmed" fw={600} mb={4} size="xs" tt="uppercase">
-                Pagos Pendientes
+              <Text className="text-label" mb="xs">MRR</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
+                €{kpis.mrr.toLocaleString()}
               </Text>
-              <Text
-                fw={700}
-                size="xl"
-                style={{ fontSize: "1.75rem", lineHeight: 1.2 }}
-              >
+              <Group gap={4} mt="xs">
+                <Badge size="sm" variant="light" color="green" radius="xl">
+                  +{kpis.mrrChange}%
+                </Badge>
+                <Text size="xs" c="dimmed">vs mes anterior</Text>
+              </Group>
+            </Box>
+            <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}>
+              <IconTrendingUp size={24} />
+            </ThemeIcon>
+          </Group>
+        </Box>
+        <Box className="nv-card" p="lg">
+          <Group align="flex-start" justify="space-between">
+            <Box>
+              <Text className="text-label" mb="xs">Ingresos del Mes</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-primary)" }}>
+                €{kpis.thisMonthRevenue.toLocaleString()}
+              </Text>
+              <Group gap={4} mt="xs">
+                <Badge size="sm" variant="light" color="blue" radius="xl">
+                  +{kpis.revenueChange}%
+                </Badge>
+                <Text size="xs" c="dimmed">vs mes anterior</Text>
+              </Group>
+            </Box>
+            <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}>
+              <IconCash size={24} />
+            </ThemeIcon>
+          </Group>
+        </Box>
+        <Box className="nv-card" p="lg">
+          <Group align="flex-start" justify="space-between">
+            <Box>
+              <Text className="text-label" mb="xs">Suscripciones Activas</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-brand)" }}>
+                {kpis.activeSubscriptions}
+              </Text>
+              <Group gap={4} mt="xs">
+                <Badge size="sm" variant="light" color="grape" radius="xl">
+                  +5
+                </Badge>
+                <Text size="xs" c="dimmed">nuevas este mes</Text>
+              </Group>
+            </Box>
+            <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "rgba(190, 75, 219, 0.1)", color: "var(--nv-brand)" }}>
+              <IconUsers size={24} />
+            </ThemeIcon>
+          </Group>
+        </Box>
+        <Box className="nv-card" p="lg">
+          <Group align="flex-start" justify="space-between">
+            <Box>
+              <Text className="text-label" mb="xs">Pagos Pendientes</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-warning)" }}>
                 {kpis.pendingPayments}
               </Text>
-              <Text c="orange" fw={500} mt={8} size="sm">
+              <Text c="orange" fw={500} mt="xs" size="sm">
                 €{kpis.pendingAmount} por cobrar
               </Text>
             </Box>
-            <ThemeIcon color="orange" radius="xl" size={48} variant="light">
+            <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "var(--nv-warning-bg)", color: "var(--nv-warning)" }}>
               <IconClock size={24} />
             </ThemeIcon>
           </Group>
-        </Paper>
+        </Box>
       </SimpleGrid>
 
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg">
-          <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview">
+        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
+          <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview" style={{ fontWeight: 500 }}>
             Resumen
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments">
+          <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
             Historial
           </Tabs.Tab>
-          <Tabs.Tab
-            leftSection={<IconRefresh size={14} />}
-            value="subscriptions"
-          >
+          <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
             Suscripciones
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconPackage size={14} />} value="products">
+          <Tabs.Tab leftSection={<IconPackage size={14} />} value="products" style={{ fontWeight: 500 }}>
             Productos
           </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="overview">
-          <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
+          <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg" className="stagger">
             {/* Revenue Distribution */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg">
+            <Box className="nv-card" p="lg">
+              <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Distribución de Ingresos
               </Text>
               <Group justify="center" mb="md">
                 <RingProgress
                   label={
                     <Box ta="center">
-                      <Text fw={700} size="lg">
+                      <Text fw={700} size="lg" style={{ color: "var(--nv-text-primary)" }}>
                         €8,500
                       </Text>
                       <Text c="dimmed" size="xs">
@@ -459,9 +483,9 @@ export function PaymentsPage() {
                   }
                   roundCaps
                   sections={[
-                    { value: 65, color: "blue", tooltip: "Suscripciones: 65%" },
-                    { value: 25, color: "green", tooltip: "Bonos: 25%" },
-                    { value: 10, color: "orange", tooltip: "Sesiones: 10%" },
+                    { value: 65, color: "var(--nv-primary)", tooltip: "Suscripciones: 65%" },
+                    { value: 25, color: "var(--nv-success)", tooltip: "Bonos: 25%" },
+                    { value: 10, color: "var(--nv-warning)", tooltip: "Sesiones: 10%" },
                   ]}
                   size={180}
                   thickness={20}
@@ -469,49 +493,29 @@ export function PaymentsPage() {
               </Group>
               <SimpleGrid cols={3} spacing="sm">
                 <Group gap="xs" justify="center">
-                  <Box
-                    h={12}
-                    style={{
-                      borderRadius: "50%",
-                      backgroundColor: "var(--mantine-color-blue-6)",
-                    }}
-                    w={12}
-                  />
+                  <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-primary)" }} />
                   <Text size="xs">Suscripciones (65%)</Text>
                 </Group>
                 <Group gap="xs" justify="center">
-                  <Box
-                    h={12}
-                    style={{
-                      borderRadius: "50%",
-                      backgroundColor: "var(--mantine-color-green-6)",
-                    }}
-                    w={12}
-                  />
+                  <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-success)" }} />
                   <Text size="xs">Bonos (25%)</Text>
                 </Group>
                 <Group gap="xs" justify="center">
-                  <Box
-                    h={12}
-                    style={{
-                      borderRadius: "50%",
-                      backgroundColor: "var(--mantine-color-orange-6)",
-                    }}
-                    w={12}
-                  />
+                  <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-warning)" }} />
                   <Text size="xs">Sesiones (10%)</Text>
                 </Group>
               </SimpleGrid>
-            </Paper>
+            </Box>
 
             {/* Recent Payments */}
-            <Paper p="lg" radius="lg" withBorder>
+            <Box className="nv-card" p="lg">
               <Group justify="space-between" mb="lg">
-                <Text fw={600}>Pagos Recientes</Text>
+                <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Pagos Recientes</Text>
                 <Button
                   rightSection={<IconArrowUpRight size={14} />}
                   size="xs"
                   variant="subtle"
+                  style={{ color: "var(--nv-primary)" }}
                 >
                   Ver todos
                 </Button>
@@ -520,18 +524,28 @@ export function PaymentsPage() {
                 {mockPayments.slice(0, 5).map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
                   return (
-                    <Group justify="space-between" key={payment.id}>
+                    <Group 
+                      justify="space-between" 
+                      key={payment.id}
+                      p="sm"
+                      style={{ 
+                        borderRadius: "var(--radius-item)", 
+                        transition: "background 0.2s",
+                        cursor: "pointer"
+                      }}
+                      className="hover-lift"
+                    >
                       <Group gap="sm">
                         <ThemeIcon
                           color={getStatusColor(payment.status)}
-                          radius="md"
-                          size="md"
+                          radius="xl"
+                          size="lg"
                           variant="light"
                         >
-                          <PaymentIcon size={14} />
+                          <PaymentIcon size={16} />
                         </ThemeIcon>
                         <Box>
-                          <Text fw={500} size="sm">
+                          <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                             {payment.client_name}
                           </Text>
                           <Text c="dimmed" size="xs">
@@ -540,13 +554,14 @@ export function PaymentsPage() {
                         </Box>
                       </Group>
                       <Box ta="right">
-                        <Text fw={600} size="sm">
+                        <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                           €{payment.amount}
                         </Text>
                         <Badge
                           color={getStatusColor(payment.status)}
                           size="xs"
                           variant="light"
+                          radius="xl"
                         >
                           {getStatusLabel(payment.status)}
                         </Badge>
@@ -555,11 +570,11 @@ export function PaymentsPage() {
                   );
                 })}
               </Stack>
-            </Paper>
+            </Box>
 
             {/* Upcoming Renewals */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg">
+            <Box className="nv-card" p="lg">
+              <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Próximas Renovaciones
               </Text>
               <Stack gap="sm">
@@ -567,9 +582,14 @@ export function PaymentsPage() {
                   .filter((s) => s.status === "active")
                   .slice(0, 4)
                   .map((sub) => (
-                    <Group justify="space-between" key={sub.id}>
+                    <Group 
+                      justify="space-between" 
+                      key={sub.id}
+                      p="sm"
+                      style={{ borderRadius: "var(--radius-item)" }}
+                    >
                       <Box>
-                        <Text fw={500} size="sm">
+                        <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                           {sub.client_name}
                         </Text>
                         <Text c="dimmed" size="xs">
@@ -577,7 +597,7 @@ export function PaymentsPage() {
                         </Text>
                       </Box>
                       <Box ta="right">
-                        <Text fw={600} size="sm">
+                        <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                           €{sub.amount}
                         </Text>
                         <Text c="dimmed" size="xs">
@@ -587,78 +607,70 @@ export function PaymentsPage() {
                     </Group>
                   ))}
               </Stack>
-            </Paper>
+            </Box>
 
             {/* Stripe Integration */}
-            <Paper p="lg" radius="lg" withBorder>
+            <Box className="nv-card" p="lg">
               <Group justify="space-between" mb="lg">
                 <Group gap="sm">
                   <ThemeIcon
                     color="violet"
-                    radius="md"
+                    radius="xl"
                     size="lg"
                     variant="light"
                   >
                     <IconBrandStripe size={20} />
                   </ThemeIcon>
                   <Box>
-                    <Text fw={600}>Stripe Connect</Text>
+                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Stripe Connect</Text>
                     <Text c="dimmed" size="xs">
                       Gestiona tu cuenta de pagos
                     </Text>
                   </Box>
                 </Group>
-                <Badge color="green" variant="light">
+                <Badge color="green" variant="light" radius="xl">
                   Conectado
                 </Badge>
               </Group>
               <Stack gap="sm">
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
-                    Balance disponible
-                  </Text>
-                  <Text fw={600} size="sm">
-                    €2,450.00
-                  </Text>
+                  <Text c="dimmed" size="sm">Balance disponible</Text>
+                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€2,450.00</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
-                    Pendiente de liquidación
-                  </Text>
-                  <Text fw={600} size="sm">
-                    €680.00
-                  </Text>
+                  <Text c="dimmed" size="sm">Pendiente de liquidación</Text>
+                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€680.00</Text>
                 </Group>
-                <Divider my="xs" />
-                <Button fullWidth variant="light">
+                <Divider my="xs" style={{ borderColor: "var(--nv-border)" }} />
+                <Button fullWidth variant="light" radius="xl" style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}>
                   Ir al Dashboard de Stripe
                 </Button>
               </Stack>
-            </Paper>
+            </Box>
           </SimpleGrid>
         </Tabs.Panel>
 
         <Tabs.Panel value="payments">
-          <Paper radius="lg" withBorder>
+          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
             <Table>
-              <Table.Thead>
+              <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Descripción</Table.Th>
-                  <Table.Th>Tipo</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th ta="right">Importe</Table.Th>
-                  <Table.Th ta="right">Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Cliente</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Descripción</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Tipo</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Estado</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Fecha</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Importe</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Acciones</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {mockPayments.map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
                   return (
-                    <Table.Tr key={payment.id}>
+                    <Table.Tr key={payment.id} style={{ transition: "background 0.2s" }}>
                       <Table.Td>
-                        <Text fw={500} size="sm">
+                        <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                           {payment.client_name}
                         </Text>
                       </Table.Td>
@@ -667,7 +679,7 @@ export function PaymentsPage() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs">
-                          <ThemeIcon color="gray" size="sm" variant="light">
+                          <ThemeIcon color="gray" size="sm" variant="light" radius="xl">
                             <PaymentIcon size={12} />
                           </ThemeIcon>
                           <Text size="xs">
@@ -680,33 +692,28 @@ export function PaymentsPage() {
                         </Group>
                       </Table.Td>
                       <Table.Td>
-                        <Badge
-                          color={getStatusColor(payment.status)}
-                          variant="light"
-                        >
+                        <Badge color={getStatusColor(payment.status)} variant="light" radius="xl">
                           {getStatusLabel(payment.status)}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Text c="dimmed" size="sm">
-                          {payment.created_at}
-                        </Text>
+                        <Text c="dimmed" size="sm">{payment.created_at}</Text>
                       </Table.Td>
                       <Table.Td ta="right">
-                        <Text fw={600} size="sm">
+                        <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                           €{payment.amount}
                         </Text>
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs" justify="flex-end">
-                          <ActionIcon color="blue" variant="subtle">
+                          <ActionIcon color="blue" variant="subtle" radius="xl">
                             <IconEye size={16} />
                           </ActionIcon>
-                          <ActionIcon color="gray" variant="subtle">
+                          <ActionIcon color="gray" variant="subtle" radius="xl">
                             <IconDownload size={16} />
                           </ActionIcon>
                           {payment.status === "pending" && (
-                            <ActionIcon color="green" variant="subtle">
+                            <ActionIcon color="green" variant="subtle" radius="xl">
                               <IconSend size={16} />
                             </ActionIcon>
                           )}
@@ -717,27 +724,27 @@ export function PaymentsPage() {
                 })}
               </Table.Tbody>
             </Table>
-          </Paper>
+          </Box>
         </Tabs.Panel>
 
         <Tabs.Panel value="subscriptions">
-          <Paper radius="lg" withBorder>
+          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
             <Table>
-              <Table.Thead>
+              <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Plan</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                  <Table.Th>Próxima renovación</Table.Th>
-                  <Table.Th ta="right">Importe</Table.Th>
-                  <Table.Th ta="right">Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Cliente</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Plan</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Estado</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Próxima renovación</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Importe</Table.Th>
+                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Acciones</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {mockSubscriptions.map((sub) => (
-                  <Table.Tr key={sub.id}>
+                  <Table.Tr key={sub.id} style={{ transition: "background 0.2s" }}>
                     <Table.Td>
-                      <Text fw={500} size="sm">
+                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                         {sub.client_name}
                       </Text>
                     </Table.Td>
@@ -745,32 +752,28 @@ export function PaymentsPage() {
                       <Text size="sm">{sub.plan_name}</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Badge color={getStatusColor(sub.status)} variant="light">
+                      <Badge color={getStatusColor(sub.status)} variant="light" radius="xl">
                         {getStatusLabel(sub.status)}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      <Text c="dimmed" size="sm">
-                        {sub.current_period_end}
-                      </Text>
+                      <Text c="dimmed" size="sm">{sub.current_period_end}</Text>
                       {sub.cancel_at_period_end && (
-                        <Text c="red" size="xs">
-                          Cancela al finalizar
-                        </Text>
+                        <Text c="red" size="xs">Cancela al finalizar</Text>
                       )}
                     </Table.Td>
                     <Table.Td ta="right">
-                      <Text fw={600} size="sm">
+                      <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                         €{sub.amount}/mes
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs" justify="flex-end">
-                        <ActionIcon color="blue" variant="subtle">
+                        <ActionIcon color="blue" variant="subtle" radius="xl">
                           <IconEye size={16} />
                         </ActionIcon>
                         {sub.status === "active" && (
-                          <ActionIcon color="red" variant="subtle">
+                          <ActionIcon color="red" variant="subtle" radius="xl">
                             <IconX size={16} />
                           </ActionIcon>
                         )}
@@ -780,13 +783,13 @@ export function PaymentsPage() {
                 ))}
               </Table.Tbody>
             </Table>
-          </Paper>
+          </Box>
         </Tabs.Panel>
 
         <Tabs.Panel value="products">
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg" className="stagger">
             {mockProducts.map((product) => (
-              <Card key={product.id} padding="lg" radius="lg" withBorder>
+              <Box key={product.id} className="nv-card" p="lg">
                 <Group justify="space-between" mb="sm">
                   <Badge
                     color={
@@ -797,6 +800,7 @@ export function PaymentsPage() {
                           : "orange"
                     }
                     variant="light"
+                    radius="xl"
                   >
                     {product.type === "subscription"
                       ? "Suscripción"
@@ -807,7 +811,7 @@ export function PaymentsPage() {
                   <Switch checked={product.is_active} color="green" size="sm" />
                 </Group>
 
-                <Text fw={600} mb="xs" size="lg">
+                <Text fw={600} mb="xs" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                   {product.name}
                 </Text>
                 <Text c="dimmed" mb="md" size="sm">
@@ -815,16 +819,16 @@ export function PaymentsPage() {
                 </Text>
 
                 {product.sessions_included && (
-                  <Badge mb="md" variant="outline">
+                  <Badge mb="md" variant="outline" radius="xl">
                     {product.sessions_included} sesiones incluidas
                   </Badge>
                 )}
 
-                <Divider mb="md" />
+                <Divider mb="md" style={{ borderColor: "var(--nv-border)" }} />
 
                 <Group align="flex-end" justify="space-between">
                   <Box>
-                    <Text fw={700} size="xl">
+                    <Text fw={700} size="xl" style={{ color: "var(--nv-primary)" }}>
                       €{product.price}
                     </Text>
                     <Text c="dimmed" size="xs">
@@ -832,15 +836,15 @@ export function PaymentsPage() {
                     </Text>
                   </Box>
                   <Group gap="xs">
-                    <ActionIcon color="blue" variant="light">
+                    <ActionIcon color="blue" variant="light" radius="xl">
                       <IconEdit size={16} />
                     </ActionIcon>
-                    <ActionIcon color="red" variant="light">
+                    <ActionIcon color="red" variant="light" radius="xl">
                       <IconTrash size={16} />
                     </ActionIcon>
                   </Group>
                 </Group>
-              </Card>
+              </Box>
             ))}
           </SimpleGrid>
         </Tabs.Panel>
@@ -852,6 +856,8 @@ export function PaymentsPage() {
         opened={productModalOpened}
         size="md"
         title="Nuevo Producto"
+        radius="lg"
+        styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={productForm.onSubmit((values) => console.log(values))}>
           <Stack>
@@ -913,6 +919,8 @@ export function PaymentsPage() {
         opened={chargeModalOpened}
         size="md"
         title="Nuevo Cobro"
+        radius="lg"
+        styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={chargeForm.onSubmit((values) => console.log(values))}>
           <Stack>

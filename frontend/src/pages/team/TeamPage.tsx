@@ -2,14 +2,13 @@ import {
   ActionIcon,
   Avatar,
   Badge,
+  Box,
   Button,
-  Card,
   Container,
   Divider,
   Group,
   Menu,
   Modal,
-  Paper,
   Select,
   SimpleGrid,
   Stack,
@@ -181,63 +180,57 @@ export function TeamPage() {
 
       {/* Stats */}
       <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl" spacing="lg">
-        <Card p="md" radius="md" withBorder>
+        <Box className="nv-card" p="lg">
           <Group justify="space-between">
-            <div>
-              <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Miembros del Equipo
-              </Text>
-              <Text fw={700} size="xl">
+            <Box>
+              <Text className="text-label" mb="xs">Miembros del Equipo</Text>
+              <Text className="text-display" style={{ fontSize: "2rem" }}>
                 {totalMembers}
               </Text>
-            </div>
-            <ThemeIcon color="blue" radius="md" size="lg" variant="light">
-              <IconUsers size={20} />
+              <Text c="dimmed" mt="xs" size="xs">
+                {activeMembers} activos, {totalMembers - activeMembers} pendientes
+              </Text>
+            </Box>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}>
+              <IconUsers size={24} />
             </ThemeIcon>
           </Group>
-          <Text c="dimmed" mt="xs" size="xs">
-            {activeMembers} activos, {totalMembers - activeMembers} pendientes
-          </Text>
-        </Card>
-        <Card p="md" radius="md" withBorder>
+        </Box>
+        <Box className="nv-card" p="lg">
           <Group justify="space-between">
-            <div>
-              <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Sesiones Este Mes
-              </Text>
-              <Text fw={700} size="xl">
+            <Box>
+              <Text className="text-label" mb="xs">Sesiones Este Mes</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
                 {teamMembers.reduce(
                   (sum, m) => sum + m.stats.sessionsThisMonth,
                   0
                 )}
               </Text>
-            </div>
-            <ThemeIcon color="green" radius="md" size="lg" variant="light">
-              <IconCalendarEvent size={20} />
+            </Box>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}>
+              <IconCalendarEvent size={24} />
             </ThemeIcon>
           </Group>
-        </Card>
-        <Card p="md" radius="md" withBorder>
+        </Box>
+        <Box className="nv-card" p="lg">
           <Group justify="space-between">
-            <div>
-              <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Ingresos del Equipo
-              </Text>
-              <Text fw={700} size="xl">
+            <Box>
+              <Text className="text-label" mb="xs">Ingresos del Equipo</Text>
+              <Text className="text-display" style={{ fontSize: "2rem" }}>
                 €{totalRevenue.toLocaleString()}
               </Text>
-            </div>
-            <ThemeIcon color="violet" radius="md" size="lg" variant="light">
-              <IconCurrencyEuro size={20} />
+            </Box>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" }}>
+              <IconCurrencyEuro size={24} />
             </ThemeIcon>
           </Group>
-        </Card>
+        </Box>
       </SimpleGrid>
 
       {/* Team Members */}
       <Stack gap="md">
         {teamMembers.map((member) => (
-          <Paper key={member.id} p="lg" radius="md" withBorder>
+          <Box key={member.id} className="nv-card" p="lg">
             <Group justify="space-between">
               <Group gap="md">
                 <Avatar color={roleColors[member.role]} radius="xl" size="lg">
@@ -248,7 +241,7 @@ export function TeamPage() {
                 </Avatar>
                 <div>
                   <Group gap="xs">
-                    <Text fw={600}>{member.name}</Text>
+                    <Text fw={600} style={{ fontFamily: "var(--font-heading)" }}>{member.name}</Text>
                     <Badge
                       color={roleColors[member.role]}
                       size="sm"
@@ -395,7 +388,7 @@ export function TeamPage() {
                 </Menu>
               </Group>
             </Group>
-          </Paper>
+          </Box>
         ))}
       </Stack>
 
@@ -405,6 +398,10 @@ export function TeamPage() {
         onClose={closeInviteModal}
         opened={inviteModalOpened}
         title="Invitar Miembro"
+        styles={{
+          header: { borderBottom: "1px solid var(--nv-border)" },
+          title: { fontFamily: "var(--font-heading)", fontWeight: 600 },
+        }}
       >
         <form
           onSubmit={inviteForm.onSubmit((values) => {
@@ -470,7 +467,7 @@ export function TeamPage() {
               <Button onClick={closeInviteModal} variant="default">
                 Cancelar
               </Button>
-              <Button leftSection={<IconMail size={14} />} type="submit">
+              <Button leftSection={<IconMail size={14} />} type="submit" className="nv-button">
                 Enviar Invitación
               </Button>
             </Group>
@@ -484,6 +481,10 @@ export function TeamPage() {
         onClose={closeEditModal}
         opened={editModalOpened}
         title={`Editar Permisos - ${selectedMember?.name}`}
+        styles={{
+          header: { borderBottom: "1px solid var(--nv-border)" },
+          title: { fontFamily: "var(--font-heading)", fontWeight: 600 },
+        }}
       >
         {selectedMember && (
           <Stack>
@@ -529,7 +530,7 @@ export function TeamPage() {
               <Button onClick={closeEditModal} variant="default">
                 Cancelar
               </Button>
-              <Button onClick={closeEditModal}>Guardar Cambios</Button>
+              <Button onClick={closeEditModal} className="nv-button">Guardar Cambios</Button>
             </Group>
           </Stack>
         )}

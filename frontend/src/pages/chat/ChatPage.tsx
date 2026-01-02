@@ -327,31 +327,32 @@ export function ChatPage() {
         title="Chat"
       />
 
-      <Paper
+      <Box
         h="calc(100% - 80px)"
-        radius="lg"
+        className="nv-card"
+        p={0}
         style={{ overflow: "hidden" }}
-        withBorder
       >
         <Grid gutter={0} h="100%">
           {/* Lista de conversaciones */}
           <Grid.Col
             h="100%"
             span={4}
-            style={{ borderRight: "1px solid var(--mantine-color-gray-2)" }}
+            style={{ borderRight: "1px solid var(--nv-border)" }}
           >
             <Box
               p="md"
-              style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+              style={{ borderBottom: "1px solid var(--nv-border)" }}
             >
               <TextInput
                 leftSection={<IconSearch size={16} />}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar conversaciones..."
+                radius="xl"
                 styles={{
                   input: {
-                    backgroundColor: "var(--mantine-color-gray-0)",
-                    border: "none",
+                    backgroundColor: "var(--nv-surface)",
+                    border: "1px solid var(--nv-border)",
                   },
                 }}
                 value={searchQuery}
@@ -393,7 +394,8 @@ export function ChatPage() {
                 <Box
                   p="md"
                   style={{
-                    borderBottom: "1px solid var(--mantine-color-gray-2)",
+                    borderBottom: "1px solid var(--nv-border)",
+                    backgroundColor: "var(--nv-paper-bg)",
                   }}
                 >
                   <Group justify="space-between">
@@ -476,7 +478,7 @@ export function ChatPage() {
                 <ScrollArea
                   flex={1}
                   p="md"
-                  style={{ backgroundColor: "var(--mantine-color-gray-0)" }}
+                  style={{ backgroundColor: "var(--nv-surface)" }}
                   viewportRef={scrollAreaRef}
                 >
                   {loadingMessages ? (
@@ -508,7 +510,7 @@ export function ChatPage() {
                 {/* Input de mensaje */}
                 <Box
                   p="md"
-                  style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+                  style={{ borderTop: "1px solid var(--nv-border)", backgroundColor: "var(--nv-paper-bg)" }}
                 >
                   {/* Channel selector */}
                   {selectedConversation.whatsapp_phone && (
@@ -537,12 +539,17 @@ export function ChatPage() {
                         onChange={(value) => setSendVia(value as MessageSource)}
                         size="xs"
                         value={sendVia}
+                        radius="xl"
+                        styles={{
+                          root: { backgroundColor: "var(--nv-surface)" },
+                          indicator: { borderRadius: "999px" }
+                        }}
                       />
                     </Group>
                   )}
 
                   <Group gap="sm">
-                    <ActionIcon color="gray" size="lg" variant="subtle">
+                    <ActionIcon color="gray" size="lg" variant="subtle" radius="xl">
                       <IconPaperclip size={20} />
                     </ActionIcon>
                     <TextInput
@@ -550,15 +557,16 @@ export function ChatPage() {
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
                       placeholder={`Escribe un mensaje${sendVia === "whatsapp" ? " por WhatsApp" : ""}...`}
+                      radius="xl"
                       styles={{
                         input: {
-                          backgroundColor: "var(--mantine-color-gray-0)",
-                          border: "none",
+                          backgroundColor: "var(--nv-surface)",
+                          border: "1px solid var(--nv-border)",
                         },
                       }}
                       value={message}
                     />
-                    <ActionIcon color="gray" size="lg" variant="subtle">
+                    <ActionIcon color="gray" size="lg" variant="subtle" radius="xl">
                       <IconMoodSmile size={20} />
                     </ActionIcon>
                     <ActionIcon
@@ -568,6 +576,7 @@ export function ChatPage() {
                       onClick={handleSendMessage}
                       size="lg"
                       variant="filled"
+                      radius="xl"
                     >
                       <IconSend size={18} />
                     </ActionIcon>
@@ -582,14 +591,15 @@ export function ChatPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   flexDirection: "column",
+                  backgroundColor: "var(--nv-surface)",
                 }}
               >
                 <ThemeIcon
-                  color="gray"
                   mb="md"
                   radius="xl"
                   size={80}
                   variant="light"
+                  style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}
                 >
                   <IconMessages size={40} />
                 </ThemeIcon>
@@ -608,7 +618,7 @@ export function ChatPage() {
             )}
           </Grid.Col>
         </Grid>
-      </Paper>
+      </Box>
     </Container>
   );
 }

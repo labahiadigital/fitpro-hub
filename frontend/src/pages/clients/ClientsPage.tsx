@@ -1,18 +1,39 @@
 import {
+  Box,
   Button,
   ColorInput,
   Container,
   Group,
   Modal,
+  SimpleGrid,
   Stack,
   Tabs,
   Text,
   Textarea,
   TextInput,
+  Badge,
+  Avatar,
+  ActionIcon,
+  Menu,
+  Paper,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { IconDownload, IconTag, IconUsers } from "@tabler/icons-react";
+import { 
+  IconDownload, 
+  IconTag, 
+  IconUsers, 
+  IconUserPlus,
+  IconDotsVertical,
+  IconEye,
+  IconEdit,
+  IconTrash,
+  IconMail,
+  IconPhone,
+  IconCalendar,
+  IconFilter,
+  IconSearch,
+} from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -30,15 +51,130 @@ import {
   useCreateClientTag,
 } from "../../hooks/useClients";
 
+// Componente de tarjeta de cliente para vista de grid
+function ClientCard({ client, onView }: { client: any; onView: () => void }) {
+  return (
+    <Box 
+      className="nv-card" 
+      p="lg"
+      style={{ cursor: "pointer" }}
+      onClick={onView}
+    >
+      <Group justify="space-between" mb="md">
+        <Group gap="md">
+          <Avatar 
+            size={50} 
+            radius="xl" 
+            src={client.avatar_url}
+            styles={{
+              root: {
+                border: "3px solid var(--nv-surface-subtle)",
+                boxShadow: "var(--shadow-sm)"
+              }
+            }}
+          >
+            {client.first_name?.[0]}{client.last_name?.[0]}
+          </Avatar>
+          <Box>
+            <Text fw={700} size="md" style={{ color: "var(--nv-dark)" }}>
+              {client.first_name} {client.last_name}
+            </Text>
+            <Group gap="xs">
+              <IconMail size={12} color="var(--nv-slate-light)" />
+              <Text size="xs" c="dimmed">{client.email}</Text>
+            </Group>
+          </Box>
+        </Group>
+        <Menu position="bottom-end" withArrow shadow="lg">
+          <Menu.Target>
+            <ActionIcon 
+              variant="subtle" 
+              color="gray" 
+              radius="xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <IconDotsVertical size={16} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item leftSection={<IconEye size={14} />} onClick={onView}>
+              Ver perfil
+            </Menu.Item>
+            <Menu.Item leftSection={<IconEdit size={14} />}>
+              Editar
+            </Menu.Item>
+            <Menu.Divider />
+            <Menu.Item leftSection={<IconTrash size={14} />} color="red">
+              Eliminar
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      </Group>
+
+      <Group gap="xs" mb="md">
+        {client.tags?.slice(0, 2).map((tag: any, i: number) => (
+          <Badge 
+            key={i} 
+            size="sm" 
+            variant="light"
+            radius="xl"
+            styles={{
+              root: {
+                backgroundColor: `${tag.color}15`,
+                color: tag.color,
+                border: `1px solid ${tag.color}30`,
+              }
+            }}
+          >
+            {tag.name}
+          </Badge>
+        ))}
+        {client.tags?.length > 2 && (
+          <Badge size="sm" variant="light" radius="xl" color="gray">
+            +{client.tags.length - 2}
+          </Badge>
+        )}
+      </Group>
+
+      <Group justify="space-between" pt="sm" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+        <Group gap="xs">
+          <IconPhone size={14} color="var(--nv-slate-light)" />
+          <Text size="xs" c="dimmed">{client.phone || "Sin teléfono"}</Text>
+        </Group>
+        <StatusBadge status={client.is_active ? "active" : "inactive"} />
+      </Group>
+    </Box>
+  );
+}
+
+// KPI Card
+function KPICard({ title, value, subtitle, color }: { title: string; value: string | number; subtitle?: string; color: string }) {
+  return (
+    <Box className="nv-card" p="lg">
+      <Text className="text-label" mb="xs">{title}</Text>
+      <Text 
+        className="text-display" 
+        style={{ fontSize: "2rem", color }}
+      >
+        {value}
+      </Text>
+      {subtitle && (
+        <Text size="xs" c="dimmed" mt="xs">{subtitle}</Text>
+      )}
+    </Box>
+  );
+}
+
 export function ClientsPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [
     clientModalOpened,
     { open: openClientModal, close: closeClientModal },
   ] = useDisclosure(false);
-  const [tagModalOpened, { close: closeTagModal }] = useDisclosure(false);
+  const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false);
 
   const { data: clientsData, isLoading } = useClients({ page, search });
   useClientTags();
@@ -63,7 +199,7 @@ export function ClientsPage() {
   const tagForm = useForm({
     initialValues: {
       name: "",
-      color: "#2D6A4F",
+      color: "#5C80BC",
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
@@ -111,7 +247,9 @@ export function ClientsPage() {
       key: "phone",
       title: "Teléfono",
       render: (client: { phone?: string }) => (
-        <Text size="sm">{client.phone || "-"}</Text>
+        <Text size="sm" fw={500} style={{ color: client.phone ? "var(--nv-dark)" : "var(--nv-slate-light)" }}>
+          {client.phone || "—"}
+        </Text>
       ),
     },
     {
@@ -121,9 +259,7 @@ export function ClientsPage() {
         client.tags && client.tags.length > 0 ? (
           <TagsList tags={client.tags} />
         ) : (
-          <Text c="dimmed" size="sm">
-            Sin etiquetas
-          </Text>
+          <Text c="dimmed" size="sm">—</Text>
         ),
     },
     {
@@ -135,23 +271,39 @@ export function ClientsPage() {
     },
     {
       key: "created_at",
-      title: "Fecha registro",
+      title: "Registro",
       render: (client: { created_at: string }) => (
-        <Text size="sm">
-          {new Date(client.created_at).toLocaleDateString("es-ES")}
-        </Text>
+        <Group gap="xs">
+          <IconCalendar size={14} color="var(--nv-slate-light)" />
+          <Text size="sm" style={{ color: "var(--nv-slate)" }}>
+            {new Date(client.created_at).toLocaleDateString("es-ES", {
+              day: "numeric",
+              month: "short",
+              year: "numeric"
+            })}
+          </Text>
+        </Group>
       ),
     },
   ];
+
+  // Estadísticas
+  const stats = {
+    total: clientsData?.total || 0,
+    active: clientsData?.items?.filter((c: any) => c.is_active).length || 0,
+    inactive: clientsData?.items?.filter((c: any) => !c.is_active).length || 0,
+    newThisMonth: 12, // Mock
+  };
 
   return (
     <Container py="xl" size="xl">
       <PageHeader
         action={{
           label: "Nuevo Cliente",
+          icon: <IconUserPlus size={18} />,
           onClick: openClientModal,
         }}
-        description="Gestiona tu cartera de clientes"
+        description="Gestiona tu cartera de clientes y su información"
         secondaryAction={{
           label: "Exportar",
           icon: <IconDownload size={16} />,
@@ -159,44 +311,101 @@ export function ClientsPage() {
           variant: "default",
         }}
         title="Clientes"
-      >
-        <Tabs defaultValue="all">
-          <Tabs.List>
-            <Tabs.Tab leftSection={<IconUsers size={14} />} value="all">
-              Todos ({clientsData?.total || 0})
-            </Tabs.Tab>
-            <Tabs.Tab value="active">Activos</Tabs.Tab>
-            <Tabs.Tab value="inactive">Inactivos</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconTag size={14} />} value="tags">
-              Etiquetas
-            </Tabs.Tab>
-          </Tabs.List>
-        </Tabs>
-      </PageHeader>
+      />
 
-      {clientsData?.items && clientsData.items.length > 0 ? (
-        <DataTable
-          columns={columns}
-          data={clientsData.items}
-          loading={isLoading}
-          onDelete={(client) => console.log("Delete", client)}
-          onEdit={(client) => console.log("Edit", client)}
-          onSearch={setSearch}
-          onView={(client: { id: string }) => navigate(`/clients/${client.id}`)}
-          pagination={{
-            page,
-            pageSize: 10,
-            total: clientsData.total,
-            onChange: setPage,
-          }}
-          searchable
-          searchPlaceholder="Buscar clientes..."
+      {/* KPIs */}
+      <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xl" spacing="md" className="stagger">
+        <KPICard 
+          title="Total Clientes" 
+          value={stats.total} 
+          subtitle="En tu cartera"
+          color="var(--nv-dark)"
         />
+        <KPICard 
+          title="Activos" 
+          value={stats.active} 
+          subtitle="Con plan activo"
+          color="var(--nv-success)"
+        />
+        <KPICard 
+          title="Inactivos" 
+          value={stats.inactive} 
+          subtitle="Sin actividad reciente"
+          color="var(--nv-slate)"
+        />
+        <KPICard 
+          title="Nuevos este mes" 
+          value={stats.newThisMonth} 
+          subtitle="+15% vs mes anterior"
+          color="var(--nv-primary)"
+        />
+      </SimpleGrid>
+
+      {/* Tabs y Filtros */}
+      <Box mb="lg">
+        <Tabs defaultValue="all">
+          <Group justify="space-between" align="flex-end">
+            <Tabs.List>
+              <Tabs.Tab 
+                leftSection={<IconUsers size={16} />} 
+                value="all"
+              >
+                Todos ({stats.total})
+              </Tabs.Tab>
+              <Tabs.Tab value="active">
+                Activos ({stats.active})
+              </Tabs.Tab>
+              <Tabs.Tab value="inactive">
+                Inactivos ({stats.inactive})
+              </Tabs.Tab>
+              <Tabs.Tab 
+                leftSection={<IconTag size={16} />} 
+                value="tags"
+                onClick={openTagModal}
+              >
+                Etiquetas
+              </Tabs.Tab>
+            </Tabs.List>
+          </Group>
+        </Tabs>
+      </Box>
+
+      {/* Contenido */}
+      {clientsData?.items && clientsData.items.length > 0 ? (
+        viewMode === "table" ? (
+          <DataTable
+            columns={columns}
+            data={clientsData.items}
+            loading={isLoading}
+            onDelete={(client) => console.log("Delete", client)}
+            onEdit={(client) => console.log("Edit", client)}
+            onSearch={setSearch}
+            onView={(client: { id: string }) => navigate(`/clients/${client.id}`)}
+            pagination={{
+              page,
+              pageSize: 10,
+              total: clientsData.total,
+              onChange: setPage,
+            }}
+            searchable
+            searchPlaceholder="Buscar por nombre, email o teléfono..."
+          />
+        ) : (
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+            {clientsData.items.map((client: any) => (
+              <ClientCard 
+                key={client.id} 
+                client={client} 
+                onView={() => navigate(`/clients/${client.id}`)}
+              />
+            ))}
+          </SimpleGrid>
+        )
       ) : isLoading ? null : (
         <EmptyState
           actionLabel="Añadir Cliente"
           description="Empieza añadiendo tu primer cliente para gestionar sus entrenamientos, nutrición y progreso."
-          icon={<IconUsers size={40} />}
+          icon={<IconUsers size={48} />}
           onAction={openClientModal}
           title="No hay clientes"
         />
@@ -206,22 +415,26 @@ export function ClientsPage() {
       <Modal
         onClose={closeClientModal}
         opened={clientModalOpened}
-        size="md"
+        size="lg"
         title="Nuevo Cliente"
+        radius="lg"
+        centered
       >
         <form onSubmit={clientForm.onSubmit(handleCreateClient)}>
-          <Stack>
+          <Stack gap="md">
             <Group grow>
               <TextInput
                 label="Nombre"
                 placeholder="Juan"
                 required
+                radius="md"
                 {...clientForm.getInputProps("first_name")}
               />
               <TextInput
                 label="Apellido"
                 placeholder="García"
                 required
+                radius="md"
                 {...clientForm.getInputProps("last_name")}
               />
             </Group>
@@ -229,24 +442,45 @@ export function ClientsPage() {
               label="Email"
               placeholder="juan@email.com"
               required
+              radius="md"
               {...clientForm.getInputProps("email")}
             />
             <TextInput
               label="Teléfono"
               placeholder="+34 600 000 000"
+              radius="md"
               {...clientForm.getInputProps("phone")}
             />
             <Textarea
               label="Objetivos"
               minRows={3}
               placeholder="Describe los objetivos del cliente..."
+              radius="md"
               {...clientForm.getInputProps("goals")}
             />
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeClientModal} variant="default">
+              <Button 
+                onClick={closeClientModal} 
+                variant="default"
+                radius="xl"
+              >
                 Cancelar
               </Button>
-              <Button loading={createClient.isPending} type="submit">
+              <Button 
+                loading={createClient.isPending} 
+                type="submit"
+                radius="xl"
+                styles={{
+                  root: {
+                    background: "var(--nv-accent)",
+                    color: "var(--nv-dark)",
+                    fontWeight: 700,
+                    "&:hover": {
+                      background: "var(--nv-accent-hover)"
+                    }
+                  }
+                }}
+              >
                 Crear Cliente
               </Button>
             </Group>
@@ -260,35 +494,57 @@ export function ClientsPage() {
         opened={tagModalOpened}
         size="sm"
         title="Nueva Etiqueta"
+        radius="lg"
+        centered
       >
         <form onSubmit={tagForm.onSubmit(handleCreateTag)}>
-          <Stack>
+          <Stack gap="md">
             <TextInput
               label="Nombre"
-              placeholder="VIP"
+              placeholder="VIP, Premium, Nuevo..."
               required
+              radius="md"
               {...tagForm.getInputProps("name")}
             />
             <ColorInput
               format="hex"
               label="Color"
+              radius="md"
               swatches={[
-                "#2D6A4F",
-                "#40916C",
-                "#F08A5D",
-                "#3B82F6",
+                "#5C80BC",
+                "#10B981",
+                "#F59E0B",
+                "#EF4444",
                 "#8B5CF6",
                 "#EC4899",
-                "#EF4444",
-                "#F59E0B",
+                "#06B6D4",
+                "#84CC16",
               ]}
               {...tagForm.getInputProps("color")}
             />
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeTagModal} variant="default">
+              <Button 
+                onClick={closeTagModal} 
+                variant="default"
+                radius="xl"
+              >
                 Cancelar
               </Button>
-              <Button loading={createTag.isPending} type="submit">
+              <Button 
+                loading={createTag.isPending} 
+                type="submit"
+                radius="xl"
+                styles={{
+                  root: {
+                    background: "var(--nv-accent)",
+                    color: "var(--nv-dark)",
+                    fontWeight: 700,
+                    "&:hover": {
+                      background: "var(--nv-accent-hover)"
+                    }
+                  }
+                }}
+              >
                 Crear Etiqueta
               </Button>
             </Group>

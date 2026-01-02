@@ -7,11 +7,11 @@ import {
   Group,
   Menu,
   Pagination,
-  Paper,
   Skeleton,
   Table,
   Text,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
 import {
   IconDotsVertical,
@@ -19,6 +19,7 @@ import {
   IconEye,
   IconSearch,
   IconTrash,
+  IconFilter,
 } from "@tabler/icons-react";
 import { useState } from "react";
 
@@ -92,44 +93,97 @@ export function DataTable<T extends { id: string }>({
 
   if (loading) {
     return (
-      <Paper p="md" radius="md" withBorder>
-        {searchable && <Skeleton height={36} mb="md" />}
-        <Skeleton height={40} mb="sm" />
+      <Box className="nv-card" p="lg">
+        {searchable && <Skeleton height={44} mb="lg" radius="xl" />}
+        <Skeleton height={48} mb="sm" radius="md" />
         {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton height={50} key={i} mb="xs" />
+          <Skeleton height={64} key={i} mb="xs" radius="md" />
         ))}
-      </Paper>
+      </Box>
     );
   }
 
   return (
-    <Paper radius="md" style={{ overflow: "hidden" }} withBorder>
+    <Box 
+      className="nv-card" 
+      style={{ 
+        overflow: "hidden",
+        border: "1px solid var(--border-subtle)"
+      }}
+    >
       {searchable && (
         <Box
-          p="md"
-          style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+          p="lg"
+          style={{ 
+            borderBottom: "1px solid var(--border-subtle)",
+            background: "var(--nv-surface-subtle)"
+          }}
         >
-          <TextInput
-            leftSection={<IconSearch size={16} />}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder={searchPlaceholder}
-            styles={{
-              input: {
-                backgroundColor: "var(--mantine-color-gray-0)",
-                border: "none",
-              },
-            }}
-            value={searchQuery}
-          />
+          <Group justify="space-between">
+            <TextInput
+              leftSection={<IconSearch size={18} color="var(--nv-slate)" />}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder={searchPlaceholder}
+              value={searchQuery}
+              radius="xl"
+              size="md"
+              style={{ flex: 1, maxWidth: 400 }}
+              styles={{
+                input: {
+                  backgroundColor: "var(--nv-surface)",
+                  border: "1px solid var(--border-subtle)",
+                  fontWeight: 500,
+                  "&:focus": {
+                    borderColor: "var(--nv-primary)",
+                    boxShadow: "0 0 0 3px var(--nv-primary-glow)"
+                  }
+                },
+              }}
+            />
+            <Tooltip label="Filtros avanzados">
+              <ActionIcon 
+                variant="default" 
+                size="lg" 
+                radius="xl"
+                style={{ 
+                  borderColor: "var(--border-subtle)",
+                  color: "var(--nv-slate)"
+                }}
+              >
+                <IconFilter size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
         </Box>
       )}
 
       <Table.ScrollContainer minWidth={800}>
-        <Table highlightOnHover verticalSpacing="sm">
+        <Table 
+          verticalSpacing="md" 
+          horizontalSpacing="lg"
+          highlightOnHover
+          highlightOnHoverColor="var(--nv-surface-subtle)"
+          styles={{
+            thead: {
+              backgroundColor: "var(--nv-surface-subtle)",
+            },
+            th: {
+              borderBottom: "2px solid var(--border-subtle) !important",
+              padding: "16px 20px !important",
+            },
+            td: {
+              borderBottom: "1px solid var(--border-subtle) !important",
+              padding: "16px 20px !important",
+            },
+            tr: {
+              transition: "background-color 0.15s ease",
+            }
+          }}
+        >
           <Table.Thead>
             <Table.Tr>
               {selectable && (
-                <Table.Th style={{ width: 40 }}>
+                <Table.Th style={{ width: 50 }}>
                   <Checkbox
                     checked={
                       selectedIds.length === data.length && data.length > 0
@@ -138,17 +192,35 @@ export function DataTable<T extends { id: string }>({
                       selectedIds.length > 0 && selectedIds.length < data.length
                     }
                     onChange={toggleAll}
+                    color="yellow"
+                    styles={{
+                      input: {
+                        cursor: "pointer",
+                        "&:checked": {
+                          backgroundColor: "var(--nv-accent)",
+                          borderColor: "var(--nv-accent)"
+                        }
+                      }
+                    }}
                   />
                 </Table.Th>
               )}
               {columns.map((column) => (
                 <Table.Th key={column.key} style={{ width: column.width }}>
-                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">
+                  <Text 
+                    fw={700} 
+                    size="xs" 
+                    tt="uppercase"
+                    style={{ 
+                      letterSpacing: "0.08em",
+                      color: "var(--nv-slate)"
+                    }}
+                  >
                     {column.title}
                   </Text>
                 </Table.Th>
               ))}
-              {hasActions && <Table.Th style={{ width: 60 }} />}
+              {hasActions && <Table.Th style={{ width: 80 }} />}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -159,9 +231,11 @@ export function DataTable<T extends { id: string }>({
                     columns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)
                   }
                 >
-                  <Text c="dimmed" py="xl" ta="center">
-                    {emptyMessage}
-                  </Text>
+                  <Box py="xl" ta="center">
+                    <Text c="dimmed" size="sm" fw={500}>
+                      {emptyMessage}
+                    </Text>
+                  </Box>
                 </Table.Td>
               </Table.Tr>
             ) : (
@@ -169,13 +243,25 @@ export function DataTable<T extends { id: string }>({
                 <Table.Tr
                   key={item.id}
                   onClick={() => onRowClick?.(item)}
-                  style={{ cursor: onRowClick ? "pointer" : "default" }}
+                  style={{ 
+                    cursor: onRowClick ? "pointer" : "default",
+                  }}
                 >
                   {selectable && (
                     <Table.Td onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedIds.includes(item.id)}
                         onChange={() => toggleRow(item.id)}
+                        color="yellow"
+                        styles={{
+                          input: {
+                            cursor: "pointer",
+                            "&:checked": {
+                              backgroundColor: "var(--nv-accent)",
+                              borderColor: "var(--nv-accent)"
+                            }
+                          }
+                        }}
                       />
                     </Table.Td>
                   )}
@@ -190,16 +276,20 @@ export function DataTable<T extends { id: string }>({
                   ))}
                   {hasActions && (
                     <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <Menu position="bottom-end" withArrow>
+                      <Menu position="bottom-end" withArrow shadow="lg">
                         <Menu.Target>
-                          <ActionIcon color="gray" variant="subtle">
-                            <IconDotsVertical size={16} />
+                          <ActionIcon 
+                            color="gray" 
+                            variant="subtle"
+                            radius="xl"
+                          >
+                            <IconDotsVertical size={18} />
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
                           {onView && (
                             <Menu.Item
-                              leftSection={<IconEye size={14} />}
+                              leftSection={<IconEye size={16} />}
                               onClick={() => onView(item)}
                             >
                               Ver detalles
@@ -207,20 +297,23 @@ export function DataTable<T extends { id: string }>({
                           )}
                           {onEdit && (
                             <Menu.Item
-                              leftSection={<IconEdit size={14} />}
+                              leftSection={<IconEdit size={16} />}
                               onClick={() => onEdit(item)}
                             >
                               Editar
                             </Menu.Item>
                           )}
                           {onDelete && (
-                            <Menu.Item
-                              color="red"
-                              leftSection={<IconTrash size={14} />}
-                              onClick={() => onDelete(item)}
-                            >
-                              Eliminar
-                            </Menu.Item>
+                            <>
+                              <Menu.Divider />
+                              <Menu.Item
+                                color="red"
+                                leftSection={<IconTrash size={16} />}
+                                onClick={() => onDelete(item)}
+                              >
+                                Eliminar
+                              </Menu.Item>
+                            </>
                           )}
                         </Menu.Dropdown>
                       </Menu>
@@ -235,19 +328,36 @@ export function DataTable<T extends { id: string }>({
 
       {pagination && pagination.total > pagination.pageSize && (
         <Group
-          justify="center"
-          p="md"
-          style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+          justify="space-between"
+          p="lg"
+          style={{ 
+            borderTop: "1px solid var(--border-subtle)",
+            background: "var(--nv-surface-subtle)"
+          }}
         >
+          <Text size="sm" c="dimmed">
+            Mostrando {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} de {pagination.total}
+          </Text>
           <Pagination
             onChange={pagination.onChange}
             size="sm"
             total={Math.ceil(pagination.total / pagination.pageSize)}
             value={pagination.page}
+            radius="xl"
+            styles={{
+              control: {
+                fontWeight: 600,
+                "&[data-active]": {
+                  backgroundColor: "var(--nv-accent)",
+                  borderColor: "var(--nv-accent)",
+                  color: "var(--nv-dark)"
+                }
+              }
+            }}
           />
         </Group>
       )}
-    </Paper>
+    </Box>
   );
 }
 
@@ -262,15 +372,24 @@ export function ClientCell({
   avatarUrl?: string;
 }) {
   return (
-    <Group gap="sm">
-      <Avatar radius="xl" size="sm" src={avatarUrl}>
+    <Group gap="sm" wrap="nowrap">
+      <Avatar 
+        radius="xl" 
+        size={40} 
+        src={avatarUrl}
+        styles={{
+          root: {
+            border: "2px solid var(--border-subtle)"
+          }
+        }}
+      >
         {name.charAt(0)}
       </Avatar>
       <Box>
-        <Text fw={500} size="sm">
+        <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }}>
           {name}
         </Text>
-        <Text c="dimmed" size="xs">
+        <Text size="xs" style={{ color: "var(--nv-slate)" }}>
           {email}
         </Text>
       </Box>
@@ -279,29 +398,34 @@ export function ClientCell({
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    active: "green",
-    inactive: "gray",
-    pending: "yellow",
-    confirmed: "blue",
-    cancelled: "red",
-    completed: "green",
-    no_show: "orange",
+  const config: Record<string, { color: string; bg: string; label: string }> = {
+    active: { color: "var(--nv-success)", bg: "var(--nv-success-bg)", label: "Activo" },
+    inactive: { color: "var(--nv-slate)", bg: "rgba(100, 116, 139, 0.1)", label: "Inactivo" },
+    pending: { color: "var(--nv-warning)", bg: "var(--nv-warning-bg)", label: "Pendiente" },
+    confirmed: { color: "var(--nv-primary)", bg: "var(--nv-primary-glow)", label: "Confirmado" },
+    cancelled: { color: "var(--nv-error)", bg: "var(--nv-error-bg)", label: "Cancelado" },
+    completed: { color: "var(--nv-success)", bg: "var(--nv-success-bg)", label: "Completado" },
+    no_show: { color: "var(--nv-warning)", bg: "var(--nv-warning-bg)", label: "No asistió" },
   };
 
-  const labels: Record<string, string> = {
-    active: "Activo",
-    inactive: "Inactivo",
-    pending: "Pendiente",
-    confirmed: "Confirmado",
-    cancelled: "Cancelado",
-    completed: "Completado",
-    no_show: "No asistió",
-  };
+  const cfg = config[status] || { color: "var(--nv-slate)", bg: "rgba(100, 116, 139, 0.1)", label: status };
 
   return (
-    <Badge color={colors[status] || "gray"} size="sm" variant="light">
-      {labels[status] || status}
+    <Badge 
+      size="sm" 
+      variant="filled"
+      radius="xl"
+      styles={{
+        root: {
+          backgroundColor: cfg.bg,
+          color: cfg.color,
+          fontWeight: 600,
+          textTransform: "capitalize",
+          padding: "4px 12px"
+        }
+      }}
+    >
+      {cfg.label}
     </Badge>
   );
 }
@@ -312,14 +436,38 @@ export function TagsList({
   tags: Array<{ name: string; color: string }>;
 }) {
   return (
-    <Group gap={4}>
+    <Group gap={6}>
       {tags.slice(0, 3).map((tag, index) => (
-        <Badge color={tag.color} key={index} size="xs" variant="light">
+        <Badge 
+          key={index} 
+          size="sm" 
+          variant="light"
+          radius="xl"
+          styles={{
+            root: {
+              backgroundColor: `${tag.color}15`,
+              color: tag.color,
+              border: `1px solid ${tag.color}30`,
+              fontWeight: 600
+            }
+          }}
+        >
           {tag.name}
         </Badge>
       ))}
       {tags.length > 3 && (
-        <Badge color="gray" size="xs" variant="light">
+        <Badge 
+          size="sm" 
+          variant="light"
+          radius="xl"
+          styles={{
+            root: {
+              backgroundColor: "var(--nv-surface-subtle)",
+              color: "var(--nv-slate)",
+              fontWeight: 600
+            }
+          }}
+        >
           +{tags.length - 3}
         </Badge>
       )}

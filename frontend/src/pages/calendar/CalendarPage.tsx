@@ -3,7 +3,6 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   Container,
   Divider,
   Group,
@@ -19,6 +18,7 @@ import {
   Textarea,
   TextInput,
   ThemeIcon,
+  Tooltip,
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -250,7 +250,7 @@ export function CalendarPage() {
           label: "Nueva Sesión",
           onClick: openModal,
         }}
-        description="Gestiona tus sesiones y reservas"
+        description="Gestiona tus sesiones y reservas de forma eficiente"
         title="Calendario"
       >
         <Group justify="space-between">
@@ -301,52 +301,61 @@ export function CalendarPage() {
       </PageHeader>
 
       {/* Today's Summary */}
-      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="lg" spacing="md">
-        <Card padding="sm" radius="md" withBorder>
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl" spacing="md" className="stagger">
+        <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text c="dimmed" size="xs" tt="uppercase">
-                Sesiones Hoy
-              </Text>
-              <Text fw={700} size="xl">
+              <Text className="text-label" mb="xs">Sesiones Hoy</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-primary)" }}>
                 {todayStats.total}
               </Text>
             </Box>
-            <ThemeIcon color="blue" radius="md" size="lg" variant="light">
-              <IconCalendarEvent size={20} />
+            <ThemeIcon 
+              size={48} 
+              radius="xl" 
+              variant="light"
+              style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}
+            >
+              <IconCalendarEvent size={24} />
             </ThemeIcon>
           </Group>
-        </Card>
-        <Card padding="sm" radius="md" withBorder>
+        </Box>
+        <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text c="dimmed" size="xs" tt="uppercase">
-                Confirmadas
-              </Text>
-              <Text c="green" fw={700} size="xl">
+              <Text className="text-label" mb="xs">Confirmadas</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
                 {todayStats.confirmed}
               </Text>
             </Box>
-            <ThemeIcon color="green" radius="md" size="lg" variant="light">
-              <IconCheck size={20} />
+            <ThemeIcon 
+              size={48} 
+              radius="xl" 
+              variant="light"
+              style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}
+            >
+              <IconCheck size={24} />
             </ThemeIcon>
           </Group>
-        </Card>
-        <Card padding="sm" radius="md" withBorder>
+        </Box>
+        <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text c="dimmed" size="xs" tt="uppercase">
-                Pendientes
-              </Text>
-              <Text c="yellow" fw={700} size="xl">
+              <Text className="text-label" mb="xs">Pendientes</Text>
+              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-warning)" }}>
                 {todayStats.pending}
               </Text>
             </Box>
-            <ThemeIcon color="yellow" radius="md" size="lg" variant="light">
-              <IconAlertCircle size={20} />
+            <ThemeIcon 
+              size={48} 
+              radius="xl" 
+              variant="light"
+              style={{ backgroundColor: "var(--nv-warning-bg)", color: "var(--nv-warning)" }}
+            >
+              <IconAlertCircle size={24} />
             </ThemeIcon>
           </Group>
-        </Card>
+        </Box>
       </SimpleGrid>
 
       {/* Calendar Views */}

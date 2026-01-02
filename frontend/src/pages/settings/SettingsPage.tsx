@@ -137,29 +137,29 @@ export function SettingsPage() {
       />
 
       <Tabs onChange={setActiveTab} orientation="vertical" value={activeTab}>
-        <Tabs.List mr="xl" w={220}>
-          <Tabs.Tab leftSection={<IconBuilding size={16} />} value="workspace">
+        <Tabs.List mr="xl" w={220} style={{ borderRight: "1px solid var(--nv-border)" }}>
+          <Tabs.Tab leftSection={<IconBuilding size={16} />} value="workspace" style={{ fontWeight: 500 }}>
             Workspace
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconUser size={16} />} value="profile">
+          <Tabs.Tab leftSection={<IconUser size={16} />} value="profile" style={{ fontWeight: 500 }}>
             Mi Perfil
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconUsers size={16} />} value="team">
+          <Tabs.Tab leftSection={<IconUsers size={16} />} value="team" style={{ fontWeight: 500 }}>
             Equipo
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconPalette size={16} />} value="branding">
+          <Tabs.Tab leftSection={<IconPalette size={16} />} value="branding" style={{ fontWeight: 500 }}>
             Marca
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications">
+          <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications" style={{ fontWeight: 500 }}>
             Notificaciones
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCalendar size={16} />} value="booking">
+          <Tabs.Tab leftSection={<IconCalendar size={16} />} value="booking" style={{ fontWeight: 500 }}>
             Reservas
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing">
+          <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing" style={{ fontWeight: 500 }}>
             Facturación
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconShield size={16} />} value="security">
+          <Tabs.Tab leftSection={<IconShield size={16} />} value="security" style={{ fontWeight: 500 }}>
             Seguridad
           </Tabs.Tab>
         </Tabs.List>
@@ -167,8 +167,8 @@ export function SettingsPage() {
         <Box style={{ flex: 1 }}>
           {/* Workspace Settings */}
           <Tabs.Panel value="workspace">
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg" size="lg">
+            <Box className="nv-card" p="lg">
+              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Información del Workspace
               </Text>
 
@@ -224,17 +224,19 @@ export function SettingsPage() {
                   />
 
                   <Group justify="flex-end">
-                    <Button type="submit">Guardar Cambios</Button>
+                    <Button type="submit" radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>
+                      Guardar Cambios
+                    </Button>
                   </Group>
                 </Stack>
               </form>
-            </Paper>
+            </Box>
           </Tabs.Panel>
 
           {/* Profile Settings */}
           <Tabs.Panel value="profile">
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg" size="lg">
+            <Box className="nv-card" p="lg">
+              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Mi Perfil
               </Text>
 
@@ -305,26 +307,28 @@ export function SettingsPage() {
                   </Group>
 
                   <Group justify="flex-end">
-                    <Button type="submit">Guardar Cambios</Button>
+                    <Button type="submit" radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>
+                      Guardar Cambios
+                    </Button>
                   </Group>
                 </Stack>
               </form>
-            </Paper>
+            </Box>
           </Tabs.Panel>
 
           {/* Team Settings */}
           <Tabs.Panel value="team">
-            <Paper p="lg" radius="lg" withBorder>
+            <Box className="nv-card" p="lg">
               <Group justify="space-between" mb="lg">
                 <Box>
-                  <Text fw={600} size="lg">
+                  <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>
                     Equipo
                   </Text>
                   <Text c="dimmed" size="sm">
                     Gestiona los miembros de tu equipo
                   </Text>
                 </Box>
-                <Button leftSection={<IconPlus size={16} />}>
+                <Button leftSection={<IconPlus size={16} />} radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>
                   Invitar Miembro
                 </Button>
               </Group>
@@ -397,13 +401,13 @@ export function SettingsPage() {
                   ))}
                 </Table.Tbody>
               </Table>
-            </Paper>
+            </Box>
           </Tabs.Panel>
 
           {/* Branding Settings */}
           <Tabs.Panel value="branding">
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg" size="lg">
+            <Box className="nv-card" p="lg">
+              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Personalización de Marca
               </Text>
 
@@ -485,17 +489,19 @@ export function SettingsPage() {
                   </Box>
 
                   <Group justify="flex-end">
-                    <Button type="submit">Guardar Cambios</Button>
+                    <Button type="submit" radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>
+                      Guardar Cambios
+                    </Button>
                   </Group>
                 </form>
               </Stack>
-            </Paper>
+            </Box>
           </Tabs.Panel>
 
           {/* Notification Settings */}
           <Tabs.Panel value="notifications">
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg" size="lg">
+            <Box className="nv-card" p="lg">
+              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Preferencias de Notificaciones
               </Text>
 
@@ -606,13 +612,13 @@ export function SettingsPage() {
                   </Stack>
                 </Box>
               </Stack>
-            </Paper>
+            </Box>
           </Tabs.Panel>
 
           {/* Booking Settings */}
           <Tabs.Panel value="booking">
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg" size="lg">
+            <Box className="nv-card" p="lg">
+              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Configuración de Reservas
               </Text>
 
@@ -706,18 +712,20 @@ export function SettingsPage() {
                   )}
 
                   <Group justify="flex-end">
-                    <Button type="submit">Guardar Cambios</Button>
+                    <Button type="submit" radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>
+                      Guardar Cambios
+                    </Button>
                   </Group>
                 </Stack>
               </form>
-            </Paper>
+            </Box>
           </Tabs.Panel>
 
           {/* Billing Settings */}
           <Tabs.Panel value="billing">
             <Stack gap="lg">
-              <Paper p="lg" radius="lg" withBorder>
-                <Text fw={600} mb="lg" size="lg">
+              <Box className="nv-card" p="lg">
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                   Plan Actual
                 </Text>
 
@@ -744,14 +752,15 @@ export function SettingsPage() {
                   color="green"
                   icon={<IconCheck size={16} />}
                   variant="light"
+                  radius="lg"
                 >
                   Tu plan incluye: clientes ilimitados, automatizaciones, chat,
                   y soporte prioritario.
                 </Alert>
-              </Paper>
+              </Box>
 
-              <Paper p="lg" radius="lg" withBorder>
-                <Text fw={600} mb="lg" size="lg">
+              <Box className="nv-card" p="lg">
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                   Método de Pago
                 </Text>
 
@@ -759,16 +768,16 @@ export function SettingsPage() {
                   justify="space-between"
                   p="md"
                   style={{
-                    border: "1px solid var(--mantine-color-gray-3)",
-                    borderRadius: "var(--mantine-radius-md)",
+                    border: "1px solid var(--nv-border)",
+                    borderRadius: "var(--radius-item)",
                   }}
                 >
                   <Group>
-                    <ThemeIcon color="blue" size="lg" variant="light">
+                    <ThemeIcon color="blue" size="lg" variant="light" radius="xl">
                       <IconCreditCard size={20} />
                     </ThemeIcon>
                     <Box>
-                      <Text fw={500} size="sm">
+                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                         •••• •••• •••• 4242
                       </Text>
                       <Text c="dimmed" size="xs">
@@ -776,14 +785,14 @@ export function SettingsPage() {
                       </Text>
                     </Box>
                   </Group>
-                  <Button size="xs" variant="light">
+                  <Button size="xs" variant="light" radius="xl">
                     Actualizar
                   </Button>
                 </Group>
-              </Paper>
+              </Box>
 
-              <Paper p="lg" radius="lg" withBorder>
-                <Text fw={600} mb="lg" size="lg">
+              <Box className="nv-card" p="lg">
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                   Historial de Facturas
                 </Text>
 
@@ -830,15 +839,15 @@ export function SettingsPage() {
                     </Table.Tr>
                   </Table.Tbody>
                 </Table>
-              </Paper>
+              </Box>
             </Stack>
           </Tabs.Panel>
 
           {/* Security Settings */}
           <Tabs.Panel value="security">
             <Stack gap="lg">
-              <Paper p="lg" radius="lg" withBorder>
-                <Text fw={600} mb="lg" size="lg">
+              <Box className="nv-card" p="lg">
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                   Cambiar Contraseña
                 </Text>
 
@@ -856,31 +865,33 @@ export function SettingsPage() {
                     placeholder="Confirmar nueva contraseña"
                   />
                   <Group justify="flex-end">
-                    <Button>Cambiar Contraseña</Button>
+                    <Button radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>
+                      Cambiar Contraseña
+                    </Button>
                   </Group>
                 </Stack>
-              </Paper>
+              </Box>
 
-              <Paper p="lg" radius="lg" withBorder>
-                <Text fw={600} mb="lg" size="lg">
+              <Box className="nv-card" p="lg">
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                   Autenticación de Dos Factores
                 </Text>
 
                 <Group justify="space-between">
                   <Box>
-                    <Text size="sm">Protege tu cuenta con 2FA</Text>
+                    <Text size="sm" style={{ color: "var(--nv-text-primary)" }}>Protege tu cuenta con 2FA</Text>
                     <Text c="dimmed" size="xs">
                       Añade una capa extra de seguridad a tu cuenta
                     </Text>
                   </Box>
-                  <Button leftSection={<IconLock size={16} />} variant="light">
+                  <Button leftSection={<IconLock size={16} />} variant="light" radius="xl">
                     Configurar 2FA
                   </Button>
                 </Group>
-              </Paper>
+              </Box>
 
-              <Paper p="lg" radius="lg" withBorder>
-                <Text fw={600} mb="lg" size="lg">
+              <Box className="nv-card" p="lg">
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                   Sesiones Activas
                 </Text>
 
@@ -889,34 +900,33 @@ export function SettingsPage() {
                     justify="space-between"
                     p="sm"
                     style={{
-                      border: "1px solid var(--mantine-color-gray-3)",
-                      borderRadius: "var(--mantine-radius-md)",
+                      border: "1px solid var(--nv-border)",
+                      borderRadius: "var(--radius-item)",
                     }}
                   >
                     <Box>
-                      <Text fw={500} size="sm">
+                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                         Este dispositivo
                       </Text>
                       <Text c="dimmed" size="xs">
                         Chrome en Windows • Madrid, España
                       </Text>
                     </Box>
-                    <Badge color="green" variant="light">
+                    <Badge color="green" variant="light" radius="xl">
                       Actual
                     </Badge>
                   </Group>
                 </Stack>
 
-                <Button color="red" mt="md" variant="light">
+                <Button color="red" mt="md" variant="light" radius="xl">
                   Cerrar todas las sesiones
                 </Button>
-              </Paper>
+              </Box>
 
-              <Paper
+              <Box
+                className="nv-card"
                 p="lg"
-                radius="lg"
-                style={{ borderColor: "var(--mantine-color-red-3)" }}
-                withBorder
+                style={{ borderColor: "var(--nv-error)" }}
               >
                 <Text c="red" fw={600} mb="lg" size="lg">
                   Zona de Peligro
@@ -927,6 +937,7 @@ export function SettingsPage() {
                   icon={<IconAlertCircle size={16} />}
                   mb="md"
                   variant="light"
+                  radius="lg"
                 >
                   Estas acciones son irreversibles. Procede con precaución.
                 </Alert>
@@ -934,17 +945,17 @@ export function SettingsPage() {
                 <Stack gap="sm">
                   <Group justify="space-between">
                     <Box>
-                      <Text fw={500} size="sm">
+                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                         Exportar todos mis datos
                       </Text>
                       <Text c="dimmed" size="xs">
                         Descarga una copia de todos tus datos (GDPR)
                       </Text>
                     </Box>
-                    <Button variant="light">Exportar</Button>
+                    <Button variant="light" radius="xl">Exportar</Button>
                   </Group>
 
-                  <Divider />
+                  <Divider style={{ borderColor: "var(--nv-border)" }} />
 
                   <Group justify="space-between">
                     <Box>
@@ -955,12 +966,12 @@ export function SettingsPage() {
                         Elimina permanentemente tu cuenta y todos los datos
                       </Text>
                     </Box>
-                    <Button color="red" variant="light">
+                    <Button color="red" variant="light" radius="xl">
                       Eliminar Cuenta
                     </Button>
                   </Group>
                 </Stack>
-              </Paper>
+              </Box>
             </Stack>
           </Tabs.Panel>
         </Box>

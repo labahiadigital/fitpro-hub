@@ -1,741 +1,243 @@
 import {
   Avatar,
-  Badge,
   Box,
-  Button,
-  Card,
-  Container,
   Grid,
   Group,
-  Paper,
-  Progress,
-  RingProgress,
   SimpleGrid,
   Stack,
   Text,
-  ThemeIcon,
-  Title,
+  UnstyledButton,
 } from "@mantine/core";
 import {
-  IconArrowUpRight,
-  IconBarbell,
-  IconCalendarEvent,
-  IconChartBar,
-  IconChevronRight,
-  IconClock,
-  IconCurrencyEuro,
-  IconFlame,
-  IconMessage,
-  IconSalad,
-  IconTarget,
+  IconArrowRight,
   IconTrendingUp,
-  IconTrophy,
   IconUsers,
+  IconClock,
+  IconChartBar,
 } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom";
-import { StatsCard } from "../../components/common/StatsCard";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { KPICard } from "../../components/common/StatsCard";
 import { AlertsWidget } from "../../components/dashboard/AlertsWidget";
 import { ClientGrowthChart } from "../../components/dashboard/ClientGrowthChart";
 import { QuickActionsWidget } from "../../components/dashboard/QuickActionsWidget";
 import { RevenueChart } from "../../components/dashboard/RevenueChart";
 import { UpcomingSessionsWidget } from "../../components/dashboard/UpcomingSessionsWidget";
-import { useKPIs } from "../../hooks/useReports";
 import { useAuthStore } from "../../stores/auth";
 
-// Client Dashboard Component
-function ClientDashboard() {
-  const navigate = useNavigate();
-  const { user } = useAuthStore();
+// --- COMPONENTES ULTRA-PREMIUM LOCALES ---
 
-  // Demo data for client view
-  const clientStats = {
-    workoutsThisWeek: 3,
-    workoutsGoal: 4,
-    currentStreak: 12,
-    totalWorkouts: 47,
-    caloriesBurned: 2450,
-    nextSession: "Hoy 18:00",
-  };
-
-  const todayWorkout = {
-    name: "Día de Pierna + Core",
-    duration: "45 min",
-    exercises: 8,
-    difficulty: "Intermedio",
-  };
-
-  const weekProgress = [
-    { day: "L", completed: true },
-    { day: "M", completed: true },
-    { day: "X", completed: true },
-    { day: "J", completed: false },
-    { day: "V", completed: false },
-    { day: "S", completed: false },
-    { day: "D", completed: false },
-  ];
-
-  const achievements = [
-    {
-      icon: <IconFlame size={16} />,
-      label: "12 días seguidos",
-      color: "orange",
-    },
-    {
-      icon: <IconTrophy size={16} />,
-      label: "Meta semanal x3",
-      color: "yellow",
-    },
-    {
-      icon: <IconBarbell size={16} />,
-      label: "50 entrenamientos",
-      color: "violet",
-    },
-  ];
-
-  const upcomingSessions = [
-    {
-      time: "Hoy 18:00",
-      title: "Entrenamiento Personal",
-      trainer: "Carlos Fitness",
-      type: "Presencial",
-    },
-    {
-      time: "Viernes 10:00",
-      title: "HIIT Grupal",
-      trainer: "Carlos Fitness",
-      type: "Presencial",
-    },
-  ];
-
+// 1. KPI "Hero" Card
+function HeroKPI({ title, value, change, data }: any) {
   return (
-    <Container py="xl" size="xl">
-      {/* Header */}
-      <Box mb="xl">
-        <Title fw={700} order={2}>
-          ¡Hola, {user?.full_name?.split(" ")[0] || "Usuario"}! 💪
-        </Title>
-        <Text c="dimmed" size="sm">
-          Llevas una racha de {clientStats.currentStreak} días. ¡Sigue así!
-        </Text>
+    <Box className="nv-card animate-in" p="xl" style={{ position: "relative", overflow: "hidden", minHeight: 240 }}>
+      <Group justify="space-between" align="flex-start" mb="lg">
+        <Stack gap={0}>
+          <Text c="dimmed" size="xs" tt="uppercase" fw={700} style={{ letterSpacing: "0.1em" }}>
+            {title}
+          </Text>
+          <Text style={{ fontSize: "3.5rem", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1 }}>
+            {value}
+          </Text>
+        </Stack>
+        <Box
+          style={{
+            background: change > 0 ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+            color: change > 0 ? "#10B981" : "#EF4444",
+            padding: "4px 12px",
+            borderRadius: "50px",
+            fontSize: "14px",
+            fontWeight: 600,
+          }}
+        >
+          {change > 0 ? "+" : ""}{change}%
+        </Box>
+      </Group>
+
+      {/* Gráfico ambiental de fondo */}
+      <Box style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "120px", opacity: 0.5 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E7E247" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#E7E247" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#E7E247"
+              strokeWidth={3}
+              fill="url(#colorGradient)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </Box>
-
-      {/* Weekly Progress */}
-      <Paper mb="xl" p="lg" radius="lg" withBorder>
-        <Group justify="space-between" mb="md">
-          <Box>
-            <Text fw={600}>Progreso Semanal</Text>
-            <Text c="dimmed" size="sm">
-              {clientStats.workoutsThisWeek} de {clientStats.workoutsGoal}{" "}
-              entrenamientos
-            </Text>
-          </Box>
-          <RingProgress
-            label={
-              <Text fw={700} size="xs" ta="center">
-                {Math.round(
-                  (clientStats.workoutsThisWeek / clientStats.workoutsGoal) *
-                    100
-                )}
-                %
-              </Text>
-            }
-            roundCaps
-            sections={[
-              {
-                value:
-                  (clientStats.workoutsThisWeek / clientStats.workoutsGoal) *
-                  100,
-                color: "teal",
-              },
-            ]}
-            size={60}
-            thickness={6}
-          />
-        </Group>
-        <Group gap="xs" justify="center">
-          {weekProgress.map((day, index) => (
-            <Box
-              h={36}
-              key={index}
-              style={{
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: day.completed
-                  ? "var(--mantine-color-teal-6)"
-                  : "var(--mantine-color-gray-1)",
-                color: day.completed ? "white" : "var(--mantine-color-gray-6)",
-                fontWeight: 600,
-                fontSize: 12,
-              }}
-              w={36}
-            >
-              {day.day}
-            </Box>
-          ))}
-        </Group>
-      </Paper>
-
-      {/* Stats Cards */}
-      <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xl" spacing="md">
-        <Paper p="md" radius="lg" ta="center" withBorder>
-          <ThemeIcon
-            color="orange"
-            mb="xs"
-            radius="xl"
-            size="lg"
-            variant="light"
-          >
-            <IconFlame size={20} />
-          </ThemeIcon>
-          <Text fw={700} size="xl">
-            {clientStats.currentStreak}
-          </Text>
-          <Text c="dimmed" size="xs">
-            Días seguidos
-          </Text>
-        </Paper>
-        <Paper p="md" radius="lg" ta="center" withBorder>
-          <ThemeIcon color="teal" mb="xs" radius="xl" size="lg" variant="light">
-            <IconBarbell size={20} />
-          </ThemeIcon>
-          <Text fw={700} size="xl">
-            {clientStats.totalWorkouts}
-          </Text>
-          <Text c="dimmed" size="xs">
-            Entrenamientos
-          </Text>
-        </Paper>
-        <Paper p="md" radius="lg" ta="center" withBorder>
-          <ThemeIcon color="red" mb="xs" radius="xl" size="lg" variant="light">
-            <IconFlame size={20} />
-          </ThemeIcon>
-          <Text fw={700} size="xl">
-            {clientStats.caloriesBurned}
-          </Text>
-          <Text c="dimmed" size="xs">
-            Kcal esta semana
-          </Text>
-        </Paper>
-        <Paper p="md" radius="lg" ta="center" withBorder>
-          <ThemeIcon color="blue" mb="xs" radius="xl" size="lg" variant="light">
-            <IconClock size={20} />
-          </ThemeIcon>
-          <Text fw={700} size="xl">
-            {clientStats.nextSession}
-          </Text>
-          <Text c="dimmed" size="xs">
-            Próxima sesión
-          </Text>
-        </Paper>
-      </SimpleGrid>
-
-      <Grid gutter="lg">
-        {/* Today's Workout */}
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <Card p={0} radius="lg" style={{ overflow: "hidden" }} withBorder>
-            <Box
-              p="lg"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--mantine-color-teal-6) 0%, var(--mantine-color-teal-8) 100%)",
-                color: "white",
-              }}
-            >
-              <Group justify="space-between" mb="xs">
-                <Badge c="teal" color="white" variant="light">
-                  Entrenamiento de Hoy
-                </Badge>
-                <IconTarget size={20} />
-              </Group>
-              <Title fw={700} mb="xs" order={3}>
-                {todayWorkout.name}
-              </Title>
-              <Group gap="lg">
-                <Text opacity={0.9} size="sm">
-                  <IconClock size={14} style={{ marginRight: 4 }} />
-                  {todayWorkout.duration}
-                </Text>
-                <Text opacity={0.9} size="sm">
-                  <IconBarbell size={14} style={{ marginRight: 4 }} />
-                  {todayWorkout.exercises} ejercicios
-                </Text>
-              </Group>
-            </Box>
-            <Box p="lg">
-              <Button
-                color="teal"
-                fullWidth
-                onClick={() => navigate("/workouts")}
-              >
-                Comenzar Entrenamiento
-              </Button>
-            </Box>
-          </Card>
-        </Grid.Col>
-
-        {/* Upcoming Sessions */}
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <Paper h="100%" p="lg" radius="lg" withBorder>
-            <Group justify="space-between" mb="md">
-              <Text fw={600}>Próximas Citas</Text>
-              <Button
-                onClick={() => navigate("/calendar")}
-                rightSection={<IconChevronRight size={14} />}
-                size="xs"
-                variant="subtle"
-              >
-                Ver todas
-              </Button>
-            </Group>
-            <Stack gap="md">
-              {upcomingSessions.map((session, index) => (
-                <Group
-                  justify="space-between"
-                  key={index}
-                  p="sm"
-                  style={{
-                    backgroundColor: "var(--mantine-color-gray-0)",
-                    borderRadius: 8,
-                  }}
-                >
-                  <Box>
-                    <Text fw={600} size="sm">
-                      {session.title}
-                    </Text>
-                    <Text c="dimmed" size="xs">
-                      con {session.trainer} • {session.type}
-                    </Text>
-                  </Box>
-                  <Badge variant="light">{session.time}</Badge>
-                </Group>
-              ))}
-            </Stack>
-          </Paper>
-        </Grid.Col>
-
-        {/* Achievements */}
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <Paper p="lg" radius="lg" withBorder>
-            <Group justify="space-between" mb="md">
-              <Text fw={600}>Logros Recientes</Text>
-              <IconTrophy color="var(--mantine-color-yellow-6)" size={20} />
-            </Group>
-            <Stack gap="sm">
-              {achievements.map((achievement, index) => (
-                <Group
-                  gap="sm"
-                  key={index}
-                  p="sm"
-                  style={{
-                    backgroundColor: "var(--mantine-color-gray-0)",
-                    borderRadius: 8,
-                  }}
-                >
-                  <ThemeIcon
-                    color={achievement.color}
-                    radius="xl"
-                    size="md"
-                    variant="light"
-                  >
-                    {achievement.icon}
-                  </ThemeIcon>
-                  <Text fw={500} size="sm">
-                    {achievement.label}
-                  </Text>
-                </Group>
-              ))}
-            </Stack>
-          </Paper>
-        </Grid.Col>
-
-        {/* Quick Actions */}
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <Paper p="lg" radius="lg" withBorder>
-            <Text fw={600} mb="md">
-              Acciones Rápidas
-            </Text>
-            <SimpleGrid cols={2} spacing="sm">
-              <Button
-                color="teal"
-                leftSection={<IconBarbell size={16} />}
-                onClick={() => navigate("/workouts")}
-                variant="light"
-              >
-                Ver Plan
-              </Button>
-              <Button
-                color="orange"
-                leftSection={<IconSalad size={16} />}
-                onClick={() => navigate("/nutrition")}
-                variant="light"
-              >
-                Mi Dieta
-              </Button>
-              <Button
-                color="blue"
-                leftSection={<IconMessage size={16} />}
-                onClick={() => navigate("/chat")}
-                variant="light"
-              >
-                Chat
-              </Button>
-              <Button
-                color="violet"
-                leftSection={<IconTrophy size={16} />}
-                onClick={() => navigate("/progress")}
-                variant="light"
-              >
-                Progreso
-              </Button>
-            </SimpleGrid>
-          </Paper>
-        </Grid.Col>
-      </Grid>
-    </Container>
+    </Box>
   );
 }
 
-// Trainer Dashboard Component
-function TrainerDashboard() {
-  const navigate = useNavigate();
-  const { user, currentWorkspace } = useAuthStore();
-  const { data: kpis } = useKPIs();
-
-  // Datos de ejemplo para gráficos
-  const revenueData = [
-    { month: "Jul", revenue: 3200, subscriptions: 2800, oneTime: 400 },
-    { month: "Ago", revenue: 3500, subscriptions: 3000, oneTime: 500 },
-    { month: "Sep", revenue: 3800, subscriptions: 3200, oneTime: 600 },
-    { month: "Oct", revenue: 4100, subscriptions: 3500, oneTime: 600 },
-    { month: "Nov", revenue: 4400, subscriptions: 3800, oneTime: 600 },
-    { month: "Dic", revenue: 4850, subscriptions: 4200, oneTime: 650 },
+// 2. Tarjeta de Lista "Glass"
+function TransactionList() {
+  const items = [
+    { name: "Juan Pérez", amount: "+€149", date: "Hoy, 10:23 AM", icon: "J" },
+    { name: "María Gómez", amount: "+€79", date: "Ayer", icon: "M" },
+    { name: "Carlos Ruiz", amount: "+€29", date: "Ayer", icon: "C" },
   ];
-
-  const clientGrowthData = [
-    { month: "Jul", total: 42, new: 5, churned: 2 },
-    { month: "Ago", total: 45, new: 6, churned: 3 },
-    { month: "Sep", total: 48, new: 5, churned: 2 },
-    { month: "Oct", total: 52, new: 7, churned: 3 },
-    { month: "Nov", total: 56, new: 6, churned: 2 },
-    { month: "Dic", total: 62, new: 8, churned: 2 },
-  ];
-
-  // Alertas de ejemplo
-  const alerts = [
-    {
-      id: "1",
-      type: "payment_due" as const,
-      title: "Pago pendiente",
-      description: "María García - Suscripción vencida hace 3 días",
-      severity: "error" as const,
-    },
-    {
-      id: "2",
-      type: "inactive_client" as const,
-      title: "Cliente inactivo",
-      description: "Carlos López - Sin actividad hace 14 días",
-      severity: "warning" as const,
-    },
-    {
-      id: "3",
-      type: "renewal_soon" as const,
-      title: "Renovación próxima",
-      description: "Ana Martínez - Renueva en 5 días",
-      severity: "info" as const,
-    },
-    {
-      id: "4",
-      type: "form_pending" as const,
-      title: "Formulario pendiente",
-      description: "Pedro Sánchez - PAR-Q sin completar",
-      severity: "warning" as const,
-    },
-  ];
-
-  // Próximas sesiones
-  const upcomingSessions = [
-    {
-      id: "1",
-      title: "Entrenamiento Personal",
-      clientName: "María García",
-      startTime: new Date().toISOString(),
-      endTime: new Date(Date.now() + 3_600_000).toISOString(),
-      type: "individual" as const,
-      modality: "in_person" as const,
-      status: "confirmed" as const,
-      location: "Sala 1",
-    },
-    {
-      id: "2",
-      title: "Consulta Nutricional",
-      clientName: "Carlos López",
-      startTime: new Date(Date.now() + 5_400_000).toISOString(),
-      endTime: new Date(Date.now() + 7_200_000).toISOString(),
-      type: "individual" as const,
-      modality: "online" as const,
-      status: "pending" as const,
-    },
-    {
-      id: "3",
-      title: "HIIT Grupal",
-      clientName: "Grupo A",
-      startTime: new Date(Date.now() + 10_800_000).toISOString(),
-      endTime: new Date(Date.now() + 14_400_000).toISOString(),
-      type: "group" as const,
-      modality: "in_person" as const,
-      status: "confirmed" as const,
-      location: "Sala Grande",
-    },
-    {
-      id: "4",
-      title: "Evaluación Inicial",
-      clientName: "Pedro Sánchez",
-      startTime: new Date(Date.now() + 86_400_000).toISOString(),
-      endTime: new Date(Date.now() + 90_000_000).toISOString(),
-      type: "individual" as const,
-      modality: "in_person" as const,
-      status: "confirmed" as const,
-    },
-  ];
-
-  // Clientes recientes
-  const recentClients = [
-    { id: 1, name: "Laura Fernández", joinedDays: 2, progress: 15 },
-    { id: 2, name: "Miguel Torres", joinedDays: 5, progress: 35 },
-    { id: 3, name: "Sara Ruiz", joinedDays: 7, progress: 45 },
-  ];
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("es-ES", {
-      style: "currency",
-      currency: "EUR",
-    }).format(value);
 
   return (
-    <Container py="xl" size="xl">
-      {/* Header */}
-      <Box mb="xl">
-        <Title fw={700} order={2}>
-          ¡Hola, {user?.full_name?.split(" ")[0] || "Usuario"}! 👋
-        </Title>
-        <Text c="dimmed" size="sm">
-          Aquí tienes un resumen de {currentWorkspace?.name || "tu negocio"} hoy
+    <Box className="nv-card animate-in delay-1" p="xl" h="100%">
+      <Group justify="space-between" mb="xl">
+        <Text size="lg" fw={700} style={{ fontFamily: "Space Grotesk" }}>Actividad Reciente</Text>
+        <UnstyledButton>
+          <IconArrowRight size={20} color="gray" />
+        </UnstyledButton>
+      </Group>
+      <Stack gap="md">
+        {items.map((item, i) => (
+          <Group key={i} justify="space-between" style={{ paddingBottom: 16, borderBottom: "1px solid var(--nv-border)" }}>
+            <Group>
+              <Avatar radius="md" size="md" color="dark">{item.icon}</Avatar>
+              <Box>
+                <Text size="sm" fw={600}>{item.name}</Text>
+                <Text size="xs" c="dimmed">{item.date}</Text>
+              </Box>
+            </Group>
+            <Text fw={600} size="sm">{item.amount}</Text>
+          </Group>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
+// 3. Mapa de Calor / Distribución (Visual Only)
+function StatsGrid() {
+  return (
+    <SimpleGrid cols={2} spacing="md">
+      <Box className="nv-card animate-in delay-2" p="lg" style={{ background: "var(--nv-dark-surface)", color: "white" }}>
+        <IconUsers size={24} color="#E7E247" />
+        <Text mt="lg" size="xs" c="dimmed" tt="uppercase" fw={700}>Usuarios Activos</Text>
+        <Text size="xl" fw={700}>3,420</Text>
+      </Box>
+      <Box className="nv-card animate-in delay-2" p="lg">
+        <IconChartBar size={24} />
+        <Text mt="lg" size="xs" c="dimmed" tt="uppercase" fw={700}>Conversión</Text>
+        <Text size="xl" fw={700}>4.2%</Text>
+      </Box>
+      <Box className="nv-card animate-in delay-3" p="lg">
+        <IconClock size={24} />
+        <Text mt="lg" size="xs" c="dimmed" tt="uppercase" fw={700}>Tiempo Promedio</Text>
+        <Text size="xl" fw={700}>12m</Text>
+      </Box>
+      <Box className="nv-card animate-in delay-3" p="lg" style={{ background: "#E7E247", color: "var(--nv-dark-base)" }}>
+        <IconTrendingUp size={24} />
+        <Text mt="lg" size="xs" style={{ opacity: 0.7 }} tt="uppercase" fw={700}>Crecimiento</Text>
+        <Text size="xl" fw={700}>+24%</Text>
+      </Box>
+    </SimpleGrid>
+  );
+}
+
+// --- MAIN PAGE ---
+
+export function DashboardPage() {
+  const { user } = useAuthStore();
+  const chartData = [
+    { value: 10 }, { value: 25 }, { value: 15 }, { value: 35 }, { value: 30 }, { value: 50 }, { value: 80 }
+  ];
+
+  // Datos para componentes importados
+  const revenueData = [
+    { month: "Ene", revenue: 8200, subscriptions: 7200, oneTime: 1000 },
+    { month: "Feb", revenue: 9500, subscriptions: 8200, oneTime: 1300 },
+    { month: "Mar", revenue: 10200, subscriptions: 8800, oneTime: 1400 },
+    { month: "Abr", revenue: 11100, subscriptions: 9500, oneTime: 1600 },
+    { month: "May", revenue: 11800, subscriptions: 10200, oneTime: 1600 },
+    { month: "Jun", revenue: 12400, subscriptions: 10800, oneTime: 1600 },
+  ];
+
+  const alerts = [
+    { id: "1", type: "payment_due" as const, title: "Pago pendiente", description: "María García - Vencido 3d", severity: "error" as const },
+    { id: "2", type: "inactive_client" as const, title: "Cliente inactivo", description: "Carlos López - 14d", severity: "warning" as const },
+  ];
+
+  const sessions = [
+    { id: "1", title: "Entrenamiento Personal", clientName: "María García", startTime: new Date().toISOString(), endTime: new Date(Date.now() + 3600000).toISOString(), type: "individual" as const, modality: "in_person" as const, status: "confirmed" as const, location: "Sala 1" },
+    { id: "2", title: "Consulta Nutricional", clientName: "Carlos López", startTime: new Date(Date.now() + 7200000).toISOString(), endTime: new Date(Date.now() + 9000000).toISOString(), type: "individual" as const, modality: "online" as const, status: "pending" as const },
+  ];
+
+  return (
+    <Box>
+      {/* Header Text */}
+      <Box mb={60} className="animate-in">
+        <Text style={{ fontSize: "4rem", fontWeight: 800, lineHeight: 0.9, letterSpacing: "-0.04em", fontFamily: "Space Grotesk" }}>
+          Resumen
+        </Text>
+        <Text size="xl" c="dimmed" mt="sm" style={{ maxWidth: 600 }}>
+          Buenas tardes, {user?.full_name?.split(" ")[0]}. Tu negocio está rindiendo excepcionalmente bien esta semana. Los ingresos han subido un 12% comparado con el periodo anterior.
         </Text>
       </Box>
 
-      {/* Quick Actions */}
-      <Box mb="xl">
+      {/* BENTO GRID LAYOUT */}
+      <Grid gutter="xl">
+        {/* Columna Principal (2/3) */}
+        <Grid.Col span={{ base: 12, md: 8 }}>
+          <Stack gap="xl">
+            {/* Fila de KPIs Gigantes */}
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <HeroKPI title="Ingresos Totales" value="€128.4k" change={12.5} data={chartData} />
+              <HeroKPI title="Beneficio Neto" value="€84.2k" change={8.1} data={[{value: 20}, {value:40}, {value:30}, {value:60}, {value:90}]} />
+            </SimpleGrid>
+            
+            {/* Gráfico Principal de Ingresos */}
+            <RevenueChart data={revenueData} currentMRR={12400} previousMRR={11800} currency="€" />
+          </Stack>
+        </Grid.Col>
+
+        {/* Columna Lateral (1/3) */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Stack gap="xl" h="100%">
+            {/* Fila de KPIs Pequeños Verticales */}
+            <KPICard
+              title="Clientes Activos"
+              value="16,601"
+              change={12.5}
+              changeType="positive"
+              chartData={[100, 110, 115, 120, 118, 125, 130, 135]}
+            />
+            <KPICard
+              title="Tasa de Cancelación"
+              value="2.1"
+              suffix="%"
+              changeType="stable"
+              changeLabel="Estable vs mes anterior"
+              chartData={[2.5, 2.4, 2.3, 2.2, 2.2, 2.1, 2.1]}
+            />
+            
+            <TransactionList />
+            <StatsGrid />
+          </Stack>
+        </Grid.Col>
+      </Grid>
+
+      {/* Fila Inferior de Widgets Operativos */}
+      <Grid gutter="lg" mt="xl" className="animate-in delay-2">
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <ClientGrowthChart totalClients={16601} newThisMonth={124} churnedThisMonth={12} />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <AlertsWidget alerts={alerts} />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <UpcomingSessionsWidget sessions={sessions} />
+        </Grid.Col>
+      </Grid>
+
+      {/* Fila Final: Quick Actions */}
+      <Box mt="xl" className="animate-in delay-3">
         <QuickActionsWidget />
       </Box>
-
-      {/* KPIs */}
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl" spacing="lg">
-        <StatsCard
-          change={12}
-          changeLabel="vs mes anterior"
-          color="primary"
-          icon={<IconUsers size={24} />}
-          title="Clientes Activos"
-          value={kpis?.active_clients || 62}
-        />
-        <StatsCard
-          color="blue"
-          icon={<IconCalendarEvent size={24} />}
-          title="Sesiones Hoy"
-          value={kpis?.upcoming_sessions || 4}
-        />
-        <StatsCard
-          change={
-            kpis?.revenue_last_month
-              ? Math.round(
-                  (((kpis?.revenue_this_month || 0) - kpis.revenue_last_month) /
-                    kpis.revenue_last_month) *
-                    100
-                )
-              : 10
-          }
-          changeLabel="vs mes anterior"
-          color="green"
-          icon={<IconCurrencyEuro size={24} />}
-          title="Ingresos Mensuales"
-          value={formatCurrency(kpis?.revenue_this_month || 4850)}
-        />
-        <StatsCard
-          change={8}
-          changeLabel="crecimiento"
-          color="violet"
-          icon={<IconTrendingUp size={24} />}
-          title="MRR"
-          value={formatCurrency(kpis?.mrr || 4200)}
-        />
-      </SimpleGrid>
-
-      <Grid gutter="lg">
-        {/* Gráfico de ingresos */}
-        <Grid.Col span={{ base: 12, lg: 8 }}>
-          <RevenueChart
-            currentMRR={4200}
-            data={revenueData}
-            previousMRR={3800}
-          />
-        </Grid.Col>
-
-        {/* Alertas */}
-        <Grid.Col span={{ base: 12, lg: 4 }}>
-          <AlertsWidget
-            alerts={alerts}
-            onAlertClick={(alert) => {
-              if (alert.type === "payment_due") navigate("/payments");
-              else if (alert.type === "inactive_client") navigate("/clients");
-              else if (alert.type === "form_pending") navigate("/forms");
-            }}
-          />
-        </Grid.Col>
-
-        {/* Gráfico de clientes */}
-        <Grid.Col span={{ base: 12, lg: 6 }}>
-          <ClientGrowthChart
-            churnedThisMonth={2}
-            data={clientGrowthData}
-            newThisMonth={8}
-            totalClients={62}
-          />
-        </Grid.Col>
-
-        {/* Próximas sesiones */}
-        <Grid.Col span={{ base: 12, lg: 6 }}>
-          <UpcomingSessionsWidget
-            onSessionClick={() => navigate("/calendar")}
-            onViewAll={() => navigate("/calendar")}
-            sessions={upcomingSessions}
-          />
-        </Grid.Col>
-
-        {/* Clientes recientes */}
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <Paper h="100%" p="lg" radius="lg" withBorder>
-            <Title fw={600} mb="lg" order={5}>
-              Nuevos Clientes
-            </Title>
-
-            <Stack gap="md">
-              {recentClients.map((client) => (
-                <Box key={client.id}>
-                  <Group justify="space-between" mb={4}>
-                    <Group gap="xs">
-                      <Avatar color="primary" radius="xl" size="sm">
-                        {client.name.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Text fw={500} size="sm">
-                          {client.name}
-                        </Text>
-                        <Text c="dimmed" size="xs">
-                          Hace {client.joinedDays} días
-                        </Text>
-                      </Box>
-                    </Group>
-                    <Text c="dimmed" size="xs">
-                      {client.progress}%
-                    </Text>
-                  </Group>
-                  <Progress color="primary" size="xs" value={client.progress} />
-                </Box>
-              ))}
-            </Stack>
-          </Paper>
-        </Grid.Col>
-
-        {/* Métricas rápidas */}
-        <Grid.Col span={{ base: 12, md: 8 }}>
-          <Paper p="lg" radius="lg" withBorder>
-            <Group justify="space-between" mb="lg">
-              <Box>
-                <Title fw={600} order={5}>
-                  Resumen del Mes
-                </Title>
-                <Text c="dimmed" size="sm">
-                  Rendimiento de tu negocio
-                </Text>
-              </Box>
-              <IconChartBar color="var(--mantine-color-gray-5)" size={24} />
-            </Group>
-
-            <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="lg">
-              <Box>
-                <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                  Sesiones Completadas
-                </Text>
-                <Group gap="xs" mt={4}>
-                  <Text fw={700} size="xl">
-                    {kpis?.completed_sessions_month || 87}
-                  </Text>
-                  <Badge color="green" size="xs" variant="light">
-                    <Group gap={2}>
-                      <IconArrowUpRight size={10} />
-                      12%
-                    </Group>
-                  </Badge>
-                </Group>
-              </Box>
-              <Box>
-                <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                  Tasa de Asistencia
-                </Text>
-                <Group gap="xs" mt={4}>
-                  <Text fw={700} size="xl">
-                    94%
-                  </Text>
-                  <Badge color="green" size="xs" variant="light">
-                    <Group gap={2}>
-                      <IconArrowUpRight size={10} />
-                      3%
-                    </Group>
-                  </Badge>
-                </Group>
-              </Box>
-              <Box>
-                <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                  ARPA
-                </Text>
-                <Group gap="xs" mt={4}>
-                  <Text fw={700} size="xl">
-                    {formatCurrency(kpis?.arpa || 68)}
-                  </Text>
-                </Group>
-              </Box>
-              <Box>
-                <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                  Tasa de Retención
-                </Text>
-                <Group gap="xs" mt={4}>
-                  <Text fw={700} size="xl">
-                    {100 - (kpis?.churn_rate || 3)}%
-                  </Text>
-                  <Badge color="green" size="xs" variant="light">
-                    Excelente
-                  </Badge>
-                </Group>
-              </Box>
-            </SimpleGrid>
-          </Paper>
-        </Grid.Col>
-      </Grid>
-    </Container>
+    </Box>
   );
-}
-
-// Main Dashboard Page - Routes to appropriate dashboard based on role
-export function DashboardPage() {
-  const { isDemoMode, demoRole } = useAuthStore();
-
-  // Show client dashboard if in demo mode as client
-  if (isDemoMode && demoRole === "client") {
-    return <ClientDashboard />;
-  }
-
-  // Default to trainer dashboard
-  return <TrainerDashboard />;
 }

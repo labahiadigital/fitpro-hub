@@ -276,35 +276,33 @@ export function WorkoutsPage() {
       />
 
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg">
-          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs">
+        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
+          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs" style={{ fontWeight: 500 }}>
             Programas
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises">
+          <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 500 }}>
             Biblioteca de Ejercicios
           </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="programs">
           {programs && programs.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg" className="stagger">
               {programs.map((program: any) => (
-                <Card key={program.id} padding="lg" radius="lg" withBorder>
-                  <Card.Section inheritPadding py="sm" withBorder>
-                    <Group justify="space-between">
-                      <Text fw={600}>{program.name}</Text>
-                      <Badge color="primary" variant="light">
-                        {program.duration_weeks} semanas
-                      </Badge>
-                    </Group>
-                  </Card.Section>
+                <Box key={program.id} className="nv-card" p="lg">
+                  <Group justify="space-between" mb="md">
+                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{program.name}</Text>
+                    <Badge color="blue" variant="light" radius="xl">
+                      {program.duration_weeks} semanas
+                    </Badge>
+                  </Group>
 
-                  <Text c="dimmed" lineClamp={2} mt="md" size="sm">
+                  <Text c="dimmed" lineClamp={2} size="sm">
                     {program.description || "Sin descripción"}
                   </Text>
 
                   <Group gap="xs" mt="md">
-                    <Badge size="sm" variant="outline">
+                    <Badge size="sm" variant="outline" radius="xl">
                       {program.difficulty === "beginner"
                         ? "Principiante"
                         : program.difficulty === "intermediate"
@@ -312,33 +310,37 @@ export function WorkoutsPage() {
                           : "Avanzado"}
                     </Badge>
                     {program.tags?.slice(0, 2).map((tag: string) => (
-                      <Badge key={tag} size="sm" variant="light">
+                      <Badge key={tag} size="sm" variant="light" radius="xl">
                         {tag}
                       </Badge>
                     ))}
                   </Group>
 
-                  <Group gap="xs" mt="md">
+                  <Divider my="md" style={{ borderColor: "var(--nv-border)" }} />
+
+                  <Group gap="xs">
                     <Button
                       flex={1}
                       leftSection={<IconEdit size={14} />}
                       onClick={() => openProgramBuilder(program)}
                       size="xs"
                       variant="light"
+                      radius="xl"
+                      style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}
                     >
                       Editar
                     </Button>
-                    <ActionIcon color="blue" variant="light">
+                    <ActionIcon color="blue" variant="light" radius="xl">
                       <IconEye size={16} />
                     </ActionIcon>
-                    <ActionIcon color="gray" variant="light">
+                    <ActionIcon color="gray" variant="light" radius="xl">
                       <IconCopy size={16} />
                     </ActionIcon>
-                    <ActionIcon color="red" variant="light">
+                    <ActionIcon color="red" variant="light" radius="xl">
                       <IconTrash size={16} />
                     </ActionIcon>
                   </Group>
-                </Card>
+                </Box>
               ))}
             </SimpleGrid>
           ) : loadingPrograms ? null : (
@@ -359,45 +361,44 @@ export function WorkoutsPage() {
             onChange={(e) => setSearchExercise(e.target.value)}
             placeholder="Buscar ejercicios..."
             value={searchExercise}
+            radius="xl"
+            styles={{
+              input: {
+                backgroundColor: "var(--nv-surface)",
+                border: "1px solid var(--nv-border)",
+              }
+            }}
           />
 
           {filteredExercises.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
               {filteredExercises.map((exercise: any) => (
-                <Card key={exercise.id} padding="sm" radius="md" withBorder>
-                  <Card.Section>
-                    <Box
-                      h={120}
-                      style={{
-                        background:
-                          "linear-gradient(135deg, var(--mantine-color-primary-1) 0%, var(--mantine-color-primary-2) 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <IconBarbell
-                        color="var(--mantine-color-primary-6)"
-                        size={40}
-                      />
-                    </Box>
-                  </Card.Section>
+                <Box key={exercise.id} className="nv-card" p={0} style={{ overflow: "hidden" }}>
+                  <Box
+                    h={120}
+                    style={{
+                      background: "linear-gradient(135deg, var(--nv-primary-glow) 0%, var(--nv-surface) 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <IconBarbell color="var(--nv-primary)" size={40} />
+                  </Box>
 
-                  <Box mt="sm">
-                    <Text fw={600} lineClamp={1} size="sm">
+                  <Box p="sm">
+                    <Text fw={600} lineClamp={1} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                       {exercise.name}
                     </Text>
                     <Group gap={4} mt="xs">
-                      {exercise.muscle_groups
-                        ?.slice(0, 2)
-                        .map((muscle: string) => (
-                          <Badge key={muscle} size="xs" variant="light">
-                            {muscle}
-                          </Badge>
-                        ))}
+                      {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                        <Badge key={muscle} size="xs" variant="light" radius="xl">
+                          {muscle}
+                        </Badge>
+                      ))}
                     </Group>
                   </Box>
-                </Card>
+                </Box>
               ))}
             </SimpleGrid>
           ) : loadingExercises ? null : (
@@ -418,6 +419,8 @@ export function WorkoutsPage() {
         opened={exerciseModalOpened}
         size="lg"
         title="Nuevo Ejercicio"
+        radius="lg"
+        styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={exerciseForm.onSubmit(handleCreateExercise)}>
           <Stack>
@@ -498,15 +501,20 @@ export function WorkoutsPage() {
         position="right"
         size="xl"
         title={editingProgram ? "Editar Programa" : "Nuevo Programa"}
+        styles={{ 
+          content: { backgroundColor: "var(--nv-paper-bg)" }, 
+          header: { backgroundColor: "var(--nv-paper-bg)", borderBottom: "1px solid var(--nv-border)" }
+        }}
       >
         <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
           <Stack>
-            <Paper p="md" radius="md" withBorder>
+            <Box className="nv-card" p="md">
               <Stack gap="sm">
                 <TextInput
                   label="Nombre del programa"
                   placeholder="Programa de Hipertrofia"
                   required
+                  radius="md"
                   {...programForm.getInputProps("name")}
                 />
 
@@ -514,6 +522,7 @@ export function WorkoutsPage() {
                   label="Descripción"
                   minRows={2}
                   placeholder="Describe el programa..."
+                  radius="md"
                   {...programForm.getInputProps("description")}
                 />
 
@@ -522,6 +531,7 @@ export function WorkoutsPage() {
                     label="Duración (semanas)"
                     max={52}
                     min={1}
+                    radius="md"
                     {...programForm.getInputProps("duration_weeks")}
                   />
                   <Select
@@ -531,6 +541,7 @@ export function WorkoutsPage() {
                       { value: "advanced", label: "Avanzado" },
                     ]}
                     label="Dificultad"
+                    radius="md"
                     {...programForm.getInputProps("difficulty")}
                   />
                 </Group>
@@ -546,14 +557,16 @@ export function WorkoutsPage() {
                   label="Etiquetas"
                   placeholder="Añade etiquetas"
                   searchable
+                  radius="md"
                   {...programForm.getInputProps("tags")}
                 />
               </Stack>
-            </Paper>
+            </Box>
 
             <Divider
               label="Constructor de Entrenamiento"
               labelPosition="center"
+              style={{ borderColor: "var(--nv-border)" }}
             />
 
             <WorkoutBuilder
@@ -568,12 +581,17 @@ export function WorkoutsPage() {
           justify="flex-end"
           mt="md"
           p="md"
-          style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+          style={{ borderTop: "1px solid var(--nv-border)" }}
         >
-          <Button onClick={closeBuilder} variant="default">
+          <Button onClick={closeBuilder} variant="default" radius="xl">
             Cancelar
           </Button>
-          <Button loading={createProgram.isPending} onClick={handleSaveProgram}>
+          <Button 
+            loading={createProgram.isPending} 
+            onClick={handleSaveProgram}
+            radius="xl"
+            style={{ backgroundColor: "var(--nv-primary)" }}
+          >
             {editingProgram ? "Guardar Cambios" : "Crear Programa"}
           </Button>
         </Group>

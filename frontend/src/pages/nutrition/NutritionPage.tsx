@@ -483,19 +483,19 @@ export function NutritionPage() {
       />
 
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg">
-          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="plans">
+        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
+          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="plans" style={{ fontWeight: 500 }}>
             Planes Nutricionales{" "}
             {mealPlans.length > 0 && (
-              <Badge ml="xs" size="xs">
+              <Badge ml="xs" size="xs" radius="xl">
                 {mealPlans.length}
               </Badge>
             )}
           </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconApple size={14} />} value="foods">
+          <Tabs.Tab leftSection={<IconApple size={14} />} value="foods" style={{ fontWeight: 500 }}>
             Biblioteca de Alimentos{" "}
             {(totalFoodsCount ?? 0) > 0 && (
-              <Badge ml="xs" size="xs">
+              <Badge ml="xs" size="xs" radius="xl">
                 {totalFoodsCount?.toLocaleString()}
               </Badge>
             )}
@@ -508,45 +508,41 @@ export function NutritionPage() {
               <Loader size="lg" />
             </Center>
           ) : mealPlans.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg" className="stagger">
               {mealPlans.map((plan) => (
-                <Card key={plan.id} padding="lg" radius="lg" withBorder>
-                  <Card.Section inheritPadding py="sm" withBorder>
-                    <Group justify="space-between">
-                      <Text fw={600}>{plan.name}</Text>
-                      <Badge color="green" variant="light">
-                        {plan.duration_days} días
-                      </Badge>
-                    </Group>
-                  </Card.Section>
+                <Box key={plan.id} className="nv-card" p="lg">
+                  <Group justify="space-between" mb="md">
+                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{plan.name}</Text>
+                    <Badge color="green" variant="light" radius="xl">
+                      {plan.duration_days} días
+                    </Badge>
+                  </Group>
 
-                  <Text c="dimmed" lineClamp={2} mt="md" size="sm">
+                  <Text c="dimmed" lineClamp={2} size="sm">
                     {plan.description || "Sin descripción"}
                   </Text>
 
                   {plan.client_name && (
-                    <Badge color="blue" mt="sm" size="sm" variant="outline">
+                    <Badge color="blue" mt="sm" size="sm" variant="outline" radius="xl">
                       Asignado a: {plan.client_name}
                     </Badge>
                   )}
 
                   <Stack gap="xs" mt="md">
                     <Group justify="space-between">
-                      <Text c="dimmed" size="xs">
-                        Calorías objetivo
-                      </Text>
-                      <Text fw={500} size="xs">
+                      <Text c="dimmed" size="xs">Calorías objetivo</Text>
+                      <Text fw={500} size="xs" style={{ color: "var(--nv-text-primary)" }}>
                         {plan.target_calories} kcal
                       </Text>
                     </Group>
                     <Group gap="xs">
-                      <Badge color="green" size="xs" variant="light">
+                      <Badge color="green" size="xs" variant="light" radius="xl">
                         P: {plan.target_protein}g
                       </Badge>
-                      <Badge color="orange" size="xs" variant="light">
+                      <Badge color="orange" size="xs" variant="light" radius="xl">
                         C: {plan.target_carbs}g
                       </Badge>
-                      <Badge color="grape" size="xs" variant="light">
+                      <Badge color="grape" size="xs" variant="light" radius="xl">
                         G: {plan.target_fat}g
                       </Badge>
                     </Group>
@@ -554,25 +550,30 @@ export function NutritionPage() {
 
                   <Group gap="xs" mt="md">
                     {plan.dietary_tags?.slice(0, 2).map((tag: string) => (
-                      <Badge key={tag} size="sm" variant="outline">
+                      <Badge key={tag} size="sm" variant="outline" radius="xl">
                         {tag}
                       </Badge>
                     ))}
                   </Group>
 
-                  <Group gap="xs" mt="md">
+                  <Divider my="md" style={{ borderColor: "var(--nv-border)" }} />
+
+                  <Group gap="xs">
                     <Button
                       flex={1}
                       leftSection={<IconEdit size={14} />}
                       onClick={() => openPlanBuilder(plan)}
                       size="xs"
                       variant="light"
+                      radius="xl"
+                      style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}
                     >
                       Editar
                     </Button>
                     <ActionIcon 
                       color="blue" 
                       variant="light"
+                      radius="xl"
                       onClick={() => navigate(`/nutrition/${plan.id}`)}
                     >
                       <IconEye size={16} />
@@ -582,6 +583,7 @@ export function NutritionPage() {
                       loading={createMealPlan.isPending}
                       onClick={() => handleDuplicatePlan(plan)}
                       variant="light"
+                      radius="xl"
                     >
                       <IconCopy size={16} />
                     </ActionIcon>
@@ -590,11 +592,12 @@ export function NutritionPage() {
                       loading={deleteMealPlan.isPending}
                       onClick={() => handleDeletePlan(plan.id, plan.name)}
                       variant="light"
+                      radius="xl"
                     >
                       <IconTrash size={16} />
                     </ActionIcon>
                   </Group>
-                </Card>
+                </Box>
               ))}
             </SimpleGrid>
           ) : (
@@ -615,6 +618,13 @@ export function NutritionPage() {
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Buscar alimentos..."
             value={searchFood}
+            radius="xl"
+            styles={{
+              input: {
+                backgroundColor: "var(--nv-surface)",
+                border: "1px solid var(--nv-border)",
+              }
+            }}
           />
 
           {isLoadingPaginatedFoods ? (
@@ -637,28 +647,29 @@ export function NutritionPage() {
                 {isFetchingFoods && <Loader size="xs" />}
               </Group>
 
-              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
+              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
                 {paginatedFoodsList.map((food) => {
                   const CategoryIcon = getCategoryIcon(food.category);
                   return (
-                    <Card key={food.id} padding="sm" radius="md" withBorder>
+                    <Box key={food.id} className="nv-card" p="sm">
                       <Group gap="sm" mb="sm">
                         <ThemeIcon
                           color={getCategoryColor(food.category)}
-                          radius="md"
+                          radius="xl"
                           size="lg"
                           variant="light"
                         >
                           <CategoryIcon size={18} />
                         </ThemeIcon>
                         <Box style={{ flex: 1 }}>
-                          <Text fw={600} lineClamp={1} size="sm">
+                          <Text fw={600} lineClamp={1} size="sm" style={{ color: "var(--nv-text-primary)" }}>
                             {food.name}
                           </Text>
                           <Badge
                             color={getCategoryColor(food.category)}
                             size="xs"
                             variant="light"
+                            radius="xl"
                           >
                             {food.category}
                           </Badge>
@@ -668,49 +679,36 @@ export function NutritionPage() {
                           onClick={() => handleDeleteFood(food.id, food.name)}
                           size="sm"
                           variant="subtle"
+                          radius="xl"
                         >
                           <IconTrash size={14} />
                         </ActionIcon>
                       </Group>
 
-                      <Divider mb="sm" />
+                      <Divider mb="sm" style={{ borderColor: "var(--nv-border)" }} />
 
                       <Group justify="space-between" mb="xs">
-                        <Text c="dimmed" size="xs">
-                          Por {food.serving_size}
-                        </Text>
-                        <Badge color="blue" variant="filled">
+                        <Text c="dimmed" size="xs">Por {food.serving_size}</Text>
+                        <Badge color="blue" variant="filled" radius="xl">
                           {food.calories?.toFixed(0) || 0} kcal
                         </Badge>
                       </Group>
 
                       <SimpleGrid cols={3} spacing="xs">
                         <Box ta="center">
-                          <Text c="dimmed" size="xs">
-                            Proteína
-                          </Text>
-                          <Text c="green" fw={500} size="sm">
-                            {food.protein?.toFixed(1) || 0}g
-                          </Text>
+                          <Text c="dimmed" size="xs">Proteína</Text>
+                          <Text c="green" fw={500} size="sm">{food.protein?.toFixed(1) || 0}g</Text>
                         </Box>
                         <Box ta="center">
-                          <Text c="dimmed" size="xs">
-                            Carbos
-                          </Text>
-                          <Text c="orange" fw={500} size="sm">
-                            {food.carbs?.toFixed(1) || 0}g
-                          </Text>
+                          <Text c="dimmed" size="xs">Carbos</Text>
+                          <Text c="orange" fw={500} size="sm">{food.carbs?.toFixed(1) || 0}g</Text>
                         </Box>
                         <Box ta="center">
-                          <Text c="dimmed" size="xs">
-                            Grasas
-                          </Text>
-                          <Text c="grape" fw={500} size="sm">
-                            {food.fat?.toFixed(1) || 0}g
-                          </Text>
+                          <Text c="dimmed" size="xs">Grasas</Text>
+                          <Text c="grape" fw={500} size="sm">{food.fat?.toFixed(1) || 0}g</Text>
                         </Box>
                       </SimpleGrid>
-                    </Card>
+                    </Box>
                   );
                 })}
               </SimpleGrid>
@@ -755,6 +753,8 @@ export function NutritionPage() {
         opened={foodModalOpened}
         size="md"
         title="Nuevo Alimento"
+        radius="lg"
+        styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={foodForm.onSubmit(handleCreateFood)}>
           <Stack>
@@ -839,10 +839,14 @@ export function NutritionPage() {
         title={
           editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"
         }
+        styles={{ 
+          content: { backgroundColor: "var(--nv-paper-bg)" }, 
+          header: { backgroundColor: "var(--nv-paper-bg)", borderBottom: "1px solid var(--nv-border)" }
+        }}
       >
         <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
           <Stack>
-            <Paper p="md" radius="md" withBorder>
+            <Box className="nv-card" p="md">
               <Stack gap="sm">
                 <TextInput
                   label="Nombre del plan"
@@ -895,9 +899,9 @@ export function NutritionPage() {
                   />
                 </Group>
               </Stack>
-            </Paper>
+            </Box>
 
-            <Divider label="Constructor de Plan" labelPosition="center" />
+            <Divider label="Constructor de Plan" labelPosition="center" style={{ borderColor: "var(--nv-border)" }} />
 
             <MealPlanBuilder
               availableFoods={foods}
@@ -915,14 +919,16 @@ export function NutritionPage() {
           justify="flex-end"
           mt="md"
           p="md"
-          style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+          style={{ borderTop: "1px solid var(--nv-border)" }}
         >
-          <Button onClick={closeBuilder} variant="default">
+          <Button onClick={closeBuilder} variant="default" radius="xl">
             Cancelar
           </Button>
           <Button
             loading={createMealPlan.isPending || updateMealPlan.isPending}
             onClick={handleSavePlan}
+            radius="xl"
+            style={{ backgroundColor: "var(--nv-success)" }}
           >
             {editingPlan ? "Guardar Cambios" : "Crear Plan"}
           </Button>

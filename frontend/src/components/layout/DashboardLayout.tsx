@@ -1,45 +1,44 @@
 import {
-  ActionIcon,
-  AppShell,
   Avatar,
-  Badge,
   Box,
   Group,
-  Menu,
   Stack,
   Text,
-  Tooltip,
   UnstyledButton,
+  ScrollArea,
+  Burger,
+  Drawer,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
-  IconBarbell,
-  IconBell,
-  IconBook,
-  IconCalendarEvent,
-  IconChartBar,
-  IconChevronRight,
-  IconCreditCard,
-  IconFileText,
-  IconForms,
-  IconHistory,
   IconLayoutDashboard,
-  IconLogout,
-  IconMessage,
-  IconMoon,
-  IconPackage,
-  IconProgress,
-  IconRobot,
-  IconSalad,
-  IconSettings,
-  IconSun,
-  IconTrophy,
   IconUsers,
+  IconCalendarEvent,
+  IconBarbell,
+  IconSettings,
+  IconLogout,
+  IconSearch,
+  IconBell,
+  IconCommand,
+  IconSalad,
+  IconForms,
+  IconFileText,
+  IconMessage,
+  IconCreditCard,
+  IconPackage,
+  IconTrophy,
   IconUsersGroup,
+  IconRobot,
+  IconChartBar,
+  IconBook,
   IconVideo,
+  IconHistory,
+  IconProgress,
 } from "@tabler/icons-react";
-import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
+
+// --- TIPOS Y DATOS ---
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -48,61 +47,11 @@ interface NavItemProps {
   badge?: number;
 }
 
-function NavItem({ icon, label, to, badge }: NavItemProps) {
-  const location = useLocation();
-  const isActive = location.pathname === to;
-
-  return (
-    <NavLink style={{ textDecoration: "none" }} to={to}>
-      <UnstyledButton
-        p="sm"
-        style={(theme) => ({
-          borderRadius: theme.radius.md,
-          backgroundColor: isActive
-            ? "var(--mantine-color-primary-0)"
-            : "transparent",
-          color: isActive
-            ? "var(--mantine-color-primary-7)"
-            : "var(--mantine-color-gray-7)",
-          fontWeight: isActive ? 600 : 400,
-          transition: "all 0.2s ease",
-          "&:hover": {
-            backgroundColor: isActive
-              ? "var(--mantine-color-primary-1)"
-              : "var(--mantine-color-gray-0)",
-          },
-        })}
-        w="100%"
-      >
-        <Group justify="space-between">
-          <Group gap="sm">
-            {icon}
-            <Text size="sm">{label}</Text>
-          </Group>
-          {badge && badge > 0 && (
-            <Badge circle color="red" size="xs">
-              {badge}
-            </Badge>
-          )}
-        </Group>
-      </UnstyledButton>
-    </NavLink>
-  );
-}
-
-// Navigation items for trainer/admin view
+// Lista completa de navegación para Entrenadores
 const trainerNavItems: NavItemProps[] = [
-  {
-    icon: <IconLayoutDashboard size={20} />,
-    label: "Dashboard",
-    to: "/dashboard",
-  },
+  { icon: <IconLayoutDashboard size={20} />, label: "Panel Principal", to: "/dashboard" },
   { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients" },
-  {
-    icon: <IconCalendarEvent size={20} />,
-    label: "Calendario",
-    to: "/calendar",
-  },
+  { icon: <IconCalendarEvent size={20} />, label: "Calendario", to: "/calendar" },
   { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts" },
   { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition" },
   { icon: <IconForms size={20} />, label: "Formularios", to: "/forms" },
@@ -112,36 +61,20 @@ const trainerNavItems: NavItemProps[] = [
   { icon: <IconPackage size={20} />, label: "Bonos", to: "/packages" },
   { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community" },
   { icon: <IconUsersGroup size={20} />, label: "Equipo", to: "/team" },
-  {
-    icon: <IconRobot size={20} />,
-    label: "Automatizaciones",
-    to: "/automations",
-  },
+  { icon: <IconRobot size={20} />, label: "Automatizaciones", to: "/automations" },
   { icon: <IconChartBar size={20} />, label: "Reportes", to: "/reports" },
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms" },
   { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes" },
   { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
 ];
 
-// Navigation items for client view
+// Lista completa de navegación para Clientes
 const clientNavItems: NavItemProps[] = [
-  {
-    icon: <IconLayoutDashboard size={20} />,
-    label: "Mi Panel",
-    to: "/dashboard",
-  },
-  {
-    icon: <IconBarbell size={20} />,
-    label: "Mis Entrenamientos",
-    to: "/workouts",
-  },
+  { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
+  { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/workouts" },
   { icon: <IconSalad size={20} />, label: "Mi Nutrición", to: "/nutrition" },
   { icon: <IconProgress size={20} />, label: "Mi Progreso", to: "/progress" },
-  {
-    icon: <IconCalendarEvent size={20} />,
-    label: "Mis Citas",
-    to: "/calendar",
-  },
+  { icon: <IconCalendarEvent size={20} />, label: "Mis Citas", to: "/calendar" },
   { icon: <IconHistory size={20} />, label: "Historial", to: "/history" },
   { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: 1 },
   { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community" },
@@ -149,182 +82,367 @@ const clientNavItems: NavItemProps[] = [
   { icon: <IconSettings size={20} />, label: "Mi Perfil", to: "/settings" },
 ];
 
-export function DashboardLayout() {
-  const { user, currentWorkspace, logout, demoRole, isDemoMode } =
-    useAuthStore();
-  const [darkMode, setDarkMode] = useState(false);
+// --- COMPONENTES ---
 
-  // Determine which navigation to show based on role
-  const isClientView = isDemoMode && demoRole === "client";
-  const navItems = isClientView ? clientNavItems : trainerNavItems;
+function NavItem({ icon, label, to, badge }: NavItemProps) {
+  const location = useLocation();
+  const isActive = location.pathname === to;
 
   return (
-    <AppShell
-      navbar={{
-        width: 260,
-        breakpoint: "sm",
-      }}
-      padding="md"
-    >
-      <AppShell.Navbar
-        p="md"
-        style={{ borderRight: "1px solid var(--mantine-color-gray-2)" }}
+    <NavLink to={to} style={{ textDecoration: "none" }}>
+      <UnstyledButton
+        w="100%"
+        p="10px"
+        style={{
+          borderRadius: "12px",
+          backgroundColor: isActive ? "rgba(255, 255, 255, 0.08)" : "transparent",
+          color: isActive ? "#E7E247" : "rgba(255, 255, 255, 0.5)",
+          transition: "all 0.2s ease",
+          position: "relative",
+          overflow: "hidden",
+        }}
+        className="nav-item"
       >
-        {/* Logo */}
-        <Box mb="xl">
-          <Group>
+        <Group gap="sm" wrap="nowrap">
+          <Box style={{ opacity: isActive ? 1 : 0.8, transition: "opacity 0.2s" }}>
+            {icon}
+          </Box>
+          <Text 
+            size="sm" 
+            fw={isActive ? 600 : 500} 
+            style={{ 
+              letterSpacing: "-0.01em",
+              flex: 1
+            }}
+            lineClamp={1}
+          >
+            {label}
+          </Text>
+          {badge && badge > 0 && (
             <Box
-              h={40}
               style={{
-                background: isClientView
-                  ? "linear-gradient(135deg, var(--mantine-color-violet-6) 0%, var(--mantine-color-violet-8) 100%)"
-                  : "linear-gradient(135deg, var(--mantine-color-primary-6) 0%, var(--mantine-color-primary-8) 100%)",
-                borderRadius: 10,
+                backgroundColor: "#E7E247",
+                color: "#2A2822",
+                fontSize: "10px",
+                fontWeight: 800,
+                borderRadius: "50%",
+                width: "18px",
+                height: "18px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
-              w={40}
             >
-              <Text c="white" fw={700} size="lg">
-                T
-              </Text>
+              {badge}
             </Box>
-            <Box>
-              <Text fw={700} size="md">
-                Trackfiz
-              </Text>
-              <Text c="dimmed" size="xs">
-                {currentWorkspace?.name || "Mi Workspace"}
-              </Text>
-            </Box>
-          </Group>
-        </Box>
-
-        {/* Demo Mode Indicator */}
-        {isDemoMode && (
+          )}
+        </Group>
+        
+        {/* Glow effect on active */}
+        {isActive && (
           <Box
-            mb="md"
-            p="xs"
             style={{
-              borderRadius: 8,
-              background: isClientView
-                ? "linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)"
-                : "linear-gradient(135deg, rgba(45, 106, 79, 0.1) 0%, rgba(45, 106, 79, 0.05) 100%)",
-              border: isClientView
-                ? "1px solid var(--mantine-color-violet-2)"
-                : "1px solid var(--mantine-color-teal-2)",
+              position: "absolute",
+              left: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "3px",
+              height: "20px",
+              background: "#E7E247",
+              borderRadius: "0 4px 4px 0",
+              boxShadow: "0 0 12px rgba(231, 226, 71, 0.6)",
+            }}
+          />
+        )}
+      </UnstyledButton>
+      <style>{`
+        .nav-item:hover {
+          background-color: rgba(255, 255, 255, 0.04) !important;
+          color: rgba(255, 255, 255, 0.8) !important;
+        }
+      `}</style>
+    </NavLink>
+  );
+}
+
+// Sidebar Component (Reutilizable para Desktop y Mobile)
+function SidebarContent() {
+  const { user, currentWorkspace, isDemoMode, demoRole } = useAuthStore();
+  const isClientView = isDemoMode && demoRole === "client";
+  const navItems = isClientView ? clientNavItems : trainerNavItems;
+
+  return (
+    <Box
+      h="100%"
+      p="lg"
+      style={{
+        background: "var(--nv-dark-surface)",
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+      }}
+    >
+      {/* Logo */}
+      <Group mb="xl" align="center">
+        <Box
+          style={{
+            width: 36,
+            height: 36,
+            background: "var(--nv-accent)",
+            borderRadius: "10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 800,
+            fontSize: "20px",
+            color: "#2A2822",
+            boxShadow: "0 0 20px rgba(231, 226, 71, 0.15)",
+          }}
+        >
+          T
+        </Box>
+        <Box>
+          <Text c="white" fw={700} size="lg" style={{ fontFamily: "Space Grotesk", lineHeight: 1 }}>
+            Trackfiz
+          </Text>
+          <Text c="dimmed" size="xs" fw={500} style={{ fontSize: "11px" }}>
+            {currentWorkspace?.name || "Espacio de Trabajo"}
+          </Text>
+        </Box>
+      </Group>
+
+      {/* Demo Mode Badge */}
+      {isDemoMode && (
+        <Box
+          mb="lg"
+          px="sm"
+          py={8}
+          style={{
+            borderRadius: "8px",
+            background: isClientView ? "rgba(139, 92, 246, 0.1)" : "rgba(231, 226, 71, 0.08)",
+            border: isClientView ? "1px solid rgba(139, 92, 246, 0.2)" : "1px solid rgba(231, 226, 71, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Box
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              backgroundColor: isClientView ? "#A78BFA" : "#E7E247",
+              boxShadow: isClientView ? "0 0 8px #A78BFA" : "0 0 8px #E7E247",
+            }}
+          />
+          <Text
+            size="xs"
+            fw={700}
+            style={{
+              color: isClientView ? "#D8B4FE" : "#E7E247",
+              letterSpacing: "0.02em",
+              textTransform: "uppercase",
+              fontSize: "10px",
             }}
           >
-            <Group gap="xs" justify="center">
-              <Badge
-                color={isClientView ? "violet" : "teal"}
-                size="sm"
-                variant="light"
-              >
-                {isClientView ? "👤 Vista Cliente" : "💪 Vista Entrenador"}
-              </Badge>
-            </Group>
-          </Box>
-        )}
+            {isClientView ? "Vista Cliente" : "Vista Entrenador"}
+          </Text>
+        </Box>
+      )}
 
-        {/* Navigation */}
-        <Stack flex={1} gap={4}>
+      {/* Navigation Scroll Area */}
+      <ScrollArea 
+        flex={1} 
+        scrollbars="y" 
+        offsetScrollbars
+        styles={{ 
+          scrollbar: { backgroundColor: "transparent" }, 
+          thumb: { backgroundColor: "rgba(255,255,255,0.1)" } 
+        }}
+      >
+        <Stack gap={4}>
+          <Text c="dimmed" size="xs" fw={700} tt="uppercase" mb={4} style={{ letterSpacing: "0.1em", fontSize: "10px", paddingLeft: "10px" }}>
+            Menú Principal
+          </Text>
           {navItems.map((item) => (
             <NavItem key={item.to} {...item} />
           ))}
         </Stack>
+      </ScrollArea>
 
-        {/* User Menu */}
-        <Box
-          pt="md"
-          style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
-        >
-          <Menu position="top-start" withArrow>
-            <Menu.Target>
-              <UnstyledButton
-                p="sm"
-                style={(theme) => ({
-                  borderRadius: theme.radius.md,
-                  "&:hover": {
-                    backgroundColor: "var(--mantine-color-gray-0)",
-                  },
-                })}
-                w="100%"
-              >
-                <Group justify="space-between">
-                  <Group gap="sm">
-                    <Avatar color="primary" radius="xl" size="sm">
-                      {user?.full_name?.charAt(0) || "U"}
-                    </Avatar>
-                    <Box>
-                      <Text fw={500} lineClamp={1} size="sm">
-                        {user?.full_name || "Usuario"}
-                      </Text>
-                      <Text c="dimmed" lineClamp={1} size="xs">
-                        {user?.email}
-                      </Text>
-                    </Box>
-                  </Group>
-                  <IconChevronRight
-                    color="var(--mantine-color-gray-5)"
-                    size={16}
-                  />
-                </Group>
-              </UnstyledButton>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Cuenta</Menu.Label>
-              <Menu.Item leftSection={<IconSettings size={14} />}>
-                Configuración
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconLogout size={14} />}
-                onClick={logout}
-              >
-                Cerrar sesión
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Box>
-      </AppShell.Navbar>
-
-      <AppShell.Main style={{ backgroundColor: "var(--mantine-color-gray-0)" }}>
-        {/* Top bar */}
-        <Group
-          justify="flex-end"
-          mb="md"
-          p="sm"
+      {/* User Profile Footer */}
+      <Box pt="md" mt="sm" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <UnstyledButton
+          w="100%"
           style={{
-            position: "sticky",
-            top: 0,
-            zIndex: 100,
-            backgroundColor: "var(--mantine-color-gray-0)",
+            padding: "8px",
+            borderRadius: "12px",
+            transition: "background 0.2s",
+          }}
+          className="profile-btn"
+        >
+          <Group>
+            <Avatar src={null} radius="xl" color="yellow" size="sm" style={{ border: "2px solid #2A2822" }}>
+              {user?.full_name?.[0]}
+            </Avatar>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text c="white" size="sm" fw={600} lh={1.2} lineClamp={1}>
+                {user?.full_name || "Usuario"}
+              </Text>
+              <Text c="dimmed" size="xs" lh={1.2} lineClamp={1}>
+                {user?.email}
+              </Text>
+            </Box>
+            <IconLogout size={16} color="gray" style={{ opacity: 0.5 }} />
+          </Group>
+        </UnstyledButton>
+      </Box>
+      <style>{`
+        .profile-btn:hover {
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
+    </Box>
+  );
+}
+
+export function DashboardLayout() {
+  const [opened, { toggle, close }] = useDisclosure();
+
+  return (
+    <div className="layout-grid">
+      {/* --- SIDEBAR FLOTANTE (DESKTOP) --- */}
+      <Box
+        component="nav"
+        className="desktop-sidebar"
+        p="md"
+        style={{
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          display: "none", // Oculto por defecto, visible en media query
+          flexDirection: "column",
+          width: 280,
+        }}
+      >
+        <Box
+          h="100%"
+          style={{
+            borderRadius: "24px",
+            overflow: "hidden", // Para recortar el contenido en las esquinas redondeadas
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            border: "1px solid rgba(255,255,255,0.05)",
           }}
         >
-          <Group gap="xs">
-            <Tooltip label="Notificaciones">
-              <ActionIcon color="gray" size="lg" variant="subtle">
-                <IconBell size={20} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label={darkMode ? "Modo claro" : "Modo oscuro"}>
-              <ActionIcon
-                color="gray"
-                onClick={() => setDarkMode(!darkMode)}
-                size="lg"
-                variant="subtle"
-              >
-                {darkMode ? <IconSun size={20} /> : <IconMoon size={20} />}
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        </Group>
+          <SidebarContent />
+        </Box>
+      </Box>
 
-        <Outlet />
-      </AppShell.Main>
-    </AppShell>
+      {/* --- MOBILE DRAWER --- */}
+      <Drawer
+        opened={opened}
+        onClose={close}
+        withCloseButton={false}
+        size="280px"
+        padding={0}
+        styles={{ body: { height: '100%', background: 'var(--nv-dark-surface)' } }}
+      >
+        <SidebarContent />
+      </Drawer>
+
+      {/* --- MAIN CONTENT AREA --- */}
+      <Box style={{ position: "relative", flex: 1, minWidth: 0 }}>
+        {/* Floating Header */}
+        <Box
+          py="lg"
+          px="xl"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            position: "sticky",
+            top: 0,
+            zIndex: 99,
+            backdropFilter: "blur(12px)",
+            background: "linear-gradient(to bottom, rgba(240, 242, 235, 0.9) 0%, rgba(240, 242, 235, 0.5) 100%)",
+            borderBottom: "1px solid rgba(0,0,0,0.03)",
+          }}
+        >
+          {/* Mobile Menu Toggle & Search */}
+          <Group>
+            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            
+            {/* Breadcrumb simulado / Contexto */}
+            <Group gap="xs" visibleFrom="xs">
+              <Text c="dimmed" size="sm" fw={500}>App</Text>
+              <Text c="dimmed" size="sm">/</Text>
+              <Text size="sm" fw={600}>Panel Principal</Text>
+            </Group>
+          </Group>
+
+          {/* Global Search */}
+          <Group
+            mx="auto"
+            visibleFrom="sm"
+            style={{
+              background: "white",
+              padding: "8px 16px",
+              borderRadius: "16px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.03)",
+              border: "1px solid rgba(0,0,0,0.04)",
+              width: "380px",
+              transition: "all 0.2s",
+              cursor: "text"
+            }}
+          >
+            <IconSearch size={16} color="var(--nv-text-tertiary)" />
+            <Text c="dimmed" size="sm" style={{ flex: 1 }}>Buscar...</Text>
+            <Box style={{ background: "#F8F9FA", padding: "2px 6px", borderRadius: "6px", border: "1px solid #E9ECEF" }}>
+              <Group gap={2}>
+                <IconCommand size={10} color="gray" />
+                <Text size="10px" fw={700} c="gray">K</Text>
+              </Group>
+            </Box>
+          </Group>
+
+          {/* Actions */}
+          <Group gap="md">
+            <UnstyledButton style={{ position: "relative" }}>
+              <IconBell size={22} color="var(--nv-text-secondary)" stroke={1.5} />
+              <Box
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 2,
+                  width: 8,
+                  height: 8,
+                  background: "#EF4444",
+                  borderRadius: "50%",
+                  border: "2px solid var(--nv-paper-bg)",
+                }}
+              />
+            </UnstyledButton>
+          </Group>
+        </Box>
+
+        {/* Content Outlet */}
+        <div className="content-area">
+          <Outlet />
+        </div>
+      </Box>
+
+      {/* Media Query for Desktop Sidebar Visibility */}
+      <style>{`
+        @media (min-width: 48em) {
+          .desktop-sidebar {
+            display: flex !important;
+          }
+        }
+        .layout-grid {
+          display: flex;
+          min-height: 100vh;
+        }
+      `}</style>
+    </div>
   );
 }

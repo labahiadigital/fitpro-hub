@@ -21,6 +21,10 @@ import {
   Tooltip,
   Card,
   FileButton,
+  Progress,
+  RingProgress,
+  Center,
+  Loader,
 } from "@mantine/core";
 import {
   IconAlertTriangle,
@@ -45,26 +49,88 @@ import {
   IconSalad,
   IconTrash,
   IconTrendingUp,
-  IconUpload,
   IconUser,
+  IconUpload,
+  IconChevronRight,
+  IconTarget,
+  IconActivity,
+  IconHeart,
+  IconScale,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useClient } from "../../hooks/useClients";
 import { useClientMealPlans } from "../../hooks/useSupabaseData";
-import { Center, Loader } from "@mantine/core";
 import { AllergenList } from "../../components/common/AllergenBadge";
+
+// KPI Card Component
+function StatCard({ icon, label, value, color, trend }: { 
+  icon: React.ReactNode; 
+  label: string; 
+  value: string | number; 
+  color: string;
+  trend?: { value: number; positive: boolean };
+}) {
+  return (
+    <Box className="nv-card" p="lg">
+      <Group justify="space-between" align="flex-start">
+        <Box>
+          <Text className="text-label" mb="xs">{label}</Text>
+          <Text 
+            className="text-display" 
+            style={{ fontSize: "1.75rem", color }}
+          >
+            {value}
+          </Text>
+          {trend && (
+            <Group gap={4} mt="xs">
+              <Badge 
+                size="sm" 
+                variant="light"
+                color={trend.positive ? "green" : "red"}
+                radius="xl"
+              >
+                {trend.positive ? "+" : ""}{trend.value}%
+              </Badge>
+            </Group>
+          )}
+        </Box>
+        <ThemeIcon 
+          size={48} 
+          radius="xl" 
+          variant="light"
+          style={{ 
+            backgroundColor: `${color}15`,
+            color: color
+          }}
+        >
+          {icon}
+        </ThemeIcon>
+      </Group>
+    </Box>
+  );
+}
+
+// Info Row Component
+function InfoRow({ label, value, icon }: { label: string; value: string | React.ReactNode; icon?: React.ReactNode }) {
+  return (
+    <Group justify="space-between" py="sm" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+      <Group gap="sm">
+        {icon && <Box style={{ color: "var(--nv-slate-light)" }}>{icon}</Box>}
+        <Text size="sm" c="dimmed">{label}</Text>
+      </Group>
+      <Text size="sm" fw={600} style={{ color: "var(--nv-dark)" }}>{value}</Text>
+    </Group>
+  );
+}
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
-  void useNavigate(); // Keep for future navigation features
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   
-  // Fetch client data using hook (handles demo mode internally)
   const { data: fetchedClient, isLoading } = useClient(id || "");
-  
-  // Fetch meal plans for this client from Supabase
   const { data: clientMealPlans } = useClientMealPlans(id || "");
 
   // Mock client data as fallback
@@ -90,7 +156,7 @@ export function ClientDetailPage() {
     ],
     tags: [
       { name: "VIP", color: "#8B5CF6" },
-      { name: "Presencial", color: "#2D6A4F" },
+      { name: "Presencial", color: "#10B981" },
     ],
     created_at: "2023-06-15",
     consents: {
@@ -101,22 +167,18 @@ export function ClientDetailPage() {
     },
   };
 
-  // Mock documents
+  // Mock data
   const documents = [
     { id: "1", name: "Plan Nutricional Enero.pdf", type: "diet_plan", direction: "outbound", created_at: "2024-01-15", is_read: true },
     { id: "2", name: "Contrato de Servicios.pdf", type: "contract", direction: "outbound", created_at: "2023-06-15", is_read: true },
     { id: "3", name: "Análisis de Sangre.pdf", type: "medical", direction: "inbound", created_at: "2024-01-10", is_read: false },
   ];
 
-  // Mock progress photos
   const progressPhotos = [
     { id: "1", photo_url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=300", photo_type: "front", photo_date: "2024-01-01", weight_kg: "62" },
     { id: "2", photo_url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300", photo_type: "side", photo_date: "2024-01-01", weight_kg: "62" },
-    { id: "3", photo_url: "https://images.unsplash.com/photo-1571019613576-2b22c76fd955?w=300", photo_type: "front", photo_date: "2023-12-01", weight_kg: "63" },
-    { id: "4", photo_url: "https://images.unsplash.com/photo-1571019613914-85f342c6a11e?w=300", photo_type: "side", photo_date: "2023-12-01", weight_kg: "63" },
   ];
 
-  // Use meal plans from Supabase, with fallback mock data for demo
   const mealPlans = clientMealPlans?.length ? clientMealPlans.map((plan) => ({
     id: plan.id,
     name: plan.name,
@@ -125,10 +187,8 @@ export function ClientDetailPage() {
     created_at: plan.created_at,
   })) : [
     { id: "1", name: "Plan Definición Q1", target_calories: 1800, status: "active", created_at: "2024-01-01" },
-    { id: "2", name: "Plan Mantenimiento", target_calories: 2000, status: "inactive", created_at: "2023-10-01" },
   ];
 
-  // Mock supplements
   const supplements = [
     { id: "1", name: "Whey Protein", dosage: "30g post-entreno", frequency: "Días de entrenamiento" },
     { id: "2", name: "Omega 3", dosage: "2 cápsulas", frequency: "Diario con comida" },
@@ -139,12 +199,11 @@ export function ClientDetailPage() {
   if (isLoading) {
     return (
       <Center h="50vh">
-        <Loader size="lg" />
+        <Loader size="lg" color="yellow" />
       </Center>
     );
   }
 
-  // Mock stats
   const stats = {
     total_sessions: 48,
     sessions_this_month: 8,
@@ -154,121 +213,43 @@ export function ClientDetailPage() {
     days_as_client: 214,
   };
 
-  // Mock activity timeline
   const activities = [
-    {
-      id: "1",
-      type: "session",
-      title: "Sesión completada",
-      description: "Entrenamiento de fuerza",
-      date: "2024-01-15 10:00",
-    },
-    {
-      id: "2",
-      type: "payment",
-      title: "Pago recibido",
-      description: "Plan Premium - Enero",
-      date: "2024-01-01 06:00",
-    },
-    {
-      id: "3",
-      type: "message",
-      title: "Mensaje enviado",
-      description: "Recordatorio de objetivos",
-      date: "2023-12-28 14:30",
-    },
-    {
-      id: "4",
-      type: "workout",
-      title: "Programa asignado",
-      description: "Plan Hipertrofia Q1",
-      date: "2023-12-20 09:00",
-    },
-    {
-      id: "5",
-      type: "form",
-      title: "Formulario completado",
-      description: "Evaluación mensual",
-      date: "2023-12-15 11:00",
-    },
+    { id: "1", type: "session", title: "Sesión completada", description: "Entrenamiento de fuerza", date: "2024-01-15 10:00" },
+    { id: "2", type: "payment", title: "Pago recibido", description: "Plan Premium - Enero", date: "2024-01-01 06:00" },
+    { id: "3", type: "message", title: "Mensaje enviado", description: "Recordatorio de objetivos", date: "2023-12-28 14:30" },
   ];
 
-  // Mock sessions
   const sessions = [
-    {
-      id: "1",
-      date: "2024-01-15",
-      time: "10:00",
-      type: "Personal Training",
-      status: "completed",
-      notes: "Buen progreso en sentadillas",
-    },
-    {
-      id: "2",
-      date: "2024-01-12",
-      time: "10:00",
-      type: "Personal Training",
-      status: "completed",
-      notes: "",
-    },
-    {
-      id: "3",
-      date: "2024-01-10",
-      time: "10:00",
-      type: "Personal Training",
-      status: "completed",
-      notes: "Revisión de técnica",
-    },
-    {
-      id: "4",
-      date: "2024-01-18",
-      time: "10:00",
-      type: "Personal Training",
-      status: "confirmed",
-      notes: "",
-    },
+    { id: "1", date: "2024-01-15", time: "10:00", type: "Personal Training", status: "completed", notes: "Buen progreso" },
+    { id: "2", date: "2024-01-18", time: "10:00", type: "Personal Training", status: "confirmed", notes: "" },
   ];
 
-  // Mock measurements
   const measurements = [
     { date: "2024-01-01", weight: 62, body_fat: 24, muscle_mass: 26 },
     { date: "2023-12-01", weight: 63, body_fat: 25, muscle_mass: 25.5 },
     { date: "2023-11-01", weight: 64, body_fat: 26, muscle_mass: 25 },
-    { date: "2023-10-01", weight: 65, body_fat: 27, muscle_mass: 24.5 },
   ];
 
   const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "session":
-        return <IconCalendarEvent size={14} />;
-      case "payment":
-        return <IconCreditCard size={14} />;
-      case "message":
-        return <IconMessage size={14} />;
-      case "workout":
-        return <IconBarbell size={14} />;
-      case "form":
-        return <IconClipboard size={14} />;
-      default:
-        return <IconHistory size={14} />;
-    }
+    const icons: Record<string, React.ReactNode> = {
+      session: <IconCalendarEvent size={14} />,
+      payment: <IconCreditCard size={14} />,
+      message: <IconMessage size={14} />,
+      workout: <IconBarbell size={14} />,
+      form: <IconClipboard size={14} />,
+    };
+    return icons[type] || <IconHistory size={14} />;
   };
 
   const getActivityColor = (type: string) => {
-    switch (type) {
-      case "session":
-        return "blue";
-      case "payment":
-        return "green";
-      case "message":
-        return "violet";
-      case "workout":
-        return "orange";
-      case "form":
-        return "cyan";
-      default:
-        return "gray";
-    }
+    const colors: Record<string, string> = {
+      session: "var(--nv-primary)",
+      payment: "var(--nv-success)",
+      message: "#8B5CF6",
+      workout: "var(--nv-warning)",
+      form: "#06B6D4",
+    };
+    return colors[type] || "var(--nv-slate)";
   };
 
   return (
@@ -281,273 +262,258 @@ export function ClientDetailPage() {
         title=""
       />
 
-      {/* Header con info del cliente */}
-      <Paper mb="lg" p="lg" radius="lg" withBorder>
-        <Group align="flex-start" justify="space-between">
-          <Group>
-            <Avatar color="primary" radius="xl" size={80}>
-              {client.first_name.charAt(0)}
-              {client.last_name.charAt(0)}
-            </Avatar>
+      {/* Header del cliente - Premium Design */}
+      <Box className="nv-card" p="xl" mb="xl">
+        <Group align="flex-start" justify="space-between" wrap="nowrap">
+          <Group gap="xl" wrap="nowrap">
+            <Box style={{ position: "relative" }}>
+              <Avatar 
+                size={100} 
+                radius="xl" 
+                src={client.avatar_url}
+                styles={{
+                  root: {
+                    border: "4px solid var(--nv-surface)",
+                    boxShadow: "var(--shadow-lg)"
+                  }
+                }}
+              >
+                <Text size="xl" fw={700}>
+                  {client.first_name.charAt(0)}{client.last_name.charAt(0)}
+                </Text>
+              </Avatar>
+              <Box
+                style={{
+                  position: "absolute",
+                  bottom: 4,
+                  right: 4,
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  backgroundColor: client.is_active ? "var(--nv-success)" : "var(--nv-slate)",
+                  border: "3px solid var(--nv-surface)",
+                }}
+              />
+            </Box>
+            
             <Box>
-              <Group gap="xs" mb={4}>
-                <Text fw={700} size="xl">
+              <Group gap="sm" mb="xs">
+                <Text 
+                  style={{ 
+                    fontSize: "1.75rem", 
+                    fontWeight: 800, 
+                    letterSpacing: "-0.02em",
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    color: "var(--nv-dark)"
+                  }}
+                >
                   {client.first_name} {client.last_name}
                 </Text>
-                <Badge
-                  color={client.is_active ? "green" : "gray"}
-                  variant="light"
-                >
-                  {client.is_active ? "Activo" : "Inactivo"}
-                </Badge>
                 {client.tags.map((tag: { name: string; color: string }, index: number) => (
                   <Badge
-                    color={tag.color}
                     key={index}
-                    size="sm"
+                    size="md"
                     variant="light"
+                    radius="xl"
+                    styles={{
+                      root: {
+                        backgroundColor: `${tag.color}15`,
+                        color: tag.color,
+                        border: `1px solid ${tag.color}30`,
+                        fontWeight: 600
+                      }
+                    }}
                   >
                     {tag.name}
                   </Badge>
                 ))}
               </Group>
-              <Group gap="lg" mt="sm">
-                <Group gap={4}>
-                  <IconMail color="var(--mantine-color-gray-6)" size={14} />
-                  <Text c="dimmed" size="sm">
-                    {client.email}
-                  </Text>
+              
+              <Group gap="xl" mt="md">
+                <Group gap="xs">
+                  <IconMail size={16} color="var(--nv-slate)" />
+                  <Text size="sm" c="dimmed">{client.email}</Text>
                 </Group>
-                <Group gap={4}>
-                  <IconPhone color="var(--mantine-color-gray-6)" size={14} />
-                  <Text c="dimmed" size="sm">
-                    {client.phone}
-                  </Text>
+                <Group gap="xs">
+                  <IconPhone size={16} color="var(--nv-slate)" />
+                  <Text size="sm" c="dimmed">{client.phone}</Text>
                 </Group>
-                <Group gap={4}>
-                  <IconCalendarEvent
-                    color="var(--mantine-color-gray-6)"
-                    size={14}
-                  />
-                  <Text c="dimmed" size="sm">
-                    Cliente desde{" "}
-                    {new Date(client.created_at).toLocaleDateString("es-ES")}
+                <Group gap="xs">
+                  <IconCalendarEvent size={16} color="var(--nv-slate)" />
+                  <Text size="sm" c="dimmed">
+                    Cliente desde {new Date(client.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
                   </Text>
                 </Group>
               </Group>
             </Box>
           </Group>
 
-          <Group>
-            <Button leftSection={<IconMessage size={16} />} variant="light">
-              Enviar Mensaje
+          <Group gap="sm">
+            <Button 
+              leftSection={<IconMessage size={18} />} 
+              variant="default"
+              radius="xl"
+              styles={{
+                root: {
+                  borderColor: "var(--border-medium)",
+                  fontWeight: 600
+                }
+              }}
+            >
+              Mensaje
             </Button>
-            <Button leftSection={<IconCalendarEvent size={16} />}>
+            <Button 
+              leftSection={<IconCalendarEvent size={18} />}
+              radius="xl"
+              styles={{
+                root: {
+                  background: "var(--nv-accent)",
+                  color: "var(--nv-dark)",
+                  fontWeight: 700,
+                  "&:hover": {
+                    background: "var(--nv-accent-hover)"
+                  }
+                }
+              }}
+            >
               Nueva Sesión
             </Button>
-            <Menu position="bottom-end" withArrow>
+            <Menu position="bottom-end" withArrow shadow="lg">
               <Menu.Target>
-                <ActionIcon size="lg" variant="default">
-                  <IconDotsVertical size={16} />
+                <ActionIcon size="lg" variant="default" radius="xl">
+                  <IconDotsVertical size={18} />
                 </ActionIcon>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item leftSection={<IconEdit size={14} />}>
-                  Editar cliente
-                </Menu.Item>
-                <Menu.Item leftSection={<IconBarbell size={14} />}>
-                  Asignar programa
-                </Menu.Item>
-                <Menu.Item leftSection={<IconSalad size={14} />}>
-                  Asignar plan nutricional
-                </Menu.Item>
-                <Menu.Item leftSection={<IconClipboard size={14} />}>
-                  Enviar formulario
-                </Menu.Item>
+                <Menu.Item leftSection={<IconEdit size={16} />}>Editar cliente</Menu.Item>
+                <Menu.Item leftSection={<IconBarbell size={16} />}>Asignar programa</Menu.Item>
+                <Menu.Item leftSection={<IconSalad size={16} />}>Asignar plan nutricional</Menu.Item>
                 <Menu.Divider />
-                <Menu.Item color="red" leftSection={<IconTrash size={14} />}>
-                  Eliminar cliente
-                </Menu.Item>
+                <Menu.Item color="red" leftSection={<IconTrash size={16} />}>Eliminar cliente</Menu.Item>
               </Menu.Dropdown>
             </Menu>
           </Group>
         </Group>
-      </Paper>
+      </Box>
 
       {/* KPIs del cliente */}
-      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }} mb="lg" spacing="md">
-        <Paper p="md" radius="md" ta="center" withBorder>
-          <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-            Sesiones Totales
-          </Text>
-          <Text fw={700} mt={4} size="xl">
-            {stats.total_sessions}
-          </Text>
-        </Paper>
-        <Paper p="md" radius="md" ta="center" withBorder>
-          <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-            Este Mes
-          </Text>
-          <Text fw={700} mt={4} size="xl">
-            {stats.sessions_this_month}
-          </Text>
-        </Paper>
-        <Paper p="md" radius="md" ta="center" withBorder>
-          <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-            Adherencia
-          </Text>
-          <Text c="green" fw={700} mt={4} size="xl">
-            {stats.adherence}%
-          </Text>
-        </Paper>
-        <Paper p="md" radius="md" ta="center" withBorder>
-          <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-            MRR
-          </Text>
-          <Text fw={700} mt={4} size="xl">
-            €{stats.mrr}
-          </Text>
-        </Paper>
-        <Paper p="md" radius="md" ta="center" withBorder>
-          <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-            LTV
-          </Text>
-          <Text fw={700} mt={4} size="xl">
-            €{stats.lifetime_value}
-          </Text>
-        </Paper>
-        <Paper p="md" radius="md" ta="center" withBorder>
-          <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-            Días como cliente
-          </Text>
-          <Text fw={700} mt={4} size="xl">
-            {stats.days_as_client}
-          </Text>
-        </Paper>
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }} mb="xl" spacing="md" className="stagger">
+        <StatCard 
+          icon={<IconCalendarEvent size={24} />} 
+          label="Sesiones Totales" 
+          value={stats.total_sessions}
+          color="var(--nv-primary)"
+        />
+        <StatCard 
+          icon={<IconActivity size={24} />} 
+          label="Este Mes" 
+          value={stats.sessions_this_month}
+          color="var(--nv-success)"
+        />
+        <StatCard 
+          icon={<IconTarget size={24} />} 
+          label="Adherencia" 
+          value={`${stats.adherence}%`}
+          color="var(--nv-success)"
+          trend={{ value: 5, positive: true }}
+        />
+        <StatCard 
+          icon={<IconCreditCard size={24} />} 
+          label="MRR" 
+          value={`€${stats.mrr}`}
+          color="var(--nv-warning)"
+        />
+        <StatCard 
+          icon={<IconHeart size={24} />} 
+          label="LTV" 
+          value={`€${stats.lifetime_value}`}
+          color="#8B5CF6"
+        />
+        <StatCard 
+          icon={<IconHistory size={24} />} 
+          label="Días como cliente" 
+          value={stats.days_as_client}
+          color="var(--nv-slate)"
+        />
       </SimpleGrid>
 
       {/* Tabs con información detallada */}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg">
-          <Tabs.Tab leftSection={<IconUser size={14} />} value="overview">
-            Resumen
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconSalad size={14} />} value="nutrition">
-            Nutrición
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconFileText size={14} />} value="documents">
-            Documentos
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconPhoto size={14} />} value="photos">
-            Fotos
-          </Tabs.Tab>
-          <Tabs.Tab
-            leftSection={<IconCalendarEvent size={14} />}
-            value="sessions"
-          >
-            Sesiones
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconTrendingUp size={14} />} value="progress">
-            Progreso
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconBarbell size={14} />} value="programs">
-            Programas
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="payments">
-            Pagos
-          </Tabs.Tab>
+        <Tabs.List mb="xl">
+          <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">Resumen</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">Sesiones</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">Progreso</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconBarbell size={16} />} value="programs">Programas</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="overview">
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
             {/* Información personal */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Group justify="space-between" mb="md">
-                <Text fw={600}>Información Personal</Text>
-                <ActionIcon color="gray" variant="subtle">
-                  <IconEdit size={16} />
+            <Box className="nv-card" p="xl">
+              <Group justify="space-between" mb="lg">
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Información Personal
+                </Text>
+                <ActionIcon variant="subtle" color="gray" radius="xl">
+                  <IconEdit size={18} />
                 </ActionIcon>
               </Group>
 
-              <Stack gap="sm">
-                <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
-                    Fecha de nacimiento
-                  </Text>
-                  <Text size="sm">
-                    {new Date(client.birth_date).toLocaleDateString("es-ES")}
-                  </Text>
-                </Group>
-                <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
-                    Género
-                  </Text>
-                  <Text size="sm">
-                    {client.gender === "female" ? "Femenino" : "Masculino"}
-                  </Text>
-                </Group>
-                <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
-                    Altura
-                  </Text>
-                  <Text size="sm">{client.height_cm} cm</Text>
-                </Group>
-                <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
-                    Peso actual
-                  </Text>
-                  <Text size="sm">{client.weight_kg} kg</Text>
-                </Group>
-
-                <Divider my="sm" />
-
-                <Box>
-                  <Text c="dimmed" mb={4} size="sm">
-                    Objetivos
-                  </Text>
-                  <Text size="sm">{client.goals}</Text>
-                </Box>
-
-                <Box>
-                  <Text c="dimmed" mb={4} size="sm">
-                    Notas internas
-                  </Text>
-                  <Text c="orange" size="sm">
-                    {client.internal_notes}
-                  </Text>
-                </Box>
+              <Stack gap={0}>
+                <InfoRow label="Fecha de nacimiento" value={new Date(client.birth_date).toLocaleDateString("es-ES")} />
+                <InfoRow label="Género" value={client.gender === "female" ? "Femenino" : "Masculino"} />
+                <InfoRow label="Altura" value={`${client.height_cm} cm`} icon={<IconScale size={14} />} />
+                <InfoRow label="Peso actual" value={`${client.weight_kg} kg`} icon={<IconScale size={14} />} />
               </Stack>
-            </Paper>
+
+              <Divider my="lg" />
+
+              <Box>
+                <Text size="sm" c="dimmed" mb="xs">Objetivos</Text>
+                <Text size="sm" fw={500}>{client.goals}</Text>
+              </Box>
+
+              {client.internal_notes && (
+                <Box mt="md" p="md" style={{ backgroundColor: "var(--nv-warning-bg)", borderRadius: "var(--radius-md)" }}>
+                  <Group gap="xs" mb="xs">
+                    <IconAlertTriangle size={16} color="var(--nv-warning)" />
+                    <Text size="sm" fw={600} style={{ color: "var(--nv-warning)" }}>Notas internas</Text>
+                  </Group>
+                  <Text size="sm">{client.internal_notes}</Text>
+                </Box>
+              )}
+            </Box>
 
             {/* Actividad reciente */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="md">
+            <Box className="nv-card" p="xl">
+              <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 Actividad Reciente
               </Text>
 
-              <Timeline
-                active={activities.length}
-                bulletSize={24}
-                lineWidth={2}
-              >
+              <Timeline active={activities.length} bulletSize={28} lineWidth={2}>
                 {activities.map((activity) => (
                   <Timeline.Item
                     bullet={
                       <ThemeIcon
-                        color={getActivityColor(activity.type)}
+                        size={28}
                         radius="xl"
-                        size={24}
                         variant="light"
+                        style={{ 
+                          backgroundColor: `${getActivityColor(activity.type)}15`,
+                          color: getActivityColor(activity.type)
+                        }}
                       >
                         {getActivityIcon(activity.type)}
                       </ThemeIcon>
                     }
                     key={activity.id}
-                    title={activity.title}
+                    title={<Text fw={600} size="sm">{activity.title}</Text>}
                   >
-                    <Text c="dimmed" size="xs">
-                      {activity.description}
-                    </Text>
+                    <Text c="dimmed" size="xs">{activity.description}</Text>
                     <Text c="dimmed" mt={4} size="xs">
                       {new Date(activity.date).toLocaleDateString("es-ES", {
                         day: "numeric",
@@ -559,17 +525,19 @@ export function ClientDetailPage() {
                   </Timeline.Item>
                 ))}
               </Timeline>
-            </Paper>
+            </Box>
 
             {/* Alergias e Intolerancias */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Group justify="space-between" mb="md">
+            <Box className="nv-card" p="xl">
+              <Group justify="space-between" mb="lg">
                 <Group gap="xs">
-                  <IconAlertTriangle size={18} color="var(--mantine-color-red-6)" />
-                  <Text fw={600}>Alergias e Intolerancias</Text>
+                  <IconAlertTriangle size={20} color="var(--nv-error)" />
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Alergias e Intolerancias
+                  </Text>
                 </Group>
-                <ActionIcon color="gray" variant="subtle">
-                  <IconEdit size={16} />
+                <ActionIcon variant="subtle" color="gray" radius="xl">
+                  <IconEdit size={18} />
                 </ActionIcon>
               </Group>
 
@@ -601,194 +569,215 @@ export function ClientDetailPage() {
               )}
 
               {client.injuries?.length > 0 && (
-                <Box mt="md">
-                  <Divider mb="md" />
+                <Box mt="lg">
+                  <Divider mb="lg" />
                   <Text size="sm" c="dimmed" mb="xs">Lesiones</Text>
                   <Stack gap="xs">
                     {client.injuries.map((injury: any, idx: number) => (
-                      <Badge key={idx} color="orange" variant="light" size="lg">
+                      <Badge 
+                        key={idx} 
+                        size="lg" 
+                        variant="light"
+                        radius="xl"
+                        styles={{
+                          root: {
+                            backgroundColor: "var(--nv-warning-bg)",
+                            color: "var(--nv-warning)"
+                          }
+                        }}
+                      >
                         {injury.name}
                       </Badge>
                     ))}
                   </Stack>
                 </Box>
               )}
-            </Paper>
+            </Box>
 
             {/* Configuración de Chat */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Group justify="space-between" mb="md">
-                <Text fw={600}>Configuración de Chat</Text>
-              </Group>
+            <Box className="nv-card" p="xl">
+              <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Configuración de Chat
+              </Text>
 
               <Group justify="space-between">
-                <Group gap="xs">
+                <Group gap="sm">
                   {client.chat_enabled ? (
-                    <IconMessage size={18} color="var(--mantine-color-green-6)" />
+                    <ThemeIcon size={40} radius="xl" variant="light" color="green">
+                      <IconMessage size={20} />
+                    </ThemeIcon>
                   ) : (
-                    <IconMessageOff size={18} color="var(--mantine-color-gray-5)" />
+                    <ThemeIcon size={40} radius="xl" variant="light" color="gray">
+                      <IconMessageOff size={20} />
+                    </ThemeIcon>
                   )}
-                  <Text size="sm">Chat habilitado</Text>
+                  <Box>
+                    <Text size="sm" fw={600}>Chat habilitado</Text>
+                    <Text c="dimmed" size="xs">
+                      {client.chat_enabled 
+                        ? "El cliente puede enviar y recibir mensajes"
+                        : "El chat está deshabilitado"}
+                    </Text>
+                  </Box>
                 </Group>
                 <Switch
                   checked={client.chat_enabled}
                   onChange={() => {}}
                   color="green"
+                  size="lg"
                 />
               </Group>
-              <Text c="dimmed" size="xs" mt="xs">
-                {client.chat_enabled 
-                  ? "El cliente puede enviar y recibir mensajes"
-                  : "El chat está deshabilitado para este cliente"}
-              </Text>
-            </Paper>
-
-            {/* Consentimientos */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="md">
-                Consentimientos GDPR
-              </Text>
-
-              <Stack gap="sm">
-                <Group justify="space-between">
-                  <Text size="sm">Tratamiento de datos</Text>
-                  <Badge
-                    color={client.consents.data_processing ? "green" : "red"}
-                    size="sm"
-                    variant="light"
-                  >
-                    {client.consents.data_processing ? "Aceptado" : "Pendiente"}
-                  </Badge>
-                </Group>
-                <Group justify="space-between">
-                  <Text size="sm">Comunicaciones de marketing</Text>
-                  <Badge
-                    color={client.consents.marketing ? "green" : "gray"}
-                    size="sm"
-                    variant="light"
-                  >
-                    {client.consents.marketing ? "Aceptado" : "No aceptado"}
-                  </Badge>
-                </Group>
-                <Group justify="space-between">
-                  <Text size="sm">Datos de salud</Text>
-                  <Badge
-                    color={client.consents.health_data ? "green" : "red"}
-                    size="sm"
-                    variant="light"
-                  >
-                    {client.consents.health_data ? "Aceptado" : "Pendiente"}
-                  </Badge>
-                </Group>
-                <Text c="dimmed" mt="sm" size="xs">
-                  Consentimientos actualizados el{" "}
-                  {new Date(client.consents.consent_date).toLocaleDateString(
-                    "es-ES"
-                  )}
-                </Text>
-              </Stack>
-            </Paper>
+            </Box>
           </SimpleGrid>
         </Tabs.Panel>
 
-        {/* Nueva pestaña: Nutrición */}
+        {/* Nutrición */}
         <Tabs.Panel value="nutrition">
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
-            {/* Planes Nutricionales */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Group justify="space-between" mb="md">
-                <Text fw={600}>Planes Nutricionales</Text>
-                <Button size="xs" leftSection={<IconPlus size={14} />}>
+            <Box className="nv-card" p="xl">
+              <Group justify="space-between" mb="lg">
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Planes Nutricionales
+                </Text>
+                <Button 
+                  size="sm" 
+                  leftSection={<IconPlus size={16} />}
+                  radius="xl"
+                  styles={{
+                    root: {
+                      background: "var(--nv-accent)",
+                      color: "var(--nv-dark)",
+                      fontWeight: 600,
+                      "&:hover": { background: "var(--nv-accent-hover)" }
+                    }
+                  }}
+                >
                   Asignar Plan
                 </Button>
               </Group>
 
-              {mealPlans.length > 0 ? (
-                <Stack gap="sm">
-                  {mealPlans.map((plan) => (
-                    <Paper key={plan.id} p="sm" withBorder radius="md">
-                      <Group justify="space-between">
-                        <Box>
-                          <Text fw={500} size="sm">{plan.name}</Text>
-                          <Text c="dimmed" size="xs">{plan.target_calories} kcal/día</Text>
-                        </Box>
-                        <Group gap="xs">
-                          <Badge 
-                            color={plan.status === "active" ? "green" : "gray"} 
-                            size="sm" 
-                            variant="light"
-                          >
-                            {plan.status === "active" ? "Activo" : "Inactivo"}
-                          </Badge>
-                          <Tooltip label="Descargar PDF">
-                            <ActionIcon color="blue" variant="light" size="sm">
-                              <IconDownload size={14} />
-                            </ActionIcon>
-                          </Tooltip>
-                        </Group>
+              <Stack gap="sm">
+                {mealPlans.map((plan) => (
+                  <Box 
+                    key={plan.id} 
+                    p="md" 
+                    style={{ 
+                      border: "1px solid var(--border-subtle)", 
+                      borderRadius: "var(--radius-md)",
+                      transition: "all 0.2s",
+                      cursor: "pointer"
+                    }}
+                    className="hover-lift"
+                  >
+                    <Group justify="space-between">
+                      <Box>
+                        <Text fw={600} size="sm">{plan.name}</Text>
+                        <Text c="dimmed" size="xs">{plan.target_calories} kcal/día</Text>
+                      </Box>
+                      <Group gap="xs">
+                        <Badge 
+                          size="sm" 
+                          variant="light"
+                          radius="xl"
+                          color={plan.status === "active" ? "green" : "gray"}
+                        >
+                          {plan.status === "active" ? "Activo" : "Inactivo"}
+                        </Badge>
+                        <ActionIcon variant="subtle" color="gray" radius="xl">
+                          <IconDownload size={16} />
+                        </ActionIcon>
                       </Group>
-                    </Paper>
-                  ))}
-                </Stack>
-              ) : (
-                <Text c="dimmed" size="sm" ta="center" py="md">
-                  No hay planes nutricionales asignados
-                </Text>
-              )}
-            </Paper>
+                    </Group>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
 
-            {/* Suplementos Recomendados */}
-            <Paper p="lg" radius="lg" withBorder>
-              <Group justify="space-between" mb="md">
+            <Box className="nv-card" p="xl">
+              <Group justify="space-between" mb="lg">
                 <Group gap="xs">
-                  <IconPill size={18} color="var(--mantine-color-green-6)" />
-                  <Text fw={600}>Suplementos Recomendados</Text>
+                  <IconPill size={20} color="var(--nv-success)" />
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Suplementos
+                  </Text>
                 </Group>
-                <Button size="xs" variant="light" leftSection={<IconPlus size={14} />}>
+                <Button 
+                  size="sm" 
+                  variant="light" 
+                  leftSection={<IconPlus size={16} />}
+                  radius="xl"
+                >
                   Añadir
                 </Button>
               </Group>
 
-              {supplements.length > 0 ? (
-                <Stack gap="sm">
-                  {supplements.map((supp) => (
-                    <Paper key={supp.id} p="sm" withBorder radius="md">
-                      <Group justify="space-between">
-                        <Box>
-                          <Text fw={500} size="sm">{supp.name}</Text>
-                          <Text c="dimmed" size="xs">{supp.dosage}</Text>
-                        </Box>
-                        <Badge color="blue" size="xs" variant="light">
-                          {supp.frequency}
-                        </Badge>
-                      </Group>
-                    </Paper>
-                  ))}
-                </Stack>
-              ) : (
-                <Text c="dimmed" size="sm" ta="center" py="md">
-                  No hay suplementos recomendados
-                </Text>
-              )}
-            </Paper>
+              <Stack gap="sm">
+                {supplements.map((supp) => (
+                  <Box 
+                    key={supp.id} 
+                    p="md" 
+                    style={{ 
+                      border: "1px solid var(--border-subtle)", 
+                      borderRadius: "var(--radius-md)" 
+                    }}
+                  >
+                    <Group justify="space-between">
+                      <Box>
+                        <Text fw={600} size="sm">{supp.name}</Text>
+                        <Text c="dimmed" size="xs">{supp.dosage}</Text>
+                      </Box>
+                      <Badge size="sm" variant="light" radius="xl" color="blue">
+                        {supp.frequency}
+                      </Badge>
+                    </Group>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
           </SimpleGrid>
         </Tabs.Panel>
 
-        {/* Nueva pestaña: Documentos */}
+        {/* Documentos */}
         <Tabs.Panel value="documents">
-          <Paper p="lg" radius="lg" withBorder>
+          <Box className="nv-card" p="xl">
             <Group justify="space-between" mb="lg">
-              <Text fw={600}>Documentos</Text>
+              <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Documentos
+              </Text>
               <FileButton onChange={() => {}} accept="application/pdf,image/*">
                 {(props) => (
-                  <Button {...props} size="xs" leftSection={<IconUpload size={14} />}>
+                  <Button 
+                    {...props} 
+                    size="sm" 
+                    leftSection={<IconUpload size={16} />}
+                    radius="xl"
+                    styles={{
+                      root: {
+                        background: "var(--nv-accent)",
+                        color: "var(--nv-dark)",
+                        fontWeight: 600,
+                        "&:hover": { background: "var(--nv-accent-hover)" }
+                      }
+                    }}
+                  >
                     Subir Documento
                   </Button>
                 )}
               </FileButton>
             </Group>
 
-            <Table>
+            <Table
+              verticalSpacing="md"
+              styles={{
+                th: { 
+                  fontWeight: 700, 
+                  fontSize: 11, 
+                  letterSpacing: "0.08em", 
+                  textTransform: "uppercase",
+                  color: "var(--nv-slate)"
+                }
+              }}
+            >
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Documento</Table.Th>
@@ -803,24 +792,24 @@ export function ClientDetailPage() {
                 {documents.map((doc) => (
                   <Table.Tr key={doc.id}>
                     <Table.Td>
-                      <Group gap="xs">
-                        <ThemeIcon color="blue" variant="light" size="sm">
-                          <IconFile size={14} />
+                      <Group gap="sm">
+                        <ThemeIcon size="sm" variant="light" radius="xl" color="blue">
+                          <IconFile size={12} />
                         </ThemeIcon>
-                        <Text size="sm">{doc.name}</Text>
+                        <Text size="sm" fw={500}>{doc.name}</Text>
                       </Group>
                     </Table.Td>
                     <Table.Td>
-                      <Badge size="sm" variant="light">
+                      <Badge size="sm" variant="light" radius="xl">
                         {doc.type === "diet_plan" ? "Plan Nutricional" :
-                         doc.type === "contract" ? "Contrato" :
-                         doc.type === "medical" ? "Médico" : doc.type}
+                         doc.type === "contract" ? "Contrato" : "Médico"}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
                       <Badge 
                         size="sm" 
                         variant="light"
+                        radius="xl"
                         color={doc.direction === "outbound" ? "blue" : "green"}
                       >
                         {doc.direction === "outbound" ? "Enviado" : "Recibido"}
@@ -835,6 +824,7 @@ export function ClientDetailPage() {
                       <Badge 
                         size="sm" 
                         variant="light"
+                        radius="xl"
                         color={doc.is_read ? "green" : "orange"}
                       >
                         {doc.is_read ? "Leído" : "No leído"}
@@ -842,11 +832,11 @@ export function ClientDetailPage() {
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs">
-                        <ActionIcon color="blue" variant="light" size="sm">
-                          <IconDownload size={14} />
+                        <ActionIcon variant="subtle" color="blue" radius="xl">
+                          <IconDownload size={16} />
                         </ActionIcon>
-                        <ActionIcon color="red" variant="light" size="sm">
-                          <IconTrash size={14} />
+                        <ActionIcon variant="subtle" color="red" radius="xl">
+                          <IconTrash size={16} />
                         </ActionIcon>
                       </Group>
                     </Table.Td>
@@ -854,77 +844,73 @@ export function ClientDetailPage() {
                 ))}
               </Table.Tbody>
             </Table>
-          </Paper>
+          </Box>
         </Tabs.Panel>
 
-        {/* Nueva pestaña: Fotos de Progreso */}
+        {/* Fotos */}
         <Tabs.Panel value="photos">
-          <Paper p="lg" radius="lg" withBorder>
+          <Box className="nv-card" p="xl">
             <Group justify="space-between" mb="lg">
-              <Text fw={600}>Fotos de Evolución</Text>
+              <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Fotos de Evolución
+              </Text>
               <FileButton onChange={() => {}} accept="image/*" multiple>
                 {(props) => (
-                  <Button {...props} size="xs" leftSection={<IconCamera size={14} />}>
+                  <Button 
+                    {...props} 
+                    size="sm" 
+                    leftSection={<IconCamera size={16} />}
+                    radius="xl"
+                    styles={{
+                      root: {
+                        background: "var(--nv-accent)",
+                        color: "var(--nv-dark)",
+                        fontWeight: 600,
+                        "&:hover": { background: "var(--nv-accent-hover)" }
+                      }
+                    }}
+                  >
                     Subir Fotos
                   </Button>
                 )}
               </FileButton>
             </Group>
 
-            {progressPhotos.length > 0 ? (
-              <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
-                {progressPhotos.map((photo) => (
-                  <Card key={photo.id} padding="xs" radius="md" withBorder>
-                    <Card.Section>
-                      <Image
-                        src={photo.photo_url}
-                        height={200}
-                        alt="Foto de progreso"
-                        fallbackSrc="https://placehold.co/300x200?text=Foto"
-                      />
-                    </Card.Section>
-                    <Group justify="space-between" mt="xs">
-                      <Box>
-                        <Badge size="xs" variant="light">
-                          {photo.photo_type === "front" ? "Frontal" : 
-                           photo.photo_type === "side" ? "Lateral" : photo.photo_type}
-                        </Badge>
-                        <Text size="xs" c="dimmed" mt={2}>
-                          {new Date(photo.photo_date).toLocaleDateString("es-ES")}
-                        </Text>
-                      </Box>
-                      {photo.weight_kg && (
-                        <Text size="xs" fw={500}>{photo.weight_kg} kg</Text>
-                      )}
-                    </Group>
-                  </Card>
-                ))}
-              </SimpleGrid>
-            ) : (
-              <Box ta="center" py="xl">
-                <ThemeIcon color="gray" size={60} variant="light" radius="xl" mb="md">
-                  <IconPhoto size={30} />
-                </ThemeIcon>
-                <Text fw={500}>No hay fotos de progreso</Text>
-                <Text c="dimmed" size="sm" mb="md">
-                  Sube fotos para hacer seguimiento visual de la evolución
-                </Text>
-                <FileButton onChange={() => {}} accept="image/*" multiple>
-                  {(props) => (
-                    <Button {...props} leftSection={<IconCamera size={16} />}>
-                      Subir Primera Foto
-                    </Button>
-                  )}
-                </FileButton>
-              </Box>
-            )}
-          </Paper>
+            <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
+              {progressPhotos.map((photo) => (
+                <Card key={photo.id} padding="xs" radius="lg" withBorder>
+                  <Card.Section>
+                    <Image
+                      src={photo.photo_url}
+                      height={200}
+                      alt="Foto de progreso"
+                      fallbackSrc="https://placehold.co/300x200?text=Foto"
+                    />
+                  </Card.Section>
+                  <Group justify="space-between" mt="sm">
+                    <Box>
+                      <Badge size="xs" variant="light" radius="xl">
+                        {photo.photo_type === "front" ? "Frontal" : "Lateral"}
+                      </Badge>
+                      <Text size="xs" c="dimmed" mt={2}>
+                        {new Date(photo.photo_date).toLocaleDateString("es-ES")}
+                      </Text>
+                    </Box>
+                    {photo.weight_kg && (
+                      <Text size="xs" fw={600}>{photo.weight_kg} kg</Text>
+                    )}
+                  </Group>
+                </Card>
+              ))}
+            </SimpleGrid>
+          </Box>
         </Tabs.Panel>
 
+        {/* Sesiones */}
         <Tabs.Panel value="sessions">
-          <Paper radius="lg" withBorder>
-            <Table>
-              <Table.Thead>
+          <Box className="nv-card" style={{ overflow: "hidden" }}>
+            <Table verticalSpacing="md" horizontalSpacing="lg">
+              <Table.Thead style={{ backgroundColor: "var(--nv-surface-subtle)" }}>
                 <Table.Tr>
                   <Table.Th>Fecha</Table.Th>
                   <Table.Th>Hora</Table.Th>
@@ -937,7 +923,7 @@ export function ClientDetailPage() {
                 {sessions.map((session) => (
                   <Table.Tr key={session.id}>
                     <Table.Td>
-                      <Text fw={500} size="sm">
+                      <Text fw={600} size="sm">
                         {new Date(session.date).toLocaleDateString("es-ES", {
                           weekday: "short",
                           day: "numeric",
@@ -945,43 +931,35 @@ export function ClientDetailPage() {
                         })}
                       </Text>
                     </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{session.time}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{session.type}</Text>
-                    </Table.Td>
+                    <Table.Td><Text size="sm">{session.time}</Text></Table.Td>
+                    <Table.Td><Text size="sm">{session.type}</Text></Table.Td>
                     <Table.Td>
                       <Badge
-                        color={
-                          session.status === "completed" ? "green" : "blue"
-                        }
+                        color={session.status === "completed" ? "green" : "blue"}
                         size="sm"
                         variant="light"
+                        radius="xl"
                       >
-                        {session.status === "completed"
-                          ? "Completada"
-                          : "Confirmada"}
+                        {session.status === "completed" ? "Completada" : "Confirmada"}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      <Text c="dimmed" size="sm">
-                        {session.notes || "-"}
-                      </Text>
+                      <Text c="dimmed" size="sm">{session.notes || "—"}</Text>
                     </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
             </Table>
-          </Paper>
+          </Box>
         </Tabs.Panel>
 
+        {/* Progreso */}
         <Tabs.Panel value="progress">
-          <Paper p="lg" radius="lg" withBorder>
-            <Text fw={600} mb="lg">
+          <Box className="nv-card" p="xl">
+            <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Evolución de Medidas
             </Text>
-            <Table>
+            <Table verticalSpacing="md">
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Fecha</Table.Th>
@@ -993,37 +971,27 @@ export function ClientDetailPage() {
               </Table.Thead>
               <Table.Tbody>
                 {measurements.map((m, index) => {
-                  const prevWeight =
-                    measurements[index + 1]?.weight || m.weight;
+                  const prevWeight = measurements[index + 1]?.weight || m.weight;
                   const weightChange = m.weight - prevWeight;
                   return (
                     <Table.Tr key={index}>
                       <Table.Td>
-                        <Text fw={500} size="sm">
-                          {new Date(m.date).toLocaleDateString("es-ES", {
-                            month: "long",
-                            year: "numeric",
-                          })}
+                        <Text fw={600} size="sm">
+                          {new Date(m.date).toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
                         </Text>
                       </Table.Td>
-                      <Table.Td>
-                        <Text size="sm">{m.weight} kg</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm">{m.body_fat}%</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm">{m.muscle_mass} kg</Text>
-                      </Table.Td>
+                      <Table.Td><Text size="sm">{m.weight} kg</Text></Table.Td>
+                      <Table.Td><Text size="sm">{m.body_fat}%</Text></Table.Td>
+                      <Table.Td><Text size="sm">{m.muscle_mass} kg</Text></Table.Td>
                       <Table.Td>
                         {index < measurements.length - 1 && (
                           <Badge
                             color={weightChange <= 0 ? "green" : "red"}
                             size="sm"
                             variant="light"
+                            radius="xl"
                           >
-                            {weightChange <= 0 ? "" : "+"}
-                            {weightChange} kg
+                            {weightChange <= 0 ? "" : "+"}{weightChange} kg
                           </Badge>
                         )}
                       </Table.Td>
@@ -1032,40 +1000,49 @@ export function ClientDetailPage() {
                 })}
               </Table.Tbody>
             </Table>
-          </Paper>
+          </Box>
         </Tabs.Panel>
 
+        {/* Programas */}
         <Tabs.Panel value="programs">
-          <Paper p="lg" py="xl" radius="lg" ta="center" withBorder>
-            <ThemeIcon
-              color="gray"
-              mb="md"
-              radius="xl"
-              size={60}
-              variant="light"
-            >
-              <IconBarbell size={30} />
+          <Box className="nv-card" p={60} ta="center">
+            <ThemeIcon size={80} radius="xl" variant="light" color="gray" mb="lg">
+              <IconBarbell size={40} />
             </ThemeIcon>
-            <Text fw={500}>Sin programas asignados actualmente</Text>
-            <Text c="dimmed" mb="md" size="sm">
+            <Text fw={700} size="lg" mb="xs">Sin programas asignados</Text>
+            <Text c="dimmed" mb="lg" maw={400} mx="auto">
               Asigna un programa de entrenamiento para este cliente
             </Text>
-            <Button leftSection={<IconPlus size={16} />}>
+            <Button 
+              leftSection={<IconPlus size={18} />}
+              radius="xl"
+              styles={{
+                root: {
+                  background: "var(--nv-accent)",
+                  color: "var(--nv-dark)",
+                  fontWeight: 700,
+                  "&:hover": { background: "var(--nv-accent-hover)" }
+                }
+              }}
+            >
               Asignar Programa
             </Button>
-          </Paper>
+          </Box>
         </Tabs.Panel>
 
+        {/* Pagos */}
         <Tabs.Panel value="payments">
-          <Paper p="lg" radius="lg" withBorder>
+          <Box className="nv-card" p="xl">
             <Group justify="space-between" mb="lg">
-              <Text fw={600}>Historial de Pagos</Text>
-              <Badge color="green" variant="light">
+              <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Historial de Pagos
+              </Text>
+              <Badge size="lg" variant="light" radius="xl" color="green">
                 Plan Premium - €149/mes
               </Badge>
             </Group>
 
-            <Table>
+            <Table verticalSpacing="md">
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Fecha</Table.Th>
@@ -1076,46 +1053,34 @@ export function ClientDetailPage() {
               </Table.Thead>
               <Table.Tbody>
                 <Table.Tr>
+                  <Table.Td><Text size="sm">01/01/2024</Text></Table.Td>
+                  <Table.Td><Text size="sm">Plan Premium - Enero 2024</Text></Table.Td>
+                  <Table.Td><Text fw={600} size="sm">€149.00</Text></Table.Td>
                   <Table.Td>
-                    <Text size="sm">01/01/2024</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">Plan Premium - Enero 2024</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text fw={500} size="sm">
-                      €149.00
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color="green" size="sm" variant="light">
-                      Pagado
-                    </Badge>
+                    <Badge color="green" size="sm" variant="light" radius="xl">Pagado</Badge>
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
+                  <Table.Td><Text size="sm">01/12/2023</Text></Table.Td>
+                  <Table.Td><Text size="sm">Plan Premium - Diciembre 2023</Text></Table.Td>
+                  <Table.Td><Text fw={600} size="sm">€149.00</Text></Table.Td>
                   <Table.Td>
-                    <Text size="sm">01/12/2023</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">Plan Premium - Diciembre 2023</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text fw={500} size="sm">
-                      €149.00
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color="green" size="sm" variant="light">
-                      Pagado
-                    </Badge>
+                    <Badge color="green" size="sm" variant="light" radius="xl">Pagado</Badge>
                   </Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>
-          </Paper>
+          </Box>
         </Tabs.Panel>
       </Tabs>
+
+      <style>{`
+        .hover-lift:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
+          border-color: var(--border-medium);
+        }
+      `}</style>
     </Container>
   );
 }
