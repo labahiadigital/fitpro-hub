@@ -577,3 +577,197 @@ export function useClientMealPlans(clientId: string) {
     enabled: !!clientId && !!workspaceId,
   });
 }
+
+// Hook para obtener pagos
+export function useSupabasePayments() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-payments", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*, clients(first_name, last_name, email), subscriptions(name)")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data?.map((payment: any) => ({
+        ...payment,
+        client_name: payment.clients ? `${payment.clients.first_name} ${payment.clients.last_name}` : "Sin cliente",
+        subscription_name: payment.subscriptions?.name || null,
+      })) || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener suscripciones
+export function useSupabaseSubscriptions() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-subscriptions", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("*, clients(first_name, last_name, email)")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data?.map((sub: any) => ({
+        ...sub,
+        client_name: sub.clients ? `${sub.clients.first_name} ${sub.clients.last_name}` : "Sin cliente",
+      })) || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener productos
+export function useSupabaseProducts() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-products", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener formularios
+export function useSupabaseForms() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-forms", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("forms")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener automatizaciones
+export function useSupabaseAutomations() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-automations", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("automations")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener paquetes de sesiones
+export function useSupabaseSessionPackages() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-session-packages", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("session_packages")
+        .select("*, products(name, price)")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener paquetes de clientes
+export function useSupabaseClientPackages() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-client-packages", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("client_packages")
+        .select("*, clients(first_name, last_name), session_packages(name, total_sessions)")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data?.map((pkg: any) => ({
+        ...pkg,
+        client_name: pkg.clients ? `${pkg.clients.first_name} ${pkg.clients.last_name}` : "Sin cliente",
+        package_name: pkg.session_packages?.name || "Sin paquete",
+      })) || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener miembros del equipo
+export function useSupabaseTeamMembers() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-team-members", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("*, users(id, full_name, email, avatar_url, is_active)")
+        .eq("workspace_id", workspaceId);
+
+      if (error) throw error;
+      return data?.map((member: any) => ({
+        id: member.users?.id,
+        full_name: member.users?.full_name || "Sin nombre",
+        email: member.users?.email,
+        avatar_url: member.users?.avatar_url,
+        is_active: member.users?.is_active,
+        role: member.role,
+        is_default: member.is_default,
+      })) || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
