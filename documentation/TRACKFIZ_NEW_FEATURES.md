@@ -90,15 +90,17 @@ Sistema completo de gestión de alergias e intolerancias con visualización en r
 
 ---
 
-### 4. 📄 GENERACIÓN DE PDF ✅
+### 4. 📄 GENERACIÓN DE PDF Y VISTA DE PLAN NUTRICIONAL ✅
 **Prioridad:** Alta  
 **Estado:** ✅ Completado
 
-Generación de PDFs profesionales para planes nutricionales y de entrenamiento.
+Generación de PDFs profesionales y vista web detallada para planes nutricionales.
 
 **Archivos creados:**
 - `backend/app/services/pdf_generator.py` - Servicio de generación
 - `backend/app/api/v1/endpoints/pdf.py` - Endpoints de la API
+- `frontend/src/components/nutrition/MealPlanDetailView.tsx` - Vista detallada del plan
+- `frontend/src/pages/nutrition/MealPlanDetailPage.tsx` - Página de detalle
 
 **Funcionalidades implementadas:**
 - ✅ Botón "Exportar a PDF" en plan nutricional
@@ -106,6 +108,14 @@ Generación de PDFs profesionales para planes nutricionales y de entrenamiento.
 - ✅ Diseño profesional con branding del workspace
 - ✅ **ALERTA IMPORTANTE**: Aviso de revisar alimentos con intolerancias/alergias
 - ✅ Descarga directa del PDF
+- ✅ **Vista web detallada** del plan nutricional con:
+  - Cálculos energéticos (TDEE, mantenimiento, hipertrofia, definición)
+  - Distribución de macronutrientes con gráfico circular
+  - Temporalización de objetivos
+  - Vista de comidas por día con tabla detallada
+  - Sección de suplementación deportiva
+  - Alertas de alérgenos en tiempo real
+- ✅ Todos los datos provienen de Supabase (sin hardcoding)
 
 ---
 
@@ -264,6 +274,39 @@ Ficha de cliente completa con todos los apartados requeridos.
 
 ---
 
+---
+
+## 🗄️ Arquitectura de Datos - Supabase
+
+### Configuración del Proyecto
+- **Project ID:** `ougfmkbjrpnjvujhuuyy`
+- **URL:** `https://ougfmkbjrpnjvujhuuyy.supabase.co`
+- **Región:** `eu-west-3`
+- **Base de datos:** PostgreSQL 17.6.1
+
+### Tablas Principales
+| Tabla | Descripción | RLS |
+|-------|-------------|-----|
+| `workspaces` | Espacios de trabajo/negocios | ✅ |
+| `users` | Usuarios del sistema | ✅ |
+| `clients` | Clientes de cada workspace | ✅ |
+| `meal_plans` | Planes nutricionales | ✅ |
+| `foods` | Biblioteca de alimentos | ✅ |
+| `workout_programs` | Programas de entrenamiento | ✅ |
+| `exercises` | Biblioteca de ejercicios | ✅ |
+| `bookings` | Reservas y citas | ✅ |
+| `subscriptions` | Suscripciones de pago | ✅ |
+| `payments` | Historial de pagos | ✅ |
+
+### Principios de Integración
+1. **Backend con SQLAlchemy**: Todos los modelos en `backend/app/models/` usan SQLAlchemy ORM
+2. **Async Sessions**: Conexiones asíncronas con `asyncpg`
+3. **RLS (Row Level Security)**: Activado en todas las tablas sensibles
+4. **Frontend con React Query**: Hooks personalizados en `frontend/src/hooks/useSupabaseData.ts`
+5. **Sin hardcoding**: Todos los datos vienen de la base de datos
+
+---
+
 ## 🔮 Funcionalidades Futuras (Roadmap)
 
 ### Modelos de Negocio / Servicios Adicionales
@@ -287,4 +330,5 @@ Ficha de cliente completa con todos los apartados requeridos.
 
 *Documento actualizado: 2 de Enero de 2026*  
 *Basado en requisitos de E13 Fitness / Borja Sanfelix*  
-*Estado: ✅ TODAS LAS FUNCIONALIDADES IMPLEMENTADAS*
+*Estado: ✅ TODAS LAS FUNCIONALIDADES IMPLEMENTADAS*  
+*Supabase Project: ougfmkbjrpnjvujhuuyy*

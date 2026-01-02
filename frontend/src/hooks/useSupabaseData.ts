@@ -502,3 +502,78 @@ export function useSupabaseWorkspace() {
     enabled: !!workspaceId,
   });
 }
+
+// Hook para obtener un plan nutricional individual
+export function useSupabaseMealPlan(id: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-meal-plan", id],
+    queryFn: async () => {
+      if (!id) return null;
+
+      const { data, error } = await supabase
+        .from("meal_plans")
+        .select(
+          "*, clients(id, first_name, last_name, email, birth_date, gender, height_cm, weight_kg, health_data)"
+        )
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id && !!workspaceId,
+  });
+}
+
+// Hook para obtener un cliente individual
+export function useClient(id: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-client", id],
+    queryFn: async () => {
+      if (!id) return null;
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select(
+          "*, client_tags_association(tag_id, client_tags(id, name, color))"
+        )
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        ...data,
+        tags:
+          data?.client_tags_association?.map((ta: any) => ta.client_tags) || [],
+      };
+    },
+    enabled: !!id && !!workspaceId,
+  });
+}
+
+// Hook para obtener planes nutricionales de un cliente
+export function useClientMealPlans(clientId: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-client-meal-plans", clientId],
+    queryFn: async () => {
+      if (!clientId) return [];
+
+      const { data, error } = await supabase
+        .from("meal_plans")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clientId && !!workspaceId,
+  });
+}

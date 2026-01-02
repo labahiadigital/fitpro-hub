@@ -43,6 +43,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { EmptyState } from "../../components/common/EmptyState";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
@@ -145,6 +146,7 @@ const initialDays: DayPlan[] = [
 const FOODS_PER_PAGE = 50;
 
 export function NutritionPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string | null>("plans");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
@@ -568,7 +570,11 @@ export function NutritionPage() {
                     >
                       Editar
                     </Button>
-                    <ActionIcon color="blue" variant="light">
+                    <ActionIcon 
+                      color="blue" 
+                      variant="light"
+                      onClick={() => navigate(`/nutrition/${plan.id}`)}
+                    >
                       <IconEye size={16} />
                     </ActionIcon>
                     <ActionIcon

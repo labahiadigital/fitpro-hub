@@ -66,6 +66,8 @@ class PDFGeneratorService:
         client_intolerances: List[str] = [],
         notes: str = "",
         logo_url: Optional[str] = None,
+        client_data: Optional[Dict[str, Any]] = None,
+        supplements: Optional[List[Dict[str, Any]]] = None,
     ) -> bytes:
         """
         Generate a PDF for a diet plan.
@@ -157,6 +159,14 @@ class PDFGeneratorService:
             ["Cliente:", client_name, "Entrenador:", trainer_name],
             ["Fecha:", datetime.now().strftime("%d/%m/%Y"), "", ""],
         ]
+        
+        # Add client details if available
+        if client_data:
+            if client_data.get('weight_kg'):
+                info_data.append(["Peso:", f"{client_data['weight_kg']} kg", "Altura:", f"{client_data.get('height_cm', '-')} cm"])
+            if client_data.get('goals'):
+                info_data.append(["Objetivo:", str(client_data['goals'])[:50], "", ""])
+        
         info_table = rl['Table'](info_data, colWidths=[3*rl['cm'], 5*rl['cm'], 3*rl['cm'], 5*rl['cm']])
         info_table.setStyle(rl['TableStyle']([
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
@@ -169,21 +179,77 @@ class PDFGeneratorService:
         elements.append(info_table)
         elements.append(rl['Spacer'](1, 20))
         
+        # Energy requirements calculation section
+        note_style = rl['ParagraphStyle'](
+            'Note',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=rl['HexColor']('#666666'),
+            spaceAfter=10
+        )
+        
+        elements.append(rl['Paragraph']("<b>Cálculo de Requisitos Energéticos Diarios</b>", subtitle_style))
+        
+        energy_note = """
+        <i>Estos cálculos son meramente orientativos. Individuos con las mismas características 
+        pueden tener gastos energéticos diferentes. La forma correcta de saber si la energía 
+        propuesta se ajusta al individuo es tras realizar un control periódico de resultados.</i>
+        """
+        elements.append(rl['Paragraph'](energy_note, note_style))
+        
+        energy_data = [
+            ["Tipo de Objetivo", "Calorías Estimadas"],
+            ["Energía Estimada para Mantenimiento", f"{target_calories:.0f} kcal"],
+            ["Hipertrofia o Aumento de Peso", f"{int(target_calories * 1.25)} kcal"],
+            ["Definición o Pérdida de Peso", f"{int(target_calories * 0.75)} kcal"],
+        ]
+        energy_table = rl['Table'](energy_data, colWidths=[8*rl['cm'], 6*rl['cm']])
+        energy_table.setStyle(rl['TableStyle']([
+            ('BACKGROUND', (0, 0), (-1, 0), rl['HexColor']('#2D6A4F')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), rl['HexColor']('#FFFFFF')),
+            ('BACKGROUND', (0, 1), (-1, 1), rl['HexColor']('#FFF3CD')),  # Yellow for maintenance
+            ('BACKGROUND', (0, 2), (-1, 2), rl['HexColor']('#D4EDDA')),  # Green for hypertrophy
+            ('BACKGROUND', (0, 3), (-1, 3), rl['HexColor']('#F8D7DA')),  # Red for definition
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, rl['HexColor']('#DEE2E6')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(energy_table)
+        elements.append(rl['Spacer'](1, 20))
+        
         # Macros targets
         elements.append(rl['Paragraph']("<b>Objetivos Nutricionales Diarios</b>", subtitle_style))
+        
+        # Calculate macro percentages
+        protein_kcal = target_protein * 4
+        carbs_kcal = target_carbs * 4
+        fat_kcal = target_fat * 9
+        total_kcal = protein_kcal + carbs_kcal + fat_kcal
+        protein_pct = round((protein_kcal / total_kcal) * 100) if total_kcal > 0 else 33
+        carbs_pct = round((carbs_kcal / total_kcal) * 100) if total_kcal > 0 else 34
+        fat_pct = round((fat_kcal / total_kcal) * 100) if total_kcal > 0 else 33
+        
         macros_data = [
-            ["Calorías", "Proteína", "Carbohidratos", "Grasas"],
-            [f"{target_calories:.0f} kcal", f"{target_protein:.0f}g", f"{target_carbs:.0f}g", f"{target_fat:.0f}g"]
+            ["", "Calorías", "Proteína", "Carbohidratos", "Grasas"],
+            ["Cantidad", f"{target_calories:.0f} kcal", f"{target_protein:.0f}g", f"{target_carbs:.0f}g", f"{target_fat:.0f}g"],
+            ["% Kcal", "100%", f"{protein_pct}%", f"{carbs_pct}%", f"{fat_pct}%"],
+            ["Kcal", f"{int(total_kcal)}", f"{int(protein_kcal)}", f"{int(carbs_kcal)}", f"{int(fat_kcal)}"],
         ]
-        macros_table = rl['Table'](macros_data, colWidths=[4*rl['cm']]*4)
+        macros_table = rl['Table'](macros_data, colWidths=[2.5*rl['cm'], 3*rl['cm'], 3*rl['cm'], 3*rl['cm'], 3*rl['cm']])
         macros_table.setStyle(rl['TableStyle']([
             ('BACKGROUND', (0, 0), (-1, 0), rl['HexColor']('#2D6A4F')),
             ('TEXTCOLOR', (0, 0), (-1, 0), rl['HexColor']('#FFFFFF')),
+            ('BACKGROUND', (0, 1), (0, -1), rl['HexColor']('#E9ECEF')),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), rl['HexColor']('#F8F9FA')),
+            ('BACKGROUND', (1, 1), (-1, -1), rl['HexColor']('#F8F9FA')),
             ('GRID', (0, 0), (-1, -1), 1, rl['HexColor']('#DEE2E6')),
         ]))
         elements.append(macros_table)
@@ -260,6 +326,46 @@ class PDFGeneratorService:
             elements.append(rl['Paragraph']("<b>Notas Adicionales</b>", subtitle_style))
             elements.append(rl['Paragraph'](notes, normal_style))
             elements.append(rl['Spacer'](1, 20))
+        
+        # Supplementation section
+        elements.append(rl['Paragraph']("<b>Suplementación Deportiva</b>", subtitle_style))
+        
+        if supplements and len(supplements) > 0:
+            supp_data = [["Suplemento", "Dosis", "Momento", "Notas"]]
+            for supp in supplements:
+                supp_data.append([
+                    supp.get('name', ''),
+                    supp.get('dosage', ''),
+                    supp.get('timing', ''),
+                    supp.get('notes', '')[:30],
+                ])
+            
+            supp_table = rl['Table'](supp_data, colWidths=[4*rl['cm'], 3*rl['cm'], 4*rl['cm'], 4*rl['cm']])
+            supp_table.setStyle(rl['TableStyle']([
+                ('BACKGROUND', (0, 0), (-1, 0), rl['HexColor']('#40916C')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), rl['HexColor']('#FFFFFF')),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, rl['HexColor']('#DEE2E6')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [rl['HexColor']('#FFFFFF'), rl['HexColor']('#F8F9FA')]),
+            ]))
+            elements.append(supp_table)
+        else:
+            # Default supplementation recommendations
+            default_supps = """
+            <b>Recomendaciones generales:</b><br/>
+            • 1 Multivitamínico con comida 1 y comida 5<br/>
+            • Omega 3 - con comida 1, 3 y 5<br/>
+            • Intra entrenamiento: 10g EAAs + 10g GLUTAMINA + 10g CREATINA<br/>
+            • Antes de dormir: ZMA 3 cápsulas
+            """
+            elements.append(rl['Paragraph'](default_supps, normal_style))
+        
+        elements.append(rl['Spacer'](1, 20))
         
         # Final warning
         final_warning = """

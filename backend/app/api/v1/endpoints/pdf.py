@@ -75,6 +75,7 @@ async def generate_diet_plan_pdf(
     client_name = "Sin asignar"
     client_allergies = []
     client_intolerances = []
+    client_data = {}
     
     if plan.client_id:
         result = await db.execute(
@@ -83,8 +84,20 @@ async def generate_diet_plan_pdf(
         client = result.scalar_one_or_none()
         if client:
             client_name = f"{client.first_name} {client.last_name}"
-            client_allergies = client.allergies or []
-            client_intolerances = client.intolerances or []
+            client_allergies = client.health_data.get("allergies", []) if client.health_data else []
+            client_intolerances = client.health_data.get("intolerances", []) if client.health_data else []
+            client_data = {
+                "name": client_name,
+                "gender": client.gender,
+                "weight_kg": client.weight_kg,
+                "height_cm": client.height_cm,
+                "goals": client.goals,
+                "allergies": client_allergies,
+                "intolerances": client_intolerances,
+            }
+    
+    # Get supplements from plan
+    supplements = plan.plan.get("supplements", []) if plan.plan else []
     
     # Generate PDF
     try:
@@ -101,6 +114,8 @@ async def generate_diet_plan_pdf(
             client_allergies=client_allergies,
             client_intolerances=client_intolerances,
             notes=data.notes or plan.description or "",
+            client_data=client_data,
+            supplements=supplements,
         )
         
         # Return as downloadable file
@@ -188,6 +203,110 @@ async def generate_workout_plan_pdf(
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f'attachment; filename="{program.name.replace(" ", "_")}.pdf"'
+            }
+        )
+        
+    except ImportError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al generar PDF: {str(e)}. Por favor, instale reportlab."
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al generar PDF: {str(e)}"
+        )
+
+
+@router.get("/meal-plan/{plan_id}")
+async def download_meal_plan_pdf(
+    plan_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Descargar PDF de un plan nutricional directamente por ID.
+    """
+    # Get meal plan
+    result = await db.execute(
+        select(MealPlan).where(
+            MealPlan.id == plan_id,
+            MealPlan.workspace_id == current_user.workspace_id
+        )
+    )
+    plan = result.scalar_one_or_none()
+    
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan nutricional no encontrado"
+        )
+    
+    # Get workspace
+    result = await db.execute(
+        select(Workspace).where(Workspace.id == current_user.workspace_id)
+    )
+    workspace = result.scalar_one_or_none()
+    
+    # Get trainer
+    result = await db.execute(
+        select(User).where(User.id == current_user.id)
+    )
+    trainer = result.scalar_one_or_none()
+    
+    # Get client if assigned
+    client_name = "Sin asignar"
+    client_allergies = []
+    client_intolerances = []
+    client_data = {}
+    
+    if plan.client_id:
+        result = await db.execute(
+            select(Client).where(Client.id == plan.client_id)
+        )
+        client = result.scalar_one_or_none()
+        if client:
+            client_name = f"{client.first_name} {client.last_name}"
+            client_allergies = client.health_data.get("allergies", []) if client.health_data else []
+            client_intolerances = client.health_data.get("intolerances", []) if client.health_data else []
+            client_data = {
+                "name": client_name,
+                "gender": client.gender,
+                "weight_kg": client.weight_kg,
+                "height_cm": client.height_cm,
+                "goals": client.goals,
+                "allergies": client_allergies,
+                "intolerances": client_intolerances,
+            }
+    
+    # Get supplements from plan
+    supplements = plan.plan.get("supplements", []) if plan.plan else []
+    
+    # Generate PDF
+    try:
+        pdf_bytes = pdf_generator.generate_diet_plan_pdf(
+            plan_name=plan.name,
+            client_name=client_name,
+            trainer_name=trainer.full_name if trainer else "Entrenador",
+            workspace_name=workspace.name if workspace else "Trackfiz",
+            target_calories=plan.target_calories or 2000,
+            target_protein=plan.target_protein or 150,
+            target_carbs=plan.target_carbs or 200,
+            target_fat=plan.target_fat or 70,
+            days=plan.plan.get("days", []) if plan.plan else [],
+            client_allergies=client_allergies,
+            client_intolerances=client_intolerances,
+            notes=plan.description or "",
+            client_data=client_data,
+            supplements=supplements,
+        )
+        
+        # Return as downloadable file
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="plan_nutricional_{plan.name.replace(" ", "_")}.pdf"'
             }
         )
         

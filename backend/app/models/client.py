@@ -70,13 +70,16 @@ class Client(BaseModel):
     weight_kg = Column(String(10), nullable=True)
     health_data = Column(JSONB, default={})
     
-    # Allergies and intolerances
-    allergies = Column(ARRAY(String), default=[])  # e.g., ["gluten", "lactosa", "frutos_secos"]
-    intolerances = Column(ARRAY(String), default=[])  # e.g., ["lactosa", "fructosa"]
-    injuries = Column(JSONB, default=[])  # List of injuries with details
-    
-    # Chat settings
-    chat_enabled = Column(Boolean, default=True)  # Enable/disable chat for this client
+    # Note: allergies, intolerances, and injuries are stored in health_data JSONB
+    # health_data = {
+    #     "allergies": ["gluten", "lactosa"],
+    #     "intolerances": ["fructosa"],
+    #     "injuries": [...],
+    #     "activity_level": "moderate",
+    #     "body_tendency": "normal",
+    #     "goal_type": "maintenance",
+    #     "goal_weight_kg": 70
+    # }
     
     # Goals and notes
     goals = Column(Text, nullable=True)

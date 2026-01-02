@@ -52,6 +52,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useClient } from "../../hooks/useClients";
+import { useClientMealPlans } from "../../hooks/useSupabaseData";
 import { Center, Loader } from "@mantine/core";
 import { AllergenList } from "../../components/common/AllergenBadge";
 
@@ -62,6 +63,9 @@ export function ClientDetailPage() {
   
   // Fetch client data using hook (handles demo mode internally)
   const { data: fetchedClient, isLoading } = useClient(id || "");
+  
+  // Fetch meal plans for this client from Supabase
+  const { data: clientMealPlans } = useClientMealPlans(id || "");
 
   // Mock client data as fallback
   const mockClient = {
@@ -112,8 +116,14 @@ export function ClientDetailPage() {
     { id: "4", photo_url: "https://images.unsplash.com/photo-1571019613914-85f342c6a11e?w=300", photo_type: "side", photo_date: "2023-12-01", weight_kg: "63" },
   ];
 
-  // Mock meal plans
-  const mealPlans = [
+  // Use meal plans from Supabase, with fallback mock data for demo
+  const mealPlans = clientMealPlans?.length ? clientMealPlans.map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    target_calories: plan.target_calories || 2000,
+    status: plan.is_template === "N" ? "active" : "inactive",
+    created_at: plan.created_at,
+  })) : [
     { id: "1", name: "Plan Definición Q1", target_calories: 1800, status: "active", created_at: "2024-01-01" },
     { id: "2", name: "Plan Mantenimiento", target_calories: 2000, status: "inactive", created_at: "2023-10-01" },
   ];

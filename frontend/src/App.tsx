@@ -20,6 +20,7 @@ import { DashboardPage } from "./pages/dashboard/DashboardPage";
 import { DocumentsPage } from "./pages/documents/DocumentsPage";
 import { FormsPage } from "./pages/forms/FormsPage";
 import { NutritionPage } from "./pages/nutrition/NutritionPage";
+import { MealPlanDetailPage } from "./pages/nutrition/MealPlanDetailPage";
 import { ClientOnboardingPage } from "./pages/onboarding/ClientOnboardingPage";
 import { PackagesPage } from "./pages/packages/PackagesPage";
 import { PaymentsPage } from "./pages/payments/PaymentsPage";
@@ -114,6 +115,7 @@ export default function App() {
                 <Route element={<CalendarPage />} path="/calendar" />
                 <Route element={<WorkoutsPage />} path="/workouts" />
                 <Route element={<NutritionPage />} path="/nutrition" />
+                <Route element={<MealPlanDetailPage />} path="/nutrition/:id" />
                 <Route element={<SupplementsPage />} path="/supplements" />
                 <Route element={<FormsPage />} path="/forms" />
                 <Route element={<ChatPage />} path="/chat" />
