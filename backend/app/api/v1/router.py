@@ -3,7 +3,8 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, workspaces, users, clients, bookings, workouts, nutrition,
     forms, messages, payments, automations, reports, products, exercises,
-    foods, notifications, supplements, documents, pdf, roles, redsys, lms, erp, referrals
+    foods, notifications, supplements, documents, pdf, roles, redsys, lms, erp, referrals,
+    live_classes, ai, wearables
 )
 
 api_router = APIRouter()
@@ -79,3 +80,12 @@ api_router.include_router(erp.router, prefix="/erp", tags=["ERP - Facturación"]
 
 # Referidos Multinivel
 api_router.include_router(referrals.router, prefix="/referrals", tags=["Sistema de Referidos"])
+
+# Clases Online en Vivo
+api_router.include_router(live_classes.router, prefix="/live-classes", tags=["Clases en Vivo"])
+
+# Generación con IA
+api_router.include_router(ai.router, prefix="/ai", tags=["Generación con IA"])
+
+# Integración con Wearables
+api_router.include_router(wearables.router, prefix="/wearables", tags=["Wearables e IoT"])

@@ -23,6 +23,9 @@
 | 10 | Gestión de Equipo: Roles Personalizados | Alta | ✅ Completado |
 | 11 | CRM: Campos Editables y Agrupables | Media | ✅ Completado |
 | 12 | Ficha de Cliente Mejorada | Alta | ✅ Completado |
+| 13 | **Clases Online en Vivo** | Media | ✅ Completado |
+| 14 | **Generación con IA** | Baja | ✅ Completado |
+| 15 | **Integración con Wearables** | Baja | ✅ Completado |
 
 ---
 
@@ -274,6 +277,124 @@ Ficha de cliente completa con todos los apartados requeridos.
 
 ---
 
+### 13. 📹 CLASES ONLINE EN VIVO ✅
+**Prioridad:** Media  
+**Estado:** ✅ Completado
+
+Sistema completo de clases en vivo con videoconferencia.
+
+**Archivos creados:**
+- `backend/app/models/live_classes.py` - Modelos SQLAlchemy
+- `backend/app/api/v1/endpoints/live_classes.py` - Endpoints de la API
+- `backend/app/services/zoom.py` - Servicio de integración con Zoom
+- `frontend/src/pages/live-classes/LiveClassesPage.tsx` - Página de clases
+- `frontend/src/hooks/useLiveClasses.ts` - Hooks de React Query
+
+**Tablas Supabase creadas:**
+- `video_integrations` - Configuración de Zoom/Meet/Teams
+- `live_classes` - Clases programadas
+- `live_class_registrations` - Inscripciones
+- `live_class_templates` - Plantillas reutilizables
+- `live_class_packages` - Paquetes de clases
+- `client_class_packages` - Paquetes por cliente
+- `meeting_logs` - Logs de reuniones
+
+**Funcionalidades implementadas:**
+- ✅ Integración con Zoom (OAuth Server-to-Server)
+- ✅ Integración con Google Meet (placeholder)
+- ✅ Integración con Microsoft Teams (placeholder)
+- ✅ Crear/editar/eliminar clases
+- ✅ Inscripciones de clientes
+- ✅ Plantillas de clases reutilizables
+- ✅ Paquetes de clases (bonos)
+- ✅ Calendario de clases
+- ✅ Estadísticas de asistencia
+- ✅ Grabación automática
+- ✅ Webhooks para eventos de reunión
+- ✅ Frontend con vista de cuadrícula/lista
+
+---
+
+### 14. 🤖 GENERACIÓN CON IA ✅
+**Prioridad:** Baja  
+**Estado:** ✅ Completado
+
+Sistema de generación automática de planes con IA.
+
+**Archivos creados:**
+- `backend/app/services/ai_generator.py` - Servicio de generación
+- `backend/app/api/v1/endpoints/ai.py` - Endpoints de la API
+
+**Tablas Supabase creadas:**
+- `ai_configurations` - Configuración de IA por workspace
+- `ai_generations` - Historial de generaciones
+- `ai_prompt_templates` - Plantillas de prompts
+- `ai_suggestions` - Sugerencias de IA (cache)
+
+**Funcionalidades implementadas:**
+- ✅ Soporte para OpenAI (GPT-4o, GPT-4o-mini)
+- ✅ Soporte para Anthropic (Claude 3.5 Sonnet)
+- ✅ Generación de planes de entrenamiento personalizados
+- ✅ Generación de planes nutricionales personalizados
+- ✅ Análisis de progreso del cliente
+- ✅ Plantillas de prompts predefinidas
+- ✅ Respuestas en formato JSON estructurado
+- ✅ Consideración de alergias/intolerancias
+- ✅ Consideración de lesiones/limitaciones
+- ✅ Tracking de tokens utilizados
+- ✅ Configuración de temperatura y max_tokens
+
+---
+
+### 15. ⌚ INTEGRACIÓN CON WEARABLES ✅
+**Prioridad:** Baja  
+**Estado:** ✅ Completado
+
+Sistema de integración con dispositivos wearables.
+
+**Archivos creados:**
+- `backend/app/models/wearables.py` - Modelos SQLAlchemy
+- `backend/app/api/v1/endpoints/wearables.py` - Endpoints de la API
+
+**Tablas Supabase creadas:**
+- `connected_devices` - Dispositivos conectados
+- `health_metrics` - Métricas de salud individuales
+- `synced_activities` - Actividades sincronizadas
+- `daily_health_summary` - Resumen diario
+- `client_health_goals` - Objetivos de salud
+- `health_alerts` - Alertas de salud
+
+**Dispositivos soportados:**
+- ✅ Apple Watch
+- ✅ Garmin
+- ✅ Fitbit
+- ✅ WHOOP
+- ✅ Oura Ring
+- ✅ Polar
+- ✅ Samsung (placeholder)
+- ✅ Xiaomi (placeholder)
+
+**Métricas soportadas:**
+- ✅ Frecuencia cardíaca (actual, reposo, máxima)
+- ✅ Variabilidad de frecuencia cardíaca (HRV)
+- ✅ Pasos y distancia
+- ✅ Calorías (activas, basales, totales)
+- ✅ Sueño (duración, calidad, fases)
+- ✅ Estrés y recuperación
+- ✅ Oxígeno en sangre
+- ✅ Temperatura corporal
+- ✅ Peso y composición corporal
+
+**Funcionalidades implementadas:**
+- ✅ Conectar/desconectar dispositivos
+- ✅ Sincronización de métricas
+- ✅ Resumen diario de salud
+- ✅ Objetivos personalizables
+- ✅ Alertas de salud automáticas
+- ✅ Dashboard de salud por cliente
+- ✅ Historial de actividades sincronizadas
+- ✅ Zonas de frecuencia cardíaca
+
 ---
 
 ## 🗄️ Arquitectura de Datos - Supabase
@@ -297,6 +418,10 @@ Ficha de cliente completa con todos los apartados requeridos.
 | `bookings` | Reservas y citas | ✅ |
 | `subscriptions` | Suscripciones de pago | ✅ |
 | `payments` | Historial de pagos | ✅ |
+| `live_classes` | Clases en vivo | ✅ |
+| `ai_generations` | Generaciones de IA | ✅ |
+| `connected_devices` | Dispositivos wearables | ✅ |
+| `health_metrics` | Métricas de salud | ✅ |
 
 ### Principios de Integración
 1. **Backend con SQLAlchemy**: Todos los modelos en `backend/app/models/` usan SQLAlchemy ORM
@@ -309,6 +434,13 @@ Ficha de cliente completa con todos los apartados requeridos.
 
 ## 🔮 Funcionalidades Futuras (Roadmap)
 
+### Pendiente - App Móvil Nativa
+- App móvil nativa con React Native / Flutter
+- Notificaciones push
+- Chat en tiempo real
+- Sincronización offline
+- App para Apple Watch
+
 ### Modelos de Negocio / Servicios Adicionales
 - Descuentos en Inversure.com para clientes Trackfiz
 - Descuentos en Elitetrece.com
@@ -319,12 +451,6 @@ Ficha de cliente completa con todos los apartados requeridos.
 - Referidos multinivel de suplementos
 - Referidos de gimnasios, centros de salud
 - Referidos de equipamiento deportivo o wearables
-
-### Funcionalidades Técnicas Futuras
-- Clases online en vivo
-- App móvil nativa personalizada
-- IA para generación de planes
-- Integración con wearables
 
 ---
 

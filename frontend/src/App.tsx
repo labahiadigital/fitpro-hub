@@ -33,6 +33,7 @@ import { WorkoutsPage } from "./pages/workouts/WorkoutsPage";
 // New Pages
 import { SupplementsPage } from "./pages/supplements/SupplementsPage";
 import { LMSPage } from "./pages/lms/LMSPage";
+import { LiveClassesPage } from "./pages/live-classes/LiveClassesPage";
 import { useAuthStore } from "./stores/auth";
 import { theme } from "./theme";
 
@@ -128,6 +129,7 @@ export default function App() {
                 <Route element={<AutomationsPage />} path="/automations" />
                 <Route element={<ReportsPage />} path="/reports" />
                 <Route element={<LMSPage />} path="/lms" />
+                <Route element={<LiveClassesPage />} path="/live-classes" />
                 <Route element={<SettingsPage />} path="/settings" />
               </Route>
 

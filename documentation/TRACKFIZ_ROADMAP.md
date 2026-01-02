@@ -3,7 +3,7 @@
 ## E13 Fitness - Vertical de Elitetrece para Fitness y Entrenadores Personales
 
 **Fecha:** Enero 2026  
-**Versión:** 2.0  
+**Versión:** 3.0  
 **Supabase Project:** `ougfmkbjrpnjvujhuuyy`
 
 ---
@@ -16,9 +16,12 @@
 
 | Módulo | Descripción | Estado |
 |--------|-------------|--------|
-| **CRM** | Gestión de clientes, agenda, reservas, pagos, comunicación, planes de entrenamiento/nutrición, seguimiento | ✅ Implementado |
-| **ERP** | Gestión de equipo, facturación, contabilidad básica | 🔄 En progreso |
-| **LMS** | Cursos, formaciones, retos, certificados, monetización | 📋 Planificado |
+| **CRM** | Gestión de clientes, agenda, reservas, pagos, comunicación, planes de entrenamiento/nutrición, seguimiento | ✅ Completado |
+| **ERP** | Gestión de equipo, facturación, contabilidad básica | ✅ Completado |
+| **LMS** | Cursos, formaciones, retos, certificados, monetización | ✅ Completado |
+| **Clases en Vivo** | Videoconferencias integradas con Zoom/Meet/Teams | ✅ Completado |
+| **IA** | Generación automática de planes con OpenAI/Anthropic | ✅ Completado |
+| **Wearables** | Integración con Apple Watch, Garmin, Fitbit, WHOOP, Oura | ✅ Completado |
 
 ---
 
@@ -48,7 +51,7 @@
 | # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
 |---|--------------|--------|-------------------|----------|
 | 1 | Gestión de Equipo | ✅ | ✅ `User`, `UserRole` | ✅ `users`, `user_roles` |
-| 2 | Roles y Permisos | ✅ | ✅ `CustomRole` | ✅ Pendiente migración |
+| 2 | Roles y Permisos | ✅ | ✅ `CustomRole` | ✅ `custom_roles` |
 | 3 | Facturación | ✅ | ✅ `Invoice`, `InvoiceItem` | ✅ `invoices`, `invoice_items` |
 | 4 | Configuración Fiscal | ✅ | ✅ `InvoiceSettings` | ✅ `invoice_settings` |
 | 5 | Gestión de Gastos | ✅ | ✅ `Expense`, `ExpenseCategory` | ✅ `expenses`, `expense_categories` |
@@ -56,7 +59,7 @@
 | 7 | Resumen Financiero | ✅ | ✅ Endpoint `/erp/summary` | - |
 | 8 | Hooks Frontend | ✅ | - | ✅ `useSupabaseInvoices`, etc. |
 
-### 🟡 MÓDULO LMS - EN PROGRESO
+### 🟢 MÓDULO LMS - COMPLETADO
 
 | # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
 |---|--------------|--------|-------------------|----------|
@@ -72,6 +75,71 @@
 | 10 | Progreso Diario Retos | ✅ | ✅ `ChallengeDailyProgress` model | ✅ `challenge_daily_progress` |
 | 11 | Frontend LMS Page | ✅ | - | - |
 | 12 | API Endpoints LMS | ✅ | ✅ `/api/v1/lms/*` | - |
+
+### 🟢 CLASES ONLINE EN VIVO - COMPLETADO
+
+| # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
+|---|--------------|--------|-------------------|----------|
+| 1 | Configuración de Video | ✅ | ✅ `VideoIntegration` | ✅ `video_integrations` |
+| 2 | Clases en Vivo | ✅ | ✅ `LiveClass` | ✅ `live_classes` |
+| 3 | Inscripciones | ✅ | ✅ `LiveClassRegistration` | ✅ `live_class_registrations` |
+| 4 | Plantillas de Clases | ✅ | ✅ `LiveClassTemplate` | ✅ `live_class_templates` |
+| 5 | Paquetes de Clases | ✅ | ✅ `LiveClassPackage` | ✅ `live_class_packages` |
+| 6 | Paquetes por Cliente | ✅ | ✅ `ClientClassPackage` | ✅ `client_class_packages` |
+| 7 | Logs de Reuniones | ✅ | ✅ `MeetingLog` | ✅ `meeting_logs` |
+| 8 | Integración Zoom | ✅ | ✅ `ZoomService` | - |
+| 9 | Integración Google Meet | 🔄 | ✅ `GoogleMeetService` | - |
+| 10 | Integración MS Teams | 🔄 | ✅ `MicrosoftTeamsService` | - |
+| 11 | Frontend Page | ✅ | - | - |
+| 12 | API Endpoints | ✅ | ✅ `/api/v1/live-classes/*` | - |
+
+### 🟢 GENERACIÓN CON IA - COMPLETADO
+
+| # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
+|---|--------------|--------|-------------------|----------|
+| 1 | Configuración de IA | ✅ | - | ✅ `ai_configurations` |
+| 2 | Historial de Generaciones | ✅ | - | ✅ `ai_generations` |
+| 3 | Plantillas de Prompts | ✅ | - | ✅ `ai_prompt_templates` |
+| 4 | Sugerencias de IA | ✅ | - | ✅ `ai_suggestions` |
+| 5 | Generador de Planes de Entrenamiento | ✅ | ✅ `AIGeneratorService` | - |
+| 6 | Generador de Planes Nutricionales | ✅ | ✅ `AIGeneratorService` | - |
+| 7 | Análisis de Progreso | ✅ | ✅ `AIGeneratorService` | - |
+| 8 | Soporte OpenAI | ✅ | ✅ GPT-4o | - |
+| 9 | Soporte Anthropic | ✅ | ✅ Claude 3.5 | - |
+| 10 | API Endpoints | ✅ | ✅ `/api/v1/ai/*` | - |
+
+### 🟢 INTEGRACIÓN CON WEARABLES - COMPLETADO
+
+| # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
+|---|--------------|--------|-------------------|----------|
+| 1 | Dispositivos Conectados | ✅ | ✅ `ConnectedDevice` | ✅ `connected_devices` |
+| 2 | Métricas de Salud | ✅ | ✅ `HealthMetric` | ✅ `health_metrics` |
+| 3 | Actividades Sincronizadas | ✅ | ✅ `SyncedActivity` | ✅ `synced_activities` |
+| 4 | Resumen Diario | ✅ | ✅ `DailyHealthSummary` | ✅ `daily_health_summary` |
+| 5 | Objetivos de Salud | ✅ | ✅ `ClientHealthGoals` | ✅ `client_health_goals` |
+| 6 | Alertas de Salud | ✅ | ✅ `HealthAlert` | ✅ `health_alerts` |
+| 7 | Soporte Apple Watch | ✅ | - | - |
+| 8 | Soporte Garmin | ✅ | - | - |
+| 9 | Soporte Fitbit | ✅ | - | - |
+| 10 | Soporte WHOOP | ✅ | - | - |
+| 11 | Soporte Oura Ring | ✅ | - | - |
+| 12 | Soporte Polar | ✅ | - | - |
+| 13 | Dashboard de Salud | ✅ | ✅ `/wearables/dashboard/{client_id}` | - |
+| 14 | API Endpoints | ✅ | ✅ `/api/v1/wearables/*` | - |
+
+### 🟢 SISTEMA DE REFERIDOS MULTINIVEL - COMPLETADO
+
+| # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
+|---|--------------|--------|-------------------|----------|
+| 1 | Programas de Referidos | ✅ | ✅ `ReferralProgram` | ✅ `referral_programs` |
+| 2 | Gestión de Afiliados | ✅ | ✅ `Affiliate` | ✅ `affiliates` |
+| 3 | Enlaces de Referido | ✅ | ✅ `ReferralLink` | ✅ `referral_links` |
+| 4 | Tracking de Clics | ✅ | ✅ `ReferralClick` | ✅ `referral_clicks` |
+| 5 | Conversiones | ✅ | ✅ `ReferralConversion` | ✅ `referral_conversions` |
+| 6 | Pagos a Afiliados | ✅ | ✅ `AffiliatePayout` | ✅ `affiliate_payouts` |
+| 7 | Suplementos con Referidos | ✅ | ✅ `SupplementReferral` | ✅ `supplement_referrals` |
+| 8 | Comisiones Multinivel | ✅ | ✅ Algoritmo de cálculo | - |
+| 9 | Dashboard de Afiliado | ✅ | ✅ Endpoint `/affiliates/{id}/dashboard` | - |
 
 ---
 
@@ -94,31 +162,19 @@
 | 11 | CRM: Campos Editables/Agrupables | `frontend/src/components/settings/CRMFieldsConfig.tsx` | ✅ |
 | 12 | Ficha Cliente Completa | `frontend/src/pages/clients/ClientDetailPage.tsx` | ✅ |
 | 13 | Vista Detallada Plan Nutricional | `frontend/src/components/nutrition/MealPlanDetailView.tsx` | ✅ |
-
-### 🟢 SISTEMA DE REFERIDOS MULTINIVEL - COMPLETADO
-
-| # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
-|---|--------------|--------|-------------------|----------|
-| 1 | Programas de Referidos | ✅ | ✅ `ReferralProgram` | ✅ `referral_programs` |
-| 2 | Gestión de Afiliados | ✅ | ✅ `Affiliate` | ✅ `affiliates` |
-| 3 | Enlaces de Referido | ✅ | ✅ `ReferralLink` | ✅ `referral_links` |
-| 4 | Tracking de Clics | ✅ | ✅ `ReferralClick` | ✅ `referral_clicks` |
-| 5 | Conversiones | ✅ | ✅ `ReferralConversion` | ✅ `referral_conversions` |
-| 6 | Pagos a Afiliados | ✅ | ✅ `AffiliatePayout` | ✅ `affiliate_payouts` |
-| 7 | Suplementos con Referidos | ✅ | ✅ `SupplementReferral` | ✅ `supplement_referrals` |
-| 8 | Comisiones Multinivel | ✅ | ✅ Algoritmo de cálculo | - |
-| 9 | Dashboard de Afiliado | ✅ | ✅ Endpoint `/affiliates/{id}/dashboard` | - |
+| 14 | Clases Online en Vivo | `backend/app/models/live_classes.py`, `backend/app/api/v1/endpoints/live_classes.py` | ✅ |
+| 15 | Generación con IA | `backend/app/services/ai_generator.py`, `backend/app/api/v1/endpoints/ai.py` | ✅ |
+| 16 | Integración Wearables | `backend/app/models/wearables.py`, `backend/app/api/v1/endpoints/wearables.py` | ✅ |
 
 ---
 
-### 📋 PENDIENTES DE IMPLEMENTAR
+### 📋 PENDIENTE - APP MÓVIL NATIVA
 
 | # | Funcionalidad | Prioridad | Descripción |
 |---|--------------|-----------|-------------|
-| 1 | **Clases Online en Vivo** | 🟡 Media | Integración con Zoom/Meet |
-| 2 | **App Móvil Nativa** | 🟡 Media | React Native / Flutter |
-| 3 | **IA para Planes** | 🟢 Baja | Generación automática con IA |
-| 4 | **Integración Wearables** | 🟢 Baja | Apple Watch, Garmin, Fitbit |
+| 1 | **App Móvil Nativa** | 🟡 Media | React Native / Flutter para iOS y Android |
+
+**Nota:** La app móvil nativa está planificada para la fase final del desarrollo.
 
 ---
 
@@ -129,11 +185,25 @@
 ```
 backend/
 ├── app/
-│   ├── api/v1/endpoints/     # Endpoints REST
+│   ├── api/v1/endpoints/     # Endpoints REST (27 archivos)
+│   │   ├── auth.py
+│   │   ├── clients.py
+│   │   ├── workouts.py
+│   │   ├── nutrition.py
+│   │   ├── live_classes.py   # NUEVO
+│   │   ├── ai.py             # NUEVO
+│   │   ├── wearables.py      # NUEVO
+│   │   └── ...
 │   ├── core/                  # Configuración, seguridad
-│   ├── models/               # Modelos SQLAlchemy
+│   ├── models/               # Modelos SQLAlchemy (24 archivos)
+│   │   ├── live_classes.py   # NUEVO
+│   │   ├── wearables.py      # NUEVO
+│   │   └── ...
 │   ├── schemas/              # Schemas Pydantic
 │   ├── services/             # Lógica de negocio
+│   │   ├── zoom.py           # NUEVO
+│   │   ├── ai_generator.py   # NUEVO
+│   │   └── ...
 │   └── middleware/           # Autenticación
 ├── alembic/                  # Migraciones
 └── requirements.txt
@@ -146,7 +216,11 @@ frontend/
 ├── src/
 │   ├── components/           # Componentes reutilizables
 │   ├── pages/               # Páginas de la aplicación
+│   │   ├── live-classes/    # NUEVO
+│   │   └── ...
 │   ├── hooks/               # Hooks personalizados
+│   │   ├── useLiveClasses.ts # NUEVO
+│   │   └── ...
 │   ├── services/            # Servicios API
 │   └── stores/              # Estado global (Zustand)
 └── package.json
@@ -159,66 +233,68 @@ frontend/
 - **Región:** `eu-west-3`
 - **PostgreSQL:** 17.6.1
 
+#### Tablas Nuevas Añadidas
+
+| Tabla | Módulo | Descripción |
+|-------|--------|-------------|
+| `video_integrations` | Clases en Vivo | Configuración de Zoom/Meet/Teams |
+| `live_classes` | Clases en Vivo | Clases programadas |
+| `live_class_registrations` | Clases en Vivo | Inscripciones a clases |
+| `live_class_templates` | Clases en Vivo | Plantillas reutilizables |
+| `live_class_packages` | Clases en Vivo | Paquetes de clases |
+| `client_class_packages` | Clases en Vivo | Paquetes por cliente |
+| `meeting_logs` | Clases en Vivo | Logs de reuniones |
+| `ai_configurations` | IA | Configuración de IA |
+| `ai_generations` | IA | Historial de generaciones |
+| `ai_prompt_templates` | IA | Plantillas de prompts |
+| `ai_suggestions` | IA | Sugerencias de IA |
+| `connected_devices` | Wearables | Dispositivos conectados |
+| `health_metrics` | Wearables | Métricas de salud |
+| `synced_activities` | Wearables | Actividades sincronizadas |
+| `daily_health_summary` | Wearables | Resumen diario |
+| `client_health_goals` | Wearables | Objetivos de salud |
+| `health_alerts` | Wearables | Alertas de salud |
+
 ---
 
 ## 📅 Roadmap de Desarrollo
 
-### Q1 2026 (Enero - Marzo)
+### Q1 2026 (Enero - Marzo) ✅ COMPLETADO
 
 #### Enero 2026 ✅
 - [x] Vista detallada de plan nutricional
 - [x] Integración completa con Supabase
 - [x] Modelos SQLAlchemy actualizados
 - [x] Datos de prueba en producción
+- [x] **Clases Online en Vivo** - Integración con Zoom/Meet/Teams
+- [x] **Generación con IA** - OpenAI y Anthropic
+- [x] **Integración con Wearables** - Apple Watch, Garmin, Fitbit, WHOOP, Oura, Polar
 
-#### Febrero 2026 📋
-- [ ] **Módulo LMS - Fase 1**
-  - [ ] Modelo de datos para cursos
-  - [ ] CRUD de cursos y lecciones
-  - [ ] Subida de contenido multimedia
-- [ ] **Facturación ERP - Fase 1**
-  - [ ] Modelo de facturas
-  - [ ] Generación de PDF de facturas
-  - [ ] Numeración automática
-
-#### Marzo 2026 📋
-- [ ] **Módulo LMS - Fase 2**
-  - [ ] Sistema de retos
-  - [ ] Certificados personalizados
-  - [ ] Monetización con Stripe/Redsys
-- [ ] **Referidos Multinivel**
-  - [ ] Sistema de comisiones
-  - [ ] Panel de afiliados
-  - [ ] Liquidaciones automáticas
-
-### Q2 2026 (Abril - Junio)
+### Q2 2026 (Abril - Junio) 📋 PLANIFICADO
 
 #### Abril 2026 📋
-- [ ] **Clases Online en Vivo**
-  - [ ] Integración Zoom API
-  - [ ] Calendario de clases grupales
-  - [ ] Grabaciones automáticas
-- [ ] **Informes Financieros**
-  - [ ] Dashboard de ingresos
-  - [ ] Exportación a Excel/PDF
-
-#### Mayo 2026 📋
 - [ ] **App Móvil - Fase 1**
   - [ ] React Native setup
   - [ ] Autenticación
   - [ ] Vista de cliente
 
-#### Junio 2026 📋
+#### Mayo 2026 📋
 - [ ] **App Móvil - Fase 2**
+  - [ ] Dashboard del cliente
+  - [ ] Planes de entrenamiento
+  - [ ] Planes nutricionales
+
+#### Junio 2026 📋
+- [ ] **App Móvil - Fase 3**
   - [ ] Notificaciones push
   - [ ] Chat en tiempo real
   - [ ] Sincronización offline
 
 ### Q3-Q4 2026 📋
-- [ ] Integración con wearables
-- [ ] IA para generación de planes
 - [ ] Marketplace de contenido
 - [ ] White-label para estudios
+- [ ] App para Apple Watch
+- [ ] Mejoras de IA con fine-tuning
 
 ---
 
@@ -310,5 +386,5 @@ export function useClients() {
 ---
 
 *Documento actualizado: 2 de Enero de 2026*  
-*Versión: 2.0*  
+*Versión: 3.0*  
 *Autor: Equipo de Desarrollo E13 Fitness*

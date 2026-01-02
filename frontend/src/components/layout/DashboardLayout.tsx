@@ -35,6 +35,7 @@ import {
   IconTrophy,
   IconUsers,
   IconUsersGroup,
+  IconVideo,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
@@ -118,6 +119,7 @@ const trainerNavItems: NavItemProps[] = [
   },
   { icon: <IconChartBar size={20} />, label: "Reportes", to: "/reports" },
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms" },
+  { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes" },
   { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
 ];
 

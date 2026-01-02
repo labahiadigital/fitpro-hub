@@ -15,6 +15,15 @@ from app.models.product import Product, SessionPackage, ClientPackage, Coupon
 from app.models.notification import Notification, NotificationPreference, EmailTemplate, ScheduledNotification
 from app.models.supplement import Supplement, SupplementRecommendation
 from app.models.document import Document, ProgressPhoto
+from app.models.live_classes import (
+    VideoIntegration,
+    LiveClass,
+    LiveClassRegistration,
+    LiveClassTemplate,
+    LiveClassPackage,
+    ClientClassPackage,
+    MeetingLog,
+)
 
 __all__ = [
     "Base",
@@ -62,4 +71,11 @@ __all__ = [
     "SupplementRecommendation",
     "Document",
     "ProgressPhoto",
+    "VideoIntegration",
+    "LiveClass",
+    "LiveClassRegistration",
+    "LiveClassTemplate",
+    "LiveClassPackage",
+    "ClientClassPackage",
+    "MeetingLog",
 ]
