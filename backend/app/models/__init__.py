@@ -46,6 +46,7 @@ __all__ = [
     "ExerciseCategory",
     "MealPlan",
     "Food",
+    "FoodCategory",
     "Form",
     "FormSubmission",
     "Message",
