@@ -8,14 +8,12 @@ import {
   Text,
   Tooltip,
   UnstyledButton,
-  rem,
 } from "@mantine/core";
 import {
   IconChevronRight,
   IconLogout,
   IconSettings,
 } from "@tabler/icons-react";
-import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
 
@@ -28,109 +26,92 @@ interface NavItemProps {
   collapsed?: boolean;
 }
 
-// --- Componente NavItem Individual ---
+// --- Componente NavItem Individual con Spotlight ---
 function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
   const location = useLocation();
   const isActive = location.pathname === to;
 
-  const content = (
-    <UnstyledButton
-      px={collapsed ? "xs" : "md"}
-      py={10}
-      style={{
-        borderRadius: "12px",
-        backgroundColor: isActive ? "rgba(231, 226, 71, 0.15)" : "transparent",
-        color: isActive ? "#E7E247" : "rgba(255, 255, 255, 0.65)",
-        fontWeight: isActive ? 600 : 500,
-        transition: "all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)",
-        position: "relative",
-        border: isActive
-          ? "1px solid rgba(231, 226, 71, 0.1)"
-          : "1px solid transparent",
-        display: "flex",
-        justifyContent: collapsed ? "center" : "flex-start",
-        alignItems: "center",
-      }}
-      w="100%"
-      className={isActive ? "nav-active-glow" : "nav-item-hover"}
+  return (
+    <Tooltip 
+      label={label} 
+      position="right" 
+      withArrow 
+      transitionProps={{ duration: 0 }}
+      disabled={!collapsed}
+      offset={20}
     >
-      <Box
-        style={{
-          color: isActive ? "#E7E247" : "currentColor",
-          display: "flex",
-          alignItems: "center",
-          opacity: isActive ? 1 : 0.8,
-          minWidth: collapsed ? "auto" : 20,
-        }}
-      >
-        {icon}
-      </Box>
-
-      {!collapsed && (
-        <Group ml="sm" justify="space-between" style={{ flex: 1 }}>
-          <Text
-            size="sm"
-            fw={isActive ? 600 : 500}
+      <NavLink to={to} style={{ textDecoration: "none", width: "100%" }}>
+        <UnstyledButton
+          className={`dock-item ${isActive ? "active" : ""}`}
+          py={12}
+          px={collapsed ? 0 : 16}
+          w="100%"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: collapsed ? "center" : "flex-start",
+            color: isActive ? "var(--accent-primary)" : "var(--text-secondary)",
+            background: isActive 
+              ? "linear-gradient(90deg, rgba(231, 226, 71, 0.05) 0%, transparent 100%)" 
+              : "transparent",
+            borderRadius: "12px",
+            marginBottom: "4px",
+            position: "relative",
+          }}
+        >
+          <Box
             style={{
-              letterSpacing: "0.01em",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 24,
+              height: 24,
+              color: isActive ? "var(--accent-primary)" : "currentColor",
+              filter: isActive ? "drop-shadow(0 0 8px rgba(231, 226, 71, 0.4))" : "none",
+              transition: "all 0.2s ease",
             }}
           >
-            {label}
-          </Text>
-          {badge && badge > 0 && (
-            <Box
-              style={{
-                backgroundColor: "#EF4444",
-                color: "white",
-                fontSize: "10px",
-                fontWeight: 700,
-                borderRadius: "99px",
-                padding: "1px 6px",
-                boxShadow: "0 2px 4px rgba(239, 68, 68, 0.3)",
-              }}
-            >
-              {badge}
-            </Box>
+            {icon}
+          </Box>
+
+          {!collapsed && (
+            <Group ml="md" style={{ flex: 1, overflow: "hidden" }} wrap="nowrap">
+              <Text
+                size="sm"
+                fw={isActive ? 600 : 500}
+                className="truncate"
+                style={{
+                  color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {label}
+              </Text>
+              {badge && badge > 0 && (
+                <Box
+                  style={{
+                    backgroundColor: "var(--accent-primary)",
+                    color: "black",
+                    fontSize: "9px",
+                    fontWeight: 800,
+                    borderRadius: "99px",
+                    padding: "0px 6px",
+                    height: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {badge}
+                </Box>
+              )}
+            </Group>
           )}
-        </Group>
-      )}
-
-      {/* Indicador de activo sutil */}
-      {isActive && !collapsed && (
-        <Box
-          style={{
-            position: "absolute",
-            left: 0,
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "3px",
-            height: "20px",
-            backgroundColor: "#E7E247",
-            borderRadius: "0 4px 4px 0",
-            boxShadow: "0 0 8px rgba(231, 226, 71, 0.5)",
-          }}
-        />
-      )}
-    </UnstyledButton>
-  );
-
-  if (collapsed) {
-    return (
-      <Tooltip label={label} position="right" withArrow transitionProps={{ duration: 0 }}>
-        <NavLink style={{ textDecoration: "none" }} to={to}>
-          {content}
-        </NavLink>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <NavLink style={{ textDecoration: "none" }} to={to}>
-      {content}
-    </NavLink>
+          
+          {/* Active Glow Indicator (Left Bar handled by CSS .dock-item::after) */}
+        </UnstyledButton>
+      </NavLink>
+    </Tooltip>
   );
 }
 
@@ -151,96 +132,82 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
       style={{
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#2A2822",
-        borderRight: "1px solid rgba(255,255,255,0.05)",
+        background: "rgba(21, 21, 26, 0.6)", // Glass background
+        backdropFilter: "blur(20px)",
+        borderRight: "1px solid rgba(255, 255, 255, 0.05)",
         width: "100%",
-        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
       {/* Brand Section */}
-      <Box p={collapsed ? "xs" : "lg"} pb="xs">
+      <Box p={collapsed ? "xs" : "lg"} pb="md">
         <Group
-          gap={collapsed ? 0 : "sm"}
-          mb="xs"
-          justify={collapsed ? "center" : "flex-start"}
+          wrap="nowrap"
+          justify={collapsed ? "center" : "space-between"}
           onClick={onToggle}
           style={{ cursor: "pointer" }}
         >
-          <Box
-            style={{
-              width: collapsed ? 32 : 42,
-              height: collapsed ? 32 : 42,
-              background: "linear-gradient(135deg, #E7E247 0%, #D4CF2E 100%)",
-              borderRadius: "12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 15px rgba(231, 226, 71, 0.2)",
-              color: "#2A2822",
-              flexShrink: 0,
-              transition: "all 0.3s ease"
-            }}
-          >
-            <Text fw={800} size={collapsed ? "md" : "xl"} style={{ letterSpacing: "-0.05em" }}>
-              T
-            </Text>
-          </Box>
-          {!collapsed && (
-            <Box style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
-              <Text
-                c="white"
-                fw={700}
-                size="lg"
-                style={{ letterSpacing: "-0.03em", lineHeight: 1.1 }}
-              >
-                Trackfiz
-              </Text>
-              <Text c="dimmed" size="xs" fw={500}>
-                {currentWorkspace?.name || "Workspace"}
-              </Text>
-            </Box>
-          )}
-        </Group>
-
-        {/* Demo Badge */}
-        {isDemoMode && !collapsed && (
-          <Box
-            mt="md"
-            px="sm"
-            py={6}
-            style={{
-              borderRadius: "8px",
-              background: isClientView
-                ? "rgba(139, 92, 246, 0.1)"
-                : "rgba(231, 226, 71, 0.08)",
-              border: isClientView
-                ? "1px solid rgba(139, 92, 246, 0.2)"
-                : "1px solid rgba(231, 226, 71, 0.15)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
+          <Group gap="sm" wrap="nowrap">
             <Box
               style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                backgroundColor: isClientView ? "#A78BFA" : "#E7E247",
-                boxShadow: isClientView ? "0 0 8px #A78BFA" : "0 0 8px #E7E247",
-              }}
-            />
-            <Text
-              size="xs"
-              fw={600}
-              style={{
-                color: isClientView ? "#D8B4FE" : "#E7E247",
-                letterSpacing: "0.02em",
+                width: 36,
+                height: 36,
+                background: "linear-gradient(135deg, var(--accent-primary) 0%, #D4CF2E 100%)",
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 0 20px rgba(231, 226, 71, 0.15)",
+                color: "#1A1B1E",
+                flexShrink: 0,
               }}
             >
-              {isClientView ? "VISTA CLIENTE" : "VISTA ENTRENADOR"}
-            </Text>
+              <Text fw={900} size="lg" style={{ fontFamily: "Space Grotesk" }}>T</Text>
+            </Box>
+            
+            {!collapsed && (
+              <Box style={{ overflow: "hidden" }}>
+                <Text
+                  c="white"
+                  fw={700}
+                  size="sm"
+                  style={{ fontFamily: "Space Grotesk", letterSpacing: "-0.01em" }}
+                >
+                  Trackfiz
+                </Text>
+                <Text c="dimmed" size="xs" fw={500} className="truncate">
+                  {currentWorkspace?.name || "Workspace"}
+                </Text>
+              </Box>
+            )}
+          </Group>
+        </Group>
+
+        {/* Demo Mode Badge */}
+        {isDemoMode && !collapsed && (
+          <Box
+            mt="lg"
+            p="xs"
+            style={{
+              borderRadius: "8px",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+            }}
+          >
+            <Group gap="xs">
+              <Box
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: isClientView ? "#A78BFA" : "var(--accent-primary)",
+                  boxShadow: `0 0 8px ${isClientView ? "#A78BFA" : "var(--accent-primary)"}`,
+                }}
+              />
+              <Text size="xs" fw={600} c="dimmed" style={{ textTransform: "uppercase", fontSize: "10px" }}>
+                {isClientView ? "Vista Cliente" : "Vista Entrenador"}
+              </Text>
+            </Group>
           </Box>
         )}
       </Box>
@@ -248,30 +215,28 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
       {/* Navigation */}
       <ScrollArea
         flex={1}
-        px="md"
-        py="xs"
+        px={collapsed ? 4 : "md"}
+        type="scroll"
         style={{
-          maskImage:
-            "linear-gradient(to bottom, transparent, black 10px, black 95%, transparent)",
-          WebkitMaskImage:
-            "linear-gradient(to bottom, transparent, black 10px, black 95%, transparent)",
+          maskImage: "linear-gradient(to bottom, transparent, black 20px, black 95%, transparent)",
         }}
       >
-        <Stack gap={2}>
+        <Stack gap={4} py="sm">
           {!collapsed && (
             <Text
               size="xs"
               fw={700}
               c="dimmed"
-              px="sm"
-              mb={4}
+              px="xs"
+              mb={8}
               style={{
-                letterSpacing: "0.08em",
                 textTransform: "uppercase",
+                letterSpacing: "0.1em",
                 fontSize: "10px",
+                opacity: 0.5,
               }}
             >
-              Menu Principal
+              Navegación
             </Text>
           )}
           {navItems.map((item) => (
@@ -280,80 +245,53 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
         </Stack>
       </ScrollArea>
 
-      {/* Footer / User Profile */}
-      <Box
-        p="md"
-        style={{
-          borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-          backgroundColor: "rgba(0,0,0,0.2)",
-        }}
-      >
-        <Menu position="right-end" shadow="lg" width={220}>
+      {/* Footer Profile */}
+      <Box p={collapsed ? "xs" : "md"} style={{ borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
+        <Menu position="right-end" shadow="xl" width={240} withArrow arrowPosition="center">
           <Menu.Target>
             <UnstyledButton
               w="100%"
+              p={4}
               style={{
-                padding: "8px",
-                borderRadius: "10px",
+                borderRadius: "12px",
                 transition: "background-color 0.2s",
-                display: "flex",
-                justifyContent: collapsed ? "center" : "flex-start",
+                "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.05)" },
               }}
-              className="user-btn-hover"
             >
-              <Group gap="sm" wrap="nowrap">
+              <Group gap={collapsed ? 0 : "sm"} justify={collapsed ? "center" : "flex-start"}>
                 <Avatar
-                  size={36}
-                  radius="xl"
-                  style={{
-                    border: "2px solid #E7E247",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                  }}
                   src={null}
                   alt={user?.full_name}
-                  color="dark"
+                  radius="md"
+                  size={32}
+                  color="yellow"
+                  style={{ 
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    background: "linear-gradient(135deg, #333 0%, #111 100%)"
+                  }}
                 >
-                  {user?.full_name?.charAt(0) || "U"}
+                  {user?.full_name?.charAt(0)}
                 </Avatar>
                 {!collapsed && (
                   <Box style={{ flex: 1, overflow: "hidden" }}>
-                    <Text c="white" fw={600} size="sm" lineClamp={1}>
-                      {user?.full_name || "Usuario"}
+                    <Text size="sm" fw={600} c="white" lineClamp={1}>
+                      {user?.full_name}
                     </Text>
-                    <Text c="dimmed" size="xs" lineClamp={1}>
+                    <Text size="xs" c="dimmed" lineClamp={1}>
                       {user?.email}
                     </Text>
                   </Box>
                 )}
-                {!collapsed && (
-                  <IconSettings size={16} color="rgba(255,255,255,0.4)" />
-                )}
+                {!collapsed && <IconSettings size={14} style={{ opacity: 0.5 }} />}
               </Group>
             </UnstyledButton>
           </Menu.Target>
-          <Menu.Dropdown
-            style={{
-              backgroundColor: "#2A2822",
-              borderColor: "rgba(255,255,255,0.1)",
-              color: "white",
-            }}
-          >
-            <Menu.Label c="dimmed">Mi Cuenta</Menu.Label>
-            <Menu.Item
-              leftSection={<IconSettings size={14} />}
-              style={{ color: "white" }}
-              className="menu-item-hover"
-            >
-              Configuración
-            </Menu.Item>
-            <Menu.Divider style={{ borderColor: "rgba(255,255,255,0.1)" }} />
-            <Menu.Item
-              color="red"
-              leftSection={<IconLogout size={14} />}
-              onClick={logout}
-              className="menu-item-hover"
-            >
-              Cerrar sesión
+          <Menu.Dropdown style={{ background: "#1A1B1E", borderColor: "rgba(255,255,255,0.1)" }}>
+            <Menu.Label>Mi Cuenta</Menu.Label>
+            <Menu.Item leftSection={<IconSettings size={14} />}>Configuración</Menu.Item>
+            <Menu.Divider />
+            <Menu.Item color="red" leftSection={<IconLogout size={14} />} onClick={logout}>
+              Cerrar Sesión
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
@@ -361,4 +299,3 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
     </Box>
   );
 }
-
