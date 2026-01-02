@@ -13,7 +13,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_db, require_workspace
+from app.core.database import get_db
+from app.middleware.auth import require_workspace
 from app.models.erp import (
     Expense,
     ExpenseCategory,

@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, require_workspace
+from app.core.database import get_db
+from app.middleware.auth import require_workspace
 from app.models.wearables import (
     ConnectedDevice,
     DailyHealthSummary,
