@@ -1050,3 +1050,166 @@ export function useSupabaseInvoiceSettings() {
     enabled: !!workspaceId,
   });
 }
+
+// =====================================================
+// HOOKS REFERIDOS MULTINIVEL
+// =====================================================
+
+// Hook para obtener programas de referidos
+export function useSupabaseReferralPrograms(activeOnly = false) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-referral-programs", workspaceId, activeOnly],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("referral_programs")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (activeOnly) {
+        query = query.eq("is_active", true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener afiliados
+export function useSupabaseAffiliates(status?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-affiliates", workspaceId, status],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("affiliates")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (status) {
+        query = query.eq("status", status);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener enlaces de referido
+export function useSupabaseReferralLinks(affiliateId?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-referral-links", workspaceId, affiliateId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("referral_links")
+        .select("*, affiliates(display_name, affiliate_code)")
+        .order("created_at", { ascending: false });
+
+      if (affiliateId) {
+        query = query.eq("affiliate_id", affiliateId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener conversiones
+export function useSupabaseReferralConversions(affiliateId?: string, status?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-referral-conversions", workspaceId, affiliateId, status],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("referral_conversions")
+        .select("*, affiliates(display_name, affiliate_code)")
+        .eq("workspace_id", workspaceId)
+        .order("converted_at", { ascending: false });
+
+      if (affiliateId) {
+        query = query.eq("affiliate_id", affiliateId);
+      }
+      if (status) {
+        query = query.eq("status", status);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener pagos a afiliados
+export function useSupabaseAffiliatePayouts(affiliateId?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-affiliate-payouts", workspaceId, affiliateId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("affiliate_payouts")
+        .select("*, affiliates(display_name, affiliate_code)")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (affiliateId) {
+        query = query.eq("affiliate_id", affiliateId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener suplementos con referidos (p\u00fablico)
+export function useSupabaseSupplementReferrals(category?: string) {
+  return useQuery({
+    queryKey: ["supabase-supplement-referrals", category],
+    queryFn: async () => {
+      let query = supabase
+        .from("supplement_referrals")
+        .select("*")
+        .eq("is_active", true)
+        .order("supplement_name");
+
+      if (category) {
+        query = query.eq("category", category);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}

@@ -95,17 +95,30 @@
 | 12 | Ficha Cliente Completa | `frontend/src/pages/clients/ClientDetailPage.tsx` | ✅ |
 | 13 | Vista Detallada Plan Nutricional | `frontend/src/components/nutrition/MealPlanDetailView.tsx` | ✅ |
 
+### 🟢 SISTEMA DE REFERIDOS MULTINIVEL - COMPLETADO
+
+| # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
+|---|--------------|--------|-------------------|----------|
+| 1 | Programas de Referidos | ✅ | ✅ `ReferralProgram` | ✅ `referral_programs` |
+| 2 | Gestión de Afiliados | ✅ | ✅ `Affiliate` | ✅ `affiliates` |
+| 3 | Enlaces de Referido | ✅ | ✅ `ReferralLink` | ✅ `referral_links` |
+| 4 | Tracking de Clics | ✅ | ✅ `ReferralClick` | ✅ `referral_clicks` |
+| 5 | Conversiones | ✅ | ✅ `ReferralConversion` | ✅ `referral_conversions` |
+| 6 | Pagos a Afiliados | ✅ | ✅ `AffiliatePayout` | ✅ `affiliate_payouts` |
+| 7 | Suplementos con Referidos | ✅ | ✅ `SupplementReferral` | ✅ `supplement_referrals` |
+| 8 | Comisiones Multinivel | ✅ | ✅ Algoritmo de cálculo | - |
+| 9 | Dashboard de Afiliado | ✅ | ✅ Endpoint `/affiliates/{id}/dashboard` | - |
+
+---
+
 ### 📋 PENDIENTES DE IMPLEMENTAR
 
 | # | Funcionalidad | Prioridad | Descripción |
 |---|--------------|-----------|-------------|
-| 1 | **Módulo LMS Completo** | 🔴 Alta | Cursos, formaciones, retos, certificados |
-| 2 | **Facturación ERP** | 🔴 Alta | Generación de facturas, numeración automática |
-| 3 | **Referidos Multinivel** | 🟡 Media | Sistema de comisiones por niveles |
-| 4 | **Clases Online en Vivo** | 🟡 Media | Integración con Zoom/Meet |
-| 5 | **App Móvil Nativa** | 🟡 Media | React Native / Flutter |
-| 6 | **IA para Planes** | 🟢 Baja | Generación automática con IA |
-| 7 | **Integración Wearables** | 🟢 Baja | Apple Watch, Garmin, Fitbit |
+| 1 | **Clases Online en Vivo** | 🟡 Media | Integración con Zoom/Meet |
+| 2 | **App Móvil Nativa** | 🟡 Media | React Native / Flutter |
+| 3 | **IA para Planes** | 🟢 Baja | Generación automática con IA |
+| 4 | **Integración Wearables** | 🟢 Baja | Apple Watch, Garmin, Fitbit |
 
 ---
 
