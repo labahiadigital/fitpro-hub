@@ -7,7 +7,6 @@ import {
   Card,
   Center,
   Divider,
-  Grid,
   Group,
   Loader,
   Menu,
@@ -15,22 +14,17 @@ import {
   NumberInput,
   Paper,
   Progress,
-  RingProgress,
-  ScrollArea,
   SegmentedControl,
   Select,
   SimpleGrid,
-  Skeleton,
   Stack,
   Switch,
-  Tabs,
   Text,
   TextInput,
   Textarea,
   ThemeIcon,
   Title,
   Tooltip,
-  rem,
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -39,7 +33,6 @@ import { notifications } from "@mantine/notifications";
 import {
   IconCalendar,
   IconCalendarEvent,
-  IconCheck,
   IconClock,
   IconCopy,
   IconDotsVertical,
@@ -47,19 +40,14 @@ import {
   IconExternalLink,
   IconLayoutGrid,
   IconLayoutList,
-  IconLink,
   IconPlus,
-  IconSettings,
   IconTrash,
-  IconUser,
   IconUsers,
   IconVideo,
   IconVideoOff,
-  IconX,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { StatsCard } from "../../components/common/StatsCard";
 import { useLiveClasses, useLiveClassStats } from "../../hooks/useLiveClasses";
@@ -88,7 +76,6 @@ interface LiveClass {
 
 // Componente de tarjeta de clase
 function ClassCard({ liveClass }: { liveClass: LiveClass }) {
-  const navigate = useNavigate();
 
   const statusColors: Record<string, string> = {
     draft: "gray",
@@ -619,7 +606,7 @@ export function LiveClassesPage() {
       <PageHeader
         title="Clases en Vivo"
         description="Gestiona tus clases online y sesiones grupales"
-        actions={
+        action={
           <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal}>
             Nueva Clase
           </Button>

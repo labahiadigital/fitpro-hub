@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import supabase from "../services/supabase";
+import { supabase } from "../services/supabase";
 
 // Tipos
 export interface LiveClass {
@@ -223,7 +223,7 @@ export function useLiveClassStats() {
         .eq("workspace_id", workspaceId);
 
       const totalParticipants = participantsData?.reduce(
-        (sum, c) => sum + (c.current_participants || 0),
+        (sum: number, c: { current_participants: number | null }) => sum + (c.current_participants || 0),
         0
       ) || 0;
 
@@ -236,7 +236,7 @@ export function useLiveClassStats() {
         .gte("live_classes.scheduled_start", startOfMonth);
 
       const totalRevenue = revenueData?.reduce(
-        (sum, r) => sum + (r.amount_paid || 0),
+        (sum: number, r: { amount_paid: number | null }) => sum + (r.amount_paid || 0),
         0
       ) || 0;
 

@@ -269,7 +269,9 @@ class PDFGeneratorService:
         
         # Days and meals
         for day in days:
-            elements.append(rl['Paragraph'](f"<b>{day.get('dayName', f'Día {day.get(\"day\", 0)}')}</b>", subtitle_style))
+            day_number = day.get("day", 0)
+            day_name = day.get('dayName', f'Día {day_number}')
+            elements.append(rl['Paragraph'](f"<b>{day_name}</b>", subtitle_style))
             
             for meal in day.get('meals', []):
                 meal_name = meal.get('name', 'Comida')
