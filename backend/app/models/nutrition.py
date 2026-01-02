@@ -6,17 +6,38 @@ from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 
 
+class FoodCategory(BaseModel):
+    """Food category model."""
+    
+    __tablename__ = "food_categories"
+    
+    name = Column(Text, nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    icon = Column(Text, nullable=True)
+    parent_id = Column(UUID(as_uuid=True), ForeignKey("food_categories.id", ondelete="SET NULL"), nullable=True)
+    is_system = Column(Boolean, default=False)
+    sort_order = Column(Integer, default=0)
+    
+    # Relationships
+    foods = relationship("Food", back_populates="food_category")
+    parent = relationship("FoodCategory", remote_side="FoodCategory.id", backref="children")
+    
+    def __repr__(self):
+        return f"<FoodCategory {self.name}>"
+
+
 class Food(BaseModel):
     """Food library model - matches Supabase schema."""
     
     __tablename__ = "foods"
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    category_id = Column(UUID(as_uuid=True), ForeignKey("food_categories.id", ondelete="SET NULL"), nullable=True, index=True)
     
     # Basic food details
     name = Column(Text, nullable=False)
     brand = Column(Text, nullable=True)
-    category = Column(Text, nullable=True)
+    category = Column(Text, nullable=True)  # Legacy text category field
     generic_name = Column(Text, nullable=True)
     quantity = Column(Text, nullable=True)
     packaging = Column(Text, nullable=True)
@@ -107,6 +128,36 @@ class Food(BaseModel):
     
     # Visibility
     is_global = Column(Boolean, default=False)
+    is_public = Column(Boolean, default=False)
+    is_system = Column(Boolean, default=False)
+    
+    # Relationships
+    food_category = relationship("FoodCategory", back_populates="foods")
+    
+    # Aliases for backward compatibility with endpoints
+    @property
+    def protein(self):
+        return self.protein_g
+    
+    @property
+    def carbs(self):
+        return self.carbs_g
+    
+    @property
+    def fat(self):
+        return self.fat_g
+    
+    @property
+    def fiber(self):
+        return self.fiber_g
+    
+    @property
+    def sugar(self):
+        return self.sugars_g
+    
+    @property
+    def sodium(self):
+        return self.sodium_mg
     
     def __repr__(self):
         return f"<Food {self.name}>"
