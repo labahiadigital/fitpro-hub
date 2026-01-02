@@ -33,13 +33,19 @@ class Exercise(BaseModel):
     name = Column(String(255), nullable=False)
     description = Column(Text)
     instructions = Column(Text)
-    video_url = Column(String(500))
+    video_url = Column(String(500))  # Main demonstration video
+    execution_video_url = Column(String(500))  # Video showing correct execution technique
     thumbnail_url = Column(String(500))
     muscle_groups = Column(ARRAY(String), default=[])
     equipment = Column(ARRAY(String), default=[])
     difficulty = Column(String(20), default='intermediate')
     is_public = Column(Boolean, default=False)
     is_system = Column(Boolean, default=False)
+    
+    # Common mistakes and tips
+    common_mistakes = Column(JSONB, default=[])  # List of common mistakes to avoid
+    tips = Column(JSONB, default=[])  # List of tips for correct execution
+    
     extra_data = Column(JSONB, default={})
     
     # Relationships

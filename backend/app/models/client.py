@@ -14,6 +14,25 @@ client_tags_association = Table(
 )
 
 
+# List of common food allergens
+COMMON_ALLERGENS = [
+    "gluten",
+    "lactosa",
+    "huevo",
+    "pescado",
+    "marisco",
+    "frutos_secos",
+    "cacahuete",
+    "soja",
+    "apio",
+    "mostaza",
+    "sesamo",
+    "sulfitos",
+    "moluscos",
+    "altramuces",
+]
+
+
 class ClientTag(BaseModel):
     __tablename__ = "client_tags"
     
@@ -51,6 +70,14 @@ class Client(BaseModel):
     weight_kg = Column(String(10), nullable=True)
     health_data = Column(JSONB, default={})
     
+    # Allergies and intolerances
+    allergies = Column(ARRAY(String), default=[])  # e.g., ["gluten", "lactosa", "frutos_secos"]
+    intolerances = Column(ARRAY(String), default=[])  # e.g., ["lactosa", "fructosa"]
+    injuries = Column(JSONB, default=[])  # List of injuries with details
+    
+    # Chat settings
+    chat_enabled = Column(Boolean, default=True)  # Enable/disable chat for this client
+    
     # Goals and notes
     goals = Column(Text, nullable=True)
     internal_notes = Column(Text, nullable=True)
@@ -74,6 +101,11 @@ class Client(BaseModel):
     meal_plans = relationship("MealPlan", back_populates="client", cascade="all, delete-orphan")
     form_submissions = relationship("FormSubmission", back_populates="client", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="client")
+    documents = relationship("Document", back_populates="client", cascade="all, delete-orphan")
+    progress_photos = relationship("ProgressPhoto", back_populates="client", cascade="all, delete-orphan")
+    supplement_recommendations = relationship("SupplementRecommendation", back_populates="client", cascade="all, delete-orphan")
+    measurements = relationship("ClientMeasurement", back_populates="client", cascade="all, delete-orphan")
+    tasks = relationship("ClientTask", back_populates="client", cascade="all, delete-orphan")
     
     @property
     def full_name(self) -> str:

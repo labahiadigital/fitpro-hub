@@ -29,6 +29,8 @@ import { ReportsPage } from "./pages/reports/ReportsPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { TeamPage } from "./pages/team/TeamPage";
 import { WorkoutsPage } from "./pages/workouts/WorkoutsPage";
+// New Pages
+import { SupplementsPage } from "./pages/supplements/SupplementsPage";
 import { useAuthStore } from "./stores/auth";
 import { theme } from "./theme";
 
@@ -112,6 +114,7 @@ export default function App() {
                 <Route element={<CalendarPage />} path="/calendar" />
                 <Route element={<WorkoutsPage />} path="/workouts" />
                 <Route element={<NutritionPage />} path="/nutrition" />
+                <Route element={<SupplementsPage />} path="/supplements" />
                 <Route element={<FormsPage />} path="/forms" />
                 <Route element={<ChatPage />} path="/chat" />
                 <Route element={<PaymentsPage />} path="/payments" />

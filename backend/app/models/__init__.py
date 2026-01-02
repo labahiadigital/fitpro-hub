@@ -1,7 +1,7 @@
 from app.models.base import Base, BaseModel, TimestampMixin
 from app.models.workspace import Workspace
-from app.models.user import User, UserRole
-from app.models.client import Client, ClientTag
+from app.models.user import User, UserRole, CustomRole, RoleType, DEFAULT_ROLE_PERMISSIONS
+from app.models.client import Client, ClientTag, COMMON_ALLERGENS
 from app.models.booking import Booking, BookingStatus
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.nutrition import Food, FoodCategory, MealPlan
@@ -13,6 +13,8 @@ from app.models.automation import Automation, AutomationLog
 from app.models.audit import AuditLog
 from app.models.product import Product, SessionPackage, ClientPackage, Coupon
 from app.models.notification import Notification, NotificationPreference, EmailTemplate, ScheduledNotification
+from app.models.supplement import Supplement, SupplementRecommendation
+from app.models.document import Document, ProgressPhoto
 
 __all__ = [
     "Base",
@@ -21,8 +23,12 @@ __all__ = [
     "Workspace",
     "User",
     "UserRole",
+    "CustomRole",
+    "RoleType",
+    "DEFAULT_ROLE_PERMISSIONS",
     "Client",
     "ClientTag",
+    "COMMON_ALLERGENS",
     "Booking",
     "BookingStatus",
     "WorkoutProgram",
@@ -52,4 +58,8 @@ __all__ = [
     "Automation",
     "AutomationLog",
     "AuditLog",
+    "Supplement",
+    "SupplementRecommendation",
+    "Document",
+    "ProgressPhoto",
 ]

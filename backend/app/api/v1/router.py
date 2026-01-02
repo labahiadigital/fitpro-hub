@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, workspaces, users, clients, bookings, workouts, nutrition,
     forms, messages, payments, automations, reports, products, exercises,
-    foods, notifications
+    foods, notifications, supplements, documents, pdf, roles, redsys
 )
 
 api_router = APIRouter()
@@ -35,17 +35,32 @@ api_router.include_router(nutrition.router, prefix="/nutrition", tags=["Nutrici√
 # Foods Library
 api_router.include_router(foods.router, prefix="/foods", tags=["Biblioteca de Alimentos"])
 
+# Supplements Library
+api_router.include_router(supplements.router, prefix="/supplements", tags=["Biblioteca de Suplementos"])
+
 # Forms
 api_router.include_router(forms.router, prefix="/forms", tags=["Formularios"])
 
 # Messages (Chat)
 api_router.include_router(messages.router, prefix="/messages", tags=["Mensajes"])
 
-# Payments
-api_router.include_router(payments.router, prefix="/payments", tags=["Pagos"])
+# Documents & Progress Photos
+api_router.include_router(documents.router, prefix="/documents", tags=["Documentos"])
+
+# PDF Generation
+api_router.include_router(pdf.router, prefix="/pdf", tags=["Generaci√≥n PDF"])
+
+# Payments (Stripe)
+api_router.include_router(payments.router, prefix="/payments", tags=["Pagos Stripe"])
+
+# Redsys Payments
+api_router.include_router(redsys.router, prefix="/redsys", tags=["Pagos Redsys"])
 
 # Products & Packages
 api_router.include_router(products.router, prefix="/products", tags=["Productos y Bonos"])
+
+# Custom Roles
+api_router.include_router(roles.router, prefix="/roles", tags=["Roles Personalizados"])
 
 # Automations
 api_router.include_router(automations.router, prefix="/automations", tags=["Automatizaciones"])

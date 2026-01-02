@@ -7,31 +7,45 @@ import {
   Container,
   Divider,
   Group,
+  Image,
   Menu,
   Paper,
   SimpleGrid,
   Stack,
+  Switch,
   Table,
   Tabs,
   Text,
   ThemeIcon,
   Timeline,
+  Tooltip,
+  Card,
+  FileButton,
 } from "@mantine/core";
 import {
+  IconAlertTriangle,
   IconBarbell,
   IconCalendarEvent,
+  IconCamera,
   IconClipboard,
   IconCreditCard,
   IconDotsVertical,
+  IconDownload,
   IconEdit,
+  IconFile,
+  IconFileText,
   IconHistory,
   IconMail,
   IconMessage,
+  IconMessageOff,
   IconPhone,
+  IconPhoto,
+  IconPill,
   IconPlus,
   IconSalad,
   IconTrash,
   IconTrendingUp,
+  IconUpload,
   IconUser,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -39,6 +53,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useClient } from "../../hooks/useClients";
 import { Center, Loader } from "@mantine/core";
+import { AllergenList } from "../../components/common/AllergenBadge";
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +78,12 @@ export function ClientDetailPage() {
     goals: "Tonificación y mejora de resistencia cardiovascular",
     internal_notes: "Lesión antigua en rodilla derecha, evitar impacto alto",
     is_active: true,
+    chat_enabled: true,
+    allergies: ["gluten", "lactosa"],
+    intolerances: ["fructosa"],
+    injuries: [
+      { name: "Lesión de rodilla derecha", date: "2020-03-15", notes: "Evitar impacto alto", status: "recovered" }
+    ],
     tags: [
       { name: "VIP", color: "#8B5CF6" },
       { name: "Presencial", color: "#2D6A4F" },
@@ -75,6 +96,33 @@ export function ClientDetailPage() {
       consent_date: "2023-06-15",
     },
   };
+
+  // Mock documents
+  const documents = [
+    { id: "1", name: "Plan Nutricional Enero.pdf", type: "diet_plan", direction: "outbound", created_at: "2024-01-15", is_read: true },
+    { id: "2", name: "Contrato de Servicios.pdf", type: "contract", direction: "outbound", created_at: "2023-06-15", is_read: true },
+    { id: "3", name: "Análisis de Sangre.pdf", type: "medical", direction: "inbound", created_at: "2024-01-10", is_read: false },
+  ];
+
+  // Mock progress photos
+  const progressPhotos = [
+    { id: "1", photo_url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=300", photo_type: "front", photo_date: "2024-01-01", weight_kg: "62" },
+    { id: "2", photo_url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300", photo_type: "side", photo_date: "2024-01-01", weight_kg: "62" },
+    { id: "3", photo_url: "https://images.unsplash.com/photo-1571019613576-2b22c76fd955?w=300", photo_type: "front", photo_date: "2023-12-01", weight_kg: "63" },
+    { id: "4", photo_url: "https://images.unsplash.com/photo-1571019613914-85f342c6a11e?w=300", photo_type: "side", photo_date: "2023-12-01", weight_kg: "63" },
+  ];
+
+  // Mock meal plans
+  const mealPlans = [
+    { id: "1", name: "Plan Definición Q1", target_calories: 1800, status: "active", created_at: "2024-01-01" },
+    { id: "2", name: "Plan Mantenimiento", target_calories: 2000, status: "inactive", created_at: "2023-10-01" },
+  ];
+
+  // Mock supplements
+  const supplements = [
+    { id: "1", name: "Whey Protein", dosage: "30g post-entreno", frequency: "Días de entrenamiento" },
+    { id: "2", name: "Omega 3", dosage: "2 cápsulas", frequency: "Diario con comida" },
+  ];
 
   const client = fetchedClient || mockClient;
   
@@ -374,6 +422,15 @@ export function ClientDetailPage() {
           <Tabs.Tab leftSection={<IconUser size={14} />} value="overview">
             Resumen
           </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconSalad size={14} />} value="nutrition">
+            Nutrición
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconFileText size={14} />} value="documents">
+            Documentos
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconPhoto size={14} />} value="photos">
+            Fotos
+          </Tabs.Tab>
           <Tabs.Tab
             leftSection={<IconCalendarEvent size={14} />}
             value="sessions"
@@ -494,6 +551,88 @@ export function ClientDetailPage() {
               </Timeline>
             </Paper>
 
+            {/* Alergias e Intolerancias */}
+            <Paper p="lg" radius="lg" withBorder>
+              <Group justify="space-between" mb="md">
+                <Group gap="xs">
+                  <IconAlertTriangle size={18} color="var(--mantine-color-red-6)" />
+                  <Text fw={600}>Alergias e Intolerancias</Text>
+                </Group>
+                <ActionIcon color="gray" variant="subtle">
+                  <IconEdit size={16} />
+                </ActionIcon>
+              </Group>
+
+              {(client.allergies?.length > 0 || client.intolerances?.length > 0) ? (
+                <Stack gap="md">
+                  {client.allergies?.length > 0 && (
+                    <Box>
+                      <Text size="sm" c="dimmed" mb="xs">Alergias</Text>
+                      <AllergenList 
+                        allergens={client.allergies} 
+                        clientAllergens={client.allergies}
+                        clientIntolerances={client.intolerances}
+                      />
+                    </Box>
+                  )}
+                  {client.intolerances?.length > 0 && (
+                    <Box>
+                      <Text size="sm" c="dimmed" mb="xs">Intolerancias</Text>
+                      <AllergenList 
+                        allergens={client.intolerances} 
+                        clientAllergens={client.allergies}
+                        clientIntolerances={client.intolerances}
+                      />
+                    </Box>
+                  )}
+                </Stack>
+              ) : (
+                <Text c="dimmed" size="sm">Sin alergias ni intolerancias registradas</Text>
+              )}
+
+              {client.injuries?.length > 0 && (
+                <Box mt="md">
+                  <Divider mb="md" />
+                  <Text size="sm" c="dimmed" mb="xs">Lesiones</Text>
+                  <Stack gap="xs">
+                    {client.injuries.map((injury: any, idx: number) => (
+                      <Badge key={idx} color="orange" variant="light" size="lg">
+                        {injury.name}
+                      </Badge>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+            </Paper>
+
+            {/* Configuración de Chat */}
+            <Paper p="lg" radius="lg" withBorder>
+              <Group justify="space-between" mb="md">
+                <Text fw={600}>Configuración de Chat</Text>
+              </Group>
+
+              <Group justify="space-between">
+                <Group gap="xs">
+                  {client.chat_enabled ? (
+                    <IconMessage size={18} color="var(--mantine-color-green-6)" />
+                  ) : (
+                    <IconMessageOff size={18} color="var(--mantine-color-gray-5)" />
+                  )}
+                  <Text size="sm">Chat habilitado</Text>
+                </Group>
+                <Switch
+                  checked={client.chat_enabled}
+                  onChange={() => {}}
+                  color="green"
+                />
+              </Group>
+              <Text c="dimmed" size="xs" mt="xs">
+                {client.chat_enabled 
+                  ? "El cliente puede enviar y recibir mensajes"
+                  : "El chat está deshabilitado para este cliente"}
+              </Text>
+            </Paper>
+
             {/* Consentimientos */}
             <Paper p="lg" radius="lg" withBorder>
               <Text fw={600} mb="md">
@@ -540,6 +679,236 @@ export function ClientDetailPage() {
               </Stack>
             </Paper>
           </SimpleGrid>
+        </Tabs.Panel>
+
+        {/* Nueva pestaña: Nutrición */}
+        <Tabs.Panel value="nutrition">
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+            {/* Planes Nutricionales */}
+            <Paper p="lg" radius="lg" withBorder>
+              <Group justify="space-between" mb="md">
+                <Text fw={600}>Planes Nutricionales</Text>
+                <Button size="xs" leftSection={<IconPlus size={14} />}>
+                  Asignar Plan
+                </Button>
+              </Group>
+
+              {mealPlans.length > 0 ? (
+                <Stack gap="sm">
+                  {mealPlans.map((plan) => (
+                    <Paper key={plan.id} p="sm" withBorder radius="md">
+                      <Group justify="space-between">
+                        <Box>
+                          <Text fw={500} size="sm">{plan.name}</Text>
+                          <Text c="dimmed" size="xs">{plan.target_calories} kcal/día</Text>
+                        </Box>
+                        <Group gap="xs">
+                          <Badge 
+                            color={plan.status === "active" ? "green" : "gray"} 
+                            size="sm" 
+                            variant="light"
+                          >
+                            {plan.status === "active" ? "Activo" : "Inactivo"}
+                          </Badge>
+                          <Tooltip label="Descargar PDF">
+                            <ActionIcon color="blue" variant="light" size="sm">
+                              <IconDownload size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Group>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Text c="dimmed" size="sm" ta="center" py="md">
+                  No hay planes nutricionales asignados
+                </Text>
+              )}
+            </Paper>
+
+            {/* Suplementos Recomendados */}
+            <Paper p="lg" radius="lg" withBorder>
+              <Group justify="space-between" mb="md">
+                <Group gap="xs">
+                  <IconPill size={18} color="var(--mantine-color-green-6)" />
+                  <Text fw={600}>Suplementos Recomendados</Text>
+                </Group>
+                <Button size="xs" variant="light" leftSection={<IconPlus size={14} />}>
+                  Añadir
+                </Button>
+              </Group>
+
+              {supplements.length > 0 ? (
+                <Stack gap="sm">
+                  {supplements.map((supp) => (
+                    <Paper key={supp.id} p="sm" withBorder radius="md">
+                      <Group justify="space-between">
+                        <Box>
+                          <Text fw={500} size="sm">{supp.name}</Text>
+                          <Text c="dimmed" size="xs">{supp.dosage}</Text>
+                        </Box>
+                        <Badge color="blue" size="xs" variant="light">
+                          {supp.frequency}
+                        </Badge>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Text c="dimmed" size="sm" ta="center" py="md">
+                  No hay suplementos recomendados
+                </Text>
+              )}
+            </Paper>
+          </SimpleGrid>
+        </Tabs.Panel>
+
+        {/* Nueva pestaña: Documentos */}
+        <Tabs.Panel value="documents">
+          <Paper p="lg" radius="lg" withBorder>
+            <Group justify="space-between" mb="lg">
+              <Text fw={600}>Documentos</Text>
+              <FileButton onChange={() => {}} accept="application/pdf,image/*">
+                {(props) => (
+                  <Button {...props} size="xs" leftSection={<IconUpload size={14} />}>
+                    Subir Documento
+                  </Button>
+                )}
+              </FileButton>
+            </Group>
+
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Documento</Table.Th>
+                  <Table.Th>Tipo</Table.Th>
+                  <Table.Th>Dirección</Table.Th>
+                  <Table.Th>Fecha</Table.Th>
+                  <Table.Th>Estado</Table.Th>
+                  <Table.Th></Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {documents.map((doc) => (
+                  <Table.Tr key={doc.id}>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <ThemeIcon color="blue" variant="light" size="sm">
+                          <IconFile size={14} />
+                        </ThemeIcon>
+                        <Text size="sm">{doc.name}</Text>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge size="sm" variant="light">
+                        {doc.type === "diet_plan" ? "Plan Nutricional" :
+                         doc.type === "contract" ? "Contrato" :
+                         doc.type === "medical" ? "Médico" : doc.type}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge 
+                        size="sm" 
+                        variant="light"
+                        color={doc.direction === "outbound" ? "blue" : "green"}
+                      >
+                        {doc.direction === "outbound" ? "Enviado" : "Recibido"}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {new Date(doc.created_at).toLocaleDateString("es-ES")}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge 
+                        size="sm" 
+                        variant="light"
+                        color={doc.is_read ? "green" : "orange"}
+                      >
+                        {doc.is_read ? "Leído" : "No leído"}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <ActionIcon color="blue" variant="light" size="sm">
+                          <IconDownload size={14} />
+                        </ActionIcon>
+                        <ActionIcon color="red" variant="light" size="sm">
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+        </Tabs.Panel>
+
+        {/* Nueva pestaña: Fotos de Progreso */}
+        <Tabs.Panel value="photos">
+          <Paper p="lg" radius="lg" withBorder>
+            <Group justify="space-between" mb="lg">
+              <Text fw={600}>Fotos de Evolución</Text>
+              <FileButton onChange={() => {}} accept="image/*" multiple>
+                {(props) => (
+                  <Button {...props} size="xs" leftSection={<IconCamera size={14} />}>
+                    Subir Fotos
+                  </Button>
+                )}
+              </FileButton>
+            </Group>
+
+            {progressPhotos.length > 0 ? (
+              <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
+                {progressPhotos.map((photo) => (
+                  <Card key={photo.id} padding="xs" radius="md" withBorder>
+                    <Card.Section>
+                      <Image
+                        src={photo.photo_url}
+                        height={200}
+                        alt="Foto de progreso"
+                        fallbackSrc="https://placehold.co/300x200?text=Foto"
+                      />
+                    </Card.Section>
+                    <Group justify="space-between" mt="xs">
+                      <Box>
+                        <Badge size="xs" variant="light">
+                          {photo.photo_type === "front" ? "Frontal" : 
+                           photo.photo_type === "side" ? "Lateral" : photo.photo_type}
+                        </Badge>
+                        <Text size="xs" c="dimmed" mt={2}>
+                          {new Date(photo.photo_date).toLocaleDateString("es-ES")}
+                        </Text>
+                      </Box>
+                      {photo.weight_kg && (
+                        <Text size="xs" fw={500}>{photo.weight_kg} kg</Text>
+                      )}
+                    </Group>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            ) : (
+              <Box ta="center" py="xl">
+                <ThemeIcon color="gray" size={60} variant="light" radius="xl" mb="md">
+                  <IconPhoto size={30} />
+                </ThemeIcon>
+                <Text fw={500}>No hay fotos de progreso</Text>
+                <Text c="dimmed" size="sm" mb="md">
+                  Sube fotos para hacer seguimiento visual de la evolución
+                </Text>
+                <FileButton onChange={() => {}} accept="image/*" multiple>
+                  {(props) => (
+                    <Button {...props} leftSection={<IconCamera size={16} />}>
+                      Subir Primera Foto
+                    </Button>
+                  )}
+                </FileButton>
+              </Box>
+            )}
+          </Paper>
         </Tabs.Panel>
 
         <Tabs.Panel value="sessions">
