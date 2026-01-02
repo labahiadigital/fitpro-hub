@@ -116,12 +116,12 @@ class EmailTemplates:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>¡Bienvenido a FitPro Hub!</h1>
+                    <h1>¡Bienvenido a Trackfiz!</h1>
                 </div>
                 <div class="content">
                     <p>Hola <strong>{name}</strong>,</p>
                     <p>Tu cuenta en <strong>{workspace_name}</strong> ha sido creada correctamente.</p>
-                    <p>Con FitPro Hub podrás:</p>
+                    <p>Con Trackfiz podrás:</p>
                     <ul>
                         <li>Gestionar tus clientes y su progreso</li>
                         <li>Crear y asignar programas de entrenamiento</li>
@@ -131,14 +131,14 @@ class EmailTemplates:
                         <li>Gestionar pagos y suscripciones</li>
                     </ul>
                     <p style="text-align: center;">
-                        <a href="https://app.fitprohub.com/dashboard" class="button">Acceder al Dashboard</a>
+                        <a href="https://app.trackfiz.com/dashboard" class="button">Acceder al Dashboard</a>
                     </p>
                     <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
                     <p>¡Éxito en tu camino!</p>
-                    <p>El equipo de FitPro Hub</p>
+                    <p>El equipo de Trackfiz</p>
                 </div>
                 <div class="footer">
-                    <p>© 2024 FitPro Hub. Todos los derechos reservados.</p>
+                    <p>© 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>
@@ -204,7 +204,7 @@ class EmailTemplates:
                     <p>¡Nos vemos pronto!</p>
                 </div>
                 <div class="footer">
-                    <p>© 2024 FitPro Hub. Todos los derechos reservados.</p>
+                    <p>© 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>
@@ -248,7 +248,7 @@ class EmailTemplates:
                     <p>¡Prepárate y nos vemos pronto!</p>
                 </div>
                 <div class="footer">
-                    <p>© 2024 FitPro Hub. Todos los derechos reservados.</p>
+                    <p>© 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>

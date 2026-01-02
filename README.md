@@ -1,8 +1,8 @@
-# FitPro Hub 🏋️‍♂️
+# Trackfiz 🏋️‍♂️
 
-**Plataforma SaaS para profesionales del fitness, wellness y salud**
+**Plataforma CRM/ERP/LMS todo-en-uno para profesionales del fitness y bienestar**
 
-Una solución completa tipo [Harbiz](https://www.harbiz.io) para entrenadores personales, nutricionistas, fisioterapeutas, profesores de yoga/pilates y estudios de fitness.
+Una solución completa de E13 Fitness para entrenadores personales, nutricionistas, fisioterapeutas, profesores de yoga/pilates y estudios de fitness.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
@@ -19,7 +19,7 @@ Una solución completa tipo [Harbiz](https://www.harbiz.io) para entrenadores pe
 - Lista de espera
 
 ### 💳 Pagos y Suscripciones
-- Integración con Stripe
+- Integración con Stripe y Redsys
 - Suscripciones recurrentes
 - Bonos de sesiones
 - Cupones y descuentos
@@ -31,23 +31,31 @@ Una solución completa tipo [Harbiz](https://www.harbiz.io) para entrenadores pe
 - Historial de actividad
 - Onboarding automatizado
 - Cumplimiento GDPR
+- Gestión de intolerancias y alergias
 
 ### 💬 Comunicaciones
-- Chat in-app
+- Chat in-app (habilitable/deshabilitabe por cliente)
+- Bandeja de entrada integrada
 - Mensajes programados
 - Notificaciones push/email
 - Grupos y comunidad
 
 ### 🏃 Entrenamiento
 - Biblioteca de ejercicios (+800)
+- Videos de ejecución correcta
 - Constructor de workouts
 - Programas personalizados
 - Seguimiento de progreso
+- Generación de PDF
 
 ### 🥗 Nutrición
 - Planes nutricionales
 - Base de datos de alimentos
+- Biblioteca de suplementación con referidos
+- Gestión de intolerancias/alergias (destacadas en rojo)
 - Lista de la compra automática
+- Nombres de comidas editables
+- Generación de PDF
 - Seguimiento de adherencia
 
 ### 🤖 Automatizaciones
@@ -61,6 +69,18 @@ Una solución completa tipo [Harbiz](https://www.harbiz.io) para entrenadores pe
 - Gráficos de evolución
 - Exportación de datos
 - Alertas inteligentes
+
+### 👥 Gestión de Equipo
+- Roles personalizables
+- Campos CRM editables y agrupables
+- Permisos granulares
+
+### 📚 LMS (Sistema de Cursos)
+- Crear cursos y formaciones
+- Retos y challenges
+- Certificados personalizados
+- Monetización integrada
+- Gestión de instructores/estudiantes
 
 ## 🛠️ Tech Stack
 
@@ -86,13 +106,14 @@ Una solución completa tipo [Harbiz](https://www.harbiz.io) para entrenadores pe
 - **Row Level Security** - Seguridad
 
 ### Integraciones
-- **Stripe** - Pagos
+- **Stripe** - Pagos internacionales
+- **Redsys** - Pagos España
 - **Brevo** - Emails transaccionales
 
 ## 📁 Estructura del Proyecto
 
 ```
-fitpro-hub/
+trackfiz/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/          # Endpoints REST
@@ -125,11 +146,12 @@ fitpro-hub/
 - Docker (opcional)
 - Cuenta de Supabase
 - Cuenta de Stripe (opcional)
+- Cuenta de Redsys (opcional)
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/labahiadigital/fitpro-hub.git
-cd fitpro-hub
+git clone https://github.com/e13fitness/trackfiz.git
+cd trackfiz
 ```
 
 ### 2. Configurar el Backend
@@ -190,6 +212,12 @@ DATABASE_URL=postgresql://...
 # Stripe
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Redsys
+REDSYS_MERCHANT_CODE=your-merchant-code
+REDSYS_SECRET_KEY=your-secret-key
+REDSYS_TERMINAL=1
+REDSYS_ENVIRONMENT=test
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
@@ -260,6 +288,7 @@ SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_KEY=xxx
 REDIS_URL=redis://redis:6379/0
 STRIPE_SECRET_KEY=sk_live_xxx
+REDSYS_MERCHANT_CODE=xxx
 ```
 
 ## 🤝 Contribuir
@@ -282,4 +311,4 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ---
 
-**FitPro Hub** - Hecho con ❤️ para profesionales del fitness
+**Trackfiz** - Hecho con ❤️ por E13 Fitness para profesionales del fitness y bienestar

@@ -1,4 +1,4 @@
-# FitPro Hub - Funcionalidades Completas
+# Trackfiz - Funcionalidades Completas
 
 ## Basado en análisis de [Harbiz](https://www.harbiz.io) y mejoras adicionales
 

@@ -111,7 +111,7 @@ def send_booking_reminder(
                 </p>
             </div>
             <div style="padding: 20px; text-align: center; color: #999; font-size: 12px;">
-                <p>Este email fue enviado por {workspace_name} a través de FitPro Hub</p>
+                <p>Este email fue enviado por {workspace_name} a través de Trackfiz</p>
             </div>
         </body>
         </html>

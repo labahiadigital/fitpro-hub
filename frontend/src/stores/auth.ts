@@ -45,7 +45,7 @@ interface AuthState {
 // Demo trainer user - Full access to all features
 const demoTrainerUser: User = {
   id: "22222222-2222-2222-2222-222222222222",
-  email: "entrenador@fitprohub.com",
+  email: "entrenador@trackfiz.com",
   full_name: "Carlos Fitness",
   avatar_url: undefined,
   is_active: true,
@@ -55,7 +55,7 @@ const demoTrainerUser: User = {
 // Demo client user - Limited access, client perspective
 const demoClientUser: User = {
   id: "33333333-3333-3333-3333-333333333333",
-  email: "cliente@fitprohub.com",
+  email: "cliente@trackfiz.com",
   full_name: "María García",
   avatar_url: undefined,
   is_active: true,
@@ -64,8 +64,8 @@ const demoClientUser: User = {
 
 const demoWorkspace: Workspace = {
   id: "11111111-1111-1111-1111-111111111111",
-  name: "FitPro Demo",
-  slug: "fitpro-demo",
+  name: "Trackfiz Demo",
+  slug: "trackfiz-demo",
   logo_url: undefined,
   branding: {
     primary_color: "#2D6A4F",
@@ -140,7 +140,7 @@ export const useAuthStore = create<AuthState>()(
         }),
     }),
     {
-      name: "fitprohub-auth",
+      name: "trackfiz-auth",
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,

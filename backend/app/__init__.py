@@ -1,2 +1,2 @@
-# FitPro Hub Backend
+# Trackfiz Backend - CRM/ERP/LMS para profesionales del fitness y bienestar
 

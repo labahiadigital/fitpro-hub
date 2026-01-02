@@ -1,13 +1,13 @@
 # Project Requirements Document (PRD)
 
-**Project Name:** FitPro Hub\
+**Project Name:** Trackfiz\
 **Type:** SaaS multi-tenant web dashboard + native mobile app for fitness, wellness, and health professionals
 
 ## 1. Project Overview
 
-FitPro Hub is a Software-as-a-Service platform tailored for fitness professionals (personal trainers, yoga/pilates instructors, physiotherapists, nutritionists) and small studios or centers with multiple collaborators. Its purpose is to centralize client data, streamline daily operations, automate routine tasks (like reminders and billing), and provide clear analytics on client progress and revenue. Professionals get a polished web dashboard to manage clients, sessions, content, chat, payments, and reporting—all under their own brand. End-clients access a native iOS/Android app or responsive web portal to view plans, book sessions, chat, and track progress.
+Trackfiz is a Software-as-a-Service platform tailored for fitness professionals (personal trainers, yoga/pilates instructors, physiotherapists, nutritionists) and small studios or centers with multiple collaborators. Its purpose is to centralize client data, streamline daily operations, automate routine tasks (like reminders and billing), and provide clear analytics on client progress and revenue. Professionals get a polished web dashboard to manage clients, sessions, content, chat, payments, and reporting—all under their own brand. End-clients access a native iOS/Android app or responsive web portal to view plans, book sessions, chat, and track progress.
 
-We’re building FitPro Hub to solve the fragmentation many coaches face: juggling spreadsheets, messaging apps, payment tools, and manual reminders. Key objectives for version 1.0 include:
+We're building Trackfiz to solve the fragmentation many coaches face: juggling spreadsheets, messaging apps, payment tools, and manual reminders. Key objectives for version 1.0 include:
 
 *   Launching a fully automated, multi-tenant system where each professional or center has an isolated workspace with custom branding.
 *   Delivering core CRM, scheduling, content delivery, chat, payment, and reporting modules.
@@ -155,4 +155,4 @@ We’re building FitPro Hub to solve the fragmentation many coaches face: juggli
 *   **Multi-Tenant Upgrades:** Schema migrations require downtime planning; use feature flags and blue-green deploys.
 *   **Custom Branding Conflicts:** Poor color combinations can hurt UX. Provide default accessible palettes.
 
-This document defines FitPro Hub’s scope, workflows, core modules, and technical constraints in clear, everyday English. It serves as the foundation for all downstream technical designs: architecture diagrams, database schemas, API specs, UI mockups, and developer guidelines.
+This document defines Trackfiz's scope, workflows, core modules, and technical constraints in clear, everyday English. It serves as the foundation for all downstream technical designs: architecture diagrams, database schemas, API specs, UI mockups, and developer guidelines.

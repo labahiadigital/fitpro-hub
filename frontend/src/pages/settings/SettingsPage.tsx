@@ -63,10 +63,10 @@ export function SettingsPage() {
     initialValues: {
       name: currentWorkspace?.name || "",
       slug: currentWorkspace?.slug || "",
-      email: "contacto@fitprodemo.com",
+      email: "contacto@trackfiz.com",
       phone: "+34 600 000 000",
       address: "Calle Ejemplo 123, Madrid",
-      website: "https://fitprodemo.com",
+      website: "https://trackfiz.com",
       description: "Centro de entrenamiento personal y bienestar",
     },
   });
@@ -96,14 +96,14 @@ export function SettingsPage() {
     {
       id: "1",
       name: user?.full_name || "Usuario Demo",
-      email: user?.email || "demo@fitprohub.com",
+      email: user?.email || "demo@trackfiz.com",
       role: "owner",
       status: "active",
     },
     {
       id: "2",
       name: "Ana García",
-      email: "ana@fitprodemo.com",
+      email: "ana@trackfiz.com",
       role: "collaborator",
       status: "active",
     },
@@ -467,7 +467,7 @@ export function SettingsPage() {
                       }}
                     >
                       <Text c="white" fw={600}>
-                        {currentWorkspace?.name || "FitPro Hub"}
+                        {currentWorkspace?.name || "Trackfiz"}
                       </Text>
                       <Text c="white" opacity={0.8} size="sm">
                         Tu centro de entrenamiento

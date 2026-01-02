@@ -1,6 +1,6 @@
-# 🚀 Guía de Despliegue - FitPro Hub en Coolify
+# 🚀 Guía de Despliegue - Trackfiz en Coolify
 
-Esta guía te ayudará a desplegar FitPro Hub en Coolify con recursos separados.
+Esta guía te ayudará a desplegar Trackfiz en Coolify con recursos separados.
 
 ## 📋 Prerrequisitos
 
@@ -31,10 +31,10 @@ Crearemos **5 recursos separados** en Coolify:
 1. En Coolify, click en **"New Resource"**
 2. Selecciona **"Database"** → **"Redis"**
 3. Configura:
-   - **Name**: `fitprohub-redis`
+   - **Name**: `trackfiz-redis`
    - **Version**: `7-alpine`
 4. Click **"Start"**
-5. **Anota la URL de conexión**: `redis://fitprohub-redis:6379`
+5. **Anota la URL de conexión**: `redis://trackfiz-redis:6379`
 
 ---
 
@@ -43,7 +43,7 @@ Crearemos **5 recursos separados** en Coolify:
 ### 2.1 Crear el recurso
 
 1. Click en **"New Resource"** → **"Public Repository"**
-2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+2. **Repository URL**: `https://github.com/labahiadigital/trackfiz`
 3. **Branch**: `master`
 4. **Build Pack**: `Dockerfile`
 5. **Base Directory**: `backend`
@@ -64,7 +64,7 @@ SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_JWT_SECRET=tu-jwt-secret-de-supabase
 
 # Redis (usa el nombre del servicio de Coolify)
-REDIS_URL=redis://fitprohub-redis:6379/0
+REDIS_URL=redis://trackfiz-redis:6379/0
 
 # Seguridad
 SECRET_KEY=genera-una-clave-secreta-muy-larga-de-al-menos-32-caracteres
@@ -103,7 +103,7 @@ El worker procesa tareas en background como:
 ### 3.1 Crear el recurso
 
 1. Click en **"New Resource"** → **"Public Repository"**
-2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+2. **Repository URL**: `https://github.com/labahiadigital/trackfiz`
 3. **Branch**: `master`
 4. **Build Pack**: `Dockerfile`
 5. **Base Directory**: `backend`
@@ -117,7 +117,7 @@ El worker procesa tareas en background como:
 DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 SUPABASE_URL=https://[PROJECT-REF].supabase.co
 SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-REDIS_URL=redis://fitprohub-redis:6379/0
+REDIS_URL=redis://trackfiz-redis:6379/0
 SECRET_KEY=la-misma-clave-que-el-backend
 STRIPE_SECRET_KEY=sk_live_xxx
 BREVO_API_KEY=tu-brevo-api-key
@@ -145,7 +145,7 @@ El scheduler ejecuta tareas programadas como:
 ### 4.1 Crear el recurso
 
 1. Click en **"New Resource"** → **"Public Repository"**
-2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+2. **Repository URL**: `https://github.com/labahiadigital/trackfiz`
 3. **Branch**: `master`
 4. **Build Pack**: `Dockerfile`
 5. **Base Directory**: `backend`
@@ -159,7 +159,7 @@ El scheduler ejecuta tareas programadas como:
 DATABASE_URL=postgresql+asyncpg://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 SUPABASE_URL=https://[PROJECT-REF].supabase.co
 SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-REDIS_URL=redis://fitprohub-redis:6379/0
+REDIS_URL=redis://trackfiz-redis:6379/0
 SECRET_KEY=la-misma-clave-que-el-backend
 ENVIRONMENT=production
 ```
@@ -179,7 +179,7 @@ Click en **"Deploy"**
 ### 5.1 Crear el recurso
 
 1. Click en **"New Resource"** → **"Public Repository"**
-2. **Repository URL**: `https://github.com/labahiadigital/fitpro-hub`
+2. **Repository URL**: `https://github.com/labahiadigital/trackfiz`
 3. **Branch**: `master`
 4. **Build Pack**: `Dockerfile`
 5. **Base Directory**: `frontend`
@@ -297,7 +297,7 @@ Abre en el navegador: `https://api.tu-dominio.com/docs`
 ### Verificar Celery Worker
 En los logs del worker deberías ver:
 ```
-[celery.worker.consumer] Connected to redis://fitprohub-redis:6379/0
+[celery.worker.consumer] Connected to redis://trackfiz-redis:6379/0
 [celery.worker.consumer] mingle: searching for neighbors
 [celery.worker.consumer] ready.
 ```
@@ -315,11 +315,11 @@ En los logs del beat deberías ver:
 
 | Recurso | Tipo | Puerto | Dominio | Dockerfile |
 |---------|------|--------|---------|------------|
-| fitprohub-redis | Database (Redis) | 6379 | - | - |
-| fitprohub-backend | Dockerfile | 8000 | api.tu-dominio.com | `Dockerfile` |
-| fitprohub-celery-worker | Dockerfile | - | - | `Dockerfile.celery` |
-| fitprohub-celery-beat | Dockerfile | - | - | `Dockerfile.beat` |
-| fitprohub-frontend | Dockerfile | 80 | app.tu-dominio.com | `Dockerfile` |
+| trackfiz-redis | Database (Redis) | 6379 | - | - |
+| trackfiz-backend | Dockerfile | 8000 | api.tu-dominio.com | `Dockerfile` |
+| trackfiz-celery-worker | Dockerfile | - | - | `Dockerfile.celery` |
+| trackfiz-celery-beat | Dockerfile | - | - | `Dockerfile.beat` |
+| trackfiz-frontend | Dockerfile | 80 | app.tu-dominio.com | `Dockerfile` |
 
 ---
 
@@ -370,4 +370,4 @@ Es importante seguir este orden:
 
 ---
 
-¡Listo! Tu FitPro Hub completo debería estar funcionando en producción 🎉
+¡Listo! Tu Trackfiz completo debería estar funcionando en producción 🎉

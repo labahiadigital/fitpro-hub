@@ -1,4 +1,4 @@
-# FitPro Hub - Plan de Implementación
+# Trackfiz - Plan de Implementación
 
 ## Basado en análisis de Harbiz.io
 

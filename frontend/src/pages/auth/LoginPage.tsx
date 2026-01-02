@@ -93,7 +93,7 @@ export function LoginPage() {
           Inicia sesión
         </Title>
         <Text c="dimmed" size="sm" ta="center">
-          Accede a tu cuenta de FitPro Hub
+          Accede a tu cuenta de Trackfiz
         </Text>
 
         {error && (

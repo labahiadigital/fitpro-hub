@@ -30,16 +30,16 @@ export function AuthLayout() {
             w={60}
           >
             <Text c="white" fw={700} size="xl">
-              F
+              T
             </Text>
           </Box>
         </Group>
 
         <Text c="white" fw={700} mb={4} size="xl" ta="center">
-          FitPro Hub
+          Trackfiz
         </Text>
         <Text c="gray.4" mb="xl" size="sm" ta="center">
-          La plataforma todo-en-uno para profesionales del fitness
+          CRM/ERP/LMS todo-en-uno para profesionales del fitness y bienestar
         </Text>
 
         <Paper
@@ -56,7 +56,7 @@ export function AuthLayout() {
         </Paper>
 
         <Text c="gray.5" mt="xl" size="xs" ta="center">
-          © 2024 FitPro Hub. Todos los derechos reservados.
+          © 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.
         </Text>
       </Container>
     </Box>

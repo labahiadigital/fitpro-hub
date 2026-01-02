@@ -183,12 +183,12 @@ export function DashboardLayout() {
               w={40}
             >
               <Text c="white" fw={700} size="lg">
-                F
+                T
               </Text>
             </Box>
             <Box>
               <Text fw={700} size="md">
-                FitPro Hub
+                Trackfiz
               </Text>
               <Text c="dimmed" size="xs">
                 {currentWorkspace?.name || "Mi Workspace"}

@@ -178,7 +178,7 @@ export function ClientOnboardingPage() {
     <Container py="xl" size="md">
       <Box mb="xl" ta="center">
         <Title mb="xs" order={2}>
-          Bienvenido a FitPro Hub
+          Bienvenido a Trackfiz
         </Title>
         <Text c="dimmed">
           Completa tu perfil para empezar tu transformación

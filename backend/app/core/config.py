@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Application
-    APP_NAME: str = "FitPro Hub"
+    APP_NAME: str = "Trackfiz"
     APP_ENV: str = "development"
     DEBUG: bool = True
     SECRET_KEY: str = "change-me-in-production"
@@ -28,13 +28,19 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     
+    # Redsys (pasarela de pago española)
+    REDSYS_MERCHANT_CODE: str = ""
+    REDSYS_SECRET_KEY: str = ""
+    REDSYS_TERMINAL: str = "1"
+    REDSYS_ENVIRONMENT: str = "test"  # test o production
+    
     # Brevo (Email)
     BREVO_API_KEY: str = ""
-    FROM_EMAIL: str = "noreply@fitprohub.com"
-    FROM_NAME: str = "FitPro Hub"
+    FROM_EMAIL: str = "noreply@trackfiz.com"
+    FROM_NAME: str = "Trackfiz"
     
     # CORS (comma-separated list of allowed origins)
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.fitprohub.com"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.trackfiz.com"
     
     # Celery (uses REDIS_URL by default)
     CELERY_BROKER_URL: str = ""

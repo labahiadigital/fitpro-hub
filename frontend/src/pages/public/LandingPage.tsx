@@ -85,7 +85,7 @@ const testimonials = [
     name: "María García",
     role: "Entrenadora Personal",
     content:
-      "FitPro Hub ha transformado mi negocio. Ahora gestiono 50 clientes sin estrés.",
+      "Trackfiz ha transformado mi negocio. Ahora gestiono 50 clientes sin estrés.",
     avatar: null,
     rating: 5,
   },
@@ -417,7 +417,7 @@ export function LandingPage() {
             ¿Listo para transformar tu negocio?
           </Title>
           <Text mb="xl" size="lg" style={{ opacity: 0.9 }}>
-            Únete a miles de profesionales que ya usan FitPro Hub para gestionar
+            Únete a miles de profesionales que ya usan Trackfiz para gestionar
             su negocio de forma eficiente.
           </Text>
           <Group gap="md" justify="center">
@@ -443,10 +443,10 @@ export function LandingPage() {
           <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="xl">
             <Stack gap="sm">
               <Text fw={700} size="lg">
-                FitPro Hub
+                Trackfiz
               </Text>
               <Text c="gray.5" size="sm">
-                La plataforma todo-en-uno para profesionales del fitness.
+                CRM/ERP/LMS todo-en-uno para profesionales del fitness y bienestar.
               </Text>
             </Stack>
             <Stack gap="xs">
@@ -500,7 +500,7 @@ export function LandingPage() {
           </SimpleGrid>
           <Divider color="gray.7" my="xl" />
           <Text c="gray.5" size="sm" ta="center">
-            © 2024 FitPro Hub. Todos los derechos reservados.
+            © 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.
           </Text>
         </Container>
       </Box>

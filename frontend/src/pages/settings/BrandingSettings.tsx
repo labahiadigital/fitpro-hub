@@ -170,7 +170,7 @@ export function BrandingSettings({
             <div>
               <Title order={4}>White Label</Title>
               <Text c="dimmed" size="sm">
-                Elimina el branding de FitPro Hub
+                Elimina el branding de Trackfiz
               </Text>
             </div>
           </Group>
@@ -185,7 +185,7 @@ export function BrandingSettings({
           <Stack gap="md">
             <Switch
               checked={config.enableWhiteLabel}
-              description="Elimina todas las referencias a FitPro Hub"
+              description="Elimina todas las referencias a Trackfiz"
               label="Habilitar White Label"
               onChange={(e) =>
                 updateConfig("enableWhiteLabel", e.currentTarget.checked)
@@ -193,7 +193,7 @@ export function BrandingSettings({
             />
             <Switch
               checked={config.hideFooterBranding}
-              description="Elimina 'Powered by FitPro Hub' del pie de página"
+              description="Elimina 'Powered by Trackfiz' del pie de página"
               disabled={!config.enableWhiteLabel}
               label="Ocultar branding en footer"
               onChange={(e) =>
