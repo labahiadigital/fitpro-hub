@@ -771,3 +771,152 @@ export function useSupabaseTeamMembers() {
     enabled: !!workspaceId,
   });
 }
+
+// =====================================================
+// HOOKS LMS - Learning Management System
+// =====================================================
+
+// Hook para obtener cursos
+export function useSupabaseCourses(publishedOnly = false) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-courses", workspaceId, publishedOnly],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("courses")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (publishedOnly) {
+        query = query.eq("is_published", true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener un curso individual
+export function useSupabaseCourse(courseId: string) {
+  return useQuery({
+    queryKey: ["supabase-course", courseId],
+    queryFn: async () => {
+      if (!courseId) return null;
+
+      const { data, error } = await supabase
+        .from("courses")
+        .select("*, course_modules(*), lessons(*)")
+        .eq("id", courseId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!courseId,
+  });
+}
+
+// Hook para obtener retos/challenges
+export function useSupabaseChallenges(publishedOnly = false) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-challenges", workspaceId, publishedOnly],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("challenges")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (publishedOnly) {
+        query = query.eq("is_published", true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener inscripciones en cursos
+export function useSupabaseCourseEnrollments(courseId?: string) {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-course-enrollments", workspaceId, courseId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      let query = supabase
+        .from("course_enrollments")
+        .select("*, courses(title, thumbnail_url), clients(first_name, last_name)")
+        .order("enrolled_at", { ascending: false });
+
+      if (courseId) {
+        query = query.eq("course_id", courseId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener certificados
+export function useSupabaseCertificates() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-certificates", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("certificates")
+        .select("*, courses(title), challenges(title)")
+        .eq("workspace_id", workspaceId)
+        .order("issue_date", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener instructores
+export function useSupabaseInstructors() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-instructors", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("instructors")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("is_active", true)
+        .order("display_name");
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}

@@ -54,19 +54,22 @@
 | 5 | Informes Financieros | 📋 | 📋 Pendiente | 📋 Pendiente |
 | 6 | Gestión de Gastos | 📋 | 📋 Pendiente | 📋 Pendiente |
 
-### 🔴 MÓDULO LMS - PLANIFICADO
+### 🟡 MÓDULO LMS - EN PROGRESO
 
 | # | Funcionalidad | Estado | Backend SQLAlchemy | Supabase |
 |---|--------------|--------|-------------------|----------|
-| 1 | Creación de Cursos | 📋 | 📋 `Course` model | 📋 `courses` |
-| 2 | Lecciones y Módulos | 📋 | 📋 `Lesson` model | 📋 `lessons` |
-| 3 | Formaciones | 📋 | 📋 `Training` model | 📋 `trainings` |
-| 4 | Retos | 📋 | 📋 `Challenge` model | 📋 `challenges` |
-| 5 | Certificados Personalizados | 📋 | 📋 `Certificate` model | 📋 `certificates` |
-| 6 | Monetización de Cursos | 📋 | 📋 Integración pagos | 📋 Pendiente |
-| 7 | Gestión de Instructores | 📋 | 📋 `Instructor` model | 📋 `instructors` |
-| 8 | Gestión de Estudiantes | 📋 | 📋 `Student` model | 📋 `students` |
-| 9 | Progreso y Evaluaciones | 📋 | 📋 `Progress` model | 📋 `course_progress` |
+| 1 | Creación de Cursos | ✅ | ✅ `Course` model | ✅ `courses` |
+| 2 | Lecciones y Módulos | ✅ | ✅ `Lesson`, `CourseModule` models | ✅ `lessons`, `course_modules` |
+| 3 | Retos/Challenges | ✅ | ✅ `Challenge` model | ✅ `challenges` |
+| 4 | Certificados Personalizados | ✅ | ✅ `Certificate` model | ✅ `certificates` |
+| 5 | Inscripciones | ✅ | ✅ `CourseEnrollment` model | ✅ `course_enrollments` |
+| 6 | Progreso de Lecciones | ✅ | ✅ `LessonProgress` model | ✅ `lesson_progress` |
+| 7 | Gestión de Instructores | ✅ | ✅ `Instructor` model | ✅ `instructors` |
+| 8 | Reseñas de Cursos | ✅ | ✅ `CourseReview` model | ✅ `course_reviews` |
+| 9 | Participantes en Retos | ✅ | ✅ `ChallengeParticipant` model | ✅ `challenge_participants` |
+| 10 | Progreso Diario Retos | ✅ | ✅ `ChallengeDailyProgress` model | ✅ `challenge_daily_progress` |
+| 11 | Frontend LMS Page | ✅ | - | - |
+| 12 | API Endpoints LMS | ✅ | ✅ `/api/v1/lms/*` | - |
 
 ---
 

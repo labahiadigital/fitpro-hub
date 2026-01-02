@@ -32,6 +32,7 @@ import { TeamPage } from "./pages/team/TeamPage";
 import { WorkoutsPage } from "./pages/workouts/WorkoutsPage";
 // New Pages
 import { SupplementsPage } from "./pages/supplements/SupplementsPage";
+import { LMSPage } from "./pages/lms/LMSPage";
 import { useAuthStore } from "./stores/auth";
 import { theme } from "./theme";
 
@@ -126,6 +127,7 @@ export default function App() {
                 <Route element={<TeamPage />} path="/team" />
                 <Route element={<AutomationsPage />} path="/automations" />
                 <Route element={<ReportsPage />} path="/reports" />
+                <Route element={<LMSPage />} path="/lms" />
                 <Route element={<SettingsPage />} path="/settings" />
               </Route>
 

@@ -14,6 +14,7 @@ import {
 import {
   IconBarbell,
   IconBell,
+  IconBook,
   IconCalendarEvent,
   IconChartBar,
   IconChevronRight,
@@ -116,6 +117,7 @@ const trainerNavItems: NavItemProps[] = [
     to: "/automations",
   },
   { icon: <IconChartBar size={20} />, label: "Reportes", to: "/reports" },
+  { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms" },
   { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
 ];
 
