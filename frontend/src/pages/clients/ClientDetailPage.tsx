@@ -9,7 +9,6 @@ import {
   Group,
   Image,
   Menu,
-  Paper,
   SimpleGrid,
   Stack,
   Switch,
@@ -18,11 +17,8 @@ import {
   Text,
   ThemeIcon,
   Timeline,
-  Tooltip,
   Card,
   FileButton,
-  Progress,
-  RingProgress,
   Center,
   Loader,
 } from "@mantine/core";
@@ -51,14 +47,13 @@ import {
   IconTrendingUp,
   IconUser,
   IconUpload,
-  IconChevronRight,
   IconTarget,
   IconActivity,
   IconHeart,
   IconScale,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useClient } from "../../hooks/useClients";
 import { useClientMealPlans } from "../../hooks/useSupabaseData";
@@ -126,7 +121,6 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   
   const { data: fetchedClient, isLoading } = useClient(id || "");

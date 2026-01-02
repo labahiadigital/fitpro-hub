@@ -8,11 +8,7 @@ import {
 import {
   IconBarbell,
   IconCalendarPlus,
-  IconCreditCard,
-  IconForms,
   IconMessage,
-  IconRobot,
-  IconSalad,
   IconUserPlus,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
@@ -36,29 +32,29 @@ export function QuickActionsWidget() {
   const navigate = useNavigate();
 
   return (
-    <Box className="premium-card" p="md">
-      <Text className="stat-label" mb="sm">Acciones Rápidas</Text>
+    <Box className="premium-card" p="sm">
+      <Text className="stat-label" mb="xs" style={{ fontSize: "10px" }}>Acciones Rápidas</Text>
 
-      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+      <SimpleGrid cols={4} spacing={6}>
         {quickActions.map((action) => (
           <UnstyledButton
             key={action.path}
             onClick={() => navigate(action.path)}
             style={{
-              padding: "10px",
-              borderRadius: "10px",
+              padding: "8px",
+              borderRadius: "8px",
               transition: "all 0.15s",
               backgroundColor: "var(--nv-surface-subtle)",
               border: "1px solid transparent"
             }}
             className="quick-action-btn"
           >
-            <Group gap="xs" wrap="nowrap">
+            <Group gap={6} wrap="nowrap">
               <Box
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "6px",
+                  width: 24,
+                  height: 24,
+                  borderRadius: "5px",
                   backgroundColor: action.bgColor,
                   display: "flex",
                   alignItems: "center",
@@ -66,9 +62,9 @@ export function QuickActionsWidget() {
                   flexShrink: 0,
                 }}
               >
-                <action.icon size={14} style={{ color: action.color }} />
+                <action.icon size={12} style={{ color: action.color }} />
               </Box>
-              <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }} lineClamp={1}>
+              <Text fw={600} size="10px" style={{ color: "var(--nv-dark)" }} lineClamp={1}>
                 {action.label}
               </Text>
             </Group>

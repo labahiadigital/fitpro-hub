@@ -15,7 +15,6 @@ import {
   Avatar,
   ActionIcon,
   Menu,
-  Paper,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -31,8 +30,6 @@ import {
   IconMail,
   IconPhone,
   IconCalendar,
-  IconFilter,
-  IconSearch,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -169,7 +166,7 @@ export function ClientsPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [viewMode] = useState<"table" | "grid">("table");
   const [
     clientModalOpened,
     { open: openClientModal, close: closeClientModal },

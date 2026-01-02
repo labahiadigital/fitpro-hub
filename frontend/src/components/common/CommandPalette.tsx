@@ -1,8 +1,6 @@
 import {
-  ActionIcon,
   Box,
   Group,
-  Kbd,
   Modal,
   ScrollArea,
   Text,
@@ -200,7 +198,7 @@ export function CommandPalette({ opened, close }: CommandPaletteProps) {
                 >
                   {group.group}
                 </Text>
-                {group.items.map((item, itemIndex) => {
+                {group.items.map((item) => {
                   // Calcular índice global para el resaltado
                   const globalIndex = flatItems.indexOf(item);
                   const isActive = globalIndex === activeIndex;
@@ -264,7 +262,7 @@ export function CommandPalette({ opened, close }: CommandPaletteProps) {
             <Text c="dimmed">No se encontraron resultados</Text>
           </Box>
         )}
-      </ScrollArea>
+      </ScrollArea.Autosize>
 
       {/* Footer */}
       <Box

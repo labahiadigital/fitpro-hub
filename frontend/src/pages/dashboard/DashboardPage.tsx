@@ -15,8 +15,7 @@ import {
   IconClock,
   IconChartBar,
 } from "@tabler/icons-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { KPICard } from "../../components/common/StatsCard";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import { AlertsWidget } from "../../components/dashboard/AlertsWidget";
 import { ClientGrowthChart } from "../../components/dashboard/ClientGrowthChart";
 import { QuickActionsWidget } from "../../components/dashboard/QuickActionsWidget";
@@ -187,59 +186,38 @@ export function DashboardPage() {
         </Text>
       </Box>
 
-      {/* BENTO GRID LAYOUT */}
-      <Grid gutter="lg">
+      {/* BENTO GRID LAYOUT - Compacto sin espacios */}
+      <Grid gutter="md">
         {/* Columna Principal (2/3) */}
         <Grid.Col span={{ base: 12, lg: 8 }}>
-          <Stack gap="lg">
+          <Stack gap="md">
             {/* Fila de KPIs Gigantes */}
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
               <HeroKPI title="Ingresos Totales" value="€128.4k" change={12.5} data={chartData} />
               <HeroKPI title="Beneficio Neto" value="€84.2k" change={8.1} data={[{value: 20}, {value:40}, {value:30}, {value:60}, {value:90}]} />
             </SimpleGrid>
             
             {/* Gráfico Principal de Ingresos */}
             <RevenueChart data={revenueData} currentMRR={12400} previousMRR={11800} currency="€" />
+            
+            {/* Widgets Operativos - Movidos aquí para eliminar espacio */}
+            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+              <ClientGrowthChart totalClients={16601} newThisMonth={124} churnedThisMonth={12} />
+              <AlertsWidget alerts={alerts} />
+              <UpcomingSessionsWidget sessions={sessions} />
+            </SimpleGrid>
           </Stack>
         </Grid.Col>
 
         {/* Columna Lateral (1/3) */}
         <Grid.Col span={{ base: 12, lg: 4 }}>
-          <Stack gap="md">
-            {/* Fila de KPIs Pequeños Verticales */}
-            <KPICard
-              title="Clientes Activos"
-              value="16,601"
-              change={12.5}
-              changeType="positive"
-              chartData={[100, 110, 115, 120, 118, 125, 130, 135]}
-            />
-            <KPICard
-              title="Tasa de Cancelación"
-              value="2.1"
-              suffix="%"
-              changeType="stable"
-              changeLabel="Estable vs mes anterior"
-              chartData={[2.5, 2.4, 2.3, 2.2, 2.2, 2.1, 2.1]}
-            />
-            
+          <Stack gap="sm">
             <TransactionList />
             <StatsGrid />
+            <QuickActionsWidget />
           </Stack>
         </Grid.Col>
       </Grid>
-
-      {/* Fila Inferior de Widgets Operativos */}
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mt="lg" className="animate-in delay-2">
-        <ClientGrowthChart totalClients={16601} newThisMonth={124} churnedThisMonth={12} />
-        <AlertsWidget alerts={alerts} />
-        <UpcomingSessionsWidget sessions={sessions} />
-      </SimpleGrid>
-
-      {/* Fila Final: Quick Actions */}
-      <Box mt="lg" className="animate-in delay-3">
-        <QuickActionsWidget />
-      </Box>
     </Box>
   );
 }

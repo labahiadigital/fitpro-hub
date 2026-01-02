@@ -3,13 +3,11 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   Container,
   Divider,
   Group,
   Modal,
   NumberInput,
-  Paper,
   RingProgress,
   Select,
   SimpleGrid,
@@ -45,7 +43,6 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
-import { StatsCard } from "../../components/common/StatsCard";
 
 interface Payment {
   id: string;
@@ -655,13 +652,13 @@ export function PaymentsPage() {
             <Table>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Descripción</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Tipo</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Fecha</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Importe</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Descripción</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Tipo</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Fecha</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Importe</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -732,12 +729,12 @@ export function PaymentsPage() {
             <Table>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Plan</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase">Próxima renovación</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Importe</Table.Th>
-                  <Table.Th c="dimmed" fw={600} size="xs" tt="uppercase" ta="right">Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Plan</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Próxima renovación</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Importe</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>

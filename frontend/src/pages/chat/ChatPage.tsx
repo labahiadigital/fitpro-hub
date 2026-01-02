@@ -8,7 +8,6 @@ import {
   Group,
   Loader,
   Menu,
-  Paper,
   ScrollArea,
   SegmentedControl,
   Stack,

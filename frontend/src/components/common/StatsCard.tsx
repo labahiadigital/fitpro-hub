@@ -88,7 +88,6 @@ export function KPICard({
                 positive: colors.positive,
                 negative: colors.negative,
                 neutral: colors.stable,
-                loss: colors.negative,
               }}
             />
           </Box>

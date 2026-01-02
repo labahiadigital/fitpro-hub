@@ -1,4 +1,4 @@
-import { Box, Group, Text, Tooltip } from "@mantine/core";
+import { Box, Group, Text } from "@mantine/core";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 
 interface RevenueData {
@@ -46,17 +46,16 @@ const CustomTooltip = ({ active, payload, label, currency }: any) => {
 export function RevenueChart({
   data,
   currentMRR,
-  previousMRR,
   currency = "€",
 }: RevenueChartProps) {
   return (
-    <Box className="premium-card" p="md" style={{ height: "100%", minHeight: 320 }}>
+    <Box className="premium-card" p="sm" style={{ height: "100%" }}>
       {/* Header */}
-      <Group justify="space-between" mb="md" align="flex-start" wrap="wrap" gap="sm">
+      <Group justify="space-between" mb="xs" align="flex-start" wrap="wrap" gap="xs">
         <Box>
-          <Text className="stat-label" mb={4}>Crecimiento de Ingresos</Text>
+          <Text className="stat-label" mb={2} style={{ fontSize: "10px" }}>Crecimiento de Ingresos</Text>
           <Group align="baseline" gap="xs">
-            <Text className="stat-value" style={{ color: "var(--nv-dark)" }}>
+            <Text fw={700} style={{ color: "var(--nv-dark)", fontSize: "1.25rem" }}>
               {currency}{currentMRR.toLocaleString()}
             </Text>
             <Text size="xs" c="var(--nv-slate)" fw={500}>
@@ -66,7 +65,7 @@ export function RevenueChart({
         </Box>
         
         {/* Legend */}
-        <Group gap="md" className="hide-mobile">
+        <Group gap="sm" className="hide-mobile">
           <Group gap={4}>
             <Box w={6} h={6} style={{ borderRadius: "50%", background: "var(--nv-primary)" }} />
             <Text size="xs" fw={500} c="var(--nv-slate)">Suscripciones</Text>
@@ -79,7 +78,7 @@ export function RevenueChart({
       </Group>
 
       {/* Chart Area */}
-      <Box h={220} w="100%">
+      <Box h={180} w="100%">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
             <defs>
@@ -93,15 +92,15 @@ export function RevenueChart({
               dataKey="month" 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'var(--nv-slate)', fontSize: 11 }} 
-              dy={8}
+              tick={{ fill: 'var(--nv-slate)', fontSize: 10 }} 
+              dy={5}
             />
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'var(--nv-slate)', fontSize: 11 }} 
+              tick={{ fill: 'var(--nv-slate)', fontSize: 10 }} 
               tickFormatter={(value) => `${value / 1000}k`}
-              width={40}
+              width={35}
             />
             <RechartsTooltip content={<CustomTooltip currency={currency} />} cursor={{ stroke: 'var(--nv-slate-light)', strokeWidth: 1, strokeDasharray: '4 4' }} />
             <Area 

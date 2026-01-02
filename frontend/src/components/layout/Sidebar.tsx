@@ -8,14 +8,11 @@ import {
   Text,
   Tooltip,
   UnstyledButton,
-  rem,
 } from "@mantine/core";
 import {
-  IconChevronRight,
   IconLogout,
   IconSettings,
 } from "@tabler/icons-react";
-import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
 

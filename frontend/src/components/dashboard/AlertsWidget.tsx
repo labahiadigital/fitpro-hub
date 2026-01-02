@@ -1,8 +1,6 @@
 import {
-  ActionIcon,
   Box,
   Group,
-  ScrollArea,
   Stack,
   Text,
 } from "@mantine/core";
@@ -37,74 +35,70 @@ const alertConfig = {
 
 export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
   return (
-    <Box className="premium-card" style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 280 }}>
-      <Box p="md" pb="sm">
-         <Group justify="space-between">
-            <Text className="stat-label">Acciones Requeridas</Text>
-            {alerts.length > 0 && (
-               <Box 
-                 className="pill-badge" 
-                 style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)", fontSize: "10px", padding: "2px 8px" }}
-               >
-                 {alerts.length} Pendientes
-               </Box>
-            )}
-         </Group>
-      </Box>
+    <Box className="premium-card" p="sm" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Group justify="space-between" mb="xs">
+        <Text className="stat-label" style={{ fontSize: "10px" }}>Acciones Requeridas</Text>
+        {alerts.length > 0 && (
+          <Box 
+            className="pill-badge" 
+            style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)", fontSize: "9px", padding: "2px 6px" }}
+          >
+            {alerts.length} Pendientes
+          </Box>
+        )}
+      </Group>
 
-      <ScrollArea flex={1} px="sm" pb="sm">
-        <Stack gap={6}>
-          {alerts.map((alert) => {
-            const config = alertConfig[alert.type];
-            const Icon = config.icon;
+      <Stack gap={4} style={{ flex: 1 }}>
+        {alerts.map((alert) => {
+          const config = alertConfig[alert.type];
+          const Icon = config.icon;
 
-            return (
-              <Box
-                key={alert.id}
-                onClick={() => onAlertClick?.(alert)}
-                p="xs"
-                style={{
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  border: "1px solid transparent",
-                }}
-                className="alert-item-hover"
-              >
-                <Group justify="space-between" wrap="nowrap" gap="xs">
-                  <Group gap="xs" wrap="nowrap">
-                    <Box
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: "8px",
-                        backgroundColor: config.bgColor,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Icon size={16} style={{ color: config.color }} stroke={2} />
-                    </Box>
-                    <Box style={{ minWidth: 0 }}>
-                      <Text fw={600} size="xs" c="var(--nv-dark)" lineClamp={1}>
-                        {alert.title}
-                      </Text>
-                      <Text c="dimmed" size="xs" lineClamp={1}>
-                        {alert.description}
-                      </Text>
-                    </Box>
-                  </Group>
-                  {onAlertClick && (
-                    <IconChevronRight size={12} color="var(--nv-slate-light)" style={{ flexShrink: 0 }} />
-                  )}
+          return (
+            <Box
+              key={alert.id}
+              onClick={() => onAlertClick?.(alert)}
+              p={6}
+              style={{
+                borderRadius: "6px",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                border: "1px solid transparent",
+              }}
+              className="alert-item-hover"
+            >
+              <Group justify="space-between" wrap="nowrap" gap={6}>
+                <Group gap={6} wrap="nowrap">
+                  <Box
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: "6px",
+                      backgroundColor: config.bgColor,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon size={14} style={{ color: config.color }} stroke={2} />
+                  </Box>
+                  <Box style={{ minWidth: 0 }}>
+                    <Text fw={600} size="xs" c="var(--nv-dark)" lineClamp={1}>
+                      {alert.title}
+                    </Text>
+                    <Text c="dimmed" size="10px" lineClamp={1}>
+                      {alert.description}
+                    </Text>
+                  </Box>
                 </Group>
-              </Box>
-            );
-          })}
-        </Stack>
-      </ScrollArea>
+                {onAlertClick && (
+                  <IconChevronRight size={10} color="var(--nv-slate-light)" style={{ flexShrink: 0 }} />
+                )}
+              </Group>
+            </Box>
+          );
+        })}
+      </Stack>
       <style>{`
          .alert-item-hover:hover {
             background-color: var(--nv-surface-subtle);
