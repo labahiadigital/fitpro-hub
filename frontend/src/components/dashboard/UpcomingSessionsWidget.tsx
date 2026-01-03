@@ -37,21 +37,21 @@ export function UpcomingSessionsWidget({
   onViewAll,
 }: UpcomingSessionsWidgetProps) {
   return (
-    <Box className="premium-card" p="sm" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Group justify="space-between" mb="xs">
-        <Text className="stat-label" style={{ fontSize: "10px" }}>Agenda de Hoy</Text>
-        <ActionIcon variant="subtle" color="gray" size="xs" onClick={onViewAll}>
-          <IconChevronRight size={12} />
+    <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Group justify="space-between" mb="sm">
+        <Text className="stat-label">Agenda de Hoy</Text>
+        <ActionIcon variant="subtle" color="gray" size="sm" onClick={onViewAll}>
+          <IconChevronRight size={14} />
         </ActionIcon>
       </Group>
 
-      <Stack gap={4} style={{ flex: 1 }}>
+      <Stack gap="xs" style={{ flex: 1 }}>
         {sessions.map((session) => (
           <Box 
             key={session.id}
-            p={6}
+            p="sm"
             style={{
-              borderRadius: "6px",
+              borderRadius: "8px",
               border: "1px solid var(--border-subtle)",
               position: "relative",
               overflow: "hidden"
@@ -61,28 +61,28 @@ export function UpcomingSessionsWidget({
             <Box 
               style={{
                 position: "absolute",
-                left: 0, top: 0, bottom: 0, width: 2,
+                left: 0, top: 0, bottom: 0, width: 3,
                 backgroundColor: session.status === "confirmed" ? "var(--nv-success)" : "var(--nv-warning)"
               }}
             />
             
-            <Group pl={6} align="flex-start" wrap="nowrap" gap={6}>
-              <Box style={{ minWidth: 32 }}>
-                <Text fw={700} size="xs">{dayjs(session.startTime).format("HH:mm")}</Text>
-                <Text size="10px" c="dimmed">{dayjs(session.endTime).format("HH:mm")}</Text>
+            <Group pl="sm" align="flex-start" wrap="nowrap" gap="sm">
+              <Box style={{ minWidth: 40 }}>
+                <Text fw={700} size="sm">{dayjs(session.startTime).format("HH:mm")}</Text>
+                <Text size="xs" c="dimmed">{dayjs(session.endTime).format("HH:mm")}</Text>
               </Box>
               
               <Box style={{ flex: 1, minWidth: 0 }}>
-                <Text fw={600} size="xs" lineClamp={1} style={{ color: "var(--nv-dark)" }}>{session.title}</Text>
-                <Group gap={4} mt={2}>
-                  <Avatar size={12} radius="xl" src={session.clientAvatar}>
+                <Text fw={600} size="sm" lineClamp={1} style={{ color: "var(--nv-dark)" }}>{session.title}</Text>
+                <Group gap="xs" mt={4}>
+                  <Avatar size={16} radius="xl" src={session.clientAvatar}>
                     {session.clientName.charAt(0)}
                   </Avatar>
-                  <Text size="10px" c="dimmed" lineClamp={1}>{session.clientName}</Text>
+                  <Text size="xs" c="dimmed" lineClamp={1}>{session.clientName}</Text>
                 </Group>
                 
-                <Box className="pill-badge" mt={3} style={{ backgroundColor: "var(--nv-surface-subtle)", color: "var(--nv-slate)", padding: "1px 5px", fontSize: "8px", display: "inline-flex", alignItems: "center" }}>
-                  {session.modality === "online" ? <IconVideo size={8} style={{marginRight:2}} /> : <IconMapPin size={8} style={{marginRight:2}} />}
+                <Box className="pill-badge" mt={6} style={{ backgroundColor: "var(--nv-surface-subtle)", color: "var(--nv-slate)", padding: "2px 6px", fontSize: "10px", display: "inline-flex", alignItems: "center" }}>
+                  {session.modality === "online" ? <IconVideo size={10} style={{marginRight:3}} /> : <IconMapPin size={10} style={{marginRight:3}} />}
                   {session.modality === "online" ? "Online" : "Presencial"}
                 </Box>
               </Box>

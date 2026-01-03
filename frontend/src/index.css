@@ -364,20 +364,43 @@ h1, h2, h3, h4, h5, h6 {
 
 .content-area {
   padding: 24px 32px;
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
+  /* Fluid container que se adapta a cualquier resolución */
+  max-width: 100%;
 }
 
+/* Pantallas medianas (laptops) */
 @media (max-width: 1024px) {
   .content-area {
     padding: 20px 24px;
   }
 }
 
+/* Tablets */
 @media (max-width: 768px) {
   .content-area {
     padding: 16px;
+  }
+}
+
+/* Pantallas grandes (1440p+) */
+@media (min-width: 1600px) {
+  .content-area {
+    padding: 32px 48px;
+  }
+}
+
+/* Pantallas muy grandes (2K+) */
+@media (min-width: 1920px) {
+  .content-area {
+    padding: 40px 64px;
+  }
+}
+
+/* Pantallas 4K */
+@media (min-width: 2560px) {
+  .content-area {
+    padding: 48px 80px;
   }
 }
 
@@ -780,7 +803,7 @@ a:focus-visible {
    STAT CARD ENHANCEMENTS
 ======================================== */
 .stat-value {
-  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-size: clamp(1.5rem, 2.5vw, 3.5rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -788,7 +811,7 @@ a:focus-visible {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: clamp(10px, 0.7vw, 12px);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -836,4 +859,199 @@ a:focus-visible {
 
 .list-item + .list-item {
   border-top: 1px solid var(--border-subtle);
+}
+
+/* ========================================
+   RESPONSIVE SCALING FOR LARGE SCREENS
+======================================== */
+
+/* Pantallas 1440p */
+@media (min-width: 1600px) {
+  .premium-card {
+    padding: var(--space-lg);
+  }
+  
+  .nv-card {
+    padding: var(--space-lg);
+  }
+  
+  .page-title {
+    font-size: 2.75rem;
+  }
+  
+  .widget-card {
+    min-height: 380px;
+  }
+}
+
+/* Pantallas 2K */
+@media (min-width: 1920px) {
+  :root {
+    --space-md: 20px;
+    --space-lg: 28px;
+    --space-xl: 40px;
+  }
+  
+  .premium-card {
+    border-radius: var(--radius-xl);
+  }
+  
+  .page-title {
+    font-size: 3rem;
+  }
+  
+  .widget-card {
+    min-height: 420px;
+  }
+  
+  .stat-value {
+    font-size: 3rem;
+  }
+}
+
+/* Pantallas 4K */
+@media (min-width: 2560px) {
+  :root {
+    --space-md: 24px;
+    --space-lg: 36px;
+    --space-xl: 48px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+  }
+  
+  .page-title {
+    font-size: 3.5rem;
+  }
+  
+  .widget-card {
+    min-height: 500px;
+  }
+  
+  .stat-value {
+    font-size: 3.5rem;
+  }
+  
+  .premium-card,
+  .nv-card {
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* ========================================
+   FLUID GRID SYSTEM
+======================================== */
+.fluid-grid {
+  display: grid;
+  gap: var(--space-md);
+  width: 100%;
+}
+
+.fluid-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.fluid-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.fluid-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Auto-fit grid que escala con el contenedor */
+.auto-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+
+@media (min-width: 1600px) {
+  .auto-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  }
+}
+
+@media (min-width: 1920px) {
+  .auto-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  }
+}
+
+/* ========================================
+   DASHBOARD SPECIFIC RESPONSIVE STYLES
+======================================== */
+.dashboard-main-grid {
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr minmax(280px, 320px);
+  }
+}
+
+@media (min-width: 1440px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr minmax(320px, 380px);
+  }
+}
+
+@media (min-width: 1920px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr minmax(380px, 450px);
+    gap: var(--space-xl);
+  }
+}
+
+@media (min-width: 2560px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr minmax(450px, 550px);
+  }
+}
+
+/* KPI Cards Grid */
+.kpi-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 1600px) {
+  .kpi-grid {
+    gap: var(--space-lg);
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Widget Grid */
+.widget-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 1200px) {
+  .widget-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .widget-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1920px) {
+  .widget-grid {
+    gap: var(--space-lg);
+  }
 }

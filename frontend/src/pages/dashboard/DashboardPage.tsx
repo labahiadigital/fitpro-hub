@@ -1,9 +1,7 @@
 import {
   Avatar,
   Box,
-  Grid,
   Group,
-  SimpleGrid,
   Stack,
   Text,
   UnstyledButton,
@@ -25,34 +23,45 @@ import { useAuthStore } from "../../stores/auth";
 
 // --- COMPONENTES ULTRA-PREMIUM LOCALES ---
 
-// 1. KPI "Hero" Card - Compact version
-function HeroKPI({ title, value, change, data }: any) {
+// 1. KPI "Hero" Card - Fluid responsive version
+function HeroKPI({ title, value, change, data, gradientId }: any) {
   return (
-    <Box className="premium-card animate-in" p="md" style={{ position: "relative", overflow: "hidden", minHeight: 140 }}>
+    <Box 
+      className="premium-card animate-in" 
+      p={{ base: "md", lg: "lg", xl: "xl" }} 
+      style={{ 
+        position: "relative", 
+        overflow: "hidden", 
+        minHeight: "clamp(140px, 12vw, 200px)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between"
+      }}
+    >
       <Group justify="space-between" align="flex-start" mb="xs">
-        <Text className="stat-label" style={{ fontSize: "10px" }}>
+        <Text className="stat-label">
           {title}
         </Text>
         <Box className="pill-badge" style={{
           background: change > 0 ? "var(--nv-success-bg)" : "var(--nv-error-bg)",
           color: change > 0 ? "var(--nv-success)" : "var(--nv-error)",
-          fontSize: "10px",
-          padding: "2px 8px"
+          fontSize: "clamp(10px, 0.7vw, 12px)",
+          padding: "4px 10px"
         }}>
           {change > 0 ? "+" : ""}{change}%
         </Box>
       </Group>
       
-      <Text className="stat-value" style={{ color: "var(--nv-dark)", fontSize: "1.75rem", marginBottom: "8px" }}>
+      <Text className="stat-value" style={{ color: "var(--nv-dark)", marginBottom: "8px" }}>
         {value}
       </Text>
 
       {/* Gráfico ambiental de fondo */}
-      <Box style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50px", opacity: 0.4 }}>
+      <Box style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "clamp(50px, 5vw, 80px)", opacity: 0.4 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
-              <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={gradientId || "colorGradient"} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--nv-accent)" stopOpacity={0.4} />
                 <stop offset="100%" stopColor="var(--nv-accent)" stopOpacity={0} />
               </linearGradient>
@@ -62,7 +71,7 @@ function HeroKPI({ title, value, change, data }: any) {
               dataKey="value"
               stroke="var(--nv-accent)"
               strokeWidth={2}
-              fill="url(#colorGradient)"
+              fill={`url(#${gradientId || "colorGradient"})`}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -71,7 +80,7 @@ function HeroKPI({ title, value, change, data }: any) {
   );
 }
 
-// 2. Tarjeta de Lista "Glass" - Compact
+// 2. Tarjeta de Lista "Glass" - Fluid responsive
 function TransactionList() {
   const items = [
     { name: "Juan Pérez", amount: "+€149", date: "Hoy, 10:23 AM", icon: "J" },
@@ -80,29 +89,36 @@ function TransactionList() {
   ];
 
   return (
-    <Box className="premium-card animate-in delay-1" p="sm">
-      <Group justify="space-between" mb="xs">
-        <Text className="stat-label" style={{ fontSize: "10px" }}>Actividad Reciente</Text>
+    <Box className="premium-card animate-in delay-1" p={{ base: "sm", lg: "md", xl: "lg" }}>
+      <Group justify="space-between" mb="sm">
+        <Text className="stat-label">Actividad Reciente</Text>
         <UnstyledButton style={{ color: "var(--nv-slate-light)" }}>
-          <IconArrowRight size={14} />
+          <IconArrowRight size={16} />
         </UnstyledButton>
       </Group>
-      <Stack gap={4}>
+      <Stack gap="xs">
         {items.map((item, i) => (
           <Group 
             key={i} 
             justify="space-between" 
-            py={6}
+            py="sm"
             style={{ borderBottom: i < items.length - 1 ? "1px solid var(--border-subtle)" : "none" }}
           >
-            <Group gap="xs">
-              <Avatar radius="md" size={28} color="dark" style={{ fontSize: "11px" }}>{item.icon}</Avatar>
+            <Group gap="sm">
+              <Avatar 
+                radius="md" 
+                size="md" 
+                color="dark" 
+                style={{ fontSize: "clamp(11px, 0.8vw, 14px)" }}
+              >
+                {item.icon}
+              </Avatar>
               <Box>
-                <Text size="xs" fw={600} style={{ color: "var(--nv-dark)" }}>{item.name}</Text>
-                <Text size="10px" c="dimmed">{item.date}</Text>
+                <Text size="sm" fw={600} style={{ color: "var(--nv-dark)" }}>{item.name}</Text>
+                <Text size="xs" c="dimmed">{item.date}</Text>
               </Box>
             </Group>
-            <Text fw={600} size="xs" style={{ color: "var(--nv-success)" }}>{item.amount}</Text>
+            <Text fw={600} size="sm" style={{ color: "var(--nv-success)" }}>{item.amount}</Text>
           </Group>
         ))}
       </Stack>
@@ -110,39 +126,39 @@ function TransactionList() {
   );
 }
 
-// 3. Mapa de Calor / Distribución (Visual Only) - Compact version
+// 3. Mapa de Calor / Distribución (Visual Only) - Fluid responsive
 function StatsGrid() {
   return (
-    <SimpleGrid cols={2} spacing="xs">
-      <Box className="nv-card-compact animate-in delay-2" p="sm" style={{ background: "var(--nv-dark-surface)", color: "white" }}>
-        <Group gap="xs" mb={4}>
-          <IconUsers size={14} color="var(--nv-accent)" />
-          <Text size="10px" className="stat-label" style={{ color: "var(--nv-slate-light)" }}>Usuarios Activos</Text>
+    <Box className="fluid-grid fluid-grid-2" style={{ gap: "var(--space-sm)" }}>
+      <Box className="nv-card-compact animate-in delay-2" p={{ base: "sm", lg: "md" }} style={{ background: "var(--nv-dark-surface)", color: "white" }}>
+        <Group gap="xs" mb="xs">
+          <IconUsers size={16} color="var(--nv-accent)" />
+          <Text className="stat-label" style={{ color: "var(--nv-slate-light)" }}>Usuarios Activos</Text>
         </Group>
-        <Text size="md" fw={700}>3,420</Text>
+        <Text size="lg" fw={700}>3,420</Text>
       </Box>
-      <Box className="nv-card-compact animate-in delay-2" p="sm">
-        <Group gap="xs" mb={4}>
-          <IconChartBar size={14} color="var(--nv-primary)" />
-          <Text size="10px" className="stat-label">Conversión</Text>
+      <Box className="nv-card-compact animate-in delay-2" p={{ base: "sm", lg: "md" }}>
+        <Group gap="xs" mb="xs">
+          <IconChartBar size={16} color="var(--nv-primary)" />
+          <Text className="stat-label">Conversión</Text>
         </Group>
-        <Text size="md" fw={700} style={{ color: "var(--nv-dark)" }}>4.2%</Text>
+        <Text size="lg" fw={700} style={{ color: "var(--nv-dark)" }}>4.2%</Text>
       </Box>
-      <Box className="nv-card-compact animate-in delay-3" p="sm">
-        <Group gap="xs" mb={4}>
-          <IconClock size={14} color="var(--nv-slate)" />
-          <Text size="10px" className="stat-label">Tiempo Promedio</Text>
+      <Box className="nv-card-compact animate-in delay-3" p={{ base: "sm", lg: "md" }}>
+        <Group gap="xs" mb="xs">
+          <IconClock size={16} color="var(--nv-slate)" />
+          <Text className="stat-label">Tiempo Promedio</Text>
         </Group>
-        <Text size="md" fw={700} style={{ color: "var(--nv-dark)" }}>12m</Text>
+        <Text size="lg" fw={700} style={{ color: "var(--nv-dark)" }}>12m</Text>
       </Box>
-      <Box className="nv-card-compact animate-in delay-3" p="sm" style={{ background: "var(--nv-accent)", color: "var(--nv-dark)" }}>
-        <Group gap="xs" mb={4}>
-          <IconTrendingUp size={14} />
-          <Text size="10px" style={{ opacity: 0.7 }} tt="uppercase" fw={700} lts="0.08em">Crecimiento</Text>
+      <Box className="nv-card-compact animate-in delay-3" p={{ base: "sm", lg: "md" }} style={{ background: "var(--nv-accent)", color: "var(--nv-dark)" }}>
+        <Group gap="xs" mb="xs">
+          <IconTrendingUp size={16} />
+          <Text className="stat-label" style={{ opacity: 0.7 }}>Crecimiento</Text>
         </Group>
-        <Text size="md" fw={700}>+24%</Text>
+        <Text size="lg" fw={700}>+24%</Text>
       </Box>
-    </SimpleGrid>
+    </Box>
   );
 }
 
@@ -177,7 +193,7 @@ export function DashboardPage() {
   return (
     <Box>
       {/* Header Text */}
-      <Box mb="xl" className="animate-in">
+      <Box mb={{ base: "lg", lg: "xl", xl: "2rem" }} className="animate-in">
         <Text className="page-title" mb="xs">
           Resumen
         </Text>
@@ -186,38 +202,34 @@ export function DashboardPage() {
         </Text>
       </Box>
 
-      {/* BENTO GRID LAYOUT - Compacto sin espacios */}
-      <Grid gutter="md">
-        {/* Columna Principal (2/3) */}
-        <Grid.Col span={{ base: 12, lg: 8 }}>
-          <Stack gap="md">
-            {/* Fila de KPIs Gigantes */}
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-              <HeroKPI title="Ingresos Totales" value="€128.4k" change={12.5} data={chartData} />
-              <HeroKPI title="Beneficio Neto" value="€84.2k" change={8.1} data={[{value: 20}, {value:40}, {value:30}, {value:60}, {value:90}]} />
-            </SimpleGrid>
-            
-            {/* Gráfico Principal de Ingresos */}
-            <RevenueChart data={revenueData} currentMRR={12400} previousMRR={11800} currency="€" />
-            
-            {/* Widgets Operativos - Movidos aquí para eliminar espacio */}
-            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
-              <ClientGrowthChart totalClients={16601} newThisMonth={124} churnedThisMonth={12} />
-              <AlertsWidget alerts={alerts} />
-              <UpcomingSessionsWidget sessions={sessions} />
-            </SimpleGrid>
-          </Stack>
-        </Grid.Col>
+      {/* BENTO GRID LAYOUT - Fluido y responsive */}
+      <Box className="dashboard-main-grid">
+        {/* Columna Principal */}
+        <Stack gap={{ base: "md", lg: "lg", xl: "xl" }}>
+          {/* Fila de KPIs Gigantes */}
+          <Box className="kpi-grid">
+            <HeroKPI title="Ingresos Totales" value="€128.4k" change={12.5} data={chartData} gradientId="gradient1" />
+            <HeroKPI title="Beneficio Neto" value="€84.2k" change={8.1} data={[{value: 20}, {value:40}, {value:30}, {value:60}, {value:90}]} gradientId="gradient2" />
+          </Box>
+          
+          {/* Gráfico Principal de Ingresos */}
+          <RevenueChart data={revenueData} currentMRR={12400} previousMRR={11800} currency="€" />
+          
+          {/* Widgets Operativos */}
+          <Box className="widget-grid">
+            <ClientGrowthChart totalClients={16601} newThisMonth={124} churnedThisMonth={12} />
+            <AlertsWidget alerts={alerts} />
+            <UpcomingSessionsWidget sessions={sessions} />
+          </Box>
+        </Stack>
 
-        {/* Columna Lateral (1/3) */}
-        <Grid.Col span={{ base: 12, lg: 4 }}>
-          <Stack gap="sm">
-            <TransactionList />
-            <StatsGrid />
-            <QuickActionsWidget />
-          </Stack>
-        </Grid.Col>
-      </Grid>
+        {/* Columna Lateral */}
+        <Stack gap={{ base: "sm", lg: "md" }}>
+          <TransactionList />
+          <StatsGrid />
+          <QuickActionsWidget />
+        </Stack>
+      </Box>
     </Box>
   );
 }

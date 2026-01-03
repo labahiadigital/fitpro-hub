@@ -49,38 +49,38 @@ export function RevenueChart({
   currency = "€",
 }: RevenueChartProps) {
   return (
-    <Box className="premium-card" p="sm" style={{ height: "100%" }}>
+    <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%" }}>
       {/* Header */}
-      <Group justify="space-between" mb="xs" align="flex-start" wrap="wrap" gap="xs">
+      <Group justify="space-between" mb={{ base: "xs", lg: "sm" }} align="flex-start" wrap="wrap" gap="sm">
         <Box>
-          <Text className="stat-label" mb={2} style={{ fontSize: "10px" }}>Crecimiento de Ingresos</Text>
+          <Text className="stat-label" mb={2}>Crecimiento de Ingresos</Text>
           <Group align="baseline" gap="xs">
-            <Text fw={700} style={{ color: "var(--nv-dark)", fontSize: "1.25rem" }}>
+            <Text fw={700} style={{ color: "var(--nv-dark)", fontSize: "clamp(1.25rem, 1.5vw, 1.75rem)" }}>
               {currency}{currentMRR.toLocaleString()}
             </Text>
-            <Text size="xs" c="var(--nv-slate)" fw={500}>
+            <Text size="sm" c="var(--nv-slate)" fw={500}>
               MRR
             </Text>
           </Group>
         </Box>
         
         {/* Legend */}
-        <Group gap="sm" className="hide-mobile">
-          <Group gap={4}>
-            <Box w={6} h={6} style={{ borderRadius: "50%", background: "var(--nv-primary)" }} />
-            <Text size="xs" fw={500} c="var(--nv-slate)">Suscripciones</Text>
+        <Group gap="md" className="hide-mobile">
+          <Group gap="xs">
+            <Box w={8} h={8} style={{ borderRadius: "50%", background: "var(--nv-primary)" }} />
+            <Text size="sm" fw={500} c="var(--nv-slate)">Suscripciones</Text>
           </Group>
-          <Group gap={4}>
-            <Box w={6} h={6} style={{ borderRadius: "50%", background: "var(--nv-accent)" }} />
-            <Text size="xs" fw={500} c="var(--nv-slate)">Únicos</Text>
+          <Group gap="xs">
+            <Box w={8} h={8} style={{ borderRadius: "50%", background: "var(--nv-accent)" }} />
+            <Text size="sm" fw={500} c="var(--nv-slate)">Únicos</Text>
           </Group>
         </Group>
       </Group>
 
-      {/* Chart Area */}
-      <Box h={180} w="100%">
+      {/* Chart Area - Height scales with viewport */}
+      <Box style={{ height: "clamp(180px, 20vw, 300px)", width: "100%" }}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--nv-primary)" stopOpacity={0.2}/>
@@ -92,15 +92,15 @@ export function RevenueChart({
               dataKey="month" 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'var(--nv-slate)', fontSize: 10 }} 
+              tick={{ fill: 'var(--nv-slate)', fontSize: 11 }} 
               dy={5}
             />
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'var(--nv-slate)', fontSize: 10 }} 
+              tick={{ fill: 'var(--nv-slate)', fontSize: 11 }} 
               tickFormatter={(value) => `${value / 1000}k`}
-              width={35}
+              width={40}
             />
             <RechartsTooltip content={<CustomTooltip currency={currency} />} cursor={{ stroke: 'var(--nv-slate-light)', strokeWidth: 1, strokeDasharray: '4 4' }} />
             <Area 

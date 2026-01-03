@@ -35,20 +35,20 @@ const alertConfig = {
 
 export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
   return (
-    <Box className="premium-card" p="sm" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Group justify="space-between" mb="xs">
-        <Text className="stat-label" style={{ fontSize: "10px" }}>Acciones Requeridas</Text>
+    <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Group justify="space-between" mb="sm">
+        <Text className="stat-label">Acciones Requeridas</Text>
         {alerts.length > 0 && (
           <Box 
             className="pill-badge" 
-            style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)", fontSize: "9px", padding: "2px 6px" }}
+            style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)", fontSize: "10px", padding: "4px 8px" }}
           >
             {alerts.length} Pendientes
           </Box>
         )}
       </Group>
 
-      <Stack gap={4} style={{ flex: 1 }}>
+      <Stack gap="xs" style={{ flex: 1 }}>
         {alerts.map((alert) => {
           const config = alertConfig[alert.type];
           const Icon = config.icon;
@@ -57,22 +57,22 @@ export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
             <Box
               key={alert.id}
               onClick={() => onAlertClick?.(alert)}
-              p={6}
+              p="sm"
               style={{
-                borderRadius: "6px",
+                borderRadius: "8px",
                 cursor: "pointer",
                 transition: "all 0.15s",
                 border: "1px solid transparent",
               }}
               className="alert-item-hover"
             >
-              <Group justify="space-between" wrap="nowrap" gap={6}>
-                <Group gap={6} wrap="nowrap">
+              <Group justify="space-between" wrap="nowrap" gap="sm">
+                <Group gap="sm" wrap="nowrap">
                   <Box
                     style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: "6px",
+                      width: 32,
+                      height: 32,
+                      borderRadius: "8px",
                       backgroundColor: config.bgColor,
                       display: "flex",
                       alignItems: "center",
@@ -80,19 +80,19 @@ export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
                       flexShrink: 0,
                     }}
                   >
-                    <Icon size={14} style={{ color: config.color }} stroke={2} />
+                    <Icon size={16} style={{ color: config.color }} stroke={2} />
                   </Box>
                   <Box style={{ minWidth: 0 }}>
-                    <Text fw={600} size="xs" c="var(--nv-dark)" lineClamp={1}>
+                    <Text fw={600} size="sm" c="var(--nv-dark)" lineClamp={1}>
                       {alert.title}
                     </Text>
-                    <Text c="dimmed" size="10px" lineClamp={1}>
+                    <Text c="dimmed" size="xs" lineClamp={1}>
                       {alert.description}
                     </Text>
                   </Box>
                 </Group>
                 {onAlertClick && (
-                  <IconChevronRight size={10} color="var(--nv-slate-light)" style={{ flexShrink: 0 }} />
+                  <IconChevronRight size={14} color="var(--nv-slate-light)" style={{ flexShrink: 0 }} />
                 )}
               </Group>
             </Box>
