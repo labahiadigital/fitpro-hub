@@ -1,5 +1,5 @@
 """Notification models."""
-from sqlalchemy import Column, String, Text, Boolean, ForeignKey
+from sqlalchemy import Column, String, Text, Boolean, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
