@@ -153,11 +153,18 @@ interface ClientDetail extends Client {
   weight_kg?: number;
   goals?: string;
   internal_notes?: string;
+  chat_enabled?: boolean;
   consents?: {
     data_processing: boolean;
     marketing: boolean;
     health_data: boolean;
     consent_date: string;
+  };
+  health_data?: {
+    allergies?: string[];
+    intolerances?: string[];
+    injuries?: Array<{ name: string; date?: string; notes?: string; status?: string }>;
+    [key: string]: unknown;
   };
 }
 
@@ -304,7 +311,7 @@ export function useUpdateClient() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<ClientDetail> }) =>
       clientsApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });

@@ -11,6 +11,7 @@ import {
   Paper,
   Progress,
   ScrollArea,
+  SegmentedControl,
   SimpleGrid,
   Stack,
   Tabs,
@@ -29,6 +30,8 @@ import {
   IconPlus,
   IconSearch,
   IconShoppingCart,
+  IconStar,
+  IconStarFilled,
   IconTrash,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -92,6 +95,11 @@ interface MealPlanBuilderProps {
   targetProtein?: number;
   targetCarbs?: number;
   targetFat?: number;
+  // Favoritos
+  foodFavorites?: string[];
+  supplementFavorites?: string[];
+  onToggleFoodFavorite?: (foodId: string, isFavorite: boolean) => void;
+  onToggleSupplementFavorite?: (supplementId: string, isFavorite: boolean) => void;
 }
 
 export function MealPlanBuilder({
@@ -103,6 +111,10 @@ export function MealPlanBuilder({
   targetProtein = 150,
   targetCarbs = 200,
   targetFat = 70,
+  foodFavorites = [],
+  supplementFavorites = [],
+  onToggleFoodFavorite,
+  onToggleSupplementFavorite,
 }: MealPlanBuilderProps) {
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
@@ -110,6 +122,8 @@ export function MealPlanBuilder({
   const [selectedMealId, setSelectedMealId] = useState<string | null>(null);
   const [foodSearch, setFoodSearch] = useState("");
   const [supplementSearch, setSupplementSearch] = useState("");
+  const [foodFilter, setFoodFilter] = useState<string>("all");
+  const [supplementFilter, setSupplementFilter] = useState<string>("all");
   const [
     shoppingListOpened,
     { open: openShoppingList, close: closeShoppingList },
@@ -373,15 +387,37 @@ export function MealPlanBuilder({
     return Object.values(items);
   };
 
-  const filteredFoods = availableFoods.filter(
-    (f) =>
-      f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
-      f.category.toLowerCase().includes(foodSearch.toLowerCase())
-  );
+  // Helper para verificar si un alimento es favorito
+  const isFoodFavorite = (foodId: string) => foodFavorites.includes(foodId);
+  const isSupplementFavorite = (supplementId: string) => supplementFavorites.includes(supplementId);
 
-  const filteredSupplements = availableSupplements.filter((s) =>
-    s.name.toLowerCase().includes(supplementSearch.toLowerCase())
-  );
+  // Filtrar y ordenar alimentos (favoritos primero)
+  const filteredFoods = availableFoods
+    .filter((f) => {
+      const matchesSearch =
+        f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
+        f.category.toLowerCase().includes(foodSearch.toLowerCase());
+      const matchesFilter = foodFilter === "all" || isFoodFavorite(f.id);
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      const aFav = isFoodFavorite(a.id) ? 0 : 1;
+      const bFav = isFoodFavorite(b.id) ? 0 : 1;
+      return aFav - bFav;
+    });
+
+  // Filtrar y ordenar suplementos (favoritos primero)
+  const filteredSupplements = availableSupplements
+    .filter((s) => {
+      const matchesSearch = s.name.toLowerCase().includes(supplementSearch.toLowerCase());
+      const matchesFilter = supplementFilter === "all" || isSupplementFavorite(s.id);
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      const aFav = isSupplementFavorite(a.id) ? 0 : 1;
+      const bFav = isSupplementFavorite(b.id) ? 0 : 1;
+      return aFav - bFav;
+    });
 
   const dayMacros = currentDay
     ? calculateDayMacros(currentDay)
@@ -766,86 +802,146 @@ export function MealPlanBuilder({
           </Tabs.List>
 
           <Tabs.Panel value="foods">
-            <TextInput
-              leftSection={<IconSearch size={16} />}
-              mb="md"
-              onChange={(e) => setFoodSearch(e.target.value)}
-              placeholder="Buscar alimentos..."
-              value={foodSearch}
-              radius="md"
-            />
+            <Group mb="md" gap="sm">
+              <TextInput
+                leftSection={<IconSearch size={16} />}
+                onChange={(e) => setFoodSearch(e.target.value)}
+                placeholder="Buscar alimentos..."
+                value={foodSearch}
+                radius="md"
+                style={{ flex: 1 }}
+              />
+              <SegmentedControl
+                value={foodFilter}
+                onChange={setFoodFilter}
+                data={[
+                  { label: "Todos", value: "all" },
+                  { label: "⭐ Favoritos", value: "favorites" },
+                ]}
+                size="xs"
+                radius="md"
+              />
+            </Group>
             <ScrollArea h={400}>
               <Stack gap="xs">
-                {filteredFoods.map((food) => (
-                  <Card
-                    key={food.id}
-                    onClick={() => addFoodToMeal(food)}
-                    padding="sm"
-                    radius="md"
-                    style={{ cursor: "pointer" }}
-                    withBorder
-                  >
-                    <Group justify="space-between">
-                      <Box>
-                        <Text fw={500} size="sm">
-                          {food.name}
-                        </Text>
+                {filteredFoods.map((food) => {
+                  const isFav = isFoodFavorite(food.id);
+                  return (
+                    <Card
+                      key={food.id}
+                      padding="sm"
+                      radius="md"
+                      style={{ 
+                        cursor: "pointer",
+                        borderColor: isFav ? "var(--mantine-color-yellow-5)" : undefined,
+                        backgroundColor: isFav ? "var(--mantine-color-yellow-0)" : undefined,
+                      }}
+                      withBorder
+                    >
+                      <Group justify="space-between">
+                        <Box onClick={() => addFoodToMeal(food)} style={{ flex: 1, cursor: "pointer" }}>
+                          <Group gap="xs">
+                            {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}
+                            <Text fw={500} size="sm">
+                              {food.name}
+                            </Text>
+                          </Group>
+                          <Group gap="xs">
+                            <Badge size="xs" variant="light">
+                              {food.category}
+                            </Badge>
+                            <Text c="dimmed" size="xs">
+                              {food.serving_size}
+                            </Text>
+                          </Group>
+                        </Box>
                         <Group gap="xs">
-                          <Badge size="xs" variant="light">
-                            {food.category}
+                          <Badge color="blue" variant="light">
+                            {food.calories} kcal
                           </Badge>
-                          <Text c="dimmed" size="xs">
-                            {food.serving_size}
-                          </Text>
+                          <Badge size="xs" variant="outline">
+                            P: {food.protein}g
+                          </Badge>
+                          <Badge size="xs" variant="outline">
+                            C: {food.carbs}g
+                          </Badge>
+                          <Badge size="xs" variant="outline">
+                            G: {food.fat}g
+                          </Badge>
+                          {onToggleFoodFavorite && (
+                            <ActionIcon
+                              variant={isFav ? "filled" : "subtle"}
+                              color="yellow"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFoodFavorite(food.id, isFav);
+                              }}
+                            >
+                              {isFav ? <IconStarFilled size={14} /> : <IconStar size={14} />}
+                            </ActionIcon>
+                          )}
                         </Group>
-                      </Box>
-                      <Group gap="xs">
-                        <Badge color="blue" variant="light">
-                          {food.calories} kcal
-                        </Badge>
-                        <Badge size="xs" variant="outline">
-                          P: {food.protein}g
-                        </Badge>
-                        <Badge size="xs" variant="outline">
-                          C: {food.carbs}g
-                        </Badge>
-                        <Badge size="xs" variant="outline">
-                          G: {food.fat}g
-                        </Badge>
                       </Group>
-                    </Group>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
+                {filteredFoods.length === 0 && (
+                  <Text c="dimmed" ta="center" py="xl">
+                    {foodFilter === "favorites" 
+                      ? "No tienes alimentos favoritos" 
+                      : "No se encontraron alimentos"}
+                  </Text>
+                )}
               </Stack>
             </ScrollArea>
           </Tabs.Panel>
 
           <Tabs.Panel value="supplements">
-            <TextInput
-              leftSection={<IconSearch size={16} />}
-              mb="md"
-              onChange={(e) => setSupplementSearch(e.target.value)}
-              placeholder="Buscar suplementos..."
-              value={supplementSearch}
-              radius="md"
-            />
+            <Group mb="md" gap="sm">
+              <TextInput
+                leftSection={<IconSearch size={16} />}
+                onChange={(e) => setSupplementSearch(e.target.value)}
+                placeholder="Buscar suplementos..."
+                value={supplementSearch}
+                radius="md"
+                style={{ flex: 1 }}
+              />
+              <SegmentedControl
+                value={supplementFilter}
+                onChange={setSupplementFilter}
+                data={[
+                  { label: "Todos", value: "all" },
+                  { label: "⭐ Favoritos", value: "favorites" },
+                ]}
+                size="xs"
+                radius="md"
+              />
+            </Group>
             <ScrollArea h={400}>
               <Stack gap="xs">
-                {filteredSupplements.map((supplement) => (
-                  <Card
-                    key={supplement.id}
-                    onClick={() => addSupplementToMeal(supplement)}
-                    padding="sm"
-                    radius="md"
-                    style={{ cursor: "pointer" }}
-                    withBorder
-                  >
-                    <Box>
+                {filteredSupplements.map((supplement) => {
+                  const isFav = isSupplementFavorite(supplement.id);
+                  return (
+                    <Card
+                      key={supplement.id}
+                      padding="sm"
+                      radius="md"
+                      style={{ 
+                        cursor: "pointer",
+                        borderColor: isFav ? "var(--mantine-color-yellow-5)" : undefined,
+                        backgroundColor: isFav ? "var(--mantine-color-yellow-0)" : undefined,
+                      }}
+                      withBorder
+                    >
                       <Group justify="space-between">
-                        <Box>
-                          <Text fw={500} size="sm">
-                            {supplement.name}
-                          </Text>
+                        <Box onClick={() => addSupplementToMeal(supplement)} style={{ flex: 1, cursor: "pointer" }}>
+                          <Group gap="xs">
+                            {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}
+                            <Text fw={500} size="sm">
+                              {supplement.name}
+                            </Text>
+                          </Group>
                           {supplement.brand && (
                             <Text size="xs" c="dimmed">
                               {supplement.brand}
@@ -883,14 +979,29 @@ export function MealPlanBuilder({
                               G: {supplement.fat}g
                             </Badge>
                           )}
+                          {onToggleSupplementFavorite && (
+                            <ActionIcon
+                              variant={isFav ? "filled" : "subtle"}
+                              color="yellow"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleSupplementFavorite(supplement.id, isFav);
+                              }}
+                            >
+                              {isFav ? <IconStarFilled size={14} /> : <IconStar size={14} />}
+                            </ActionIcon>
+                          )}
                         </Group>
                       </Group>
-                    </Box>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
                 {filteredSupplements.length === 0 && (
                   <Text c="dimmed" ta="center" py="xl">
-                    No hay suplementos disponibles
+                    {supplementFilter === "favorites" 
+                      ? "No tienes suplementos favoritos" 
+                      : "No hay suplementos disponibles"}
                   </Text>
                 )}
               </Stack>

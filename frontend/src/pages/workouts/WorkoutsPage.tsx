@@ -259,7 +259,7 @@ export function WorkoutsPage() {
   );
 
   return (
-    <Container py="lg" size="xl">
+    <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
           label:
@@ -285,7 +285,7 @@ export function WorkoutsPage() {
 
         <Tabs.Panel value="programs">
           {programs && programs.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" className="stagger">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
               {programs.map((program: any) => (
                 <Box key={program.id} className="nv-card" p="md">
                   <Group justify="space-between" mb="sm">
@@ -370,7 +370,7 @@ export function WorkoutsPage() {
           />
 
           {filteredExercises.length > 0 ? (
-            <SimpleGrid cols={{ base: 2, sm: 3, lg: 4, xl: 5 }} spacing="sm" className="stagger">
+            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
               {filteredExercises.map((exercise: any) => (
                 <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden" }}>
                   <Box

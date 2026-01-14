@@ -285,7 +285,7 @@ export function PackagesPage() {
   );
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={
           <Button
@@ -359,7 +359,7 @@ export function PackagesPage() {
         </Tabs.List>
 
         <Tabs.Panel value="packages">
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
             {packages.map((pkg) => (
               <Card key={pkg.id} p="lg" radius="md" withBorder>
                 <Group justify="space-between" mb="md">

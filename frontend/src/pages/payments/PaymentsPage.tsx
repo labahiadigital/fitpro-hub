@@ -350,7 +350,7 @@ export function PaymentsPage() {
   };
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
           label: "Nuevo Cobro",
@@ -784,7 +784,7 @@ export function PaymentsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="products">
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg" className="stagger">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
             {mockProducts.map((product) => (
               <Box key={product.id} className="nv-card" p="lg">
                 <Group justify="space-between" mb="sm">

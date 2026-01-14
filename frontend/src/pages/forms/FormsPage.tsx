@@ -348,7 +348,7 @@ export function FormsPage() {
   };
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
           label: activeTab === "forms" ? "Nuevo Formulario" : "Subir Documento",
@@ -374,7 +374,7 @@ export function FormsPage() {
 
         <Tabs.Panel value="forms">
           {forms.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
               {forms.map((formTemplate) => (
                 <Card key={formTemplate.id} padding="lg" radius="lg" withBorder>
                   <Group justify="space-between" mb="sm">

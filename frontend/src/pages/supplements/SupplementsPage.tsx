@@ -8,7 +8,7 @@ export function SupplementsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("library");
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         title="Suplementación"
         description="Gestiona tu biblioteca de suplementos y recomendaciones"

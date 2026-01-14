@@ -18,6 +18,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import { 
   IconDownload, 
   IconTag, 
@@ -46,6 +47,7 @@ import {
   useClientTags,
   useCreateClient,
   useCreateClientTag,
+  useUpdateClient,
 } from "../../hooks/useClients";
 
 // Componente de tarjeta de cliente para vista de grid
@@ -177,6 +179,11 @@ export function ClientsPage() {
   useClientTags();
   const createClient = useCreateClient();
   const createTag = useCreateClientTag();
+  const updateClient = useUpdateClient();
+  
+  // Estado para el modal de edición
+  const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
 
   const clientForm = useForm({
     initialValues: {
@@ -203,6 +210,21 @@ export function ClientsPage() {
     },
   });
 
+  const editForm = useForm({
+    initialValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      goals: "",
+    },
+    validate: {
+      first_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
+      last_name: (value) => (value.length < 2 ? "Apellido requerido" : null),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+    },
+  });
+
   const handleCreateClient = async (values: typeof clientForm.values) => {
     try {
       await createClient.mutateAsync(values);
@@ -218,6 +240,47 @@ export function ClientsPage() {
       await createTag.mutateAsync(values);
       closeTagModal();
       tagForm.reset();
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleEditClient = (client: any) => {
+    setEditingClient(client);
+    editForm.setValues({
+      first_name: client.first_name || "",
+      last_name: client.last_name || "",
+      email: client.email || "",
+      phone: client.phone || "",
+      goals: client.goals || "",
+    });
+    openEditModal();
+  };
+
+  const handleUpdateClient = async (values: typeof editForm.values) => {
+    if (!editingClient) return;
+    
+    // Para clientes demo, solo mostramos mensaje y cerramos
+    if (editingClient.id.startsWith("demo-client-")) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, los cambios no se guardan permanentemente",
+        color: "yellow",
+      });
+      closeEditModal();
+      editForm.reset();
+      setEditingClient(null);
+      return;
+    }
+    
+    try {
+      await updateClient.mutateAsync({
+        id: editingClient.id,
+        data: values,
+      });
+      closeEditModal();
+      editForm.reset();
+      setEditingClient(null);
     } catch {
       // Error handled by mutation
     }
@@ -293,7 +356,7 @@ export function ClientsPage() {
   };
 
   return (
-    <Container py="lg" size="xl">
+    <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
           label: "Nuevo Cliente",
@@ -311,7 +374,7 @@ export function ClientsPage() {
       />
 
       {/* KPIs */}
-      <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg" spacing="sm" className="stagger">
+      <SimpleGrid cols={{ base: 2, sm: 4, xl: 6 }} mb="lg" spacing="sm" className="stagger">
         <KPICard 
           title="Total Clientes" 
           value={stats.total} 
@@ -375,7 +438,7 @@ export function ClientsPage() {
             data={clientsData.items}
             loading={isLoading}
             onDelete={(client) => console.log("Delete", client)}
-            onEdit={(client) => console.log("Edit", client)}
+            onEdit={(client) => handleEditClient(client)}
             onSearch={setSearch}
             onView={(client: { id: string }) => navigate(`/clients/${client.id}`)}
             pagination={{
@@ -388,7 +451,7 @@ export function ClientsPage() {
             searchPlaceholder="Buscar por nombre, email o teléfono..."
           />
         ) : (
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
             {clientsData.items.map((client: any) => (
               <ClientCard 
                 key={client.id} 
@@ -543,6 +606,83 @@ export function ClientsPage() {
                 }}
               >
                 Crear Etiqueta
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
+
+      {/* Modal para editar cliente */}
+      <Modal
+        onClose={closeEditModal}
+        opened={editModalOpened}
+        size="lg"
+        title={`Editar Cliente: ${editingClient?.first_name || ''} ${editingClient?.last_name || ''}`}
+        radius="lg"
+        centered
+      >
+        <form onSubmit={editForm.onSubmit(handleUpdateClient)}>
+          <Stack gap="md">
+            <Group grow>
+              <TextInput
+                label="Nombre"
+                placeholder="Juan"
+                required
+                radius="md"
+                {...editForm.getInputProps("first_name")}
+              />
+              <TextInput
+                label="Apellido"
+                placeholder="García"
+                required
+                radius="md"
+                {...editForm.getInputProps("last_name")}
+              />
+            </Group>
+            <TextInput
+              label="Email"
+              placeholder="juan@email.com"
+              required
+              radius="md"
+              {...editForm.getInputProps("email")}
+            />
+            <TextInput
+              label="Teléfono"
+              placeholder="+34 600 000 000"
+              radius="md"
+              {...editForm.getInputProps("phone")}
+            />
+            <Textarea
+              label="Objetivos"
+              minRows={3}
+              placeholder="Describe los objetivos del cliente..."
+              radius="md"
+              {...editForm.getInputProps("goals")}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button 
+                onClick={closeEditModal} 
+                variant="default"
+                radius="xl"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                loading={updateClient.isPending} 
+                type="submit"
+                radius="xl"
+                styles={{
+                  root: {
+                    background: "var(--nv-accent)",
+                    color: "var(--nv-dark)",
+                    fontWeight: 700,
+                    "&:hover": {
+                      background: "var(--nv-accent-hover)"
+                    }
+                  }
+                }}
+              >
+                Guardar Cambios
               </Button>
             </Group>
           </Stack>

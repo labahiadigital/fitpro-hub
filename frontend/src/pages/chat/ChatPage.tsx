@@ -316,7 +316,7 @@ export function ChatPage() {
   );
 
   return (
-    <Container h="calc(100vh - 100px)" py="xl" size="xl">
+    <Container h="calc(100vh - 100px)" py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         description={
           isClientView

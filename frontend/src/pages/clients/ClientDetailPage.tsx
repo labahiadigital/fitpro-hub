@@ -9,12 +9,18 @@ import {
   Group,
   Image,
   Menu,
+  Modal,
+  MultiSelect,
   SimpleGrid,
   Stack,
   Switch,
   Table,
   Tabs,
   Text,
+  TextInput,
+  Textarea,
+  NumberInput,
+  Select,
   ThemeIcon,
   Timeline,
   Card,
@@ -22,6 +28,9 @@ import {
   Center,
   Loader,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { useDisclosure } from "@mantine/hooks";
+import { useForm } from "@mantine/form";
 import {
   IconAlertTriangle,
   IconBarbell,
@@ -53,11 +62,45 @@ import {
   IconScale,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useClient } from "../../hooks/useClients";
-import { useClientMealPlans } from "../../hooks/useSupabaseData";
+import { useClient, useUpdateClient, useDeleteClient } from "../../hooks/useClients";
+import { 
+  useClientMealPlans,
+  useWorkoutProgramTemplates,
+  useMealPlanTemplates,
+  useAssignWorkoutProgram,
+  useAssignMealPlan,
+} from "../../hooks/useSupabaseData";
 import { AllergenList } from "../../components/common/AllergenBadge";
+
+// Lista de alérgenos comunes
+const COMMON_ALLERGENS = [
+  { value: "gluten", label: "Gluten" },
+  { value: "lactosa", label: "Lactosa" },
+  { value: "huevo", label: "Huevo" },
+  { value: "pescado", label: "Pescado" },
+  { value: "mariscos", label: "Mariscos" },
+  { value: "frutos_secos", label: "Frutos secos" },
+  { value: "cacahuete", label: "Cacahuete" },
+  { value: "soja", label: "Soja" },
+  { value: "apio", label: "Apio" },
+  { value: "mostaza", label: "Mostaza" },
+  { value: "sesamo", label: "Sésamo" },
+  { value: "sulfitos", label: "Sulfitos" },
+  { value: "moluscos", label: "Moluscos" },
+  { value: "altramuces", label: "Altramuces" },
+];
+
+// Lista de intolerancias comunes
+const COMMON_INTOLERANCES = [
+  { value: "fructosa", label: "Fructosa" },
+  { value: "sorbitol", label: "Sorbitol" },
+  { value: "histamina", label: "Histamina" },
+  { value: "fodmap", label: "FODMAP" },
+  { value: "cafeina", label: "Cafeína" },
+  { value: "alcohol", label: "Alcohol" },
+];
 
 // KPI Card Component - Compact version
 function StatCard({ icon, label, value, color, trend }: { 
@@ -121,10 +164,44 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   
   const { data: fetchedClient, isLoading } = useClient(id || "");
   const { data: clientMealPlans } = useClientMealPlans(id || "");
+  const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
+  
+  // Modal de alergias e intolerancias
+  const [allergyModalOpened, { open: openAllergyModal, close: closeAllergyModal }] = useDisclosure(false);
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [selectedIntolerances, setSelectedIntolerances] = useState<string[]>([]);
+  
+  // Modal de editar cliente
+  const [editClientModalOpened, { open: openEditClientModal, close: closeEditClientModal }] = useDisclosure(false);
+  
+  // Modal de información personal
+  const [editInfoModalOpened, { open: openEditInfoModal, close: closeEditInfoModal }] = useDisclosure(false);
+  
+  // Modal de confirmación de eliminar
+  const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
+  const [assignProgramModalOpened, { open: openAssignProgramModal, close: closeAssignProgramModal }] = useDisclosure(false);
+  const [assignMealPlanModalOpened, { open: openAssignMealPlanModal, close: closeAssignMealPlanModal }] = useDisclosure(false);
+  
+  // Hooks para obtener templates
+  const { data: workoutTemplates = [] } = useWorkoutProgramTemplates();
+  const { data: mealPlanTemplates = [] } = useMealPlanTemplates();
+  
+  // Hooks para asignaciones
+  const assignWorkoutProgram = useAssignWorkoutProgram();
+  const assignMealPlan = useAssignMealPlan();
+  
+  // Estados para los formularios de asignación
+  const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
+  const [selectedMealPlan, setSelectedMealPlan] = useState<string | null>(null);
+  const [assignStartDate, setAssignStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [assignEndDate, setAssignEndDate] = useState<string>("");
+  const [assignNotes, setAssignNotes] = useState("");
 
   // Mock client data as fallback
   const mockClient = {
@@ -189,6 +266,282 @@ export function ClientDetailPage() {
 
   const client = fetchedClient || mockClient;
   
+  // Formulario de edición de cliente
+  const editClientForm = useForm({
+    initialValues: {
+      first_name: client.first_name || "",
+      last_name: client.last_name || "",
+      email: client.email || "",
+      phone: client.phone || "",
+      goals: client.goals || "",
+    },
+  });
+  
+  // Formulario de información personal
+  const editInfoForm = useForm({
+    initialValues: {
+      birth_date: client.birth_date || "",
+      gender: client.gender || "",
+      height_cm: client.height_cm || 0,
+      weight_kg: client.weight_kg || 0,
+      internal_notes: client.internal_notes || "",
+    },
+  });
+  
+  // Verificar si es cliente demo
+  const isDemoClient = id?.startsWith("demo-client-") || false;
+  
+  // Handler para editar cliente
+  const handleEditClient = async (values: typeof editClientForm.values) => {
+    if (!id) return;
+    
+    if (isDemoClient) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, los cambios no se guardan permanentemente",
+        color: "yellow",
+      });
+      closeEditClientModal();
+      return;
+    }
+    
+    try {
+      await updateClient.mutateAsync({ id, data: values });
+      notifications.show({
+        title: "Cliente actualizado",
+        message: "Los datos del cliente se han actualizado correctamente",
+        color: "green",
+      });
+      closeEditClientModal();
+    } catch (error) {
+      console.error("Error updating client:", error);
+    }
+  };
+  
+  // Handler para editar información personal
+  const handleEditInfo = async (values: typeof editInfoForm.values) => {
+    if (!id) return;
+    
+    if (isDemoClient) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, los cambios no se guardan permanentemente",
+        color: "yellow",
+      });
+      closeEditInfoModal();
+      return;
+    }
+    
+    try {
+      await updateClient.mutateAsync({ id, data: values });
+      notifications.show({
+        title: "Información actualizada",
+        message: "La información personal se ha actualizado correctamente",
+        color: "green",
+      });
+      closeEditInfoModal();
+    } catch (error) {
+      console.error("Error updating info:", error);
+    }
+  };
+  
+  // Handler para eliminar cliente
+  const handleDeleteClient = async () => {
+    if (!id) return;
+    
+    if (isDemoClient) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, no se pueden eliminar clientes",
+        color: "yellow",
+      });
+      closeDeleteModal();
+      return;
+    }
+    
+    try {
+      await deleteClient.mutateAsync(id);
+      notifications.show({
+        title: "Cliente eliminado",
+        message: "El cliente ha sido eliminado correctamente",
+        color: "green",
+      });
+      navigate("/clients");
+    } catch (error) {
+      console.error("Error deleting client:", error);
+    }
+  };
+  
+  // Handler para toggle de chat
+  const handleToggleChat = async () => {
+    if (!id) return;
+    
+    if (isDemoClient) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, los cambios no se guardan permanentemente",
+        color: "yellow",
+      });
+      return;
+    }
+    
+    try {
+      await updateClient.mutateAsync({ 
+        id, 
+        data: { chat_enabled: !client.chat_enabled } 
+      });
+      notifications.show({
+        title: "Chat actualizado",
+        message: client.chat_enabled ? "Chat deshabilitado" : "Chat habilitado",
+        color: "green",
+      });
+    } catch (error) {
+      console.error("Error toggling chat:", error);
+    }
+  };
+  
+  // Handler para abrir modal de edición de cliente
+  const handleOpenEditClientModal = () => {
+    editClientForm.setValues({
+      first_name: client.first_name || "",
+      last_name: client.last_name || "",
+      email: client.email || "",
+      phone: client.phone || "",
+      goals: client.goals || "",
+    });
+    openEditClientModal();
+  };
+  
+  // Handler para abrir modal de información personal
+  const handleOpenEditInfoModal = () => {
+    editInfoForm.setValues({
+      birth_date: client.birth_date || "",
+      gender: client.gender || "",
+      height_cm: client.height_cm || 0,
+      weight_kg: client.weight_kg || 0,
+      internal_notes: client.internal_notes || "",
+    });
+    openEditInfoModal();
+  };
+  
+  // Handler para mensaje
+  const handleSendMessage = () => {
+    navigate(`/chat?client=${id}`);
+  };
+  
+  // Handler para nueva sesión
+  const handleNewSession = () => {
+    navigate(`/calendar?new=true&client=${id}`);
+  };
+  
+  // Handler para asignar programa
+  const handleAssignProgram = () => {
+    setSelectedProgram(null);
+    setAssignStartDate(new Date().toISOString().split('T')[0]);
+    setAssignEndDate("");
+    setAssignNotes("");
+    openAssignProgramModal();
+  };
+  
+  // Handler para asignar plan nutricional
+  const handleAssignNutritionPlan = () => {
+    setSelectedMealPlan(null);
+    setAssignStartDate(new Date().toISOString().split('T')[0]);
+    setAssignEndDate("");
+    setAssignNotes("");
+    openAssignMealPlanModal();
+  };
+  
+  // Handler para confirmar asignación de programa
+  const handleConfirmAssignProgram = async () => {
+    if (!id || !selectedProgram || !assignStartDate) {
+      notifications.show({
+        title: "Error",
+        message: "Selecciona un programa y fecha de inicio",
+        color: "red",
+      });
+      return;
+    }
+    
+    if (isDemoClient) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, las asignaciones no se guardan permanentemente",
+        color: "yellow",
+      });
+      closeAssignProgramModal();
+      return;
+    }
+    
+    try {
+      await assignWorkoutProgram.mutateAsync({
+        clientId: id,
+        programId: selectedProgram,
+        startDate: assignStartDate,
+        endDate: assignEndDate || undefined,
+        notes: assignNotes || undefined,
+      });
+      notifications.show({
+        title: "Programa asignado",
+        message: "El programa de entrenamiento ha sido asignado correctamente",
+        color: "green",
+      });
+      closeAssignProgramModal();
+    } catch (error) {
+      console.error("Error assigning program:", error);
+      notifications.show({
+        title: "Error",
+        message: "No se pudo asignar el programa",
+        color: "red",
+      });
+    }
+  };
+  
+  // Handler para confirmar asignación de plan nutricional
+  const handleConfirmAssignMealPlan = async () => {
+    if (!id || !selectedMealPlan || !assignStartDate) {
+      notifications.show({
+        title: "Error",
+        message: "Selecciona un plan nutricional y fecha de inicio",
+        color: "red",
+      });
+      return;
+    }
+    
+    if (isDemoClient) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, las asignaciones no se guardan permanentemente",
+        color: "yellow",
+      });
+      closeAssignMealPlanModal();
+      return;
+    }
+    
+    try {
+      await assignMealPlan.mutateAsync({
+        clientId: id,
+        mealPlanId: selectedMealPlan,
+        startDate: assignStartDate,
+        endDate: assignEndDate || undefined,
+        notes: assignNotes || undefined,
+      });
+      notifications.show({
+        title: "Plan asignado",
+        message: "El plan nutricional ha sido asignado correctamente",
+        color: "green",
+      });
+      closeAssignMealPlanModal();
+    } catch (error) {
+      console.error("Error assigning meal plan:", error);
+      notifications.show({
+        title: "Error",
+        message: "No se pudo asignar el plan nutricional",
+        color: "red",
+      });
+    }
+  };
+  
   if (isLoading) {
     return (
       <Center h="50vh">
@@ -245,8 +598,47 @@ export function ClientDetailPage() {
     return colors[type] || "var(--nv-slate)";
   };
 
+  // Handlers para el modal de alergias
+  const handleOpenAllergyModal = () => {
+    setSelectedAllergies(client.allergies || []);
+    setSelectedIntolerances(client.intolerances || []);
+    openAllergyModal();
+  };
+
+  const handleSaveAllergies = async () => {
+    if (!id) return;
+    
+    // Para clientes demo, solo actualizamos el estado local (no hay backend real)
+    if (id.startsWith("demo-client-")) {
+      // Simulamos el guardado actualizando el cliente mock
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo, los cambios no se guardan permanentemente",
+        color: "yellow",
+      });
+      closeAllergyModal();
+      return;
+    }
+    
+    try {
+      await updateClient.mutateAsync({
+        id,
+        data: {
+          health_data: {
+            ...(client.health_data || {}),
+            allergies: selectedAllergies,
+            intolerances: selectedIntolerances,
+          },
+        },
+      });
+      closeAllergyModal();
+    } catch (error) {
+      console.error("Error saving allergies:", error);
+    }
+  };
+
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         breadcrumbs={[
           { label: "Clientes", href: "/clients" },
@@ -346,6 +738,7 @@ export function ClientDetailPage() {
               leftSection={<IconMessage size={18} />} 
               variant="default"
               radius="xl"
+              onClick={handleSendMessage}
               styles={{
                 root: {
                   borderColor: "var(--border-medium)",
@@ -358,6 +751,7 @@ export function ClientDetailPage() {
             <Button 
               leftSection={<IconCalendarEvent size={18} />}
               radius="xl"
+              onClick={handleNewSession}
               styles={{
                 root: {
                   background: "var(--nv-accent)",
@@ -378,11 +772,19 @@ export function ClientDetailPage() {
                 </ActionIcon>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item leftSection={<IconEdit size={16} />}>Editar cliente</Menu.Item>
-                <Menu.Item leftSection={<IconBarbell size={16} />}>Asignar programa</Menu.Item>
-                <Menu.Item leftSection={<IconSalad size={16} />}>Asignar plan nutricional</Menu.Item>
+                <Menu.Item leftSection={<IconEdit size={16} />} onClick={handleOpenEditClientModal}>
+                  Editar cliente
+                </Menu.Item>
+                <Menu.Item leftSection={<IconBarbell size={16} />} onClick={handleAssignProgram}>
+                  Asignar programa
+                </Menu.Item>
+                <Menu.Item leftSection={<IconSalad size={16} />} onClick={handleAssignNutritionPlan}>
+                  Asignar plan nutricional
+                </Menu.Item>
                 <Menu.Divider />
-                <Menu.Item color="red" leftSection={<IconTrash size={16} />}>Eliminar cliente</Menu.Item>
+                <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={openDeleteModal}>
+                  Eliminar cliente
+                </Menu.Item>
               </Menu.Dropdown>
             </Menu>
           </Group>
@@ -390,7 +792,7 @@ export function ClientDetailPage() {
       </Box>
 
       {/* KPIs del cliente */}
-      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }} mb="xl" spacing="md" className="stagger">
+      <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 6, xl: 8 }} mb="xl" spacing="md" className="stagger">
         <StatCard 
           icon={<IconCalendarEvent size={24} />} 
           label="Sesiones Totales" 
@@ -444,14 +846,14 @@ export function ClientDetailPage() {
         </Tabs.List>
 
         <Tabs.Panel value="overview">
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+          <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="lg">
             {/* Información personal */}
             <Box className="nv-card" p="xl">
               <Group justify="space-between" mb="lg">
                 <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Información Personal
                 </Text>
-                <ActionIcon variant="subtle" color="gray" radius="xl">
+                <ActionIcon variant="subtle" color="gray" radius="xl" onClick={handleOpenEditInfoModal}>
                   <IconEdit size={18} />
                 </ActionIcon>
               </Group>
@@ -529,7 +931,12 @@ export function ClientDetailPage() {
                     Alergias e Intolerancias
                   </Text>
                 </Group>
-                <ActionIcon variant="subtle" color="gray" radius="xl">
+                <ActionIcon 
+                  variant="subtle" 
+                  color="gray" 
+                  radius="xl"
+                  onClick={handleOpenAllergyModal}
+                >
                   <IconEdit size={18} />
                 </ActionIcon>
               </Group>
@@ -615,7 +1022,7 @@ export function ClientDetailPage() {
                 </Group>
                 <Switch
                   checked={client.chat_enabled}
-                  onChange={() => {}}
+                  onChange={handleToggleChat}
                   color="green"
                   size="lg"
                 />
@@ -626,7 +1033,7 @@ export function ClientDetailPage() {
 
         {/* Nutrición */}
         <Tabs.Panel value="nutrition">
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+          <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="lg">
             <Box className="nv-card" p="xl">
               <Group justify="space-between" mb="lg">
                 <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -636,6 +1043,7 @@ export function ClientDetailPage() {
                   size="sm" 
                   leftSection={<IconPlus size={16} />}
                   radius="xl"
+                  onClick={handleAssignNutritionPlan}
                   styles={{
                     root: {
                       background: "var(--nv-accent)",
@@ -869,7 +1277,7 @@ export function ClientDetailPage() {
               </FileButton>
             </Group>
 
-            <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
+            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 6 }} spacing="md">
               {progressPhotos.map((photo) => (
                 <Card key={photo.id} padding="xs" radius="lg" withBorder>
                   <Card.Section>
@@ -1009,6 +1417,7 @@ export function ClientDetailPage() {
             <Button 
               leftSection={<IconPlus size={18} />}
               radius="xl"
+              onClick={handleAssignProgram}
               styles={{
                 root: {
                   background: "var(--nv-accent)",
@@ -1074,6 +1483,384 @@ export function ClientDetailPage() {
           border-color: var(--border-medium);
         }
       `}</style>
+
+      {/* Modal para editar alergias e intolerancias */}
+      <Modal
+        opened={allergyModalOpened}
+        onClose={closeAllergyModal}
+        title="Editar Alergias e Intolerancias"
+        size="lg"
+        radius="lg"
+        centered
+      >
+        <Stack gap="lg">
+          <MultiSelect
+            label="Alergias"
+            placeholder="Selecciona las alergias del cliente"
+            data={COMMON_ALLERGENS}
+            value={selectedAllergies}
+            onChange={setSelectedAllergies}
+            searchable
+            clearable
+            radius="md"
+          />
+          
+          <MultiSelect
+            label="Intolerancias"
+            placeholder="Selecciona las intolerancias del cliente"
+            data={COMMON_INTOLERANCES}
+            value={selectedIntolerances}
+            onChange={setSelectedIntolerances}
+            searchable
+            clearable
+            radius="md"
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button 
+              variant="default" 
+              onClick={closeAllergyModal}
+              radius="xl"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveAllergies}
+              loading={updateClient.isPending}
+              radius="xl"
+              styles={{
+                root: {
+                  background: "var(--nv-accent)",
+                  color: "var(--nv-dark)",
+                  fontWeight: 700,
+                  "&:hover": { background: "var(--nv-accent-hover)" }
+                }
+              }}
+            >
+              Guardar Cambios
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal para editar cliente */}
+      <Modal
+        opened={editClientModalOpened}
+        onClose={closeEditClientModal}
+        title="Editar Cliente"
+        size="lg"
+        radius="lg"
+        centered
+      >
+        <form onSubmit={editClientForm.onSubmit(handleEditClient)}>
+          <Stack gap="md">
+            <Group grow>
+              <TextInput
+                label="Nombre"
+                placeholder="Juan"
+                required
+                radius="md"
+                {...editClientForm.getInputProps("first_name")}
+              />
+              <TextInput
+                label="Apellido"
+                placeholder="García"
+                required
+                radius="md"
+                {...editClientForm.getInputProps("last_name")}
+              />
+            </Group>
+            <TextInput
+              label="Email"
+              placeholder="juan@email.com"
+              required
+              radius="md"
+              {...editClientForm.getInputProps("email")}
+            />
+            <TextInput
+              label="Teléfono"
+              placeholder="+34 600 000 000"
+              radius="md"
+              {...editClientForm.getInputProps("phone")}
+            />
+            <Textarea
+              label="Objetivos"
+              placeholder="Describe los objetivos del cliente..."
+              minRows={3}
+              radius="md"
+              {...editClientForm.getInputProps("goals")}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={closeEditClientModal} radius="xl">
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                loading={updateClient.isPending}
+                radius="xl"
+                styles={{
+                  root: {
+                    background: "var(--nv-accent)",
+                    color: "var(--nv-dark)",
+                    fontWeight: 700,
+                    "&:hover": { background: "var(--nv-accent-hover)" }
+                  }
+                }}
+              >
+                Guardar Cambios
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
+
+      {/* Modal para editar información personal */}
+      <Modal
+        opened={editInfoModalOpened}
+        onClose={closeEditInfoModal}
+        title="Editar Información Personal"
+        size="lg"
+        radius="lg"
+        centered
+      >
+        <form onSubmit={editInfoForm.onSubmit(handleEditInfo)}>
+          <Stack gap="md">
+            <TextInput
+              label="Fecha de nacimiento"
+              type="date"
+              radius="md"
+              {...editInfoForm.getInputProps("birth_date")}
+            />
+            <Select
+              label="Género"
+              placeholder="Selecciona el género"
+              data={[
+                { value: "male", label: "Masculino" },
+                { value: "female", label: "Femenino" },
+                { value: "other", label: "Otro" },
+              ]}
+              radius="md"
+              {...editInfoForm.getInputProps("gender")}
+            />
+            <Group grow>
+              <NumberInput
+                label="Altura (cm)"
+                placeholder="165"
+                min={100}
+                max={250}
+                radius="md"
+                {...editInfoForm.getInputProps("height_cm")}
+              />
+              <NumberInput
+                label="Peso (kg)"
+                placeholder="65"
+                min={30}
+                max={300}
+                decimalScale={1}
+                radius="md"
+                {...editInfoForm.getInputProps("weight_kg")}
+              />
+            </Group>
+            <Textarea
+              label="Notas internas"
+              placeholder="Notas visibles solo para el entrenador..."
+              minRows={3}
+              radius="md"
+              {...editInfoForm.getInputProps("internal_notes")}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={closeEditInfoModal} radius="xl">
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                loading={updateClient.isPending}
+                radius="xl"
+                styles={{
+                  root: {
+                    background: "var(--nv-accent)",
+                    color: "var(--nv-dark)",
+                    fontWeight: 700,
+                    "&:hover": { background: "var(--nv-accent-hover)" }
+                  }
+                }}
+              >
+                Guardar Cambios
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
+
+      {/* Modal de confirmación para eliminar cliente */}
+      <Modal
+        opened={deleteModalOpened}
+        onClose={closeDeleteModal}
+        title="Eliminar Cliente"
+        size="sm"
+        radius="lg"
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            ¿Estás seguro de que quieres eliminar a <strong>{client.first_name} {client.last_name}</strong>? 
+            Esta acción no se puede deshacer.
+          </Text>
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeDeleteModal} radius="xl">
+              Cancelar
+            </Button>
+            <Button
+              color="red"
+              onClick={handleDeleteClient}
+              loading={deleteClient.isPending}
+              radius="xl"
+            >
+              Eliminar
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal para asignar programa de entrenamiento */}
+      <Modal
+        opened={assignProgramModalOpened}
+        onClose={closeAssignProgramModal}
+        title="Asignar Programa de Entrenamiento"
+        size="md"
+        radius="lg"
+      >
+        <Stack gap="md">
+          <Select
+            label="Programa de entrenamiento"
+            placeholder="Selecciona un programa"
+            data={workoutTemplates.map((p) => ({
+              value: p.id,
+              label: `${p.name} (${p.duration_weeks} semanas - ${p.difficulty})`,
+            }))}
+            value={selectedProgram}
+            onChange={setSelectedProgram}
+            searchable
+            required
+          />
+          
+          <TextInput
+            label="Fecha de inicio"
+            type="date"
+            value={assignStartDate}
+            onChange={(e) => setAssignStartDate(e.currentTarget.value)}
+            required
+          />
+          
+          <TextInput
+            label="Fecha de fin (opcional)"
+            type="date"
+            value={assignEndDate}
+            onChange={(e) => setAssignEndDate(e.currentTarget.value)}
+          />
+          
+          <Textarea
+            label="Notas (opcional)"
+            placeholder="Notas adicionales para esta asignación..."
+            value={assignNotes}
+            onChange={(e) => setAssignNotes(e.currentTarget.value)}
+            rows={3}
+          />
+          
+          {workoutTemplates.length === 0 && (
+            <Text size="sm" c="dimmed" ta="center">
+              No hay programas de entrenamiento disponibles.
+              <br />
+              Crea uno desde la sección de Entrenamiento.
+            </Text>
+          )}
+          
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeAssignProgramModal} radius="xl">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmAssignProgram}
+              loading={assignWorkoutProgram.isPending}
+              disabled={!selectedProgram || workoutTemplates.length === 0}
+              radius="xl"
+              leftSection={<IconBarbell size={16} />}
+            >
+              Asignar Programa
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal para asignar plan nutricional */}
+      <Modal
+        opened={assignMealPlanModalOpened}
+        onClose={closeAssignMealPlanModal}
+        title="Asignar Plan Nutricional"
+        size="md"
+        radius="lg"
+      >
+        <Stack gap="md">
+          <Select
+            label="Plan nutricional"
+            placeholder="Selecciona un plan"
+            data={mealPlanTemplates.map((p) => ({
+              value: p.id,
+              label: `${p.name} (${p.duration_days || 7} días - ${p.target_calories || 0} kcal)`,
+            }))}
+            value={selectedMealPlan}
+            onChange={setSelectedMealPlan}
+            searchable
+            required
+          />
+          
+          <TextInput
+            label="Fecha de inicio"
+            type="date"
+            value={assignStartDate}
+            onChange={(e) => setAssignStartDate(e.currentTarget.value)}
+            required
+          />
+          
+          <TextInput
+            label="Fecha de fin (opcional)"
+            type="date"
+            value={assignEndDate}
+            onChange={(e) => setAssignEndDate(e.currentTarget.value)}
+          />
+          
+          <Textarea
+            label="Notas (opcional)"
+            placeholder="Notas adicionales para esta asignación..."
+            value={assignNotes}
+            onChange={(e) => setAssignNotes(e.currentTarget.value)}
+            rows={3}
+          />
+          
+          {mealPlanTemplates.length === 0 && (
+            <Text size="sm" c="dimmed" ta="center">
+              No hay planes nutricionales disponibles.
+              <br />
+              Crea uno desde la sección de Nutrición.
+            </Text>
+          )}
+          
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeAssignMealPlanModal} radius="xl">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmAssignMealPlan}
+              loading={assignMealPlan.isPending}
+              disabled={!selectedMealPlan || mealPlanTemplates.length === 0}
+              radius="xl"
+              leftSection={<IconSalad size={16} />}
+            >
+              Asignar Plan
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Container>
   );
 }

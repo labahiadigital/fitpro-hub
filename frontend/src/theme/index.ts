@@ -109,6 +109,14 @@ export const theme = createTheme({
     fontWeight: "700",
   },
   defaultRadius: "md",
+  // Breakpoints personalizados para pantallas grandes
+  breakpoints: {
+    xs: "36em",   // 576px
+    sm: "48em",   // 768px
+    md: "62em",   // 992px
+    lg: "75em",   // 1200px
+    xl: "88em",   // 1408px
+  },
   components: {
     Button: {
       defaultProps: {
@@ -180,6 +188,21 @@ export const theme = createTheme({
     Notification: {
       defaultProps: {
         radius: "md",
+      },
+    },
+    Container: {
+      defaultProps: {
+        // Usar fluid por defecto para aprovechar el espacio
+      },
+      styles: {
+        root: {
+          // Tamaños más grandes para pantallas 2K+
+          "--container-size-xs": "540px",
+          "--container-size-sm": "720px",
+          "--container-size-md": "960px",
+          "--container-size-lg": "1200px",
+          "--container-size-xl": "1600px", // Aumentado de 1400px
+        },
       },
     },
     Badge: {

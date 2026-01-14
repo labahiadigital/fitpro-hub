@@ -113,7 +113,7 @@ export function ReportsPage() {
   const maxRevenue = Math.max(...revenueData.map((d) => d.revenue));
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
           label: "Exportar Datos",

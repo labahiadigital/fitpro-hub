@@ -457,7 +457,7 @@ export function LMSPage() {
   };
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         title="Academia / LMS"
         description="Gestiona tus cursos, formaciones y retos"
@@ -595,7 +595,7 @@ export function LMSPage() {
               </Stack>
             </Center>
           ) : (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
               {filteredCourses.map((course: Course) => (
                 <CourseCard key={course.id} course={course} />
               ))}
@@ -619,7 +619,7 @@ export function LMSPage() {
               </Stack>
             </Center>
           ) : (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
               {filteredChallenges.map((challenge: Challenge) => (
                 <ChallengeCard key={challenge.id} challenge={challenge} />
               ))}

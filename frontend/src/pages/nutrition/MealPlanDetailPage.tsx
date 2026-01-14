@@ -5,11 +5,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
 import { useSupabaseMealPlan, useClient } from "../../hooks/useSupabaseData";
-import { supabase } from "../../services/supabase";
+import { generateMealPlanPDF } from "../../services/pdfGenerator";
+import { useAuthStore } from "../../stores/auth";
 
 export function MealPlanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentWorkspace, user } = useAuthStore();
 
   // Fetch meal plan data
   const { data: mealPlan, isLoading: isLoadingPlan } = useSupabaseMealPlan(id || "");
@@ -18,7 +20,7 @@ export function MealPlanDetailPage() {
   const { data: client } = useClient(mealPlan?.client_id || "");
 
   const handleExportPDF = async () => {
-    if (!id) return;
+    if (!mealPlan) return;
 
     try {
       notifications.show({
@@ -29,27 +31,38 @@ export function MealPlanDetailPage() {
         autoClose: false,
       });
 
-      // Call backend API to generate PDF
-      const response = await fetch(`/api/v1/pdf/meal-plan/${id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
+      // Generate PDF on client side
+      const pdfData = {
+        id: mealPlan.id,
+        name: mealPlan.name,
+        description: mealPlan.description,
+        target_calories: mealPlan.target_calories || 2000,
+        target_protein: mealPlan.target_protein || 150,
+        target_carbs: mealPlan.target_carbs || 200,
+        target_fat: mealPlan.target_fat || 70,
+        plan: mealPlan.plan || { days: [] },
+        supplements: mealPlan.supplements || [],
+        notes: mealPlan.notes,
+        nutritional_advice: mealPlan.nutritional_advice,
+      };
+
+      const clientData = client
+        ? {
+            first_name: client.first_name,
+            last_name: client.last_name,
+            weight_kg: client.weight_kg ? parseFloat(String(client.weight_kg)) : undefined,
+            height_cm: client.height_cm ? parseFloat(String(client.height_cm)) : undefined,
+            allergies: client.health_data?.allergies || [],
+            intolerances: client.health_data?.intolerances || [],
+            goals: client.goals,
+          }
+        : undefined;
+
+      generateMealPlanPDF(pdfData, {
+        workspaceName: currentWorkspace?.name || "Trackfiz",
+        trainerName: user?.full_name || "Entrenador",
+        client: clientData,
       });
-
-      if (!response.ok) {
-        throw new Error("Error al generar PDF");
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `plan_nutricional_${mealPlan?.name?.replace(/\s+/g, "_") || "plan"}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
       notifications.update({
         id: "pdf-export",
@@ -61,6 +74,7 @@ export function MealPlanDetailPage() {
         autoClose: 3000,
       });
     } catch (error) {
+      console.error("Error generating PDF:", error);
       notifications.update({
         id: "pdf-export",
         title: "Error",
@@ -82,7 +96,7 @@ export function MealPlanDetailPage() {
 
   if (isLoadingPlan) {
     return (
-      <Container py="xl" size="xl">
+      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
         <Center h="50vh">
           <Loader size="lg" />
         </Center>
@@ -92,7 +106,7 @@ export function MealPlanDetailPage() {
 
   if (!mealPlan) {
     return (
-      <Container py="xl" size="xl">
+      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
         <PageHeader
           breadcrumbs={[
             { label: "Nutrición", href: "/nutrition" },
@@ -144,7 +158,7 @@ export function MealPlanDetailPage() {
     : undefined;
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         breadcrumbs={[
           { label: "Nutrición", href: "/nutrition" },

@@ -602,7 +602,7 @@ export function LiveClassesPage() {
       : displayClasses.filter((c) => c.status === statusFilter);
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         title="Clases en Vivo"
         description="Gestiona tus clases online y sesiones grupales"

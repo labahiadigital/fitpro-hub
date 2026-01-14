@@ -189,7 +189,7 @@ export function DocumentsPage() {
   const pendingSignatures = documents.filter((d) => d.status === "sent").length;
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
           label: "Nuevo Documento",

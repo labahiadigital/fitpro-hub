@@ -130,7 +130,7 @@ export function SettingsPage() {
   };
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         description="Gestiona tu workspace, perfil y preferencias"
         title="Configuración"

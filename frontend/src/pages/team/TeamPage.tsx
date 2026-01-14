@@ -167,7 +167,7 @@ export function TeamPage() {
   };
 
   return (
-    <Container py="xl" size="xl">
+    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
           label: "Invitar Miembro",
