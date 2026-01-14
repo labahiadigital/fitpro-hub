@@ -71,8 +71,11 @@ import {
   useMealPlanTemplates,
   useAssignWorkoutProgram,
   useAssignMealPlan,
+  useSupabaseMealPlan,
 } from "../../hooks/useSupabaseData";
 import { AllergenList } from "../../components/common/AllergenBadge";
+import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
+import { IconArrowLeft, IconEye } from "@tabler/icons-react";
 
 // Lista de alérgenos comunes
 const COMMON_ALLERGENS = [
@@ -198,10 +201,14 @@ export function ClientDetailPage() {
   
   // Estados para los formularios de asignación
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
-  const [selectedMealPlan, setSelectedMealPlan] = useState<string | null>(null);
+  const [selectedMealPlanForAssign, setSelectedMealPlanForAssign] = useState<string | null>(null);
   const [assignStartDate, setAssignStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [assignEndDate, setAssignEndDate] = useState<string>("");
   const [assignNotes, setAssignNotes] = useState("");
+  
+  // Estado para ver plan nutricional detallado
+  const [viewingMealPlanId, setViewingMealPlanId] = useState<string | null>(null);
+  const { data: viewingMealPlan } = useSupabaseMealPlan(viewingMealPlanId || "");
 
   // Mock client data as fallback
   const mockClient = {
@@ -265,6 +272,88 @@ export function ClientDetailPage() {
   ];
 
   const client = fetchedClient || mockClient;
+
+  // ===== CÁLCULOS NUTRICIONALES BASADOS EN EL CLIENTE =====
+  const ACTIVITY_MULTIPLIERS: Record<string, number> = {
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    active: 1.725,
+    very_active: 1.9,
+  };
+
+  const ACTIVITY_LABELS: Record<string, string> = {
+    sedentary: "Sedentario",
+    light: "Ligero",
+    moderate: "Activo",
+    active: "Muy Activo",
+    very_active: "Extremadamente Activo",
+  };
+
+  const GOAL_LABELS: Record<string, string> = {
+    fat_loss: "Pérdida de Grasa",
+    maintenance: "Mantenimiento",
+    muscle_gain: "Ganancia Muscular",
+  };
+
+  // Calcular edad del cliente
+  const clientAge = client.birth_date 
+    ? Math.floor((Date.now() - new Date(client.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+    : 30;
+
+  // Obtener datos de health_data o valores por defecto
+  const activityLevel = (client as any).health_data?.activity_level || "moderate";
+  const goalType = (client as any).health_data?.goal_type || "maintenance";
+
+  // Calcular BMR (Mifflin-St Jeor)
+  const clientBMR = (() => {
+    const weight = parseFloat(String(client.weight_kg)) || 70;
+    const height = parseFloat(String(client.height_cm)) || 170;
+    const age = clientAge;
+    const gender = client.gender;
+    
+    if (gender === "female") {
+      return 10 * weight + 6.25 * height - 5 * age - 161;
+    }
+    return 10 * weight + 6.25 * height - 5 * age + 5;
+  })();
+
+  // Calcular TDEE
+  const clientTDEE = Math.round(clientBMR * (ACTIVITY_MULTIPLIERS[activityLevel] || 1.55));
+
+  // Calcular objetivos según tipo de objetivo
+  const nutritionalTargets = (() => {
+    const weight = parseFloat(String(client.weight_kg)) || 70;
+    let targetCalories = clientTDEE;
+    
+    if (goalType === "fat_loss") {
+      targetCalories = Math.round(clientTDEE * 0.8); // -20%
+    } else if (goalType === "muscle_gain") {
+      targetCalories = Math.round(clientTDEE * 1.15); // +15%
+    }
+    
+    // Proteínas: 2.0-2.2g/kg según objetivo
+    const proteinMultiplier = goalType === "maintenance" ? 1.8 : 2.2;
+    const targetProtein = Math.round(weight * proteinMultiplier);
+    
+    // Grasas: 25-30% de calorías
+    const fatCalories = targetCalories * 0.28;
+    const targetFat = Math.round(fatCalories / 9);
+    
+    // Carbohidratos: resto de calorías
+    const proteinCalories = targetProtein * 4;
+    const remainingCalories = targetCalories - proteinCalories - fatCalories;
+    const targetCarbs = Math.round(remainingCalories / 4);
+    
+    return {
+      calories: targetCalories,
+      protein: targetProtein,
+      carbs: targetCarbs,
+      fat: targetFat,
+      bmr: Math.round(clientBMR),
+      tdee: clientTDEE,
+    };
+  })();
   
   // Formulario de edición de cliente
   const editClientForm = useForm({
@@ -445,7 +534,7 @@ export function ClientDetailPage() {
   
   // Handler para asignar plan nutricional
   const handleAssignNutritionPlan = () => {
-    setSelectedMealPlan(null);
+    setSelectedMealPlanForAssign(null);
     setAssignStartDate(new Date().toISOString().split('T')[0]);
     setAssignEndDate("");
     setAssignNotes("");
@@ -499,7 +588,7 @@ export function ClientDetailPage() {
   
   // Handler para confirmar asignación de plan nutricional
   const handleConfirmAssignMealPlan = async () => {
-    if (!id || !selectedMealPlan || !assignStartDate) {
+    if (!id || !selectedMealPlanForAssign || !assignStartDate) {
       notifications.show({
         title: "Error",
         message: "Selecciona un plan nutricional y fecha de inicio",
@@ -521,7 +610,7 @@ export function ClientDetailPage() {
     try {
       await assignMealPlan.mutateAsync({
         clientId: id,
-        mealPlanId: selectedMealPlan,
+        mealPlanId: selectedMealPlanForAssign,
         startDate: assignStartDate,
         endDate: assignEndDate || undefined,
         notes: assignNotes || undefined,
@@ -1033,109 +1122,288 @@ export function ClientDetailPage() {
 
         {/* Nutrición */}
         <Tabs.Panel value="nutrition">
-          <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="lg">
-            <Box className="nv-card" p="xl">
-              <Group justify="space-between" mb="lg">
-                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Planes Nutricionales
-                </Text>
-                <Button 
-                  size="sm" 
-                  leftSection={<IconPlus size={16} />}
-                  radius="xl"
-                  onClick={handleAssignNutritionPlan}
-                  styles={{
-                    root: {
-                      background: "var(--nv-accent)",
-                      color: "var(--nv-dark)",
-                      fontWeight: 600,
-                      "&:hover": { background: "var(--nv-accent-hover)" }
-                    }
-                  }}
-                >
-                  Asignar Plan
-                </Button>
-              </Group>
-
-              <Stack gap="sm">
-                {mealPlans.map((plan) => (
-                  <Box 
-                    key={plan.id} 
-                    p="md" 
-                    style={{ 
-                      border: "1px solid var(--border-subtle)", 
-                      borderRadius: "var(--radius-md)",
-                      transition: "all 0.2s",
-                      cursor: "pointer"
-                    }}
-                    className="hover-lift"
-                  >
-                    <Group justify="space-between">
-                      <Box>
-                        <Text fw={600} size="sm">{plan.name}</Text>
-                        <Text c="dimmed" size="xs">{plan.target_calories} kcal/día</Text>
-                      </Box>
-                      <Group gap="xs">
-                        <Badge 
-                          size="sm" 
-                          variant="light"
-                          radius="xl"
-                          color={plan.status === "active" ? "green" : "gray"}
-                        >
-                          {plan.status === "active" ? "Activo" : "Inactivo"}
-                        </Badge>
-                        <ActionIcon variant="subtle" color="gray" radius="xl">
-                          <IconDownload size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Group>
-                  </Box>
-                ))}
-              </Stack>
+          {/* Si hay un plan seleccionado para ver, mostrar la vista detallada */}
+          {viewingMealPlanId && viewingMealPlan ? (
+            <Box>
+              {/* Botón para volver */}
+              <Button 
+                variant="subtle" 
+                leftSection={<IconArrowLeft size={16} />}
+                onClick={() => setViewingMealPlanId(null)}
+                mb="lg"
+                radius="xl"
+              >
+                Volver a la lista
+              </Button>
+              
+              {/* Vista detallada del plan nutricional */}
+              <MealPlanDetailView
+                mealPlan={{
+                  id: viewingMealPlan.id,
+                  name: viewingMealPlan.name,
+                  description: viewingMealPlan.description,
+                  target_calories: viewingMealPlan.target_calories,
+                  target_protein: viewingMealPlan.target_protein,
+                  target_carbs: viewingMealPlan.target_carbs,
+                  target_fat: viewingMealPlan.target_fat,
+                  plan: viewingMealPlan.plan || { days: [] },
+                  supplements: viewingMealPlan.supplements || [],
+                  notes: viewingMealPlan.notes,
+                  nutritional_advice: viewingMealPlan.nutritional_advice,
+                  equivalences: viewingMealPlan.equivalences,
+                }}
+                client={{
+                  id: client.id,
+                  first_name: client.first_name,
+                  last_name: client.last_name,
+                  gender: (client.gender as "male" | "female") || "male",
+                  age: clientAge,
+                  weight_kg: client.weight_kg || 70,
+                  height_cm: client.height_cm || 170,
+                  activity_level: activityLevel as any,
+                  body_tendency: "normal",
+                  goal_type: goalType as any,
+                  allergies: (client as any).health_data?.allergies || client.allergies || [],
+                  intolerances: (client as any).health_data?.intolerances || client.intolerances || [],
+                }}
+                onEdit={() => navigate(`/nutrition/plans/${viewingMealPlanId}/edit`)}
+              />
             </Box>
-
-            <Box className="nv-card" p="xl">
-              <Group justify="space-between" mb="lg">
-                <Group gap="xs">
-                  <IconPill size={20} color="var(--nv-success)" />
-                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Suplementos
-                  </Text>
+          ) : (
+            <>
+              {/* Tarjeta principal de Objetivos Nutricionales del Cliente */}
+              <Box className="nv-card" p="xl" mb="xl" style={{ background: "linear-gradient(135deg, var(--nv-accent) 0%, #10B981 100%)" }}>
+                <Group justify="space-between" align="flex-start" mb="lg">
+                  <Box>
+                    <Text size="xs" tt="uppercase" fw={700} style={{ letterSpacing: "0.1em", color: "rgba(0,0,0,0.6)" }}>
+                      Objetivos Nutricionales Calculados
+                    </Text>
+                    <Text fw={700} size="xl" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "var(--nv-dark)" }}>
+                      {client.first_name} {client.last_name}
+                    </Text>
+                  </Box>
+                  <Badge 
+                    size="lg" 
+                    radius="xl"
+                    style={{ 
+                      background: goalType === "fat_loss" ? "#EF4444" : goalType === "muscle_gain" ? "#22C55E" : "#3B82F6",
+                      color: "white",
+                      fontWeight: 700
+                    }}
+                  >
+                    {GOAL_LABELS[goalType] || "Mantenimiento"}
+                  </Badge>
                 </Group>
-                <Button 
-                  size="sm" 
-                  variant="light" 
-                  leftSection={<IconPlus size={16} />}
-                  radius="xl"
-                >
-                  Añadir
-                </Button>
-              </Group>
 
-              <Stack gap="sm">
-                {supplements.map((supp) => (
-                  <Box 
-                    key={supp.id} 
-                    p="md" 
-                    style={{ 
-                      border: "1px solid var(--border-subtle)", 
-                      borderRadius: "var(--radius-md)" 
-                    }}
-                  >
-                    <Group justify="space-between">
-                      <Box>
-                        <Text fw={600} size="sm">{supp.name}</Text>
-                        <Text c="dimmed" size="xs">{supp.dosage}</Text>
-                      </Box>
-                      <Badge size="sm" variant="light" radius="xl" color="blue">
-                        {supp.frequency}
-                      </Badge>
+                <SimpleGrid cols={{ base: 2, sm: 3, md: 6 }} spacing="md" mb="lg">
+                  <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
+                    <Text size="xs" c="dimmed" mb={4}>Peso</Text>
+                    <Text fw={700} size="lg">{client.weight_kg || "—"} kg</Text>
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
+                    <Text size="xs" c="dimmed" mb={4}>Altura</Text>
+                    <Text fw={700} size="lg">{client.height_cm || "—"} cm</Text>
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
+                    <Text size="xs" c="dimmed" mb={4}>Edad</Text>
+                    <Text fw={700} size="lg">{clientAge} años</Text>
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
+                    <Text size="xs" c="dimmed" mb={4}>Actividad</Text>
+                    <Text fw={700} size="sm">{ACTIVITY_LABELS[activityLevel] || "Activo"}</Text>
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
+                    <Text size="xs" c="dimmed" mb={4}>BMR</Text>
+                    <Text fw={700} size="lg">{nutritionalTargets.bmr} kcal</Text>
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
+                    <Text size="xs" c="dimmed" mb={4}>TDEE</Text>
+                    <Text fw={700} size="lg">{nutritionalTargets.tdee} kcal</Text>
+                  </Box>
+                </SimpleGrid>
+
+                {/* Macros Objetivo */}
+                <Box p="lg" style={{ background: "rgba(255,255,255,0.95)", borderRadius: "var(--radius-lg)" }}>
+                  <Text fw={700} size="sm" mb="md" style={{ color: "var(--nv-dark)" }}>
+                    🎯 Objetivos Diarios Recomendados
+                  </Text>
+                  <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="lg">
+                    <Box ta="center">
+                      <Text size="2rem" fw={700} style={{ color: "#3B82F6", fontFamily: "'Space Grotesk', sans-serif" }}>
+                        {nutritionalTargets.calories}
+                      </Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Calorías</Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="2rem" fw={700} style={{ color: "#22C55E", fontFamily: "'Space Grotesk', sans-serif" }}>
+                        {nutritionalTargets.protein}g
+                      </Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Proteínas</Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="2rem" fw={700} style={{ color: "#F59E0B", fontFamily: "'Space Grotesk', sans-serif" }}>
+                        {nutritionalTargets.carbs}g
+                      </Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Carbohidratos</Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="2rem" fw={700} style={{ color: "#8B5CF6", fontFamily: "'Space Grotesk', sans-serif" }}>
+                        {nutritionalTargets.fat}g
+                      </Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Grasas</Text>
+                    </Box>
+                  </SimpleGrid>
+                </Box>
+
+                {/* Alergias e intolerancias */}
+                {((client as any).health_data?.allergies?.length > 0 || (client as any).health_data?.intolerances?.length > 0 || client.allergies?.length > 0) && (
+                  <Box mt="md" p="md" style={{ background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
+                    <Group gap="xs" mb="xs">
+                      <IconAlertTriangle size={16} color="#EF4444" />
+                      <Text size="sm" fw={600} style={{ color: "#EF4444" }}>Alergias e Intolerancias</Text>
+                    </Group>
+                    <Group gap="xs">
+                      {[
+                        ...((client as any).health_data?.allergies || client.allergies || []),
+                        ...((client as any).health_data?.intolerances || client.intolerances || [])
+                      ].map((item: string, idx: number) => (
+                        <Badge key={idx} color="red" variant="light" size="sm">{item}</Badge>
+                      ))}
                     </Group>
                   </Box>
-                ))}
-              </Stack>
-            </Box>
-          </SimpleGrid>
+                )}
+              </Box>
+
+              <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="lg">
+                <Box className="nv-card" p="xl">
+                  <Group justify="space-between" mb="lg">
+                    <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      Planes Nutricionales
+                    </Text>
+                    <Button 
+                      size="sm" 
+                      leftSection={<IconPlus size={16} />}
+                      radius="xl"
+                      onClick={handleAssignNutritionPlan}
+                      styles={{
+                        root: {
+                          background: "var(--nv-accent)",
+                          color: "var(--nv-dark)",
+                          fontWeight: 600,
+                          "&:hover": { background: "var(--nv-accent-hover)" }
+                        }
+                      }}
+                    >
+                      Asignar Plan
+                    </Button>
+                  </Group>
+
+                  <Stack gap="sm">
+                    {mealPlans.map((plan) => (
+                      <Box 
+                        key={plan.id} 
+                        p="md" 
+                        style={{ 
+                          border: "1px solid var(--border-subtle)", 
+                          borderRadius: "var(--radius-md)",
+                          transition: "all 0.2s",
+                          cursor: "pointer"
+                        }}
+                        className="hover-lift"
+                        onClick={() => setViewingMealPlanId(plan.id)}
+                      >
+                        <Group justify="space-between">
+                          <Box>
+                            <Text fw={600} size="sm">{plan.name}</Text>
+                            <Text c="dimmed" size="xs">{plan.target_calories} kcal/día</Text>
+                          </Box>
+                          <Group gap="xs">
+                            <Badge 
+                              size="sm" 
+                              variant="light"
+                              radius="xl"
+                              color={plan.status === "active" ? "green" : "gray"}
+                            >
+                              {plan.status === "active" ? "Activo" : "Inactivo"}
+                            </Badge>
+                            <ActionIcon 
+                              variant="subtle" 
+                              color="blue" 
+                              radius="xl"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingMealPlanId(plan.id);
+                              }}
+                            >
+                              <IconEye size={16} />
+                            </ActionIcon>
+                            <ActionIcon 
+                              variant="subtle" 
+                              color="gray" 
+                              radius="xl"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <IconDownload size={16} />
+                            </ActionIcon>
+                          </Group>
+                        </Group>
+                      </Box>
+                    ))}
+                    
+                    {mealPlans.length === 0 && (
+                      <Text size="sm" c="dimmed" ta="center" py="xl">
+                        No hay planes nutricionales asignados.
+                        <br />
+                        Haz clic en "Asignar Plan" para añadir uno.
+                      </Text>
+                    )}
+                  </Stack>
+                </Box>
+
+                <Box className="nv-card" p="xl">
+                  <Group justify="space-between" mb="lg">
+                    <Group gap="xs">
+                      <IconPill size={20} color="var(--nv-success)" />
+                      <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        Suplementos
+                      </Text>
+                    </Group>
+                    <Button 
+                      size="sm" 
+                      variant="light" 
+                      leftSection={<IconPlus size={16} />}
+                      radius="xl"
+                    >
+                      Añadir
+                    </Button>
+                  </Group>
+
+                  <Stack gap="sm">
+                    {supplements.map((supp) => (
+                      <Box 
+                        key={supp.id} 
+                        p="md" 
+                        style={{ 
+                          border: "1px solid var(--border-subtle)", 
+                          borderRadius: "var(--radius-md)" 
+                        }}
+                      >
+                        <Group justify="space-between">
+                          <Box>
+                            <Text fw={600} size="sm">{supp.name}</Text>
+                            <Text c="dimmed" size="xs">{supp.dosage}</Text>
+                          </Box>
+                          <Badge size="sm" variant="light" radius="xl" color="blue">
+                            {supp.frequency}
+                          </Badge>
+                        </Group>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+              </SimpleGrid>
+            </>
+          )}
         </Tabs.Panel>
 
         {/* Documentos */}
@@ -1808,8 +2076,8 @@ export function ClientDetailPage() {
               value: p.id,
               label: `${p.name} (${p.duration_days || 7} días - ${p.target_calories || 0} kcal)`,
             }))}
-            value={selectedMealPlan}
-            onChange={setSelectedMealPlan}
+            value={selectedMealPlanForAssign}
+            onChange={setSelectedMealPlanForAssign}
             searchable
             required
           />
@@ -1852,7 +2120,7 @@ export function ClientDetailPage() {
             <Button
               onClick={handleConfirmAssignMealPlan}
               loading={assignMealPlan.isPending}
-              disabled={!selectedMealPlan || mealPlanTemplates.length === 0}
+              disabled={!selectedMealPlanForAssign || mealPlanTemplates.length === 0}
               radius="xl"
               leftSection={<IconSalad size={16} />}
             >
