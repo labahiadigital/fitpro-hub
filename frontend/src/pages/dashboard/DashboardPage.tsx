@@ -205,7 +205,7 @@ export function DashboardPage() {
       {/* BENTO GRID LAYOUT - Fluido y responsive */}
       <Box className="dashboard-main-grid">
         {/* Columna Principal */}
-        <Stack gap={{ base: "md", lg: "lg", xl: "xl" }}>
+        <Stack gap="lg">
           {/* Fila de KPIs Gigantes */}
           <Box className="kpi-grid">
             <HeroKPI title="Ingresos Totales" value="€128.4k" change={12.5} data={chartData} gradientId="gradient1" />
@@ -224,7 +224,7 @@ export function DashboardPage() {
         </Stack>
 
         {/* Columna Lateral */}
-        <Stack gap={{ base: "sm", lg: "md" }}>
+        <Stack gap="md">
           <TransactionList />
           <StatsGrid />
           <QuickActionsWidget />

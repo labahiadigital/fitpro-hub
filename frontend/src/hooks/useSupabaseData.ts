@@ -514,9 +514,7 @@ export function useSupabaseMealPlan(id: string) {
 
       const { data, error } = await supabase
         .from("meal_plans")
-        .select(
-          "*, clients(id, first_name, last_name, email, birth_date, gender, height_cm, weight_kg, health_data)"
-        )
+        .select("*, clients(id, first_name, last_name, email, birth_date, gender, height_cm, weight_kg, health_data)")
         .eq("id", id)
         .single();
 
@@ -538,337 +536,34 @@ export function useClient(id: string) {
 
       const { data, error } = await supabase
         .from("clients")
-        .select(
-          "*, client_tags_association(tag_id, client_tags(id, name, color))"
-        )
+        .select("*, client_tags_association(tag_id, client_tags(id, name, color))")
         .eq("id", id)
         .single();
 
       if (error) throw error;
-
+      
       return {
         ...data,
-        tags:
-          data?.client_tags_association?.map((ta: any) => ta.client_tags) || [],
+        tags: data?.client_tags_association?.map((ta: any) => ta.client_tags) || [],
       };
     },
     enabled: !!id && !!workspaceId,
   });
 }
 
-// Hook para obtener planes nutricionales de un cliente
-export function useClientMealPlans(clientId: string) {
+// Hook para obtener suplementos
+export function useSupplements() {
   const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ["supabase-client-meal-plans", clientId],
+    queryKey: ["supabase-supplements", workspaceId],
     queryFn: async () => {
-      if (!clientId) return [];
-
       const { data, error } = await supabase
-        .from("meal_plans")
+        .from("supplements")
         .select("*")
-        .eq("client_id", clientId)
-        .order("created_at", { ascending: false });
+        .or(`workspace_id.eq.${workspaceId},is_global.eq.true`)
+        .order("name", { ascending: true });
 
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!clientId && !!workspaceId,
-  });
-}
-
-// Hook para obtener pagos
-export function useSupabasePayments() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-payments", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("payments")
-        .select("*, clients(first_name, last_name, email), subscriptions(name)")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data?.map((payment: any) => ({
-        ...payment,
-        client_name: payment.clients ? `${payment.clients.first_name} ${payment.clients.last_name}` : "Sin cliente",
-        subscription_name: payment.subscriptions?.name || null,
-      })) || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener suscripciones
-export function useSupabaseSubscriptions() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-subscriptions", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*, clients(first_name, last_name, email)")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data?.map((sub: any) => ({
-        ...sub,
-        client_name: sub.clients ? `${sub.clients.first_name} ${sub.clients.last_name}` : "Sin cliente",
-      })) || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener productos
-export function useSupabaseProducts() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-products", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener formularios
-export function useSupabaseForms() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-forms", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("forms")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener automatizaciones
-export function useSupabaseAutomations() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-automations", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("automations")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener paquetes de sesiones
-export function useSupabaseSessionPackages() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-session-packages", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("session_packages")
-        .select("*, products(name, price)")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener paquetes de clientes
-export function useSupabaseClientPackages() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-client-packages", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("client_packages")
-        .select("*, clients(first_name, last_name), session_packages(name, total_sessions)")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data?.map((pkg: any) => ({
-        ...pkg,
-        client_name: pkg.clients ? `${pkg.clients.first_name} ${pkg.clients.last_name}` : "Sin cliente",
-        package_name: pkg.session_packages?.name || "Sin paquete",
-      })) || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener miembros del equipo
-export function useSupabaseTeamMembers() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-team-members", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("*, users(id, full_name, email, avatar_url, is_active)")
-        .eq("workspace_id", workspaceId);
-
-      if (error) throw error;
-      return data?.map((member: any) => ({
-        id: member.users?.id,
-        full_name: member.users?.full_name || "Sin nombre",
-        email: member.users?.email,
-        avatar_url: member.users?.avatar_url,
-        is_active: member.users?.is_active,
-        role: member.role,
-        is_default: member.is_default,
-      })) || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// =====================================================
-// HOOKS LMS - Learning Management System
-// =====================================================
-
-// Hook para obtener cursos
-export function useSupabaseCourses(publishedOnly = false) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-courses", workspaceId, publishedOnly],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("courses")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (publishedOnly) {
-        query = query.eq("is_published", true);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener un curso individual
-export function useSupabaseCourse(courseId: string) {
-  return useQuery({
-    queryKey: ["supabase-course", courseId],
-    queryFn: async () => {
-      if (!courseId) return null;
-
-      const { data, error } = await supabase
-        .from("courses")
-        .select("*, course_modules(*), lessons(*)")
-        .eq("id", courseId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!courseId,
-  });
-}
-
-// Hook para obtener retos/challenges
-export function useSupabaseChallenges(publishedOnly = false) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-challenges", workspaceId, publishedOnly],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("challenges")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (publishedOnly) {
-        query = query.eq("is_published", true);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener inscripciones en cursos
-export function useSupabaseCourseEnrollments(courseId?: string) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-course-enrollments", workspaceId, courseId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("course_enrollments")
-        .select("*, courses(title, thumbnail_url), clients(first_name, last_name)")
-        .order("enrolled_at", { ascending: false });
-
-      if (courseId) {
-        query = query.eq("course_id", courseId);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -889,7 +584,72 @@ export function useSupabaseCertificates() {
         .from("certificates")
         .select("*, courses(title), challenges(title)")
         .eq("workspace_id", workspaceId)
-        .order("issue_date", { ascending: false });
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener cursos
+export function useSupabaseCourses() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-courses", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("courses")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener challenges
+export function useSupabaseChallenges() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-challenges", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("challenges")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+// Hook para obtener inscripciones a cursos
+export function useSupabaseCourseEnrollments() {
+  const workspaceId = useWorkspaceId();
+
+  return useQuery({
+    queryKey: ["supabase-course-enrollments", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("course_enrollments")
+        .select("*, courses(title)")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -911,8 +671,7 @@ export function useSupabaseInstructors() {
         .from("instructors")
         .select("*")
         .eq("workspace_id", workspaceId)
-        .eq("is_active", true)
-        .order("display_name");
+        .order("display_name", { ascending: true });
 
       if (error) throw error;
       return data || [];
@@ -921,295 +680,38 @@ export function useSupabaseInstructors() {
   });
 }
 
-// =====================================================
-// HOOKS ERP - FacturaciÃ³n y Gastos
-// =====================================================
-
-// Hook para obtener facturas
-export function useSupabaseInvoices(status?: string) {
+// Hook para obtener documentos de un cliente
+export function useClientDocuments(clientId: string) {
   const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ["supabase-invoices", workspaceId, status],
+    queryKey: ["supabase-client-documents", clientId],
     queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("invoices")
-        .select("*, invoice_items(*), clients(first_name, last_name)")
-        .eq("workspace_id", workspaceId)
-        .order("issue_date", { ascending: false });
-
-      if (status) {
-        query = query.eq("status", status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      if (!clientId) return [];
+      
+      // TODO: Implement when documents table is ready
+      return [];
     },
-    enabled: !!workspaceId,
+    enabled: !!clientId && !!workspaceId,
   });
 }
 
-// Hook para obtener gastos
-export function useSupabaseExpenses(category?: string) {
+// Hook para obtener planes nutricionales de un cliente
+export function useClientMealPlans(clientId: string) {
   const workspaceId = useWorkspaceId();
 
   return useQuery({
-    queryKey: ["supabase-expenses", workspaceId, category],
+    queryKey: ["supabase-client-meal-plans", clientId],
     queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("expenses")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("expense_date", { ascending: false });
-
-      if (category) {
-        query = query.eq("category", category);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener categorÃ­as de gastos
-export function useSupabaseExpenseCategories() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-expense-categories", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
+      if (!clientId) return [];
 
       const { data, error } = await supabase
-        .from("expense_categories")
+        .from("meal_plans")
         .select("*")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });      if (error) throw error;
       return data || [];
     },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener presupuestos
-export function useSupabaseQuotes(status?: string) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-quotes", workspaceId, status],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("quotes")
-        .select("*, quote_items(*), clients(first_name, last_name)")
-        .eq("workspace_id", workspaceId)
-        .order("issue_date", { ascending: false });
-
-      if (status) {
-        query = query.eq("status", status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener configuraciÃ³n de facturaciÃ³n
-export function useSupabaseInvoiceSettings() {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-invoice-settings", workspaceId],
-    queryFn: async () => {
-      if (!workspaceId) return null;
-
-      const { data, error } = await supabase
-        .from("invoice_settings")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .single();
-
-      if (error && error.code !== "PGRST116") throw error;
-      return data;
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// =====================================================
-// HOOKS REFERIDOS MULTINIVEL
-// =====================================================
-
-// Hook para obtener programas de referidos
-export function useSupabaseReferralPrograms(activeOnly = false) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-referral-programs", workspaceId, activeOnly],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("referral_programs")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (activeOnly) {
-        query = query.eq("is_active", true);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener afiliados
-export function useSupabaseAffiliates(status?: string) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-affiliates", workspaceId, status],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("affiliates")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (status) {
-        query = query.eq("status", status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener enlaces de referido
-export function useSupabaseReferralLinks(affiliateId?: string) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-referral-links", workspaceId, affiliateId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("referral_links")
-        .select("*, affiliates(display_name, affiliate_code)")
-        .order("created_at", { ascending: false });
-
-      if (affiliateId) {
-        query = query.eq("affiliate_id", affiliateId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener conversiones
-export function useSupabaseReferralConversions(affiliateId?: string, status?: string) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-referral-conversions", workspaceId, affiliateId, status],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("referral_conversions")
-        .select("*, affiliates(display_name, affiliate_code)")
-        .eq("workspace_id", workspaceId)
-        .order("converted_at", { ascending: false });
-
-      if (affiliateId) {
-        query = query.eq("affiliate_id", affiliateId);
-      }
-      if (status) {
-        query = query.eq("status", status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener pagos a afiliados
-export function useSupabaseAffiliatePayouts(affiliateId?: string) {
-  const workspaceId = useWorkspaceId();
-
-  return useQuery({
-    queryKey: ["supabase-affiliate-payouts", workspaceId, affiliateId],
-    queryFn: async () => {
-      if (!workspaceId) return [];
-
-      let query = supabase
-        .from("affiliate_payouts")
-        .select("*, affiliates(display_name, affiliate_code)")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
-
-      if (affiliateId) {
-        query = query.eq("affiliate_id", affiliateId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!workspaceId,
-  });
-}
-
-// Hook para obtener suplementos con referidos (p\u00fablico)
-export function useSupabaseSupplementReferrals(category?: string) {
-  return useQuery({
-    queryKey: ["supabase-supplement-referrals", category],
-    queryFn: async () => {
-      let query = supabase
-        .from("supplement_referrals")
-        .select("*")
-        .eq("is_active", true)
-        .order("supplement_name");
-
-      if (category) {
-        query = query.eq("category", category);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
+    enabled: !!clientId && !!workspaceId,
   });
 }

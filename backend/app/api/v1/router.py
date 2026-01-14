@@ -4,7 +4,7 @@ from app.api.v1.endpoints import (
     auth, workspaces, users, clients, bookings, workouts, nutrition,
     forms, messages, payments, automations, reports, products, exercises,
     foods, notifications, supplements, documents, pdf, roles, redsys, lms, erp, referrals,
-    live_classes, ai, wearables
+    live_classes, ai, wearables, reminders, health
 )
 
 api_router = APIRouter()
@@ -68,6 +68,12 @@ api_router.include_router(automations.router, prefix="/automations", tags=["Auto
 
 # Notifications
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notificaciones"])
+
+# Recordatorios
+api_router.include_router(reminders.router, prefix="/reminders", tags=["Recordatorios"])
+
+# Health Data (Allergens, Diseases, etc.)
+api_router.include_router(health.router, prefix="/health", tags=["Datos de Salud"])
 
 # Reports
 api_router.include_router(reports.router, prefix="/reports", tags=["Reportes"])

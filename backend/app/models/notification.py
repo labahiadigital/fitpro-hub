@@ -97,3 +97,24 @@ class ScheduledNotification(BaseModel):
     # Relationships
     template = relationship("EmailTemplate")
     automation = relationship("Automation")
+
+
+class ReminderSetting(BaseModel):
+    """Recurring reminder settings for trainers and clients."""
+    
+    __tablename__ = "reminder_settings"
+    
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)  # For trainers
+    client_id = Column(UUID(as_uuid=True), ForeignKey('clients.id', ondelete='CASCADE'), nullable=True, index=True)  # For clients
+    
+    # Reminder configuration
+    reminder_type = Column(String(50), nullable=False)  # 'workout', 'nutrition', 'supplement', 'check_in', 'measurement'
+    frequency_days = Column(Integer, nullable=False, default=15)  # Every N days
+    last_sent = Column(String, nullable=True)
+    next_scheduled = Column(String, nullable=False, index=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    custom_message = Column(Text, nullable=True)
+    
+    def __repr__(self):
+        return f"<ReminderSetting {self.reminder_type} every {self.frequency_days} days>"

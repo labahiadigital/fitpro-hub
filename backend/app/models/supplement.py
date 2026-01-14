@@ -1,5 +1,5 @@
 """Supplement library models with referral codes."""
-from sqlalchemy import Column, String, Text, Float, Boolean, ForeignKey
+from sqlalchemy import Column, String, Text, Float, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
@@ -66,6 +66,10 @@ class SupplementRecommendation(BaseModel):
     frequency = Column(String(100), nullable=True)  # e.g., "Diario", "Días de entrenamiento"
     notes = Column(Text, nullable=True)
     
+    # How to take instructions
+    how_to_take = Column(Text, nullable=True)  # e.g., "Mezclar con agua o leche"
+    timing = Column(Text, nullable=True)  # e.g., "Antes del entrenamiento", "Con comida"
+    
     # Status
     is_active = Column(Boolean, default=True)
     
@@ -75,3 +79,22 @@ class SupplementRecommendation(BaseModel):
     
     def __repr__(self):
         return f"<SupplementRecommendation {self.id}>"
+
+
+class SupplementFavorite(BaseModel):
+    """Supplement favorites for users."""
+    
+    __tablename__ = "supplement_favorites"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'supplement_id', name='unique_user_supplement_favorite'),
+    )
+    
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    supplement_id = Column(UUID(as_uuid=True), ForeignKey("supplements.id", ondelete="CASCADE"), nullable=False)
+    
+    # Relationships
+    supplement = relationship("Supplement")
+    
+    def __repr__(self):
+        return f"<SupplementFavorite user={self.user_id} supplement={self.supplement_id}>"

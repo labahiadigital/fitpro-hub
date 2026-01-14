@@ -1,5 +1,5 @@
 """Nutrition and Food models."""
-from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR
+from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
@@ -186,6 +186,15 @@ class MealPlan(BaseModel):
     target_carbs = Column(Numeric, nullable=True)
     target_fat = Column(Numeric, nullable=True)
     
+    # Meal times structure: {"meals": [{"name": "Comida 1", "time": "08:00"}, ...]}
+    meal_times = Column(JSONB, default={
+        "meals": [
+            {"name": "Comida 1", "time": "08:00"},
+            {"name": "Comida 2", "time": "13:00"},
+            {"name": "Comida 3", "time": "20:00"}
+        ]
+    })
+    
     # Plan structure (days -> meals -> foods with portions)
     plan = Column(JSONB, default={"days": []})
     
@@ -204,3 +213,59 @@ class MealPlan(BaseModel):
     
     def __repr__(self):
         return f"<MealPlan {self.name}>"
+
+
+class CustomFood(BaseModel):
+    """Custom food created by workspace users."""
+    
+    __tablename__ = "custom_foods"
+    
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    # Basic food details
+    name = Column(Text, nullable=False, index=True)
+    brand = Column(Text, nullable=True)
+    category_id = Column(UUID(as_uuid=True), ForeignKey("food_categories.id", ondelete="SET NULL"), nullable=True)
+    
+    # Serving info
+    serving_size = Column(Numeric, default=100, nullable=False)
+    serving_unit = Column(Text, default='g', nullable=False)
+    
+    # Nutritional info per 1g
+    calories = Column(Numeric, default=0, nullable=False)
+    protein_g = Column(Numeric, default=0, nullable=False)
+    carbs_g = Column(Numeric, default=0, nullable=False)
+    fat_g = Column(Numeric, default=0, nullable=False)
+    fiber_g = Column(Numeric, default=0, nullable=False)
+    sugars_g = Column(Numeric, default=0, nullable=False)
+    saturated_fat_g = Column(Numeric, default=0, nullable=False)
+    sodium_mg = Column(Numeric, default=0, nullable=False)
+    
+    # Additional details
+    ingredients = Column(Text, nullable=True)
+    allergens = Column(Text, nullable=True)
+    image_url = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    
+    def __repr__(self):
+        return f"<CustomFood {self.name}>"
+
+
+class FoodFavorite(BaseModel):
+    """Food favorites for users."""
+    
+    __tablename__ = "food_favorites"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'food_id', name='unique_user_food_favorite'),
+    )
+    
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    food_id = Column(UUID(as_uuid=True), ForeignKey("foods.id", ondelete="CASCADE"), nullable=False)
+    
+    # Relationships
+    food = relationship("Food")
+    
+    def __repr__(self):
+        return f"<FoodFavorite user={self.user_id} food={self.food_id}>"

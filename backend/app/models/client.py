@@ -70,11 +70,13 @@ class Client(BaseModel):
     weight_kg = Column(String(10), nullable=True)
     health_data = Column(JSONB, default={})
     
-    # Note: allergies, intolerances, and injuries are stored in health_data JSONB
+    # Note: allergies, intolerances, diseases, and injuries are stored in health_data JSONB
     # health_data = {
-    #     "allergies": ["gluten", "lactosa"],
-    #     "intolerances": ["fructosa"],
+    #     "allergens": ["gluten", "lactosa", "frutos_secos"],  # Food allergens
+    #     "intolerances": ["fructosa", "lactosa"],
+    #     "diseases": ["diabetes", "hipertension", "celiaquia"],  # Medical conditions
     #     "injuries": [...],
+    #     "medications": ["medicamento1", "medicamento2"],
     #     "activity_level": "moderate",
     #     "body_tendency": "normal",
     #     "goal_type": "maintenance",

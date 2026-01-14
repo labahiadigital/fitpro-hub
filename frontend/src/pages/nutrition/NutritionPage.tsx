@@ -35,8 +35,11 @@ import {
   IconEye,
   IconMeat,
   IconMilk,
+  IconPill,
   IconSalad,
   IconSearch,
+  IconStar,
+  IconStarFilled,
   IconTemplate,
   IconTrash,
 } from "@tabler/icons-react";
@@ -59,8 +62,10 @@ import {
   useSupabaseFoodsCount,
   useSupabaseFoodsPaginated,
   useSupabaseMealPlans,
+  useSupplements,
   useUpdateMealPlan,
 } from "../../hooks/useSupabaseData";
+import { useFoodFavorites, useToggleFoodFavorite } from "../../hooks/useFavorites";
 
 // Función para mapear categoría de la BD a categoría del frontend
 function mapCategory(dbCategory: string | null): string {
@@ -166,6 +171,9 @@ export function NutritionPage() {
   const { data: totalFoodsCount } = useSupabaseFoodsCount();
   const { data: supabaseMealPlans, isLoading: isLoadingPlans } =
     useSupabaseMealPlans();
+  const { data: supabaseSupplements } = useSupplements();
+  const { data: foodFavorites } = useFoodFavorites();
+  const toggleFoodFavorite = useToggleFoodFavorite();
 
   // Resetear página cuando cambia la búsqueda
   const handleSearchChange = useCallback((value: string) => {
@@ -194,6 +202,42 @@ export function NutritionPage() {
       category: mapCategory(food.category),
     }));
   }, [supabaseFoods]);
+
+  // Mapear suplementos
+  const supplements = useMemo(() => {
+    if (!supabaseSupplements) return [];
+    return supabaseSupplements.map((supp: any) => ({
+      id: supp.id,
+      name: supp.name,
+      brand: supp.brand,
+      calories: supp.calories || 0,
+      protein: supp.protein || 0,
+      carbs: supp.carbs || 0,
+      fat: supp.fat || 0,
+      serving_size: supp.serving_size || "30g",
+      how_to_take: supp.usage_instructions,
+      timing: supp.extra_data?.timing,
+    }));
+  }, [supabaseSupplements]);
+
+  // Check if food is favorite
+  const isFoodFavorite = useCallback((foodId: string) => {
+    return foodFavorites?.some((f: any) => f.id === foodId) || false;
+  }, [foodFavorites]);
+
+  // Toggle food favorite
+  const handleToggleFoodFavorite = async (foodId: string) => {
+    const isFavorite = isFoodFavorite(foodId);
+    try {
+      await toggleFoodFavorite.mutateAsync({ foodId, isFavorite });
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo actualizar el favorito",
+        color: "red",
+      });
+    }
+  };
 
   // Mapear planes nutricionales
   const mealPlans = useMemo(() => {
@@ -498,6 +542,14 @@ export function NutritionPage() {
               </Badge>
             )}
           </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconPill size={14} />} value="supplements" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Suplementos{" "}
+            {supplements.length > 0 && (
+              <Badge ml="xs" size="xs" radius="md" variant="light">
+                {supplements.length}
+              </Badge>
+            )}
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="plans">
@@ -640,32 +692,46 @@ export function NutritionPage() {
                 {paginatedFoodsList.map((food) => {
                   const CategoryIcon = getCategoryIcon(food.category);
                   return (
-                    <Box key={food.id} className="nv-card-compact" p="xs">
-                      <Group gap="xs" mb="xs" wrap="nowrap">
-                        <ThemeIcon
-                          color={getCategoryColor(food.category)}
-                          radius="md"
-                          size="md"
-                          variant="light"
-                        >
-                          <CategoryIcon size={14} />
-                        </ThemeIcon>
-                        <Box style={{ flex: 1, minWidth: 0 }}>
-                          <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                            {food.name}
-                          </Text>
-                          <Text size="xs" c="dimmed">{food.serving_size}</Text>
-                        </Box>
-                        <ActionIcon
-                          color="red"
-                          onClick={() => handleDeleteFood(food.id, food.name)}
-                          size="xs"
-                          variant="subtle"
-                          radius="md"
-                        >
-                          <IconTrash size={12} />
-                        </ActionIcon>
-                      </Group>
+                <Box key={food.id} className="nv-card-compact" p="xs">
+                  <Group gap="xs" mb="xs" wrap="nowrap">
+                    <ThemeIcon
+                      color={getCategoryColor(food.category)}
+                      radius="md"
+                      size="md"
+                      variant="light"
+                    >
+                      <CategoryIcon size={14} />
+                    </ThemeIcon>
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                        {food.name}
+                      </Text>
+                      <Text size="xs" c="dimmed">{food.serving_size}</Text>
+                    </Box>
+                    <ActionIcon
+                      color={isFoodFavorite(food.id) ? "yellow" : "gray"}
+                      onClick={() => handleToggleFoodFavorite(food.id)}
+                      size="xs"
+                      variant="subtle"
+                      radius="md"
+                      loading={toggleFoodFavorite.isPending}
+                    >
+                      {isFoodFavorite(food.id) ? (
+                        <IconStarFilled size={12} />
+                      ) : (
+                        <IconStar size={12} />
+                      )}
+                    </ActionIcon>
+                    <ActionIcon
+                      color="red"
+                      onClick={() => handleDeleteFood(food.id, food.name)}
+                      size="xs"
+                      variant="subtle"
+                      radius="md"
+                    >
+                      <IconTrash size={12} />
+                    </ActionIcon>
+                  </Group>
 
                       <Group justify="space-between" mb="xs">
                         <Badge color="blue" variant="light" radius="md" size="xs">
@@ -712,6 +778,66 @@ export function NutritionPage() {
               icon={<IconApple size={40} />}
               onAction={openFoodModal}
               title="No hay alimentos"
+            />
+          )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="supplements">
+          {supplements.length > 0 ? (
+            <SimpleGrid cols={{ base: 2, sm: 3, lg: 4, xl: 5 }} spacing="sm" className="stagger">
+              {supplements.map((supp) => (
+                <Box key={supp.id} className="nv-card-compact" p="xs">
+                  <Group gap="xs" mb="xs" wrap="nowrap">
+                    <ThemeIcon
+                      color="violet"
+                      radius="md"
+                      size="md"
+                      variant="light"
+                    >
+                      <IconPill size={14} />
+                    </ThemeIcon>
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                        {supp.name}
+                      </Text>
+                      {supp.brand && (
+                        <Text size="xs" c="dimmed">{supp.brand}</Text>
+                      )}
+                    </Box>
+                  </Group>
+
+                  <Group justify="space-between" mb="xs">
+                    <Badge color="violet" variant="light" radius="md" size="xs">
+                      {supp.serving_size}
+                    </Badge>
+                    {supp.calories > 0 && (
+                      <Badge color="blue" variant="light" radius="md" size="xs">
+                        {supp.calories} kcal
+                      </Badge>
+                    )}
+                  </Group>
+
+                  {supp.protein > 0 && (
+                    <Group gap={4} justify="space-between" mb="xs">
+                      <Text size="xs" c="green" fw={600}>P:{supp.protein}g</Text>
+                      <Text size="xs" c="orange" fw={600}>C:{supp.carbs}g</Text>
+                      <Text size="xs" c="grape" fw={600}>G:{supp.fat}g</Text>
+                    </Group>
+                  )}
+
+                  {supp.how_to_take && (
+                    <Text size="xs" c="dimmed" lineClamp={2} mt="xs">
+                      <Text component="span" fw={600}>Cómo tomar:</Text> {supp.how_to_take}
+                    </Text>
+                  )}
+                </Box>
+              ))}
+            </SimpleGrid>
+          ) : (
+            <EmptyState
+              description="Los suplementos se cargan desde la base de datos. Añade suplementos para verlos aquí."
+              icon={<IconPill size={40} />}
+              title="No hay suplementos"
             />
           )}
         </Tabs.Panel>
@@ -875,6 +1001,7 @@ export function NutritionPage() {
 
             <MealPlanBuilder
               availableFoods={foods}
+              availableSupplements={supplements}
               days={mealPlanDays}
               onChange={setMealPlanDays}
               targetCalories={planForm.values.target_calories}

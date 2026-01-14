@@ -7,7 +7,7 @@ from sqlalchemy import select, or_
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models.supplement import Supplement, SupplementRecommendation
+from app.models.supplement import Supplement, SupplementRecommendation, SupplementFavorite
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 
 router = APIRouter()
@@ -90,6 +90,8 @@ class RecommendationCreate(BaseModel):
     dosage: Optional[str] = None
     frequency: Optional[str] = None
     notes: Optional[str] = None
+    how_to_take: Optional[str] = None
+    timing: Optional[str] = None
 
 
 class RecommendationResponse(BaseModel):
@@ -100,6 +102,8 @@ class RecommendationResponse(BaseModel):
     dosage: Optional[str]
     frequency: Optional[str]
     notes: Optional[str]
+    how_to_take: Optional[str]
+    timing: Optional[str]
     is_active: bool
     supplement: Optional[SupplementResponse] = None
     
@@ -303,6 +307,8 @@ async def create_recommendation(
         dosage=data.dosage,
         frequency=data.frequency,
         notes=data.notes,
+        how_to_take=data.how_to_take,
+        timing=data.timing,
         is_active=True
     )
     db.add(recommendation)
@@ -335,4 +341,100 @@ async def delete_recommendation(
         )
     
     await db.delete(recommendation)
+    await db.commit()
+
+
+# ============ SUPPLEMENT FAVORITES ============
+
+@router.get("/favorites", response_model=List[SupplementResponse])
+async def list_favorite_supplements(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Listar suplementos favoritos del usuario.
+    """
+    result = await db.execute(
+        select(Supplement)
+        .join(SupplementFavorite)
+        .where(
+            SupplementFavorite.user_id == current_user.id,
+            SupplementFavorite.workspace_id == current_user.workspace_id
+        )
+        .order_by(Supplement.name)
+    )
+    return result.scalars().all()
+
+
+@router.post("/favorites/{supplement_id}", status_code=status.HTTP_201_CREATED)
+async def add_supplement_to_favorites(
+    supplement_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Añadir un suplemento a favoritos.
+    """
+    # Check if supplement exists
+    result = await db.execute(
+        select(Supplement).where(Supplement.id == supplement_id)
+    )
+    supplement = result.scalar_one_or_none()
+    
+    if not supplement:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Suplemento no encontrado"
+        )
+    
+    # Check if already favorited
+    result = await db.execute(
+        select(SupplementFavorite).where(
+            SupplementFavorite.user_id == current_user.id,
+            SupplementFavorite.supplement_id == supplement_id
+        )
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este suplemento ya está en favoritos"
+        )
+    
+    # Add to favorites
+    favorite = SupplementFavorite(
+        workspace_id=current_user.workspace_id,
+        user_id=current_user.id,
+        supplement_id=supplement_id
+    )
+    db.add(favorite)
+    await db.commit()
+    
+    return {"message": "Suplemento añadido a favoritos"}
+
+
+@router.delete("/favorites/{supplement_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_supplement_from_favorites(
+    supplement_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Eliminar un suplemento de favoritos.
+    """
+    result = await db.execute(
+        select(SupplementFavorite).where(
+            SupplementFavorite.user_id == current_user.id,
+            SupplementFavorite.supplement_id == supplement_id,
+            SupplementFavorite.workspace_id == current_user.workspace_id
+        )
+    )
+    favorite = result.scalar_one_or_none()
+    
+    if not favorite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Este suplemento no está en favoritos"
+        )
+    
+    await db.delete(favorite)
     await db.commit()
