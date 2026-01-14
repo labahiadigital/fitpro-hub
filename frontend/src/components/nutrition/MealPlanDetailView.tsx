@@ -95,10 +95,10 @@ interface MealPlanData {
   id: string;
   name: string;
   description?: string;
-  target_calories: number;
-  target_protein: number;
-  target_carbs: number;
-  target_fat: number;
+  target_calories?: number;
+  target_protein?: number;
+  target_carbs?: number;
+  target_fat?: number;
   plan: { days: DayPlan[] };
   supplements?: SupplementRecommendation[];
   notes?: string;
@@ -194,6 +194,47 @@ export function MealPlanDetailView({
       recommended: goal_type === "fat_loss" ? definition : goal_type === "muscle_gain" ? hypertrophy : maintenance,
     };
   }, [tdee, clientForm.values.goal_type]);
+
+  // Calculate client-based nutritional targets (these should come from client, not plan)
+  const clientTargets = useMemo(() => {
+    // If client exists, calculate targets based on their data
+    if (client) {
+      const { weight_kg, goal_type } = clientForm.values;
+      
+      // Protein: 1.8-2.2g per kg for muscle gain, 2.0-2.4g for fat loss, 1.6-2.0g for maintenance
+      let proteinMultiplier = 2.0;
+      if (goal_type === "muscle_gain") proteinMultiplier = 2.2;
+      if (goal_type === "fat_loss") proteinMultiplier = 2.2;
+      
+      const targetProtein = Math.round(weight_kg * proteinMultiplier);
+      const targetCalories = energyTargets.recommended;
+      
+      // Calculate remaining calories after protein
+      const proteinCalories = targetProtein * 4;
+      const remainingCalories = targetCalories - proteinCalories;
+      
+      // Split remaining between carbs (60%) and fat (40%)
+      const targetFat = Math.round((remainingCalories * 0.35) / 9);
+      const targetCarbs = Math.round((remainingCalories * 0.65) / 4);
+      
+      return {
+        calories: targetCalories,
+        protein: targetProtein,
+        carbs: targetCarbs,
+        fat: targetFat,
+        source: "client" as const,
+      };
+    }
+    
+    // Fallback to plan values if no client
+    return {
+      calories: mealPlan.target_calories || 2000,
+      protein: mealPlan.target_protein || 150,
+      carbs: mealPlan.target_carbs || 200,
+      fat: mealPlan.target_fat || 70,
+      source: "plan" as const,
+    };
+  }, [client, clientForm.values, energyTargets.recommended, mealPlan]);
 
   // Calculate goal timeline
   const goalTimeline = useMemo(() => {
@@ -396,6 +437,62 @@ export function MealPlanDetailView({
         )}
       </Paper>
 
+      {/* Client Info Card - Only show if client is assigned */}
+      {client && (
+        <Paper p="lg" radius="md" withBorder mb="lg" bg="blue.0">
+          <Group justify="space-between" align="flex-start">
+            <Box>
+              <Text size="sm" c="dimmed" tt="uppercase" fw={600}>
+                Datos del Cliente
+              </Text>
+              <Title order={3} mt="xs">
+                {client.first_name} {client.last_name}
+              </Title>
+            </Box>
+            <SimpleGrid cols={{ base: 2, sm: 4, md: 6 }} spacing="md">
+              <Box ta="center">
+                <Text size="xs" c="dimmed">Peso</Text>
+                <Text fw={700}>{clientForm.values.weight_kg} kg</Text>
+              </Box>
+              <Box ta="center">
+                <Text size="xs" c="dimmed">Altura</Text>
+                <Text fw={700}>{clientForm.values.height_cm} cm</Text>
+              </Box>
+              <Box ta="center">
+                <Text size="xs" c="dimmed">Edad</Text>
+                <Text fw={700}>{clientForm.values.age} años</Text>
+              </Box>
+              <Box ta="center">
+                <Text size="xs" c="dimmed">Actividad</Text>
+                <Text fw={700}>{ACTIVITY_LABELS[clientForm.values.activity_level as keyof typeof ACTIVITY_LABELS]}</Text>
+              </Box>
+              <Box ta="center">
+                <Text size="xs" c="dimmed">Objetivo</Text>
+                <Badge color={
+                  clientForm.values.goal_type === "fat_loss" ? "red" : 
+                  clientForm.values.goal_type === "muscle_gain" ? "green" : "blue"
+                }>
+                  {clientForm.values.goal_type === "fat_loss" ? "Pérdida Grasa" : 
+                   clientForm.values.goal_type === "muscle_gain" ? "Ganancia Muscular" : "Mantenimiento"}
+                </Badge>
+              </Box>
+              <Box ta="center">
+                <Text size="xs" c="dimmed">Kcal Objetivo</Text>
+                <Text fw={700} c="blue">{clientTargets.calories} kcal</Text>
+              </Box>
+            </SimpleGrid>
+          </Group>
+          {(client.allergies?.length || client.intolerances?.length) && (
+            <Group mt="md" gap="xs">
+              <Text size="sm" fw={500}>Alergias/Intolerancias:</Text>
+              {[...(client.allergies || []), ...(client.intolerances || [])].map((item, idx) => (
+                <Badge key={idx} color="red" variant="light" size="sm">{item}</Badge>
+              ))}
+            </Group>
+          )}
+        </Paper>
+      )}
+
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List mb="lg">
           <Tabs.Tab value="overview" leftSection={<IconChartPie size={14} />}>
@@ -484,20 +581,27 @@ export function MealPlanDetailView({
 
             {/* Target vs Actual */}
             <Paper p="lg" radius="md" withBorder>
-              <Text fw={600} mb="md">
-                Objetivos vs Actual
-              </Text>
+              <Group justify="space-between" mb="md">
+                <Text fw={600}>
+                  Objetivos vs Actual
+                </Text>
+                {client && (
+                  <Badge color="blue" variant="light" size="sm">
+                    Calculado desde cliente
+                  </Badge>
+                )}
+              </Group>
               <Stack gap="md">
                 <Box>
                   <Group justify="space-between" mb={4}>
                     <Text size="sm">Calorías</Text>
                     <Text size="sm" fw={500}>
-                      {actualMacros.calories} / {mealPlan.target_calories} kcal
+                      {actualMacros.calories} / {clientTargets.calories} kcal
                     </Text>
                   </Group>
                   <Progress
-                    value={(actualMacros.calories / mealPlan.target_calories) * 100}
-                    color={actualMacros.calories > mealPlan.target_calories * 1.1 ? "red" : "blue"}
+                    value={(actualMacros.calories / clientTargets.calories) * 100}
+                    color={actualMacros.calories > clientTargets.calories * 1.1 ? "red" : "blue"}
                     size="lg"
                     radius="xl"
                   />
@@ -506,11 +610,11 @@ export function MealPlanDetailView({
                   <Group justify="space-between" mb={4}>
                     <Text size="sm">Proteína</Text>
                     <Text size="sm" fw={500}>
-                      {actualMacros.protein} / {mealPlan.target_protein}g
+                      {actualMacros.protein} / {clientTargets.protein}g
                     </Text>
                   </Group>
                   <Progress
-                    value={(actualMacros.protein / mealPlan.target_protein) * 100}
+                    value={(actualMacros.protein / clientTargets.protein) * 100}
                     color="green"
                     size="lg"
                     radius="xl"
@@ -520,11 +624,11 @@ export function MealPlanDetailView({
                   <Group justify="space-between" mb={4}>
                     <Text size="sm">Carbohidratos</Text>
                     <Text size="sm" fw={500}>
-                      {actualMacros.carbs} / {mealPlan.target_carbs}g
+                      {actualMacros.carbs} / {clientTargets.carbs}g
                     </Text>
                   </Group>
                   <Progress
-                    value={(actualMacros.carbs / mealPlan.target_carbs) * 100}
+                    value={(actualMacros.carbs / clientTargets.carbs) * 100}
                     color="orange"
                     size="lg"
                     radius="xl"
@@ -534,11 +638,11 @@ export function MealPlanDetailView({
                   <Group justify="space-between" mb={4}>
                     <Text size="sm">Grasas</Text>
                     <Text size="sm" fw={500}>
-                      {actualMacros.fat} / {mealPlan.target_fat}g
+                      {actualMacros.fat} / {clientTargets.fat}g
                     </Text>
                   </Group>
                   <Progress
-                    value={(actualMacros.fat / mealPlan.target_fat) * 100}
+                    value={(actualMacros.fat / clientTargets.fat) * 100}
                     color="grape"
                     size="lg"
                     radius="xl"
@@ -576,11 +680,11 @@ export function MealPlanDetailView({
                     <Table.Td ta="right">{actualMacros.protein}g</Table.Td>
                     <Table.Td ta="right">{macroPercentages.protein}%</Table.Td>
                     <Table.Td ta="right">{Math.round(actualMacros.protein * 4)}</Table.Td>
-                    <Table.Td ta="right">{mealPlan.target_protein}g</Table.Td>
+                    <Table.Td ta="right">{clientTargets.protein}g</Table.Td>
                     <Table.Td ta="right">
-                      <Badge color={actualMacros.protein >= mealPlan.target_protein ? "green" : "red"} variant="light">
-                        {actualMacros.protein - mealPlan.target_protein > 0 ? "+" : ""}
-                        {Math.round(actualMacros.protein - mealPlan.target_protein)}g
+                      <Badge color={actualMacros.protein >= clientTargets.protein ? "green" : "red"} variant="light">
+                        {actualMacros.protein - clientTargets.protein > 0 ? "+" : ""}
+                        {Math.round(actualMacros.protein - clientTargets.protein)}g
                       </Badge>
                     </Table.Td>
                   </Table.Tr>
@@ -596,11 +700,11 @@ export function MealPlanDetailView({
                     <Table.Td ta="right">{actualMacros.carbs}g</Table.Td>
                     <Table.Td ta="right">{macroPercentages.carbs}%</Table.Td>
                     <Table.Td ta="right">{Math.round(actualMacros.carbs * 4)}</Table.Td>
-                    <Table.Td ta="right">{mealPlan.target_carbs}g</Table.Td>
+                    <Table.Td ta="right">{clientTargets.carbs}g</Table.Td>
                     <Table.Td ta="right">
-                      <Badge color={Math.abs(actualMacros.carbs - mealPlan.target_carbs) < 20 ? "green" : "orange"} variant="light">
-                        {actualMacros.carbs - mealPlan.target_carbs > 0 ? "+" : ""}
-                        {Math.round(actualMacros.carbs - mealPlan.target_carbs)}g
+                      <Badge color={Math.abs(actualMacros.carbs - clientTargets.carbs) < 20 ? "green" : "orange"} variant="light">
+                        {actualMacros.carbs - clientTargets.carbs > 0 ? "+" : ""}
+                        {Math.round(actualMacros.carbs - clientTargets.carbs)}g
                       </Badge>
                     </Table.Td>
                   </Table.Tr>
@@ -616,11 +720,11 @@ export function MealPlanDetailView({
                     <Table.Td ta="right">{actualMacros.fat}g</Table.Td>
                     <Table.Td ta="right">{macroPercentages.fat}%</Table.Td>
                     <Table.Td ta="right">{Math.round(actualMacros.fat * 9)}</Table.Td>
-                    <Table.Td ta="right">{mealPlan.target_fat}g</Table.Td>
+                    <Table.Td ta="right">{clientTargets.fat}g</Table.Td>
                     <Table.Td ta="right">
-                      <Badge color={Math.abs(actualMacros.fat - mealPlan.target_fat) < 10 ? "green" : "orange"} variant="light">
-                        {actualMacros.fat - mealPlan.target_fat > 0 ? "+" : ""}
-                        {Math.round(actualMacros.fat - mealPlan.target_fat)}g
+                      <Badge color={Math.abs(actualMacros.fat - clientTargets.fat) < 10 ? "green" : "orange"} variant="light">
+                        {actualMacros.fat - clientTargets.fat > 0 ? "+" : ""}
+                        {Math.round(actualMacros.fat - clientTargets.fat)}g
                       </Badge>
                     </Table.Td>
                   </Table.Tr>
@@ -629,11 +733,11 @@ export function MealPlanDetailView({
                     <Table.Td ta="right">-</Table.Td>
                     <Table.Td ta="right">100%</Table.Td>
                     <Table.Td ta="right">{actualMacros.calories}</Table.Td>
-                    <Table.Td ta="right">{mealPlan.target_calories}</Table.Td>
+                    <Table.Td ta="right">{clientTargets.calories}</Table.Td>
                     <Table.Td ta="right">
-                      <Badge color={Math.abs(actualMacros.calories - mealPlan.target_calories) < 100 ? "green" : "orange"} variant="light">
-                        {actualMacros.calories - mealPlan.target_calories > 0 ? "+" : ""}
-                        {actualMacros.calories - mealPlan.target_calories}
+                      <Badge color={Math.abs(actualMacros.calories - clientTargets.calories) < 100 ? "green" : "orange"} variant="light">
+                        {actualMacros.calories - clientTargets.calories > 0 ? "+" : ""}
+                        {actualMacros.calories - clientTargets.calories}
                       </Badge>
                     </Table.Td>
                   </Table.Tr>
