@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+import traceback
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
 from app.api.v1.router import api_router
@@ -24,6 +27,35 @@ app = FastAPI(
     openapi_url="/openapi.json",
     lifespan=lifespan
 )
+
+
+# Custom exception handler to ensure CORS headers are always present
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handle all unhandled exceptions and ensure CORS headers are present."""
+    # Log the error for debugging
+    print(f"❌ Unhandled exception: {exc}")
+    print(f"   Path: {request.url.path}")
+    print(f"   Method: {request.method}")
+    traceback.print_exc()
+    
+    # Get origin from request
+    origin = request.headers.get("origin", "*")
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "message": str(exc) if settings.DEBUG else "An unexpected error occurred"
+        },
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
 
 # CORS - Allow all origins in development/staging
 # Note: When allow_credentials=True, we cannot use allow_origins=["*"]

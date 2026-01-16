@@ -1,5 +1,5 @@
 # Single stage build for better compatibility with Coolify
-# Build version: 2025-12-16-v2 (force rebuild)
+# Build version: 2026-01-16-v1 (force IPv4 for Supabase connectivity)
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -11,6 +11,10 @@ RUN apt-get update && apt-get install -y \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Force IPv4 DNS resolution (fix for Supabase connectivity issues with IPv6-only resolution)
+# This is needed because some hosting providers don't support IPv6
+RUN echo 'precedence ::ffff:0:0/96 100' >> /etc/gai.conf
 
 # Install Python dependencies
 COPY requirements.txt .
