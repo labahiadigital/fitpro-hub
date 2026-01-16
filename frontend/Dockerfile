@@ -1,5 +1,5 @@
 # Build stage
-# Build version: 2025-12-16-v2 (force rebuild - fix workspace_id undefined)
+# Build version: 2026-01-16-v1 (fix esbuild + memory for vite build)
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -7,11 +7,14 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy package files and npmrc for build script permissions
+COPY package.json pnpm-lock.yaml .npmrc ./
 
-# Install dependencies
+# Install dependencies with script execution enabled for esbuild
 RUN pnpm install --frozen-lockfile
+
+# Approve and run esbuild postinstall if needed
+RUN pnpm approve-builds esbuild core-js || true
 
 # Copy application code
 COPY . .
@@ -27,6 +30,9 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
+
+# Increase Node memory for large builds
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Build the application
 RUN pnpm run build
