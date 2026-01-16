@@ -71,51 +71,11 @@ export function useProducts(params?: {
   product_type?: string;
   is_active?: boolean;
 }) {
-  const { currentWorkspace, isDemoMode } = useAuthStore();
+  const { currentWorkspace } = useAuthStore();
 
   return useQuery({
     queryKey: ["products", currentWorkspace?.id, params],
     queryFn: async () => {
-      if (isDemoMode) {
-        return {
-          items: [
-            {
-              id: "1",
-              workspace_id: currentWorkspace?.id,
-              name: "Plan Premium",
-              description: "Acceso completo a todos los servicios",
-              product_type: "subscription",
-              price: 149,
-              currency: "EUR",
-              interval: "month",
-              interval_count: 1,
-              trial_days: 7,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            {
-              id: "2",
-              workspace_id: currentWorkspace?.id,
-              name: "Plan Básico",
-              description: "Acceso a entrenamientos básicos",
-              product_type: "subscription",
-              price: 79,
-              currency: "EUR",
-              interval: "month",
-              interval_count: 1,
-              trial_days: 0,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ] as Product[],
-          total: 2,
-          page: 1,
-          size: 20,
-        };
-      }
-
       const response = await api.get("/products/", {
         params: { workspace_id: currentWorkspace?.id, ...params },
       });
@@ -165,49 +125,11 @@ export function useUpdateProduct() {
 
 // Session Packages hooks
 export function useSessionPackages(params?: { is_active?: boolean }) {
-  const { currentWorkspace, isDemoMode } = useAuthStore();
+  const { currentWorkspace } = useAuthStore();
 
   return useQuery({
     queryKey: ["session-packages", currentWorkspace?.id, params],
     queryFn: async () => {
-      if (isDemoMode) {
-        return {
-          items: [
-            {
-              id: "1",
-              workspace_id: currentWorkspace?.id,
-              name: "Bono 10 Sesiones",
-              description: "Paquete de 10 sesiones de entrenamiento personal",
-              total_sessions: 10,
-              price: 450,
-              currency: "EUR",
-              validity_days: 90,
-              session_types: ["personal_training"],
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            {
-              id: "2",
-              workspace_id: currentWorkspace?.id,
-              name: "Bono 5 Sesiones",
-              description: "Paquete de 5 sesiones",
-              total_sessions: 5,
-              price: 250,
-              currency: "EUR",
-              validity_days: 60,
-              session_types: ["personal_training", "group_class"],
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ] as SessionPackage[],
-          total: 2,
-          page: 1,
-          size: 20,
-        };
-      }
-
       const response = await api.get("/products/packages/", {
         params: { workspace_id: currentWorkspace?.id, ...params },
       });
@@ -218,37 +140,11 @@ export function useSessionPackages(params?: { is_active?: boolean }) {
 }
 
 export function useClientPackages(clientId?: string) {
-  const { currentWorkspace, isDemoMode } = useAuthStore();
+  const { currentWorkspace } = useAuthStore();
 
   return useQuery({
     queryKey: ["client-packages", currentWorkspace?.id, clientId],
     queryFn: async () => {
-      if (isDemoMode) {
-        return {
-          items: [
-            {
-              id: "1",
-              workspace_id: currentWorkspace?.id,
-              client_id: clientId,
-              package_id: "1",
-              total_sessions: 10,
-              used_sessions: 3,
-              remaining_sessions: 7,
-              status: "active",
-              purchased_at: new Date().toISOString(),
-              expires_at: new Date(
-                Date.now() + 90 * 24 * 60 * 60 * 1000
-              ).toISOString(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ] as ClientPackage[],
-          total: 1,
-          page: 1,
-          size: 20,
-        };
-      }
-
       const response = await api.get("/products/client-packages/", {
         params: { workspace_id: currentWorkspace?.id, client_id: clientId },
       });
@@ -260,34 +156,11 @@ export function useClientPackages(clientId?: string) {
 
 // Coupons hooks
 export function useCoupons(params?: { is_active?: boolean }) {
-  const { currentWorkspace, isDemoMode } = useAuthStore();
+  const { currentWorkspace } = useAuthStore();
 
   return useQuery({
     queryKey: ["coupons", currentWorkspace?.id, params],
     queryFn: async () => {
-      if (isDemoMode) {
-        return {
-          items: [
-            {
-              id: "1",
-              workspace_id: currentWorkspace?.id,
-              code: "WELCOME20",
-              description: "20% de descuento para nuevos clientes",
-              discount_type: "percentage",
-              discount_value: 20,
-              max_uses: 100,
-              current_uses: 15,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ] as Coupon[],
-          total: 1,
-          page: 1,
-          size: 20,
-        };
-      }
-
       const response = await api.get("/products/coupons/", {
         params: { workspace_id: currentWorkspace?.id, ...params },
       });

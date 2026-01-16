@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     FROM_EMAIL: str = "noreply@trackfiz.com"
     FROM_NAME: str = "Trackfiz"
     
+    # Frontend URL (for invitation links)
+    FRONTEND_URL: str = "http://localhost:5173"
+    
     # CORS (comma-separated list of allowed origins)
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.trackfiz.com"
     

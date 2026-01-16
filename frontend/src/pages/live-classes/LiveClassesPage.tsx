@@ -521,80 +521,8 @@ export function LiveClassesPage() {
   const { data: classes, isLoading } = useLiveClasses();
   const { data: stats } = useLiveClassStats();
 
-  // Clases de ejemplo si no hay datos
-  const demoClasses: LiveClass[] = [
-    {
-      id: "1",
-      title: "HIIT Intensivo - Quema Grasa",
-      description: "Entrenamiento de alta intensidad para quemar calorías",
-      class_type: "group",
-      category: "fitness",
-      scheduled_start: dayjs().add(2, "hour").toISOString(),
-      scheduled_end: dayjs().add(3, "hour").toISOString(),
-      duration_minutes: 60,
-      max_participants: 20,
-      current_participants: 15,
-      is_free: false,
-      price: 15,
-      currency: "€",
-      difficulty_level: "intermediate",
-      status: "scheduled",
-    },
-    {
-      id: "2",
-      title: "Yoga Restaurativo",
-      description: "Sesión de yoga para relajación y flexibilidad",
-      class_type: "group",
-      category: "yoga",
-      scheduled_start: dayjs().toISOString(),
-      scheduled_end: dayjs().add(1, "hour").toISOString(),
-      duration_minutes: 60,
-      max_participants: 15,
-      current_participants: 12,
-      is_free: false,
-      price: 12,
-      currency: "€",
-      difficulty_level: "beginner",
-      meeting_url: "https://zoom.us/j/123456789",
-      status: "live",
-    },
-    {
-      id: "3",
-      title: "Masterclass Nutrición Deportiva",
-      description: "Aprende a optimizar tu alimentación para el rendimiento",
-      class_type: "webinar",
-      category: "nutrition",
-      scheduled_start: dayjs().add(1, "day").toISOString(),
-      scheduled_end: dayjs().add(1, "day").add(90, "minute").toISOString(),
-      duration_minutes: 90,
-      max_participants: 100,
-      current_participants: 45,
-      is_free: true,
-      price: 0,
-      currency: "€",
-      difficulty_level: "all",
-      status: "scheduled",
-    },
-    {
-      id: "4",
-      title: "Entrenamiento de Fuerza",
-      description: "Sesión de fuerza con pesas",
-      class_type: "group",
-      category: "strength",
-      scheduled_start: dayjs().subtract(1, "day").toISOString(),
-      scheduled_end: dayjs().subtract(1, "day").add(1, "hour").toISOString(),
-      duration_minutes: 60,
-      max_participants: 10,
-      current_participants: 8,
-      is_free: false,
-      price: 20,
-      currency: "€",
-      difficulty_level: "advanced",
-      status: "completed",
-    },
-  ];
-
-  const displayClasses = classes?.length ? classes : demoClasses;
+  // Usar datos reales de la API
+  const displayClasses = classes || [];
 
   const filteredClasses =
     statusFilter === "all"

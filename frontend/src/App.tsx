@@ -22,6 +22,8 @@ import { FormsPage } from "./pages/forms/FormsPage";
 import { NutritionPage } from "./pages/nutrition/NutritionPage";
 import { MealPlanDetailPage } from "./pages/nutrition/MealPlanDetailPage";
 import { ClientOnboardingPage } from "./pages/onboarding/ClientOnboardingPage";
+import { OnboardingPage } from "./pages/onboarding/OnboardingPage";
+import { InvitationOnboardingPage } from "./pages/onboarding/InvitationOnboardingPage";
 import { PackagesPage } from "./pages/packages/PackagesPage";
 import { PaymentsPage } from "./pages/payments/PaymentsPage";
 // Public Pages
@@ -85,10 +87,26 @@ export default function App() {
               {/* Public Landing Page */}
               <Route element={<LandingPage />} path="/" />
 
-              {/* Client Onboarding (public) */}
+              {/* Client Onboarding via invitation token (primary method) */}
+              <Route
+                element={<InvitationOnboardingPage />}
+                path="/onboarding/invite/:token"
+              />
+
+              {/* Legacy: Client Onboarding via workspace slug */}
               <Route
                 element={<ClientOnboardingPage />}
                 path="/onboarding/:workspaceSlug"
+              />
+
+              {/* User Onboarding (after registration) */}
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <OnboardingPage />
+                  </ProtectedRoute>
+                }
+                path="/complete-profile"
               />
 
               {/* Auth routes */}

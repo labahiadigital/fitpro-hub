@@ -210,68 +210,32 @@ export function ClientDetailPage() {
   const [viewingMealPlanId, setViewingMealPlanId] = useState<string | null>(null);
   const { data: viewingMealPlan } = useSupabaseMealPlan(viewingMealPlanId || "");
 
-  // Mock client data as fallback
-  const mockClient = {
-    id: id || "1",
-    first_name: "María",
-    last_name: "García",
-    email: "maria@email.com",
-    phone: "+34 600 123 456",
-    avatar_url: null,
-    birth_date: "1990-05-15",
-    gender: "female",
-    height_cm: 165,
-    weight_kg: 62,
-    goals: "Tonificación y mejora de resistencia cardiovascular",
-    internal_notes: "Lesión antigua en rodilla derecha, evitar impacto alto",
-    is_active: true,
-    chat_enabled: true,
-    allergies: ["gluten", "lactosa"],
-    intolerances: ["fructosa"],
-    injuries: [
-      { name: "Lesión de rodilla derecha", date: "2020-03-15", notes: "Evitar impacto alto", status: "recovered" }
-    ],
-    tags: [
-      { name: "VIP", color: "#8B5CF6" },
-      { name: "Presencial", color: "#10B981" },
-    ],
-    created_at: "2023-06-15",
-    consents: {
-      data_processing: true,
-      marketing: true,
-      health_data: true,
-      consent_date: "2023-06-15",
-    },
-  };
-
-  // Mock data
-  const documents = [
-    { id: "1", name: "Plan Nutricional Enero.pdf", type: "diet_plan", direction: "outbound", created_at: "2024-01-15", is_read: true },
-    { id: "2", name: "Contrato de Servicios.pdf", type: "contract", direction: "outbound", created_at: "2023-06-15", is_read: true },
-    { id: "3", name: "Análisis de Sangre.pdf", type: "medical", direction: "inbound", created_at: "2024-01-10", is_read: false },
-  ];
-
-  const progressPhotos = [
-    { id: "1", photo_url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=300", photo_type: "front", photo_date: "2024-01-01", weight_kg: "62" },
-    { id: "2", photo_url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300", photo_type: "side", photo_date: "2024-01-01", weight_kg: "62" },
-  ];
-
-  const mealPlans = clientMealPlans?.length ? clientMealPlans.map((plan) => ({
+  // Use real client data from API
+  const client = fetchedClient;
+  
+  // Documents and other data should come from API
+  const documents: { id: string; name: string; type: string; direction: string; created_at: string; is_read: boolean }[] = [];
+  const progressPhotos: { id: string; photo_url: string; photo_type: string; photo_date: string; weight_kg: string }[] = [];
+  
+  // Meal plans from Supabase
+  const mealPlans = (clientMealPlans || []).map((plan: { id: string; name: string; target_calories?: number; is_template?: string; created_at: string }) => ({
     id: plan.id,
     name: plan.name,
     target_calories: plan.target_calories || 2000,
     status: plan.is_template === "N" ? "active" : "inactive",
     created_at: plan.created_at,
-  })) : [
-    { id: "1", name: "Plan Definición Q1", target_calories: 1800, status: "active", created_at: "2024-01-01" },
-  ];
+  }));
 
-  const supplements = [
-    { id: "1", name: "Whey Protein", dosage: "30g post-entreno", frequency: "Días de entrenamiento" },
-    { id: "2", name: "Omega 3", dosage: "2 cápsulas", frequency: "Diario con comida" },
-  ];
-
-  const client = fetchedClient || mockClient;
+  const supplements: { id: string; name: string; dosage: string; frequency: string }[] = [];
+  
+  // If no client found, show loading or redirect
+  if (!client && !isLoading) {
+    return (
+      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
+        <Text c="dimmed" ta="center">Cliente no encontrado</Text>
+      </Container>
+    );
+  }
 
   // ===== CÁLCULOS NUTRICIONALES BASADOS EN EL CLIENTE =====
   const ACTIVITY_MULTIPLIERS: Record<string, number> = {
@@ -648,22 +612,10 @@ export function ClientDetailPage() {
     days_as_client: 214,
   };
 
-  const activities = [
-    { id: "1", type: "session", title: "Sesión completada", description: "Entrenamiento de fuerza", date: "2024-01-15 10:00" },
-    { id: "2", type: "payment", title: "Pago recibido", description: "Plan Premium - Enero", date: "2024-01-01 06:00" },
-    { id: "3", type: "message", title: "Mensaje enviado", description: "Recordatorio de objetivos", date: "2023-12-28 14:30" },
-  ];
-
-  const sessions = [
-    { id: "1", date: "2024-01-15", time: "10:00", type: "Personal Training", status: "completed", notes: "Buen progreso" },
-    { id: "2", date: "2024-01-18", time: "10:00", type: "Personal Training", status: "confirmed", notes: "" },
-  ];
-
-  const measurements = [
-    { date: "2024-01-01", weight: 62, body_fat: 24, muscle_mass: 26 },
-    { date: "2023-12-01", weight: 63, body_fat: 25, muscle_mass: 25.5 },
-    { date: "2023-11-01", weight: 64, body_fat: 26, muscle_mass: 25 },
-  ];
+  // TODO: Conectar a endpoints de actividades, sesiones y mediciones cuando estén disponibles
+  const activities: { id: string; type: string; title: string; description: string; date: string }[] = [];
+  const sessions: { id: string; date: string; time: string; type: string; status: string; notes: string }[] = [];
+  const measurements: { date: string; weight: number; body_fat: number; muscle_mass: number }[] = [];
 
   const getActivityIcon = (type: string) => {
     const icons: Record<string, React.ReactNode> = {

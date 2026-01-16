@@ -41,79 +41,7 @@ import {
   useWorkoutPrograms,
 } from "../../hooks/useWorkouts";
 
-// Mock exercises data
-const mockExercises = [
-  {
-    id: "1",
-    name: "Press de Banca",
-    muscle_groups: ["pecho", "tríceps"],
-    equipment: ["barra", "banco"],
-    image_url: "",
-  },
-  {
-    id: "2",
-    name: "Sentadilla",
-    muscle_groups: ["cuádriceps", "glúteos"],
-    equipment: ["barra"],
-    image_url: "",
-  },
-  {
-    id: "3",
-    name: "Peso Muerto",
-    muscle_groups: ["espalda", "isquiotibiales"],
-    equipment: ["barra"],
-    image_url: "",
-  },
-  {
-    id: "4",
-    name: "Dominadas",
-    muscle_groups: ["espalda", "bíceps"],
-    equipment: ["barra de dominadas"],
-    image_url: "",
-  },
-  {
-    id: "5",
-    name: "Press Militar",
-    muscle_groups: ["hombros", "tríceps"],
-    equipment: ["barra"],
-    image_url: "",
-  },
-  {
-    id: "6",
-    name: "Curl de Bíceps",
-    muscle_groups: ["bíceps"],
-    equipment: ["mancuernas"],
-    image_url: "",
-  },
-  {
-    id: "7",
-    name: "Extensión de Tríceps",
-    muscle_groups: ["tríceps"],
-    equipment: ["mancuernas"],
-    image_url: "",
-  },
-  {
-    id: "8",
-    name: "Zancadas",
-    muscle_groups: ["cuádriceps", "glúteos"],
-    equipment: ["mancuernas"],
-    image_url: "",
-  },
-  {
-    id: "9",
-    name: "Plancha",
-    muscle_groups: ["core"],
-    equipment: ["ninguno"],
-    image_url: "",
-  },
-  {
-    id: "10",
-    name: "Remo con Barra",
-    muscle_groups: ["espalda", "bíceps"],
-    equipment: ["barra"],
-    image_url: "",
-  },
-];
+// Exercises are fetched from the API via useExercises hook
 
 export function WorkoutsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("programs");
@@ -128,7 +56,7 @@ export function WorkoutsPage() {
   const [workoutBlocks, setWorkoutBlocks] = useState<any[]>([]);
   const [editingProgram, setEditingProgram] = useState<any>(null);
 
-  const { data: exercises = mockExercises, isLoading: loadingExercises } =
+  const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
   const { data: programs, isLoading: loadingPrograms } =
     useWorkoutPrograms(true);
@@ -250,7 +178,7 @@ export function WorkoutsPage() {
     { value: "barra de dominadas", label: "Barra de dominadas" },
   ];
 
-  const filteredExercises = (exercises || mockExercises).filter(
+  const filteredExercises = (exercises || []).filter(
     (e: any) =>
       e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
       e.muscle_groups?.some((m: string) =>
@@ -569,7 +497,7 @@ export function WorkoutsPage() {
             />
 
             <WorkoutBuilder
-              availableExercises={mockExercises}
+              availableExercises={exercises || []}
               blocks={workoutBlocks}
               onChange={setWorkoutBlocks}
             />

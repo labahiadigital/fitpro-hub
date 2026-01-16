@@ -43,208 +43,18 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
+import {
+  usePayments,
+  useSubscriptions,
+  useProducts,
+  usePaymentKPIs,
+  useStripeStatus,
+  type Payment,
+  type Subscription,
+} from "../../hooks/usePayments";
+import { useClients } from "../../hooks/useClients";
 
-interface Payment {
-  id: string;
-  client_name: string;
-  description: string;
-  amount: number;
-  currency: string;
-  status: "completed" | "pending" | "failed" | "refunded";
-  payment_type: "subscription" | "one_time" | "package";
-  created_at: string;
-  paid_at?: string;
-}
-
-interface Subscription {
-  id: string;
-  client_name: string;
-  plan_name: string;
-  amount: number;
-  currency: string;
-  status: "active" | "cancelled" | "past_due" | "trialing";
-  current_period_end: string;
-  cancel_at_period_end: boolean;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  currency: string;
-  type: "subscription" | "one_time" | "package";
-  sessions_included?: number;
-  is_active: boolean;
-}
-
-const mockPayments: Payment[] = [
-  {
-    id: "1",
-    client_name: "María García",
-    description: "Plan Premium - Julio",
-    amount: 120,
-    currency: "EUR",
-    status: "completed",
-    payment_type: "subscription",
-    created_at: "2024-07-20",
-    paid_at: "2024-07-20",
-  },
-  {
-    id: "2",
-    client_name: "Carlos López",
-    description: "Bono 10 Sesiones",
-    amount: 450,
-    currency: "EUR",
-    status: "completed",
-    payment_type: "package",
-    created_at: "2024-07-19",
-    paid_at: "2024-07-19",
-  },
-  {
-    id: "3",
-    client_name: "Ana Martínez",
-    description: "Plan Premium - Julio",
-    amount: 120,
-    currency: "EUR",
-    status: "pending",
-    payment_type: "subscription",
-    created_at: "2024-07-18",
-  },
-  {
-    id: "4",
-    client_name: "Pedro Sánchez",
-    description: "Sesión Individual",
-    amount: 50,
-    currency: "EUR",
-    status: "completed",
-    payment_type: "one_time",
-    created_at: "2024-07-17",
-    paid_at: "2024-07-17",
-  },
-  {
-    id: "5",
-    client_name: "Laura Fernández",
-    description: "Plan Básico - Julio",
-    amount: 80,
-    currency: "EUR",
-    status: "failed",
-    payment_type: "subscription",
-    created_at: "2024-07-16",
-  },
-];
-
-const mockSubscriptions: Subscription[] = [
-  {
-    id: "1",
-    client_name: "María García",
-    plan_name: "Plan Premium",
-    amount: 120,
-    currency: "EUR",
-    status: "active",
-    current_period_end: "2024-08-20",
-    cancel_at_period_end: false,
-  },
-  {
-    id: "2",
-    client_name: "Carlos López",
-    plan_name: "Plan Básico",
-    amount: 80,
-    currency: "EUR",
-    status: "active",
-    current_period_end: "2024-08-15",
-    cancel_at_period_end: false,
-  },
-  {
-    id: "3",
-    client_name: "Ana Martínez",
-    plan_name: "Plan Premium",
-    amount: 120,
-    currency: "EUR",
-    status: "past_due",
-    current_period_end: "2024-07-18",
-    cancel_at_period_end: false,
-  },
-  {
-    id: "4",
-    client_name: "Pedro Sánchez",
-    plan_name: "Plan Básico",
-    amount: 80,
-    currency: "EUR",
-    status: "trialing",
-    current_period_end: "2024-07-25",
-    cancel_at_period_end: false,
-  },
-  {
-    id: "5",
-    client_name: "Laura Fernández",
-    plan_name: "Plan Premium",
-    amount: 120,
-    currency: "EUR",
-    status: "cancelled",
-    current_period_end: "2024-07-31",
-    cancel_at_period_end: true,
-  },
-];
-
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "Plan Básico",
-    description: "4 sesiones al mes + seguimiento",
-    price: 80,
-    currency: "EUR",
-    type: "subscription",
-    is_active: true,
-  },
-  {
-    id: "2",
-    name: "Plan Premium",
-    description: "8 sesiones al mes + nutrición + chat",
-    price: 120,
-    currency: "EUR",
-    type: "subscription",
-    is_active: true,
-  },
-  {
-    id: "3",
-    name: "Plan VIP",
-    description: "Sesiones ilimitadas + todo incluido",
-    price: 200,
-    currency: "EUR",
-    type: "subscription",
-    is_active: true,
-  },
-  {
-    id: "4",
-    name: "Bono 5 Sesiones",
-    description: "Válido por 2 meses",
-    price: 225,
-    currency: "EUR",
-    type: "package",
-    sessions_included: 5,
-    is_active: true,
-  },
-  {
-    id: "5",
-    name: "Bono 10 Sesiones",
-    description: "Válido por 4 meses",
-    price: 450,
-    currency: "EUR",
-    type: "package",
-    sessions_included: 10,
-    is_active: true,
-  },
-  {
-    id: "6",
-    name: "Sesión Individual",
-    description: "Sesión suelta de entrenamiento",
-    price: 50,
-    currency: "EUR",
-    type: "one_time",
-    is_active: true,
-  },
-];
+// Types are imported from usePayments hook
 
 export function PaymentsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("overview");
@@ -256,6 +66,14 @@ export function PaymentsPage() {
     chargeModalOpened,
     { open: openChargeModal, close: closeChargeModal },
   ] = useDisclosure(false);
+
+  // Fetch real data
+  const { data: payments = [] } = usePayments();
+  const { data: subscriptions = [] } = useSubscriptions();
+  const { data: products = [] } = useProducts();
+  const { data: kpisData } = usePaymentKPIs();
+  useStripeStatus(); // Check Stripe connection status
+  const { data: clientsData } = useClients({ page: 1 });
 
   const productForm = useForm({
     initialValues: {
@@ -280,15 +98,22 @@ export function PaymentsPage() {
     },
   });
 
+  // Use real KPIs or default values
   const kpis = {
-    mrr: 6800,
-    mrrChange: 9.7,
-    activeSubscriptions: 45,
-    pendingPayments: 3,
-    pendingAmount: 360,
-    thisMonthRevenue: 8500,
-    revenueChange: 12,
+    mrr: kpisData?.mrr || 0,
+    mrrChange: kpisData?.mrr_change || 0,
+    activeSubscriptions: kpisData?.active_subscriptions || 0,
+    pendingPayments: kpisData?.pending_payments || 0,
+    pendingAmount: kpisData?.pending_amount || 0,
+    thisMonthRevenue: kpisData?.this_month_revenue || 0,
+    revenueChange: kpisData?.revenue_change || 0,
   };
+
+  // Client options for select
+  const clientOptions = (clientsData?.items || []).map((c: { id: string; full_name?: string; first_name: string; last_name: string }) => ({
+    value: c.id,
+    label: c.full_name || `${c.first_name} ${c.last_name}`,
+  }));
 
   const getStatusColor = (
     status: Payment["status"] | Subscription["status"]
@@ -518,7 +343,7 @@ export function PaymentsPage() {
                 </Button>
               </Group>
               <Stack gap="sm">
-                {mockPayments.slice(0, 5).map((payment) => {
+                {payments.slice(0, 5).map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
                   return (
                     <Group 
@@ -575,7 +400,7 @@ export function PaymentsPage() {
                 Próximas Renovaciones
               </Text>
               <Stack gap="sm">
-                {mockSubscriptions
+                {subscriptions
                   .filter((s) => s.status === "active")
                   .slice(0, 4)
                   .map((sub) => (
@@ -662,7 +487,7 @@ export function PaymentsPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {mockPayments.map((payment) => {
+                {payments.map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
                   return (
                     <Table.Tr key={payment.id} style={{ transition: "background 0.2s" }}>
@@ -738,7 +563,7 @@ export function PaymentsPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {mockSubscriptions.map((sub) => (
+                {subscriptions.map((sub) => (
                   <Table.Tr key={sub.id} style={{ transition: "background 0.2s" }}>
                     <Table.Td>
                       <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
@@ -785,7 +610,7 @@ export function PaymentsPage() {
 
         <Tabs.Panel value="products">
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
-            {mockProducts.map((product) => (
+            {products.map((product) => (
               <Box key={product.id} className="nv-card" p="lg">
                 <Group justify="space-between" mb="sm">
                   <Badge
@@ -922,11 +747,7 @@ export function PaymentsPage() {
         <form onSubmit={chargeForm.onSubmit((values) => console.log(values))}>
           <Stack>
             <Select
-              data={[
-                { value: "1", label: "María García" },
-                { value: "2", label: "Carlos López" },
-                { value: "3", label: "Ana Martínez" },
-              ]}
+              data={clientOptions}
               label="Cliente"
               placeholder="Selecciona un cliente"
               searchable
@@ -934,7 +755,7 @@ export function PaymentsPage() {
             />
 
             <Select
-              data={mockProducts.map((p) => ({
+              data={products.map((p) => ({
                 value: p.id,
                 label: `${p.name} - €${p.price}`,
               }))}

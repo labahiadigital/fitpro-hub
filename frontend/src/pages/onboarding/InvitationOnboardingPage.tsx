@@ -39,7 +39,18 @@ import {
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+
+interface InvitationData {
+  valid: boolean;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  workspace_name?: string;
+  workspace_slug?: string;
+  message?: string;
+}
 
 interface OnboardingFormData {
   // Personal Info
@@ -111,55 +122,46 @@ const INTOLERANCES = [
   { value: "cafeina", label: "Cafeína" },
 ];
 
-export function ClientOnboardingPage() {
-  const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+export function InvitationOnboardingPage() {
+  const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { setUser, setTokens } = useAuthStore();
   const [active, setActive] = useState(0);
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [workspaceInfo, setWorkspaceInfo] = useState<{ name: string; id: string } | null>(null);
-  const [loadingWorkspace, setLoadingWorkspace] = useState(true);
+  const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
+  const [loadingInvitation, setLoadingInvitation] = useState(true);
 
-  // Verificar que el workspace existe
+  // Verificar invitación
   useEffect(() => {
-    const checkWorkspace = async () => {
-      if (!workspaceSlug) {
-        setLoadingWorkspace(false);
+    const validateInvitation = async () => {
+      if (!token) {
+        setLoadingInvitation(false);
         return;
       }
       
       try {
-        const { data, error } = await supabase
-          .from("workspaces")
-          .select("id, name")
-          .eq("slug", workspaceSlug)
-          .single();
+        const response = await api.get(`/invitations/validate/${token}`);
+        setInvitationData(response.data);
         
-        if (error || !data) {
-          notifications.show({
-            title: "Error",
-            message: "El enlace de registro no es válido",
-            color: "red",
+        if (response.data.valid) {
+          // Pre-fill form with invitation data
+          form.setValues({
+            ...form.values,
+            email: response.data.email || "",
+            firstName: response.data.first_name || "",
+            lastName: response.data.last_name || "",
           });
-          navigate("/");
-          return;
         }
-        
-        setWorkspaceInfo({ name: data.name, id: data.id });
       } catch {
-        notifications.show({
-          title: "Error",
-          message: "Error al verificar el enlace",
-          color: "red",
-        });
+        setInvitationData({ valid: false });
       } finally {
-        setLoadingWorkspace(false);
+        setLoadingInvitation(false);
       }
     };
     
-    checkWorkspace();
-  }, [workspaceSlug, navigate]);
+    validateInvitation();
+  }, [token]);
 
   const form = useForm<OnboardingFormData>({
     initialValues: {
@@ -209,17 +211,13 @@ export function ClientOnboardingPage() {
       if (active === 1) {
         return {
           primaryGoal: values.primaryGoal ? null : "Selecciona un objetivo",
-          activityLevel: values.activityLevel
-            ? null
-            : "Selecciona tu nivel de actividad",
+          activityLevel: values.activityLevel ? null : "Selecciona tu nivel de actividad",
         };
       }
       if (active === 4) {
         return {
           acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
-          acceptPrivacy: values.acceptPrivacy
-            ? null
-            : "Debes aceptar la política de privacidad",
+          acceptPrivacy: values.acceptPrivacy ? null : "Debes aceptar la política de privacidad",
         };
       }
       return {};
@@ -240,7 +238,7 @@ export function ClientOnboardingPage() {
   const hasParqRisk = Object.values(form.values.parqResponses).some((v) => v);
 
   const handleSubmit = async () => {
-    if (!workspaceInfo) return;
+    if (!invitationData || !token) return;
     
     setLoading(true);
     try {
@@ -275,11 +273,22 @@ export function ClientOnboardingPage() {
       if (userError && !userError.message.includes("duplicate")) {
         console.error("Error creating user:", userError);
       }
+
+      // 3. Get workspace ID from slug
+      const { data: workspaceData } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("slug", invitationData.workspace_slug)
+        .single();
+
+      if (!workspaceData) {
+        throw new Error("Workspace no encontrado");
+      }
       
-      // 3. Crear el rol del usuario en el workspace
+      // 4. Crear el rol del usuario en el workspace
       const { error: roleError } = await supabase.from("user_roles").insert({
         user_id: authData.user.id,
-        workspace_id: workspaceInfo.id,
+        workspace_id: workspaceData.id,
         role: "client",
       });
       
@@ -287,9 +296,9 @@ export function ClientOnboardingPage() {
         console.error("Error creating role:", roleError);
       }
       
-      // 4. Crear el perfil de cliente
+      // 5. Crear el perfil de cliente
       const { error: clientError } = await supabase.from("clients").insert({
-        workspace_id: workspaceInfo.id,
+        workspace_id: workspaceData.id,
         user_id: authData.user.id,
         first_name: values.firstName,
         last_name: values.lastName,
@@ -328,7 +337,14 @@ export function ClientOnboardingPage() {
         throw clientError;
       }
       
-      // 5. Si hay sesión, guardar tokens
+      // 6. Marcar invitación como aceptada
+      try {
+        await api.post(`/invitations/accept/${token}`);
+      } catch (e) {
+        console.error("Error accepting invitation:", e);
+      }
+      
+      // 7. Si hay sesión, guardar tokens
       if (authData.session) {
         setUser({
           id: authData.user.id,
@@ -359,18 +375,18 @@ export function ClientOnboardingPage() {
     }
   };
 
-  if (loadingWorkspace) {
+  if (loadingInvitation) {
     return (
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
           <Loader size="lg" />
-          <Text c="dimmed" mt="md">Verificando enlace de registro...</Text>
+          <Text c="dimmed" mt="md">Verificando invitación...</Text>
         </Paper>
       </Container>
     );
   }
 
-  if (!workspaceInfo) {
+  if (!invitationData || !invitationData.valid) {
     return (
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
@@ -385,11 +401,11 @@ export function ClientOnboardingPage() {
             <IconAlertCircle size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            Enlace no válido
+            Invitación no válida
           </Title>
           <Text c="dimmed" mb="xl">
-            El enlace de registro no es válido o ha expirado.
-            Contacta con tu entrenador para obtener un nuevo enlace.
+            Esta invitación no es válida o ha expirado.
+            Contacta con tu entrenador para obtener una nueva invitación.
           </Text>
           <Button size="lg" onClick={() => navigate("/")}>Ir al inicio</Button>
         </Paper>
@@ -415,8 +431,8 @@ export function ClientOnboardingPage() {
             ¡Registro Completado!
           </Title>
           <Text c="dimmed" mb="xl">
-            Gracias por completar tu registro en {workspaceInfo.name}. Tu entrenador revisará tu
-            información y se pondrá en contacto contigo pronto.
+            Gracias por completar tu registro en {invitationData.workspace_name}. 
+            Tu entrenador revisará tu información y se pondrá en contacto contigo pronto.
           </Text>
           <Button size="lg" onClick={() => navigate("/dashboard")}>Ir al Dashboard</Button>
         </Paper>
@@ -428,11 +444,18 @@ export function ClientOnboardingPage() {
     <Container py="xl" size="md">
       <Box mb="xl" ta="center">
         <Title mb="xs" order={2}>
-          Bienvenido a {workspaceInfo.name}
+          Bienvenido a {invitationData.workspace_name}
         </Title>
         <Text c="dimmed">
           Completa tu perfil para empezar tu transformación
         </Text>
+        {invitationData.message && (
+          <Paper p="md" mt="md" radius="md" withBorder style={{ background: "rgba(45, 106, 79, 0.05)" }}>
+            <Text size="sm" c="dimmed" fs="italic">
+              "{invitationData.message}"
+            </Text>
+          </Paper>
+        )}
       </Box>
 
       <Progress mb="xl" radius="xl" size="sm" value={(active / 4) * 100} />
@@ -471,6 +494,7 @@ export function ClientOnboardingPage() {
                 label="Email"
                 placeholder="tu@email.com"
                 required
+                disabled={!!invitationData.email}
                 leftSection={<IconMail size={16} />}
                 {...form.getInputProps("email")}
               />
@@ -540,16 +564,10 @@ export function ClientOnboardingPage() {
                 data={[
                   { value: "lose_weight", label: "Perder peso" },
                   { value: "gain_muscle", label: "Ganar masa muscular" },
-                  {
-                    value: "improve_fitness",
-                    label: "Mejorar condición física",
-                  },
+                  { value: "improve_fitness", label: "Mejorar condición física" },
                   { value: "maintain", label: "Mantener peso actual" },
                   { value: "improve_health", label: "Mejorar salud general" },
-                  {
-                    value: "sports_performance",
-                    label: "Rendimiento deportivo",
-                  },
+                  { value: "sports_performance", label: "Rendimiento deportivo" },
                   { value: "rehabilitation", label: "Rehabilitación" },
                 ]}
                 label="Objetivo Principal"
@@ -581,17 +599,11 @@ export function ClientOnboardingPage() {
               )}
               <Select
                 data={[
-                  {
-                    value: "sedentary",
-                    label: "Sedentario (poco o nada de ejercicio)",
-                  },
+                  { value: "sedentary", label: "Sedentario (poco o nada de ejercicio)" },
                   { value: "light", label: "Ligero (1-2 días/semana)" },
                   { value: "moderate", label: "Moderado (3-4 días/semana)" },
                   { value: "active", label: "Activo (5-6 días/semana)" },
-                  {
-                    value: "very_active",
-                    label: "Muy activo (ejercicio intenso diario)",
-                  },
+                  { value: "very_active", label: "Muy activo (ejercicio intenso diario)" },
                 ]}
                 label="Nivel de Actividad Actual"
                 placeholder="Selecciona"
@@ -656,9 +668,7 @@ export function ClientOnboardingPage() {
               )}
               <Checkbox
                 label="¿Tienes alguna condición médica?"
-                {...form.getInputProps("hasMedicalConditions", {
-                  type: "checkbox",
-                })}
+                {...form.getInputProps("hasMedicalConditions", { type: "checkbox" })}
               />
               {form.values.hasMedicalConditions && (
                 <Textarea
@@ -693,7 +703,7 @@ export function ClientOnboardingPage() {
             </Text>
             <Stack gap="md">
               <Radio.Group
-                label="1. ¿Alguna vez un médico te ha dicho que tienes una condición cardíaca y que solo debes hacer actividad física recomendada por un médico?"
+                label="1. ¿Alguna vez un médico te ha dicho que tienes una condición cardíaca?"
                 {...form.getInputProps("parqResponses.heartCondition")}
               >
                 <Group mt="xs">
@@ -713,7 +723,7 @@ export function ClientOnboardingPage() {
               </Radio.Group>
 
               <Radio.Group
-                label="3. ¿Has experimentado mareos o pérdida de conocimiento en el último mes?"
+                label="3. ¿Has experimentado mareos o pérdida de conocimiento?"
                 {...form.getInputProps("parqResponses.dizziness")}
               >
                 <Group mt="xs">
@@ -723,7 +733,7 @@ export function ClientOnboardingPage() {
               </Radio.Group>
 
               <Radio.Group
-                label="4. ¿Tienes algún problema óseo o articular que pueda empeorar con el ejercicio?"
+                label="4. ¿Tienes algún problema óseo o articular?"
                 {...form.getInputProps("parqResponses.boneJoint")}
               >
                 <Group mt="xs">
@@ -733,7 +743,7 @@ export function ClientOnboardingPage() {
               </Radio.Group>
 
               <Radio.Group
-                label="5. ¿Tomas actualmente medicamentos para la presión arterial o el corazón?"
+                label="5. ¿Tomas medicamentos para la presión arterial o el corazón?"
                 {...form.getInputProps("parqResponses.bloodPressure")}
               >
                 <Group mt="xs">
@@ -743,7 +753,7 @@ export function ClientOnboardingPage() {
               </Radio.Group>
 
               <Radio.Group
-                label="6. ¿Conoces alguna otra razón por la que no deberías hacer ejercicio?"
+                label="6. ¿Conoces otra razón por la que no deberías hacer ejercicio?"
                 {...form.getInputProps("parqResponses.otherReason")}
               >
                 <Group mt="xs">
@@ -794,7 +804,7 @@ export function ClientOnboardingPage() {
                     <Text c="blue" component="a" href="#" inherit>
                       Política de Privacidad
                     </Text>{" "}
-                    y el tratamiento de mis datos *
+                    y el tratamiento de mis datos de salud *
                   </Text>
                 }
                 {...form.getInputProps("acceptPrivacy", { type: "checkbox" })}

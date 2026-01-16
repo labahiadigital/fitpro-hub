@@ -2,16 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../services/supabase";
 import { useAuthStore } from "../stores/auth";
 
-// Demo workspace ID para pruebas - usado como fallback cuando no hay workspace
-const DEMO_WORKSPACE_ID = "11111111-1111-1111-1111-111111111111";
-
-// Helper para obtener el workspace ID, siempre fallback a demo
+// Helper para obtener el workspace ID
 function useWorkspaceId() {
-  const { isDemoMode, currentWorkspace } = useAuthStore();
-  // Siempre usar demo workspace si no hay workspace definido
-  return isDemoMode || !currentWorkspace?.id
-    ? DEMO_WORKSPACE_ID
-    : currentWorkspace.id;
+  const { currentWorkspace } = useAuthStore();
+  return currentWorkspace?.id;
 }
 
 // Hook para obtener clientes desde Supabase

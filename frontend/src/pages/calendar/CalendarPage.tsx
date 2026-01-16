@@ -6,6 +6,7 @@ import {
   Container,
   Divider,
   Group,
+  Loader,
   Modal,
   NumberInput,
   Paper,
@@ -39,7 +40,8 @@ import {
 import dayjs from "dayjs";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useCreateBooking } from "../../hooks/useBookings";
+import { useBookings, useCreateBooking } from "../../hooks/useBookings";
+import { useClients } from "../../hooks/useClients";
 import "dayjs/locale/es";
 
 dayjs.locale("es");
@@ -47,71 +49,17 @@ dayjs.locale("es");
 interface Booking {
   id: string;
   title: string;
-  client_name: string;
+  client_name?: string;
+  client_id?: string;
   start_time: string;
   end_time: string;
-  status: "confirmed" | "pending" | "cancelled" | "completed";
+  status: "confirmed" | "pending" | "cancelled" | "completed" | "no_show";
   session_type: "individual" | "group";
   modality: "in_person" | "online";
-  location?: string;
+  location?: { type: string; address?: string; online_link?: string };
   notes?: string;
   color?: string;
 }
-
-const mockBookings: Booking[] = [
-  {
-    id: "1",
-    title: "Entrenamiento Personal",
-    client_name: "María García",
-    start_time: "2024-07-22T09:00:00",
-    end_time: "2024-07-22T10:00:00",
-    status: "confirmed",
-    session_type: "individual",
-    modality: "in_person",
-    location: "Gimnasio Centro",
-  },
-  {
-    id: "2",
-    title: "Clase Grupal HIIT",
-    client_name: "Grupo A",
-    start_time: "2024-07-22T11:00:00",
-    end_time: "2024-07-22T12:00:00",
-    status: "confirmed",
-    session_type: "group",
-    modality: "in_person",
-    location: "Sala 2",
-  },
-  {
-    id: "3",
-    title: "Consulta Nutricional",
-    client_name: "Carlos López",
-    start_time: "2024-07-22T16:00:00",
-    end_time: "2024-07-22T16:30:00",
-    status: "pending",
-    session_type: "individual",
-    modality: "online",
-  },
-  {
-    id: "4",
-    title: "Entrenamiento Personal",
-    client_name: "Ana Martínez",
-    start_time: "2024-07-23T10:00:00",
-    end_time: "2024-07-23T11:00:00",
-    status: "confirmed",
-    session_type: "individual",
-    modality: "in_person",
-  },
-  {
-    id: "5",
-    title: "Yoga",
-    client_name: "Grupo B",
-    start_time: "2024-07-24T08:00:00",
-    end_time: "2024-07-24T09:00:00",
-    status: "confirmed",
-    session_type: "group",
-    modality: "in_person",
-  },
-];
 
 export function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -119,12 +67,34 @@ export function CalendarPage() {
   const [modalOpened, { open: openModal, close: closeModal }] =
     useDisclosure(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [bookings] = useState<Booking[]>(mockBookings);
 
   const startOfWeek = dayjs(currentDate).startOf("week");
   const endOfWeek = dayjs(currentDate).endOf("week");
   const startOfMonth = dayjs(currentDate).startOf("month");
   const endOfMonth = dayjs(currentDate).endOf("month");
+
+  // Fetch real data
+  const { data: bookingsData, isLoading: bookingsLoading } = useBookings({
+    start_date:
+      view === "month"
+        ? startOfMonth.toISOString()
+        : view === "week"
+          ? startOfWeek.toISOString()
+          : dayjs(currentDate).startOf("day").toISOString(),
+    end_date:
+      view === "month"
+        ? endOfMonth.toISOString()
+        : view === "week"
+          ? endOfWeek.toISOString()
+          : dayjs(currentDate).endOf("day").toISOString(),
+  });
+
+  const { data: clientsData } = useClients({ page: 1 });
+
+  const bookings: Booking[] = (bookingsData || []).map((b: Booking) => ({
+    ...b,
+    client_name: b.client_name || "Cliente",
+  }));
 
   const createBooking = useCreateBooking();
 
@@ -211,6 +181,8 @@ export function CalendarPage() {
         return "red";
       case "completed":
         return "blue";
+      case "no_show":
+        return "gray";
       default:
         return "gray";
     }
@@ -241,6 +213,14 @@ export function CalendarPage() {
         dayjs(b.start_time).isSame(dayjs(), "day") && b.status === "pending"
     ).length,
   };
+
+  // Get clients for select dropdown
+  const clientOptions = (clientsData?.items || []).map(
+    (c: { id: string; full_name?: string; first_name: string; last_name: string }) => ({
+      value: c.id,
+      label: c.full_name || `${c.first_name} ${c.last_name}`,
+    })
+  );
 
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
@@ -300,20 +280,33 @@ export function CalendarPage() {
       </PageHeader>
 
       {/* Today's Summary */}
-      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl" spacing="md" className="stagger">
+      <SimpleGrid
+        cols={{ base: 1, sm: 3 }}
+        mb="xl"
+        spacing="md"
+        className="stagger"
+      >
         <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Sesiones Hoy</Text>
-              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-primary)" }}>
-                {todayStats.total}
+              <Text className="text-label" mb="xs">
+                Sesiones Hoy
+              </Text>
+              <Text
+                className="text-display"
+                style={{ fontSize: "2rem", color: "var(--nv-primary)" }}
+              >
+                {bookingsLoading ? <Loader size="sm" /> : todayStats.total}
               </Text>
             </Box>
-            <ThemeIcon 
-              size={48} 
-              radius="xl" 
+            <ThemeIcon
+              size={48}
+              radius="xl"
               variant="light"
-              style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}
+              style={{
+                backgroundColor: "var(--nv-primary-glow)",
+                color: "var(--nv-primary)",
+              }}
             >
               <IconCalendarEvent size={24} />
             </ThemeIcon>
@@ -322,16 +315,24 @@ export function CalendarPage() {
         <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Confirmadas</Text>
-              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
-                {todayStats.confirmed}
+              <Text className="text-label" mb="xs">
+                Confirmadas
+              </Text>
+              <Text
+                className="text-display"
+                style={{ fontSize: "2rem", color: "var(--nv-success)" }}
+              >
+                {bookingsLoading ? <Loader size="sm" /> : todayStats.confirmed}
               </Text>
             </Box>
-            <ThemeIcon 
-              size={48} 
-              radius="xl" 
+            <ThemeIcon
+              size={48}
+              radius="xl"
               variant="light"
-              style={{ backgroundColor: "var(--nv-success-bg)", color: "var(--nv-success)" }}
+              style={{
+                backgroundColor: "var(--nv-success-bg)",
+                color: "var(--nv-success)",
+              }}
             >
               <IconCheck size={24} />
             </ThemeIcon>
@@ -340,16 +341,24 @@ export function CalendarPage() {
         <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Pendientes</Text>
-              <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-warning)" }}>
-                {todayStats.pending}
+              <Text className="text-label" mb="xs">
+                Pendientes
+              </Text>
+              <Text
+                className="text-display"
+                style={{ fontSize: "2rem", color: "var(--nv-warning)" }}
+              >
+                {bookingsLoading ? <Loader size="sm" /> : todayStats.pending}
               </Text>
             </Box>
-            <ThemeIcon 
-              size={48} 
-              radius="xl" 
+            <ThemeIcon
+              size={48}
+              radius="xl"
               variant="light"
-              style={{ backgroundColor: "var(--nv-warning-bg)", color: "var(--nv-warning)" }}
+              style={{
+                backgroundColor: "var(--nv-warning-bg)",
+                color: "var(--nv-warning)",
+              }}
             >
               <IconAlertCircle size={24} />
             </ThemeIcon>
@@ -358,7 +367,14 @@ export function CalendarPage() {
       </SimpleGrid>
 
       {/* Calendar Views */}
-      {view === "month" ? (
+      {bookingsLoading ? (
+        <Paper radius="lg" p="xl" ta="center" withBorder>
+          <Loader size="lg" />
+          <Text c="dimmed" mt="md">
+            Cargando calendario...
+          </Text>
+        </Paper>
+      ) : view === "month" ? (
         <Paper radius="lg" style={{ overflow: "hidden" }} withBorder>
           {/* Month Header */}
           <Box
@@ -606,11 +622,7 @@ export function CalendarPage() {
             />
 
             <Select
-              data={[
-                { value: "1", label: "María García" },
-                { value: "2", label: "Carlos López" },
-                { value: "3", label: "Ana Martínez" },
-              ]}
+              data={clientOptions}
               label="Cliente"
               leftSection={<IconUser size={16} />}
               placeholder="Selecciona un cliente"
@@ -744,7 +756,9 @@ export function CalendarPage() {
                       ? "Pendiente"
                       : selectedBooking.status === "cancelled"
                         ? "Cancelada"
-                        : "Completada"}
+                        : selectedBooking.status === "completed"
+                          ? "Completada"
+                          : "No asistió"}
                 </Badge>
               </Box>
             </Group>
@@ -760,7 +774,7 @@ export function CalendarPage() {
                   Cliente
                 </Text>
                 <Text fw={500} size="sm">
-                  {selectedBooking.client_name}
+                  {selectedBooking.client_name || "No especificado"}
                 </Text>
               </Box>
             </Group>
@@ -800,7 +814,9 @@ export function CalendarPage() {
                     : "Online"}
                 </Text>
                 <Text fw={500} size="sm">
-                  {selectedBooking.location || "No especificada"}
+                  {selectedBooking.location?.address ||
+                    selectedBooking.location?.online_link ||
+                    "No especificada"}
                 </Text>
               </Box>
             </Group>

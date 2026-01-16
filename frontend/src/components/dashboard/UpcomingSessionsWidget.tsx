@@ -30,12 +30,27 @@ interface UpcomingSessionsWidgetProps {
   sessions: Session[];
   onSessionClick?: (session: Session) => void;
   onViewAll?: () => void;
+  loading?: boolean;
 }
 
 export function UpcomingSessionsWidget({
   sessions,
   onViewAll,
+  loading,
 }: UpcomingSessionsWidgetProps) {
+  if (loading) {
+    return (
+      <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <Group justify="space-between" mb="sm">
+          <Text className="stat-label">Agenda de Hoy</Text>
+        </Group>
+        <Stack gap="xs" style={{ flex: 1 }}>
+          <Text c="dimmed" ta="center" py="md">Cargando sesiones...</Text>
+        </Stack>
+      </Box>
+    );
+  }
+
   return (
     <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Group justify="space-between" mb="sm">
@@ -46,7 +61,9 @@ export function UpcomingSessionsWidget({
       </Group>
 
       <Stack gap="xs" style={{ flex: 1 }}>
-        {sessions.map((session) => (
+        {sessions.length === 0 ? (
+          <Text c="dimmed" ta="center" py="xl" size="sm">No hay sesiones programadas para hoy</Text>
+        ) : sessions.map((session) => (
           <Box 
             key={session.id}
             p="sm"

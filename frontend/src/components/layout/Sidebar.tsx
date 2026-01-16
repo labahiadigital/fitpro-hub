@@ -139,8 +139,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
-  const { user, currentWorkspace, logout, isDemoMode, demoRole } = useAuthStore();
-  const isClientView = isDemoMode && demoRole === "client";
+  const { user, currentWorkspace, logout } = useAuthStore();
 
   return (
     <Box
@@ -199,47 +198,6 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
           )}
         </Group>
 
-        {/* Demo Badge */}
-        {isDemoMode && !collapsed && (
-          <Box
-            mt="md"
-            px="sm"
-            py={6}
-            style={{
-              borderRadius: "8px",
-              background: isClientView
-                ? "rgba(139, 92, 246, 0.1)"
-                : "rgba(231, 226, 71, 0.08)",
-              border: isClientView
-                ? "1px solid rgba(139, 92, 246, 0.2)"
-                : "1px solid rgba(231, 226, 71, 0.15)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <Box
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                backgroundColor: isClientView ? "#A78BFA" : "#E7E247",
-                boxShadow: isClientView ? "0 0 8px #A78BFA" : "0 0 8px #E7E247",
-              }}
-            />
-            <Text
-              size="xs"
-              fw={600}
-              style={{
-                color: isClientView ? "#D8B4FE" : "#E7E247",
-                letterSpacing: "0.02em",
-              }}
-            >
-              {isClientView ? "VISTA CLIENTE" : "VISTA ENTRENADOR"}
-            </Text>
-          </Box>
-        )}
       </Box>
 
       {/* Navigation */}

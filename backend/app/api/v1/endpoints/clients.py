@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,12 +7,13 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.models.client import Client, ClientTag
+from app.models.user import UserRole
 from app.schemas.client import (
     ClientCreate, ClientUpdate, ClientResponse, ClientListResponse,
     ClientTagCreate, ClientTagUpdate, ClientTagResponse
 )
-from app.schemas.base import PaginatedResponse
-from app.middleware.auth import require_workspace, require_staff, CurrentUser
+from app.schemas.base import PaginatedResponse, BaseSchema
+from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
 
 router = APIRouter()
 
@@ -409,4 +410,112 @@ async def delete_client_permanent(
     # Hard delete
     await db.delete(client)
     await db.commit()
+
+
+# ============ ONBOARDING ============
+
+class OnboardingRequest(BaseSchema):
+    """Schema for client onboarding data."""
+    first_name: str
+    last_name: str
+    phone: Optional[str] = None
+    birth_date: Optional[str] = None
+    gender: Optional[str] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    goals: Optional[str] = None
+    health_data: Optional[Dict] = None
+    consents: Optional[Dict] = None
+
+
+@router.post("/onboarding", response_model=ClientResponse)
+async def complete_onboarding(
+    data: OnboardingRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Complete client onboarding. Creates or updates client profile for the authenticated user.
+    This endpoint is for users (clients) to complete their profile after registration.
+    """
+    # Check if user already has a client profile in any workspace
+    result = await db.execute(
+        select(Client).where(Client.user_id == current_user.id)
+    )
+    existing_client = result.scalar_one_or_none()
+    
+    if existing_client:
+        # Update existing client profile
+        existing_client.first_name = data.first_name
+        existing_client.last_name = data.last_name
+        existing_client.phone = data.phone
+        existing_client.birth_date = data.birth_date
+        existing_client.gender = data.gender
+        existing_client.height_cm = str(data.height_cm) if data.height_cm else None
+        existing_client.weight_kg = str(data.weight_kg) if data.weight_kg else None
+        existing_client.goals = data.goals
+        existing_client.health_data = data.health_data or {}
+        existing_client.consents = data.consents or {}
+        
+        await db.commit()
+        await db.refresh(existing_client)
+        client = existing_client
+    else:
+        # Find the workspace the user belongs to (if any)
+        result = await db.execute(
+            select(UserRole).where(UserRole.user_id == current_user.id)
+        )
+        user_role = result.scalar_one_or_none()
+        
+        if not user_role:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No tienes un workspace asignado. Contacta con tu entrenador."
+            )
+        
+        workspace_id = user_role.workspace_id
+        
+        # Create new client profile
+        client = Client(
+            workspace_id=workspace_id,
+            user_id=current_user.id,
+            first_name=data.first_name,
+            last_name=data.last_name,
+            email=current_user.email,
+            phone=data.phone,
+            birth_date=data.birth_date,
+            gender=data.gender,
+            height_cm=str(data.height_cm) if data.height_cm else None,
+            weight_kg=str(data.weight_kg) if data.weight_kg else None,
+            goals=data.goals,
+            health_data=data.health_data or {},
+            consents=data.consents or {},
+            is_active=True
+        )
+        db.add(client)
+        await db.commit()
+        await db.refresh(client)
+    
+    # Return response
+    return ClientResponse(
+        id=client.id,
+        workspace_id=client.workspace_id,
+        first_name=client.first_name,
+        last_name=client.last_name,
+        full_name=client.full_name,
+        email=client.email,
+        phone=client.phone,
+        avatar_url=client.avatar_url,
+        birth_date=client.birth_date,
+        gender=client.gender,
+        height_cm=client.height_cm,
+        weight_kg=client.weight_kg,
+        health_data=client.health_data or {},
+        goals=client.goals,
+        consents=client.consents or {},
+        is_active=client.is_active,
+        tags=[],
+        created_at=client.created_at,
+        updated_at=client.updated_at
+    )
 

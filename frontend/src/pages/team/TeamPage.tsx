@@ -34,6 +34,8 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
+import { useTeamMembers } from "../../hooks/useTeam";
+import { useAuthStore } from "../../stores/auth";
 
 interface TeamMember {
   id: string;
@@ -79,69 +81,42 @@ export function TeamPage() {
     useDisclosure(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
-  // Mock data
-  const [teamMembers] = useState<TeamMember[]>([
-    {
-      id: "1",
-      name: "Juan García",
-      email: "juan@fitprohub.com",
-      role: "owner",
-      status: "active",
-      permissions: {
-        clients: true,
-        calendar: true,
-        payments: true,
-        reports: true,
-        settings: true,
-      },
-      stats: { clients: 45, sessionsThisMonth: 120, revenue: 8500 },
-    },
-    {
-      id: "2",
-      name: "María López",
-      email: "maria@fitprohub.com",
-      role: "trainer",
-      status: "active",
-      permissions: {
-        clients: true,
-        calendar: true,
-        payments: false,
-        reports: false,
-        settings: false,
-      },
-      stats: { clients: 25, sessionsThisMonth: 80, revenue: 4200 },
-    },
-    {
-      id: "3",
-      name: "Carlos Rodríguez",
-      email: "carlos@fitprohub.com",
-      role: "trainer",
-      status: "active",
-      permissions: {
-        clients: true,
-        calendar: true,
-        payments: false,
-        reports: false,
-        settings: false,
-      },
-      stats: { clients: 18, sessionsThisMonth: 65, revenue: 3100 },
-    },
-    {
-      id: "4",
-      name: "Ana Martínez",
-      email: "ana@fitprohub.com",
-      role: "receptionist",
-      status: "pending",
-      permissions: {
-        clients: true,
-        calendar: true,
-        payments: false,
-        reports: false,
-        settings: false,
-      },
-      stats: { clients: 0, sessionsThisMonth: 0, revenue: 0 },
-    },
-  ]);
+  // Fetch real data
+  const { data: teamMembersData = [] } = useTeamMembers();
+  const { user } = useAuthStore();
+  
+  // Transform API data to TeamMember format
+  const teamMembers: TeamMember[] = teamMembersData.length > 0 
+    ? teamMembersData.map((m: { id: string; full_name?: string; name?: string; email: string; role: string; is_active: boolean; permissions?: { clients?: boolean; calendar?: boolean; payments?: boolean; reports?: boolean; settings?: boolean } }) => ({
+        id: m.id,
+        name: m.full_name || m.name || m.email,
+        email: m.email,
+        role: m.role === "owner" ? "owner" : m.role === "collaborator" ? "admin" : "trainer",
+        status: m.is_active ? "active" : "pending",
+        permissions: {
+          clients: m.permissions?.clients ?? true,
+          calendar: m.permissions?.calendar ?? true,
+          payments: m.permissions?.payments ?? (m.role === "owner"),
+          reports: m.permissions?.reports ?? (m.role === "owner"),
+          settings: m.permissions?.settings ?? (m.role === "owner"),
+        },
+        stats: { clients: 0, sessionsThisMonth: 0, revenue: 0 },
+      }))
+    : [{
+        id: "current-user",
+        name: user?.full_name || "Usuario",
+        email: user?.email || "",
+        role: "owner" as const,
+        status: "active" as const,
+        permissions: {
+          clients: true,
+          calendar: true,
+          payments: true,
+          reports: true,
+          settings: true,
+        },
+        stats: { clients: 0, sessionsThisMonth: 0, revenue: 0 },
+      }];
 
   const inviteForm = useForm({
     initialValues: {

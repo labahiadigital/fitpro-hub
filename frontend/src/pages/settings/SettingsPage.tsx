@@ -51,6 +51,7 @@ import {
   useUpdateNotificationPreferences,
 } from "../../hooks/useNotifications";
 import { useAuthStore } from "../../stores/auth";
+import { useTeamMembers } from "../../hooks/useTeam";
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("workspace");
@@ -58,25 +59,25 @@ export function SettingsPage() {
   const { data: notifPrefs } = useNotificationPreferences();
   const updatePrefs = useUpdateNotificationPreferences();
 
-  // Workspace form
+  // Workspace form - uses real data from workspace settings
   const workspaceForm = useForm({
     initialValues: {
       name: currentWorkspace?.name || "",
       slug: currentWorkspace?.slug || "",
-      email: "contacto@trackfiz.com",
-      phone: "+34 600 000 000",
-      address: "Calle Ejemplo 123, Madrid",
-      website: "https://trackfiz.com",
-      description: "Centro de entrenamiento personal y bienestar",
+      email: "",
+      phone: "",
+      address: "",
+      website: "",
+      description: "",
     },
   });
 
-  // Profile form
+  // Profile form - uses real user data
   const profileForm = useForm({
     initialValues: {
       full_name: user?.full_name || "",
       email: user?.email || "",
-      phone: "+34 600 000 000",
+      phone: "",
       timezone: "Europe/Madrid",
       language: "es",
     },
@@ -91,23 +92,23 @@ export function SettingsPage() {
     },
   });
 
-  // Team members (mock)
-  const teamMembers = [
-    {
-      id: "1",
-      name: user?.full_name || "Usuario Demo",
-      email: user?.email || "demo@trackfiz.com",
-      role: "owner",
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Ana García",
-      email: "ana@trackfiz.com",
-      role: "collaborator",
-      status: "active",
-    },
-  ];
+  // Team members from API, fallback to current user
+  const { data: fetchedTeamMembers = [] } = useTeamMembers();
+  const teamMembers = fetchedTeamMembers.length > 0 
+    ? fetchedTeamMembers.map((m: any) => ({
+        id: m.id || m.user_id,
+        name: m.full_name || m.name || "Usuario",
+        email: m.email || "",
+        role: m.role || "collaborator",
+        status: m.is_active ? "active" : "inactive",
+      }))
+    : [{
+        id: user?.id || "1",
+        name: user?.full_name || "Usuario",
+        email: user?.email || "",
+        role: "owner",
+        status: "active",
+      }];
 
   // Booking settings
   const bookingForm = useForm({

@@ -32,8 +32,6 @@ import {
   IconChartBar,
   IconBook,
   IconVideo,
-  IconHistory,
-  IconProgress,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
@@ -68,7 +66,7 @@ const trainerNavItems: NavItemProps[] = [
   { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
 ];
 
-// Lista completa de navegación para Clientes
+/* TODO: Lista de navegación para Clientes (cuando se implemente vista cliente)
 const clientNavItems: NavItemProps[] = [
   { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
   { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/workouts" },
@@ -81,6 +79,7 @@ const clientNavItems: NavItemProps[] = [
   { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents" },
   { icon: <IconSettings size={20} />, label: "Mi Perfil", to: "/settings" },
 ];
+*/
 
 // --- COMPONENTES ---
 
@@ -167,9 +166,9 @@ function NavItem({ icon, label, to, badge }: NavItemProps) {
 
 // Sidebar Component (Reutilizable para Desktop y Mobile)
 function SidebarContent() {
-  const { user, currentWorkspace, isDemoMode, demoRole } = useAuthStore();
-  const isClientView = isDemoMode && demoRole === "client";
-  const navItems = isClientView ? clientNavItems : trainerNavItems;
+  const { user, currentWorkspace } = useAuthStore();
+  // TODO: Implement client view based on user role from backend
+  const navItems = trainerNavItems;
 
   return (
     <Box
@@ -211,44 +210,6 @@ function SidebarContent() {
         </Box>
       </Group>
 
-      {/* Demo Mode Badge */}
-      {isDemoMode && (
-        <Box
-          mb="lg"
-          px="sm"
-          py={8}
-          style={{
-            borderRadius: "8px",
-            background: isClientView ? "rgba(139, 92, 246, 0.1)" : "rgba(231, 226, 71, 0.08)",
-            border: isClientView ? "1px solid rgba(139, 92, 246, 0.2)" : "1px solid rgba(231, 226, 71, 0.15)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <Box
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              backgroundColor: isClientView ? "#A78BFA" : "#E7E247",
-              boxShadow: isClientView ? "0 0 8px #A78BFA" : "0 0 8px #E7E247",
-            }}
-          />
-          <Text
-            size="xs"
-            fw={700}
-            style={{
-              color: isClientView ? "#D8B4FE" : "#E7E247",
-              letterSpacing: "0.02em",
-              textTransform: "uppercase",
-              fontSize: "10px",
-            }}
-          >
-            {isClientView ? "Vista Cliente" : "Vista Entrenador"}
-          </Text>
-        </Box>
-      )}
 
       {/* Navigation Scroll Area */}
       <ScrollArea 

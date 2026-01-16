@@ -4,7 +4,7 @@ from app.api.v1.endpoints import (
     auth, workspaces, users, clients, bookings, workouts, nutrition,
     forms, messages, payments, automations, reports, products, exercises,
     foods, notifications, supplements, documents, pdf, roles, redsys, lms, erp, referrals,
-    live_classes, ai, wearables, reminders, health
+    live_classes, ai, wearables, reminders, health, invitations
 )
 
 api_router = APIRouter()
@@ -95,3 +95,6 @@ api_router.include_router(ai.router, prefix="/ai", tags=["Generación con IA"])
 
 # Integración con Wearables
 api_router.include_router(wearables.router, prefix="/wearables", tags=["Wearables e IoT"])
+
+# Client Invitations
+api_router.include_router(invitations.router, prefix="/invitations", tags=["Invitaciones de Clientes"])

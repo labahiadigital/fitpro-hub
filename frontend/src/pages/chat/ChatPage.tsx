@@ -45,7 +45,7 @@ import {
   useMessages,
   useSendMessage,
 } from "../../hooks/useChat";
-import { useAuthStore } from "../../stores/auth";
+// import { useAuthStore } from "../../stores/auth";
 import "dayjs/locale/es";
 
 dayjs.extend(relativeTime);
@@ -250,8 +250,8 @@ export function ChatPage() {
   const [sendVia, setSendVia] = useState<MessageSource>("platform");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const { isDemoMode, demoRole } = useAuthStore();
-  const isClientView = isDemoMode && demoRole === "client";
+  // TODO: Determinar vista cliente basándose en rol real del usuario
+  const isClientView = false;
 
   // Queries
   const { data: conversations = [], isLoading: loadingConversations } =

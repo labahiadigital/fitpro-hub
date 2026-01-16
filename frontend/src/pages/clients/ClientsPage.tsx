@@ -20,7 +20,6 @@ import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { 
-  IconDownload, 
   IconTag, 
   IconUsers, 
   IconUserPlus,
@@ -31,6 +30,9 @@ import {
   IconMail,
   IconPhone,
   IconCalendar,
+  IconSend,
+  IconCopy,
+  IconCheck,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -49,6 +51,7 @@ import {
   useCreateClientTag,
   useUpdateClient,
 } from "../../hooks/useClients";
+import { useCreateInvitation } from "../../hooks/useInvitations";
 
 // Componente de tarjeta de cliente para vista de grid
 function ClientCard({ client, onView }: { client: any; onView: () => void }) {
@@ -180,10 +183,16 @@ export function ClientsPage() {
   const createClient = useCreateClient();
   const createTag = useCreateClientTag();
   const updateClient = useUpdateClient();
+  const createInvitation = useCreateInvitation();
   
   // Estado para el modal de edición
   const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
   const [editingClient, setEditingClient] = useState<any>(null);
+  
+  // Estado para invitación
+  const [inviteModalOpened, { open: openInviteModal, close: closeInviteModal }] = useDisclosure(false);
+  const [lastInvitationUrl, setLastInvitationUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const clientForm = useForm({
     initialValues: {
@@ -196,6 +205,18 @@ export function ClientsPage() {
     validate: {
       first_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
       last_name: (value) => (value.length < 2 ? "Apellido requerido" : null),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+    },
+  });
+
+  const inviteForm = useForm({
+    initialValues: {
+      email: "",
+      first_name: "",
+      last_name: "",
+      message: "",
+    },
+    validate: {
       email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
     },
   });
@@ -243,6 +264,40 @@ export function ClientsPage() {
     } catch {
       // Error handled by mutation
     }
+  };
+
+  const handleInviteClient = async (values: typeof inviteForm.values) => {
+    try {
+      const result = await createInvitation.mutateAsync({
+        email: values.email,
+        first_name: values.first_name || undefined,
+        last_name: values.last_name || undefined,
+        message: values.message || undefined,
+      });
+      setLastInvitationUrl(result.invitation_url);
+      inviteForm.reset();
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleCopyInvitationUrl = () => {
+    if (lastInvitationUrl) {
+      navigator.clipboard.writeText(lastInvitationUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      notifications.show({
+        title: "Enlace copiado",
+        message: "El enlace de invitación ha sido copiado al portapapeles",
+        color: "green",
+      });
+    }
+  };
+
+  const handleCloseInviteModal = () => {
+    closeInviteModal();
+    setLastInvitationUrl(null);
+    inviteForm.reset();
   };
 
   const handleEditClient = (client: any) => {
@@ -359,15 +414,15 @@ export function ClientsPage() {
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nuevo Cliente",
-          icon: <IconUserPlus size={16} />,
-          onClick: openClientModal,
+          label: "Invitar Cliente",
+          icon: <IconSend size={16} />,
+          onClick: openInviteModal,
         }}
         description="Gestiona tu cartera de clientes y su información"
         secondaryAction={{
-          label: "Exportar",
-          icon: <IconDownload size={14} />,
-          onClick: () => {},
+          label: "Crear Manual",
+          icon: <IconUserPlus size={14} />,
+          onClick: openClientModal,
           variant: "default",
         }}
         title="Clientes"
@@ -687,6 +742,147 @@ export function ClientsPage() {
             </Group>
           </Stack>
         </form>
+      </Modal>
+
+      {/* Modal para invitar cliente */}
+      <Modal
+        onClose={handleCloseInviteModal}
+        opened={inviteModalOpened}
+        size="md"
+        title="Invitar Cliente"
+        radius="lg"
+        centered
+      >
+        {lastInvitationUrl ? (
+          <Stack gap="md">
+            <Box 
+              p="lg" 
+              style={{ 
+                background: "var(--nv-success-bg)", 
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--nv-success)"
+              }}
+            >
+              <Group gap="sm" mb="sm">
+                <IconCheck size={20} color="var(--nv-success)" />
+                <Text fw={600} style={{ color: "var(--nv-success)" }}>
+                  ¡Invitación enviada!
+                </Text>
+              </Group>
+              <Text size="sm" c="dimmed">
+                Se ha enviado un email con el enlace de registro al cliente.
+              </Text>
+            </Box>
+            
+            <Box>
+              <Text size="sm" fw={500} mb="xs">Enlace de invitación:</Text>
+              <Group gap="xs">
+                <TextInput
+                  value={lastInvitationUrl}
+                  readOnly
+                  style={{ flex: 1 }}
+                  radius="md"
+                />
+                <ActionIcon 
+                  size="lg" 
+                  variant="light" 
+                  onClick={handleCopyInvitationUrl}
+                  color={copied ? "green" : "blue"}
+                  radius="md"
+                >
+                  {copied ? <IconCheck size={18} /> : <IconCopy size={18} />}
+                </ActionIcon>
+              </Group>
+              <Text size="xs" c="dimmed" mt="xs">
+                También puedes copiar este enlace y enviarlo manualmente.
+              </Text>
+            </Box>
+
+            <Button 
+              onClick={handleCloseInviteModal}
+              fullWidth
+              radius="xl"
+              styles={{
+                root: {
+                  background: "var(--nv-accent)",
+                  color: "var(--nv-dark)",
+                  fontWeight: 700,
+                }
+              }}
+            >
+              Cerrar
+            </Button>
+          </Stack>
+        ) : (
+          <form onSubmit={inviteForm.onSubmit(handleInviteClient)}>
+            <Stack gap="md">
+              <Text size="sm" c="dimmed">
+                Envía una invitación por email para que el cliente complete su registro 
+                con toda la información que necesitas (datos personales, objetivos, salud, etc.)
+              </Text>
+              
+              <TextInput
+                label="Email del cliente"
+                placeholder="cliente@email.com"
+                required
+                radius="md"
+                leftSection={<IconMail size={16} />}
+                {...inviteForm.getInputProps("email")}
+              />
+              
+              <Group grow>
+                <TextInput
+                  label="Nombre (opcional)"
+                  placeholder="Juan"
+                  radius="md"
+                  {...inviteForm.getInputProps("first_name")}
+                />
+                <TextInput
+                  label="Apellido (opcional)"
+                  placeholder="García"
+                  radius="md"
+                  {...inviteForm.getInputProps("last_name")}
+                />
+              </Group>
+              
+              <Textarea
+                label="Mensaje personalizado (opcional)"
+                placeholder="Hola, te invito a unirte a mi programa de entrenamiento..."
+                minRows={3}
+                radius="md"
+                {...inviteForm.getInputProps("message")}
+              />
+
+              <Group justify="flex-end" mt="md">
+                <Button 
+                  onClick={handleCloseInviteModal} 
+                  variant="default"
+                  radius="xl"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  loading={createInvitation.isPending} 
+                  type="submit"
+                  radius="xl"
+                  leftSection={<IconSend size={16} />}
+                  styles={{
+                    root: {
+                      background: "var(--nv-accent)",
+                      color: "var(--nv-dark)",
+                      fontWeight: 700,
+                      "&:hover": {
+                        background: "var(--nv-accent-hover)"
+                      }
+                    }
+                  }}
+                >
+                  Enviar Invitación
+                </Button>
+              </Group>
+            </Stack>
+          </form>
+        )}
       </Modal>
     </Container>
   );

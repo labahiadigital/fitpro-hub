@@ -40,24 +40,9 @@ export interface ExerciseFilters {
 }
 
 export function useExerciseCategories() {
-  const { isDemoMode } = useAuthStore();
-
   return useQuery({
     queryKey: ["exercise-categories"],
     queryFn: async () => {
-      if (isDemoMode) {
-        return {
-          items: [
-            { id: "1", name: "Fuerza", icon: "barbell", is_system: true },
-            { id: "2", name: "Cardio", icon: "heart", is_system: true },
-            { id: "3", name: "Flexibilidad", icon: "stretch", is_system: true },
-            { id: "4", name: "HIIT", icon: "fire", is_system: true },
-            { id: "5", name: "Core", icon: "abs", is_system: true },
-          ] as ExerciseCategory[],
-          total: 5,
-        };
-      }
-
       const response = await api.get("/exercises/categories/");
       return response.data;
     },
@@ -65,99 +50,11 @@ export function useExerciseCategories() {
 }
 
 export function useExercises(filters?: ExerciseFilters) {
-  const { currentWorkspace, isDemoMode } = useAuthStore();
+  const { currentWorkspace } = useAuthStore();
 
   return useQuery({
     queryKey: ["exercises", currentWorkspace?.id, filters],
     queryFn: async () => {
-      if (isDemoMode) {
-        const exercises: Exercise[] = [
-          {
-            id: "1",
-            name: "Sentadilla con barra",
-            description: "Ejercicio compuesto para piernas",
-            instructions:
-              "1. Coloca la barra en la espalda alta\n2. Baja controladamente\n3. Sube explosivamente",
-            muscle_groups: ["quadriceps", "glutes", "hamstrings"],
-            equipment: ["barbell"],
-            difficulty: "intermediate",
-            is_public: true,
-            is_system: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "2",
-            name: "Press de banca",
-            description: "Ejercicio para pecho",
-            instructions:
-              "1. Túmbate en el banco\n2. Baja la barra al pecho\n3. Empuja hacia arriba",
-            muscle_groups: ["chest", "shoulders", "triceps"],
-            equipment: ["barbell", "bench"],
-            difficulty: "intermediate",
-            is_public: true,
-            is_system: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "3",
-            name: "Peso muerto",
-            description: "Ejercicio compuesto para espalda y piernas",
-            muscle_groups: ["back", "hamstrings", "glutes"],
-            equipment: ["barbell"],
-            difficulty: "advanced",
-            is_public: true,
-            is_system: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "4",
-            name: "Dominadas",
-            description: "Ejercicio para espalda con peso corporal",
-            muscle_groups: ["back", "biceps"],
-            equipment: ["pull_up_bar"],
-            difficulty: "intermediate",
-            is_public: true,
-            is_system: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "5",
-            name: "Plancha",
-            description: "Ejercicio isométrico para core",
-            muscle_groups: ["abs", "lower_back"],
-            equipment: ["bodyweight"],
-            difficulty: "beginner",
-            is_public: true,
-            is_system: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ];
-
-        let filtered = exercises;
-        if (filters?.search) {
-          filtered = filtered.filter((e) =>
-            e.name.toLowerCase().includes(filters.search!.toLowerCase())
-          );
-        }
-        if (filters?.muscle_group) {
-          filtered = filtered.filter((e) =>
-            e.muscle_groups.includes(filters.muscle_group!)
-          );
-        }
-        if (filters?.difficulty) {
-          filtered = filtered.filter(
-            (e) => e.difficulty === filters.difficulty
-          );
-        }
-
-        return { items: filtered, total: filtered.length, page: 1, size: 20 };
-      }
-
       const response = await api.get("/exercises/", {
         params: { workspace_id: currentWorkspace?.id, ...filters },
       });
@@ -167,26 +64,9 @@ export function useExercises(filters?: ExerciseFilters) {
 }
 
 export function useExercise(id: string) {
-  const { isDemoMode } = useAuthStore();
-
   return useQuery({
     queryKey: ["exercise", id],
     queryFn: async () => {
-      if (isDemoMode) {
-        return {
-          id,
-          name: "Sentadilla con barra",
-          description: "Ejercicio compuesto para piernas",
-          instructions:
-            "1. Coloca la barra en la espalda alta\n2. Baja controladamente\n3. Sube explosivamente",
-          muscle_groups: ["quadriceps", "glutes", "hamstrings"],
-          equipment: ["barbell"],
-          difficulty: "intermediate",
-          is_public: true,
-          is_system: true,
-        } as Exercise;
-      }
-
       const response = await api.get(`/exercises/${id}`);
       return response.data;
     },

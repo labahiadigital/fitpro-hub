@@ -10,20 +10,22 @@ import {
   IconCreditCard,
   IconForms,
   IconUserOff,
+  IconTrophy,
 } from "@tabler/icons-react";
 
 interface Alert {
   id: string;
-  type: "payment_due" | "inactive_client" | "renewal_soon" | "form_pending";
+  type: "payment_due" | "inactive_client" | "renewal_soon" | "form_pending" | "goal_achieved";
   title: string;
   description: string;
-  severity: "warning" | "error" | "info";
+  severity: "warning" | "error" | "info" | "success";
   actionUrl?: string;
 }
 
 interface AlertsWidgetProps {
   alerts: Alert[];
   onAlertClick?: (alert: Alert) => void;
+  loading?: boolean;
 }
 
 const alertConfig = {
@@ -31,9 +33,23 @@ const alertConfig = {
   inactive_client: { icon: IconUserOff, color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.1)" },
   renewal_soon: { icon: IconCalendarDue, color: "#E7E247", bgColor: "rgba(231, 226, 71, 0.1)" },
   form_pending: { icon: IconForms, color: "#5C80BC", bgColor: "rgba(92, 128, 188, 0.1)" },
+  goal_achieved: { icon: IconTrophy, color: "#10B981", bgColor: "rgba(16, 185, 129, 0.1)" },
 };
 
-export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
+export function AlertsWidget({ alerts, onAlertClick, loading }: AlertsWidgetProps) {
+  if (loading) {
+    return (
+      <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <Group justify="space-between" mb="sm">
+          <Text className="stat-label">Acciones Requeridas</Text>
+        </Group>
+        <Stack gap="xs" style={{ flex: 1 }}>
+          <Text c="dimmed" ta="center" py="md">Cargando alertas...</Text>
+        </Stack>
+      </Box>
+    );
+  }
+
   return (
     <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Group justify="space-between" mb="sm">
@@ -49,7 +65,9 @@ export function AlertsWidget({ alerts, onAlertClick }: AlertsWidgetProps) {
       </Group>
 
       <Stack gap="xs" style={{ flex: 1 }}>
-        {alerts.map((alert) => {
+        {alerts.length === 0 ? (
+          <Text c="dimmed" ta="center" py="md" size="sm">No hay alertas pendientes</Text>
+        ) : alerts.map((alert) => {
           const config = alertConfig[alert.type];
           const Icon = config.icon;
 

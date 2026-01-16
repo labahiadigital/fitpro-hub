@@ -4,24 +4,19 @@ import {
   Box,
   Button,
   Checkbox,
-  Divider,
   Group,
   PasswordInput,
   Stack,
   Text,
   TextInput,
-  ThemeIcon,
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
   IconAlertCircle,
-  IconBarbell,
   IconChevronRight,
   IconMail,
   IconLock,
-  IconSparkles,
-  IconUser,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -32,8 +27,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { setUser, setTokens, loginDemoTrainer, loginDemoClient } =
-    useAuthStore();
+  const { setUser, setTokens } = useAuthStore();
 
   const form = useForm({
     initialValues: {
@@ -71,21 +65,12 @@ export function LoginPage() {
         setTokens(data.session.access_token, data.session.refresh_token);
         navigate("/dashboard");
       }
-    } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setError(error.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoTrainer = () => {
-    loginDemoTrainer();
-    navigate("/dashboard");
-  };
-
-  const handleDemoClient = () => {
-    loginDemoClient();
-    navigate("/dashboard");
   };
 
   const inputStyles = {
@@ -130,7 +115,7 @@ export function LoginPage() {
           Inicia sesión
         </Title>
         <Text c="gray.5" size="sm" mt={4}>
-          Accede a tu cuenta de Trackfiz
+          Accede a tu cuenta de E13 Fitness
         </Text>
       </Box>
 
@@ -215,110 +200,7 @@ export function LoginPage() {
             Iniciar Sesión
           </Button>
 
-          <Divider
-            label={
-              <Group gap={6}>
-                <IconSparkles size={14} color="var(--nv-accent)" />
-                <Text size="xs" c="gray.5">Prueba la demo</Text>
-              </Group>
-            }
-            labelPosition="center"
-            color="rgba(255, 255, 255, 0.1)"
-            my="xs"
-          />
-
-          {/* Demo buttons */}
-          <Stack gap="sm">
-            <Button
-              fullWidth
-              variant="outline"
-              onClick={handleDemoTrainer}
-              leftSection={
-                <ThemeIcon
-                  radius="xl"
-                  size="md"
-                  style={{
-                    background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-                    color: "#1a1a2e",
-                  }}
-                >
-                  <IconBarbell size={14} />
-                </ThemeIcon>
-              }
-              styles={{
-                root: {
-                  height: "auto",
-                  padding: "14px 16px",
-                  borderColor: "rgba(255, 255, 255, 0.1)",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  borderRadius: 12,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    background: "rgba(67, 233, 123, 0.1)",
-                    borderColor: "rgba(67, 233, 123, 0.3)",
-                  },
-                },
-                inner: {
-                  justifyContent: "flex-start",
-                },
-              }}
-            >
-              <Box>
-                <Text fw={600} size="sm" c="white">
-                  Demo Entrenador
-                </Text>
-                <Text c="gray.5" size="xs">
-                  Gestiona clientes, entrenamientos y pagos
-                </Text>
-              </Box>
-            </Button>
-
-            <Button
-              fullWidth
-              variant="outline"
-              onClick={handleDemoClient}
-              leftSection={
-                <ThemeIcon
-                  radius="xl"
-                  size="md"
-                  style={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    color: "white",
-                  }}
-                >
-                  <IconUser size={14} />
-                </ThemeIcon>
-              }
-              styles={{
-                root: {
-                  height: "auto",
-                  padding: "14px 16px",
-                  borderColor: "rgba(255, 255, 255, 0.1)",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  borderRadius: 12,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    background: "rgba(102, 126, 234, 0.1)",
-                    borderColor: "rgba(102, 126, 234, 0.3)",
-                  },
-                },
-                inner: {
-                  justifyContent: "flex-start",
-                },
-              }}
-            >
-              <Box>
-                <Text fw={600} size="sm" c="white">
-                  Demo Cliente
-                </Text>
-                <Text c="gray.5" size="xs">
-                  Ve tus entrenamientos, progreso y más
-                </Text>
-              </Box>
-            </Button>
-          </Stack>
-
-          <Text c="gray.5" size="sm" ta="center" mt="xs">
+          <Text c="gray.5" size="sm" ta="center" mt="md">
             ¿No tienes cuenta?{" "}
             <Anchor
               component={Link}
