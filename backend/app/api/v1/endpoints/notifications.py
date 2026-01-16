@@ -1,15 +1,16 @@
 """Notification endpoints."""
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
 
 from app.core.database import get_db
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user, require_workspace
 from app.models.notification import Notification, NotificationPreference
 from app.models.user import User
+from app.models.client import Client
 from app.schemas.notification import (
     NotificationCreate, NotificationUpdate, NotificationResponse, NotificationList,
     NotificationMarkRead, NotificationMarkAllRead,
@@ -17,6 +18,50 @@ from app.schemas.notification import (
 )
 
 router = APIRouter()
+
+
+# ==================== Dashboard Alerts ====================
+
+@router.get("/alerts")
+async def get_dashboard_alerts(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(require_workspace),
+):
+    """
+    Get dashboard alerts for the current workspace.
+    Returns alerts about inactive clients, upcoming renewals, etc.
+    """
+    alerts = []
+    workspace_id = current_user.workspace_id
+    
+    # Get inactive clients (no activity in last 14 days)
+    fourteen_days_ago = datetime.utcnow() - timedelta(days=14)
+    result = await db.execute(
+        select(Client).where(
+            Client.workspace_id == workspace_id,
+            Client.is_active == True,
+            Client.updated_at < fourteen_days_ago
+        ).limit(5)
+    )
+    inactive_clients = result.scalars().all()
+    
+    for client in inactive_clients:
+        alerts.append({
+            "id": f"inactive-{client.id}",
+            "type": "inactive_client",
+            "title": f"{client.first_name} {client.last_name} inactivo",
+            "description": f"Sin actividad en los últimos 14 días",
+            "severity": "warning",
+            "client_id": str(client.id),
+            "created_at": datetime.utcnow().isoformat(),
+        })
+    
+    # TODO: Add more alert types as needed:
+    # - Payment due alerts (when payment module is ready)
+    # - Subscription renewal alerts
+    # - Form pending alerts
+    
+    return alerts
 
 
 # ==================== Notifications ====================
