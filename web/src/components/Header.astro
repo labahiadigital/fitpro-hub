@@ -1,5 +1,5 @@
 ---
-import { getLangFromUrl, useTranslations, useTranslatedPath, languages } from '../i18n/utils';
+import { getLangFromUrl, useTranslations, useTranslatedPath, languages, translatePathToLang, type Lang } from '../i18n/utils';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
@@ -37,7 +37,7 @@ const currentPath = Astro.url.pathname.replace(/^\/(es|ca)/, '') || '/';
         <div class="lang-switcher">
           {Object.entries(languages).map(([langCode, langName]) => (
             <a 
-              href={`/${langCode}${currentPath}`} 
+              href={translatePathToLang(currentPath, lang, langCode as Lang)} 
               class:list={['lang-link', { active: lang === langCode }]}
               aria-label={`Cambiar a ${langName}`}
             >

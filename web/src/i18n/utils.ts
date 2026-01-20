@@ -35,4 +35,31 @@ export function getLocalizedRoute(route: keyof (typeof routes)[typeof defaultLan
   return routes[lang][route] || routes[defaultLang][route];
 }
 
+// Translate a path from the current language to another language
+export function translatePathToLang(currentPath: string, fromLang: Lang, toLang: Lang): string {
+  // Remove trailing slash for comparison
+  const cleanPath = currentPath.replace(/\/$/, '') || '/';
+  
+  // If it's the homepage, just return the target language root
+  if (cleanPath === '/' || cleanPath === '') {
+    return `/${toLang}/`;
+  }
+  
+  // Check if the current path matches any known route in the source language
+  const fromRoutes = routes[fromLang];
+  const toRoutes = routes[toLang];
+  
+  for (const [routeKey, routeValue] of Object.entries(fromRoutes)) {
+    // Check if current path matches this route (with or without trailing slash)
+    if (cleanPath === `/${routeValue}` || cleanPath === `/${routeValue}/`) {
+      // Get the translated route for the target language
+      const translatedRoute = toRoutes[routeKey as keyof typeof toRoutes];
+      return `/${toLang}/${translatedRoute}/`;
+    }
+  }
+  
+  // If no translation found, just return the path with new language prefix
+  return `/${toLang}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+}
+
 export { languages, defaultLang };
