@@ -13,8 +13,13 @@ const { title, description = 'La plataforma #1 para profesionales fitness. Gesti
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Preconnect to font origins for faster font loading -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <title>{title}</title>
+    <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     
@@ -29,8 +34,6 @@ const { title, description = 'La plataforma #1 para profesionales fitness. Gesti
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     
-    <title>{title}</title>
-    
     <!-- Optimized Google Fonts with astro-font -->
     <AstroFont
       config={[
@@ -44,6 +47,20 @@ const { title, description = 'La plataforma #1 para profesionales fitness. Gesti
             },
             {
               style: 'normal',
+              weight: '700',
+              path: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff2'
+            },
+          ],
+          preload: true,
+          display: "swap",
+          selector: "body",
+          fallback: "sans-serif",
+        },
+        {
+          name: "Inter",
+          src: [
+            {
+              style: 'normal',
               weight: '500',
               path: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fAZ9hiJ-Ek-_EeA.woff2'
             },
@@ -54,16 +71,11 @@ const { title, description = 'La plataforma #1 para profesionales fitness. Gesti
             },
             {
               style: 'normal',
-              weight: '700',
-              path: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff2'
-            },
-            {
-              style: 'normal',
               weight: '800',
               path: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuDyYAZ9hiJ-Ek-_EeA.woff2'
             },
           ],
-          preload: true,
+          preload: false,
           display: "swap",
           selector: "body",
           fallback: "sans-serif",

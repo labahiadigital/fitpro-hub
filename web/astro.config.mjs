@@ -6,6 +6,13 @@ export default defineConfig({
   site: 'https://trackfiz.com',
   compressHTML: true,
   build: {
-    inlineStylesheets: 'auto',
+    // Inline all stylesheets to eliminate render-blocking CSS
+    inlineStylesheets: 'always',
+  },
+  vite: {
+    build: {
+      // Reduce CSS chunk size
+      cssCodeSplit: false,
+    },
   },
 });
