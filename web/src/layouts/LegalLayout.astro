@@ -1,0 +1,152 @@
+---
+import Layout from './Layout.astro';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import '@/styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  lastUpdated?: string;
+}
+
+const { title, description, lastUpdated } = Astro.props;
+---
+
+<Layout title={`${title} | Trackfiz`} description={description}>
+  <Header />
+  <main class="legal-page">
+    <div class="container">
+      <div class="legal-header">
+        <h1>{title}</h1>
+        {lastUpdated && (
+          <p class="last-updated">Última actualización: {lastUpdated}</p>
+        )}
+      </div>
+      <div class="legal-content">
+        <slot />
+      </div>
+    </div>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .legal-page {
+    padding-top: 72px;
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--color-background-alt) 0%, var(--color-background) 100%);
+  }
+  
+  .legal-header {
+    padding-block: 4rem 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 3rem;
+  }
+  
+  .legal-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  
+  .last-updated {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+  }
+  
+  .legal-content {
+    max-width: 800px;
+    margin-inline: auto;
+    padding-bottom: 6rem;
+  }
+  
+  .legal-content :global(h2) {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+  }
+  
+  .legal-content :global(h3) {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+  }
+  
+  .legal-content :global(h4) {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+  }
+  
+  .legal-content :global(p) {
+    color: var(--color-text-muted);
+    line-height: 1.8;
+    margin-bottom: 1rem;
+  }
+  
+  .legal-content :global(ul),
+  .legal-content :global(ol) {
+    color: var(--color-text-muted);
+    line-height: 1.8;
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+  
+  .legal-content :global(li) {
+    margin-bottom: 0.5rem;
+  }
+  
+  .legal-content :global(strong) {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+  
+  .legal-content :global(a) {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  
+  .legal-content :global(a:hover) {
+    color: var(--color-accent-light);
+  }
+  
+  .legal-content :global(.highlight-box) {
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-block: 1.5rem;
+  }
+  
+  .legal-content :global(.highlight-box p) {
+    margin-bottom: 0;
+  }
+  
+  .legal-content :global(.warning-box) {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-block: 1.5rem;
+  }
+  
+  .legal-content :global(.warning-box p) {
+    color: #fca5a5;
+    margin-bottom: 0;
+  }
+  
+  .legal-content :global(hr) {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin-block: 2rem;
+  }
+</style>
