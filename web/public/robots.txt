@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://trackfiz.com/sitemap-index.xml

@@ -16,6 +16,10 @@ RUN apt-get update && apt-get install -y \
 # This is needed because some hosting providers don't support IPv6
 RUN echo 'precedence ::ffff:0:0/96 100' >> /etc/gai.conf
 
+# Disable IPv6 completely in the container
+ENV ASYNCPG_NO_IPV6=1
+RUN echo "options single-request-reopen" >> /etc/resolv.conf || true
+
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

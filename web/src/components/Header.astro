@@ -1,0 +1,106 @@
+---
+const navLinks = [
+  { label: 'Funcionalidades', href: '#features' },
+  { label: 'Precios', href: '#pricing' },
+  { label: 'Testimonios', href: '#testimonials' },
+  { label: 'Blog', href: '/blog' },
+];
+
+const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.trackfiz.com';
+---
+
+<header class="header">
+  <div class="container">
+    <nav class="nav">
+      <a href="/" class="logo">
+        <div class="logo-icon">T</div>
+        <span class="logo-text">Trackfiz</span>
+      </a>
+      
+      <ul class="nav-links hide-mobile">
+        {navLinks.map(link => (
+          <li>
+            <a href={link.href} class="nav-link">{link.label}</a>
+          </li>
+        ))}
+      </ul>
+      
+      <div class="nav-actions">
+        <a href={`${appUrl}/login`} class="btn btn-subtle hide-mobile">
+          Iniciar Sesión
+        </a>
+        <a href={`${appUrl}/register`} class="btn btn-primary">
+          Empezar Gratis
+        </a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(26, 26, 38, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--color-background);
+  }
+  
+  .logo-text {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--color-text);
+  }
+  
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    list-style: none;
+  }
+  
+  .nav-link {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+  
+  .nav-link:hover {
+    color: var(--color-text);
+  }
+  
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+</style>

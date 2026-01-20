@@ -26,8 +26,6 @@ import { OnboardingPage } from "./pages/onboarding/OnboardingPage";
 import { InvitationOnboardingPage } from "./pages/onboarding/InvitationOnboardingPage";
 import { PackagesPage } from "./pages/packages/PackagesPage";
 import { PaymentsPage } from "./pages/payments/PaymentsPage";
-// Public Pages
-import { LandingPage } from "./pages/public/LandingPage";
 import { ReportsPage } from "./pages/reports/ReportsPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { TeamPage } from "./pages/team/TeamPage";
@@ -84,8 +82,8 @@ export default function App() {
           <Notifications position="top-right" />
           <BrowserRouter>
             <Routes>
-              {/* Public Landing Page */}
-              <Route element={<LandingPage />} path="/" />
+              {/* Redirect root to login (landing page is now in the web project) */}
+              <Route element={<Navigate replace to="/login" />} path="/" />
 
               {/* Client Onboarding via invitation token (primary method) */}
               <Route
