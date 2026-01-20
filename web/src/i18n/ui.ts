@@ -120,6 +120,7 @@ export const ui = {
     'footer.legal.privacy': 'Privacidad',
     'footer.legal.cookies': 'Cookies',
     'footer.legal.terms': 'Condiciones de Venta',
+    'footer.legal.cancellation': 'Condiciones de Cancelación',
     'footer.copyright': 'Trackfiz by E13 Fitness. Todos los derechos reservados.',
 
     // Meta
@@ -245,6 +246,7 @@ export const ui = {
     'footer.legal.privacy': 'Privacitat',
     'footer.legal.cookies': 'Cookies',
     'footer.legal.terms': 'Condicions de Venda',
+    'footer.legal.cancellation': 'Condicions de Cancel·lació',
     'footer.copyright': 'Trackfiz by E13 Fitness. Tots els drets reservats.',
 
     // Meta
