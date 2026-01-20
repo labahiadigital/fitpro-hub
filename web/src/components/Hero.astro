@@ -1,11 +1,16 @@
 ---
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
 const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.trackfiz.com';
 
 const stats = [
-  { value: '10K+', label: 'Profesionales activos' },
-  { value: '500K+', label: 'Sesiones gestionadas' },
-  { value: '€2M+', label: 'Pagos procesados' },
-  { value: '99.9%', label: 'Uptime garantizado' },
+  { value: '10K+', label: t('hero.stats.professionals') },
+  { value: '500K+', label: t('hero.stats.sessions') },
+  { value: '€2M+', label: t('hero.stats.payments') },
+  { value: '99.9%', label: t('hero.stats.uptime') },
 ];
 ---
 
@@ -18,38 +23,37 @@ const stats = [
     <div class="hero-content animate-fade-in-up">
       <span class="badge">
         <span class="badge-emoji">🚀</span>
-        La plataforma #1 para profesionales fitness
+        {t('hero.badge')}
       </span>
       
       <h1 class="hero-title">
-        Gestiona tu negocio fitness 
-        <span class="gradient-text">como un profesional</span>
+        {t('hero.title')} 
+        <span class="gradient-text">{t('hero.titleHighlight')}</span>
       </h1>
       
       <p class="hero-subtitle">
-        Todo lo que necesitas para gestionar clientes, entrenamientos,
-        pagos y comunicaciones en una sola plataforma diseñada para el éxito.
+        {t('hero.subtitle')}
       </p>
       
       <div class="hero-cta">
         <a href={`${appUrl}/register`} class="btn btn-primary btn-lg">
-          Empieza Gratis
+          {t('hero.cta.start')}
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </a>
         <a href="#demo" class="btn btn-outline btn-lg">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Ver Demo
+          {t('hero.cta.demo')}
         </a>
       </div>
       
       <div class="hero-apps">
         <div class="app-item">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/><path d="M10 2c1 .5 2 2 2 5"/></svg>
-          <span>iOS App</span>
+          <span>{t('hero.apps.ios')}</span>
         </div>
         <div class="app-item">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/><path d="M15 5l2-3"/><path d="M9 5l-2-3"/><rect x="4" y="5" width="16" height="5" rx="1"/></svg>
-          <span>Android App</span>
+          <span>{t('hero.apps.android')}</span>
         </div>
       </div>
       
@@ -64,17 +68,17 @@ const stats = [
           <div class="window-content">
             <div class="kpi-grid">
               <div class="kpi-card">
-                <span class="kpi-label">Ingresos</span>
+                <span class="kpi-label">{t('hero.kpi.revenue')}</span>
                 <span class="kpi-value">€8,450</span>
                 <span class="kpi-change positive">+12.5%</span>
               </div>
               <div class="kpi-card">
-                <span class="kpi-label">Clientes</span>
+                <span class="kpi-label">{t('hero.kpi.clients')}</span>
                 <span class="kpi-value">156</span>
                 <span class="kpi-change positive">+8.2%</span>
               </div>
               <div class="kpi-card">
-                <span class="kpi-label">Sesiones</span>
+                <span class="kpi-label">{t('hero.kpi.sessions')}</span>
                 <span class="kpi-value">342</span>
                 <span class="kpi-change positive">+15.3%</span>
               </div>

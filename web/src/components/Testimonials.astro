@@ -1,25 +1,30 @@
 ---
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
 const testimonials = [
   {
-    name: 'María García',
-    role: 'Entrenadora Personal',
-    content: 'Trackfiz ha transformado mi negocio. Ahora gestiono 50 clientes sin estrés y mis ingresos han crecido un 40%.',
+    name: t('testimonials.1.name'),
+    role: t('testimonials.1.role'),
+    content: t('testimonials.1.quote'),
     rating: 5,
-    company: 'FitMaria Studio',
+    company: 'FitPro Studio',
   },
   {
-    name: 'Carlos Rodríguez',
-    role: 'Dueño de Gimnasio',
-    content: 'La mejor inversión para mi estudio. Los pagos automáticos me ahorran horas cada semana.',
+    name: t('testimonials.2.name'),
+    role: t('testimonials.2.role'),
+    content: t('testimonials.2.quote'),
     rating: 5,
-    company: 'CrossFit Málaga',
+    company: 'NutriSport',
   },
   {
-    name: 'Ana Martínez',
-    role: 'Nutricionista',
-    content: 'Mis clientes adoran la app. La comunicación es fluida y profesional. Recomiendo Trackfiz al 100%.',
+    name: t('testimonials.3.name'),
+    role: t('testimonials.3.role'),
+    content: t('testimonials.3.quote'),
     rating: 5,
-    company: 'NutriVida',
+    company: 'CrossFit BCN',
   },
 ];
 ---
@@ -27,8 +32,9 @@ const testimonials = [
 <section id="testimonials" class="section section-alt">
   <div class="container">
     <div class="section-header">
-      <span class="badge">Testimonios</span>
-      <h2 class="section-title">Lo que dicen nuestros usuarios</h2>
+      <span class="badge">{t('testimonials.badge')}</span>
+      <h2 class="section-title">{t('testimonials.title')}</h2>
+      <p class="section-subtitle">{t('testimonials.subtitle')}</p>
     </div>
     
     <div class="testimonials-grid">
@@ -71,6 +77,13 @@ const testimonials = [
   .section-title {
     font-size: 2.5rem;
     font-weight: 700;
+    margin-top: 1rem;
+  }
+  
+  .section-subtitle {
+    color: var(--color-text-muted);
+    font-size: 1.125rem;
+    max-width: 600px;
     margin-top: 1rem;
   }
   

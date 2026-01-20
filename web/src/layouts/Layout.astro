@@ -1,16 +1,21 @@
 ---
 import { AstroFont } from "astro-font";
+import { getLangFromUrl, useTranslations } from "../i18n/utils";
 
 interface Props {
   title: string;
   description?: string;
 }
 
-const { title, description = 'La plataforma #1 para profesionales fitness. Gestiona clientes, entrenamientos, nutrición y pagos en un solo lugar.' } = Astro.props;
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const ogLocale = lang === 'ca' ? 'ca_ES' : 'es_ES';
+
+const { title, description = t('meta.description') } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="es">
+<html lang={lang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -23,11 +28,16 @@ const { title, description = 'La plataforma #1 para profesionales fitness. Gesti
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     
+    <!-- Alternate language links -->
+    <link rel="alternate" hreflang="es" href={`https://trackfiz.com/es${Astro.url.pathname.replace(/^\/(es|ca)/, '')}`} />
+    <link rel="alternate" hreflang="ca" href={`https://trackfiz.com/ca${Astro.url.pathname.replace(/^\/(es|ca)/, '')}`} />
+    <link rel="alternate" hreflang="x-default" href={`https://trackfiz.com/es${Astro.url.pathname.replace(/^\/(es|ca)/, '')}`} />
+    
     <!-- Open Graph -->
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:locale" content="es_ES" />
+    <meta property="og:locale" content={ogLocale} />
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />

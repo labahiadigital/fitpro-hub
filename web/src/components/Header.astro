@@ -1,18 +1,25 @@
 ---
+import { getLangFromUrl, useTranslations, useTranslatedPath, languages } from '../i18n/utils';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const translatePath = useTranslatedPath(lang);
+
 const navLinks = [
-  { label: 'Funcionalidades', href: '#features' },
-  { label: 'Precios', href: '#pricing' },
-  { label: 'Testimonios', href: '#testimonials' },
-  { label: 'Blog', href: '/blog' },
+  { label: t('nav.features'), href: '#features' },
+  { label: t('nav.pricing'), href: '#pricing' },
 ];
 
 const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.trackfiz.com';
+
+// Get current path without language prefix for language switcher
+const currentPath = Astro.url.pathname.replace(/^\/(es|ca)/, '') || '/';
 ---
 
 <header class="header">
   <div class="container">
     <nav class="nav">
-      <a href="/" class="logo">
+      <a href={translatePath('/')} class="logo">
         <div class="logo-icon">T</div>
         <span class="logo-text">Trackfiz</span>
       </a>
@@ -26,11 +33,24 @@ const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.trackfiz.com';
       </ul>
       
       <div class="nav-actions">
+        <!-- Language Switcher -->
+        <div class="lang-switcher">
+          {Object.entries(languages).map(([langCode, langName]) => (
+            <a 
+              href={`/${langCode}${currentPath}`} 
+              class:list={['lang-link', { active: lang === langCode }]}
+              aria-label={`Cambiar a ${langName}`}
+            >
+              {langCode.toUpperCase()}
+            </a>
+          ))}
+        </div>
+        
         <a href={`${appUrl}/login`} class="btn btn-subtle hide-mobile">
-          Iniciar Sesión
+          {t('nav.login')}
         </a>
         <a href={`${appUrl}/register`} class="btn btn-primary">
-          Empezar Gratis
+          {t('nav.start')}
         </a>
       </div>
     </nav>
@@ -102,5 +122,33 @@ const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.trackfiz.com';
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+  
+  .lang-switcher {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-right: 0.5rem;
+    padding: 0.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+  }
+  
+  .lang-link {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  
+  .lang-link:hover {
+    color: var(--color-text);
+  }
+  
+  .lang-link.active {
+    background: var(--color-accent);
+    color: var(--color-background);
   }
 </style>

@@ -1,51 +1,54 @@
 ---
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
 const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.trackfiz.com';
 
 const pricingPlans = [
   {
-    name: 'Starter',
-    price: 29,
-    description: 'Para profesionales que empiezan',
+    name: t('pricing.starter.name'),
+    price: 0,
+    description: t('pricing.starter.description'),
     features: [
-      'Hasta 30 clientes',
-      'Calendario y reservas',
-      'Chat con clientes',
-      'Entrenamientos básicos',
-      'Soporte por email',
+      t('pricing.starter.feature1'),
+      t('pricing.starter.feature2'),
+      t('pricing.starter.feature3'),
+      t('pricing.starter.feature4'),
     ],
     highlighted: false,
     badge: null,
   },
   {
-    name: 'Pro',
-    price: 59,
-    description: 'Para profesionales establecidos',
+    name: t('pricing.pro.name'),
+    price: 29,
+    description: t('pricing.pro.description'),
     features: [
-      'Clientes ilimitados',
-      'Todo de Starter',
-      'Automatizaciones',
-      'Nutrición y planes',
-      'Pagos con Stripe',
-      'Reportes avanzados',
-      'Soporte prioritario',
+      t('pricing.pro.feature1'),
+      t('pricing.pro.feature2'),
+      t('pricing.pro.feature3'),
+      t('pricing.pro.feature4'),
+      t('pricing.pro.feature5'),
+      t('pricing.pro.feature6'),
     ],
     highlighted: true,
-    badge: 'Más Popular',
+    badge: t('pricing.pro.badge'),
   },
   {
-    name: 'Business',
-    price: 99,
-    description: 'Para centros y equipos',
+    name: t('pricing.business.name'),
+    price: 79,
+    description: t('pricing.business.description'),
     features: [
-      'Todo de Pro',
-      'Multi-usuario (5 incluidos)',
-      'Branding personalizado',
-      'API access',
-      'Onboarding dedicado',
-      'Soporte 24/7',
+      t('pricing.business.feature1'),
+      t('pricing.business.feature2'),
+      t('pricing.business.feature3'),
+      t('pricing.business.feature4'),
+      t('pricing.business.feature5'),
+      t('pricing.business.feature6'),
     ],
     highlighted: false,
-    badge: 'Enterprise',
+    badge: t('pricing.business.badge'),
   },
 ];
 ---
@@ -55,10 +58,10 @@ const pricingPlans = [
   
   <div class="container">
     <div class="section-header">
-      <span class="badge">Precios</span>
-      <h2 class="section-title">Planes para cada etapa de tu negocio</h2>
+      <span class="badge">{t('pricing.badge')}</span>
+      <h2 class="section-title">{t('pricing.title')}</h2>
       <p class="section-subtitle">
-        Empieza gratis y escala según crezcas. Sin compromisos, cancela cuando quieras.
+        {t('pricing.subtitle')}
       </p>
     </div>
     
@@ -80,7 +83,7 @@ const pricingPlans = [
             <span class={`price-value ${plan.highlighted ? 'gradient-text' : ''}`}>
               €{plan.price}
             </span>
-            <span class="price-period">/mes</span>
+            <span class="price-period">{t('pricing.month')}</span>
           </div>
           
           <div class="pricing-divider"></div>
@@ -98,7 +101,7 @@ const pricingPlans = [
             href={`${appUrl}/register?plan=${plan.name.toLowerCase()}`} 
             class={`btn btn-block ${plan.highlighted ? 'btn-primary' : 'btn-outline'}`}
           >
-            Empezar Ahora
+            {t('pricing.cta')}
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </a>
         </div>
