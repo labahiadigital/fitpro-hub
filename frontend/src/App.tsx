@@ -34,6 +34,16 @@ import { WorkoutsPage } from "./pages/workouts/WorkoutsPage";
 import { SupplementsPage } from "./pages/supplements/SupplementsPage";
 import { LMSPage } from "./pages/lms/LMSPage";
 import { LiveClassesPage } from "./pages/live-classes/LiveClassesPage";
+// Client-specific pages
+import { 
+  ClientDashboardPage,
+  MyWorkoutsPage,
+  MyNutritionPage,
+  MyProgressPage,
+  MyCalendarPage,
+  MyDocumentsPage,
+  MyProfilePage,
+} from "./pages/client";
 import { useAuthStore } from "./stores/auth";
 import { theme } from "./theme";
 
@@ -55,7 +65,12 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+
+  // Wait for Zustand to hydrate from localStorage before checking auth
+  if (!_hasHydrated) {
+    return null; // or a loading spinner
+  }
 
   if (!isAuthenticated) {
     return <Navigate replace to="/login" />;
@@ -65,9 +80,41 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+
+  // Wait for Zustand to hydrate from localStorage before checking auth
+  if (!_hasHydrated) {
+    return null; // or a loading spinner
+  }
 
   if (isAuthenticated) {
+    return <Navigate replace to="/dashboard" />;
+  }
+
+  return <>{children}</>;
+}
+
+// Component that shows the right dashboard based on user role
+function SmartDashboard() {
+  const { user } = useAuthStore();
+  
+  if (user?.role === 'client') {
+    return <ClientDashboardPage />;
+  }
+  
+  return <DashboardPage />;
+}
+
+// Route guard for trainer-only routes
+function TrainerRoute({ children }: { children: React.ReactNode }) {
+  const { user, _hasHydrated } = useAuthStore();
+
+  if (!_hasHydrated) {
+    return null;
+  }
+
+  // Redirect clients trying to access trainer routes
+  if (user?.role === 'client') {
     return <Navigate replace to="/dashboard" />;
   }
 
@@ -127,26 +174,39 @@ export default function App() {
                   </ProtectedRoute>
                 }
               >
-                <Route element={<DashboardPage />} path="/dashboard" />
-                <Route element={<ClientsPage />} path="/clients" />
-                <Route element={<ClientDetailPage />} path="/clients/:id" />
-                <Route element={<CalendarPage />} path="/calendar" />
-                <Route element={<WorkoutsPage />} path="/workouts" />
-                <Route element={<NutritionPage />} path="/nutrition" />
-                <Route element={<MealPlanDetailPage />} path="/nutrition/:id" />
-                <Route element={<SupplementsPage />} path="/supplements" />
-                <Route element={<FormsPage />} path="/forms" />
+                {/* Smart Dashboard - shows different content based on role */}
+                <Route element={<SmartDashboard />} path="/dashboard" />
+                
+                {/* Client-specific routes */}
+                <Route element={<MyWorkoutsPage />} path="/my-workouts" />
+                <Route element={<MyNutritionPage />} path="/my-nutrition" />
+                <Route element={<MyProgressPage />} path="/my-progress" />
+                <Route element={<MyCalendarPage />} path="/my-calendar" />
+                <Route element={<MyDocumentsPage />} path="/my-documents" />
+                <Route element={<MyProfilePage />} path="/my-profile" />
+                
+                {/* Shared routes (accessible to both trainers and clients) */}
                 <Route element={<ChatPage />} path="/chat" />
-                <Route element={<PaymentsPage />} path="/payments" />
-                <Route element={<PackagesPage />} path="/packages" />
-                <Route element={<CommunityPage />} path="/community" />
-                <Route element={<DocumentsPage />} path="/documents" />
-                <Route element={<TeamPage />} path="/team" />
-                <Route element={<AutomationsPage />} path="/automations" />
-                <Route element={<ReportsPage />} path="/reports" />
                 <Route element={<LMSPage />} path="/lms" />
-                <Route element={<LiveClassesPage />} path="/live-classes" />
-                <Route element={<SettingsPage />} path="/settings" />
+                
+                {/* Trainer-only routes */}
+                <Route element={<TrainerRoute><ClientsPage /></TrainerRoute>} path="/clients" />
+                <Route element={<TrainerRoute><ClientDetailPage /></TrainerRoute>} path="/clients/:id" />
+                <Route element={<TrainerRoute><CalendarPage /></TrainerRoute>} path="/calendar" />
+                <Route element={<TrainerRoute><WorkoutsPage /></TrainerRoute>} path="/workouts" />
+                <Route element={<TrainerRoute><NutritionPage /></TrainerRoute>} path="/nutrition" />
+                <Route element={<TrainerRoute><MealPlanDetailPage /></TrainerRoute>} path="/nutrition/:id" />
+                <Route element={<TrainerRoute><SupplementsPage /></TrainerRoute>} path="/supplements" />
+                <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
+                <Route element={<TrainerRoute><PaymentsPage /></TrainerRoute>} path="/payments" />
+                <Route element={<TrainerRoute><PackagesPage /></TrainerRoute>} path="/packages" />
+                <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
+                <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
+                <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
+                <Route element={<TrainerRoute><AutomationsPage /></TrainerRoute>} path="/automations" />
+                <Route element={<TrainerRoute><ReportsPage /></TrainerRoute>} path="/reports" />
+                <Route element={<TrainerRoute><LiveClassesPage /></TrainerRoute>} path="/live-classes" />
+                <Route element={<TrainerRoute><SettingsPage /></TrainerRoute>} path="/settings" />
               </Route>
 
               {/* 404 */}

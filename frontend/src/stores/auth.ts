@@ -1,13 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+type UserRole = 'owner' | 'collaborator' | 'client';
+
 interface User {
   id: string;
   email: string;
   full_name?: string;
   avatar_url?: string;
   is_active: boolean;
-  role?: string;
+  role?: UserRole;
+  workspace_id?: string;
 }
 
 interface Workspace {
@@ -28,11 +31,13 @@ interface AuthState {
   refreshToken: string | null;
   currentWorkspace: Workspace | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
 
   setUser: (user: User | null) => void;
   setTokens: (accessToken: string, refreshToken?: string) => void;
   setWorkspace: (workspace: Workspace | null) => void;
   logout: () => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -43,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       currentWorkspace: null,
       isAuthenticated: false,
+      _hasHydrated: false,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
 
@@ -59,6 +65,8 @@ export const useAuthStore = create<AuthState>()(
           currentWorkspace: null,
           isAuthenticated: false,
         }),
+        
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
       name: "trackfiz-auth",
@@ -68,6 +76,32 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         currentWorkspace: state.currentWorkspace,
       }),
+      onRehydrateStorage: () => (state) => {
+        // onRehydrateStorage is called after rehydration completes
+        // state contains the rehydrated values
+        if (state) {
+          const hasToken = !!state.accessToken;
+          // Set _hasHydrated immediately so waitForHydration resolves
+          state._hasHydrated = true;
+          state.isAuthenticated = hasToken;
+        }
+      },
     }
   )
 );
+
+// Helper to wait for hydration
+export const waitForHydration = (): Promise<void> => {
+  return new Promise((resolve) => {
+    if (useAuthStore.getState()._hasHydrated) {
+      resolve();
+      return;
+    }
+    const unsub = useAuthStore.subscribe((state) => {
+      if (state._hasHydrated) {
+        unsub();
+        resolve();
+      }
+    });
+  });
+};

@@ -1,6 +1,6 @@
 """Client invitation model."""
 from enum import Enum as PyEnum
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import Column, String, Boolean, Enum, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -31,8 +31,8 @@ class ClientInvitation(BaseModel):
     # Invitation token (unique, used in URL)
     token = Column(String(64), unique=True, nullable=False, index=True)
     
-    # Status
-    status = Column(Enum(InvitationStatus), default=InvitationStatus.PENDING, nullable=False)
+    # Status - using String instead of Enum for flexibility with DB values
+    status = Column(String(20), default="pending", nullable=False)
     
     # Expiration (default 7 days)
     expires_at = Column(DateTime, nullable=False)
@@ -53,11 +53,17 @@ class ClientInvitation(BaseModel):
     
     @property
     def is_expired(self) -> bool:
-        return datetime.utcnow() > self.expires_at
+        now = datetime.now(timezone.utc)
+        # Handle both timezone-aware and timezone-naive expires_at
+        if self.expires_at.tzinfo is None:
+            expires_at = self.expires_at.replace(tzinfo=timezone.utc)
+        else:
+            expires_at = self.expires_at
+        return now > expires_at
     
     @property
     def is_valid(self) -> bool:
-        return self.status == InvitationStatus.PENDING and not self.is_expired
+        return self.status == "pending" and not self.is_expired
     
     def __repr__(self):
         return f"<ClientInvitation {self.email} - {self.status}>"

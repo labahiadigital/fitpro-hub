@@ -12,9 +12,22 @@ from pydantic import BaseModel, EmailStr
 from app.core.database import get_db
 from app.core.config import settings
 from app.models.invitation import ClientInvitation, InvitationStatus
+
+# String constants for status values (matching database)
+STATUS_PENDING = "pending"
+STATUS_ACCEPTED = "accepted"
+STATUS_EXPIRED = "expired"
+STATUS_CANCELLED = "cancelled"
 from app.models.workspace import Workspace
 from app.models.client import Client
+from app.models.user import User, UserRole, RoleType
 from app.middleware.auth import require_staff, require_workspace, CurrentUser
+from supabase import acreate_client
+from app.core.config import settings as app_settings
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 from app.services.email import email_service, EmailTemplates
 from app.tasks.notifications import send_email_task
 
@@ -178,7 +191,7 @@ async def create_invitation(
         select(ClientInvitation).where(
             ClientInvitation.workspace_id == current_user.workspace_id,
             ClientInvitation.email == data.email,
-            ClientInvitation.status == InvitationStatus.PENDING,
+            ClientInvitation.status == STATUS_PENDING,
         )
     )
     existing = existing_result.scalar_one_or_none()
@@ -218,7 +231,7 @@ async def create_invitation(
         first_name=data.first_name,
         last_name=data.last_name,
         token=token,
-        status=InvitationStatus.PENDING,
+        status=STATUS_PENDING,
         expires_at=expires_at,
         client_id=existing_client.id if existing_client else None,
         message=data.message,
@@ -323,7 +336,7 @@ async def resend_invitation(
             detail="Invitación no encontrada"
         )
     
-    if invitation.status == InvitationStatus.ACCEPTED:
+    if invitation.status == STATUS_ACCEPTED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Esta invitación ya fue aceptada"
@@ -338,7 +351,7 @@ async def resend_invitation(
     # Extend expiration if expired
     if invitation.is_expired:
         invitation.expires_at = datetime.utcnow() + timedelta(days=7)
-        invitation.status = InvitationStatus.PENDING
+        invitation.status = STATUS_PENDING
     
     await db.commit()
     await db.refresh(invitation)
@@ -399,13 +412,13 @@ async def cancel_invitation(
             detail="Invitación no encontrada"
         )
     
-    if invitation.status == InvitationStatus.ACCEPTED:
+    if invitation.status == STATUS_ACCEPTED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No se puede cancelar una invitación ya aceptada"
         )
     
-    invitation.status = InvitationStatus.CANCELLED
+    invitation.status = STATUS_CANCELLED
     await db.commit()
 
 
@@ -426,11 +439,11 @@ async def validate_invitation_token(
     if not invitation:
         return ValidateTokenResponse(valid=False)
     
-    if invitation.status != InvitationStatus.PENDING:
+    if invitation.status != STATUS_PENDING:
         return ValidateTokenResponse(valid=False)
     
     if invitation.is_expired:
-        invitation.status = InvitationStatus.EXPIRED
+        invitation.status = STATUS_EXPIRED
         await db.commit()
         return ValidateTokenResponse(valid=False)
     
@@ -471,7 +484,7 @@ async def accept_invitation(
             detail="Invitación no encontrada"
         )
     
-    if invitation.status == InvitationStatus.ACCEPTED:
+    if invitation.status == STATUS_ACCEPTED:
         return {"message": "Invitación ya aceptada"}
     
     if invitation.is_expired:
@@ -480,8 +493,173 @@ async def accept_invitation(
             detail="La invitación ha expirado"
         )
     
-    invitation.status = InvitationStatus.ACCEPTED
+    invitation.status = STATUS_ACCEPTED
     invitation.accepted_at = datetime.utcnow()
     await db.commit()
     
     return {"message": "Invitación aceptada correctamente"}
+
+
+# Schema for invitation completion
+class InvitationCompleteRequest(BaseModel):
+    email: str
+    password: str
+    first_name: str
+    last_name: str
+    phone: Optional[str] = None
+    birth_date: Optional[str] = None
+    gender: Optional[str] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    goals: Optional[str] = None
+    health_data: Optional[dict] = None
+    consents: Optional[dict] = None
+
+
+@router.post("/complete/{token}")
+async def complete_invitation(
+    token: str,
+    data: InvitationCompleteRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Complete an invitation by creating user account and client profile.
+    """
+    # Find invitation
+    result = await db.execute(
+        select(ClientInvitation).where(ClientInvitation.token == token)
+    )
+    invitation = result.scalar_one_or_none()
+    
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitación no encontrada"
+        )
+    
+    if invitation.status == STATUS_ACCEPTED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La invitación ya fue utilizada"
+        )
+    
+    if invitation.is_expired:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La invitación ha expirado"
+        )
+    
+    # Check if user already exists
+    result = await db.execute(
+        select(User).where(User.email == data.email)
+    )
+    existing_user = result.scalar_one_or_none()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El email ya está registrado"
+        )
+    
+    try:
+        # Create Supabase client
+        supabase = await acreate_client(app_settings.SUPABASE_URL, app_settings.SUPABASE_KEY)
+        
+        # Create user in Supabase Auth
+        auth_response = await supabase.auth.sign_up({
+            "email": data.email,
+            "password": data.password,
+            "options": {
+                "data": {
+                    "full_name": f"{data.first_name} {data.last_name}"
+                }
+            }
+        })
+        
+        if not auth_response.user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Error al crear usuario en autenticación"
+            )
+        
+        # Create user in our database
+        user = User(
+            email=data.email,
+            full_name=f"{data.first_name} {data.last_name}",
+            auth_id=auth_response.user.id
+        )
+        db.add(user)
+        await db.flush()
+        
+        # Assign user as client role in workspace
+        user_role = UserRole(
+            user_id=user.id,
+            workspace_id=invitation.workspace_id,
+            role=RoleType.client,
+            is_default=True
+        )
+        db.add(user_role)
+        
+        # Create client profile
+        client = Client(
+            workspace_id=invitation.workspace_id,
+            user_id=user.id,
+            first_name=data.first_name,
+            last_name=data.last_name,
+            email=data.email,
+            phone=data.phone,
+            birth_date=data.birth_date,
+            gender=data.gender,
+            height_cm=str(data.height_cm) if data.height_cm else None,
+            weight_kg=str(data.weight_kg) if data.weight_kg else None,
+            goals=data.goals,
+            health_data=data.health_data or {},
+            consents=data.consents or {},
+            is_active=True
+        )
+        db.add(client)
+        
+        # Mark invitation as accepted
+        invitation.status = STATUS_ACCEPTED
+        invitation.accepted_at = datetime.utcnow()
+        
+        await db.commit()
+        
+        # Return tokens if session exists
+        if auth_response.session:
+            return {
+                "access_token": auth_response.session.access_token,
+                "token_type": "bearer",
+                "expires_in": auth_response.session.expires_in or 3600,
+                "refresh_token": auth_response.session.refresh_token,
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "full_name": user.full_name
+                }
+            }
+        else:
+            # Email confirmation required
+            return {
+                "access_token": "pending_confirmation",
+                "token_type": "bearer",
+                "expires_in": 0,
+                "refresh_token": "",
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "full_name": user.full_name
+                }
+            }
+        
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error completing invitation: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al completar registro: {str(e)}"
+        )

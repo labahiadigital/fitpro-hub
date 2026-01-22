@@ -1,5 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { useAuthStore } from "../stores/auth";
+import { useAuthStore, waitForHydration } from "../stores/auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
@@ -10,17 +10,39 @@ export const api = axios.create({
   },
 });
 
+// Flag to prevent multiple refresh attempts
+let isRefreshing = false;
+// Queue of failed requests to retry after refresh
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config: InternalAxiosRequestConfig) => {
+    // Wait for Zustand to hydrate from localStorage before making requests
+    await waitForHydration();
+    
+    const state = useAuthStore.getState();
+    
+    if (state.accessToken) {
+      config.headers.Authorization = `Bearer ${state.accessToken}`;
     }
 
-    const workspace = useAuthStore.getState().currentWorkspace;
-    if (workspace) {
-      config.headers["X-Workspace-ID"] = workspace.id;
+    if (state.currentWorkspace) {
+      config.headers["X-Workspace-ID"] = state.currentWorkspace.id;
     }
 
     return config;
@@ -31,12 +53,80 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expired, logout user
-      useAuthStore.getState().logout();
-      window.location.href = "/login";
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // Don't logout for login/register endpoints
+      const isAuthEndpoint = originalRequest.url?.includes("/auth/login") || 
+                             originalRequest.url?.includes("/auth/register") ||
+                             originalRequest.url?.includes("/auth/refresh");
+      
+      if (isAuthEndpoint) {
+        return Promise.reject(error);
+      }
+
+      // If we're already refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+          }
+          return api(originalRequest);
+        }).catch((err) => {
+          return Promise.reject(err);
+        });
+      }
+      
+      originalRequest._retry = true;
+      
+      // Try to refresh token if we have one
+      const refreshToken = useAuthStore.getState().refreshToken;
+      
+      if (refreshToken) {
+        isRefreshing = true;
+        
+        try {
+          const response = await axios.post(`${API_URL}/auth/refresh`, {
+            refresh_token: refreshToken,
+          });
+          
+          const { access_token, refresh_token } = response.data;
+          useAuthStore.getState().setTokens(access_token, refresh_token);
+          
+          processQueue(null, access_token);
+          isRefreshing = false;
+          
+          // Retry the original request with new token
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          }
+          return api(originalRequest);
+        } catch (refreshError) {
+          processQueue(refreshError, null);
+          isRefreshing = false;
+          // Refresh failed, logout user
+          useAuthStore.getState().logout();
+          // Only redirect if not already on login page
+          if (!window.location.pathname.includes("/login")) {
+            window.location.href = "/login";
+          }
+          return Promise.reject(refreshError);
+        }
+      } else {
+        // No refresh token, logout only if we were supposed to be authenticated
+        const hasHydrated = useAuthStore.getState()._hasHydrated;
+        if (hasHydrated) {
+          useAuthStore.getState().logout();
+          if (!window.location.pathname.includes("/login")) {
+            window.location.href = "/login";
+          }
+        }
+      }
     }
+    
     return Promise.reject(error);
   }
 );
@@ -114,8 +204,13 @@ export const workoutsApi = {
   updateProgram: (id: string, data: object) =>
     api.put(`/workouts/programs/${id}`, data),
   deleteProgram: (id: string) => api.delete(`/workouts/programs/${id}`),
-  assignProgram: (programId: string, clientId: string) =>
-    api.post(`/workouts/programs/${programId}/assign/${clientId}`),
+  assignProgram: (programId: string, clientId: string, startDate?: string, endDate?: string, notes?: string) =>
+    api.post(`/workouts/programs/${programId}/assign`, { 
+      client_id: clientId,
+      start_date: startDate,
+      end_date: endDate,
+      notes: notes
+    }),
 
   // Logs
   logs: (clientId: string) => api.get(`/workouts/logs/${clientId}`),
@@ -129,15 +224,20 @@ export const nutritionApi = {
   getFood: (id: string) => api.get(`/nutrition/foods/${id}`),
   createFood: (data: object) => api.post("/nutrition/foods", data),
 
-  // Meal Plans
-  plans: (params?: object) => api.get("/nutrition/plans", { params }),
-  getPlan: (id: string) => api.get(`/nutrition/plans/${id}`),
-  createPlan: (data: object) => api.post("/nutrition/plans", data),
+  // Meal Plans - backend uses /meal-plans
+  plans: (params?: object) => api.get("/nutrition/meal-plans", { params }),
+  getPlan: (id: string) => api.get(`/nutrition/meal-plans/${id}`),
+  createPlan: (data: object) => api.post("/nutrition/meal-plans", data),
   updatePlan: (id: string, data: object) =>
-    api.put(`/nutrition/plans/${id}`, data),
-  deletePlan: (id: string) => api.delete(`/nutrition/plans/${id}`),
-  assignPlan: (planId: string, clientId: string) =>
-    api.post(`/nutrition/plans/${planId}/assign/${clientId}`),
+    api.put(`/nutrition/meal-plans/${id}`, data),
+  deletePlan: (id: string) => api.delete(`/nutrition/meal-plans/${id}`),
+  assignPlan: (planId: string, clientId: string, startDate?: string, endDate?: string, notes?: string) =>
+    api.post(`/nutrition/meal-plans/${planId}/assign`, { 
+      client_id: clientId,
+      start_date: startDate,
+      end_date: endDate,
+      notes: notes
+    }),
 };
 
 // Forms API
@@ -173,8 +273,8 @@ export const messagesApi = {
 // Payments API
 export const paymentsApi = {
   // Stripe Connect
-  connectAccount: () => api.post("/payments/stripe/connect"),
-  accountStatus: () => api.get("/payments/stripe/status"),
+  connectAccount: () => api.post("/payments/connect"),
+  accountStatus: () => api.get("/payments/connect/status"),
 
   // Subscriptions
   subscriptions: (params?: object) =>
@@ -186,9 +286,9 @@ export const paymentsApi = {
     api.post(`/payments/subscriptions/${id}/cancel`),
 
   // Payments
-  payments: (params?: object) => api.get("/payments", { params }),
+  payments: (params?: object) => api.get("/payments/payments", { params }),
   createPaymentIntent: (data: object) => api.post("/payments/intent", data),
-  refund: (paymentId: string) => api.post(`/payments/${paymentId}/refund`),
+  refund: (paymentId: string) => api.post(`/payments/payments/${paymentId}/refund`),
 };
 
 // Automations API
@@ -226,6 +326,52 @@ export const settingsApi = {
   updateBranding: (data: object) => api.put("/settings/branding", data),
   updateNotifications: (data: object) =>
     api.put("/settings/notifications", data),
+};
+
+// Client Portal API - endpoints for clients to access their own data
+export const clientPortalApi = {
+  // Dashboard
+  dashboard: () => api.get("/my/dashboard"),
+  
+  // Profile
+  profile: () => api.get("/my/profile"),
+  updateProfile: (data: object) => api.put("/my/profile", data),
+  
+  // Workouts
+  workouts: () => api.get("/my/workouts"),
+  getWorkout: (id: string) => api.get(`/my/workouts/${id}`),
+  logWorkout: (data: { program_id: string; log: object }) => 
+    api.post("/my/workouts/logs", data),
+  workoutHistory: (limit?: number) => 
+    api.get("/my/workouts/logs/history", { params: { limit } }),
+  
+  // Nutrition
+  mealPlan: () => api.get("/my/nutrition/plan"),
+  allMealPlans: () => api.get("/my/nutrition/plans"),
+  logNutrition: (data: { date: string; meal_name: string; foods: object[]; notes?: string }) =>
+    api.post("/my/nutrition/logs", data),
+  nutritionLogs: (date?: string, limit?: number) =>
+    api.get("/my/nutrition/logs", { params: { date, limit } }),
+  deleteNutritionLog: (logIndex: number) =>
+    api.delete(`/my/nutrition/logs/${logIndex}`),
+  
+  // Progress
+  measurements: (limit?: number) =>
+    api.get("/my/progress/measurements", { params: { limit } }),
+  createMeasurement: (data: {
+    measured_at: string;
+    weight_kg?: number;
+    body_fat_percentage?: number;
+    muscle_mass_kg?: number;
+    measurements?: object;
+    notes?: string;
+  }) => api.post("/my/progress/measurements", data),
+  progressSummary: () => api.get("/my/progress/summary"),
+  
+  // Calendar/Bookings
+  bookings: (params?: { status?: string; upcoming_only?: boolean; limit?: number }) =>
+    api.get("/my/calendar/bookings", { params }),
+  getBooking: (id: string) => api.get(`/my/calendar/bookings/${id}`),
 };
 
 export default api;

@@ -14,6 +14,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore } from "../../stores/auth";
 
 // --- Tipos y Datos ---
@@ -139,7 +140,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
-  const { user, currentWorkspace, logout } = useAuthStore();
+  const { user, currentWorkspace } = useAuthStore();
+  const { logout } = useAuth();
 
   return (
     <Box

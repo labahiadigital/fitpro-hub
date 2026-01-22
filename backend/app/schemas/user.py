@@ -46,6 +46,21 @@ class UserResponse(BaseSchema):
     updated_at: datetime
 
 
+class UserMeResponse(BaseSchema):
+    """Response for /me endpoint including role information."""
+    id: UUID
+    email: str
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool
+    preferences: Dict[str, Any]
+    role: Optional[str] = None  # Current role in workspace (owner, collaborator, client)
+    workspace_id: Optional[UUID] = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class UserRoleCreate(BaseSchema):
     user_id: Optional[UUID] = None
     email: Optional[EmailStr] = None  # For inviting new users

@@ -32,8 +32,11 @@ import {
   IconChartBar,
   IconBook,
   IconVideo,
+  IconChartLine,
+  IconUser,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore } from "../../stores/auth";
 
 // --- TIPOS Y DATOS ---
@@ -45,7 +48,7 @@ interface NavItemProps {
   badge?: number;
 }
 
-// Lista completa de navegación para Entrenadores
+// Lista de navegación para Entrenadores/Owners/Collaborators
 const trainerNavItems: NavItemProps[] = [
   { icon: <IconLayoutDashboard size={20} />, label: "Panel Principal", to: "/dashboard" },
   { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients" },
@@ -66,20 +69,18 @@ const trainerNavItems: NavItemProps[] = [
   { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
 ];
 
-/* TODO: Lista de navegación para Clientes (cuando se implemente vista cliente)
+// Lista de navegación para Clientes - solo lo que necesitan ver
 const clientNavItems: NavItemProps[] = [
   { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
-  { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/workouts" },
-  { icon: <IconSalad size={20} />, label: "Mi Nutrición", to: "/nutrition" },
-  { icon: <IconProgress size={20} />, label: "Mi Progreso", to: "/progress" },
-  { icon: <IconCalendarEvent size={20} />, label: "Mis Citas", to: "/calendar" },
-  { icon: <IconHistory size={20} />, label: "Historial", to: "/history" },
-  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: 1 },
-  { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community" },
-  { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents" },
-  { icon: <IconSettings size={20} />, label: "Mi Perfil", to: "/settings" },
+  { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/my-workouts" },
+  { icon: <IconSalad size={20} />, label: "Mi Nutrición", to: "/my-nutrition" },
+  { icon: <IconChartLine size={20} />, label: "Mi Progreso", to: "/my-progress" },
+  { icon: <IconCalendarEvent size={20} />, label: "Mis Citas", to: "/my-calendar" },
+  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat" },
+  { icon: <IconFileText size={20} />, label: "Mis Documentos", to: "/my-documents" },
+  { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
+  { icon: <IconUser size={20} />, label: "Mi Perfil", to: "/my-profile" },
 ];
-*/
 
 // --- COMPONENTES ---
 
@@ -167,8 +168,12 @@ function NavItem({ icon, label, to, badge }: NavItemProps) {
 // Sidebar Component (Reutilizable para Desktop y Mobile)
 function SidebarContent() {
   const { user, currentWorkspace } = useAuthStore();
-  // TODO: Implement client view based on user role from backend
-  const navItems = trainerNavItems;
+  const { logout } = useAuth();
+  
+  // Determinar qué items de navegación mostrar según el rol
+  const isClient = user?.role === 'client';
+  const navItems = isClient ? clientNavItems : trainerNavItems;
+  const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 
   return (
     <Box
@@ -223,7 +228,7 @@ function SidebarContent() {
       >
         <Stack gap={4}>
           <Text c="dimmed" size="xs" fw={700} tt="uppercase" mb={4} style={{ letterSpacing: "0.1em", fontSize: "10px", paddingLeft: "10px" }}>
-            Menú Principal
+            {menuTitle}
           </Text>
           {navItems.map((item) => (
             <NavItem key={item.to} {...item} />
@@ -235,6 +240,7 @@ function SidebarContent() {
       <Box pt="md" mt="sm" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <UnstyledButton
           w="100%"
+          onClick={logout}
           style={{
             padding: "8px",
             borderRadius: "12px",
