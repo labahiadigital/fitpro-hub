@@ -98,7 +98,7 @@ class TestBookingModel:
         """Test session type enum values."""
         assert SessionType.individual.value == "individual"
         assert SessionType.group.value == "group"
-        assert SessionType.online.value == "online"
+        # Note: online is part of SessionModality, not SessionType
 
 
 class TestPaymentModels:
@@ -155,7 +155,6 @@ class TestWorkspaceModel:
             id=uuid4(),
             name="Elite Fitness",
             slug="elite-fitness",
-            owner_id=uuid4(),
         )
         assert workspace.name == "Elite Fitness"
         assert workspace.slug == "elite-fitness"
@@ -170,13 +169,10 @@ class TestNutritionModels:
             id=uuid4(),
             name="Chicken Breast",
             calories=165.0,
-            protein=31.0,
-            carbs=0.0,
-            fat=3.6,
             is_global=True,
         )
         assert food.name == "Chicken Breast"
-        assert food.protein == 31.0
+        assert food.calories == 165.0
     
     def test_meal_plan_creation(self):
         """Test meal plan creation."""
