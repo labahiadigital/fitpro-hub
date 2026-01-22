@@ -37,7 +37,9 @@ import { WorkoutBuilder } from "../../components/workouts/WorkoutBuilder";
 import {
   useCreateExercise,
   useCreateWorkoutProgram,
+  useDeleteWorkoutProgram,
   useExercises,
+  useUpdateWorkoutProgram,
   useWorkoutPrograms,
 } from "../../hooks/useWorkouts";
 
@@ -62,6 +64,8 @@ export function WorkoutsPage() {
     useWorkoutPrograms(true);
   const createExercise = useCreateExercise();
   const createProgram = useCreateWorkoutProgram();
+  const updateProgram = useUpdateWorkoutProgram();
+  const deleteProgram = useDeleteWorkoutProgram();
 
   const exerciseForm = useForm({
     initialValues: {
@@ -124,33 +128,57 @@ export function WorkoutsPage() {
     const values = programForm.values;
     if (!values.name) return;
 
+    const programData = {
+      ...values,
+      template: {
+        blocks: workoutBlocks.map((block) => ({
+          id: block.id,
+          name: block.name,
+          type: block.type,
+          rest_between_sets: block.rest_between_sets,
+          rounds: block.rounds,
+          exercises: block.exercises?.map((ex: any) => ({
+            id: ex.id,
+            exercise_id: ex.exercise_id || ex.exercise?.id,
+            exercise: ex.exercise,
+            sets: ex.sets,
+            reps: ex.reps,
+            rest_seconds: ex.rest_seconds,
+            notes: ex.notes,
+            order: ex.order,
+          })) || [],
+        })),
+      },
+      is_template: true,
+    };
+
     try {
-      await createProgram.mutateAsync({
-        ...values,
-        template: {
-          weeks: workoutBlocks.map((block) => ({
-            days: block.days || [
-              {
-                exercises:
-                  block.exercises?.map((ex: any) => ({
-                    exercise_id: ex.exercise_id,
-                    sets: ex.sets,
-                    reps: ex.reps,
-                    rest_seconds: ex.rest_seconds,
-                    notes: ex.notes,
-                  })) || [],
-              },
-            ],
-          })),
-        },
-        is_template: true,
-      });
+      if (editingProgram) {
+        // Update existing program
+        await updateProgram.mutateAsync({
+          id: editingProgram.id,
+          data: programData,
+        });
+      } else {
+        // Create new program
+        await createProgram.mutateAsync(programData);
+      }
       closeBuilder();
       programForm.reset();
       setWorkoutBlocks([]);
       setEditingProgram(null);
     } catch {
       // Error handled
+    }
+  };
+
+  const handleDeleteProgram = async (programId: string) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar este programa?")) {
+      try {
+        await deleteProgram.mutateAsync(programId);
+      } catch {
+        // Error handled
+      }
     }
   };
 
@@ -262,7 +290,14 @@ export function WorkoutsPage() {
                     <ActionIcon color="gray" variant="light" radius="md" size="sm">
                       <IconCopy size={14} />
                     </ActionIcon>
-                    <ActionIcon color="red" variant="light" radius="md" size="sm">
+                    <ActionIcon 
+                      color="red" 
+                      variant="light" 
+                      radius="md" 
+                      size="sm"
+                      onClick={() => handleDeleteProgram(program.id)}
+                      loading={deleteProgram.isPending}
+                    >
                       <IconTrash size={14} />
                     </ActionIcon>
                   </Group>
@@ -514,7 +549,7 @@ export function WorkoutsPage() {
             Cancelar
           </Button>
           <Button 
-            loading={createProgram.isPending} 
+            loading={createProgram.isPending || updateProgram.isPending} 
             onClick={handleSaveProgram}
             radius="xl"
             style={{ backgroundColor: "var(--nv-primary)" }}

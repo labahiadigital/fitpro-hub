@@ -33,33 +33,54 @@ import {
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { StatsCard } from "../../components/common/StatsCard";
-
-// Empty data - will be populated from API
-const revenueData: { month: string; revenue: number; clients: number }[] = [];
-const clientActivityData: { name: string; value: number; color: string }[] = [];
-const topClients: { name: string; sessions: number; revenue: number; compliance: number }[] = [];
-const recentPayments: { client: string; amount: number; date: string; status: string }[] = [];
+import { useKPIs, useRevenueChart, useClientsChart } from "../../hooks/useReports";
 
 export function ReportsPage() {
   const [period, setPeriod] = useState<string | null>("30");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
 
-  // TODO: Use real data from useKPIs hook when available
-  // const { data: kpisData } = useKPIs();
+  // Use real data from API
+  const { data: kpisData } = useKPIs();
+  const { data: revenueData = [] } = useRevenueChart(7);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { data: _clientsChartData = [] } = useClientsChart(6);
+  
+  // Map API data to UI format
   const kpis = {
-    mrr: 0,
-    mrrChange: 0,
-    totalClients: 0,
+    mrr: kpisData?.mrr || 0,
+    mrrChange: (kpisData?.revenue_last_month || 0) > 0 
+      ? Math.round(((kpisData?.revenue_this_month || 0) - (kpisData?.revenue_last_month || 0)) / (kpisData?.revenue_last_month || 1) * 100) 
+      : 0,
+    totalClients: kpisData?.total_clients || 0,
     clientsChange: 0,
-    activeClients: 0,
-    churnRate: 0,
-    avgRevenue: 0,
-    bookingsThisMonth: 0,
+    activeClients: kpisData?.active_clients || 0,
+    churnRate: kpisData?.churn_rate || 0,
+    avgRevenue: kpisData?.arpa || 0,
+    bookingsThisMonth: kpisData?.completed_sessions_month || 0,
     bookingsChange: 0,
-    completionRate: 0,
+    completionRate: kpisData?.completed_sessions_month && kpisData?.upcoming_sessions 
+      ? Math.round((kpisData.completed_sessions_month / (kpisData.completed_sessions_month + kpisData.upcoming_sessions)) * 100) 
+      : 0,
   };
+  
+  // Convert chart data
+  const revenueChartData = revenueData.map((d: { label: string; value: number }) => ({
+    month: d.label,
+    revenue: d.value,
+    clients: 0,
+  }));
+  
+  // Client activity data (calculated from kpis)
+  const clientActivityData = kpis.totalClients > 0 ? [
+    { name: "Activos", value: kpis.activeClients, color: "green" },
+    { name: "Inactivos", value: kpis.totalClients - kpis.activeClients, color: "gray" },
+  ] : [];
+  
+  // Empty arrays for tables that need specific API endpoints
+  const topClients: { name: string; sessions: number; revenue: number; compliance: number }[] = [];
+  const recentPayments: { client: string; amount: number; date: string; status: string }[] = [];
 
-  const maxRevenue = Math.max(...revenueData.map((d) => d.revenue));
+  const maxRevenue = Math.max(...revenueChartData.map((d) => d.revenue), 1);
 
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
@@ -166,7 +187,7 @@ export function ReportsPage() {
 
               <Box h={200}>
                 <Group align="flex-end" gap={4} h="100%">
-                  {revenueData.map((item, index) => (
+                  {revenueChartData.map((item, index) => (
                     <Tooltip
                       key={item.month}
                       label={`${item.month}: €${item.revenue}`}
@@ -179,7 +200,7 @@ export function ReportsPage() {
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.backgroundColor =
-                            index === revenueData.length - 1
+                            index === revenueChartData.length - 1
                               ? "var(--mantine-color-green-6)"
                               : "var(--mantine-color-green-2)";
                         }}
@@ -187,19 +208,20 @@ export function ReportsPage() {
                           flex: 1,
                           height: `${(item.revenue / maxRevenue) * 100}%`,
                           backgroundColor:
-                            index === revenueData.length - 1
+                            index === revenueChartData.length - 1
                               ? "var(--mantine-color-green-6)"
                               : "var(--mantine-color-green-2)",
                           borderRadius: "4px 4px 0 0",
                           transition: "all 0.2s",
                           cursor: "pointer",
+                          minHeight: 4,
                         }}
                       />
                     </Tooltip>
                   ))}
                 </Group>
                 <Group gap={4} mt="xs">
-                  {revenueData.map((item) => (
+                  {revenueChartData.map((item) => (
                     <Text
                       c="dimmed"
                       key={item.month}
@@ -446,7 +468,7 @@ export function ReportsPage() {
             </Text>
             <Box h={300}>
               <Group align="flex-end" gap={8} h="100%">
-                {revenueData.map((item) => (
+                {revenueChartData.map((item) => (
                   <Box key={item.month} style={{ flex: 1 }}>
                     <Tooltip label={`€${item.revenue}`} withArrow>
                       <Box
@@ -494,36 +516,26 @@ export function ReportsPage() {
 
             <Paper p="lg" radius="lg" withBorder>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Nuevos Este Mes
+                Sesiones Completadas
               </Text>
               <Text fw={700} mt="xs" size="xl">
-                15
+                {kpis.bookingsThisMonth}
               </Text>
-              <Group gap={4} mt="xs">
-                <ThemeIcon color="blue" radius="xl" size="xs" variant="light">
-                  <IconArrowUpRight size={10} />
-                </ThemeIcon>
-                <Text c="blue" size="xs">
-                  +25% vs mes anterior
-                </Text>
-              </Group>
+              <Text c="dimmed" mt="xs" size="xs">
+                Este mes
+              </Text>
             </Paper>
 
             <Paper p="lg" radius="lg" withBorder>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Bajas Este Mes
+                Tasa de Abandono
               </Text>
               <Text fw={700} mt="xs" size="xl">
-                5
+                {kpis.churnRate}%
               </Text>
-              <Group gap={4} mt="xs">
-                <ThemeIcon color="green" radius="xl" size="xs" variant="light">
-                  <IconArrowDownRight size={10} />
-                </ThemeIcon>
-                <Text c="green" size="xs">
-                  -2 vs mes anterior
-                </Text>
-              </Group>
+              <Text c="dimmed" mt="xs" size="xs">
+                Churn rate mensual
+              </Text>
             </Paper>
           </SimpleGrid>
 
@@ -580,6 +592,7 @@ export function ReportsPage() {
               <Text fw={600} mb="lg">
                 Reservas por Día de la Semana
               </Text>
+              {kpis.bookingsThisMonth > 0 ? (
               <Stack gap="sm">
                 {[
                   "Lunes",
@@ -589,10 +602,7 @@ export function ReportsPage() {
                   "Viernes",
                   "Sábado",
                   "Domingo",
-                ].map((day, index) => {
-                  const value = [28, 32, 25, 30, 35, 20, 10][index];
-                  const max = 35;
-                  return (
+                ].map((day) => (
                     <Group gap="sm" key={day}>
                       <Text size="sm" w={80}>
                         {day}
@@ -601,21 +611,26 @@ export function ReportsPage() {
                         color="blue"
                         size="lg"
                         style={{ flex: 1 }}
-                        value={(value / max) * 100}
+                        value={0}
                       />
                       <Text fw={500} size="sm" w={30}>
-                        {value}
+                        -
                       </Text>
                     </Group>
-                  );
-                })}
+                ))}
               </Stack>
+              ) : (
+                <Text c="dimmed" ta="center" py="xl">
+                  Sin datos de reservas aún
+                </Text>
+              )}
             </Paper>
 
             <Paper p="lg" radius="lg" withBorder>
               <Text fw={600} mb="lg">
                 Horarios Más Populares
               </Text>
+              {kpis.bookingsThisMonth > 0 ? (
               <Stack gap="sm">
                 {[
                   "08:00",
@@ -625,10 +640,7 @@ export function ReportsPage() {
                   "18:00",
                   "19:00",
                   "20:00",
-                ].map((hour, index) => {
-                  const value = [15, 22, 18, 25, 30, 28, 20][index];
-                  const max = 30;
-                  return (
+                ].map((hour) => (
                     <Group gap="sm" key={hour}>
                       <Text size="sm" w={60}>
                         {hour}
@@ -637,61 +649,55 @@ export function ReportsPage() {
                         color="grape"
                         size="lg"
                         style={{ flex: 1 }}
-                        value={(value / max) * 100}
+                        value={0}
                       />
                       <Text fw={500} size="sm" w={30}>
-                        {value}
+                        -
                       </Text>
                     </Group>
-                  );
-                })}
-              </Stack>
-            </Paper>
-
-            <Paper p="lg" radius="lg" withBorder>
-              <Text fw={600} mb="lg">
-                Tasa de Cumplimiento por Programa
-              </Text>
-              <Stack gap="md">
-                {[
-                  { name: "Hipertrofia", compliance: 92 },
-                  { name: "Pérdida de Peso", compliance: 85 },
-                  { name: "Fuerza", compliance: 88 },
-                  { name: "Tonificación", compliance: 90 },
-                ].map((program) => (
-                  <Box key={program.name}>
-                    <Group justify="space-between" mb={4}>
-                      <Text size="sm">{program.name}</Text>
-                      <Text fw={500} size="sm">
-                        {program.compliance}%
-                      </Text>
-                    </Group>
-                    <Progress
-                      color={
-                        program.compliance >= 90
-                          ? "green"
-                          : program.compliance >= 80
-                            ? "yellow"
-                            : "red"
-                      }
-                      size="md"
-                      value={program.compliance}
-                    />
-                  </Box>
                 ))}
               </Stack>
+              ) : (
+                <Text c="dimmed" ta="center" py="xl">
+                  Sin datos de horarios aún
+                </Text>
+              )}
             </Paper>
 
             <Paper p="lg" radius="lg" withBorder>
               <Text fw={600} mb="lg">
-                Tipos de Sesión
+                Resumen de Actividad
+              </Text>
+              <Stack gap="md">
+                <Group justify="space-between">
+                  <Text size="sm">Sesiones Completadas</Text>
+                  <Text fw={500} size="sm">{kpis.bookingsThisMonth}</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="sm">Tasa de Cumplimiento</Text>
+                  <Text fw={500} size="sm">{kpis.completionRate}%</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="sm">Clientes Activos</Text>
+                  <Text fw={500} size="sm">{kpis.activeClients}</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="sm">Ingreso Promedio por Cliente</Text>
+                  <Text fw={500} size="sm">€{kpis.avgRevenue.toFixed(2)}</Text>
+                </Group>
+              </Stack>
+            </Paper>
+
+            <Paper p="lg" radius="lg" withBorder>
+              <Text fw={600} mb="lg">
+                Distribución de Clientes
               </Text>
               <Group justify="center" mb="md">
                 <RingProgress
                   label={
                     <Box ta="center">
                       <Text fw={700} size="lg">
-                        156
+                        {kpis.totalClients}
                       </Text>
                       <Text c="dimmed" size="xs">
                         Total
@@ -699,27 +705,15 @@ export function ReportsPage() {
                     </Box>
                   }
                   roundCaps
-                  sections={[
-                    { value: 60, color: "blue", tooltip: "Individual: 60%" },
-                    { value: 25, color: "green", tooltip: "Grupal: 25%" },
-                    { value: 15, color: "orange", tooltip: "Online: 15%" },
-                  ]}
+                  sections={kpis.totalClients > 0 ? [
+                    { value: (kpis.activeClients / kpis.totalClients) * 100, color: "green", tooltip: `Activos: ${kpis.activeClients}` },
+                    { value: ((kpis.totalClients - kpis.activeClients) / kpis.totalClients) * 100, color: "gray", tooltip: `Inactivos: ${kpis.totalClients - kpis.activeClients}` },
+                  ] : [{ value: 100, color: "gray", tooltip: "Sin clientes" }]}
                   size={160}
                   thickness={16}
                 />
               </Group>
-              <SimpleGrid cols={3} spacing="sm">
-                <Group gap="xs" justify="center">
-                  <Box
-                    h={12}
-                    style={{
-                      borderRadius: "50%",
-                      backgroundColor: "var(--mantine-color-blue-6)",
-                    }}
-                    w={12}
-                  />
-                  <Text size="xs">Individual (60%)</Text>
-                </Group>
+              <SimpleGrid cols={2} spacing="sm">
                 <Group gap="xs" justify="center">
                   <Box
                     h={12}
@@ -729,18 +723,18 @@ export function ReportsPage() {
                     }}
                     w={12}
                   />
-                  <Text size="xs">Grupal (25%)</Text>
+                  <Text size="xs">Activos ({kpis.activeClients})</Text>
                 </Group>
                 <Group gap="xs" justify="center">
                   <Box
                     h={12}
                     style={{
                       borderRadius: "50%",
-                      backgroundColor: "var(--mantine-color-orange-6)",
+                      backgroundColor: "var(--mantine-color-gray-6)",
                     }}
                     w={12}
                   />
-                  <Text size="xs">Online (15%)</Text>
+                  <Text size="xs">Inactivos ({kpis.totalClients - kpis.activeClients})</Text>
                 </Group>
               </SimpleGrid>
             </Paper>

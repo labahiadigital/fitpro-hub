@@ -43,8 +43,17 @@ import {
   IconUser,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { notifications } from "@mantine/notifications";
 import { EmptyState } from "../../components/common/EmptyState";
 import { PageHeader } from "../../components/common/PageHeader";
+import {
+  useAutomations,
+  useCreateAutomation,
+  useUpdateAutomation,
+  useDeleteAutomation,
+  useToggleAutomation,
+  type Automation as ApiAutomation,
+} from "../../hooks/useAutomations";
 
 interface AutomationTrigger {
   type: string;
@@ -161,11 +170,34 @@ const actionTypes = [
   },
 ];
 
-// TODO: Replace with API call when backend endpoint is ready
-// const { data: automations = [] } = useAutomations();
-
 export function AutomationsPage() {
-  const [automations, setAutomations] = useState<Automation[]>([]);
+  // API hooks
+  const { data: automationsData = [] } = useAutomations();
+  const createAutomation = useCreateAutomation();
+  const updateAutomationMutation = useUpdateAutomation();
+  const deleteAutomationMutation = useDeleteAutomation();
+  const toggleAutomationMutation = useToggleAutomation();
+  
+  // Map API data to UI format
+  const automations: Automation[] = Array.isArray(automationsData) 
+    ? automationsData.map((a: ApiAutomation) => ({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        trigger: {
+          type: a.trigger_type,
+          config: a.trigger_config || {},
+        },
+        actions: (a.actions || []).map((action: { type: string; config?: Record<string, unknown> }, index: number) => ({
+          id: `action-${index}`,
+          type: action.type,
+          config: action.config || {},
+        })),
+        is_active: a.is_active,
+        last_run: a.stats?.last_run_at,
+        run_count: a.stats?.total_runs || 0,
+      }))
+    : [];
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [editingAutomation, setEditingAutomation] = useState<Automation | null>(
@@ -231,48 +263,89 @@ export function AutomationsPage() {
     );
   };
 
-  const handleSaveAutomation = () => {
+  const handleSaveAutomation = async () => {
     const values = form.values;
     if (!(values.name && values.trigger_type)) return;
 
-    const newAutomation: Automation = {
-      id: editingAutomation?.id || `auto-${Date.now()}`,
+    const automationData = {
       name: values.name,
       description: values.description,
-      trigger: {
-        type: values.trigger_type,
-        config: values.trigger_config,
-      },
-      actions,
+      trigger_type: values.trigger_type,
+      trigger_config: values.trigger_config,
+      actions: actions.map((a) => ({
+        type: a.type,
+        config: a.config,
+      })),
       is_active: editingAutomation?.is_active ?? true,
-      run_count: editingAutomation?.run_count ?? 0,
     };
 
-    if (editingAutomation) {
-      setAutomations((autos) =>
-        autos.map((a) => (a.id === editingAutomation.id ? newAutomation : a))
-      );
-    } else {
-      setAutomations((autos) => [...autos, newAutomation]);
+    try {
+      if (editingAutomation) {
+        await updateAutomationMutation.mutateAsync({
+          id: editingAutomation.id,
+          data: automationData,
+        });
+        notifications.show({
+          title: "Automatización actualizada",
+          message: "La automatización se ha actualizado correctamente",
+          color: "green",
+        });
+      } else {
+        await createAutomation.mutateAsync(automationData);
+        notifications.show({
+          title: "Automatización creada",
+          message: "La automatización se ha creado correctamente",
+          color: "green",
+        });
+      }
+
+      closeBuilder();
+      form.reset();
+      setActions([]);
+      setSelectedTrigger(null);
+      setEditingAutomation(null);
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo guardar la automatización",
+        color: "red",
+      });
     }
-
-    closeBuilder();
-    form.reset();
-    setActions([]);
-    setSelectedTrigger(null);
-    setEditingAutomation(null);
   };
 
-  const toggleAutomation = (automationId: string) => {
-    setAutomations((autos) =>
-      autos.map((a) =>
-        a.id === automationId ? { ...a, is_active: !a.is_active } : a
-      )
-    );
+  const toggleAutomation = async (automationId: string) => {
+    const automation = automations.find((a) => a.id === automationId);
+    if (automation) {
+      try {
+        await toggleAutomationMutation.mutateAsync({
+          id: automationId,
+          is_active: !automation.is_active,
+        });
+      } catch (error) {
+        notifications.show({
+          title: "Error",
+          message: "No se pudo actualizar el estado",
+          color: "red",
+        });
+      }
+    }
   };
 
-  const deleteAutomation = (automationId: string) => {
-    setAutomations((autos) => autos.filter((a) => a.id !== automationId));
+  const deleteAutomation = async (automationId: string) => {
+    try {
+      await deleteAutomationMutation.mutateAsync(automationId);
+      notifications.show({
+        title: "Automatización eliminada",
+        message: "La automatización se ha eliminado correctamente",
+        color: "green",
+      });
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo eliminar la automatización",
+        color: "red",
+      });
+    }
   };
 
   const getTriggerInfo = (type: string) =>

@@ -52,6 +52,14 @@ import {
 import { useState } from "react";
 import { EmptyState } from "../../components/common/EmptyState";
 import { PageHeader } from "../../components/common/PageHeader";
+import { notifications } from "@mantine/notifications";
+import {
+  useForms,
+  useCreateForm,
+  useUpdateForm,
+  useDeleteForm,
+  type Form,
+} from "../../hooks/useForms";
 
 interface FormField {
   id: string;
@@ -105,14 +113,28 @@ const fieldTypes = [
   { value: "radio", label: "Opción única", icon: IconList },
 ];
 
-// TODO: Replace with API call when backend endpoint is ready
-// const { data: forms = [] } = useForms();
-// const { data: documents = [] } = useDocuments();
-
 export function FormsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("forms");
-  const [forms, setForms] = useState<FormTemplate[]>([]);
   const [documents] = useState<Document[]>([]);
+  
+  // API hooks
+  const { data: formsData = [], isLoading: formsLoading } = useForms();
+  const createForm = useCreateForm();
+  const updateForm = useUpdateForm();
+  const deleteFormMutation = useDeleteForm();
+  
+  // Map API forms to FormTemplate interface
+  const forms: FormTemplate[] = Array.isArray(formsData) ? (formsData as Form[]).map((f) => ({
+    id: f.id,
+    name: f.name,
+    description: f.description,
+    type: f.form_type === "assessment" ? "custom" : f.form_type === "survey" ? "feedback" : f.form_type as FormTemplate["type"],
+    fields: f.fields || [],
+    is_active: f.is_active === true || f.is_active === "Y" || f.is_active === "true",
+    send_on_onboarding: f.send_on_onboarding ?? false,
+    submissions_count: f.submissions_count ?? 0,
+    created_at: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+  })) : [];
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [
@@ -173,47 +195,91 @@ export function FormsPage() {
     setFormFields((fields) => fields.filter((f) => f.id !== fieldId));
   };
 
-  const handleSaveForm = () => {
+  const handleSaveForm = async () => {
     const values = form.values;
     if (!values.name) return;
 
-    const newForm: FormTemplate = {
-      id: editingForm?.id || `form-${Date.now()}`,
+    // Map form type to backend enum
+    const formTypeMap: Record<string, string> = {
+      custom: "custom",
+      par_q: "health",
+      consent: "consent",
+      health: "health",
+      feedback: "survey",
+    };
+
+    const formData = {
       name: values.name,
-      description: values.description,
-      type: values.type as FormTemplate["type"],
+      description: values.description || undefined,
+      form_type: formTypeMap[values.type] || "custom",
       fields: formFields,
       is_active: editingForm?.is_active ?? true,
       send_on_onboarding: values.send_on_onboarding,
-      submissions_count: editingForm?.submissions_count ?? 0,
-      created_at:
-        editingForm?.created_at || new Date().toISOString().split("T")[0],
     };
 
-    if (editingForm) {
-      setForms((f) =>
-        f.map((item) => (item.id === editingForm.id ? newForm : item))
-      );
-    } else {
-      setForms((f) => [...f, newForm]);
+    try {
+      if (editingForm) {
+        await updateForm.mutateAsync({ id: editingForm.id, data: formData });
+        notifications.show({
+          title: "Formulario actualizado",
+          message: `${values.name} se ha actualizado correctamente`,
+          color: "green",
+        });
+      } else {
+        await createForm.mutateAsync(formData);
+        notifications.show({
+          title: "Formulario creado",
+          message: `${values.name} se ha creado correctamente`,
+          color: "green",
+        });
+      }
+
+      closeBuilder();
+      form.reset();
+      setFormFields([]);
+      setEditingForm(null);
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo guardar el formulario",
+        color: "red",
+      });
     }
-
-    closeBuilder();
-    form.reset();
-    setFormFields([]);
-    setEditingForm(null);
   };
 
-  const toggleFormActive = (formId: string) => {
-    setForms((f) =>
-      f.map((item) =>
-        item.id === formId ? { ...item, is_active: !item.is_active } : item
-      )
-    );
+  const toggleFormActive = async (formId: string, currentStatus: boolean) => {
+    try {
+      await updateForm.mutateAsync({
+        id: formId,
+        data: { is_active: !currentStatus },
+      });
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo cambiar el estado del formulario",
+        color: "red",
+      });
+    }
   };
 
-  const deleteForm = (formId: string) => {
-    setForms((f) => f.filter((item) => item.id !== formId));
+  const handleDeleteForm = async (formId: string, formName: string) => {
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar "${formName}"?`)) {
+      return;
+    }
+    try {
+      await deleteFormMutation.mutateAsync(formId);
+      notifications.show({
+        title: "Formulario eliminado",
+        message: `${formName} se ha eliminado correctamente`,
+        color: "green",
+      });
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo eliminar el formulario",
+        color: "red",
+      });
+    }
   };
 
   const getFormTypeColor = (type: FormTemplate["type"]) => {
@@ -309,7 +375,7 @@ export function FormsPage() {
                     <Switch
                       checked={formTemplate.is_active}
                       color="green"
-                      onChange={() => toggleFormActive(formTemplate.id)}
+                      onChange={() => toggleFormActive(formTemplate.id, formTemplate.is_active)}
                       size="sm"
                     />
                   </Group>
@@ -355,7 +421,8 @@ export function FormsPage() {
                     </ActionIcon>
                     <ActionIcon
                       color="red"
-                      onClick={() => deleteForm(formTemplate.id)}
+                      loading={deleteFormMutation.isPending}
+                      onClick={() => handleDeleteForm(formTemplate.id, formTemplate.name)}
                       variant="light"
                     >
                       <IconTrash size={16} />

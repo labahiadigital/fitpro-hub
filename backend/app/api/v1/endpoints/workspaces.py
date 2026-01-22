@@ -89,6 +89,34 @@ async def create_workspace(
     return workspace
 
 
+@router.get("/by-slug/{slug}")
+async def get_workspace_by_slug(
+    slug: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Obtener detalles de un workspace por su slug.
+    Este endpoint es público (usado para onboarding de clientes).
+    """
+    result = await db.execute(
+        select(Workspace).where(Workspace.slug == slug)
+    )
+    workspace = result.scalar_one_or_none()
+    
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workspace no encontrado"
+        )
+    
+    return {
+        "id": str(workspace.id),
+        "name": workspace.name,
+        "slug": workspace.slug,
+        "logo_url": workspace.logo_url
+    }
+
+
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 async def get_workspace(
     workspace_id: UUID,

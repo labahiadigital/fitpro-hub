@@ -578,11 +578,11 @@ export function NutritionPage() {
 
     // Filtrar solo favoritos si está activo el filtro
     if (foodFilter === "favorites") {
-      foodsList = foodsList.filter(food => isFoodFavorite(food.id));
+      foodsList = foodsList.filter((food: Food) => isFoodFavorite(food.id));
     }
 
     // Ordenar favoritos primero
-    foodsList.sort((a, b) => {
+    foodsList.sort((a: Food, b: Food) => {
       const aFav = isFoodFavorite(a.id);
       const bFav = isFoodFavorite(b.id);
       if (aFav && !bFav) return -1;
@@ -670,7 +670,7 @@ export function NutritionPage() {
             </Center>
           ) : mealPlans.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
-              {mealPlans.map((plan) => (
+              {mealPlans.map((plan: { id: string; name: string; description?: string; duration_days: number; target_calories: number; target_protein: number; target_carbs: number; target_fat: number; dietary_tags: string[]; plan: { days: unknown[] }; client_name: string | null }) => (
                 <Box key={plan.id} className="nv-card" p="md">
                   <Group justify="space-between" mb="sm">
                     <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{plan.name}</Text>
@@ -860,7 +860,7 @@ export function NutritionPage() {
                       {/* Calorías destacadas */}
                       <Group justify="space-between" align="center">
                         <Box className="food-card-calories">
-                          🔥 {food.calories?.toFixed(0) || 0} kcal
+                          🔥 {Number(food.calories || 0).toFixed(0)} kcal
                         </Box>
                         <Group gap={4}>
                           <Tooltip label="Ver detalle">
@@ -910,15 +910,15 @@ export function NutritionPage() {
                       {/* Macros en grid elegante */}
                       <Box className="food-card-macros">
                         <Box className="food-card-macro protein">
-                          <Text className="food-card-macro-value">{food.protein?.toFixed(0) || 0}g</Text>
+                          <Text className="food-card-macro-value">{Number(food.protein || 0).toFixed(0)}g</Text>
                           <Text className="food-card-macro-label">Proteína</Text>
                         </Box>
                         <Box className="food-card-macro carbs">
-                          <Text className="food-card-macro-value">{food.carbs?.toFixed(0) || 0}g</Text>
+                          <Text className="food-card-macro-value">{Number(food.carbs || 0).toFixed(0)}g</Text>
                           <Text className="food-card-macro-label">Carbos</Text>
                         </Box>
                         <Box className="food-card-macro fat">
-                          <Text className="food-card-macro-value">{food.fat?.toFixed(0) || 0}g</Text>
+                          <Text className="food-card-macro-value">{Number(food.fat || 0).toFixed(0)}g</Text>
                           <Text className="food-card-macro-label">Grasas</Text>
                         </Box>
                       </Box>
@@ -1647,23 +1647,23 @@ export function NutritionPage() {
                   <SimpleGrid cols={2}>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Energía</Text>
-                      <Text fw={600} size="lg">{viewingFood.calories?.toFixed(1) || 0} kcal</Text>
+                      <Text fw={600} size="lg">{Number(viewingFood.calories || 0).toFixed(1)} kcal</Text>
                       {viewingFood.energy_kj && <Text size="xs" c="dimmed">{viewingFood.energy_kj} kJ</Text>}
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Proteínas</Text>
-                      <Text fw={600} size="lg" c="green">{viewingFood.protein_g?.toFixed(1) || 0} g</Text>
+                      <Text fw={600} size="lg" c="green">{Number(viewingFood.protein_g || 0).toFixed(1)} g</Text>
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Carbohidratos</Text>
-                      <Text fw={600} size="lg" c="orange">{viewingFood.carbs_g?.toFixed(1) || 0} g</Text>
+                      <Text fw={600} size="lg" c="orange">{Number(viewingFood.carbs_g || 0).toFixed(1)} g</Text>
                       {viewingFood.sugars_g > 0 && <Text size="xs" c="dimmed">de los cuales azúcares: {viewingFood.sugars_g}g</Text>}
                       {viewingFood.added_sugars_g > 0 && <Text size="xs" c="dimmed">azúcares añadidos: {viewingFood.added_sugars_g}g</Text>}
                       {viewingFood.starch_g > 0 && <Text size="xs" c="dimmed">almidón: {viewingFood.starch_g}g</Text>}
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Grasas</Text>
-                      <Text fw={600} size="lg" c="grape">{viewingFood.fat_g?.toFixed(1) || 0} g</Text>
+                      <Text fw={600} size="lg" c="grape">{Number(viewingFood.fat_g || 0).toFixed(1)} g</Text>
                       {viewingFood.saturated_fat_g > 0 && <Text size="xs" c="dimmed">saturadas: {viewingFood.saturated_fat_g}g</Text>}
                       {viewingFood.monounsaturated_fat_g > 0 && <Text size="xs" c="dimmed">monoinsaturadas: {viewingFood.monounsaturated_fat_g}g</Text>}
                       {viewingFood.polyunsaturated_fat_g > 0 && <Text size="xs" c="dimmed">poliinsaturadas: {viewingFood.polyunsaturated_fat_g}g</Text>}
@@ -1671,11 +1671,11 @@ export function NutritionPage() {
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Fibra</Text>
-                      <Text fw={600} size="lg">{viewingFood.fiber_g?.toFixed(1) || 0} g</Text>
+                      <Text fw={600} size="lg">{Number(viewingFood.fiber_g || 0).toFixed(1)} g</Text>
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Sal</Text>
-                      <Text fw={600} size="lg">{viewingFood.salt_g?.toFixed(2) || 0} g</Text>
+                      <Text fw={600} size="lg">{Number(viewingFood.salt_g || 0).toFixed(2)} g</Text>
                       {viewingFood.sodium_mg > 0 && <Text size="xs" c="dimmed">sodio: {viewingFood.sodium_mg}mg</Text>}
                     </Box>
                   </SimpleGrid>

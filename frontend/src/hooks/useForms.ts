@@ -9,12 +9,12 @@ export interface Form {
   description?: string;
   form_type: "health" | "consent" | "assessment" | "survey" | "custom";
   fields: FormField[];
-  is_active: boolean;
-  is_required: boolean;
-  send_on_onboarding: boolean;
-  submissions_count: number;
+  is_active: boolean | string; // Backend may return "Y"/"N"
+  is_required?: boolean;
+  send_on_onboarding?: boolean;
+  submissions_count?: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface FormField {
@@ -93,6 +93,35 @@ export function useCreateForm() {
         ...data,
         workspace_id: currentWorkspace?.id,
       });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+    },
+  });
+}
+
+export function useUpdateForm() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Form> }) => {
+      const response = await api.put(`/forms/${id}`, data);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+      queryClient.invalidateQueries({ queryKey: ["form", variables.id] });
+    },
+  });
+}
+
+export function useDeleteForm() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.delete(`/forms/${id}`);
       return response.data;
     },
     onSuccess: () => {

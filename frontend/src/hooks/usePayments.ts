@@ -66,7 +66,10 @@ export function useSubscriptions(params?: { status?: string }) {
 export function useProducts() {
   return useQuery({
     queryKey: ["products"],
-    queryFn: async () => api.get("/products"),
+    queryFn: async () => {
+      // TODO: Replace with actual products endpoint when available
+      return { data: [] };
+    },
     select: (response) => response.data as Product[],
   });
 }
@@ -80,10 +83,32 @@ export function usePaymentKPIs() {
   });
 }
 
+export interface StripeStatus {
+  is_connected: boolean;
+  onboarding_complete: boolean;
+  charges_enabled?: boolean;
+  payouts_enabled?: boolean;
+  balance?: {
+    available: number;
+    pending: number;
+  };
+  dashboard_url?: string;
+}
+
 export function useStripeStatus() {
   return useQuery({
     queryKey: ["stripe-status"],
     queryFn: async () => paymentsApi.accountStatus(),
-    select: (response) => response.data,
+    select: (response): StripeStatus => {
+      const data = response.data;
+      return {
+        is_connected: data?.connected || false,
+        onboarding_complete: data?.onboarding_complete || false,
+        charges_enabled: data?.charges_enabled,
+        payouts_enabled: data?.payouts_enabled,
+        balance: data?.balance,
+        dashboard_url: data?.dashboard_url,
+      };
+    },
   });
 }

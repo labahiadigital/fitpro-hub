@@ -38,7 +38,7 @@ import {
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "../../services/supabase";
+import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 
 interface OnboardingFormData {
@@ -130,13 +130,10 @@ export function ClientOnboardingPage() {
       }
       
       try {
-        const { data, error } = await supabase
-          .from("workspaces")
-          .select("id, name")
-          .eq("slug", workspaceSlug)
-          .single();
+        const response = await api.get(`/workspaces/by-slug/${workspaceSlug}`);
+        const data = response.data;
         
-        if (error || !data) {
+        if (!data) {
           notifications.show({
             title: "Error",
             message: "El enlace de registro no es válido",
@@ -150,9 +147,10 @@ export function ClientOnboardingPage() {
       } catch {
         notifications.show({
           title: "Error",
-          message: "Error al verificar el enlace",
+          message: "El enlace de registro no es válido",
           color: "red",
         });
+        navigate("/");
       } finally {
         setLoadingWorkspace(false);
       }
@@ -246,59 +244,18 @@ export function ClientOnboardingPage() {
     try {
       const values = form.values;
       
-      // 1. Crear usuario en Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Call the backend to complete client onboarding
+      const response = await api.post(`/auth/register-client`, {
+        workspace_id: workspaceInfo.id,
         email: values.email,
         password: values.password,
-        options: {
-          data: {
-            full_name: `${values.firstName} ${values.lastName}`,
-          },
-        },
-      });
-      
-      if (authError) throw authError;
-      
-      if (!authData.user) {
-        throw new Error("No se pudo crear el usuario");
-      }
-      
-      // 2. Crear el registro de usuario en la tabla users
-      const { error: userError } = await supabase.from("users").insert({
-        id: authData.user.id,
-        auth_id: authData.user.id,
-        email: values.email,
-        full_name: `${values.firstName} ${values.lastName}`,
-        is_active: true,
-      });
-      
-      if (userError && !userError.message.includes("duplicate")) {
-        console.error("Error creating user:", userError);
-      }
-      
-      // 3. Crear el rol del usuario en el workspace
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: authData.user.id,
-        workspace_id: workspaceInfo.id,
-        role: "client",
-      });
-      
-      if (roleError) {
-        console.error("Error creating role:", roleError);
-      }
-      
-      // 4. Crear el perfil de cliente
-      const { error: clientError } = await supabase.from("clients").insert({
-        workspace_id: workspaceInfo.id,
-        user_id: authData.user.id,
         first_name: values.firstName,
         last_name: values.lastName,
-        email: values.email,
         phone: values.phone,
         birth_date: values.birthDate?.toISOString().split("T")[0],
         gender: values.gender,
-        height_cm: values.height?.toString(),
-        weight_kg: values.weight?.toString(),
+        height_cm: values.height,
+        weight_kg: values.weight,
         goals: values.goalsDescription || values.primaryGoal,
         health_data: {
           activity_level: values.activityLevel,
@@ -320,23 +277,17 @@ export function ClientOnboardingPage() {
           marketing: values.acceptMarketing,
           consent_date: new Date().toISOString(),
         },
-        is_active: true,
       });
       
-      if (clientError) {
-        console.error("Error creating client:", clientError);
-        throw clientError;
-      }
-      
-      // 5. Si hay sesión, guardar tokens
-      if (authData.session) {
+      // If registration succeeded and returned tokens, save them
+      if (response.data?.access_token) {
         setUser({
-          id: authData.user.id,
-          email: authData.user.email!,
+          id: response.data.user?.id,
+          email: values.email,
           full_name: `${values.firstName} ${values.lastName}`,
           is_active: true,
         });
-        setTokens(authData.session.access_token, authData.session.refresh_token);
+        setTokens(response.data.access_token, response.data.refresh_token);
       }
       
       setCompleted(true);
@@ -348,10 +299,10 @@ export function ClientOnboardingPage() {
       });
       
     } catch (error: unknown) {
-      const err = error as { message?: string };
+      const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
         title: "Error",
-        message: err.message || "Error al completar el registro",
+        message: err.response?.data?.detail || err.message || "Error al completar el registro",
         color: "red",
       });
     } finally {

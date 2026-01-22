@@ -56,6 +56,20 @@ class MealPlanCreate(BaseModel):
     is_template: bool = True
 
 
+class MealPlanUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    client_id: Optional[UUID] = None
+    duration_days: Optional[int] = None
+    target_calories: Optional[float] = None
+    target_protein: Optional[float] = None
+    target_carbs: Optional[float] = None
+    target_fat: Optional[float] = None
+    dietary_tags: Optional[List[str]] = None
+    plan: Optional[dict] = None
+    is_template: Optional[bool] = None
+
+
 class MealPlanResponse(BaseModel):
     id: UUID
     workspace_id: UUID
@@ -151,6 +165,48 @@ async def get_food(
     return FoodResponse.model_validate(food)
 
 
+class FoodCreate(BaseModel):
+    name: str
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    serving_size: Optional[float] = 100
+    serving_unit: Optional[str] = "g"
+    calories: Optional[float] = 0
+    protein_g: Optional[float] = 0
+    carbs_g: Optional[float] = 0
+    fat_g: Optional[float] = 0
+    fiber_g: Optional[float] = 0
+
+
+@router.post("/foods", response_model=FoodResponse, status_code=status.HTTP_201_CREATED)
+async def create_food(
+    data: FoodCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Crear un alimento personalizado para el workspace.
+    """
+    food = Food(
+        workspace_id=current_user.workspace_id,
+        name=data.name,
+        brand=data.brand,
+        category=data.category,
+        serving_size=data.serving_size,
+        serving_unit=data.serving_unit,
+        calories=data.calories,
+        protein_g=data.protein_g,
+        carbs_g=data.carbs_g,
+        fat_g=data.fat_g,
+        fiber_g=data.fiber_g,
+        is_global=False
+    )
+    db.add(food)
+    await db.commit()
+    await db.refresh(food)
+    return FoodResponse.model_validate(food)
+
+
 # ============ MEAL PLANS ============
 
 @router.get("/meal-plans", response_model=List[MealPlanResponse])
@@ -234,12 +290,12 @@ async def get_meal_plan(
 @router.put("/meal-plans/{plan_id}", response_model=MealPlanResponse)
 async def update_meal_plan(
     plan_id: UUID,
-    data: MealPlanCreate,
+    data: MealPlanUpdate,
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Actualizar un plan nutricional.
+    Actualizar un plan nutricional (parcialmente).
     """
     result = await db.execute(
         select(MealPlan).where(
@@ -255,8 +311,10 @@ async def update_meal_plan(
             detail="Plan nutricional no encontrado"
         )
     
+    # Only update fields that are provided (not None)
     for field, value in data.model_dump(exclude_unset=True).items():
-        setattr(plan, field, value)
+        if value is not None:
+            setattr(plan, field, value)
     
     await db.commit()
     await db.refresh(plan)
@@ -288,6 +346,64 @@ async def delete_meal_plan(
     
     await db.delete(plan)
     await db.commit()
+
+
+# Schema for assign request
+class AssignMealPlanRequest(BaseModel):
+    client_id: UUID
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/meal-plans/{plan_id}/assign", response_model=MealPlanResponse, status_code=status.HTTP_201_CREATED)
+async def assign_meal_plan_to_client(
+    plan_id: UUID,
+    data: AssignMealPlanRequest,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Asignar un plan nutricional (template) a un cliente.
+    Crea una copia del plan con el client_id asignado.
+    """
+    # Get the template meal plan
+    result = await db.execute(
+        select(MealPlan).where(
+            MealPlan.id == plan_id,
+            MealPlan.workspace_id == current_user.workspace_id
+        )
+    )
+    template = result.scalar_one_or_none()
+    
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan nutricional no encontrado"
+        )
+    
+    # Create a copy assigned to the client
+    assigned_plan = MealPlan(
+        workspace_id=current_user.workspace_id,
+        created_by=current_user.id,
+        client_id=data.client_id,
+        name=template.name,
+        description=template.description,
+        duration_days=template.duration_days,
+        target_calories=template.target_calories,
+        target_protein=template.target_protein,
+        target_carbs=template.target_carbs,
+        target_fat=template.target_fat,
+        dietary_tags=template.dietary_tags,
+        plan=template.plan,
+        meal_times=template.meal_times,
+        is_template=False  # This is an assigned instance, not a template
+    )
+    
+    db.add(assigned_plan)
+    await db.commit()
+    await db.refresh(assigned_plan)
+    return assigned_plan
 
 
 # ============ FAVORITES ============

@@ -195,7 +195,7 @@ async def get_payment_kpis(
     mrr_result = await db.execute(
         select(func.coalesce(func.sum(Subscription.amount), 0)).where(
             Subscription.workspace_id == current_user.workspace_id,
-            Subscription.status == SubscriptionStatus.ACTIVE
+            Subscription.status == SubscriptionStatus.active
         )
     )
     mrr = float(mrr_result.scalar() or 0)
@@ -204,7 +204,7 @@ async def get_payment_kpis(
     active_subs_result = await db.execute(
         select(func.count()).where(
             Subscription.workspace_id == current_user.workspace_id,
-            Subscription.status == SubscriptionStatus.ACTIVE
+            Subscription.status == SubscriptionStatus.active
         )
     )
     active_subscriptions = active_subs_result.scalar() or 0
@@ -213,7 +213,7 @@ async def get_payment_kpis(
     pending_result = await db.execute(
         select(func.count(), func.coalesce(func.sum(Payment.amount), 0)).where(
             Payment.workspace_id == current_user.workspace_id,
-            Payment.status == PaymentStatus.PENDING
+            Payment.status == PaymentStatus.pending
         )
     )
     pending_row = pending_result.one()
@@ -224,7 +224,7 @@ async def get_payment_kpis(
     revenue_this_month_result = await db.execute(
         select(func.coalesce(func.sum(Payment.amount), 0)).where(
             Payment.workspace_id == current_user.workspace_id,
-            Payment.status == PaymentStatus.SUCCEEDED,
+            Payment.status == PaymentStatus.succeeded,
             Payment.created_at >= first_of_month
         )
     )
@@ -234,7 +234,7 @@ async def get_payment_kpis(
     revenue_last_month_result = await db.execute(
         select(func.coalesce(func.sum(Payment.amount), 0)).where(
             Payment.workspace_id == current_user.workspace_id,
-            Payment.status == PaymentStatus.SUCCEEDED,
+            Payment.status == PaymentStatus.succeeded,
             Payment.created_at >= first_of_last_month,
             Payment.created_at < first_of_month
         )
@@ -301,7 +301,7 @@ async def create_subscription(
         currency=data.currency,
         interval=data.interval,
         stripe_price_id=data.stripe_price_id,
-        status=SubscriptionStatus.ACTIVE,
+        status=SubscriptionStatus.active,
         current_period_start=datetime.utcnow()
     )
     db.add(subscription)
@@ -333,7 +333,7 @@ async def cancel_subscription(
             detail="Suscripción no encontrada"
         )
     
-    subscription.status = SubscriptionStatus.CANCELLED
+    subscription.status = SubscriptionStatus.cancelled
     subscription.cancelled_at = datetime.utcnow()
     await db.commit()
 

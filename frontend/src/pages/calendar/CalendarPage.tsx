@@ -40,7 +40,13 @@ import {
 import dayjs from "dayjs";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useBookings, useCreateBooking } from "../../hooks/useBookings";
+import {
+  useBookings,
+  useCancelBooking,
+  useCompleteBooking,
+  useCreateBooking,
+  useUpdateBooking,
+} from "../../hooks/useBookings";
 import { useClients } from "../../hooks/useClients";
 import "dayjs/locale/es";
 
@@ -97,6 +103,9 @@ export function CalendarPage() {
   }));
 
   const createBooking = useCreateBooking();
+  const updateBooking = useUpdateBooking();
+  const cancelBooking = useCancelBooking();
+  const completeBooking = useCompleteBooking();
 
   const form = useForm({
     initialValues: {
@@ -120,7 +129,8 @@ export function CalendarPage() {
   const handleCreateBooking = async (values: typeof form.values) => {
     try {
       await createBooking.mutateAsync({
-        ...values,
+        title: values.title,
+        description: values.notes || undefined,
         session_type: values.session_type as "individual" | "group",
         modality: values.modality as "in_person" | "online",
         start_time: values.start_time.toISOString(),
@@ -132,9 +142,45 @@ export function CalendarPage() {
           online_link:
             values.modality === "online" ? values.location : undefined,
         },
+        capacity: values.max_participants,
+        is_recurring: values.is_recurring,
+        // Only send client_id if a client was selected
+        ...(values.client_id ? { client_id: values.client_id } : {}),
       });
       closeModal();
       form.reset();
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (window.confirm("¿Estás seguro de que quieres cancelar esta sesión?")) {
+      try {
+        await cancelBooking.mutateAsync(bookingId);
+        setSelectedBooking(null);
+      } catch {
+        // Error handled by mutation
+      }
+    }
+  };
+
+  const handleCompleteBooking = async (bookingId: string) => {
+    try {
+      await completeBooking.mutateAsync(bookingId);
+      setSelectedBooking(null);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleConfirmBooking = async (bookingId: string) => {
+    try {
+      await updateBooking.mutateAsync({
+        id: bookingId,
+        data: { status: "confirmed" },
+      });
+      setSelectedBooking(null);
     } catch {
       // Error handled by mutation
     }
@@ -845,6 +891,8 @@ export function CalendarPage() {
                   <Button
                     color="green"
                     leftSection={<IconCheck size={16} />}
+                    loading={updateBooking.isPending}
+                    onClick={() => handleConfirmBooking(selectedBooking.id)}
                     variant="light"
                   >
                     Confirmar
@@ -852,6 +900,8 @@ export function CalendarPage() {
                   <Button
                     color="red"
                     leftSection={<IconX size={16} />}
+                    loading={cancelBooking.isPending}
+                    onClick={() => handleCancelBooking(selectedBooking.id)}
                     variant="light"
                   >
                     Cancelar
@@ -861,14 +911,19 @@ export function CalendarPage() {
               {selectedBooking.status === "confirmed" && (
                 <>
                   <Button
-                    leftSection={<IconRepeat size={16} />}
+                    color="green"
+                    leftSection={<IconCheck size={16} />}
+                    loading={completeBooking.isPending}
+                    onClick={() => handleCompleteBooking(selectedBooking.id)}
                     variant="light"
                   >
-                    Reprogramar
+                    Completar
                   </Button>
                   <Button
                     color="red"
                     leftSection={<IconX size={16} />}
+                    loading={cancelBooking.isPending}
+                    onClick={() => handleCancelBooking(selectedBooking.id)}
                     variant="light"
                   >
                     Cancelar

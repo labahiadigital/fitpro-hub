@@ -1,4 +1,11 @@
-"""Pytest configuration and fixtures for testing."""
+"""Pytest configuration and fixtures for testing.
+
+NOTE: Integration tests require PostgreSQL.
+Set TEST_DATABASE_URL to a PostgreSQL connection string to run them:
+  export TEST_DATABASE_URL="postgresql+asyncpg://user:pass@localhost/test_db"
+  
+Unit tests don't require a database.
+"""
 import asyncio
 import os
 from datetime import datetime
@@ -17,26 +24,31 @@ from app.core.database import get_db
 from app.models.base import Base
 
 
-# Test database URL - use SQLite for tests
-TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL",
-    "sqlite+aiosqlite:///./test.db"
-)
+# Test database URL - PostgreSQL is required for integration tests
+# SQLite is NOT supported due to JSONB, UUID functions, and other PostgreSQL features
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "")
 
-# Create test engine
-test_engine = create_async_engine(
-    TEST_DATABASE_URL,
-    poolclass=NullPool,
-    echo=False,
-)
+# Check if we have a valid PostgreSQL URL
+HAS_POSTGRES = TEST_DATABASE_URL.startswith("postgresql")
 
-TestSessionLocal = async_sessionmaker(
-    bind=test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
+# Create test engine only if PostgreSQL is configured
+test_engine = None
+TestSessionLocal = None
+
+if HAS_POSTGRES:
+    test_engine = create_async_engine(
+        TEST_DATABASE_URL,
+        poolclass=NullPool,
+        echo=False,
+    )
+    
+    TestSessionLocal = async_sessionmaker(
+        bind=test_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -49,7 +61,13 @@ def event_loop() -> Generator:
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Create a fresh database session for each test."""
+    """Create a fresh database session for each test.
+    
+    Requires PostgreSQL - will skip if not configured.
+    """
+    if not HAS_POSTGRES or test_engine is None:
+        pytest.skip("Integration tests require PostgreSQL. Set TEST_DATABASE_URL env var.")
+    
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     

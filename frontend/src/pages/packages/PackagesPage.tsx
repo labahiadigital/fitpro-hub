@@ -37,7 +37,16 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { notifications } from "@mantine/notifications";
 import { PageHeader } from "../../components/common/PageHeader";
+import {
+  useSessionPackages,
+  useClientPackages,
+  useCreateSessionPackage,
+  useUpdateSessionPackage,
+  type SessionPackage as SessionPackageType,
+  type ClientPackage as ClientPackageType,
+} from "../../hooks/usePackages";
 
 interface SessionPackage {
   id: string;
@@ -63,10 +72,6 @@ interface ClientPackage {
   status: "active" | "expired" | "exhausted";
 }
 
-// TODO: Replace with API call when backend endpoint is ready
-// const { data: packages = [] } = usePackages();
-// const { data: clientPackages = [] } = useClientPackages();
-
 const sessionTypeOptions = [
   { value: "Personal Training", label: "Personal Training" },
   { value: "HIIT", label: "HIIT Grupal" },
@@ -78,8 +83,38 @@ const sessionTypeOptions = [
 
 export function PackagesPage() {
   const [activeTab, setActiveTab] = useState<string | null>("packages");
-  const [packages, setPackages] = useState<SessionPackage[]>([]);
-  const [clientPackages] = useState<ClientPackage[]>([]);
+  
+  // API hooks
+  const { data: packagesData = [] } = useSessionPackages();
+  const { data: clientPackagesData = [] } = useClientPackages();
+  const createPackage = useCreateSessionPackage();
+  const updatePackage = useUpdateSessionPackage();
+  
+  // Map API data to UI format
+  const packages: SessionPackage[] = packagesData.map((p: SessionPackageType) => ({
+    id: p.id,
+    name: p.name,
+    description: p.description || "",
+    totalSessions: p.total_sessions,
+    price: p.price,
+    validityDays: p.validity_days,
+    sessionTypes: p.session_types || [],
+    isActive: p.is_active,
+    soldCount: p.sold_count || 0,
+  }));
+  
+  const clientPackages: ClientPackage[] = clientPackagesData.map((cp: ClientPackageType) => ({
+    id: cp.id,
+    clientName: cp.client_name || "Cliente",
+    clientEmail: cp.client_email || "",
+    packageName: cp.package_name || "Paquete",
+    totalSessions: cp.total_sessions,
+    usedSessions: cp.used_sessions,
+    purchasedAt: cp.purchased_at,
+    expiresAt: cp.expires_at,
+    status: cp.status,
+  }));
+  
   const [
     packageModalOpened,
     { open: openPackageModal, close: closePackageModal },
@@ -124,35 +159,68 @@ export function PackagesPage() {
     openPackageModal();
   };
 
-  const handleSavePackage = (values: typeof packageForm.values) => {
-    if (editingPackage) {
-      setPackages(
-        packages.map((p) =>
-          p.id === editingPackage.id ? { ...p, ...values } : p
-        )
-      );
-    } else {
-      setPackages([
-        ...packages,
-        {
-          id: Date.now().toString(),
-          ...values,
-          soldCount: 0,
-        },
-      ]);
+  const handleSavePackage = async (values: typeof packageForm.values) => {
+    try {
+      const packageData = {
+        name: values.name,
+        description: values.description,
+        total_sessions: values.totalSessions,
+        price: values.price,
+        validity_days: values.validityDays,
+        session_types: values.sessionTypes,
+        is_active: values.isActive,
+      };
+      
+      if (editingPackage) {
+        await updatePackage.mutateAsync({
+          id: editingPackage.id,
+          data: packageData,
+        });
+        notifications.show({
+          title: "Paquete actualizado",
+          message: "El paquete se ha actualizado correctamente",
+          color: "green",
+        });
+      } else {
+        await createPackage.mutateAsync(packageData);
+        notifications.show({
+          title: "Paquete creado",
+          message: "El paquete se ha creado correctamente",
+          color: "green",
+        });
+      }
+      closePackageModal();
+      packageForm.reset();
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo guardar el paquete",
+        color: "red",
+      });
     }
-    closePackageModal();
-    packageForm.reset();
   };
 
-  const handleDeletePackage = (id: string) => {
-    setPackages(packages.filter((p) => p.id !== id));
+  const handleDeletePackage = async (id: string) => {
+    // TODO: Add delete mutation when endpoint supports it
+    console.log("Delete package:", id);
   };
 
-  const handleToggleActive = (id: string) => {
-    setPackages(
-      packages.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p))
-    );
+  const handleToggleActive = async (id: string) => {
+    const pkg = packages.find((p) => p.id === id);
+    if (pkg) {
+      try {
+        await updatePackage.mutateAsync({
+          id,
+          data: { is_active: !pkg.isActive },
+        });
+      } catch (error) {
+        notifications.show({
+          title: "Error",
+          message: "No se pudo actualizar el estado",
+          color: "red",
+        });
+      }
+    }
   };
 
   const getStatusColor = (status: ClientPackage["status"]) => {

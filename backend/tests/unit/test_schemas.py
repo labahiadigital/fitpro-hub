@@ -5,7 +5,7 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from app.schemas.client import ClientCreate, ClientUpdate, ClientResponse
-from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
+from app.schemas.auth import LoginRequest, RegisterRequest, Token
 from app.schemas.workspace import WorkspaceCreate, WorkspaceResponse
 
 
@@ -80,13 +80,15 @@ class TestAuthSchemas:
     
     def test_token_response(self):
         """Test token response schema."""
-        data = TokenResponse(
+        data = Token(
             access_token="eyJhbGciOiJIUzI1NiIs...",
             refresh_token="refresh_token_value",
             token_type="bearer",
+            expires_in=3600,
         )
         assert data.token_type == "bearer"
         assert data.access_token.startswith("eyJ")
+        assert data.expires_in == 3600
 
 
 class TestWorkspaceSchemas:
@@ -113,13 +115,13 @@ class TestWorkspaceSchemas:
     def test_workspace_response(self):
         """Test workspace response schema."""
         workspace_id = uuid4()
-        owner_id = uuid4()
         
         data = WorkspaceResponse(
             id=workspace_id,
             name="Test Gym",
             slug="test-gym",
-            owner_id=owner_id,
+            branding={},
+            settings={},
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )

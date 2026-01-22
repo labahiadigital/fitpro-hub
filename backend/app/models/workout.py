@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Integer, ForeignKey
+from sqlalchemy import Column, String, Text, Integer, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
@@ -10,6 +10,7 @@ class WorkoutProgram(BaseModel):
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=True, index=True)
     
     # Program details
     name = Column(String(255), nullable=False)
@@ -26,8 +27,8 @@ class WorkoutProgram(BaseModel):
     # Tags for categorization
     tags = Column(ARRAY(String), default=[])
     
-    # Is this a template or assigned program
-    is_template = Column(String(1), default="Y")  # Y/N
+    # Is this a template or assigned program (DB uses boolean)
+    is_template = Column(Boolean, default=True)
     
     # Relationships
     workspace = relationship("Workspace", back_populates="workout_programs")

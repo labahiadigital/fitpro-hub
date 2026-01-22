@@ -1,6 +1,10 @@
+/**
+ * MIGRATED: All hooks now use the backend API instead of Supabase directly.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { supabase } from "../services/supabase";
+import { api } from "../services/api";
+import { useAuthStore } from "../stores/auth";
 
 // Tipos
 export interface LiveClass {
@@ -102,24 +106,8 @@ export interface ClassStats {
 
 // Hook para obtener workspace_id del usuario actual
 function useWorkspaceId() {
-  const { data } = useQuery({
-    queryKey: ["current-user"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data: userData } = await supabase
-        .from("users")
-        .select("workspace_id")
-        .eq("id", user.id)
-        .single();
-
-      return userData?.workspace_id;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-
-  return data;
+  const { currentWorkspace } = useAuthStore();
+  return currentWorkspace?.id;
 }
 
 // Hook para listar clases en vivo
@@ -135,34 +123,19 @@ export function useLiveClasses(filters?: {
   return useQuery({
     queryKey: ["live-classes", workspaceId, filters],
     queryFn: async () => {
-      let query = supabase
-        .from("live_classes")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("scheduled_start", { ascending: true });
+      try {
+        const params: Record<string, string> = {};
+        if (filters?.status) params.status = filters.status;
+        if (filters?.category) params.category = filters.category;
+        if (filters?.from_date) params.from_date = filters.from_date.toISOString();
+        if (filters?.to_date) params.to_date = filters.to_date.toISOString();
+        if (filters?.upcoming_only) params.upcoming_only = "true";
 
-      if (filters?.status) {
-        query = query.eq("status", filters.status);
+        const response = await api.get("/live-classes/classes", { params });
+        return (response.data || []) as LiveClass[];
+      } catch {
+        return [];
       }
-      if (filters?.category) {
-        query = query.eq("category", filters.category);
-      }
-      if (filters?.from_date) {
-        query = query.gte("scheduled_start", filters.from_date.toISOString());
-      }
-      if (filters?.to_date) {
-        query = query.lte("scheduled_start", filters.to_date.toISOString());
-      }
-      if (filters?.upcoming_only) {
-        query = query
-          .gte("scheduled_start", new Date().toISOString())
-          .in("status", ["scheduled", "live"]);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as LiveClass[];
     },
     enabled: !!workspaceId,
   });
@@ -173,14 +146,8 @@ export function useLiveClass(classId: string) {
   return useQuery({
     queryKey: ["live-class", classId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("live_classes")
-        .select("*, live_class_registrations(*)")
-        .eq("id", classId)
-        .single();
-
-      if (error) throw error;
-      return data as LiveClass & { live_class_registrations: LiveClassRegistration[] };
+      const response = await api.get(`/live-classes/classes/${classId}`);
+      return response.data as LiveClass & { live_class_registrations: LiveClassRegistration[] };
     },
     enabled: !!classId,
   });
@@ -193,61 +160,19 @@ export function useLiveClassStats() {
   return useQuery({
     queryKey: ["live-class-stats", workspaceId],
     queryFn: async () => {
-      const now = new Date().toISOString();
-
-      // Total de clases
-      const { count: totalClasses } = await supabase
-        .from("live_classes")
-        .select("*", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId);
-
-      // Clases próximas
-      const { count: upcomingClasses } = await supabase
-        .from("live_classes")
-        .select("*", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId)
-        .gte("scheduled_start", now)
-        .in("status", ["scheduled", "live"]);
-
-      // Clases completadas
-      const { count: completedClasses } = await supabase
-        .from("live_classes")
-        .select("*", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId)
-        .eq("status", "completed");
-
-      // Total de participantes
-      const { data: participantsData } = await supabase
-        .from("live_classes")
-        .select("current_participants")
-        .eq("workspace_id", workspaceId);
-
-      const totalParticipants = participantsData?.reduce(
-        (sum: number, c: { current_participants: number | null }) => sum + (c.current_participants || 0),
-        0
-      ) || 0;
-
-      // Ingresos totales (del mes actual)
-      const startOfMonth = dayjs().startOf("month").toISOString();
-      const { data: revenueData } = await supabase
-        .from("live_class_registrations")
-        .select("amount_paid, live_classes!inner(workspace_id, scheduled_start)")
-        .eq("live_classes.workspace_id", workspaceId)
-        .gte("live_classes.scheduled_start", startOfMonth);
-
-      const totalRevenue = revenueData?.reduce(
-        (sum: number, r: { amount_paid: number | null }) => sum + (r.amount_paid || 0),
-        0
-      ) || 0;
-
-      return {
-        total_classes: totalClasses || 0,
-        upcoming_classes: upcomingClasses || 0,
-        completed_classes: completedClasses || 0,
-        total_participants: totalParticipants,
-        average_attendance: totalClasses ? totalParticipants / totalClasses : 0,
-        total_revenue: totalRevenue,
-      } as ClassStats;
+      try {
+        const response = await api.get("/live-classes/stats");
+        return response.data as ClassStats;
+      } catch {
+        return {
+          total_classes: 0,
+          upcoming_classes: 0,
+          completed_classes: 0,
+          total_participants: 0,
+          average_attendance: 0,
+          total_revenue: 0,
+        };
+      }
     },
     enabled: !!workspaceId,
   });
@@ -256,21 +181,11 @@ export function useLiveClassStats() {
 // Hook para crear una clase
 export function useCreateLiveClass() {
   const queryClient = useQueryClient();
-  const workspaceId = useWorkspaceId();
 
   return useMutation({
     mutationFn: async (classData: Partial<LiveClass>) => {
-      const { data, error } = await supabase
-        .from("live_classes")
-        .insert({
-          ...classData,
-          workspace_id: workspaceId,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const response = await api.post("/live-classes/classes", classData);
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["live-classes"] });
@@ -285,15 +200,8 @@ export function useUpdateLiveClass() {
 
   return useMutation({
     mutationFn: async ({ id, ...classData }: Partial<LiveClass> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("live_classes")
-        .update(classData)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const response = await api.put(`/live-classes/classes/${id}`, classData);
+      return response.data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["live-classes"] });
@@ -308,12 +216,7 @@ export function useDeleteLiveClass() {
 
   return useMutation({
     mutationFn: async (classId: string) => {
-      const { error } = await supabase
-        .from("live_classes")
-        .delete()
-        .eq("id", classId);
-
-      if (error) throw error;
+      await api.delete(`/live-classes/classes/${classId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["live-classes"] });
@@ -334,24 +237,11 @@ export function useRegisterForClass() {
       classId: string;
       clientId?: string;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const { data, error } = await supabase
-        .from("live_class_registrations")
-        .insert({
-          class_id: classId,
-          user_id: clientId ? null : user?.id,
-          client_id: clientId,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Incrementar contador de participantes
-      await supabase.rpc("increment_class_participants", { class_id: classId });
-
-      return data;
+      const response = await api.post(`/live-classes/registrations`, {
+        class_id: classId,
+        client_id: clientId,
+      });
+      return response.data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["live-class", variables.classId] });
@@ -367,20 +257,11 @@ export function useCancelRegistration() {
   return useMutation({
     mutationFn: async ({
       registrationId,
-      classId,
     }: {
       registrationId: string;
       classId: string;
     }) => {
-      const { error } = await supabase
-        .from("live_class_registrations")
-        .update({ status: "cancelled" })
-        .eq("id", registrationId);
-
-      if (error) throw error;
-
-      // Decrementar contador de participantes
-      await supabase.rpc("decrement_class_participants", { class_id: classId });
+      await api.post(`/live-classes/registrations/${registrationId}/cancel`);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["live-class", variables.classId] });
@@ -396,15 +277,12 @@ export function useLiveClassTemplates() {
   return useQuery({
     queryKey: ["live-class-templates", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("live_class_templates")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      return data as LiveClassTemplate[];
+      try {
+        const response = await api.get("/live-classes/templates");
+        return (response.data || []) as LiveClassTemplate[];
+      } catch {
+        return [];
+      }
     },
     enabled: !!workspaceId,
   });
@@ -417,15 +295,12 @@ export function useLiveClassPackages() {
   return useQuery({
     queryKey: ["live-class-packages", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("live_class_packages")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      return data as LiveClassPackage[];
+      try {
+        const response = await api.get("/live-classes/packages");
+        return (response.data || []) as LiveClassPackage[];
+      } catch {
+        return [];
+      }
     },
     enabled: !!workspaceId,
   });
@@ -438,28 +313,28 @@ export function useLiveClassCalendar(startDate: Date, endDate: Date) {
   return useQuery({
     queryKey: ["live-class-calendar", workspaceId, startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("live_classes")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .gte("scheduled_start", startDate.toISOString())
-        .lte("scheduled_start", endDate.toISOString())
-        .neq("status", "cancelled")
-        .order("scheduled_start");
+      try {
+        const response = await api.get("/live-classes/classes", {
+          params: {
+            from_date: startDate.toISOString(),
+            to_date: endDate.toISOString(),
+          },
+        });
 
-      if (error) throw error;
-
-      // Agrupar por fecha
-      const calendar: Record<string, LiveClass[]> = {};
-      for (const liveClass of data || []) {
-        const dateKey = dayjs(liveClass.scheduled_start).format("YYYY-MM-DD");
-        if (!calendar[dateKey]) {
-          calendar[dateKey] = [];
+        // Agrupar por fecha
+        const calendar: Record<string, LiveClass[]> = {};
+        for (const liveClass of response.data || []) {
+          const dateKey = dayjs(liveClass.scheduled_start).format("YYYY-MM-DD");
+          if (!calendar[dateKey]) {
+            calendar[dateKey] = [];
+          }
+          calendar[dateKey].push(liveClass as LiveClass);
         }
-        calendar[dateKey].push(liveClass as LiveClass);
-      }
 
-      return calendar;
+        return calendar;
+      } catch {
+        return {};
+      }
     },
     enabled: !!workspaceId,
   });

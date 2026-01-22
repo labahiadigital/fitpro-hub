@@ -72,6 +72,9 @@ import {
   useAssignWorkoutProgram,
   useAssignMealPlan,
   useSupabaseMealPlan,
+  useClientWorkoutAssignments,
+  useDeleteAssignedProgram,
+  useDeleteAssignedMealPlan,
 } from "../../hooks/useSupabaseData";
 import { AllergenList } from "../../components/common/AllergenBadge";
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
@@ -172,6 +175,7 @@ export function ClientDetailPage() {
   
   const { data: fetchedClient, isLoading } = useClient(id || "");
   const { data: clientMealPlans } = useClientMealPlans(id || "");
+  const { data: clientWorkoutPrograms = [] } = useClientWorkoutAssignments(id || "");
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   
@@ -199,6 +203,15 @@ export function ClientDetailPage() {
   const assignWorkoutProgram = useAssignWorkoutProgram();
   const assignMealPlan = useAssignMealPlan();
   
+  // Hooks para eliminar asignaciones
+  const deleteAssignedProgram = useDeleteAssignedProgram();
+  const deleteAssignedMealPlan = useDeleteAssignedMealPlan();
+  
+  // Estado para eliminar programa/plan
+  const [deletingProgramId, setDeletingProgramId] = useState<string | null>(null);
+  const [deletingMealPlanId, setDeletingMealPlanId] = useState<string | null>(null);
+  const [deleteConfirmModalOpened, { open: openDeleteConfirmModal, close: closeDeleteConfirmModal }] = useDisclosure(false);
+  
   // Estados para los formularios de asignación
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [selectedMealPlanForAssign, setSelectedMealPlanForAssign] = useState<string | null>(null);
@@ -210,43 +223,48 @@ export function ClientDetailPage() {
   const [viewingMealPlanId, setViewingMealPlanId] = useState<string | null>(null);
   const { data: viewingMealPlan } = useSupabaseMealPlan(viewingMealPlanId || "");
 
-  // Use real client data from API
-  const client = fetchedClient;
+  // Use real client data from API - with default empty object to prevent hook errors
+  const client = fetchedClient || {
+    id: "",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    goals: "",
+    birth_date: "",
+    gender: "",
+    height_cm: 0,
+    weight_kg: 0,
+    internal_notes: "",
+    health_data: {},
+  };
   
   // Documents and other data should come from API
   const documents: { id: string; name: string; type: string; direction: string; created_at: string; is_read: boolean }[] = [];
   const progressPhotos: { id: string; photo_url: string; photo_type: string; photo_date: string; weight_kg: string }[] = [];
   
   // Meal plans from Supabase
-  const mealPlans = (clientMealPlans || []).map((plan: { id: string; name: string; target_calories?: number; is_template?: string; created_at: string }) => ({
+  const mealPlans = (clientMealPlans || []).map((plan: { 
+    id: string; 
+    name: string; 
+    target_calories?: number; 
+    target_protein?: number;
+    target_carbs?: number;
+    target_fat?: number;
+    is_template?: string | boolean; 
+    created_at: string 
+  }) => ({
     id: plan.id,
     name: plan.name,
     target_calories: plan.target_calories || 2000,
-    status: plan.is_template === "N" ? "active" : "inactive",
+    target_protein: plan.target_protein || 0,
+    target_carbs: plan.target_carbs || 0,
+    target_fat: plan.target_fat || 0,
+    status: plan.is_template === false || plan.is_template === "N" ? "active" : "inactive",
     created_at: plan.created_at,
   }));
 
   const supplements: { id: string; name: string; dosage: string; frequency: string }[] = [];
-  
-  // If loading, show loader
-  if (isLoading) {
-    return (
-      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
-        <Center h={400}>
-          <Loader size="lg" />
-        </Center>
-      </Container>
-    );
-  }
-
-  // If no client found, show error
-  if (!client) {
-    return (
-      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
-        <Text c="dimmed" ta="center">Cliente no encontrado</Text>
-      </Container>
-    );
-  }
 
   // ===== CÁLCULOS NUTRICIONALES BASADOS EN EL CLIENTE =====
   const ACTIVITY_MULTIPLIERS: Record<string, number> = {
@@ -355,6 +373,26 @@ export function ClientDetailPage() {
   // Verificar si es cliente demo
   const isDemoClient = id?.startsWith("demo-client-") || false;
   
+  // If loading, show loader
+  if (isLoading) {
+    return (
+      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
+        <Center h={400}>
+          <Loader size="lg" />
+        </Center>
+      </Container>
+    );
+  }
+
+  // If no client found, show error
+  if (!fetchedClient) {
+    return (
+      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
+        <Text c="dimmed" ta="center">Cliente no encontrado</Text>
+      </Container>
+    );
+  }
+  
   // Handler para editar cliente
   const handleEditClient = async (values: typeof editClientForm.values) => {
     if (!id) return;
@@ -397,7 +435,13 @@ export function ClientDetailPage() {
     }
     
     try {
-      await updateClient.mutateAsync({ id, data: values });
+      // Convert number fields to strings for API
+      const data = {
+        ...values,
+        height_cm: values.height_cm ? String(values.height_cm) : null,
+        weight_kg: values.weight_kg ? String(values.weight_kg) : null,
+      };
+      await updateClient.mutateAsync({ id, data });
       notifications.show({
         title: "Información actualizada",
         message: "La información personal se ha actualizado correctamente",
@@ -606,6 +650,61 @@ export function ClientDetailPage() {
     }
   };
   
+  // Handler para abrir modal de confirmación de eliminar programa
+  const handleDeleteProgram = (programId: string) => {
+    setDeletingProgramId(programId);
+    setDeletingMealPlanId(null);
+    openDeleteConfirmModal();
+  };
+  
+  // Handler para abrir modal de confirmación de eliminar plan nutricional
+  const handleDeleteMealPlan = (planId: string) => {
+    setDeletingMealPlanId(planId);
+    setDeletingProgramId(null);
+    openDeleteConfirmModal();
+  };
+  
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!id) return;
+    
+    try {
+      if (deletingProgramId) {
+        await deleteAssignedProgram.mutateAsync({
+          programId: deletingProgramId,
+          clientId: id,
+        });
+        notifications.show({
+          title: "Programa eliminado",
+          message: "El programa de entrenamiento ha sido eliminado correctamente",
+          color: "green",
+        });
+      } else if (deletingMealPlanId) {
+        await deleteAssignedMealPlan.mutateAsync({
+          planId: deletingMealPlanId,
+          clientId: id,
+        });
+        notifications.show({
+          title: "Plan eliminado",
+          message: "El plan nutricional ha sido eliminado correctamente",
+          color: "green",
+        });
+      }
+      closeDeleteConfirmModal();
+      setDeletingProgramId(null);
+      setDeletingMealPlanId(null);
+    } catch (error) {
+      console.error("Error deleting:", error);
+      notifications.show({
+        title: "Error",
+        message: deletingProgramId 
+          ? "No se pudo eliminar el programa" 
+          : "No se pudo eliminar el plan nutricional",
+        color: "red",
+      });
+    }
+  };
+  
   if (isLoading) {
     return (
       <Center h="50vh">
@@ -614,13 +713,22 @@ export function ClientDetailPage() {
     );
   }
 
+  // Calculate stats from client data
+  const calculateDaysAsClient = () => {
+    if (!client?.created_at) return 0;
+    const created = new Date(client.created_at);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
   const stats = {
-    total_sessions: 48,
-    sessions_this_month: 8,
-    adherence: 92,
-    mrr: 149,
-    lifetime_value: 1788,
-    days_as_client: 214,
+    total_sessions: 0, // TODO: Get from bookings API when endpoint available
+    sessions_this_month: 0, // TODO: Get from bookings API when endpoint available  
+    adherence: 0, // TODO: Calculate from completed vs scheduled sessions
+    mrr: 0, // TODO: Get from subscriptions API when endpoint available
+    lifetime_value: 0, // TODO: Get from payments API when endpoint available
+    days_as_client: calculateDaysAsClient(),
   };
 
   // TODO: Conectar a endpoints de actividades, sesiones y mediciones cuando estén disponibles
@@ -652,8 +760,10 @@ export function ClientDetailPage() {
 
   // Handlers para el modal de alergias
   const handleOpenAllergyModal = () => {
-    setSelectedAllergies(client.allergies || []);
-    setSelectedIntolerances(client.intolerances || []);
+    // Lee de health_data.allergens (la clave correcta del modelo)
+    const healthData = (client as { health_data?: { allergens?: string[]; intolerances?: string[] } }).health_data || {};
+    setSelectedAllergies(healthData.allergens || []);
+    setSelectedIntolerances(healthData.intolerances || []);
     openAllergyModal();
   };
 
@@ -677,15 +787,25 @@ export function ClientDetailPage() {
         id,
         data: {
           health_data: {
-            ...(client.health_data || {}),
-            allergies: selectedAllergies,
+            ...((client as { health_data?: object }).health_data || {}),
+            allergens: selectedAllergies,  // Cambiado de 'allergies' a 'allergens'
             intolerances: selectedIntolerances,
           },
         },
       });
+      notifications.show({
+        title: "Guardado",
+        message: "Alergias e intolerancias actualizadas correctamente",
+        color: "green",
+      });
       closeAllergyModal();
     } catch (error) {
       console.error("Error saving allergies:", error);
+      notifications.show({
+        title: "Error",
+        message: "No se pudieron guardar las alergias",
+        color: "red",
+      });
     }
   };
 
@@ -848,32 +968,31 @@ export function ClientDetailPage() {
         <StatCard 
           icon={<IconCalendarEvent size={24} />} 
           label="Sesiones Totales" 
-          value={stats.total_sessions}
+          value={stats.total_sessions || "-"}
           color="var(--nv-primary)"
         />
         <StatCard 
           icon={<IconActivity size={24} />} 
           label="Este Mes" 
-          value={stats.sessions_this_month}
+          value={stats.sessions_this_month || "-"}
           color="var(--nv-success)"
         />
         <StatCard 
           icon={<IconTarget size={24} />} 
           label="Adherencia" 
-          value={`${stats.adherence}%`}
+          value={stats.adherence > 0 ? `${stats.adherence}%` : "-"}
           color="var(--nv-success)"
-          trend={{ value: 5, positive: true }}
         />
         <StatCard 
           icon={<IconCreditCard size={24} />} 
           label="MRR" 
-          value={`€${stats.mrr}`}
+          value={stats.mrr > 0 ? `€${stats.mrr}` : "-"}
           color="var(--nv-warning)"
         />
         <StatCard 
           icon={<IconHeart size={24} />} 
           label="LTV" 
-          value={`€${stats.lifetime_value}`}
+          value={stats.lifetime_value > 0 ? `€${stats.lifetime_value}` : "-"}
           color="#8B5CF6"
         />
         <StatCard 
@@ -993,25 +1112,25 @@ export function ClientDetailPage() {
                 </ActionIcon>
               </Group>
 
-              {(client.allergies?.length > 0 || client.intolerances?.length > 0) ? (
+              {(((client as any).health_data?.allergens?.length > 0) || ((client as any).health_data?.intolerances?.length > 0)) ? (
                 <Stack gap="md">
-                  {client.allergies?.length > 0 && (
+                  {(client as any).health_data?.allergens?.length > 0 && (
                     <Box>
                       <Text size="sm" c="dimmed" mb="xs">Alergias</Text>
                       <AllergenList 
-                        allergens={client.allergies} 
-                        clientAllergens={client.allergies}
-                        clientIntolerances={client.intolerances}
+                        allergens={(client as any).health_data?.allergens || []} 
+                        clientAllergens={(client as any).health_data?.allergens || []}
+                        clientIntolerances={(client as any).health_data?.intolerances || []}
                       />
                     </Box>
                   )}
-                  {client.intolerances?.length > 0 && (
+                  {(client as any).health_data?.intolerances?.length > 0 && (
                     <Box>
                       <Text size="sm" c="dimmed" mb="xs">Intolerancias</Text>
                       <AllergenList 
-                        allergens={client.intolerances} 
-                        clientAllergens={client.allergies}
-                        clientIntolerances={client.intolerances}
+                        allergens={(client as any).health_data?.intolerances || []} 
+                        clientAllergens={(client as any).health_data?.allergens || []}
+                        clientIntolerances={(client as any).health_data?.intolerances || []}
                       />
                     </Box>
                   )}
@@ -1126,8 +1245,8 @@ export function ClientDetailPage() {
                   activity_level: activityLevel as any,
                   body_tendency: "normal",
                   goal_type: goalType as any,
-                  allergies: (client as any).health_data?.allergies || client.allergies || [],
-                  intolerances: (client as any).health_data?.intolerances || client.intolerances || [],
+                  allergies: (client as any).health_data?.allergens || [],
+                  intolerances: (client as any).health_data?.intolerances || [],
                 }}
                 onEdit={() => navigate(`/nutrition/plans/${viewingMealPlanId}/edit`)}
               />
@@ -1185,41 +1304,61 @@ export function ClientDetailPage() {
                   </Box>
                 </SimpleGrid>
 
-                {/* Macros Objetivo */}
+                {/* Macros Objetivo - del Plan Asignado o Calculados */}
                 <Box p="lg" style={{ background: "rgba(255,255,255,0.95)", borderRadius: "var(--radius-lg)" }}>
                   <Text fw={700} size="sm" mb="md" style={{ color: "var(--nv-dark)" }}>
-                    🎯 Objetivos Diarios Recomendados
+                    🎯 Objetivos Diarios {mealPlans.length > 0 ? `(${mealPlans[0].name})` : "(Calculados automáticamente)"}
                   </Text>
                   <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="lg">
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#3B82F6", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.calories}
+                        {mealPlans.length > 0 && mealPlans[0].target_calories ? mealPlans[0].target_calories : nutritionalTargets.calories}
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Calorías</Text>
+                      {mealPlans.length > 0 && mealPlans[0].target_calories && mealPlans[0].target_calories !== nutritionalTargets.calories && (
+                        <Text size="xs" c="gray.5" mt={2}>
+                          (Recom: {nutritionalTargets.calories})
+                        </Text>
+                      )}
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#22C55E", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.protein}g
+                        {mealPlans.length > 0 && mealPlans[0].target_protein ? mealPlans[0].target_protein : nutritionalTargets.protein}g
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Proteínas</Text>
+                      {mealPlans.length > 0 && mealPlans[0].target_protein && mealPlans[0].target_protein !== nutritionalTargets.protein && (
+                        <Text size="xs" c="gray.5" mt={2}>
+                          (Recom: {nutritionalTargets.protein}g)
+                        </Text>
+                      )}
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#F59E0B", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.carbs}g
+                        {mealPlans.length > 0 && mealPlans[0].target_carbs ? mealPlans[0].target_carbs : nutritionalTargets.carbs}g
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Carbohidratos</Text>
+                      {mealPlans.length > 0 && mealPlans[0].target_carbs && mealPlans[0].target_carbs !== nutritionalTargets.carbs && (
+                        <Text size="xs" c="gray.5" mt={2}>
+                          (Recom: {nutritionalTargets.carbs}g)
+                        </Text>
+                      )}
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#8B5CF6", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.fat}g
+                        {mealPlans.length > 0 && mealPlans[0].target_fat ? mealPlans[0].target_fat : nutritionalTargets.fat}g
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Grasas</Text>
+                      {mealPlans.length > 0 && mealPlans[0].target_fat && mealPlans[0].target_fat !== nutritionalTargets.fat && (
+                        <Text size="xs" c="gray.5" mt={2}>
+                          (Recom: {nutritionalTargets.fat}g)
+                        </Text>
+                      )}
                     </Box>
                   </SimpleGrid>
                 </Box>
 
                 {/* Alergias e intolerancias */}
-                {((client as any).health_data?.allergies?.length > 0 || (client as any).health_data?.intolerances?.length > 0 || client.allergies?.length > 0) && (
+                {((client as any).health_data?.allergens?.length > 0 || (client as any).health_data?.intolerances?.length > 0) && (
                   <Box mt="md" p="md" style={{ background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
                     <Group gap="xs" mb="xs">
                       <IconAlertTriangle size={16} color="#EF4444" />
@@ -1227,8 +1366,8 @@ export function ClientDetailPage() {
                     </Group>
                     <Group gap="xs">
                       {[
-                        ...((client as any).health_data?.allergies || client.allergies || []),
-                        ...((client as any).health_data?.intolerances || client.intolerances || [])
+                        ...((client as any).health_data?.allergens || []),
+                        ...((client as any).health_data?.intolerances || [])
                       ].map((item: string, idx: number) => (
                         <Badge key={idx} color="red" variant="light" size="sm">{item}</Badge>
                       ))}
@@ -1262,7 +1401,7 @@ export function ClientDetailPage() {
                   </Group>
 
                   <Stack gap="sm">
-                    {mealPlans.map((plan) => (
+                    {mealPlans.map((plan: { id: string; name: string; target_calories: number; status: string; created_at: string }) => (
                       <Box 
                         key={plan.id} 
                         p="md" 
@@ -1307,6 +1446,17 @@ export function ClientDetailPage() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               <IconDownload size={16} />
+                            </ActionIcon>
+                            <ActionIcon 
+                              variant="subtle" 
+                              color="red" 
+                              radius="xl"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMealPlan(plan.id);
+                              }}
+                            >
+                              <IconTrash size={16} />
                             </ActionIcon>
                           </Group>
                         </Group>
@@ -1637,30 +1787,119 @@ export function ClientDetailPage() {
 
         {/* Programas */}
         <Tabs.Panel value="programs">
-          <Box className="nv-card" p={60} ta="center">
-            <ThemeIcon size={80} radius="xl" variant="light" color="gray" mb="lg">
-              <IconBarbell size={40} />
-            </ThemeIcon>
-            <Text fw={700} size="lg" mb="xs">Sin programas asignados</Text>
-            <Text c="dimmed" mb="lg" maw={400} mx="auto">
-              Asigna un programa de entrenamiento para este cliente
-            </Text>
-            <Button 
-              leftSection={<IconPlus size={18} />}
-              radius="xl"
-              onClick={handleAssignProgram}
-              styles={{
-                root: {
-                  background: "var(--nv-accent)",
-                  color: "var(--nv-dark)",
-                  fontWeight: 700,
-                  "&:hover": { background: "var(--nv-accent-hover)" }
-                }
-              }}
-            >
-              Asignar Programa
-            </Button>
-          </Box>
+          {clientWorkoutPrograms.length > 0 ? (
+            <Box className="nv-card" p="xl">
+              <Group justify="space-between" mb="lg">
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Programas de Entrenamiento
+                </Text>
+                <Button 
+                  leftSection={<IconPlus size={18} />}
+                  radius="xl"
+                  onClick={handleAssignProgram}
+                  size="sm"
+                  styles={{
+                    root: {
+                      background: "var(--nv-accent)",
+                      color: "var(--nv-dark)",
+                      fontWeight: 700,
+                    }
+                  }}
+                >
+                  Asignar Programa
+                </Button>
+              </Group>
+              <Stack gap="md">
+                {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at: string }) => (
+                  <Card key={program.id} padding="lg" radius="md" withBorder>
+                    <Group justify="space-between" align="flex-start">
+                      <Box>
+                        <Group gap="sm" mb="xs">
+                          <ThemeIcon size="lg" radius="xl" variant="light" color="blue">
+                            <IconBarbell size={18} />
+                          </ThemeIcon>
+                          <Text fw={600} size="md">{program.name}</Text>
+                        </Group>
+                        {program.description && (
+                          <Text size="sm" c="dimmed" mb="sm">{program.description}</Text>
+                        )}
+                        <Group gap="md">
+                          {program.duration_weeks && (
+                            <Badge variant="light" color="blue" size="sm">
+                              {program.duration_weeks} semanas
+                            </Badge>
+                          )}
+                          {program.difficulty && (
+                            <Badge variant="light" color="gray" size="sm">
+                              {program.difficulty}
+                            </Badge>
+                          )}
+                          <Text size="xs" c="dimmed">
+                            Asignado: {new Date(program.created_at).toLocaleDateString('es-ES')}
+                          </Text>
+                        </Group>
+                      </Box>
+                      <Menu position="bottom-end" withArrow shadow="md">
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" color="gray" size="lg">
+                            <IconDotsVertical size={18} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item 
+                            leftSection={<IconEye size={16} />}
+                            onClick={() => {
+                              // TODO: Navegar al detalle del programa
+                              notifications.show({
+                                title: "Ver programa",
+                                message: `Visualizando: ${program.name}`,
+                                color: "blue",
+                              });
+                            }}
+                          >
+                            Ver detalles
+                          </Menu.Item>
+                          <Menu.Divider />
+                          <Menu.Item 
+                            color="red"
+                            leftSection={<IconTrash size={16} />}
+                            onClick={() => handleDeleteProgram(program.id)}
+                          >
+                            Eliminar asignación
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
+                    </Group>
+                  </Card>
+                ))}
+              </Stack>
+            </Box>
+          ) : (
+            <Box className="nv-card" p={60} ta="center">
+              <ThemeIcon size={80} radius="xl" variant="light" color="gray" mb="lg">
+                <IconBarbell size={40} />
+              </ThemeIcon>
+              <Text fw={700} size="lg" mb="xs">Sin programas asignados</Text>
+              <Text c="dimmed" mb="lg" maw={400} mx="auto">
+                Asigna un programa de entrenamiento para este cliente
+              </Text>
+              <Button 
+                leftSection={<IconPlus size={18} />}
+                radius="xl"
+                onClick={handleAssignProgram}
+                styles={{
+                  root: {
+                    background: "var(--nv-accent)",
+                    color: "var(--nv-dark)",
+                    fontWeight: 700,
+                    "&:hover": { background: "var(--nv-accent-hover)" }
+                  }
+                }}
+              >
+                Asignar Programa
+              </Button>
+            </Box>
+          )}
         </Tabs.Panel>
 
         {/* Pagos */}
@@ -1965,9 +2204,9 @@ export function ClientDetailPage() {
           <Select
             label="Programa de entrenamiento"
             placeholder="Selecciona un programa"
-            data={workoutTemplates.map((p) => ({
+            data={workoutTemplates.map((p: { id: string; name: string; duration_weeks?: number; difficulty?: string }) => ({
               value: p.id,
-              label: `${p.name} (${p.duration_weeks} semanas - ${p.difficulty})`,
+              label: `${p.name} (${p.duration_weeks || 0} semanas - ${p.difficulty || 'N/A'})`,
             }))}
             value={selectedProgram}
             onChange={setSelectedProgram}
@@ -2035,7 +2274,7 @@ export function ClientDetailPage() {
           <Select
             label="Plan nutricional"
             placeholder="Selecciona un plan"
-            data={mealPlanTemplates.map((p) => ({
+            data={mealPlanTemplates.map((p: { id: string; name: string; duration_days?: number; target_calories?: number }) => ({
               value: p.id,
               label: `${p.name} (${p.duration_days || 7} días - ${p.target_calories || 0} kcal)`,
             }))}
@@ -2088,6 +2327,43 @@ export function ClientDetailPage() {
               leftSection={<IconSalad size={16} />}
             >
               Asignar Plan
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal de confirmación para eliminar programa/plan */}
+      <Modal
+        opened={deleteConfirmModalOpened}
+        onClose={closeDeleteConfirmModal}
+        title={deletingProgramId ? "Eliminar Programa" : "Eliminar Plan Nutricional"}
+        size="sm"
+        radius="lg"
+        centered
+      >
+        <Stack gap="lg">
+          <Text size="sm" c="dimmed">
+            {deletingProgramId 
+              ? "¿Estás seguro de que quieres eliminar este programa de entrenamiento asignado? Esta acción no se puede deshacer."
+              : "¿Estás seguro de que quieres eliminar este plan nutricional asignado? Esta acción no se puede deshacer."
+            }
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button 
+              variant="default" 
+              radius="xl"
+              onClick={closeDeleteConfirmModal}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              color="red"
+              radius="xl"
+              leftSection={<IconTrash size={16} />}
+              onClick={handleConfirmDelete}
+              loading={deleteAssignedProgram.isPending || deleteAssignedMealPlan.isPending}
+            >
+              Eliminar
             </Button>
           </Group>
         </Stack>

@@ -42,6 +42,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
+import { EmptyState } from "../../components/common/EmptyState";
 
 interface Document {
   id: string;
@@ -74,11 +75,11 @@ export function DocumentsPage() {
     { open: openFolderModal, close: closeFolderModal },
   ] = useDisclosure(false);
 
-  // TODO: Replace with API call when backend endpoint is ready
-  // const { data: documents = [] } = useDocuments();
-  // const { data: folders = [] } = useDocumentFolders();
+  // Note: Document storage backend is not yet implemented
+  // The tables for documents don't exist in the current DB schema
   const [documents] = useState<Document[]>([]);
   const [folders] = useState<DocumentFolder[]>([]);
+  const isModuleDisabled = true; // Set to false when backend is ready
 
   const documentForm = useForm({
     initialValues: {
@@ -226,6 +227,23 @@ export function DocumentsPage() {
 
         {/* Documents Tab */}
         <Tabs.Panel value="documents">
+          {isModuleDisabled ? (
+            <EmptyState
+              icon={<IconFileText size={48} />}
+              title="Módulo en desarrollo"
+              description="La gestión de documentos estará disponible próximamente. Esta funcionalidad permitirá subir, firmar y gestionar contratos y documentos."
+            />
+          ) : documents.length === 0 ? (
+            <EmptyState
+              icon={<IconFileText size={48} />}
+              title="No hay documentos"
+              description="Crea tu primer documento para empezar a gestionar contratos y consentimientos."
+              action={{
+                label: "Crear Documento",
+                onClick: openDocumentModal,
+              }}
+            />
+          ) : (
           <Stack gap="md">
             {documents.map((doc) => (
               <Paper key={doc.id} p="md" radius="md" withBorder>
@@ -317,6 +335,7 @@ export function DocumentsPage() {
               </Paper>
             ))}
           </Stack>
+          )}
         </Tabs.Panel>
 
         {/* Folders Tab */}

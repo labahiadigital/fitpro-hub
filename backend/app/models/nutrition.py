@@ -208,7 +208,8 @@ class CustomFood(BaseModel):
     # Basic food details
     name = Column(Text, nullable=False, index=True)
     brand = Column(Text, nullable=True)
-    category_id = Column(UUID(as_uuid=True), ForeignKey("food_categories.id", ondelete="SET NULL"), nullable=True)
+    # NOTE: food_categories table doesn't exist - using category as text field like in Food model
+    category = Column(Text, nullable=True)
     
     # Serving info
     serving_size = Column(Numeric, default=100, nullable=False)

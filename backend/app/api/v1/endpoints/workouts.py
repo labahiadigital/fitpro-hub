@@ -50,23 +50,36 @@ class ExerciseResponse(BaseModel):
 class WorkoutProgramCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    client_id: Optional[UUID] = None
     duration_weeks: int = 4
     difficulty: str = "intermediate"
     template: dict = {"weeks": []}
     tags: List[str] = []
-    is_template: str = "Y"
+    is_template: bool = True
+
+
+class WorkoutProgramUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    client_id: Optional[UUID] = None
+    duration_weeks: Optional[int] = None
+    difficulty: Optional[str] = None
+    template: Optional[dict] = None
+    tags: Optional[List[str]] = None
+    is_template: Optional[bool] = None
 
 
 class WorkoutProgramResponse(BaseModel):
     id: UUID
     workspace_id: UUID
+    client_id: Optional[UUID] = None
     name: str
-    description: Optional[str]
-    duration_weeks: int
-    difficulty: str
-    template: dict
-    tags: List[str]
-    is_template: str
+    description: Optional[str] = None
+    duration_weeks: Optional[int] = 4
+    difficulty: Optional[str] = "intermediate"
+    template: Optional[dict] = None
+    tags: Optional[List[str]] = []
+    is_template: bool = True
     
     class Config:
         from_attributes = True
@@ -154,7 +167,8 @@ async def create_exercise(
 
 @router.get("/programs", response_model=List[WorkoutProgramResponse])
 async def list_programs(
-    is_template: Optional[str] = None,
+    is_template: Optional[bool] = None,
+    client_id: Optional[UUID] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
@@ -165,8 +179,11 @@ async def list_programs(
         WorkoutProgram.workspace_id == current_user.workspace_id
     )
     
-    if is_template:
+    if is_template is not None:
         query = query.where(WorkoutProgram.is_template == is_template)
+    
+    if client_id:
+        query = query.where(WorkoutProgram.client_id == client_id)
     
     result = await db.execute(query.order_by(WorkoutProgram.created_at.desc()))
     return result.scalars().all()
@@ -184,6 +201,7 @@ async def create_program(
     program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
+        client_id=data.client_id,
         name=data.name,
         description=data.description,
         duration_weeks=data.duration_weeks,
@@ -227,12 +245,12 @@ async def get_program(
 @router.put("/programs/{program_id}", response_model=WorkoutProgramResponse)
 async def update_program(
     program_id: UUID,
-    data: WorkoutProgramCreate,
+    data: WorkoutProgramUpdate,
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Actualizar un programa.
+    Actualizar un programa (parcialmente).
     """
     result = await db.execute(
         select(WorkoutProgram).where(
@@ -248,8 +266,10 @@ async def update_program(
             detail="Programa no encontrado"
         )
     
-    for field, value in data.model_dump().items():
-        setattr(program, field, value)
+    # Only update fields that are provided (not None)
+    for field, value in data.model_dump(exclude_unset=True).items():
+        if value is not None:
+            setattr(program, field, value)
     
     await db.commit()
     await db.refresh(program)
@@ -281,6 +301,60 @@ async def delete_program(
     
     await db.delete(program)
     await db.commit()
+
+
+# Schema for assign request
+class AssignProgramRequest(BaseModel):
+    client_id: UUID
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/programs/{program_id}/assign", response_model=WorkoutProgramResponse, status_code=status.HTTP_201_CREATED)
+async def assign_program_to_client(
+    program_id: UUID,
+    data: AssignProgramRequest,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Asignar un programa (template) a un cliente.
+    Crea una copia del programa con el client_id asignado.
+    """
+    # Get the template program
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == program_id,
+            WorkoutProgram.workspace_id == current_user.workspace_id
+        )
+    )
+    template = result.scalar_one_or_none()
+    
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Programa no encontrado"
+        )
+    
+    # Create a copy assigned to the client
+    assigned_program = WorkoutProgram(
+        workspace_id=current_user.workspace_id,
+        created_by=current_user.id,
+        client_id=data.client_id,
+        name=template.name,
+        description=template.description,
+        duration_weeks=template.duration_weeks,
+        difficulty=template.difficulty,
+        template=template.template,
+        tags=template.tags,
+        is_template=False  # This is an assigned instance, not a template
+    )
+    
+    db.add(assigned_program)
+    await db.commit()
+    await db.refresh(assigned_program)
+    return assigned_program
 
 
 # ============ LOGS ============

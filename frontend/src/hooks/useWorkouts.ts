@@ -86,7 +86,7 @@ export function useWorkoutPrograms(isTemplate?: boolean) {
     queryKey: ["workout-programs", isTemplate],
     queryFn: async () => {
       return workoutsApi.programs({
-        is_template: isTemplate ? "Y" : undefined,
+        is_template: isTemplate,
       });
     },
     select: (response) => response.data as WorkoutProgram[],
