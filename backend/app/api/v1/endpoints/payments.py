@@ -173,6 +173,90 @@ async def get_stripe_status(
         return {"connected": True, "onboarding_complete": False}
 
 
+# ============ KPIS ============
+
+@router.get("/kpis")
+async def get_payment_kpis(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Obtener KPIs de pagos del workspace.
+    """
+    from sqlalchemy import func
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
+    
+    now = datetime.utcnow()
+    first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    first_of_last_month = first_of_month - relativedelta(months=1)
+    
+    # MRR - Monthly Recurring Revenue from active subscriptions
+    mrr_result = await db.execute(
+        select(func.coalesce(func.sum(Subscription.amount), 0)).where(
+            Subscription.workspace_id == current_user.workspace_id,
+            Subscription.status == SubscriptionStatus.ACTIVE
+        )
+    )
+    mrr = float(mrr_result.scalar() or 0)
+    
+    # Active subscriptions count
+    active_subs_result = await db.execute(
+        select(func.count()).where(
+            Subscription.workspace_id == current_user.workspace_id,
+            Subscription.status == SubscriptionStatus.ACTIVE
+        )
+    )
+    active_subscriptions = active_subs_result.scalar() or 0
+    
+    # Pending payments
+    pending_result = await db.execute(
+        select(func.count(), func.coalesce(func.sum(Payment.amount), 0)).where(
+            Payment.workspace_id == current_user.workspace_id,
+            Payment.status == PaymentStatus.PENDING
+        )
+    )
+    pending_row = pending_result.one()
+    pending_payments = pending_row[0] or 0
+    pending_amount = float(pending_row[1] or 0)
+    
+    # This month revenue
+    revenue_this_month_result = await db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0)).where(
+            Payment.workspace_id == current_user.workspace_id,
+            Payment.status == PaymentStatus.SUCCEEDED,
+            Payment.created_at >= first_of_month
+        )
+    )
+    this_month_revenue = float(revenue_this_month_result.scalar() or 0)
+    
+    # Last month revenue (for comparison)
+    revenue_last_month_result = await db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0)).where(
+            Payment.workspace_id == current_user.workspace_id,
+            Payment.status == PaymentStatus.SUCCEEDED,
+            Payment.created_at >= first_of_last_month,
+            Payment.created_at < first_of_month
+        )
+    )
+    last_month_revenue = float(revenue_last_month_result.scalar() or 0)
+    
+    # Calculate change percentage
+    revenue_change = 0
+    if last_month_revenue > 0:
+        revenue_change = round(((this_month_revenue - last_month_revenue) / last_month_revenue) * 100, 1)
+    
+    return {
+        "mrr": mrr,
+        "mrr_change": 0,  # Would need historical data
+        "active_subscriptions": active_subscriptions,
+        "pending_payments": pending_payments,
+        "pending_amount": pending_amount,
+        "this_month_revenue": this_month_revenue,
+        "revenue_change": revenue_change
+    }
+
+
 # ============ SUBSCRIPTIONS ============
 
 @router.get("/subscriptions", response_model=List[SubscriptionResponse])

@@ -22,24 +22,26 @@ class ExerciseCreate(BaseModel):
     muscle_groups: List[str] = []
     equipment: List[str] = []
     difficulty: str = "intermediate"
-    category_id: Optional[UUID] = None
+    category: Optional[str] = None
     video_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 class ExerciseResponse(BaseModel):
     id: UUID
     name: str
-    description: Optional[str]
-    instructions: Optional[str]
-    muscle_groups: List[str]
-    equipment: List[str]
-    difficulty: str
-    category_id: Optional[UUID]
-    video_url: Optional[str]
-    thumbnail_url: Optional[str]
-    is_public: bool
-    is_system: bool
+    description: Optional[str] = None
+    instructions: Optional[str] = None
+    muscle_groups: Optional[List[str]] = []
+    equipment: Optional[List[str]] = []
+    difficulty: Optional[str] = "intermediate"
+    category: Optional[str] = None
+    video_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    image_url: Optional[str] = None
+    is_global: bool = False
+    workspace_id: Optional[UUID] = None
     
     class Config:
         from_attributes = True
@@ -92,18 +94,17 @@ class WorkoutLogResponse(BaseModel):
 async def list_exercises(
     search: Optional[str] = None,
     muscle_group: Optional[str] = None,
-    category_id: Optional[UUID] = None,
+    category: Optional[str] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar ejercicios (públicos, del sistema, y del workspace).
+    Listar ejercicios (globales y del workspace).
     """
     query = select(Exercise).where(
         or_(
             Exercise.workspace_id == current_user.workspace_id,
-            Exercise.is_public == True,
-            Exercise.is_system == True
+            Exercise.is_global == True
         )
     )
     
@@ -113,8 +114,8 @@ async def list_exercises(
     if muscle_group:
         query = query.where(Exercise.muscle_groups.contains([muscle_group]))
     
-    if category_id:
-        query = query.where(Exercise.category_id == category_id)
+    if category:
+        query = query.where(Exercise.category == category)
     
     result = await db.execute(query.order_by(Exercise.name))
     return result.scalars().all()
@@ -137,11 +138,11 @@ async def create_exercise(
         muscle_groups=data.muscle_groups,
         equipment=data.equipment,
         difficulty=data.difficulty,
-        category_id=data.category_id,
+        category=data.category,
         video_url=data.video_url,
         thumbnail_url=data.thumbnail_url,
-        is_public=False,
-        is_system=False
+        image_url=data.image_url,
+        is_global=False
     )
     db.add(exercise)
     await db.commit()

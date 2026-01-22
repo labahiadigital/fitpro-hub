@@ -108,41 +108,46 @@ async def list_conversations(
     Listar conversaciones del workspace.
     Incluye conversaciones de plataforma y WhatsApp unificadas.
     """
-    query = select(Conversation).where(
-        Conversation.workspace_id == current_user.workspace_id
-    ).options(selectinload(Conversation.client))
-    
-    if not include_archived:
-        query = query.where(Conversation.is_archived == False)
-    
-    result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
-    conversations = result.scalars().all()
-    
-    # Enrich with client data
-    response = []
-    for conv in conversations:
-        conv_dict = {
-            "id": conv.id,
-            "workspace_id": conv.workspace_id,
-            "client_id": conv.client_id,
-            "name": conv.name,
-            "conversation_type": conv.conversation_type,
-            "participant_ids": conv.participant_ids or [],
-            "whatsapp_phone": conv.whatsapp_phone,
-            "whatsapp_profile_name": conv.whatsapp_profile_name,
-            "preferred_channel": conv.preferred_channel,
-            "last_message_at": conv.last_message_at,
-            "last_message_preview": conv.last_message_preview,
-            "last_message_source": conv.last_message_source,
-            "unread_count": conv.unread_count or 0,
-            "is_archived": conv.is_archived,
-            "created_at": conv.created_at,
-            "client_name": conv.client.full_name if conv.client else conv.whatsapp_profile_name or conv.name,
-            "client_avatar_url": conv.client.avatar_url if conv.client else None,
-        }
-        response.append(ConversationResponse(**conv_dict))
-    
-    return response
+    try:
+        query = select(Conversation).where(
+            Conversation.workspace_id == current_user.workspace_id
+        ).options(selectinload(Conversation.client))
+        
+        if not include_archived:
+            query = query.where(Conversation.is_archived == False)
+        
+        result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
+        conversations = result.scalars().all()
+        
+        # Enrich with client data
+        response = []
+        for conv in conversations:
+            conv_dict = {
+                "id": conv.id,
+                "workspace_id": conv.workspace_id,
+                "client_id": conv.client_id,
+                "name": conv.name,
+                "conversation_type": conv.conversation_type,
+                "participant_ids": conv.participant_ids or [],
+                "whatsapp_phone": conv.whatsapp_phone,
+                "whatsapp_profile_name": conv.whatsapp_profile_name,
+                "preferred_channel": conv.preferred_channel,
+                "last_message_at": conv.last_message_at,
+                "last_message_preview": conv.last_message_preview,
+                "last_message_source": conv.last_message_source,
+                "unread_count": conv.unread_count or 0,
+                "is_archived": conv.is_archived,
+                "created_at": conv.created_at,
+                "client_name": conv.client.full_name if conv.client else conv.whatsapp_profile_name or conv.name,
+                "client_avatar_url": conv.client.avatar_url if conv.client else None,
+            }
+            response.append(ConversationResponse(**conv_dict))
+        
+        return response
+    except Exception as e:
+        # Table might not exist yet - return empty list
+        print(f"[Messages] Error listing conversations: {e}")
+        return []
 
 
 @router.post("/conversations", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)

@@ -88,79 +88,13 @@ export function CommunityPage() {
   const [groupModalOpened, { open: openGroupModal, close: closeGroupModal }] =
     useDisclosure(false);
 
-  // Mock data
-  const [challenges] = useState<Challenge[]>([
-    {
-      id: "1",
-      name: "Reto 30 Días Fitness",
-      description: "Completa 30 entrenamientos en 30 días",
-      type: "workouts",
-      goal: 30,
-      unit: "entrenamientos",
-      startDate: "2024-01-01",
-      endDate: "2024-01-31",
-      participants: [
-        { id: "1", name: "María García", progress: 24 },
-        { id: "2", name: "Carlos López", progress: 20 },
-        { id: "3", name: "Ana Martínez", progress: 18 },
-        { id: "4", name: "Pedro Sánchez", progress: 15 },
-      ],
-      isActive: true,
-    },
-    {
-      id: "2",
-      name: "Desafío 10K Pasos",
-      description: "Camina 10,000 pasos diarios durante 2 semanas",
-      type: "steps",
-      goal: 140_000,
-      unit: "pasos",
-      startDate: "2024-01-15",
-      endDate: "2024-01-29",
-      participants: [
-        { id: "1", name: "María García", progress: 98_000 },
-        { id: "3", name: "Ana Martínez", progress: 85_000 },
-      ],
-      isActive: true,
-    },
-  ]);
-
-  const [groups] = useState<CommunityGroup[]>([
-    {
-      id: "1",
-      name: "Runners Club",
-      description: "Grupo para amantes del running",
-      memberCount: 25,
-      isPrivate: false,
-    },
-    {
-      id: "2",
-      name: "Pérdida de Peso",
-      description: "Apoyo mutuo para perder peso",
-      memberCount: 18,
-      isPrivate: true,
-    },
-    {
-      id: "3",
-      name: "Yoga & Mindfulness",
-      description: "Práctica de yoga y meditación",
-      memberCount: 32,
-      isPrivate: false,
-    },
-  ]);
-
-  const [leaderboard] = useState<LeaderboardEntry[]>([
-    { rank: 1, userId: "1", userName: "María García", score: 2450, streak: 15 },
-    { rank: 2, userId: "2", userName: "Carlos López", score: 2280, streak: 12 },
-    { rank: 3, userId: "3", userName: "Ana Martínez", score: 2100, streak: 10 },
-    { rank: 4, userId: "4", userName: "Pedro Sánchez", score: 1950, streak: 8 },
-    {
-      rank: 5,
-      userId: "5",
-      userName: "Laura Fernández",
-      score: 1800,
-      streak: 7,
-    },
-  ]);
+  // TODO: Replace with API call when backend endpoint is ready
+  // const { data: challenges = [] } = useChallenges();
+  // const { data: groups = [] } = useCommunityGroups();
+  // const { data: leaderboard = [] } = useLeaderboard();
+  const [challenges] = useState<Challenge[]>([]);
+  const [groups] = useState<CommunityGroup[]>([]);
+  const [leaderboard] = useState<LeaderboardEntry[]>([]);
 
   const challengeForm = useForm({
     initialValues: {

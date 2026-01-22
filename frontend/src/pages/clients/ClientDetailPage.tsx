@@ -228,8 +228,19 @@ export function ClientDetailPage() {
 
   const supplements: { id: string; name: string; dosage: string; frequency: string }[] = [];
   
-  // If no client found, show loading or redirect
-  if (!client && !isLoading) {
+  // If loading, show loader
+  if (isLoading) {
+    return (
+      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
+        <Center h={400}>
+          <Loader size="lg" />
+        </Center>
+      </Container>
+    );
+  }
+
+  // If no client found, show error
+  if (!client) {
     return (
       <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
         <Text c="dimmed" ta="center">Cliente no encontrado</Text>

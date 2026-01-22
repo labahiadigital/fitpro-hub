@@ -63,99 +63,9 @@ interface ClientPackage {
   status: "active" | "expired" | "exhausted";
 }
 
-const mockPackages: SessionPackage[] = [
-  {
-    id: "1",
-    name: "Bono 10 Sesiones",
-    description: "Paquete de 10 sesiones de entrenamiento personal",
-    totalSessions: 10,
-    price: 350,
-    validityDays: 90,
-    sessionTypes: ["Personal Training"],
-    isActive: true,
-    soldCount: 15,
-  },
-  {
-    id: "2",
-    name: "Bono 20 Sesiones",
-    description: "Paquete de 20 sesiones con descuento",
-    totalSessions: 20,
-    price: 600,
-    validityDays: 180,
-    sessionTypes: ["Personal Training", "HIIT"],
-    isActive: true,
-    soldCount: 8,
-  },
-  {
-    id: "3",
-    name: "Pack Nutrición",
-    description: "5 consultas nutricionales",
-    totalSessions: 5,
-    price: 150,
-    validityDays: 60,
-    sessionTypes: ["Nutrición"],
-    isActive: true,
-    soldCount: 12,
-  },
-  {
-    id: "4",
-    name: "Pack Completo",
-    description: "Entrenamiento + Nutrición",
-    totalSessions: 15,
-    price: 500,
-    validityDays: 120,
-    sessionTypes: ["Personal Training", "Nutrición"],
-    isActive: false,
-    soldCount: 3,
-  },
-];
-
-const mockClientPackages: ClientPackage[] = [
-  {
-    id: "1",
-    clientName: "María García",
-    clientEmail: "maria@email.com",
-    packageName: "Bono 10 Sesiones",
-    totalSessions: 10,
-    usedSessions: 6,
-    purchasedAt: "2024-10-15",
-    expiresAt: "2025-01-15",
-    status: "active",
-  },
-  {
-    id: "2",
-    clientName: "Carlos López",
-    clientEmail: "carlos@email.com",
-    packageName: "Bono 20 Sesiones",
-    totalSessions: 20,
-    usedSessions: 20,
-    purchasedAt: "2024-08-01",
-    expiresAt: "2025-02-01",
-    status: "exhausted",
-  },
-  {
-    id: "3",
-    clientName: "Ana Martínez",
-    clientEmail: "ana@email.com",
-    packageName: "Pack Nutrición",
-    totalSessions: 5,
-    usedSessions: 2,
-    purchasedAt: "2024-11-01",
-    expiresAt: "2024-12-31",
-    status: "active",
-  },
-  {
-    id: "4",
-    clientName: "Pedro Sánchez",
-    clientEmail: "pedro@email.com",
-    packageName: "Bono 10 Sesiones",
-    totalSessions: 10,
-    usedSessions: 3,
-    purchasedAt: "2024-06-01",
-    expiresAt: "2024-09-01",
-    status: "expired",
-  },
-];
+// TODO: Replace with API call when backend endpoint is ready
+// const { data: packages = [] } = usePackages();
+// const { data: clientPackages = [] } = useClientPackages();
 
 const sessionTypeOptions = [
   { value: "Personal Training", label: "Personal Training" },
@@ -168,8 +78,8 @@ const sessionTypeOptions = [
 
 export function PackagesPage() {
   const [activeTab, setActiveTab] = useState<string | null>("packages");
-  const [packages, setPackages] = useState<SessionPackage[]>(mockPackages);
-  const [clientPackages] = useState<ClientPackage[]>(mockClientPackages);
+  const [packages, setPackages] = useState<SessionPackage[]>([]);
+  const [clientPackages] = useState<ClientPackage[]>([]);
   const [
     packageModalOpened,
     { open: openPackageModal, close: closePackageModal },

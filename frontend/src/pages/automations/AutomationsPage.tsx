@@ -161,76 +161,11 @@ const actionTypes = [
   },
 ];
 
-const mockAutomations: Automation[] = [
-  {
-    id: "1",
-    name: "Onboarding de Nuevo Cliente",
-    description: "Secuencia de bienvenida para nuevos clientes",
-    trigger: { type: "client_created", config: {} },
-    actions: [
-      { id: "a1", type: "send_email", config: { template: "welcome" } },
-      {
-        id: "a2",
-        type: "assign_form",
-        config: { form: "par_q" },
-        delay: 1,
-        delayUnit: "hours",
-      },
-      {
-        id: "a3",
-        type: "send_message",
-        config: { message: "Bienvenido!" },
-        delay: 1,
-        delayUnit: "days",
-      },
-    ],
-    is_active: true,
-    last_run: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    run_count: 45,
-  },
-  {
-    id: "2",
-    name: "Recordatorio de Sesión",
-    description: "Envía recordatorio 24h antes de la sesión",
-    trigger: { type: "booking_reminder", config: { hours_before: 24 } },
-    actions: [
-      {
-        id: "a1",
-        type: "send_email",
-        config: { template: "booking_reminder" },
-      },
-      {
-        id: "a2",
-        type: "send_notification",
-        config: { title: "Sesión mañana" },
-      },
-    ],
-    is_active: true,
-    last_run: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    run_count: 230,
-  },
-  {
-    id: "3",
-    name: "Reactivación de Cliente Inactivo",
-    description: "Contacta clientes sin actividad en 30 días",
-    trigger: { type: "client_inactive", config: { days: 30 } },
-    actions: [
-      { id: "a1", type: "send_email", config: { template: "reactivation" } },
-      {
-        id: "a2",
-        type: "update_tags",
-        config: { add: ["inactivo"] },
-        delay: 7,
-        delayUnit: "days",
-      },
-    ],
-    is_active: false,
-    run_count: 12,
-  },
-];
+// TODO: Replace with API call when backend endpoint is ready
+// const { data: automations = [] } = useAutomations();
 
 export function AutomationsPage() {
-  const [automations, setAutomations] = useState<Automation[]>(mockAutomations);
+  const [automations, setAutomations] = useState<Automation[]>([]);
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [editingAutomation, setEditingAutomation] = useState<Automation | null>(

@@ -34,80 +34,29 @@ import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { StatsCard } from "../../components/common/StatsCard";
 
-// Mock data for charts
-const revenueData = [
-  { month: "Ene", revenue: 4200, clients: 45 },
-  { month: "Feb", revenue: 4800, clients: 48 },
-  { month: "Mar", revenue: 5100, clients: 52 },
-  { month: "Abr", revenue: 4900, clients: 50 },
-  { month: "May", revenue: 5600, clients: 58 },
-  { month: "Jun", revenue: 6200, clients: 65 },
-  { month: "Jul", revenue: 6800, clients: 72 },
-];
-
-const clientActivityData = [
-  { name: "Activos", value: 72, color: "green" },
-  { name: "Inactivos", value: 18, color: "yellow" },
-  { name: "Nuevos", value: 15, color: "blue" },
-  { name: "Bajas", value: 5, color: "red" },
-];
-
-const topClients = [
-  { name: "María García", sessions: 24, revenue: 480, compliance: 95 },
-  { name: "Carlos López", sessions: 20, revenue: 400, compliance: 88 },
-  { name: "Ana Martínez", sessions: 18, revenue: 360, compliance: 92 },
-  { name: "Pedro Sánchez", sessions: 16, revenue: 320, compliance: 85 },
-  { name: "Laura Fernández", sessions: 14, revenue: 280, compliance: 90 },
-];
-
-const recentPayments = [
-  {
-    client: "María García",
-    amount: 120,
-    date: "2024-07-20",
-    status: "completed",
-  },
-  {
-    client: "Carlos López",
-    amount: 80,
-    date: "2024-07-19",
-    status: "completed",
-  },
-  {
-    client: "Ana Martínez",
-    amount: 120,
-    date: "2024-07-18",
-    status: "completed",
-  },
-  {
-    client: "Pedro Sánchez",
-    amount: 80,
-    date: "2024-07-17",
-    status: "pending",
-  },
-  {
-    client: "Laura Fernández",
-    amount: 120,
-    date: "2024-07-16",
-    status: "completed",
-  },
-];
+// Empty data - will be populated from API
+const revenueData: { month: string; revenue: number; clients: number }[] = [];
+const clientActivityData: { name: string; value: number; color: string }[] = [];
+const topClients: { name: string; sessions: number; revenue: number; compliance: number }[] = [];
+const recentPayments: { client: string; amount: number; date: string; status: string }[] = [];
 
 export function ReportsPage() {
   const [period, setPeriod] = useState<string | null>("30");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
 
+  // TODO: Use real data from useKPIs hook when available
+  // const { data: kpisData } = useKPIs();
   const kpis = {
-    mrr: 6800,
-    mrrChange: 9.7,
-    totalClients: 110,
-    clientsChange: 12,
-    activeClients: 72,
-    churnRate: 4.5,
-    avgRevenue: 94.44,
-    bookingsThisMonth: 156,
-    bookingsChange: 8,
-    completionRate: 89,
+    mrr: 0,
+    mrrChange: 0,
+    totalClients: 0,
+    clientsChange: 0,
+    activeClients: 0,
+    churnRate: 0,
+    avgRevenue: 0,
+    bookingsThisMonth: 0,
+    bookingsChange: 0,
+    completionRate: 0,
   };
 
   const maxRevenue = Math.max(...revenueData.map((d) => d.revenue));

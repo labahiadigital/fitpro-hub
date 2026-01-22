@@ -105,92 +105,14 @@ const fieldTypes = [
   { value: "radio", label: "Opción única", icon: IconList },
 ];
 
-const mockForms: FormTemplate[] = [
-  {
-    id: "1",
-    name: "PAR-Q (Cuestionario de Aptitud Física)",
-    description: "Cuestionario estándar de preparación para actividad física",
-    type: "par_q",
-    fields: [],
-    is_active: true,
-    send_on_onboarding: true,
-    submissions_count: 45,
-    created_at: "2024-01-15",
-  },
-  {
-    id: "2",
-    name: "Consentimiento Informado",
-    description: "Documento de consentimiento para servicios de entrenamiento",
-    type: "consent",
-    fields: [],
-    is_active: true,
-    send_on_onboarding: true,
-    submissions_count: 42,
-    created_at: "2024-01-15",
-  },
-  {
-    id: "3",
-    name: "Historial de Salud",
-    description: "Información médica y de salud del cliente",
-    type: "health",
-    fields: [],
-    is_active: true,
-    send_on_onboarding: false,
-    submissions_count: 38,
-    created_at: "2024-02-01",
-  },
-  {
-    id: "4",
-    name: "Encuesta de Satisfacción",
-    description: "Feedback sobre los servicios recibidos",
-    type: "feedback",
-    fields: [],
-    is_active: false,
-    send_on_onboarding: false,
-    submissions_count: 12,
-    created_at: "2024-03-10",
-  },
-];
-
-const mockDocuments: Document[] = [
-  {
-    id: "1",
-    name: "Guía de Nutrición.pdf",
-    type: "pdf",
-    size: 2_500_000,
-    uploaded_at: "2024-07-15",
-    folder: "Recursos",
-  },
-  {
-    id: "2",
-    name: "Plan de Entrenamiento Template.xlsx",
-    type: "xlsx",
-    size: 150_000,
-    uploaded_at: "2024-07-10",
-    folder: "Plantillas",
-  },
-  {
-    id: "3",
-    name: "Contrato de Servicios.pdf",
-    type: "pdf",
-    size: 500_000,
-    uploaded_at: "2024-06-20",
-    folder: "Legal",
-  },
-  {
-    id: "4",
-    name: "Política de Privacidad.pdf",
-    type: "pdf",
-    size: 320_000,
-    uploaded_at: "2024-06-15",
-    folder: "Legal",
-  },
-];
+// TODO: Replace with API call when backend endpoint is ready
+// const { data: forms = [] } = useForms();
+// const { data: documents = [] } = useDocuments();
 
 export function FormsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("forms");
-  const [forms, setForms] = useState<FormTemplate[]>(mockForms);
-  const [documents] = useState<Document[]>(mockDocuments);
+  const [forms, setForms] = useState<FormTemplate[]>([]);
+  const [documents] = useState<Document[]>([]);
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [

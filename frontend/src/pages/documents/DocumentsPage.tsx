@@ -74,55 +74,11 @@ export function DocumentsPage() {
     { open: openFolderModal, close: closeFolderModal },
   ] = useDisclosure(false);
 
-  // Mock data
-  const [documents] = useState<Document[]>([
-    {
-      id: "1",
-      name: "Contrato de Servicios",
-      type: "contract",
-      status: "signed",
-      createdAt: "2024-01-15",
-      sentTo: ["maria@email.com", "carlos@email.com"],
-      signedCount: 15,
-      totalSent: 18,
-      requiresSignature: true,
-    },
-    {
-      id: "2",
-      name: "Consentimiento RGPD",
-      type: "consent",
-      status: "sent",
-      createdAt: "2024-01-10",
-      sentTo: ["ana@email.com"],
-      signedCount: 8,
-      totalSent: 12,
-      requiresSignature: true,
-    },
-    {
-      id: "3",
-      name: "Exención de Responsabilidad",
-      type: "waiver",
-      status: "draft",
-      createdAt: "2024-01-20",
-      requiresSignature: true,
-    },
-    {
-      id: "4",
-      name: "Guía de Nutrición",
-      type: "custom",
-      status: "signed",
-      createdAt: "2024-01-05",
-      requiresSignature: false,
-      fileUrl: "/documents/nutrition-guide.pdf",
-    },
-  ]);
-
-  const [folders] = useState<DocumentFolder[]>([
-    { id: "1", name: "Contratos", documentCount: 5, color: "blue" },
-    { id: "2", name: "Consentimientos", documentCount: 3, color: "green" },
-    { id: "3", name: "Guías y Recursos", documentCount: 8, color: "violet" },
-    { id: "4", name: "Facturas", documentCount: 12, color: "orange" },
-  ]);
+  // TODO: Replace with API call when backend endpoint is ready
+  // const { data: documents = [] } = useDocuments();
+  // const { data: folders = [] } = useDocumentFolders();
+  const [documents] = useState<Document[]>([]);
+  const [folders] = useState<DocumentFolder[]>([]);
 
   const documentForm = useForm({
     initialValues: {
