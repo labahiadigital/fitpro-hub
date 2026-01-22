@@ -12,10 +12,10 @@ from app.api.v1.router import api_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print(f"🚀 Starting {settings.APP_NAME}...")
+    print(f"[START] Starting {settings.APP_NAME}...")
     yield
     # Shutdown
-    print(f"👋 Shutting down {settings.APP_NAME}...")
+    print(f"[STOP] Shutting down {settings.APP_NAME}...")
 
 
 app = FastAPI(
@@ -34,7 +34,7 @@ app = FastAPI(
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions and ensure CORS headers are present."""
     # Log the error for debugging
-    print(f"❌ Unhandled exception: {exc}")
+    print(f"[ERROR] Unhandled exception: {exc}")
     print(f"   Path: {request.url.path}")
     print(f"   Method: {request.method}")
     traceback.print_exc()
@@ -86,6 +86,51 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/test-dns")
+async def test_dns():
+    """Test DNS resolution and HTTP connection to Supabase."""
+    import socket
+    import httpx
+    from supabase._async.client import create_client as create_async_client
+    from app.core.config import settings
+    
+    results = {}
+    
+    # Test DNS resolution
+    try:
+        addrs = socket.getaddrinfo("ougfmkbjrpnjvujhuuyy.supabase.co", 443)
+        results["dns"] = f"OK - {len(addrs)} addresses"
+    except Exception as e:
+        results["dns"] = f"Error: {str(e)}"
+    
+    # Test HTTP connection
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://ougfmkbjrpnjvujhuuyy.supabase.co/rest/v1/", timeout=10)
+            results["http"] = f"OK - Status {response.status_code}"
+    except Exception as e:
+        results["http"] = f"Error: {str(e)}"
+    
+    # Test Supabase client
+    try:
+        client = await create_async_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        results["supabase_client"] = "OK - Client created"
+        
+        # Test auth
+        try:
+            auth_response = await client.auth.sign_in_with_password({
+                "email": "e13fitnessofficial@gmail.com",
+                "password": "E13Fitness2024!Secure#"
+            })
+            results["supabase_auth"] = f"OK - User: {auth_response.user.email if auth_response.user else 'None'}"
+        except Exception as e:
+            results["supabase_auth"] = f"Error: {str(e)}"
+    except Exception as e:
+        results["supabase_client"] = f"Error: {str(e)}"
+    
+    return results
 
 
 if __name__ == "__main__":

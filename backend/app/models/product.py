@@ -28,7 +28,6 @@ class Product(BaseModel):
     
     # Relationships
     session_packages = relationship("SessionPackage", back_populates="product")
-    subscriptions = relationship("Subscription", back_populates="product")
 
 
 class SessionPackage(BaseModel):

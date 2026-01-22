@@ -7,17 +7,16 @@ from app.models.base import BaseModel
 
 
 class RoleType(str, PyEnum):
-    OWNER = "owner"
-    ADMIN = "admin"
-    TRAINER = "trainer"
-    NUTRITIONIST = "nutritionist"
-    COLLABORATOR = "collaborator"
-    CLIENT = "client"
+    """Role types matching Supabase user_role_type enum (lowercase values)."""
+    # NOTE: Supabase only has owner, collaborator, client in the enum
+    owner = "owner"
+    collaborator = "collaborator" 
+    client = "client"
 
 
-# Default permissions for each role type
+# Default permissions for each role type (using lowercase enum values)
 DEFAULT_ROLE_PERMISSIONS = {
-    RoleType.OWNER: {
+    RoleType.owner: {
         "clients": ["create", "read", "update", "delete"],
         "workouts": ["create", "read", "update", "delete"],
         "nutrition": ["create", "read", "update", "delete"],
@@ -29,43 +28,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "chat": ["read", "send"],
         "automations": ["create", "read", "update", "delete"],
     },
-    RoleType.ADMIN: {
-        "clients": ["create", "read", "update", "delete"],
-        "workouts": ["create", "read", "update", "delete"],
-        "nutrition": ["create", "read", "update", "delete"],
-        "calendar": ["create", "read", "update", "delete"],
-        "payments": ["read", "update"],
-        "team": ["read", "update"],
-        "settings": ["read"],
-        "reports": ["read"],
-        "chat": ["read", "send"],
-        "automations": ["create", "read", "update", "delete"],
-    },
-    RoleType.TRAINER: {
-        "clients": ["create", "read", "update"],
-        "workouts": ["create", "read", "update", "delete"],
-        "nutrition": ["read"],
-        "calendar": ["create", "read", "update", "delete"],
-        "payments": ["read"],
-        "team": [],
-        "settings": [],
-        "reports": ["read"],
-        "chat": ["read", "send"],
-        "automations": ["read"],
-    },
-    RoleType.NUTRITIONIST: {
-        "clients": ["read", "update"],
-        "workouts": ["read"],
-        "nutrition": ["create", "read", "update", "delete"],
-        "calendar": ["create", "read", "update"],
-        "payments": ["read"],
-        "team": [],
-        "settings": [],
-        "reports": ["read"],
-        "chat": ["read", "send"],
-        "automations": ["read"],
-    },
-    RoleType.COLLABORATOR: {
+    RoleType.collaborator: {
         "clients": ["read"],
         "workouts": ["read"],
         "nutrition": ["read"],
@@ -77,7 +40,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "chat": ["read", "send"],
         "automations": [],
     },
-    RoleType.CLIENT: {
+    RoleType.client: {
         "clients": [],
         "workouts": ["read"],
         "nutrition": ["read"],
@@ -101,8 +64,8 @@ class User(BaseModel):
     phone = Column(String(50), nullable=True)
     is_active = Column(Boolean, default=True)
     
-    # Supabase Auth ID
-    auth_id = Column(String(255), unique=True, nullable=True, index=True)
+    # Supabase Auth ID (UUID from Supabase Auth)
+    auth_id = Column(UUID(as_uuid=True), unique=True, nullable=True, index=True)
     
     # Preferences
     preferences = Column(JSONB, default={
@@ -117,76 +80,36 @@ class User(BaseModel):
     
     # Relationships
     workspace_roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User {self.email}>"
 
 
-class CustomRole(BaseModel):
-    """Custom roles defined by workspace owners."""
-    
-    __tablename__ = "custom_roles"
-    
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
-    
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    color = Column(String(7), default="#2D6A4F")
-    
-    # Custom permissions (override defaults)
-    permissions = Column(JSONB, default={})
-    
-    # Base role type (for fallback permissions)
-    base_role = Column(Enum(RoleType), default=RoleType.COLLABORATOR)
-    
-    # Is this role active
-    is_active = Column(Boolean, default=True)
-    
-    # Relationships
-    workspace = relationship("Workspace", back_populates="custom_roles")
-    
-    def get_permissions(self):
-        """Get effective permissions (custom + base role defaults)."""
-        base_perms = DEFAULT_ROLE_PERMISSIONS.get(self.base_role, {}).copy()
-        if self.permissions:
-            base_perms.update(self.permissions)
-        return base_perms
-    
-    def __repr__(self):
-        return f"<CustomRole {self.name}>"
+# NOTE: CustomRole table does not exist in current Supabase schema
+# Commented out to match actual database schema
+# class CustomRole(BaseModel):
+#     """Custom roles defined by workspace owners."""
+#     __tablename__ = "custom_roles"
+#     ... (table not in current schema)
 
 
 class UserRole(BaseModel):
+    """User role in a workspace - matches Supabase schema."""
     __tablename__ = "user_roles"
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
-    role = Column(Enum(RoleType), nullable=False, default=RoleType.COLLABORATOR)
-    custom_role_id = Column(UUID(as_uuid=True), ForeignKey("custom_roles.id", ondelete="SET NULL"), nullable=True)
+    role = Column(Enum(RoleType, name="user_role_type", create_type=False), nullable=False, default=RoleType.collaborator)
     is_default = Column(Boolean, default=False)  # Default workspace for user
-    
-    # Custom permissions override (for fine-grained control)
-    custom_permissions = Column(JSONB, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="workspace_roles")
     workspace = relationship("Workspace", back_populates="users")
-    custom_role = relationship("CustomRole")
     
     def get_permissions(self):
         """Get effective permissions for this user role."""
-        # Start with base role permissions
-        perms = DEFAULT_ROLE_PERMISSIONS.get(self.role, {}).copy()
-        
-        # Override with custom role permissions if set
-        if self.custom_role:
-            perms = self.custom_role.get_permissions()
-        
-        # Override with user-specific permissions if set
-        if self.custom_permissions:
-            perms.update(self.custom_permissions)
-        
-        return perms
+        return DEFAULT_ROLE_PERMISSIONS.get(self.role, {}).copy()
     
     def has_permission(self, resource: str, action: str) -> bool:
         """Check if user has a specific permission."""

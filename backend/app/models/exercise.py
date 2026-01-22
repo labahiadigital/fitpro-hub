@@ -7,49 +7,32 @@ import uuid
 from app.models.base import BaseModel
 
 
-class ExerciseCategory(BaseModel):
-    """Exercise category model."""
-    
-    __tablename__ = "exercise_categories"
-    
-    name = Column(String(100), nullable=False)
-    description = Column(Text)
-    icon = Column(String(50))
-    parent_id = Column(UUID(as_uuid=True), ForeignKey('exercise_categories.id', ondelete='SET NULL'))
-    is_system = Column(Boolean, default=False)
-    
-    # Relationships
-    exercises = relationship("Exercise", back_populates="category")
-    children = relationship("ExerciseCategory", backref="parent", remote_side="ExerciseCategory.id")
+# NOTE: ExerciseCategory table does not exist in DB - exercises have 'category' as text directly
+# class ExerciseCategory(BaseModel):
+#     """Exercise category model."""
+#     __tablename__ = "exercise_categories"
+#     ... (table not in current schema)
 
 
 class Exercise(BaseModel):
-    """Exercise library model."""
+    """Exercise library model - matches Supabase schema."""
     
     __tablename__ = "exercises"
     
+    # DB columns: id, workspace_id, name, description, instructions, muscle_groups, equipment, 
+    #             difficulty, category, video_url, image_url, thumbnail_url, is_global, created_at, updated_at
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=True, index=True)
-    category_id = Column(UUID(as_uuid=True), ForeignKey('exercise_categories.id', ondelete='SET NULL'))
-    name = Column(String(255), nullable=False)
-    description = Column(Text)
-    instructions = Column(Text)
-    video_url = Column(String(500))  # Main demonstration video
-    execution_video_url = Column(String(500))  # Video showing correct execution technique
-    thumbnail_url = Column(String(500))
-    muscle_groups = Column(ARRAY(String), default=[])
-    equipment = Column(ARRAY(String), default=[])
-    difficulty = Column(String(20), default='intermediate')
-    is_public = Column(Boolean, default=False)
-    is_system = Column(Boolean, default=False)
-    
-    # Common mistakes and tips
-    common_mistakes = Column(JSONB, default=[])  # List of common mistakes to avoid
-    tips = Column(JSONB, default=[])  # List of tips for correct execution
-    
-    extra_data = Column(JSONB, default={})
-    
-    # Relationships
-    category = relationship("ExerciseCategory", back_populates="exercises")
+    name = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
+    instructions = Column(Text, nullable=True)
+    muscle_groups = Column(ARRAY(Text), default=[])
+    equipment = Column(ARRAY(Text), default=[])
+    difficulty = Column(Text, default='intermediate')
+    category = Column(Text, nullable=True)  # Direct text, no FK
+    video_url = Column(Text, nullable=True)
+    image_url = Column(Text, nullable=True)
+    thumbnail_url = Column(Text, nullable=True)
+    is_global = Column(Boolean, default=False)
 
 
 class ClientMeasurement(BaseModel):

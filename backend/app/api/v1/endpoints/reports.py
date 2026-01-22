@@ -73,12 +73,12 @@ async def get_kpis(
     )
     total_clients = total_clients_result.scalar() or 0
     
-    # Upcoming sessions
+    # Upcoming sessions (pending or confirmed)
     upcoming_sessions_result = await db.execute(
         select(func.count(Booking.id)).where(
             Booking.workspace_id == workspace_id,
             Booking.start_time >= now,
-            Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED])
+            Booking.status.in_([BookingStatus.pending, BookingStatus.confirmed])
         )
     )
     upcoming_sessions = upcoming_sessions_result.scalar() or 0
@@ -88,49 +88,49 @@ async def get_kpis(
         select(func.count(Booking.id)).where(
             Booking.workspace_id == workspace_id,
             Booking.start_time >= start_of_month,
-            Booking.status == BookingStatus.COMPLETED
+            Booking.status == BookingStatus.completed
         )
     )
     completed_sessions_month = completed_sessions_result.scalar() or 0
     
-    # MRR (Monthly Recurring Revenue)
+    # MRR (Monthly Recurring Revenue) - active subscriptions
     mrr_result = await db.execute(
         select(func.sum(Subscription.amount)).where(
             Subscription.workspace_id == workspace_id,
-            Subscription.status == SubscriptionStatus.ACTIVE
+            Subscription.status == SubscriptionStatus.active
         )
     )
-    mrr = mrr_result.scalar() or 0.0
+    mrr = float(mrr_result.scalar() or 0)
     
     # ARPA (Average Revenue Per Account)
     arpa = mrr / active_clients if active_clients > 0 else 0.0
     
-    # Revenue this month
+    # Revenue this month (succeeded payments)
     revenue_this_month_result = await db.execute(
         select(func.sum(Payment.amount)).where(
             Payment.workspace_id == workspace_id,
-            Payment.status == PaymentStatus.SUCCEEDED,
+            Payment.status == PaymentStatus.succeeded,
             Payment.paid_at >= start_of_month
         )
     )
-    revenue_this_month = revenue_this_month_result.scalar() or 0.0
+    revenue_this_month = float(revenue_this_month_result.scalar() or 0)
     
     # Revenue last month
     revenue_last_month_result = await db.execute(
         select(func.sum(Payment.amount)).where(
             Payment.workspace_id == workspace_id,
-            Payment.status == PaymentStatus.SUCCEEDED,
+            Payment.status == PaymentStatus.succeeded,
             Payment.paid_at >= start_of_last_month,
             Payment.paid_at < start_of_month
         )
     )
-    revenue_last_month = revenue_last_month_result.scalar() or 0.0
+    revenue_last_month = float(revenue_last_month_result.scalar() or 0)
     
-    # Churn rate (simplified: cancelled subscriptions / total subscriptions this month)
+    # Churn rate (cancelled subscriptions / total subscriptions this month)
     cancelled_result = await db.execute(
         select(func.count(Subscription.id)).where(
             Subscription.workspace_id == workspace_id,
-            Subscription.status == SubscriptionStatus.CANCELLED,
+            Subscription.status == SubscriptionStatus.cancelled,
             Subscription.cancelled_at >= start_of_month
         )
     )
@@ -179,16 +179,16 @@ async def get_revenue_chart(
         else:
             month_end = (month_start + timedelta(days=32)).replace(day=1)
         
-        # Get revenue for this month
+        # Get revenue for this month (succeeded payments)
         result = await db.execute(
             select(func.sum(Payment.amount)).where(
                 Payment.workspace_id == workspace_id,
-                Payment.status == PaymentStatus.SUCCEEDED,
+                Payment.status == PaymentStatus.succeeded,
                 Payment.paid_at >= month_start,
                 Payment.paid_at < month_end
             )
         )
-        revenue = result.scalar() or 0.0
+        revenue = float(result.scalar() or 0)
         
         # Format month label
         month_label = month_start.strftime("%b %Y")
@@ -247,4 +247,3 @@ async def export_report(
         "report_type": data.report_type,
         "format": data.format
     }
-

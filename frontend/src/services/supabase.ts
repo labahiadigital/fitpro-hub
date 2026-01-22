@@ -1,4 +1,15 @@
+/**
+ * NOTA: Este archivo debe ser migrado para usar el backend.
+ * Las funciones de autenticación ya usan el backend via ./api.ts
+ * 
+ * Las funciones de datos (supabase.from()) todavía acceden directamente
+ * a Supabase temporalmente hasta que se migren todos los hooks.
+ * 
+ * TODO: Migrar todos los hooks de useSupabaseData.ts para usar el backend
+ */
+
 import { createClient } from "@supabase/supabase-js";
+import { authApi, api } from "./api";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -7,54 +18,70 @@ if (!(supabaseUrl && supabaseAnonKey)) {
   throw new Error("Missing Supabase environment variables");
 }
 
+// Cliente de Supabase para lectura de datos (temporalmente mientras se migra)
+// TODO: Eliminar cuando todos los hooks usen el backend
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
   },
 });
 
-// Auth helpers
+// === FUNCIONES QUE USAN EL BACKEND (CORRECTO) ===
+
 export const signUp = async (
   email: string,
   password: string,
-  metadata?: object
+  metadata?: { full_name?: string }
 ) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: metadata,
-    },
-  });
-  return { data, error };
+  try {
+    const response = await authApi.register({
+      email,
+      password,
+      full_name: metadata?.full_name || "",
+      workspace_name: "",
+    });
+    return { data: response.data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
 };
 
 export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  return { data, error };
+  try {
+    const response = await authApi.login(email, password);
+    return { data: response.data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+  try {
+    await authApi.logout();
+    return { error: null };
+  } catch (error) {
+    return { error };
+  }
 };
 
 export const getSession = async () => {
-  const { data, error } = await supabase.auth.getSession();
-  return { data, error };
+  // El backend maneja las sesiones via JWT almacenado en Zustand
+  return { data: null, error: null };
 };
 
 export const getUser = async () => {
-  const { data, error } = await supabase.auth.getUser();
-  return { data, error };
+  try {
+    const response = await authApi.me();
+    return { data: { user: response.data }, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
 };
 
-// Listen to auth changes
-export const onAuthStateChange = (
-  callback: (event: string, session: unknown) => void
-) => supabase.auth.onAuthStateChange(callback);
+// Stub para compatibilidad - El frontend usa Zustand para estado de auth
+export const onAuthStateChange = (callback: (event: string, session: unknown) => void) => {
+  // No hacer nada - el frontend maneja el estado con Zustand
+  return { data: { subscription: { unsubscribe: () => {} } } };
+};

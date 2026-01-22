@@ -25,8 +25,8 @@ class BookingCreate(BaseModel):
     client_id: Optional[UUID] = None
     title: str
     description: Optional[str] = None
-    session_type: SessionType = SessionType.INDIVIDUAL
-    modality: SessionModality = SessionModality.IN_PERSON
+    session_type: SessionType = SessionType.individual
+    modality: SessionModality = SessionModality.in_person
     start_time: datetime
     end_time: datetime
     location: Optional[LocationSchema] = None
@@ -133,7 +133,7 @@ async def create_booking(
             and_(
                 Booking.workspace_id == current_user.workspace_id,
                 Booking.organizer_id == current_user.id,
-                Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+                Booking.status.in_([BookingStatus.pending, BookingStatus.confirmed]),
                 or_(
                     and_(
                         Booking.start_time <= data.start_time,
@@ -172,7 +172,7 @@ async def create_booking(
         is_recurring=data.is_recurring,
         recurrence_rule=data.recurrence_rule,
         notes=data.notes,
-        status=BookingStatus.CONFIRMED
+        status=BookingStatus.confirmed
     )
     db.add(booking)
     await db.commit()
@@ -278,7 +278,7 @@ async def cancel_booking(
                 detail="No tienes permisos para cancelar esta reserva"
             )
     
-    booking.status = BookingStatus.CANCELLED
+    booking.status = BookingStatus.cancelled
     await db.commit()
 
 
@@ -305,7 +305,7 @@ async def complete_booking(
             detail="Reserva no encontrada"
         )
     
-    booking.status = BookingStatus.COMPLETED
+    booking.status = BookingStatus.completed
     await db.commit()
     await db.refresh(booking)
     

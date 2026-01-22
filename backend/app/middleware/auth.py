@@ -38,13 +38,13 @@ class CurrentUser:
         return self.role in roles
     
     def is_owner(self) -> bool:
-        return self.role == RoleType.OWNER
+        return self.role == RoleType.owner
     
     def is_collaborator(self) -> bool:
-        return self.role in [RoleType.OWNER, RoleType.COLLABORATOR]
+        return self.role in [RoleType.owner, RoleType.collaborator]
     
     def is_client(self) -> bool:
-        return self.role == RoleType.CLIENT
+        return self.role == RoleType.client
 
 
 async def get_current_user(
@@ -89,7 +89,7 @@ async def get_current_user(
             detail="Usuario desactivado",
         )
     
-    # Get workspace context from token or app_metadata
+    # Get workspace context - first try app_metadata, then default workspace
     workspace_id = None
     role = None
     
@@ -98,7 +98,6 @@ async def get_current_user(
     
     if workspace_id_str:
         workspace_id = UUID(workspace_id_str)
-        
         # Get user role in this workspace
         result = await db.execute(
             select(UserRole).where(
@@ -107,9 +106,30 @@ async def get_current_user(
             )
         )
         user_role = result.scalar_one_or_none()
-        
         if user_role:
             role = user_role.role
+    else:
+        # No workspace in token, try to get user's default workspace
+        result = await db.execute(
+            select(UserRole).where(
+                UserRole.user_id == user.id,
+                UserRole.is_default == True
+            )
+        )
+        default_role = result.scalar_one_or_none()
+        
+        if default_role:
+            workspace_id = default_role.workspace_id
+            role = default_role.role
+        else:
+            # No default, get first workspace
+            result = await db.execute(
+                select(UserRole).where(UserRole.user_id == user.id).limit(1)
+            )
+            first_role = result.scalar_one_or_none()
+            if first_role:
+                workspace_id = first_role.workspace_id
+                role = first_role.role
     
     return CurrentUser(
         user=user,
@@ -169,7 +189,7 @@ def require_roles(allowed_roles: List[RoleType]):
 
 
 # Pre-defined role checkers
-require_owner = require_roles([RoleType.OWNER])
-require_staff = require_roles([RoleType.OWNER, RoleType.COLLABORATOR])
-require_any_role = require_roles([RoleType.OWNER, RoleType.COLLABORATOR, RoleType.CLIENT])
+require_owner = require_roles([RoleType.owner])
+require_staff = require_roles([RoleType.owner, RoleType.collaborator])
+require_any_role = require_roles([RoleType.owner, RoleType.collaborator, RoleType.client])
 

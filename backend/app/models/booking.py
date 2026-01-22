@@ -7,21 +7,24 @@ from app.models.base import BaseModel
 
 
 class BookingStatus(str, PyEnum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    CANCELLED = "cancelled"
-    COMPLETED = "completed"
-    NO_SHOW = "no_show"
+    """Booking status matching Supabase booking_status enum (lowercase values)."""
+    pending = "pending"
+    confirmed = "confirmed"
+    cancelled = "cancelled"
+    completed = "completed"
+    no_show = "no_show"
 
 
 class SessionType(str, PyEnum):
-    INDIVIDUAL = "individual"
-    GROUP = "group"
+    """Session type matching Supabase session_type enum (lowercase values)."""
+    individual = "individual"
+    group = "group"
 
 
 class SessionModality(str, PyEnum):
-    IN_PERSON = "in_person"
-    ONLINE = "online"
+    """Session modality matching Supabase session_modality enum (lowercase values)."""
+    in_person = "in_person"
+    online = "online"
 
 
 class Booking(BaseModel):
@@ -34,8 +37,8 @@ class Booking(BaseModel):
     # Session details
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    session_type = Column(Enum(SessionType), default=SessionType.INDIVIDUAL)
-    modality = Column(Enum(SessionModality), default=SessionModality.IN_PERSON)
+    session_type = Column(Enum(SessionType, name="session_type", create_type=False), default=SessionType.individual)
+    modality = Column(Enum(SessionModality, name="session_modality", create_type=False), default=SessionModality.in_person)
     
     # Time
     start_time = Column(DateTime(timezone=True), nullable=False, index=True)
@@ -57,7 +60,7 @@ class Booking(BaseModel):
     waitlist_ids = Column(ARRAY(UUID(as_uuid=True)), default=[])
     
     # Status
-    status = Column(Enum(BookingStatus), default=BookingStatus.PENDING)
+    status = Column(Enum(BookingStatus, name="booking_status", create_type=False), default=BookingStatus.pending)
     
     # Recurrence
     is_recurring = Column(Boolean, default=False)

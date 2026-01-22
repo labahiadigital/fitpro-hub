@@ -81,42 +81,12 @@ class Workspace(BaseModel):
             "reschedule_hours": 12,
             "max_advance_days": 30
         },
-        "payment_gateway": "stripe",  # stripe, redsys, or both
+        "payment_gateway": "stripe",
         "redsys_enabled": False,
     })
     
-    # CRM field configuration (editable by trainer)
-    crm_config = Column(JSONB, default=DEFAULT_CRM_FIELDS)
-    
-    # Meal name configuration (editable names for meals)
-    meal_names = Column(JSONB, default={
-        "meal_1": "Desayuno",
-        "meal_2": "Media Mañana",
-        "meal_3": "Almuerzo",
-        "meal_4": "Merienda",
-        "meal_5": "Cena",
-        "meal_6": "Pre-entreno",
-        "meal_7": "Post-entreno",
-    })
-    
-    # Glossary for tooltips (acronyms and terms)
-    glossary = Column(JSONB, default={
-        "RM": "Repetición Máxima - El peso máximo que puedes levantar una vez",
-        "RPE": "Rate of Perceived Exertion - Escala de esfuerzo percibido del 1 al 10",
-        "AMRAP": "As Many Reps As Possible - Tantas repeticiones como sea posible",
-        "EMOM": "Every Minute On the Minute - Cada minuto durante un minuto",
-        "PR": "Personal Record - Récord personal",
-        "WOD": "Workout Of the Day - Entrenamiento del día",
-        "HIIT": "High Intensity Interval Training - Entrenamiento de intervalos de alta intensidad",
-        "LISS": "Low Intensity Steady State - Cardio de baja intensidad constante",
-        "TUT": "Time Under Tension - Tiempo bajo tensión",
-        "RIR": "Reps In Reserve - Repeticiones en reserva",
-        "TDEE": "Total Daily Energy Expenditure - Gasto energético diario total",
-        "BMR": "Basal Metabolic Rate - Tasa metabólica basal",
-        "NEAT": "Non-Exercise Activity Thermogenesis - Termogénesis por actividad no relacionada con ejercicio",
-        "KCAL": "Kilocalorías - Unidad de energía",
-        "MACROS": "Macronutrientes - Proteínas, carbohidratos y grasas",
-    })
+    # NOTE: crm_config, meal_names, and glossary columns do not exist in current Supabase schema
+    # They would need to be added via migration if needed
     
     # Relationships
     users = relationship("UserRole", back_populates="workspace", cascade="all, delete-orphan")
@@ -128,7 +98,7 @@ class Workspace(BaseModel):
     conversations = relationship("Conversation", back_populates="workspace", cascade="all, delete-orphan")
     stripe_account = relationship("StripeAccount", back_populates="workspace", uselist=False)
     automations = relationship("Automation", back_populates="workspace", cascade="all, delete-orphan")
-    custom_roles = relationship("CustomRole", back_populates="workspace", cascade="all, delete-orphan")
+    # custom_roles relationship removed - table does not exist in current schema
     
     def __repr__(self):
         return f"<Workspace {self.name}>"

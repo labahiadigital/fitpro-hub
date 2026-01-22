@@ -1,24 +1,25 @@
 from enum import Enum as PyEnum
-from sqlalchemy import Column, String, Text, Enum, ForeignKey, Float, DateTime
+from sqlalchemy import Column, String, Text, Enum, ForeignKey, Numeric, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
 
 
+# Enum values must match DB exactly (lowercase)
 class SubscriptionStatus(str, PyEnum):
-    ACTIVE = "active"
-    PAST_DUE = "past_due"
-    CANCELLED = "cancelled"
-    TRIALING = "trialing"
-    PAUSED = "paused"
+    active = "active"
+    past_due = "past_due"
+    cancelled = "cancelled"
+    trialing = "trialing"
+    paused = "paused"
 
 
 class PaymentStatus(str, PyEnum):
-    PENDING = "pending"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    REFUNDED = "refunded"
+    pending = "pending"
+    succeeded = "succeeded"
+    failed = "failed"
+    refunded = "refunded"
 
 
 class StripeAccount(BaseModel):
@@ -27,11 +28,11 @@ class StripeAccount(BaseModel):
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     
     # Stripe Connect account
-    stripe_account_id = Column(String(255), unique=True, nullable=False)
+    stripe_account_id = Column(Text, unique=True, nullable=False)
     
     # Account status
-    is_active = Column(String(1), default="Y")  # Y/N
-    onboarding_complete = Column(String(1), default="N")  # Y/N
+    is_active = Column(Boolean, default=True)
+    onboarding_complete = Column(Boolean, default=False)
     
     # Account details
     details = Column(JSONB, default={})
@@ -48,33 +49,36 @@ class Subscription(BaseModel):
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     
     # Stripe subscription
-    stripe_subscription_id = Column(String(255), unique=True, nullable=True)
-    stripe_customer_id = Column(String(255), nullable=True)
-    stripe_price_id = Column(String(255), nullable=True)
+    stripe_subscription_id = Column(Text, unique=True, nullable=True)
+    stripe_customer_id = Column(Text, nullable=True)
+    stripe_price_id = Column(Text, nullable=True)
     
     # Subscription details
-    name = Column(String(255), nullable=False)
+    name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
+    status = Column(
+        Enum(SubscriptionStatus, name="subscription_status", create_type=False),
+        default=SubscriptionStatus.active
+    )
     
-    # Pricing
-    amount = Column(Float, nullable=False)
-    currency = Column(String(3), default="EUR")
-    interval = Column(String(20), default="month")  # month, year, week
+    # Pricing - use Numeric to match DB
+    amount = Column(Numeric, nullable=False)
+    currency = Column(Text, default="EUR")
+    interval = Column(Text, default="month")  # month, year, week
     
     # Dates
     current_period_start = Column(DateTime(timezone=True), nullable=True)
     current_period_end = Column(DateTime(timezone=True), nullable=True)
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Extra data
-    extra_data = Column(JSONB, default={})
+    # Extra metadata (DB column is 'metadata', but we use different attr name to avoid SQLAlchemy conflict)
+    extra_data = Column("metadata", JSONB, default={})
     
     # Relationships
-    product = relationship("Product", back_populates="subscriptions")
+    payments = relationship("Payment", back_populates="subscription")
+    client = relationship("Client", back_populates="subscriptions")
     
     def __repr__(self):
         return f"<Subscription {self.name}>"
@@ -88,25 +92,31 @@ class Payment(BaseModel):
     subscription_id = Column(UUID(as_uuid=True), ForeignKey("subscriptions.id", ondelete="SET NULL"), nullable=True)
     
     # Stripe payment
-    stripe_payment_intent_id = Column(String(255), unique=True, nullable=True)
-    stripe_invoice_id = Column(String(255), nullable=True)
+    stripe_payment_intent_id = Column(Text, unique=True, nullable=True)
+    stripe_invoice_id = Column(Text, nullable=True)
     
     # Payment details
-    description = Column(String(255), nullable=True)
-    amount = Column(Float, nullable=False)
-    currency = Column(String(3), default="EUR")
-    status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
+    description = Column(Text, nullable=True)
+    amount = Column(Numeric, nullable=False)
+    currency = Column(Text, default="EUR")
+    status = Column(
+        Enum(PaymentStatus, name="payment_status", create_type=False),
+        default=PaymentStatus.pending
+    )
     
     # Payment type
-    payment_type = Column(String(50), default="subscription")  # subscription, package, one_time
+    payment_type = Column(Text, default="subscription")  # subscription, package, one_time
     
     # Dates
     paid_at = Column(DateTime(timezone=True), nullable=True)
     refunded_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Extra data
-    extra_data = Column(JSONB, default={})
+    # Extra metadata (DB column is 'metadata', but we use different attr name to avoid SQLAlchemy conflict)
+    extra_data = Column("metadata", JSONB, default={})
+    
+    # Relationships
+    subscription = relationship("Subscription", back_populates="payments")
+    client = relationship("Client", back_populates="payments")
     
     def __repr__(self):
         return f"<Payment {self.amount} {self.currency}>"
-

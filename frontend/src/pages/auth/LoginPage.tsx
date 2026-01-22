@@ -20,14 +20,14 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../../services/supabase";
+import { authApi, workspacesApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 
 export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { setUser, setTokens } = useAuthStore();
+  const { setUser, setTokens, setWorkspace } = useAuthStore();
 
   const form = useForm({
     initialValues: {
@@ -46,28 +46,31 @@ export function LoginPage() {
     setError(null);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword(
-        {
-          email: values.email,
-          password: values.password,
+      // Login through backend API
+      const loginResponse = await authApi.login(values.email, values.password);
+      const { access_token, refresh_token } = loginResponse.data;
+      
+      // Save tokens
+      setTokens(access_token, refresh_token);
+      
+      // Get user profile from backend
+      const userResponse = await authApi.me();
+      setUser(userResponse.data);
+      
+      // Get workspaces and set current workspace
+      try {
+        const workspacesResponse = await workspacesApi.list();
+        if (workspacesResponse.data.length > 0) {
+          setWorkspace(workspacesResponse.data[0]);
         }
-      );
-
-      if (authError) throw authError;
-
-      if (data.user && data.session) {
-        setUser({
-          id: data.user.id,
-          email: data.user.email!,
-          full_name: data.user.user_metadata?.full_name,
-          is_active: true,
-        });
-        setTokens(data.session.access_token, data.session.refresh_token);
-        navigate("/dashboard");
+      } catch {
+        console.log("No workspaces found");
       }
+
+      navigate("/dashboard");
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      setError(error.message || "Error al iniciar sesión");
+      const error = err as { response?: { data?: { detail?: string } }; message?: string };
+      setError(error.response?.data?.detail || error.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }

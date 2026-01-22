@@ -8,13 +8,12 @@ from sqlalchemy import select, func, update
 
 from app.core.database import get_db
 from app.middleware.auth import get_current_user, require_workspace
-from app.models.notification import Notification, NotificationPreference
+from app.models.notification import Notification
 from app.models.user import User
 from app.models.client import Client
 from app.schemas.notification import (
     NotificationCreate, NotificationUpdate, NotificationResponse, NotificationList,
     NotificationMarkRead, NotificationMarkAllRead,
-    NotificationPreferenceUpdate, NotificationPreferenceResponse,
 )
 
 router = APIRouter()
@@ -191,54 +190,6 @@ async def delete_notification(
     await db.commit()
 
 
-# ==================== Notification Preferences ====================
-
-@router.get("/preferences", response_model=NotificationPreferenceResponse)
-async def get_notification_preferences(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Get notification preferences for the current user."""
-    result = await db.execute(
-        select(NotificationPreference).where(
-            NotificationPreference.user_id == current_user.id
-        )
-    )
-    preferences = result.scalar_one_or_none()
-    
-    if not preferences:
-        # Create default preferences
-        preferences = NotificationPreference(user_id=current_user.id)
-        db.add(preferences)
-        await db.commit()
-        await db.refresh(preferences)
-    
-    return NotificationPreferenceResponse.model_validate(preferences)
-
-
-@router.patch("/preferences", response_model=NotificationPreferenceResponse)
-async def update_notification_preferences(
-    data: NotificationPreferenceUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Update notification preferences."""
-    result = await db.execute(
-        select(NotificationPreference).where(
-            NotificationPreference.user_id == current_user.id
-        )
-    )
-    preferences = result.scalar_one_or_none()
-    
-    if not preferences:
-        preferences = NotificationPreference(user_id=current_user.id)
-        db.add(preferences)
-    
-    update_data = data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(preferences, field, value)
-    
-    await db.commit()
-    await db.refresh(preferences)
-    return NotificationPreferenceResponse.model_validate(preferences)
+# NOTE: Notification Preferences endpoints disabled - table does not exist in DB
+# User preferences are stored in the 'preferences' JSONB field of the users table
 

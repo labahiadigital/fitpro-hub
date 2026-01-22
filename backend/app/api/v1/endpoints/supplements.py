@@ -1,14 +1,15 @@
-"""Supplement library endpoints with referral codes."""
+"""Supplement library endpoints - simplified to match actual DB schema."""
 from typing import List, Optional
 from uuid import UUID
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models.supplement import Supplement, SupplementRecommendation, SupplementFavorite
-from app.middleware.auth import require_workspace, require_staff, CurrentUser
+from app.models.supplement import Supplement, SupplementFavorite
+from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
 
 router = APIRouter()
 
@@ -20,92 +21,34 @@ class SupplementCreate(BaseModel):
     brand: Optional[str] = None
     description: Optional[str] = None
     category: Optional[str] = None
-    serving_size: str = "30g"
+    serving_size: Optional[float] = None
+    serving_unit: Optional[str] = None
     calories: Optional[float] = None
     protein: Optional[float] = None
     carbs: Optional[float] = None
     fat: Optional[float] = None
-    ingredients: Optional[str] = None
     usage_instructions: Optional[str] = None
     warnings: Optional[str] = None
     image_url: Optional[str] = None
-    purchase_url: Optional[str] = None
-    referral_code: Optional[str] = None
-    referral_url: Optional[str] = None
-    commission_percentage: Optional[float] = None
-    is_public: bool = False
-
-
-class SupplementUpdate(BaseModel):
-    name: Optional[str] = None
-    brand: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
-    serving_size: Optional[str] = None
-    calories: Optional[float] = None
-    protein: Optional[float] = None
-    carbs: Optional[float] = None
-    fat: Optional[float] = None
-    ingredients: Optional[str] = None
-    usage_instructions: Optional[str] = None
-    warnings: Optional[str] = None
-    image_url: Optional[str] = None
-    purchase_url: Optional[str] = None
-    referral_code: Optional[str] = None
-    referral_url: Optional[str] = None
-    commission_percentage: Optional[float] = None
-    is_public: Optional[bool] = None
 
 
 class SupplementResponse(BaseModel):
     id: UUID
-    workspace_id: Optional[UUID]
+    workspace_id: Optional[UUID] = None
     name: str
-    brand: Optional[str]
-    description: Optional[str]
-    category: Optional[str]
-    serving_size: str
-    calories: Optional[float]
-    protein: Optional[float]
-    carbs: Optional[float]
-    fat: Optional[float]
-    ingredients: Optional[str]
-    usage_instructions: Optional[str]
-    warnings: Optional[str]
-    image_url: Optional[str]
-    purchase_url: Optional[str]
-    referral_code: Optional[str]
-    referral_url: Optional[str]
-    commission_percentage: Optional[float]
-    is_public: bool
-    is_system: bool
-    
-    class Config:
-        from_attributes = True
-
-
-class RecommendationCreate(BaseModel):
-    client_id: UUID
-    supplement_id: UUID
-    dosage: Optional[str] = None
-    frequency: Optional[str] = None
-    notes: Optional[str] = None
-    how_to_take: Optional[str] = None
-    timing: Optional[str] = None
-
-
-class RecommendationResponse(BaseModel):
-    id: UUID
-    workspace_id: UUID
-    client_id: UUID
-    supplement_id: UUID
-    dosage: Optional[str]
-    frequency: Optional[str]
-    notes: Optional[str]
-    how_to_take: Optional[str]
-    timing: Optional[str]
-    is_active: bool
-    supplement: Optional[SupplementResponse] = None
+    brand: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    serving_size: Optional[Decimal] = None
+    serving_unit: Optional[str] = None
+    calories: Optional[Decimal] = None
+    protein: Optional[Decimal] = None
+    carbs: Optional[Decimal] = None
+    fat: Optional[Decimal] = None
+    usage_instructions: Optional[str] = None
+    warnings: Optional[str] = None
+    image_url: Optional[str] = None
+    is_global: bool = False
     
     class Config:
         from_attributes = True
@@ -121,13 +64,12 @@ async def list_supplements(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar suplementos (públicos, del sistema, y del workspace).
+    Listar suplementos (globales y del workspace).
     """
     query = select(Supplement).where(
         or_(
             Supplement.workspace_id == current_user.workspace_id,
-            Supplement.is_public == True,
-            Supplement.is_system == True
+            Supplement.is_global == True
         )
     )
     
@@ -148,7 +90,7 @@ async def create_supplement(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Crear un nuevo suplemento.
+    Crear un suplemento.
     """
     supplement = Supplement(
         workspace_id=current_user.workspace_id,
@@ -157,20 +99,15 @@ async def create_supplement(
         description=data.description,
         category=data.category,
         serving_size=data.serving_size,
+        serving_unit=data.serving_unit,
         calories=data.calories,
         protein=data.protein,
         carbs=data.carbs,
         fat=data.fat,
-        ingredients=data.ingredients,
         usage_instructions=data.usage_instructions,
         warnings=data.warnings,
         image_url=data.image_url,
-        purchase_url=data.purchase_url,
-        referral_code=data.referral_code,
-        referral_url=data.referral_url,
-        commission_percentage=data.commission_percentage,
-        is_public=data.is_public,
-        is_system=False
+        is_global=False
     )
     db.add(supplement)
     await db.commit()
@@ -185,15 +122,14 @@ async def get_supplement(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Obtener detalles de un suplemento.
+    Obtener un suplemento por ID.
     """
     result = await db.execute(
         select(Supplement).where(
             Supplement.id == supplement_id,
             or_(
                 Supplement.workspace_id == current_user.workspace_id,
-                Supplement.is_public == True,
-                Supplement.is_system == True
+                Supplement.is_global == True
             )
         )
     )
@@ -211,7 +147,7 @@ async def get_supplement(
 @router.put("/{supplement_id}", response_model=SupplementResponse)
 async def update_supplement(
     supplement_id: UUID,
-    data: SupplementUpdate,
+    data: SupplementCreate,
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
@@ -267,140 +203,44 @@ async def delete_supplement(
     await db.commit()
 
 
-# ============ RECOMMENDATIONS ============
+# ============ FAVORITES ============
 
-@router.get("/recommendations/client/{client_id}", response_model=List[RecommendationResponse])
-async def list_client_recommendations(
-    client_id: UUID,
-    current_user: CurrentUser = Depends(require_workspace),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Listar recomendaciones de suplementos para un cliente.
-    """
-    result = await db.execute(
-        select(SupplementRecommendation)
-        .where(
-            SupplementRecommendation.workspace_id == current_user.workspace_id,
-            SupplementRecommendation.client_id == client_id,
-            SupplementRecommendation.is_active == True
-        )
-        .order_by(SupplementRecommendation.created_at.desc())
-    )
-    return result.scalars().all()
-
-
-@router.post("/recommendations", response_model=RecommendationResponse, status_code=status.HTTP_201_CREATED)
-async def create_recommendation(
-    data: RecommendationCreate,
-    current_user: CurrentUser = Depends(require_staff),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Crear una recomendación de suplemento para un cliente.
-    """
-    recommendation = SupplementRecommendation(
-        workspace_id=current_user.workspace_id,
-        client_id=data.client_id,
-        supplement_id=data.supplement_id,
-        recommended_by=current_user.id,
-        dosage=data.dosage,
-        frequency=data.frequency,
-        notes=data.notes,
-        how_to_take=data.how_to_take,
-        timing=data.timing,
-        is_active=True
-    )
-    db.add(recommendation)
-    await db.commit()
-    await db.refresh(recommendation)
-    return recommendation
-
-
-@router.delete("/recommendations/{recommendation_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_recommendation(
-    recommendation_id: UUID,
-    current_user: CurrentUser = Depends(require_staff),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Eliminar una recomendación de suplemento.
-    """
-    result = await db.execute(
-        select(SupplementRecommendation).where(
-            SupplementRecommendation.id == recommendation_id,
-            SupplementRecommendation.workspace_id == current_user.workspace_id
-        )
-    )
-    recommendation = result.scalar_one_or_none()
-    
-    if not recommendation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Recomendación no encontrada"
-        )
-    
-    await db.delete(recommendation)
-    await db.commit()
-
-
-# ============ SUPPLEMENT FAVORITES ============
-
-@router.get("/favorites", response_model=List[SupplementResponse])
-async def list_favorite_supplements(
-    current_user: CurrentUser = Depends(require_workspace),
+@router.get("/favorites/list")
+async def list_supplement_favorites(
+    current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Listar suplementos favoritos del usuario.
     """
     result = await db.execute(
-        select(Supplement)
-        .join(SupplementFavorite)
-        .where(
-            SupplementFavorite.user_id == current_user.id,
-            SupplementFavorite.workspace_id == current_user.workspace_id
-        )
-        .order_by(Supplement.name)
+        select(SupplementFavorite).where(SupplementFavorite.user_id == current_user.id)
     )
-    return result.scalars().all()
+    favorites = result.scalars().all()
+    return [{"supplement_id": f.supplement_id} for f in favorites]
 
 
 @router.post("/favorites/{supplement_id}", status_code=status.HTTP_201_CREATED)
-async def add_supplement_to_favorites(
+async def add_supplement_favorite(
     supplement_id: UUID,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Añadir un suplemento a favoritos.
+    Añadir suplemento a favoritos.
     """
-    # Check if supplement exists
-    result = await db.execute(
-        select(Supplement).where(Supplement.id == supplement_id)
-    )
-    supplement = result.scalar_one_or_none()
-    
-    if not supplement:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Suplemento no encontrado"
-        )
-    
-    # Check if already favorited
-    result = await db.execute(
+    existing = await db.execute(
         select(SupplementFavorite).where(
             SupplementFavorite.user_id == current_user.id,
             SupplementFavorite.supplement_id == supplement_id
         )
     )
-    if result.scalar_one_or_none():
+    if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este suplemento ya está en favoritos"
+            detail="El suplemento ya está en favoritos"
         )
     
-    # Add to favorites
     favorite = SupplementFavorite(
         workspace_id=current_user.workspace_id,
         user_id=current_user.id,
@@ -408,24 +248,22 @@ async def add_supplement_to_favorites(
     )
     db.add(favorite)
     await db.commit()
-    
     return {"message": "Suplemento añadido a favoritos"}
 
 
 @router.delete("/favorites/{supplement_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_supplement_from_favorites(
+async def remove_supplement_favorite(
     supplement_id: UUID,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Eliminar un suplemento de favoritos.
+    Eliminar suplemento de favoritos.
     """
     result = await db.execute(
         select(SupplementFavorite).where(
             SupplementFavorite.user_id == current_user.id,
-            SupplementFavorite.supplement_id == supplement_id,
-            SupplementFavorite.workspace_id == current_user.workspace_id
+            SupplementFavorite.supplement_id == supplement_id
         )
     )
     favorite = result.scalar_one_or_none()
@@ -433,7 +271,7 @@ async def remove_supplement_from_favorites(
     if not favorite:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Este suplemento no está en favoritos"
+            detail="El suplemento no está en favoritos"
         )
     
     await db.delete(favorite)

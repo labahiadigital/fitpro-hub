@@ -52,6 +52,7 @@ export const authApi = {
     workspace_name: string;
   }) => api.post("/auth/register", data),
   me: () => api.get("/auth/me"),
+  logout: () => api.post("/auth/logout"),
   refreshToken: (refreshToken: string) =>
     api.post("/auth/refresh", { refresh_token: refreshToken }),
 };

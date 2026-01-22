@@ -8,56 +8,29 @@ from app.models.base import BaseModel
 
 
 class Notification(BaseModel):
-    """In-app notification model."""
+    """In-app notification model - matches Supabase schema."""
     
     __tablename__ = "notifications"
     
+    # DB columns: id, user_id, workspace_id, title, body, type, link, is_read, read_at, created_at
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    title = Column(String(255), nullable=False)
-    message = Column(Text, nullable=False)
-    notification_type = Column(String(50), default='info')  # info, success, warning, error, reminder
-    category = Column(String(50))  # booking, payment, message, client, system
+    title = Column(Text, nullable=False)
+    body = Column(Text, nullable=True)
+    type = Column(Text, nullable=True)  # info, success, warning, error, reminder
+    link = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False)
-    read_at = Column(String)
-    action_url = Column(String(500))
-    action_label = Column(String(100))
-    extra_data = Column(JSONB, default={})
+    read_at = Column(String, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="notifications")
 
 
-class NotificationPreference(BaseModel):
-    """User notification preferences."""
-    
-    __tablename__ = "notification_preferences"
-    
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
-    
-    # Email notifications
-    email_booking_created = Column(Boolean, default=True)
-    email_booking_cancelled = Column(Boolean, default=True)
-    email_booking_reminder = Column(Boolean, default=True)
-    email_payment_received = Column(Boolean, default=True)
-    email_payment_failed = Column(Boolean, default=True)
-    email_new_message = Column(Boolean, default=True)
-    email_new_client = Column(Boolean, default=True)
-    email_form_submitted = Column(Boolean, default=True)
-    email_marketing = Column(Boolean, default=False)
-    
-    # Push notifications
-    push_enabled = Column(Boolean, default=True)
-    push_booking_created = Column(Boolean, default=True)
-    push_booking_cancelled = Column(Boolean, default=True)
-    push_booking_reminder = Column(Boolean, default=True)
-    push_new_message = Column(Boolean, default=True)
-    
-    # In-app notifications
-    inapp_all = Column(Boolean, default=True)
-    
-    # Relationships
-    user = relationship("User", back_populates="notification_preferences")
+# NOTE: NotificationPreference table does not exist in DB
+# class NotificationPreference(BaseModel):
+#     """User notification preferences."""
+#     __tablename__ = "notification_preferences"
+#     ... (table not in current schema)
 
 
 class EmailTemplate(BaseModel):
@@ -75,28 +48,11 @@ class EmailTemplate(BaseModel):
     is_active = Column(Boolean, default=True)
 
 
-class ScheduledNotification(BaseModel):
-    """Scheduled notifications for automation."""
-    
-    __tablename__ = "scheduled_notifications"
-    
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
-    recipient_type = Column(String(20), nullable=False)  # user, client
-    recipient_id = Column(UUID(as_uuid=True), nullable=False)
-    channel = Column(String(20), nullable=False)  # email, push, inapp
-    template_id = Column(UUID(as_uuid=True), ForeignKey('email_templates.id', ondelete='SET NULL'))
-    subject = Column(String(255))
-    message = Column(Text, nullable=False)
-    scheduled_for = Column(String, nullable=False)
-    sent_at = Column(String)
-    status = Column(String(20), default='pending')  # pending, sent, failed, cancelled
-    error_message = Column(Text)
-    extra_data = Column(JSONB, default={})
-    automation_id = Column(UUID(as_uuid=True), ForeignKey('automations.id', ondelete='SET NULL'))
-    
-    # Relationships
-    template = relationship("EmailTemplate")
-    automation = relationship("Automation")
+# NOTE: ScheduledNotification table does not exist in DB
+# class ScheduledNotification(BaseModel):
+#     """Scheduled notifications for automation."""
+#     __tablename__ = "scheduled_notifications"
+#     ... (table not in current schema)
 
 
 class ReminderSetting(BaseModel):

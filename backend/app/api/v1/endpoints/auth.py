@@ -1,10 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from supabase import create_client, Client as SupabaseClient
+from supabase import create_client, Client as SupabaseClient, acreate_client
+import traceback
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import get_db, AsyncSessionLocal
 from app.models.user import User, UserRole, RoleType
 from app.models.workspace import Workspace
 from app.schemas.auth import LoginRequest, RegisterRequest, Token
@@ -14,7 +19,14 @@ from app.middleware.auth import get_current_user, CurrentUser
 router = APIRouter()
 
 
+async def get_supabase_async_client():
+    """Create a new async Supabase client for each request."""
+    logger.info(f"Creating Supabase async client with URL: {settings.SUPABASE_URL[:30]}...")
+    return await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+
+
 def get_supabase_client() -> SupabaseClient:
+    """Create a sync Supabase client (not recommended for async endpoints)."""
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 
@@ -26,7 +38,7 @@ async def register(
     """
     Registrar nuevo usuario y crear workspace.
     """
-    supabase = get_supabase_client()
+    supabase = await get_supabase_async_client()
     
     # Check if user already exists
     result = await db.execute(
@@ -42,7 +54,7 @@ async def register(
     
     try:
         # Create user in Supabase Auth
-        auth_response = supabase.auth.sign_up({
+        auth_response = await supabase.auth.sign_up({
             "email": data.email,
             "password": data.password,
             "options": {
@@ -83,7 +95,7 @@ async def register(
             user_role = UserRole(
                 user_id=user.id,
                 workspace_id=workspace.id,
-                role=RoleType.OWNER,
+                role=RoleType.owner,
                 is_default=True
             )
             db.add(user_role)
@@ -107,17 +119,14 @@ async def register(
 
 
 @router.post("/login", response_model=Token)
-async def login(
-    data: LoginRequest,
-    db: AsyncSession = Depends(get_db)
-):
+async def login(data: LoginRequest):
     """
     Iniciar sesión con email y contraseña.
     """
-    supabase = get_supabase_client()
-    
     try:
-        auth_response = supabase.auth.sign_in_with_password({
+        supabase = await get_supabase_async_client()
+        
+        auth_response = await supabase.auth.sign_in_with_password({
             "email": data.email,
             "password": data.password
         })
@@ -128,22 +137,6 @@ async def login(
                 detail="Credenciales inválidas"
             )
         
-        # Check if user exists in our database
-        result = await db.execute(
-            select(User).where(User.auth_id == auth_response.user.id)
-        )
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            # Create user if doesn't exist (for existing Supabase users)
-            user = User(
-                email=data.email,
-                auth_id=auth_response.user.id,
-                full_name=auth_response.user.user_metadata.get("full_name")
-            )
-            db.add(user)
-            await db.commit()
-        
         return Token(
             access_token=auth_response.session.access_token,
             token_type="bearer",
@@ -151,6 +144,8 @@ async def login(
             refresh_token=auth_response.session.refresh_token
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         if "Invalid login credentials" in str(e):
             raise HTTPException(
@@ -170,10 +165,10 @@ async def logout(
     """
     Cerrar sesión.
     """
-    supabase = get_supabase_client()
+    supabase = await get_supabase_async_client()
     
     try:
-        supabase.auth.sign_out()
+        await supabase.auth.sign_out()
         return {"message": "Sesión cerrada correctamente"}
     except Exception as e:
         raise HTTPException(
@@ -199,10 +194,10 @@ async def refresh_token(
     """
     Refrescar token de acceso.
     """
-    supabase = get_supabase_client()
+    supabase = await get_supabase_async_client()
     
     try:
-        auth_response = supabase.auth.refresh_session(refresh_token)
+        auth_response = await supabase.auth.refresh_session(refresh_token)
         
         if not auth_response.session:
             raise HTTPException(

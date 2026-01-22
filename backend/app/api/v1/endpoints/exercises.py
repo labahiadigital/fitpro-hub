@@ -1,203 +1,216 @@
-"""Exercise library endpoints."""
+"""Exercise library endpoints - simplified to match actual DB schema."""
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
+from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.middleware.auth import get_current_user, require_roles
-from app.models.exercise import Exercise, ExerciseCategory
+from app.middleware.auth import get_current_user, require_workspace, require_staff, CurrentUser
+from app.models.exercise import Exercise
 from app.models.user import User
-from app.schemas.exercise import (
-    ExerciseCreate, ExerciseUpdate, ExerciseResponse, ExerciseList,
-    ExerciseCategoryCreate, ExerciseCategoryUpdate, ExerciseCategoryResponse, ExerciseCategoryList,
-)
 
 router = APIRouter()
 
 
-# ==================== Exercise Categories ====================
+# ============ SCHEMAS ============
 
-@router.get("/categories/", response_model=ExerciseCategoryList)
-async def list_exercise_categories(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """List all exercise categories."""
-    result = await db.execute(select(ExerciseCategory))
-    categories = result.scalars().all()
+class ExerciseCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    instructions: Optional[str] = None
+    muscle_groups: List[str] = []
+    equipment: List[str] = []
+    difficulty: str = "intermediate"
+    category: Optional[str] = None
+    video_url: Optional[str] = None
+    image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+
+
+class ExerciseResponse(BaseModel):
+    id: UUID
+    workspace_id: Optional[UUID] = None
+    name: str
+    description: Optional[str] = None
+    instructions: Optional[str] = None
+    muscle_groups: List[str] = []
+    equipment: List[str] = []
+    difficulty: Optional[str] = None
+    category: Optional[str] = None
+    video_url: Optional[str] = None
+    image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    is_global: bool = False
     
-    return ExerciseCategoryList(
-        items=[ExerciseCategoryResponse.model_validate(c) for c in categories],
-        total=len(categories),
-    )
+    class Config:
+        from_attributes = True
 
 
-@router.post("/categories/", response_model=ExerciseCategoryResponse, status_code=status.HTTP_201_CREATED)
-async def create_exercise_category(
-    data: ExerciseCategoryCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles(["owner", "collaborator"])),
-):
-    """Create a new exercise category."""
-    category = ExerciseCategory(**data.model_dump())
-    db.add(category)
-    await db.commit()
-    await db.refresh(category)
-    return ExerciseCategoryResponse.model_validate(category)
+class ExerciseListResponse(BaseModel):
+    items: List[ExerciseResponse]
+    total: int
+    page: int
+    page_size: int
 
 
-# ==================== Exercises ====================
+# ============ EXERCISES ============
 
-@router.get("/", response_model=ExerciseList)
+@router.get("/", response_model=ExerciseListResponse)
 async def list_exercises(
-    workspace_id: Optional[UUID] = None,
-    category_id: Optional[UUID] = None,
-    muscle_group: Optional[str] = None,
-    equipment: Optional[str] = None,
-    difficulty: Optional[str] = None,
     search: Optional[str] = None,
+    category: Optional[str] = None,
+    muscle_group: Optional[str] = None,
+    difficulty: Optional[str] = None,
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(50, ge=1, le=100),
+    current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """List exercises (system + workspace-specific)."""
-    # Include system exercises and workspace-specific ones
+    """List exercises (global and workspace-specific)."""
     query = select(Exercise).where(
         or_(
-            Exercise.is_system == True,
-            Exercise.is_public == True,
-            Exercise.workspace_id == workspace_id,
+            Exercise.workspace_id == current_user.workspace_id,
+            Exercise.is_global == True
         )
     )
     
-    if category_id:
-        query = query.where(Exercise.category_id == category_id)
+    if search:
+        query = query.where(Exercise.name.ilike(f"%{search}%"))
+    
+    if category:
+        query = query.where(Exercise.category == category)
+    
     if muscle_group:
-        query = query.where(Exercise.muscle_groups.contains([muscle_group]))
-    if equipment:
-        query = query.where(Exercise.equipment.contains([equipment]))
+        query = query.where(Exercise.muscle_groups.any(muscle_group))
+    
     if difficulty:
         query = query.where(Exercise.difficulty == difficulty)
-    if search:
-        query = query.where(
-            or_(
-                Exercise.name.ilike(f"%{search}%"),
-                Exercise.description.ilike(f"%{search}%"),
-            )
-        )
     
+    # Count total
     count_query = select(func.count()).select_from(query.subquery())
-    total = await db.scalar(count_query)
+    total = await db.scalar(count_query) or 0
     
-    query = query.offset((page - 1) * size).limit(size)
+    # Apply pagination
+    offset = (page - 1) * page_size
+    query = query.order_by(Exercise.name).offset(offset).limit(page_size)
+    
     result = await db.execute(query)
     exercises = result.scalars().all()
     
-    return ExerciseList(
+    return ExerciseListResponse(
         items=[ExerciseResponse.model_validate(e) for e in exercises],
-        total=total or 0,
+        total=total,
         page=page,
-        size=size,
+        page_size=page_size
     )
 
 
 @router.post("/", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
 async def create_exercise(
     data: ExerciseCreate,
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles(["owner", "collaborator"])),
 ):
-    """Create a new custom exercise."""
-    exercise = Exercise(**data.model_dump())
+    """Create a new exercise."""
+    exercise = Exercise(
+        workspace_id=current_user.workspace_id,
+        name=data.name,
+        description=data.description,
+        instructions=data.instructions,
+        muscle_groups=data.muscle_groups,
+        equipment=data.equipment,
+        difficulty=data.difficulty,
+        category=data.category,
+        video_url=data.video_url,
+        image_url=data.image_url,
+        thumbnail_url=data.thumbnail_url,
+        is_global=False
+    )
     db.add(exercise)
     await db.commit()
     await db.refresh(exercise)
-    return ExerciseResponse.model_validate(exercise)
+    return exercise
 
 
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
 async def get_exercise(
     exercise_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """Get a specific exercise."""
-    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    """Get exercise by ID."""
+    result = await db.execute(
+        select(Exercise).where(
+            Exercise.id == exercise_id,
+            or_(
+                Exercise.workspace_id == current_user.workspace_id,
+                Exercise.is_global == True
+            )
+        )
+    )
     exercise = result.scalar_one_or_none()
     
     if not exercise:
-        raise HTTPException(status_code=404, detail="Exercise not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found"
+        )
     
-    return ExerciseResponse.model_validate(exercise)
+    return exercise
 
 
-@router.patch("/{exercise_id}", response_model=ExerciseResponse)
+@router.put("/{exercise_id}", response_model=ExerciseResponse)
 async def update_exercise(
     exercise_id: UUID,
-    data: ExerciseUpdate,
+    data: ExerciseCreate,
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles(["owner", "collaborator"])),
 ):
     """Update an exercise."""
-    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    result = await db.execute(
+        select(Exercise).where(
+            Exercise.id == exercise_id,
+            Exercise.workspace_id == current_user.workspace_id
+        )
+    )
     exercise = result.scalar_one_or_none()
     
     if not exercise:
-        raise HTTPException(status_code=404, detail="Exercise not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found"
+        )
     
-    if exercise.is_system:
-        raise HTTPException(status_code=403, detail="Cannot modify system exercises")
-    
-    update_data = data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
+    for field, value in data.model_dump(exclude_unset=True).items():
         setattr(exercise, field, value)
     
     await db.commit()
     await db.refresh(exercise)
-    return ExerciseResponse.model_validate(exercise)
+    return exercise
 
 
 @router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exercise(
     exercise_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_roles(["owner"])),
 ):
     """Delete an exercise."""
-    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    result = await db.execute(
+        select(Exercise).where(
+            Exercise.id == exercise_id,
+            Exercise.workspace_id == current_user.workspace_id
+        )
+    )
     exercise = result.scalar_one_or_none()
     
     if not exercise:
-        raise HTTPException(status_code=404, detail="Exercise not found")
-    
-    if exercise.is_system:
-        raise HTTPException(status_code=403, detail="Cannot delete system exercises")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found"
+        )
     
     await db.delete(exercise)
     await db.commit()
-
-
-# ==================== Muscle Groups & Equipment ====================
-
-@router.get("/meta/muscle-groups", response_model=List[str])
-async def get_muscle_groups():
-    """Get list of available muscle groups."""
-    return [
-        "chest", "back", "shoulders", "biceps", "triceps", "forearms",
-        "abs", "obliques", "lower_back", "glutes", "quadriceps",
-        "hamstrings", "calves", "hip_flexors", "full_body",
-    ]
-
-
-@router.get("/meta/equipment", response_model=List[str])
-async def get_equipment():
-    """Get list of available equipment types."""
-    return [
-        "bodyweight", "barbell", "dumbbell", "kettlebell", "cable",
-        "machine", "resistance_band", "medicine_ball", "pull_up_bar",
-        "bench", "box", "trx", "foam_roller", "yoga_mat", "none",
-    ]
-

@@ -6,24 +6,11 @@ from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 
 
-class FoodCategory(BaseModel):
-    """Food category model."""
-    
-    __tablename__ = "food_categories"
-    
-    name = Column(Text, nullable=False, unique=True)
-    description = Column(Text, nullable=True)
-    icon = Column(Text, nullable=True)
-    parent_id = Column(UUID(as_uuid=True), ForeignKey("food_categories.id", ondelete="SET NULL"), nullable=True)
-    is_system = Column(Boolean, default=False)
-    sort_order = Column(Integer, default=0)
-    
-    # Relationships
-    foods = relationship("Food", back_populates="food_category")
-    parent = relationship("FoodCategory", remote_side="FoodCategory.id", backref="children")
-    
-    def __repr__(self):
-        return f"<FoodCategory {self.name}>"
+# NOTE: FoodCategory table does not exist in DB - foods have 'category' as text directly
+# class FoodCategory(BaseModel):
+#     """Food category model."""
+#     __tablename__ = "food_categories"
+#     ... (table not in current schema)
 
 
 class Food(BaseModel):
@@ -32,7 +19,7 @@ class Food(BaseModel):
     __tablename__ = "foods"
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
-    category_id = Column(UUID(as_uuid=True), ForeignKey("food_categories.id", ondelete="SET NULL"), nullable=True, index=True)
+    # NOTE: No category_id FK - category is stored as text directly
     
     # Basic food details
     name = Column(Text, nullable=False)
@@ -128,11 +115,6 @@ class Food(BaseModel):
     
     # Visibility
     is_global = Column(Boolean, default=False)
-    is_public = Column(Boolean, default=False)
-    is_system = Column(Boolean, default=False)
-    
-    # Relationships
-    food_category = relationship("FoodCategory", back_populates="foods")
     
     # Aliases for backward compatibility with endpoints
     @property

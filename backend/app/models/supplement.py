@@ -1,84 +1,56 @@
-"""Supplement library models with referral codes."""
-from sqlalchemy import Column, String, Text, Float, Boolean, ForeignKey, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+"""Supplement library models - matches Supabase schema."""
+from sqlalchemy import Column, Text, Numeric, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
 
 
 class Supplement(BaseModel):
-    """Supplement library model."""
+    """Supplement library model - matches Supabase schema."""
     
     __tablename__ = "supplements"
+    
+    # DB columns: id, workspace_id, name, brand, category, description, 
+    #             serving_size, serving_unit, calories, protein, carbs, fat,
+    #             usage_instructions, warnings, image_url, is_global, created_at, updated_at
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     
     # Supplement details
-    name = Column(String(255), nullable=False)
-    brand = Column(String(255), nullable=True)
+    name = Column(Text, nullable=False)
+    brand = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
-    category = Column(String(100), nullable=True)  # proteína, creatina, vitaminas, etc.
+    category = Column(Text, nullable=True)
+    
+    # Serving info
+    serving_size = Column(Numeric, nullable=True)
+    serving_unit = Column(Text, nullable=True)
     
     # Nutritional info
-    serving_size = Column(String(50), default="30g")
-    calories = Column(Float, nullable=True)
-    protein = Column(Float, nullable=True)
-    carbs = Column(Float, nullable=True)
-    fat = Column(Float, nullable=True)
+    calories = Column(Numeric, nullable=True)
+    protein = Column(Numeric, nullable=True)
+    carbs = Column(Numeric, nullable=True)
+    fat = Column(Numeric, nullable=True)
     
     # Additional info
-    ingredients = Column(Text, nullable=True)
     usage_instructions = Column(Text, nullable=True)
     warnings = Column(Text, nullable=True)
     
     # Media
-    image_url = Column(String(500), nullable=True)
-    
-    # Referral/affiliate info
-    purchase_url = Column(String(500), nullable=True)
-    referral_code = Column(String(100), nullable=True)
-    referral_url = Column(String(500), nullable=True)
-    commission_percentage = Column(Float, nullable=True)  # Porcentaje de comisión
+    image_url = Column(Text, nullable=True)
     
     # Visibility
-    is_public = Column(Boolean, default=False)
-    is_system = Column(Boolean, default=False)
-    
-    # Extra data
-    extra_data = Column(JSONB, default={})
+    is_global = Column(Boolean, default=False)
     
     def __repr__(self):
         return f"<Supplement {self.name}>"
 
 
-class SupplementRecommendation(BaseModel):
-    """Supplement recommendations for clients."""
-    
-    __tablename__ = "supplement_recommendations"
-    
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
-    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
-    supplement_id = Column(UUID(as_uuid=True), ForeignKey("supplements.id", ondelete="CASCADE"), nullable=False)
-    recommended_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    
-    # Recommendation details
-    dosage = Column(String(100), nullable=True)  # e.g., "30g después del entrenamiento"
-    frequency = Column(String(100), nullable=True)  # e.g., "Diario", "Días de entrenamiento"
-    notes = Column(Text, nullable=True)
-    
-    # How to take instructions
-    how_to_take = Column(Text, nullable=True)  # e.g., "Mezclar con agua o leche"
-    timing = Column(Text, nullable=True)  # e.g., "Antes del entrenamiento", "Con comida"
-    
-    # Status
-    is_active = Column(Boolean, default=True)
-    
-    # Relationships
-    supplement = relationship("Supplement")
-    client = relationship("Client", back_populates="supplement_recommendations")
-    
-    def __repr__(self):
-        return f"<SupplementRecommendation {self.id}>"
+# NOTE: SupplementRecommendation table does not exist in DB
+# class SupplementRecommendation(BaseModel):
+#     __tablename__ = "supplement_recommendations"
+#     ... (table not in current schema)
 
 
 class SupplementFavorite(BaseModel):

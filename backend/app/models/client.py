@@ -98,7 +98,7 @@ class Client(BaseModel):
     # Status
     is_active = Column(Boolean, default=True)
     
-    # Relationships
+    # Relationships - only to tables that exist in DB
     workspace = relationship("Workspace", back_populates="clients")
     tags = relationship("ClientTag", secondary=client_tags_association, back_populates="clients")
     bookings = relationship("Booking", back_populates="client", cascade="all, delete-orphan")
@@ -106,11 +106,11 @@ class Client(BaseModel):
     meal_plans = relationship("MealPlan", back_populates="client", cascade="all, delete-orphan")
     form_submissions = relationship("FormSubmission", back_populates="client", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="client")
-    documents = relationship("Document", back_populates="client", cascade="all, delete-orphan")
-    progress_photos = relationship("ProgressPhoto", back_populates="client", cascade="all, delete-orphan")
-    supplement_recommendations = relationship("SupplementRecommendation", back_populates="client", cascade="all, delete-orphan")
     measurements = relationship("ClientMeasurement", back_populates="client", cascade="all, delete-orphan")
     tasks = relationship("ClientTask", back_populates="client", cascade="all, delete-orphan")
+    packages = relationship("ClientPackage", back_populates="client", cascade="all, delete-orphan")
+    subscriptions = relationship("Subscription", back_populates="client", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="client", cascade="all, delete-orphan")
     
     @property
     def full_name(self) -> str:

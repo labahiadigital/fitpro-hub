@@ -49,7 +49,7 @@ class UserResponse(BaseSchema):
 class UserRoleCreate(BaseSchema):
     user_id: Optional[UUID] = None
     email: Optional[EmailStr] = None  # For inviting new users
-    role: RoleType = RoleType.COLLABORATOR
+    role: RoleType = RoleType.collaborator
 
 
 class UserRoleUpdate(BaseSchema):
@@ -68,7 +68,7 @@ class UserRoleResponse(BaseSchema):
 
 class InviteUserRequest(BaseSchema):
     email: EmailStr
-    role: RoleType = RoleType.COLLABORATOR
+    role: RoleType = RoleType.collaborator
     send_email: bool = True
 
 

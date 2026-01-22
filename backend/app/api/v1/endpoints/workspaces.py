@@ -79,7 +79,7 @@ async def create_workspace(
     user_role = UserRole(
         user_id=current_user.id,
         workspace_id=workspace.id,
-        role=RoleType.OWNER,
+        role=RoleType.owner,
         is_default=True
     )
     db.add(user_role)
