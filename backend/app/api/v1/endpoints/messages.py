@@ -321,7 +321,7 @@ async def list_messages(
     return list(reversed(messages))
 
 
-@router.post("/messages", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 async def send_message(
     data: MessageCreate,
     current_user: CurrentUser = Depends(require_workspace),
@@ -421,7 +421,7 @@ async def mark_conversation_read(
     return {"status": "ok"}
 
 
-@router.delete("/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_message(
     message_id: UUID,
     current_user: CurrentUser = Depends(require_workspace),
