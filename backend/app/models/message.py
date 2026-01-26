@@ -1,6 +1,6 @@
 from enum import Enum as PyEnum
 from sqlalchemy import Column, String, Text, Boolean, Enum, ForeignKey, DateTime, Integer
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY, ENUM as PG_ENUM
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -42,6 +42,38 @@ class MessageStatus(str, PyEnum):
     FAILED = "failed"
 
 
+# Create PostgreSQL ENUMs that use the Python enum values (lowercase)
+ConversationTypeEnum = PG_ENUM(
+    'direct', 'group', 'broadcast',
+    name='conversationtype',
+    create_type=False
+)
+
+MessageTypeEnum = PG_ENUM(
+    'text', 'image', 'voice', 'file', 'template',
+    name='messagetype',
+    create_type=False
+)
+
+MessageSourceEnum = PG_ENUM(
+    'platform', 'whatsapp',
+    name='messagesource',
+    create_type=False
+)
+
+MessageDirectionEnum = PG_ENUM(
+    'inbound', 'outbound',
+    name='messagedirection',
+    create_type=False
+)
+
+MessageStatusEnum = PG_ENUM(
+    'pending', 'sent', 'delivered', 'read', 'failed',
+    name='messagestatus',
+    create_type=False
+)
+
+
 class Conversation(BaseModel):
     __tablename__ = "conversations"
     
@@ -52,7 +84,7 @@ class Conversation(BaseModel):
     
     # Conversation details
     name = Column(String(255), nullable=True)  # For group chats or client name
-    conversation_type = Column(Enum(ConversationType), default=ConversationType.DIRECT)
+    conversation_type = Column(ConversationTypeEnum, default='direct')
     
     # Participants (user IDs - for internal platform users)
     participant_ids = Column(ARRAY(UUID(as_uuid=True)), default=[])
@@ -62,12 +94,12 @@ class Conversation(BaseModel):
     whatsapp_profile_name = Column(String(255), nullable=True)  # WhatsApp display name
     
     # Preferred channel for this conversation
-    preferred_channel = Column(Enum(MessageSource), default=MessageSource.PLATFORM)
+    preferred_channel = Column(MessageSourceEnum, default='platform')
     
     # Last message info (for listing)
     last_message_at = Column(DateTime(timezone=True), nullable=True)
     last_message_preview = Column(String(255), nullable=True)
-    last_message_source = Column(Enum(MessageSource), nullable=True)  # Source of last message
+    last_message_source = Column(MessageSourceEnum, nullable=True)  # Source of last message
     
     # Unread counts
     unread_count = Column(Integer, default=0)
@@ -91,11 +123,11 @@ class Message(BaseModel):
     sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     # Message source and direction
-    source = Column(Enum(MessageSource), default=MessageSource.PLATFORM, nullable=False)
-    direction = Column(Enum(MessageDirection), default=MessageDirection.OUTBOUND, nullable=False)
+    source = Column(MessageSourceEnum, default='platform', nullable=False)
+    direction = Column(MessageDirectionEnum, default='outbound', nullable=False)
     
     # Message content
-    message_type = Column(Enum(MessageType), default=MessageType.TEXT)
+    message_type = Column(MessageTypeEnum, default='text')
     content = Column(Text, nullable=True)
     
     # Media (for images, voice notes, files)
@@ -104,7 +136,7 @@ class Message(BaseModel):
     
     # External message tracking (WhatsApp, etc.)
     external_id = Column(String(255), nullable=True, index=True)  # WhatsApp message ID
-    external_status = Column(Enum(MessageStatus), default=MessageStatus.PENDING)
+    external_status = Column(MessageStatusEnum, default='pending')
     external_error = Column(Text, nullable=True)  # Error message if failed
     
     # WhatsApp specific

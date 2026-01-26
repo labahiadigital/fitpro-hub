@@ -173,6 +173,22 @@ export const clientsApi = {
     api.delete(`/clients/${clientId}/tags/${tagId}`),
   export: (format: "csv" | "xlsx") =>
     api.get("/clients/export", { params: { format }, responseType: "blob" }),
+  // Progress & Measurements (staff access)
+  getMeasurements: (clientId: string, limit?: number) =>
+    api.get(`/clients/${clientId}/measurements`, { params: { limit } }),
+  getPhotos: (clientId: string, limit?: number) =>
+    api.get(`/clients/${clientId}/photos`, { params: { limit } }),
+  getProgressSummary: (clientId: string) =>
+    api.get(`/clients/${clientId}/progress-summary`),
+  // Invitations
+  sendInvitation: (data: { email: string; first_name?: string; last_name?: string; message?: string }) =>
+    api.post("/clients/invitations", data),
+  listInvitations: (status?: string) =>
+    api.get("/clients/invitations", { params: status ? { status } : {} }),
+  resendInvitation: (invitationId: string) =>
+    api.post(`/clients/invitations/${invitationId}/resend`),
+  cancelInvitation: (invitationId: string) =>
+    api.delete(`/clients/invitations/${invitationId}`),
 };
 
 // Bookings API
@@ -256,19 +272,7 @@ export const formsApi = {
     api.post(`/forms/${formId}/send/${clientId}`),
 };
 
-// Messages API
-export const messagesApi = {
-  conversations: () => api.get("/messages/conversations"),
-  getConversation: (id: string) => api.get(`/messages/conversations/${id}`),
-  createConversation: (data: object) =>
-    api.post("/messages/conversations", data),
-  messages: (conversationId: string, params?: object) =>
-    api.get(`/messages/conversations/${conversationId}/messages`, { params }),
-  send: (conversationId: string, data: object) =>
-    api.post(`/messages/conversations/${conversationId}/messages`, data),
-  markRead: (conversationId: string) =>
-    api.post(`/messages/conversations/${conversationId}/read`),
-};
+// Messages API - moved to end of file with new structure
 
 // Payments API
 export const paymentsApi = {
@@ -368,10 +372,46 @@ export const clientPortalApi = {
   }) => api.post("/my/progress/measurements", data),
   progressSummary: () => api.get("/my/progress/summary"),
   
+  // Photos
+  getPhotos: (limit?: number) =>
+    api.get("/my/progress/photos", { params: { limit } }),
+  uploadPhoto: (file: File, type: string, notes?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/my/progress/photos?photo_type=${type}${notes ? `&notes=${encodeURIComponent(notes)}` : ''}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  
   // Calendar/Bookings
   bookings: (params?: { status?: string; upcoming_only?: boolean; limit?: number }) =>
     api.get("/my/calendar/bookings", { params }),
   getBooking: (id: string) => api.get(`/my/calendar/bookings/${id}`),
+  
+  // Messages/Chat
+  getConversation: () => api.get("/my/messages/conversation"),
+  getMessages: (limit?: number, before?: string) =>
+    api.get("/my/messages", { params: { limit, before } }),
+  sendMessage: (content: string) =>
+    api.post("/my/messages", { content, message_type: "text" }),
+  markMessagesRead: () => api.post("/my/messages/mark-read"),
+  getUnreadCount: () => api.get("/my/messages/unread-count"),
+};
+
+// Messages API (Staff/Trainer)
+export const messagesApi = {
+  getConversations: (includeArchived?: boolean) =>
+    api.get("/messages/conversations", { params: { include_archived: includeArchived } }),
+  getConversation: (id: string) => api.get(`/messages/conversations/${id}`),
+  createConversation: (data: { client_id?: string; name?: string }) =>
+    api.post("/messages/conversations", data),
+  getMessages: (conversationId: string, limit?: number, before?: string) =>
+    api.get(`/messages/conversations/${conversationId}/messages`, { params: { limit, before } }),
+  sendMessage: (data: { conversation_id: string; content: string; send_via?: string }) =>
+    api.post("/messages", { ...data, message_type: "text" }),
+  markConversationRead: (conversationId: string) =>
+    api.post(`/messages/conversations/${conversationId}/read`),
+  getUnreadCount: () => api.get("/messages/unread-count"),
 };
 
 export default api;

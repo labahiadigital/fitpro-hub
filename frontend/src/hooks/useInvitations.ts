@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../services/api";
+import { clientsApi } from "../services/api";
 import { notifications } from "@mantine/notifications";
 
 export interface Invitation {
@@ -8,10 +8,8 @@ export interface Invitation {
   first_name?: string;
   last_name?: string;
   status: "pending" | "accepted" | "expired" | "cancelled";
-  token: string;
   expires_at: string;
   created_at: string;
-  invitation_url: string;
 }
 
 export interface InvitationCreate {
@@ -19,16 +17,14 @@ export interface InvitationCreate {
   first_name?: string;
   last_name?: string;
   message?: string;
-  expires_days?: number;
 }
 
 export function useInvitations(statusFilter?: string) {
   return useQuery({
-    queryKey: ["invitations", statusFilter],
+    queryKey: ["client-invitations", statusFilter],
     queryFn: async () => {
-      const params = statusFilter ? `?status_filter=${statusFilter}` : "";
-      const response = await api.get(`/invitations${params}`);
-      return response.data as { items: Invitation[]; total: number };
+      const response = await clientsApi.listInvitations(statusFilter);
+      return response.data as Invitation[];
     },
   });
 }
@@ -38,11 +34,11 @@ export function useCreateInvitation() {
 
   return useMutation({
     mutationFn: async (data: InvitationCreate) => {
-      const response = await api.post("/invitations", data);
+      const response = await clientsApi.sendInvitation(data);
       return response.data as Invitation;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["client-invitations"] });
       notifications.show({
         title: "Invitación enviada",
         message: "El cliente recibirá un email con el enlace de registro",
@@ -65,11 +61,11 @@ export function useResendInvitation() {
 
   return useMutation({
     mutationFn: async (invitationId: string) => {
-      const response = await api.post(`/invitations/${invitationId}/resend`);
-      return response.data as Invitation;
+      const response = await clientsApi.resendInvitation(invitationId);
+      return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["client-invitations"] });
       notifications.show({
         title: "Invitación reenviada",
         message: "Se ha enviado un nuevo email al cliente",
@@ -92,10 +88,10 @@ export function useCancelInvitation() {
 
   return useMutation({
     mutationFn: async (invitationId: string) => {
-      await api.delete(`/invitations/${invitationId}`);
+      await clientsApi.cancelInvitation(invitationId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["client-invitations"] });
       notifications.show({
         title: "Invitación cancelada",
         message: "La invitación ha sido cancelada",

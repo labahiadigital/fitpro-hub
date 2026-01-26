@@ -10,6 +10,7 @@ import {
   Drawer,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { useQuery } from "@tanstack/react-query";
 import {
   IconLayoutDashboard,
   IconUsers,
@@ -38,6 +39,7 @@ import {
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore } from "../../stores/auth";
+import { clientPortalApi, messagesApi } from "../../services/api";
 
 // --- TIPOS Y DATOS ---
 
@@ -48,8 +50,8 @@ interface NavItemProps {
   badge?: number;
 }
 
-// Lista de navegación para Entrenadores/Owners/Collaborators
-const trainerNavItems: NavItemProps[] = [
+// Lista de navegación para Entrenadores/Owners/Collaborators (sin badge, se añade dinámicamente)
+const getTrainerNavItems = (unreadCount: number): NavItemProps[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Panel Principal", to: "/dashboard" },
   { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients" },
   { icon: <IconCalendarEvent size={20} />, label: "Calendario", to: "/calendar" },
@@ -57,7 +59,7 @@ const trainerNavItems: NavItemProps[] = [
   { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition" },
   { icon: <IconForms size={20} />, label: "Formularios", to: "/forms" },
   { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents" },
-  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: 3 },
+  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount },
   { icon: <IconCreditCard size={20} />, label: "Pagos", to: "/payments" },
   { icon: <IconPackage size={20} />, label: "Bonos", to: "/packages" },
   { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community" },
@@ -69,14 +71,14 @@ const trainerNavItems: NavItemProps[] = [
   { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
 ];
 
-// Lista de navegación para Clientes - solo lo que necesitan ver
-const clientNavItems: NavItemProps[] = [
+// Lista de navegación para Clientes (sin badge, se añade dinámicamente)
+const getClientNavItems = (unreadCount: number): NavItemProps[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
   { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/my-workouts" },
   { icon: <IconSalad size={20} />, label: "Mi Nutrición", to: "/my-nutrition" },
   { icon: <IconChartLine size={20} />, label: "Mi Progreso", to: "/my-progress" },
   { icon: <IconCalendarEvent size={20} />, label: "Mis Citas", to: "/my-calendar" },
-  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat" },
+  { icon: <IconMessage size={20} />, label: "Mensajes", to: "/my-messages", badge: unreadCount },
   { icon: <IconFileText size={20} />, label: "Mis Documentos", to: "/my-documents" },
   { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
   { icon: <IconUser size={20} />, label: "Mi Perfil", to: "/my-profile" },
@@ -172,7 +174,25 @@ function SidebarContent() {
   
   // Determinar qué items de navegación mostrar según el rol
   const isClient = user?.role === 'client';
-  const navItems = isClient ? clientNavItems : trainerNavItems;
+  
+  // Fetch unread message count based on role
+  const { data: unreadData } = useQuery({
+    queryKey: ["unread-messages-count", isClient ? "client" : "trainer"],
+    queryFn: async () => {
+      if (isClient) {
+        const response = await clientPortalApi.getUnreadCount();
+        return response.data;
+      } else {
+        const response = await messagesApi.getUnreadCount();
+        return response.data;
+      }
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 10000,
+  });
+  
+  const unreadCount = unreadData?.unread_count || 0;
+  const navItems = isClient ? getClientNavItems(unreadCount) : getTrainerNavItems(unreadCount);
   const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 
   return (

@@ -68,17 +68,47 @@ interface WorkoutProgram {
   duration_weeks?: number;
   difficulty?: string;
   template?: {
-    weeks?: Array<{
-      week: number;
-      days: Array<{
-        day: string;
-        exercises: Array<{
-          name: string;
+    // Nueva estructura con días de la semana
+    days?: Array<{
+      id: string;
+      day: number;
+      dayName: string;
+      isRestDay: boolean;
+      notes?: string;
+      blocks: Array<{
+        id: string;
+        name: string;
+        type?: string;
+        rest_between_sets?: number;
+        rounds?: number;
+        exercises?: Array<{
+          id: string;
+          exercise_id?: string;
+          exercise?: {
+            id: string;
+            name: string;
+            muscle_groups?: string[];
+          };
+          name?: string;
           sets: number;
           reps: string;
-          weight?: string;
+          rest_seconds?: number;
           notes?: string;
         }>;
+      }>;
+    }>;
+    // Retrocompatibilidad: bloques planos
+    blocks?: Array<{
+      id: string;
+      name: string;
+      type?: string;
+      exercises?: Array<{
+        exercise?: { name?: string };
+        name?: string;
+        sets?: number;
+        reps?: string;
+        rest_seconds?: number;
+        notes?: string;
       }>;
     }>;
   };
@@ -106,9 +136,29 @@ interface MealPlan {
   };
   plan?: {
     days: Array<{
+      id: string;
+      day: number;
+      dayName: string;
+      notes?: string;
       meals: Array<{
+        id: string;
         name: string;
-        foods: Array<{ name: string; quantity: number; calories: number }>;
+        time: string;
+        items: Array<{
+          id: string;
+          food_id?: string;
+          food?: {
+            id: string;
+            name: string;
+            calories: number;
+            protein: number;
+            carbs: number;
+            fat: number;
+            serving_size: string;
+          };
+          quantity_grams: number;
+          type: "food" | "supplement";
+        }>;
       }>;
     }>;
   };
@@ -457,6 +507,53 @@ export function useProgressSummary() {
     queryFn: async () => {
       const response = await clientPortalApi.progressSummary();
       return response.data;
+    },
+  });
+}
+
+// Photos hooks
+interface ProgressPhoto {
+  url: string;
+  type: string;
+  notes?: string;
+  uploaded_at: string;
+  measurement_date?: string;
+}
+
+export function useProgressPhotos(limit = 50) {
+  return useQuery<ProgressPhoto[]>({
+    queryKey: ["progress-photos", limit],
+    queryFn: async () => {
+      const response = await clientPortalApi.getPhotos(limit);
+      return response.data;
+    },
+  });
+}
+
+export function useUploadProgressPhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ file, type, notes }: { file: File; type: string; notes?: string }) => {
+      const response = await clientPortalApi.uploadPhoto(file, type, notes);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["progress-photos"] });
+      queryClient.invalidateQueries({ queryKey: ["my-measurements"] });
+      queryClient.invalidateQueries({ queryKey: ["progress-summary"] });
+      notifications.show({
+        title: "Foto subida",
+        message: "Tu foto de progreso ha sido guardada",
+        color: "green",
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        title: "Error",
+        message: error.message || "No se pudo subir la foto",
+        color: "red",
+      });
     },
   });
 }

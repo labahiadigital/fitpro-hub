@@ -64,7 +64,7 @@ import {
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useClient, useUpdateClient, useDeleteClient } from "../../hooks/useClients";
+import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary } from "../../hooks/useClients";
 import { 
   useClientMealPlans,
   useWorkoutProgramTemplates,
@@ -176,6 +176,9 @@ export function ClientDetailPage() {
   const { data: fetchedClient, isLoading } = useClient(id || "");
   const { data: clientMealPlans } = useClientMealPlans(id || "");
   const { data: clientWorkoutPrograms = [] } = useClientWorkoutAssignments(id || "");
+  const { data: clientMeasurements = [] } = useClientMeasurements(id || "");
+  const { data: clientPhotos = [] } = useClientPhotos(id || "");
+  const { data: clientProgressSummary } = useClientProgressSummary(id || "");
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   
@@ -222,6 +225,10 @@ export function ClientDetailPage() {
   // Estado para ver plan nutricional detallado
   const [viewingMealPlanId, setViewingMealPlanId] = useState<string | null>(null);
   const { data: viewingMealPlan } = useSupabaseMealPlan(viewingMealPlanId || "");
+  
+  // Estado para ver programa de entrenamiento detallado
+  const [selectedProgramForView, setSelectedProgramForView] = useState<{ id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } } | null>(null);
+  const [viewProgramModalOpened, { open: openViewProgramModal, close: closeViewProgramModal }] = useDisclosure(false);
 
   // Use real client data from API - with default empty object to prevent hook errors
   const client = fetchedClient || {
@@ -241,7 +248,15 @@ export function ClientDetailPage() {
   
   // Documents and other data should come from API
   const documents: { id: string; name: string; type: string; direction: string; created_at: string; is_read: boolean }[] = [];
-  const progressPhotos: { id: string; photo_url: string; photo_type: string; photo_date: string; weight_kg: string }[] = [];
+  
+  // Transform clientPhotos from API to the format expected by the UI
+  const progressPhotos = (clientPhotos || []).map((photo, index) => ({
+    id: `photo-${index}`,
+    photo_url: photo.url,
+    photo_type: photo.type || "front",
+    photo_date: photo.measurement_date || photo.uploaded_at || new Date().toISOString(),
+    weight_kg: "",
+  }));
   
   // Meal plans from Supabase
   const mealPlans = (clientMealPlans || []).map((plan: { 
@@ -731,10 +746,21 @@ export function ClientDetailPage() {
     days_as_client: calculateDaysAsClient(),
   };
 
-  // TODO: Conectar a endpoints de actividades, sesiones y mediciones cuando estén disponibles
+  // TODO: Conectar a endpoints de actividades y sesiones cuando estén disponibles
   const activities: { id: string; type: string; title: string; description: string; date: string }[] = [];
   const sessions: { id: string; date: string; time: string; type: string; status: string; notes: string }[] = [];
-  const measurements: { date: string; weight: number; body_fat: number; muscle_mass: number }[] = [];
+  
+  // Medidas del cliente (conectado al backend)
+  const measurements = clientMeasurements.map(m => ({
+    id: m.id,
+    date: m.measured_at || m.created_at,
+    weight: m.weight_kg || 0,
+    body_fat: m.body_fat_percentage || 0,
+    muscle_mass: m.muscle_mass_kg || 0,
+    measurements: m.measurements || {},
+    photos: m.photos || [],
+    notes: m.notes,
+  }));
 
   const getActivityIcon = (type: string) => {
     const icons: Record<string, React.ReactNode> = {
@@ -1737,52 +1763,197 @@ export function ClientDetailPage() {
 
         {/* Progreso */}
         <Tabs.Panel value="progress">
-          <Box className="nv-card" p="xl">
-            <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Evolución de Medidas
-            </Text>
-            <Table verticalSpacing="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Peso (kg)</Table.Th>
-                  <Table.Th>% Grasa</Table.Th>
-                  <Table.Th>Masa Muscular (kg)</Table.Th>
-                  <Table.Th>Variación</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {measurements.map((m, index) => {
-                  const prevWeight = measurements[index + 1]?.weight || m.weight;
-                  const weightChange = m.weight - prevWeight;
-                  return (
-                    <Table.Tr key={index}>
-                      <Table.Td>
-                        <Text fw={600} size="sm">
-                          {new Date(m.date).toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
-                        </Text>
-                      </Table.Td>
-                      <Table.Td><Text size="sm">{m.weight} kg</Text></Table.Td>
-                      <Table.Td><Text size="sm">{m.body_fat}%</Text></Table.Td>
-                      <Table.Td><Text size="sm">{m.muscle_mass} kg</Text></Table.Td>
-                      <Table.Td>
-                        {index < measurements.length - 1 && (
-                          <Badge
-                            color={weightChange <= 0 ? "green" : "red"}
-                            size="sm"
-                            variant="light"
-                            radius="xl"
-                          >
-                            {weightChange <= 0 ? "" : "+"}{weightChange} kg
-                          </Badge>
-                        )}
-                      </Table.Td>
+          <Stack gap="lg">
+            {/* Resumen de progreso */}
+            {clientProgressSummary && (
+              <SimpleGrid cols={{ base: 1, sm: 3 }} mb="md">
+                <Box className="nv-card" p="lg">
+                  <Group justify="space-between" mb="xs">
+                    <Text size="sm" c="dimmed">Peso Actual</Text>
+                    <ThemeIcon size="sm" variant="light" color="blue">
+                      <IconScale size={14} />
+                    </ThemeIcon>
+                  </Group>
+                  <Text fw={700} size="xl">{clientProgressSummary.current_stats.weight || 0} kg</Text>
+                  {clientProgressSummary.start_stats.weight > 0 && (
+                    <Text size="xs" c="dimmed">
+                      Inicio: {clientProgressSummary.start_stats.weight} kg
+                      {clientProgressSummary.target_stats.weight && ` → Objetivo: ${clientProgressSummary.target_stats.weight} kg`}
+                    </Text>
+                  )}
+                </Box>
+                <Box className="nv-card" p="lg">
+                  <Group justify="space-between" mb="xs">
+                    <Text size="sm" c="dimmed">% Grasa Corporal</Text>
+                    <ThemeIcon size="sm" variant="light" color="orange">
+                      <IconActivity size={14} />
+                    </ThemeIcon>
+                  </Group>
+                  <Text fw={700} size="xl">{clientProgressSummary.current_stats.body_fat || 0}%</Text>
+                  {clientProgressSummary.start_stats.body_fat && (
+                    <Text size="xs" c="dimmed">
+                      Inicio: {clientProgressSummary.start_stats.body_fat}%
+                    </Text>
+                  )}
+                </Box>
+                <Box className="nv-card" p="lg">
+                  <Group justify="space-between" mb="xs">
+                    <Text size="sm" c="dimmed">Masa Muscular</Text>
+                    <ThemeIcon size="sm" variant="light" color="green">
+                      <IconBarbell size={14} />
+                    </ThemeIcon>
+                  </Group>
+                  <Text fw={700} size="xl">{clientProgressSummary.current_stats.muscle_mass || 0} kg</Text>
+                  {clientProgressSummary.start_stats.muscle_mass && (
+                    <Text size="xs" c="dimmed">
+                      Inicio: {clientProgressSummary.start_stats.muscle_mass} kg
+                    </Text>
+                  )}
+                </Box>
+              </SimpleGrid>
+            )}
+
+            {/* Tabla de medidas */}
+            <Box className="nv-card" p="xl">
+              <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Evolución de Medidas ({measurements.length} registros)
+              </Text>
+              {measurements.length === 0 ? (
+                <Text c="dimmed" ta="center" py="xl">
+                  El cliente no ha registrado medidas aún
+                </Text>
+              ) : (
+                <Table verticalSpacing="md">
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Fecha</Table.Th>
+                      <Table.Th>Peso (kg)</Table.Th>
+                      <Table.Th>% Grasa</Table.Th>
+                      <Table.Th>Masa Muscular (kg)</Table.Th>
+                      <Table.Th>Medidas</Table.Th>
+                      <Table.Th>Variación</Table.Th>
                     </Table.Tr>
-                  );
-                })}
-              </Table.Tbody>
-            </Table>
-          </Box>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {measurements.map((m, index) => {
+                      const prevMeasurement = measurements[index + 1];
+                      const weightChange = prevMeasurement ? m.weight - prevMeasurement.weight : 0;
+                      const bodyFatChange = prevMeasurement ? m.body_fat - prevMeasurement.body_fat : 0;
+                      const muscleChange = prevMeasurement ? m.muscle_mass - prevMeasurement.muscle_mass : 0;
+                      
+                      return (
+                        <Table.Tr key={m.id || index}>
+                          <Table.Td>
+                            <Text fw={600} size="sm">
+                              {new Date(m.date).toLocaleDateString("es-ES", { 
+                                day: "numeric",
+                                month: "short", 
+                                year: "numeric" 
+                              })}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm">{m.weight > 0 ? `${m.weight} kg` : "-"}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm">{m.body_fat > 0 ? `${m.body_fat}%` : "-"}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm">{m.muscle_mass > 0 ? `${m.muscle_mass} kg` : "-"}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            {m.measurements && Object.keys(m.measurements).length > 0 ? (
+                              <Group gap={4}>
+                                {m.measurements.chest && <Badge size="xs" variant="light">P: {m.measurements.chest}</Badge>}
+                                {m.measurements.waist && <Badge size="xs" variant="light">C: {m.measurements.waist}</Badge>}
+                                {m.measurements.hips && <Badge size="xs" variant="light">Ca: {m.measurements.hips}</Badge>}
+                              </Group>
+                            ) : (
+                              <Text size="sm" c="dimmed">-</Text>
+                            )}
+                          </Table.Td>
+                          <Table.Td>
+                            {prevMeasurement && (
+                              <Stack gap={2}>
+                                {weightChange !== 0 && (
+                                  <Badge
+                                    color={weightChange <= 0 ? "green" : "red"}
+                                    size="xs"
+                                    variant="light"
+                                  >
+                                    {weightChange > 0 ? "+" : ""}{weightChange.toFixed(1)} kg
+                                  </Badge>
+                                )}
+                                {bodyFatChange !== 0 && m.body_fat > 0 && (
+                                  <Badge
+                                    color={bodyFatChange <= 0 ? "green" : "orange"}
+                                    size="xs"
+                                    variant="light"
+                                  >
+                                    {bodyFatChange > 0 ? "+" : ""}{bodyFatChange.toFixed(1)}% grasa
+                                  </Badge>
+                                )}
+                                {muscleChange !== 0 && m.muscle_mass > 0 && (
+                                  <Badge
+                                    color={muscleChange >= 0 ? "blue" : "red"}
+                                    size="xs"
+                                    variant="light"
+                                  >
+                                    {muscleChange > 0 ? "+" : ""}{muscleChange.toFixed(1)} kg músculo
+                                  </Badge>
+                                )}
+                              </Stack>
+                            )}
+                          </Table.Td>
+                        </Table.Tr>
+                      );
+                    })}
+                  </Table.Tbody>
+                </Table>
+              )}
+            </Box>
+
+            {/* Fotos de progreso */}
+            <Box className="nv-card" p="xl">
+              <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Fotos de Progreso ({clientPhotos.length} fotos)
+              </Text>
+              {clientPhotos.length === 0 ? (
+                <Text c="dimmed" ta="center" py="xl">
+                  El cliente no ha subido fotos de progreso aún
+                </Text>
+              ) : (
+                <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
+                  {clientPhotos.map((photo, index) => (
+                    <Card key={index} padding="xs" radius="md" withBorder>
+                      <Card.Section>
+                        <Image
+                          src={photo.url}
+                          height={180}
+                          alt={`Foto ${photo.type}`}
+                          fallbackSrc="https://placehold.co/200x180?text=Foto"
+                        />
+                      </Card.Section>
+                      <Stack gap={2} mt="xs">
+                        <Badge size="xs" variant="light" color="blue">
+                          {photo.type === "front" ? "Frontal" : 
+                           photo.type === "back" ? "Espalda" : 
+                           photo.type === "side" ? "Lateral" : photo.type}
+                        </Badge>
+                        <Text size="xs" c="dimmed">
+                          {photo.measurement_date 
+                            ? new Date(photo.measurement_date).toLocaleDateString("es-ES")
+                            : photo.uploaded_at 
+                              ? new Date(photo.uploaded_at).toLocaleDateString("es-ES")
+                              : "Sin fecha"}
+                        </Text>
+                      </Stack>
+                    </Card>
+                  ))}
+                </SimpleGrid>
+              )}
+            </Box>
+          </Stack>
         </Tabs.Panel>
 
         {/* Programas */}
@@ -1849,15 +2020,19 @@ export function ClientDetailPage() {
                           <Menu.Item 
                             leftSection={<IconEye size={16} />}
                             onClick={() => {
-                              // TODO: Navegar al detalle del programa
-                              notifications.show({
-                                title: "Ver programa",
-                                message: `Visualizando: ${program.name}`,
-                                color: "blue",
-                              });
+                              setSelectedProgramForView(program);
+                              openViewProgramModal();
                             }}
                           >
                             Ver detalles
+                          </Menu.Item>
+                          <Menu.Item 
+                            leftSection={<IconEdit size={16} />}
+                            onClick={() => {
+                              navigate(`/workouts?edit=${program.id}`);
+                            }}
+                          >
+                            Editar programa
                           </Menu.Item>
                           <Menu.Divider />
                           <Menu.Item 
@@ -2367,6 +2542,97 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
+      </Modal>
+
+      {/* Modal para ver detalles del programa de entrenamiento */}
+      <Modal
+        opened={viewProgramModalOpened}
+        onClose={closeViewProgramModal}
+        title={selectedProgramForView?.name || "Programa de Entrenamiento"}
+        size="lg"
+        radius="lg"
+      >
+        {selectedProgramForView && (
+          <Stack gap="md">
+            {selectedProgramForView.description && (
+              <Text size="sm" c="dimmed">{selectedProgramForView.description}</Text>
+            )}
+            <Group gap="md">
+              {selectedProgramForView.duration_weeks && (
+                <Badge variant="light" color="blue">
+                  {selectedProgramForView.duration_weeks} semanas
+                </Badge>
+              )}
+              {selectedProgramForView.difficulty && (
+                <Badge variant="light" color="gray">
+                  {selectedProgramForView.difficulty}
+                </Badge>
+              )}
+            </Group>
+            
+            <Divider my="sm" label="Ejercicios" labelPosition="center" />
+            
+            {selectedProgramForView.template?.blocks?.map((block, blockIndex) => (
+              <Box key={blockIndex}>
+                <Group gap="xs" mb="sm">
+                  <Badge 
+                    color={block.type === 'warmup' ? 'orange' : block.type === 'cooldown' ? 'blue' : 'yellow'} 
+                    variant="light"
+                    size="sm"
+                  >
+                    {block.type === 'warmup' ? 'Calentamiento' : block.type === 'cooldown' ? 'Enfriamiento' : 'Principal'}
+                  </Badge>
+                  <Text fw={600} size="sm">{block.name}</Text>
+                </Group>
+                <Stack gap="xs">
+                  {block.exercises?.map((ex, exIndex) => (
+                    <Card key={exIndex} padding="sm" radius="md" withBorder>
+                      <Group justify="space-between">
+                        <Text size="sm" fw={500}>
+                          {ex.exercise?.name || ex.name || "Ejercicio"}
+                        </Text>
+                        <Group gap="xs">
+                          <Badge variant="light" color="blue" size="sm">
+                            {ex.sets || 3} x {ex.reps || "10-12"}
+                          </Badge>
+                          {ex.rest_seconds && (
+                            <Badge variant="light" color="gray" size="sm">
+                              {ex.rest_seconds}s
+                            </Badge>
+                          )}
+                        </Group>
+                      </Group>
+                      {ex.notes && (
+                        <Text size="xs" c="dimmed" mt="xs">{ex.notes}</Text>
+                      )}
+                    </Card>
+                  ))}
+                </Stack>
+              </Box>
+            ))}
+            
+            {(!selectedProgramForView.template?.blocks || selectedProgramForView.template.blocks.length === 0) && (
+              <Text c="dimmed" ta="center" py="xl">
+                Este programa no tiene ejercicios configurados
+              </Text>
+            )}
+            
+            <Group justify="flex-end" mt="md">
+              <Button variant="light" onClick={closeViewProgramModal}>
+                Cerrar
+              </Button>
+              <Button 
+                leftSection={<IconEdit size={16} />}
+                onClick={() => {
+                  closeViewProgramModal();
+                  navigate(`/workouts?edit=${selectedProgramForView.id}`);
+                }}
+              >
+                Editar programa
+              </Button>
+            </Group>
+          </Stack>
+        )}
       </Modal>
     </Container>
   );

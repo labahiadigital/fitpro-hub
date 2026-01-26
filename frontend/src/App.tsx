@@ -43,6 +43,7 @@ import {
   MyCalendarPage,
   MyDocumentsPage,
   MyProfilePage,
+  MyMessagesPage,
 } from "./pages/client";
 import { useAuthStore } from "./stores/auth";
 import { theme } from "./theme";
@@ -184,8 +185,9 @@ export default function App() {
                 <Route element={<MyCalendarPage />} path="/my-calendar" />
                 <Route element={<MyDocumentsPage />} path="/my-documents" />
                 <Route element={<MyProfilePage />} path="/my-profile" />
+                <Route element={<MyMessagesPage />} path="/my-messages" />
                 
-                {/* Shared routes (accessible to both trainers and clients) */}
+                {/* Trainer chat page */}
                 <Route element={<ChatPage />} path="/chat" />
                 <Route element={<LMSPage />} path="/lms" />
                 

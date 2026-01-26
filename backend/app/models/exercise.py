@@ -1,5 +1,5 @@
 """Exercise library models."""
-from sqlalchemy import Column, String, Text, Numeric, Integer, Boolean, ForeignKey, ARRAY
+from sqlalchemy import Column, String, Text, Numeric, Integer, Boolean, ForeignKey, ARRAY, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
@@ -41,7 +41,7 @@ class ClientMeasurement(BaseModel):
     __tablename__ = "client_measurements"
     
     client_id = Column(UUID(as_uuid=True), ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
-    measured_at = Column(String, nullable=False)
+    measured_at = Column(DateTime(timezone=True), nullable=True)
     weight_kg = Column(Numeric(5, 2))
     body_fat_percentage = Column(Numeric(5, 2))
     muscle_mass_kg = Column(Numeric(5, 2))

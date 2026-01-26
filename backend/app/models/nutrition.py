@@ -2,6 +2,7 @@
 from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.mutable import MutableDict
 
 from app.models.base import BaseModel
 
@@ -186,8 +187,8 @@ class MealPlan(BaseModel):
     # Is this a template or assigned plan
     is_template = Column(Boolean, default=True)
     
-    # Adherence tracking
-    adherence = Column(JSONB, default={"logs": []})
+    # Adherence tracking - MutableDict allows SQLAlchemy to detect in-place changes
+    adherence = Column(MutableDict.as_mutable(JSONB), default={"logs": []})
     
     # Relationships
     workspace = relationship("Workspace", back_populates="meal_plans")

@@ -195,7 +195,7 @@ export function NutritionPage() {
   } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch);
   const { data: totalFoodsCount } = useSupabaseFoodsCount();
   const { data: supabaseMealPlans, isLoading: isLoadingPlans } =
-    useSupabaseMealPlans();
+    useSupabaseMealPlans({ is_template: true });
   const { data: supabaseSupplements } = useSupplements();
   
   // Favoritos

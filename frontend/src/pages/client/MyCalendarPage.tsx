@@ -22,68 +22,27 @@ import {
 } from "@tabler/icons-react";
 import { useMyBookings } from "../../hooks/useClientPortal";
 
-// Datos de ejemplo
-const mockCalendarData = {
-  upcomingSessions: [
-    {
-      id: 1,
-      date: "Hoy",
-      time: "18:00 - 19:00",
-      title: "Entrenamiento de Fuerza",
-      trainer: "E13 Fitness",
-      type: "presencial",
-      location: "Gimnasio Principal",
-      status: "confirmed",
-    },
-    {
-      id: 2,
-      date: "Viernes, 24 Ene",
-      time: "10:00 - 10:45",
-      title: "Cardio HIIT",
-      trainer: "E13 Fitness",
-      type: "online",
-      location: "Zoom",
-      status: "confirmed",
-    },
-    {
-      id: 3,
-      date: "Lunes, 27 Ene",
-      time: "18:00 - 19:00",
-      title: "Entrenamiento de Fuerza",
-      trainer: "E13 Fitness",
-      type: "presencial",
-      location: "Gimnasio Principal",
-      status: "pending",
-    },
-  ],
-  pastSessions: [
-    {
-      id: 4,
-      date: "Miércoles, 22 Ene",
-      time: "18:00 - 19:00",
-      title: "Entrenamiento Tren Inferior",
-      trainer: "E13 Fitness",
-      completed: true,
-    },
-    {
-      id: 5,
-      date: "Lunes, 20 Ene",
-      time: "18:00 - 19:00",
-      title: "Entrenamiento Tren Superior",
-      trainer: "E13 Fitness",
-      completed: true,
-    },
-  ],
-  weekDays: [
-    { day: "L", date: 20, hasSession: true, isPast: true },
-    { day: "M", date: 21, hasSession: false, isPast: true },
-    { day: "X", date: 22, hasSession: true, isPast: true },
-    { day: "J", date: 23, hasSession: true, isToday: true },
-    { day: "V", date: 24, hasSession: true, isPast: false },
-    { day: "S", date: 25, hasSession: false, isPast: false },
-    { day: "D", date: 26, hasSession: false, isPast: false },
-  ],
-};
+// No mock data - all data comes from backend
+
+// Generate week days dynamically
+function getWeekDays() {
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+
+  const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  return days.map((day, index) => {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + index);
+    return {
+      day,
+      date: date.getDate(),
+      hasSession: false, // Will be updated based on bookings
+      isPast: date < today && date.toDateString() !== today.toDateString(),
+      isToday: date.toDateString() === today.toDateString(),
+    };
+  });
+}
 
 export function MyCalendarPage() {
   const { data: bookings, isLoading } = useMyBookings({ upcoming_only: true, limit: 20 });
@@ -109,9 +68,9 @@ export function MyCalendarPage() {
   })) || [];
 
   const data = {
-    upcomingSessions: upcomingSessions.length > 0 ? upcomingSessions : mockCalendarData.upcomingSessions,
-    pastSessions: mockCalendarData.pastSessions,
-    weekDays: mockCalendarData.weekDays,
+    upcomingSessions,
+    pastSessions: [], // TODO: Fetch past sessions from API
+    weekDays: getWeekDays(),
   };
 
   return (

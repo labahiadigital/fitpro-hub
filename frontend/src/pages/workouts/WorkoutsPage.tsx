@@ -26,14 +26,16 @@ import {
   IconCopy,
   IconEdit,
   IconEye,
+  IconFlame,
   IconSearch,
+  IconStretching,
   IconTemplate,
   IconTrash,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { EmptyState } from "../../components/common/EmptyState";
 import { PageHeader } from "../../components/common/PageHeader";
-import { WorkoutBuilder } from "../../components/workouts/WorkoutBuilder";
+import { WorkoutBuilderWithDays, initialWorkoutDays, type WorkoutDay } from "../../components/workouts/WorkoutBuilder";
 import {
   useCreateExercise,
   useCreateWorkoutProgram,
@@ -55,7 +57,7 @@ export function WorkoutsPage() {
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [searchExercise, setSearchExercise] = useState("");
-  const [workoutBlocks, setWorkoutBlocks] = useState<any[]>([]);
+  const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>(initialWorkoutDays);
   const [editingProgram, setEditingProgram] = useState<any>(null);
 
   const { data: exercises = [], isLoading: loadingExercises } =
@@ -108,7 +110,20 @@ export function WorkoutsPage() {
   const openProgramBuilder = (program?: any) => {
     if (program) {
       setEditingProgram(program);
-      setWorkoutBlocks(program.template?.blocks || []);
+      // Cargar días desde el template si existen, si no usar los bloques antiguos en el día 1
+      if (program.template?.days) {
+        setWorkoutDays(program.template.days);
+      } else if (program.template?.blocks) {
+        // Retrocompatibilidad: poner bloques antiguos en el lunes
+        const newDays = initialWorkoutDays.map((d, i) => 
+          i === 0 
+            ? { ...d, blocks: program.template.blocks, isRestDay: false }
+            : { ...d }
+        );
+        setWorkoutDays(newDays);
+      } else {
+        setWorkoutDays(initialWorkoutDays);
+      }
       programForm.setValues({
         name: program.name,
         description: program.description || "",
@@ -118,7 +133,7 @@ export function WorkoutsPage() {
       });
     } else {
       setEditingProgram(null);
-      setWorkoutBlocks([]);
+      setWorkoutDays(initialWorkoutDays);
       programForm.reset();
     }
     openBuilder();
@@ -131,23 +146,51 @@ export function WorkoutsPage() {
     const programData = {
       ...values,
       template: {
-        blocks: workoutBlocks.map((block) => ({
-          id: block.id,
-          name: block.name,
-          type: block.type,
-          rest_between_sets: block.rest_between_sets,
-          rounds: block.rounds,
-          exercises: block.exercises?.map((ex: any) => ({
-            id: ex.id,
-            exercise_id: ex.exercise_id || ex.exercise?.id,
-            exercise: ex.exercise,
-            sets: ex.sets,
-            reps: ex.reps,
-            rest_seconds: ex.rest_seconds,
-            notes: ex.notes,
-            order: ex.order,
-          })) || [],
+        // Nueva estructura con días
+        days: workoutDays.map((day) => ({
+          id: day.id,
+          day: day.day,
+          dayName: day.dayName,
+          isRestDay: day.isRestDay,
+          notes: day.notes,
+          blocks: day.blocks.map((block) => ({
+            id: block.id,
+            name: block.name,
+            type: block.type,
+            rest_between_sets: block.rest_between_sets,
+            rounds: block.rounds,
+            exercises: block.exercises?.map((ex: any) => ({
+              id: ex.id,
+              exercise_id: ex.exercise_id || ex.exercise?.id,
+              exercise: ex.exercise,
+              sets: ex.sets,
+              reps: ex.reps,
+              rest_seconds: ex.rest_seconds,
+              notes: ex.notes,
+              order: ex.order,
+            })) || [],
+          })),
         })),
+        // Retrocompatibilidad: también guardar bloques planos (todos los bloques de todos los días)
+        blocks: workoutDays.flatMap((day) =>
+          day.blocks.map((block) => ({
+            id: block.id,
+            name: block.name,
+            type: block.type,
+            rest_between_sets: block.rest_between_sets,
+            rounds: block.rounds,
+            exercises: block.exercises?.map((ex: any) => ({
+              id: ex.id,
+              exercise_id: ex.exercise_id || ex.exercise?.id,
+              exercise: ex.exercise,
+              sets: ex.sets,
+              reps: ex.reps,
+              rest_seconds: ex.rest_seconds,
+              notes: ex.notes,
+              order: ex.order,
+            })) || [],
+          }))
+        ),
       },
       is_template: true,
     };
@@ -165,7 +208,7 @@ export function WorkoutsPage() {
       }
       closeBuilder();
       programForm.reset();
-      setWorkoutBlocks([]);
+      setWorkoutDays(initialWorkoutDays);
       setEditingProgram(null);
     } catch {
       // Error handled
@@ -236,6 +279,12 @@ export function WorkoutsPage() {
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 600, fontSize: "13px" }}>
             Ejercicios
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconFlame size={14} />} value="warmup" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Calentamiento
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconStretching size={14} />} value="stretching" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Estiramientos
           </Tabs.Tab>
         </Tabs.List>
 
@@ -373,6 +422,156 @@ export function WorkoutsPage() {
             />
           )}
         </Tabs.Panel>
+
+        <Tabs.Panel value="warmup">
+          <TextInput
+            leftSection={<IconSearch size={14} />}
+            mb="md"
+            onChange={(e) => setSearchExercise(e.target.value)}
+            placeholder="Buscar ejercicios de calentamiento..."
+            value={searchExercise}
+            radius="md"
+            size="sm"
+            styles={{
+              input: {
+                backgroundColor: "var(--nv-surface)",
+                border: "1px solid var(--border-subtle)",
+              }
+            }}
+          />
+
+          {(exercises || []).filter(
+            (e: any) =>
+              e.category?.toLowerCase() === "calentamiento" &&
+              (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+                e.muscle_groups?.some((m: string) =>
+                  m.toLowerCase().includes(searchExercise.toLowerCase())
+                ))
+          ).length > 0 ? (
+            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
+              {(exercises || [])
+                .filter(
+                  (e: any) =>
+                    e.category?.toLowerCase() === "calentamiento" &&
+                    (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+                      e.muscle_groups?.some((m: string) =>
+                        m.toLowerCase().includes(searchExercise.toLowerCase())
+                      ))
+                )
+                .map((exercise: any) => (
+                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden" }}>
+                    <Box
+                      h={80}
+                      style={{
+                        background: "linear-gradient(135deg, rgba(255, 107, 0, 0.2) 0%, var(--nv-surface-subtle) 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <IconFlame color="var(--mantine-color-orange-6)" size={28} />
+                    </Box>
+
+                    <Box p="xs">
+                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                        {exercise.name}
+                      </Text>
+                      <Group gap={4} mt={4}>
+                        {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                          <Badge key={muscle} size="xs" variant="light" color="orange" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
+                            {muscle}
+                          </Badge>
+                        ))}
+                      </Group>
+                    </Box>
+                  </Box>
+                ))}
+            </SimpleGrid>
+          ) : loadingExercises ? null : (
+            <EmptyState
+              actionLabel="Añadir Calentamiento"
+              description="Añade ejercicios de calentamiento a tu biblioteca."
+              icon={<IconFlame size={36} />}
+              onAction={openExerciseModal}
+              title="No hay ejercicios de calentamiento"
+            />
+          )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="stretching">
+          <TextInput
+            leftSection={<IconSearch size={14} />}
+            mb="md"
+            onChange={(e) => setSearchExercise(e.target.value)}
+            placeholder="Buscar estiramientos..."
+            value={searchExercise}
+            radius="md"
+            size="sm"
+            styles={{
+              input: {
+                backgroundColor: "var(--nv-surface)",
+                border: "1px solid var(--border-subtle)",
+              }
+            }}
+          />
+
+          {(exercises || []).filter(
+            (e: any) =>
+              e.category?.toLowerCase() === "estiramiento" &&
+              (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+                e.muscle_groups?.some((m: string) =>
+                  m.toLowerCase().includes(searchExercise.toLowerCase())
+                ))
+          ).length > 0 ? (
+            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
+              {(exercises || [])
+                .filter(
+                  (e: any) =>
+                    e.category?.toLowerCase() === "estiramiento" &&
+                    (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+                      e.muscle_groups?.some((m: string) =>
+                        m.toLowerCase().includes(searchExercise.toLowerCase())
+                      ))
+                )
+                .map((exercise: any) => (
+                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden" }}>
+                    <Box
+                      h={80}
+                      style={{
+                        background: "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, var(--nv-surface-subtle) 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <IconStretching color="var(--mantine-color-green-6)" size={28} />
+                    </Box>
+
+                    <Box p="xs">
+                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                        {exercise.name}
+                      </Text>
+                      <Group gap={4} mt={4}>
+                        {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                          <Badge key={muscle} size="xs" variant="light" color="green" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
+                            {muscle}
+                          </Badge>
+                        ))}
+                      </Group>
+                    </Box>
+                  </Box>
+                ))}
+            </SimpleGrid>
+          ) : loadingExercises ? null : (
+            <EmptyState
+              actionLabel="Añadir Estiramiento"
+              description="Añade ejercicios de estiramiento a tu biblioteca."
+              icon={<IconStretching size={36} />}
+              onAction={openExerciseModal}
+              title="No hay estiramientos"
+            />
+          )}
+        </Tabs.Panel>
       </Tabs>
 
       {/* Modal para crear ejercicio */}
@@ -438,6 +637,8 @@ export function WorkoutsPage() {
                   { value: "cardio", label: "Cardio" },
                   { value: "flexibilidad", label: "Flexibilidad" },
                   { value: "core", label: "Core" },
+                  { value: "calentamiento", label: "Calentamiento" },
+                  { value: "estiramiento", label: "Estiramiento" },
                 ]}
                 label="Categoría"
                 {...exerciseForm.getInputProps("category")}
@@ -526,15 +727,15 @@ export function WorkoutsPage() {
             </Box>
 
             <Divider
-              label="Constructor de Entrenamiento"
+              label="Constructor de Entrenamiento por Día"
               labelPosition="center"
               style={{ borderColor: "var(--nv-border)" }}
             />
 
-            <WorkoutBuilder
+            <WorkoutBuilderWithDays
+              days={workoutDays}
+              onChangeDays={setWorkoutDays}
               availableExercises={exercises || []}
-              blocks={workoutBlocks}
-              onChange={setWorkoutBlocks}
             />
           </Stack>
         </ScrollArea>

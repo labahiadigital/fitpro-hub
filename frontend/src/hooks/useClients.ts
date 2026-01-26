@@ -171,3 +171,90 @@ export function useCreateClientTag() {
     },
   });
 }
+
+// ============ STAFF: Client Progress & Measurements ============
+
+interface ClientMeasurement {
+  id: string;
+  client_id: string;
+  measured_at: string | null;
+  weight_kg: number | null;
+  body_fat_percentage: number | null;
+  muscle_mass_kg: number | null;
+  measurements: {
+    chest?: number;
+    waist?: number;
+    hips?: number;
+    arms?: number;
+    thighs?: number;
+  };
+  photos: Array<{
+    url: string;
+    type: string;
+    notes?: string;
+    uploaded_at: string;
+  }>;
+  notes: string | null;
+  created_at: string;
+}
+
+interface ClientPhoto {
+  url: string;
+  type: string;
+  notes?: string;
+  uploaded_at: string;
+  measurement_date?: string;
+}
+
+interface ClientProgressSummary {
+  current_stats: {
+    weight: number;
+    body_fat: number | null;
+    muscle_mass: number | null;
+  };
+  start_stats: {
+    weight: number;
+    body_fat: number | null;
+    muscle_mass: number | null;
+  };
+  target_stats: {
+    weight: number | null;
+    body_fat: number | null;
+    muscle_mass: number | null;
+  };
+  measurements_count: number;
+  goals: string | null;
+  weight_history: Array<{
+    date: string | null;
+    weight: number | null;
+    body_fat: number | null;
+    muscle_mass: number | null;
+  }>;
+}
+
+export function useClientMeasurements(clientId: string, limit = 50) {
+  return useQuery({
+    queryKey: ["client-measurements", clientId, limit],
+    queryFn: async () => clientsApi.getMeasurements(clientId, limit),
+    select: (response) => response.data as ClientMeasurement[],
+    enabled: !!clientId && !clientId.startsWith("demo-"),
+  });
+}
+
+export function useClientPhotos(clientId: string, limit = 50) {
+  return useQuery({
+    queryKey: ["client-photos", clientId, limit],
+    queryFn: async () => clientsApi.getPhotos(clientId, limit),
+    select: (response) => response.data as ClientPhoto[],
+    enabled: !!clientId && !clientId.startsWith("demo-"),
+  });
+}
+
+export function useClientProgressSummary(clientId: string) {
+  return useQuery({
+    queryKey: ["client-progress-summary", clientId],
+    queryFn: async () => clientsApi.getProgressSummary(clientId),
+    select: (response) => response.data as ClientProgressSummary,
+    enabled: !!clientId && !clientId.startsWith("demo-"),
+  });
+}

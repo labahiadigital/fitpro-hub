@@ -566,3 +566,27 @@ async def whatsapp_status_webhook(
     
     return {"status": "ok"}
 
+
+# ============ UNREAD COUNT ============
+
+@router.get("/unread-count")
+async def get_total_unread_count(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get total unread message count across all conversations for staff.
+    Used to display badge in sidebar.
+    """
+    result = await db.execute(
+        select(func.coalesce(func.sum(Conversation.unread_count), 0)).where(
+            and_(
+                Conversation.workspace_id == current_user.workspace_id,
+                Conversation.is_archived == False
+            )
+        )
+    )
+    total = result.scalar() or 0
+    
+    return {"unread_count": int(total)}
+

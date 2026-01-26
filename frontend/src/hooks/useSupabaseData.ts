@@ -234,11 +234,11 @@ export function useWorkoutProgramTemplates() {
 // ============ MEAL PLANS ============
 
 // Hook para obtener planes nutricionales
-export function useSupabaseMealPlans() {
+export function useSupabaseMealPlans(options?: { is_template?: boolean }) {
   return useQuery({
-    queryKey: ["meal-plans"],
+    queryKey: ["meal-plans", options],
     queryFn: async () => {
-      const response = await nutritionApi.plans();
+      const response = await nutritionApi.plans(options);
       return response.data || [];
     },
   });

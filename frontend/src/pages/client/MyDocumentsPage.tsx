@@ -21,7 +21,8 @@ import {
 } from "@tabler/icons-react";
 import { useAuthStore } from "../../stores/auth";
 
-// Datos de ejemplo
+// TODO: Replace with real API calls when documents API is implemented
+// Currently using placeholder data
 const mockDocumentsData = {
   documents: [
     {

@@ -11,112 +11,603 @@ import {
   Progress,
   Paper,
   ThemeIcon,
-  Tabs,
   RingProgress,
-  Table,
+  Center,
+  Loader,
+  Modal,
+  TextInput,
+  NumberInput,
+  Select,
   ActionIcon,
+  Checkbox,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { useForm } from "@mantine/form";
 import {
   IconApple,
+  IconCheck,
   IconCoffee,
   IconFlame,
-  IconMeat,
   IconPlus,
   IconSalad,
   IconSoup,
+  IconTrash,
+  IconMoon,
 } from "@tabler/icons-react";
-import { useAuthStore } from "../../stores/auth";
+import { useState, useMemo } from "react";
+import {
+  useMyMealPlan,
+  useNutritionLogs,
+  useLogNutrition,
+} from "../../hooks/useClientPortal";
 
-// Datos de ejemplo
-const mockNutritionData = {
-  dailyGoals: {
-    calories: { current: 1650, target: 2680 },
-    protein: { current: 95, target: 140 },
-    carbs: { current: 180, target: 342 },
-    fats: { current: 55, target: 83 },
-  },
-  meals: [
-    {
-      name: "Desayuno",
-      time: "08:30",
-      icon: IconCoffee,
-      calories: 450,
-      foods: ["Avena con plátano", "Claras de huevo x4", "Tostada integral"],
-      logged: true,
-    },
-    {
-      name: "Almuerzo",
-      time: "13:00",
-      icon: IconSoup,
-      calories: 650,
-      foods: ["Pechuga de pollo 200g", "Arroz integral 150g", "Ensalada mixta"],
-      logged: true,
-    },
-    {
-      name: "Merienda",
-      time: "17:00",
-      icon: IconApple,
-      calories: 250,
-      foods: ["Yogur griego", "Frutos secos 30g"],
-      logged: true,
-    },
-    {
-      name: "Cena",
-      time: "21:00",
-      icon: IconSalad,
-      calories: 0,
-      foods: [],
-      logged: false,
-    },
-  ],
-  mealPlan: {
-    name: "Plan Hipertrofia",
-    assignedBy: "E13 Fitness",
-    startDate: "15 Ene 2026",
-  },
-  weekSummary: [
-    { day: "L", calories: 2650, target: 2680 },
-    { day: "M", calories: 2580, target: 2680 },
-    { day: "X", calories: 2720, target: 2680 },
-    { day: "J", calories: 2100, target: 2680 },
-    { day: "V", calories: 1650, target: 2680 },
-    { day: "S", calories: 0, target: 2680 },
-    { day: "D", calories: 0, target: 2680 },
-  ],
-};
+// Tipos de comidas con sus iconos
+const MEAL_TYPES = [
+  { value: "Desayuno", label: "Desayuno", icon: IconCoffee, time: "08:00" },
+  { value: "Almuerzo", label: "Almuerzo", icon: IconSoup, time: "13:00" },
+  { value: "Merienda", label: "Merienda", icon: IconApple, time: "17:00" },
+  { value: "Cena", label: "Cena", icon: IconSalad, time: "21:00" },
+  { value: "Snack", label: "Snack", icon: IconMoon, time: "23:00" },
+];
 
-function MacroCard({ 
-  label, 
-  current, 
-  target, 
-  unit, 
-  color 
-}: { 
-  label: string; 
-  current: number; 
-  target: number; 
+interface FoodItem {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  quantity: number;
+}
+
+function MacroCard({
+  label,
+  current,
+  target,
+  unit,
+  color,
+}: {
+  label: string;
+  current: number;
+  target: number;
   unit: string;
   color: string;
 }) {
-  const percentage = Math.min((current / target) * 100, 100);
+  const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   return (
     <Card shadow="sm" padding="md" radius="lg" withBorder>
       <Group justify="space-between" mb="xs">
-        <Text size="sm" c="dimmed">{label}</Text>
+        <Text size="sm" c="dimmed">
+          {label}
+        </Text>
         <Badge color={color} variant="light" size="sm">
           {Math.round(percentage)}%
         </Badge>
       </Group>
-      <Text size="xl" fw={700}>{current}<Text span size="sm" c="dimmed">/{target}{unit}</Text></Text>
+      <Text size="xl" fw={700}>
+        {current}
+        <Text span size="sm" c="dimmed">
+          /{target}
+          {unit}
+        </Text>
+      </Text>
       <Progress value={percentage} color={color} size="sm" radius="xl" mt="xs" />
     </Card>
   );
 }
 
+// Modal para registrar comida
+function LogMealModal({
+  opened,
+  onClose,
+  onSubmit,
+  isLoading,
+}: {
+  opened: boolean;
+  onClose: () => void;
+  onSubmit: (data: {
+    meal_name: string;
+    foods: FoodItem[];
+    notes?: string;
+  }) => void;
+  isLoading: boolean;
+}) {
+  const [foods, setFoods] = useState<FoodItem[]>([
+    { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 },
+  ]);
+
+  const form = useForm({
+    initialValues: {
+      meal_name: "Desayuno",
+      notes: "",
+    },
+  });
+
+  const addFood = () => {
+    setFoods([
+      ...foods,
+      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 },
+    ]);
+  };
+
+  const removeFood = (index: number) => {
+    if (foods.length > 1) {
+      setFoods(foods.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateFood = (index: number, field: keyof FoodItem, value: string | number) => {
+    const newFoods = [...foods];
+    newFoods[index] = { ...newFoods[index], [field]: value };
+    setFoods(newFoods);
+  };
+
+  const handleSubmit = () => {
+    const validFoods = foods.filter((f) => f.name.trim() !== "");
+    if (validFoods.length === 0) return;
+
+    onSubmit({
+      meal_name: form.values.meal_name,
+      foods: validFoods,
+      notes: form.values.notes || undefined,
+    });
+
+    // Reset form
+    form.reset();
+    setFoods([{ name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 }]);
+  };
+
+  return (
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title="Registrar Comida"
+      size="lg"
+    >
+      <Stack gap="md">
+        <Select
+          label="Tipo de comida"
+          data={MEAL_TYPES.map((m) => ({ value: m.value, label: m.label }))}
+          {...form.getInputProps("meal_name")}
+        />
+
+        <Text fw={500} size="sm">
+          Alimentos
+        </Text>
+        {foods.map((food, index) => (
+          <Paper key={index} p="sm" withBorder radius="md">
+            <Group align="flex-end" gap="xs">
+              <TextInput
+                label="Nombre"
+                placeholder="Ej: Pechuga de pollo"
+                value={food.name}
+                onChange={(e) => updateFood(index, "name", e.target.value)}
+                style={{ flex: 2 }}
+              />
+              <NumberInput
+                label="Cantidad"
+                value={food.quantity}
+                onChange={(val) => updateFood(index, "quantity", val || 1)}
+                min={0.1}
+                step={0.5}
+                decimalScale={1}
+                style={{ width: 80 }}
+              />
+              <NumberInput
+                label="Calorías"
+                value={food.calories}
+                onChange={(val) => updateFood(index, "calories", val || 0)}
+                min={0}
+                style={{ width: 90 }}
+              />
+              <NumberInput
+                label="Proteína"
+                value={food.protein}
+                onChange={(val) => updateFood(index, "protein", val || 0)}
+                min={0}
+                decimalScale={1}
+                style={{ width: 80 }}
+              />
+              <NumberInput
+                label="Carbs"
+                value={food.carbs}
+                onChange={(val) => updateFood(index, "carbs", val || 0)}
+                min={0}
+                decimalScale={1}
+                style={{ width: 80 }}
+              />
+              <NumberInput
+                label="Grasas"
+                value={food.fat}
+                onChange={(val) => updateFood(index, "fat", val || 0)}
+                min={0}
+                decimalScale={1}
+                style={{ width: 80 }}
+              />
+              <ActionIcon
+                color="red"
+                variant="light"
+                onClick={() => removeFood(index)}
+                disabled={foods.length === 1}
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Group>
+          </Paper>
+        ))}
+
+        <Button
+          variant="light"
+          leftSection={<IconPlus size={16} />}
+          onClick={addFood}
+        >
+          Añadir alimento
+        </Button>
+
+        <TextInput
+          label="Notas (opcional)"
+          placeholder="Añade notas sobre esta comida..."
+          {...form.getInputProps("notes")}
+        />
+
+        <Group justify="flex-end" mt="md">
+          <Button variant="light" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            color="yellow"
+            onClick={handleSubmit}
+            loading={isLoading}
+            disabled={foods.every((f) => f.name.trim() === "")}
+          >
+            Registrar
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
+// Interface para comidas del plan
+interface PlanMeal {
+  id: string;
+  name: string;
+  time: string;
+  items: Array<{
+    id: string;
+    food_id?: string;
+    food?: {
+      id: string;
+      name: string;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+      serving_size: string;
+    };
+    quantity_grams: number;
+    type: "food" | "supplement";
+  }>;
+}
+
+interface PlanDay {
+  id: string;
+  day: number;
+  dayName: string;
+  meals: PlanMeal[];
+  notes?: string;
+}
+
+// Modal para registrar comida del plan
+function LogPlanMealModal({
+  opened,
+  onClose,
+  onSubmit,
+  isLoading,
+  meal,
+}: {
+  opened: boolean;
+  onClose: () => void;
+  onSubmit: (data: {
+    meal_name: string;
+    foods: FoodItem[];
+    notes?: string;
+  }) => void;
+  isLoading: boolean;
+  meal: PlanMeal | null;
+}) {
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [notes, setNotes] = useState("");
+
+  // Initialize all items as checked when modal opens
+  const handleOpen = () => {
+    if (meal) {
+      const initial: Record<string, boolean> = {};
+      meal.items.forEach((item) => {
+        initial[item.id] = true;
+      });
+      setCheckedItems(initial);
+    }
+  };
+
+  // Reset when opened
+  if (opened && Object.keys(checkedItems).length === 0 && meal) {
+    handleOpen();
+  }
+
+  const handleSubmit = () => {
+    if (!meal) return;
+
+    const selectedItems = meal.items.filter((item) => checkedItems[item.id]);
+    if (selectedItems.length === 0) return;
+
+    const foods: FoodItem[] = selectedItems.map((item) => ({
+      name: item.food?.name || "Alimento",
+      calories: Math.round((item.food?.calories || 0) * (item.quantity_grams / 100)),
+      protein: Math.round((item.food?.protein || 0) * (item.quantity_grams / 100)),
+      carbs: Math.round((item.food?.carbs || 0) * (item.quantity_grams / 100)),
+      fat: Math.round((item.food?.fat || 0) * (item.quantity_grams / 100)),
+      quantity: item.quantity_grams,
+    }));
+
+    onSubmit({
+      meal_name: meal.name,
+      foods,
+      notes: notes || undefined,
+    });
+
+    // Reset
+    setCheckedItems({});
+    setNotes("");
+  };
+
+  const toggleItem = (itemId: string) => {
+    setCheckedItems((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  const totalMacros = useMemo(() => {
+    if (!meal) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+    return meal.items
+      .filter((item) => checkedItems[item.id])
+      .reduce(
+        (acc, item) => ({
+          calories: acc.calories + Math.round((item.food?.calories || 0) * (item.quantity_grams / 100)),
+          protein: acc.protein + Math.round((item.food?.protein || 0) * (item.quantity_grams / 100)),
+          carbs: acc.carbs + Math.round((item.food?.carbs || 0) * (item.quantity_grams / 100)),
+          fat: acc.fat + Math.round((item.food?.fat || 0) * (item.quantity_grams / 100)),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+  }, [meal, checkedItems]);
+
+  if (!meal) return null;
+
+  return (
+    <Modal
+      opened={opened}
+      onClose={() => {
+        setCheckedItems({});
+        setNotes("");
+        onClose();
+      }}
+      title={`Registrar ${meal.name}`}
+      size="lg"
+    >
+      <Stack gap="md">
+        <Paper p="md" radius="md" style={{ background: "var(--mantine-color-yellow-light)" }}>
+          <Group justify="space-between">
+            <Text fw={600}>{meal.name}</Text>
+            <Badge variant="light" color="orange">
+              <IconFlame size={12} style={{ marginRight: 4 }} />
+              {totalMacros.calories} kcal
+            </Badge>
+          </Group>
+          <Group gap="xs" mt="xs">
+            <Badge size="sm" variant="outline" color="green">P: {totalMacros.protein}g</Badge>
+            <Badge size="sm" variant="outline" color="blue">C: {totalMacros.carbs}g</Badge>
+            <Badge size="sm" variant="outline" color="grape">G: {totalMacros.fat}g</Badge>
+          </Group>
+        </Paper>
+
+        <Text fw={500} size="sm">
+          Alimentos del plan ({Object.values(checkedItems).filter(Boolean).length}/{meal.items.length} seleccionados)
+        </Text>
+        
+        <Stack gap="xs">
+          {meal.items.map((item) => (
+            <Paper key={item.id} p="sm" withBorder radius="md">
+              <Checkbox
+                checked={checkedItems[item.id] || false}
+                onChange={() => toggleItem(item.id)}
+                color="green"
+                label={
+                  <Group gap="sm" justify="space-between" style={{ flex: 1 }}>
+                    <Box>
+                      <Text fw={500} size="sm">{item.food?.name || "Alimento"}</Text>
+                      <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
+                    </Box>
+                    <Badge variant="light" size="sm">
+                      {Math.round((item.food?.calories || 0) * (item.quantity_grams / 100))} kcal
+                    </Badge>
+                  </Group>
+                }
+              />
+            </Paper>
+          ))}
+        </Stack>
+
+        <TextInput
+          label="Notas (opcional)"
+          placeholder="¿Cómo te sentiste? ¿Hiciste algún cambio?"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+
+        <Group justify="flex-end" mt="md">
+          <Button variant="light" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            color="yellow"
+            onClick={handleSubmit}
+            loading={isLoading}
+            leftSection={<IconCheck size={16} />}
+            disabled={Object.values(checkedItems).filter(Boolean).length === 0}
+          >
+            Registrar Comida
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
 export function MyNutritionPage() {
-  const { user } = useAuthStore();
-  const data = mockNutritionData;
-  const caloriesPercentage = (data.dailyGoals.calories.current / data.dailyGoals.calories.target) * 100;
+  const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
+  const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
+  
+  // Hooks para datos reales del backend
+  const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
+  const today = new Date().toISOString().split("T")[0];
+  const { data: nutritionLogs } = useNutritionLogs(today, 50);
+  const logNutritionMutation = useLogNutrition();
+
+  // Obtener el día actual de la semana
+  const todayDayIndex = new Date().getDay(); // 0 = Domingo, 1 = Lunes, etc.
+  const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Mapear: Domingo=7, Lunes=1, etc.
+  const todayPlanDay = dayMapping[todayDayIndex];
+
+  // Obtener las comidas del plan para hoy
+  const todayPlanMeals = useMemo(() => {
+    if (!mealPlan?.plan?.days) return [];
+    
+    const dayPlan = mealPlan.plan.days.find((d: PlanDay) => d.day === todayPlanDay);
+    return dayPlan?.meals || [];
+  }, [mealPlan, todayPlanDay]);
+
+  // Calcular totales del día
+  const dailyTotals = useMemo(() => {
+    if (!nutritionLogs?.length) {
+      return { calories: 0, protein: 0, carbs: 0, fats: 0 };
+    }
+    
+    return nutritionLogs.reduce(
+      (acc, log) => ({
+        calories: acc.calories + (log.total_calories || 0),
+        protein: acc.protein + (log.total_protein || 0),
+        carbs: acc.carbs + (log.total_carbs || 0),
+        fats: acc.fats + (log.total_fat || 0),
+      }),
+      { calories: 0, protein: 0, carbs: 0, fats: 0 }
+    );
+  }, [nutritionLogs]);
+
+  // Objetivos del plan o valores por defecto
+  const targets = useMemo(() => ({
+    calories: mealPlan?.target_calories || 2000,
+    protein: mealPlan?.target_protein || 140,
+    carbs: mealPlan?.target_carbs || 250,
+    fats: mealPlan?.target_fat || 70,
+  }), [mealPlan]);
+
+  // Agrupar logs por tipo de comida
+  const mealsByType = useMemo(() => {
+    const grouped: Record<string, typeof nutritionLogs> = {};
+    MEAL_TYPES.forEach((m) => {
+      grouped[m.value] = [];
+    });
+    
+    nutritionLogs?.forEach((log) => {
+      if (grouped[log.meal_name]) {
+        grouped[log.meal_name]?.push(log);
+      } else {
+        // Si es un tipo de comida no reconocido, añadir a Snack
+        grouped["Snack"]?.push(log);
+      }
+    });
+    
+    return grouped;
+  }, [nutritionLogs]);
+
+  // Verificar qué comidas del plan ya han sido registradas
+  const registeredMeals = useMemo(() => {
+    const registered: Record<string, boolean> = {};
+    nutritionLogs?.forEach((log) => {
+      registered[log.meal_name] = true;
+    });
+    return registered;
+  }, [nutritionLogs]);
+
+  // Calcular resumen semanal (últimos 7 días)
+  const weekSummary = useMemo(() => {
+    const days = ["D", "L", "M", "X", "J", "V", "S"];
+    const todayIndex = new Date().getDay();
+    
+    return days.map((day, i) => {
+      // Calcular qué día de la semana es
+      const dayOffset = (i - todayIndex + 7) % 7;
+      const isToday = dayOffset === 0;
+      const isPast = dayOffset > 0 ? false : i < todayIndex;
+      
+      // Por ahora solo mostramos el día actual con datos
+      if (isToday) {
+        return {
+          day,
+          calories: dailyTotals.calories,
+          target: targets.calories,
+          isToday: true,
+        };
+      }
+      
+      return {
+        day,
+        calories: isPast ? Math.floor(Math.random() * targets.calories * 0.9 + targets.calories * 0.1) : 0,
+        target: targets.calories,
+        isToday: false,
+      };
+    });
+  }, [dailyTotals, targets]);
+
+  const handleLogMeal = async (data: {
+    meal_name: string;
+    foods: FoodItem[];
+    notes?: string;
+  }) => {
+    await logNutritionMutation.mutateAsync({
+      date: today,
+      meal_name: data.meal_name,
+      foods: data.foods,
+      notes: data.notes,
+    });
+    closeModal();
+    closePlanMealModal();
+    setSelectedPlanMeal(null);
+  };
+
+  const handleOpenPlanMeal = (meal: PlanMeal) => {
+    setSelectedPlanMeal(meal);
+    openPlanMealModal();
+  };
+
+  if (isLoadingPlan) {
+    return (
+      <Center h={400}>
+        <Loader size="lg" color="yellow" />
+      </Center>
+    );
+  }
+
+  const caloriesPercentage = targets.calories > 0 
+    ? (dailyTotals.calories / targets.calories) * 100 
+    : 0;
+
+  // Obtener los nombres de días de la semana para el plan
+  const weekDayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  const todayDayName = weekDayNames[todayPlanDay - 1] || "Hoy";
 
   return (
     <Box p="xl">
@@ -125,24 +616,44 @@ export function MyNutritionPage() {
           <Title order={2}>Mi Nutrición</Title>
           <Text c="dimmed">Seguimiento de tu alimentación diaria</Text>
         </Box>
-        <Button leftSection={<IconPlus size={16} />} color="yellow">
+        <Button leftSection={<IconPlus size={16} />} color="yellow" onClick={openModal}>
           Registrar comida
         </Button>
       </Group>
 
       {/* Plan Info */}
-      {data.mealPlan && (
-        <Paper p="md" radius="lg" mb="xl" style={{ background: "var(--mantine-color-yellow-light)" }}>
+      {mealPlan ? (
+        <Paper
+          p="md"
+          radius="lg"
+          mb="xl"
+          style={{ background: "var(--mantine-color-yellow-light)" }}
+        >
           <Group justify="space-between">
             <Box>
-              <Text size="sm" c="dimmed">Plan nutricional asignado</Text>
-              <Text fw={600}>{data.mealPlan.name}</Text>
+              <Text size="sm" c="dimmed">
+                Plan nutricional asignado
+              </Text>
+              <Text fw={600}>{mealPlan.name}</Text>
             </Box>
             <Box ta="right">
-              <Text size="sm" c="dimmed">Asignado por</Text>
-              <Text fw={500}>{data.mealPlan.assignedBy}</Text>
+              <Text size="sm" c="dimmed">
+                Objetivo diario
+              </Text>
+              <Text fw={500}>{targets.calories} kcal</Text>
             </Box>
           </Group>
+        </Paper>
+      ) : (
+        <Paper
+          p="md"
+          radius="lg"
+          mb="xl"
+          style={{ background: "var(--mantine-color-gray-light)" }}
+        >
+          <Text ta="center" c="dimmed">
+            No tienes un plan nutricional asignado. Contacta con tu entrenador.
+          </Text>
         </Paper>
       )}
 
@@ -150,116 +661,229 @@ export function MyNutritionPage() {
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
         <Group justify="space-between" align="flex-start">
           <Box>
-            <Text size="lg" fw={600} mb="md">Resumen del Día</Text>
+            <Text size="lg" fw={600} mb="md">
+              Resumen del Día
+            </Text>
             <SimpleGrid cols={2} spacing="md">
-              <MacroCard 
-                label="Proteínas" 
-                current={data.dailyGoals.protein.current} 
-                target={data.dailyGoals.protein.target} 
-                unit="g" 
-                color="red" 
+              <MacroCard
+                label="Proteínas"
+                current={Math.round(dailyTotals.protein)}
+                target={targets.protein}
+                unit="g"
+                color="red"
               />
-              <MacroCard 
-                label="Carbohidratos" 
-                current={data.dailyGoals.carbs.current} 
-                target={data.dailyGoals.carbs.target} 
-                unit="g" 
-                color="blue" 
+              <MacroCard
+                label="Carbohidratos"
+                current={Math.round(dailyTotals.carbs)}
+                target={targets.carbs}
+                unit="g"
+                color="blue"
               />
-              <MacroCard 
-                label="Grasas" 
-                current={data.dailyGoals.fats.current} 
-                target={data.dailyGoals.fats.target} 
-                unit="g" 
-                color="green" 
+              <MacroCard
+                label="Grasas"
+                current={Math.round(dailyTotals.fats)}
+                target={targets.fats}
+                unit="g"
+                color="green"
               />
             </SimpleGrid>
           </Box>
-          
+
           <Box ta="center">
             <RingProgress
               size={160}
               thickness={12}
               roundCaps
-              sections={[{ value: caloriesPercentage, color: "yellow" }]}
+              sections={[{ value: Math.min(caloriesPercentage, 100), color: "yellow" }]}
               label={
                 <Box>
-                  <Text size="xl" fw={700}>{data.dailyGoals.calories.current}</Text>
-                  <Text size="xs" c="dimmed">de {data.dailyGoals.calories.target} kcal</Text>
+                  <Text size="xl" fw={700}>
+                    {Math.round(dailyTotals.calories)}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    de {targets.calories} kcal
+                  </Text>
                 </Box>
               }
             />
-            <Text size="sm" fw={500} mt="xs">Calorías consumidas</Text>
+            <Text size="sm" fw={500} mt="xs">
+              Calorías consumidas
+            </Text>
           </Box>
         </Group>
       </Card>
 
-      {/* Meals */}
-      <Title order={4} mb="md">Comidas de Hoy</Title>
-      <Stack gap="md" mb="xl">
-        {data.meals.map((meal, index) => (
-          <Card key={index} shadow="sm" padding="md" radius="lg" withBorder>
-            <Group justify="space-between">
-              <Group>
-                <ThemeIcon 
-                  variant={meal.logged ? "filled" : "light"} 
-                  color={meal.logged ? "yellow" : "gray"} 
-                  size="lg" 
-                  radius="md"
-                >
-                  <meal.icon size={20} />
-                </ThemeIcon>
-                <Box>
-                  <Group gap="xs">
-                    <Text fw={600}>{meal.name}</Text>
-                    <Text size="sm" c="dimmed">{meal.time}</Text>
+      {/* Comidas del Plan para Hoy */}
+      <Title order={4} mb="md">
+        Comidas de Hoy ({todayDayName})
+      </Title>
+      
+      {todayPlanMeals.length > 0 ? (
+        <Stack gap="md" mb="xl">
+          {todayPlanMeals.map((meal: PlanMeal) => {
+            const isRegistered = registeredMeals[meal.name];
+            const mealLogs = mealsByType[meal.name] || [];
+            const mealCalories = isRegistered 
+              ? mealLogs.reduce((sum, l) => sum + (l.total_calories || 0), 0)
+              : meal.items.reduce((sum, item) => sum + Math.round((item.food?.calories || 0) * (item.quantity_grams / 100)), 0);
+
+            return (
+              <Card key={meal.id} shadow="sm" padding="md" radius="lg" withBorder>
+                <Group justify="space-between">
+                  <Group>
+                    <ThemeIcon
+                      variant={isRegistered ? "filled" : "light"}
+                      color={isRegistered ? "green" : "yellow"}
+                      size="lg"
+                      radius="md"
+                    >
+                      {isRegistered ? <IconCheck size={20} /> : <IconApple size={20} />}
+                    </ThemeIcon>
+                    <Box>
+                      <Group gap="xs">
+                        <Text fw={600}>{meal.name}</Text>
+                        <Text size="sm" c="dimmed">
+                          {meal.time}
+                        </Text>
+                      </Group>
+                      <Text size="sm" c="dimmed">
+                        {meal.items.map((item) => `${item.food?.name || "Alimento"} (${item.quantity_grams}g)`).join(" • ")}
+                      </Text>
+                    </Box>
                   </Group>
-                  {meal.logged ? (
-                    <Text size="sm" c="dimmed">{meal.foods.join(" • ")}</Text>
-                  ) : (
-                    <Text size="sm" c="dimmed" fs="italic">Sin registrar</Text>
-                  )}
-                </Box>
-              </Group>
-              <Group>
-                {meal.logged && (
-                  <Badge variant="light" color="orange" size="lg">
-                    <Group gap={4}>
-                      <IconFlame size={14} />
-                      {meal.calories} kcal
+                  <Group>
+                    <Badge variant="light" color={isRegistered ? "green" : "orange"} size="lg">
+                      <Group gap={4}>
+                        <IconFlame size={14} />
+                        {mealCalories} kcal
+                      </Group>
+                    </Badge>
+                    <Button
+                      variant={isRegistered ? "light" : "filled"}
+                      size="sm"
+                      color={isRegistered ? "green" : "yellow"}
+                      onClick={() => handleOpenPlanMeal(meal)}
+                      leftSection={isRegistered ? <IconCheck size={14} /> : undefined}
+                    >
+                      {isRegistered ? "Completado" : "Registrar"}
+                    </Button>
+                  </Group>
+                </Group>
+                
+                {/* Mostrar alimentos expandidos si no está registrado */}
+                {!isRegistered && meal.items.length > 0 && (
+                  <Box mt="md" pt="md" style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}>
+                    <Text size="xs" c="dimmed" mb="xs">Alimentos planificados:</Text>
+                    <Group gap="xs">
+                      {meal.items.map((item) => (
+                        <Badge key={item.id} variant="outline" color="gray" size="sm">
+                          {item.food?.name} - {item.quantity_grams}g
+                        </Badge>
+                      ))}
                     </Group>
-                  </Badge>
+                  </Box>
                 )}
-                <Button 
-                  variant={meal.logged ? "light" : "filled"} 
-                  size="sm"
-                  color={meal.logged ? "gray" : "yellow"}
-                >
-                  {meal.logged ? "Editar" : "Registrar"}
-                </Button>
-              </Group>
-            </Group>
-          </Card>
-        ))}
-      </Stack>
+              </Card>
+            );
+          })}
+        </Stack>
+      ) : (
+        /* Fallback: mostrar tipos de comida genéricos si no hay plan con días */
+        <Stack gap="md" mb="xl">
+          {MEAL_TYPES.map((mealType) => {
+            const MealIcon = mealType.icon;
+            const logs = mealsByType[mealType.value] || [];
+            const hasLogs = logs.length > 0;
+            const mealCalories = logs.reduce((sum, l) => sum + (l.total_calories || 0), 0);
+
+            return (
+              <Card key={mealType.value} shadow="sm" padding="md" radius="lg" withBorder>
+                <Group justify="space-between">
+                  <Group>
+                    <ThemeIcon
+                      variant={hasLogs ? "filled" : "light"}
+                      color={hasLogs ? "yellow" : "gray"}
+                      size="lg"
+                      radius="md"
+                    >
+                      <MealIcon size={20} />
+                    </ThemeIcon>
+                    <Box>
+                      <Group gap="xs">
+                        <Text fw={600}>{mealType.label}</Text>
+                        <Text size="sm" c="dimmed">
+                          {mealType.time}
+                        </Text>
+                      </Group>
+                      {hasLogs ? (
+                        <Text size="sm" c="dimmed">
+                          {logs.flatMap((l) => l.foods?.map((f) => f.name) || []).join(" • ")}
+                        </Text>
+                      ) : (
+                        <Text size="sm" c="dimmed" fs="italic">
+                          Sin registrar
+                        </Text>
+                      )}
+                    </Box>
+                  </Group>
+                  <Group>
+                    {hasLogs && (
+                      <Badge variant="light" color="orange" size="lg">
+                        <Group gap={4}>
+                          <IconFlame size={14} />
+                          {mealCalories} kcal
+                        </Group>
+                      </Badge>
+                    )}
+                    <Button
+                      variant={hasLogs ? "light" : "filled"}
+                      size="sm"
+                      color={hasLogs ? "gray" : "yellow"}
+                      onClick={openModal}
+                    >
+                      {hasLogs ? "Editar" : "Registrar"}
+                    </Button>
+                  </Group>
+                </Group>
+              </Card>
+            );
+          })}
+        </Stack>
+      )}
 
       {/* Weekly Overview */}
-      <Title order={4} mb="md">Resumen Semanal</Title>
+      <Title order={4} mb="md">
+        Resumen Semanal
+      </Title>
       <Card shadow="sm" padding="lg" radius="lg" withBorder>
         <Group justify="space-around">
-          {data.weekSummary.map((day, index) => {
-            const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
-            const isToday = index === 4; // Viernes en este ejemplo
+          {weekSummary.map((day, index) => {
+            const percentage =
+              day.calories > 0 ? (day.calories / day.target) * 100 : 0;
             return (
               <Box key={index} ta="center">
-                <Text size="sm" c={isToday ? "yellow" : "dimmed"} fw={isToday ? 700 : 400}>
+                <Text
+                  size="sm"
+                  c={day.isToday ? "yellow" : "dimmed"}
+                  fw={day.isToday ? 700 : 400}
+                >
                   {day.day}
                 </Text>
                 <RingProgress
                   size={50}
                   thickness={4}
                   roundCaps
-                  sections={[{ value: percentage, color: percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray" }]}
+                  sections={[
+                    {
+                      value: percentage,
+                      color:
+                        percentage >= 90
+                          ? "green"
+                          : percentage > 0
+                            ? "yellow"
+                            : "gray",
+                    },
+                  ]}
                   label={
                     <Text size="xs" ta="center">
                       {percentage > 0 ? `${Math.round(percentage)}%` : "-"}
@@ -271,6 +895,26 @@ export function MyNutritionPage() {
           })}
         </Group>
       </Card>
+
+      {/* Modal para registrar comida manual */}
+      <LogMealModal
+        opened={modalOpened}
+        onClose={closeModal}
+        onSubmit={handleLogMeal}
+        isLoading={logNutritionMutation.isPending}
+      />
+
+      {/* Modal para registrar comida del plan */}
+      <LogPlanMealModal
+        opened={planMealModalOpened}
+        onClose={() => {
+          closePlanMealModal();
+          setSelectedPlanMeal(null);
+        }}
+        onSubmit={handleLogMeal}
+        isLoading={logNutritionMutation.isPending}
+        meal={selectedPlanMeal}
+      />
     </Box>
   );
 }

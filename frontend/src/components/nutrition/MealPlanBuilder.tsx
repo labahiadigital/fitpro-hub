@@ -4,10 +4,13 @@ import {
   Box,
   Button,
   Card,
+  Center,
   Divider,
   Group,
+  Loader,
   Modal,
   NumberInput,
+  Pagination,
   Paper,
   Progress,
   ScrollArea,
@@ -20,7 +23,7 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import {
   IconApple,
   IconClock,
@@ -35,6 +38,8 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { nutritionApi } from "../../services/api";
 
 export interface Food {
   id: string;
@@ -124,10 +129,48 @@ export function MealPlanBuilder({
   const [supplementSearch, setSupplementSearch] = useState("");
   const [foodFilter, setFoodFilter] = useState<string>("all");
   const [supplementFilter, setSupplementFilter] = useState<string>("all");
+  const [foodPage, setFoodPage] = useState(1);
+  const [debouncedFoodSearch] = useDebouncedValue(foodSearch, 300);
   const [
     shoppingListOpened,
     { open: openShoppingList, close: closeShoppingList },
   ] = useDisclosure(false);
+
+  const FOODS_PER_PAGE = 30;
+
+  // Hook para buscar alimentos desde el servidor con paginación
+  const { data: serverFoodsData, isLoading: isLoadingServerFoods } = useQuery({
+    queryKey: ["foods-modal-search", debouncedFoodSearch, foodPage],
+    queryFn: async () => {
+      const response = await nutritionApi.foods({
+        page: foodPage,
+        limit: FOODS_PER_PAGE,
+        search: debouncedFoodSearch || undefined,
+      });
+      const data = response.data;
+      return {
+        items: (data?.items || []).map((food: any) => ({
+          id: food.id,
+          name: food.name || "Sin nombre",
+          calories: food.calories || 0,
+          protein: food.protein_g || 0,
+          carbs: food.carbs_g || 0,
+          fat: food.fat_g || 0,
+          serving_size: food.quantity || `${food.serving_size || 100}g`,
+          category: food.category || "Otros",
+        })),
+        total: data?.total || 0,
+        totalPages: Math.ceil((data?.total || 0) / FOODS_PER_PAGE),
+      };
+    },
+    enabled: foodModalOpened, // Solo buscar cuando el modal está abierto
+  });
+
+  // Reset page when search changes
+  const handleFoodSearchChange = (value: string) => {
+    setFoodSearch(value);
+    setFoodPage(1);
+  };
 
   const currentDay = days.find((d) => d.id === activeDay);
 
@@ -391,20 +434,27 @@ export function MealPlanBuilder({
   const isFoodFavorite = (foodId: string) => foodFavorites.includes(foodId);
   const isSupplementFavorite = (supplementId: string) => supplementFavorites.includes(supplementId);
 
-  // Filtrar y ordenar alimentos (favoritos primero)
-  const filteredFoods = availableFoods
-    .filter((f) => {
-      const matchesSearch =
-        f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
-        f.category.toLowerCase().includes(foodSearch.toLowerCase());
-      const matchesFilter = foodFilter === "all" || isFoodFavorite(f.id);
-      return matchesSearch && matchesFilter;
-    })
-    .sort((a, b) => {
+  // Obtener alimentos del servidor o filtrados localmente para favoritos
+  const filteredFoods = (() => {
+    // Si estamos en modo favoritos, filtrar de la lista local
+    if (foodFilter === "favorites") {
+      return availableFoods
+        .filter((f) => isFoodFavorite(f.id))
+        .filter((f) => {
+          if (!foodSearch) return true;
+          return f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
+            f.category.toLowerCase().includes(foodSearch.toLowerCase());
+        });
+    }
+    // De lo contrario, usar los datos del servidor
+    const serverFoods = serverFoodsData?.items || [];
+    // Ordenar favoritos primero
+    return serverFoods.sort((a: Food, b: Food) => {
       const aFav = isFoodFavorite(a.id) ? 0 : 1;
       const bFav = isFoodFavorite(b.id) ? 0 : 1;
       return aFav - bFav;
     });
+  })();
 
   // Filtrar y ordenar suplementos (favoritos primero)
   const filteredSupplements = availableSupplements
@@ -805,7 +855,7 @@ export function MealPlanBuilder({
             <Group mb="md" gap="sm">
               <TextInput
                 leftSection={<IconSearch size={16} />}
-                onChange={(e) => setFoodSearch(e.target.value)}
+                onChange={(e) => handleFoodSearchChange(e.target.value)}
                 placeholder="Buscar alimentos..."
                 value={foodSearch}
                 radius="md"
@@ -813,7 +863,10 @@ export function MealPlanBuilder({
               />
               <SegmentedControl
                 value={foodFilter}
-                onChange={setFoodFilter}
+                onChange={(v) => {
+                  setFoodFilter(v);
+                  setFoodPage(1);
+                }}
                 data={[
                   { label: "Todos", value: "all" },
                   { label: "⭐ Favoritos", value: "favorites" },
@@ -822,79 +875,114 @@ export function MealPlanBuilder({
                 radius="md"
               />
             </Group>
-            <ScrollArea h={400}>
-              <Stack gap="xs">
-                {filteredFoods.map((food) => {
-                  const isFav = isFoodFavorite(food.id);
-                  return (
-                    <Card
-                      key={food.id}
-                      padding="sm"
-                      radius="md"
-                      style={{ 
-                        cursor: "pointer",
-                        borderColor: isFav ? "var(--mantine-color-yellow-5)" : undefined,
-                        backgroundColor: isFav ? "var(--mantine-color-yellow-0)" : undefined,
-                      }}
-                      withBorder
-                    >
-                      <Group justify="space-between">
-                        <Box onClick={() => addFoodToMeal(food)} style={{ flex: 1, cursor: "pointer" }}>
+            
+            {/* Info de resultados */}
+            {foodFilter === "all" && serverFoodsData && (
+              <Group justify="space-between" mb="xs">
+                <Text c="dimmed" size="xs">
+                  {serverFoodsData.total > 0 
+                    ? `${(foodPage - 1) * FOODS_PER_PAGE + 1} - ${Math.min(foodPage * FOODS_PER_PAGE, serverFoodsData.total)} de ${serverFoodsData.total.toLocaleString()}`
+                    : "0 resultados"
+                  }
+                  {debouncedFoodSearch && ` • "${debouncedFoodSearch}"`}
+                </Text>
+                {isLoadingServerFoods && <Loader size="xs" />}
+              </Group>
+            )}
+
+            <ScrollArea h={350}>
+              {isLoadingServerFoods && foodFilter === "all" ? (
+                <Center py="xl">
+                  <Loader size="md" />
+                </Center>
+              ) : (
+                <Stack gap="xs">
+                  {filteredFoods.map((food: Food) => {
+                    const isFav = isFoodFavorite(food.id);
+                    return (
+                      <Card
+                        key={food.id}
+                        padding="sm"
+                        radius="md"
+                        style={{ 
+                          cursor: "pointer",
+                          borderColor: isFav ? "var(--mantine-color-yellow-5)" : undefined,
+                          backgroundColor: isFav ? "var(--mantine-color-yellow-0)" : undefined,
+                        }}
+                        withBorder
+                      >
+                        <Group justify="space-between">
+                          <Box onClick={() => addFoodToMeal(food)} style={{ flex: 1, cursor: "pointer" }}>
+                            <Group gap="xs">
+                              {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}
+                              <Text fw={500} size="sm">
+                                {food.name}
+                              </Text>
+                            </Group>
+                            <Group gap="xs">
+                              <Badge size="xs" variant="light">
+                                {food.category}
+                              </Badge>
+                              <Text c="dimmed" size="xs">
+                                {food.serving_size}
+                              </Text>
+                            </Group>
+                          </Box>
                           <Group gap="xs">
-                            {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}
-                            <Text fw={500} size="sm">
-                              {food.name}
-                            </Text>
-                          </Group>
-                          <Group gap="xs">
-                            <Badge size="xs" variant="light">
-                              {food.category}
+                            <Badge color="blue" variant="light">
+                              {food.calories} kcal
                             </Badge>
-                            <Text c="dimmed" size="xs">
-                              {food.serving_size}
-                            </Text>
+                            <Badge size="xs" variant="outline">
+                              P: {food.protein}g
+                            </Badge>
+                            <Badge size="xs" variant="outline">
+                              C: {food.carbs}g
+                            </Badge>
+                            <Badge size="xs" variant="outline">
+                              G: {food.fat}g
+                            </Badge>
+                            {onToggleFoodFavorite && (
+                              <ActionIcon
+                                variant={isFav ? "filled" : "subtle"}
+                                color="yellow"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleFoodFavorite(food.id, isFav);
+                                }}
+                              >
+                                {isFav ? <IconStarFilled size={14} /> : <IconStar size={14} />}
+                              </ActionIcon>
+                            )}
                           </Group>
-                        </Box>
-                        <Group gap="xs">
-                          <Badge color="blue" variant="light">
-                            {food.calories} kcal
-                          </Badge>
-                          <Badge size="xs" variant="outline">
-                            P: {food.protein}g
-                          </Badge>
-                          <Badge size="xs" variant="outline">
-                            C: {food.carbs}g
-                          </Badge>
-                          <Badge size="xs" variant="outline">
-                            G: {food.fat}g
-                          </Badge>
-                          {onToggleFoodFavorite && (
-                            <ActionIcon
-                              variant={isFav ? "filled" : "subtle"}
-                              color="yellow"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleFoodFavorite(food.id, isFav);
-                              }}
-                            >
-                              {isFav ? <IconStarFilled size={14} /> : <IconStar size={14} />}
-                            </ActionIcon>
-                          )}
                         </Group>
-                      </Group>
-                    </Card>
-                  );
-                })}
-                {filteredFoods.length === 0 && (
-                  <Text c="dimmed" ta="center" py="xl">
-                    {foodFilter === "favorites" 
-                      ? "No tienes alimentos favoritos" 
-                      : "No se encontraron alimentos"}
-                  </Text>
-                )}
-              </Stack>
+                      </Card>
+                    );
+                  })}
+                  {filteredFoods.length === 0 && !isLoadingServerFoods && (
+                    <Text c="dimmed" ta="center" py="xl">
+                      {foodFilter === "favorites" 
+                        ? "No tienes alimentos favoritos" 
+                        : "No se encontraron alimentos"}
+                    </Text>
+                  )}
+                </Stack>
+              )}
             </ScrollArea>
+            
+            {/* Paginación para alimentos */}
+            {foodFilter === "all" && serverFoodsData && serverFoodsData.totalPages > 1 && (
+              <Center mt="md">
+                <Pagination
+                  value={foodPage}
+                  onChange={setFoodPage}
+                  total={serverFoodsData.totalPages}
+                  size="sm"
+                  boundaries={1}
+                  siblings={1}
+                />
+              </Center>
+            )}
           </Tabs.Panel>
 
           <Tabs.Panel value="supplements">

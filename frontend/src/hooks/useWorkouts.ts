@@ -15,23 +15,45 @@ interface Exercise {
   image_url?: string;
 }
 
+interface WorkoutExercise {
+  id?: string;
+  exercise_id?: string;
+  exercise?: {
+    id?: string;
+    name?: string;
+  };
+  name?: string;
+  sets: number;
+  reps: string;
+  rest_seconds?: number;
+  notes?: string;
+  order?: number;
+}
+
+interface WorkoutBlock {
+  id?: string;
+  name: string;
+  type?: string; // 'warmup' | 'main' | 'cooldown' | 'circuit'
+  rest_between_sets?: number;
+  rounds?: number;
+  exercises: WorkoutExercise[];
+}
+
 interface WorkoutProgram {
   id: string;
   workspace_id: string;
+  client_id?: string;
   name: string;
   description?: string;
   duration_weeks: number;
   difficulty: string;
   template: {
-    weeks: Array<{
+    blocks?: WorkoutBlock[];
+    // Legacy structure support
+    weeks?: Array<{
       days: Array<{
-        exercises: Array<{
-          exercise_id: string;
-          sets: number;
-          reps: string;
-          rest_seconds: number;
-          notes?: string;
-        }>;
+        day?: string;
+        exercises: WorkoutExercise[];
       }>;
     }>;
   };

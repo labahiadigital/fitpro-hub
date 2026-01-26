@@ -19,6 +19,7 @@ import {
   ScrollArea,
   SimpleGrid,
   Stack,
+  Tabs,
   Text,
   TextInput,
   ThemeIcon,
@@ -67,11 +68,40 @@ interface WorkoutBlock {
   rounds?: number;
 }
 
+// Nueva estructura para días de la semana
+export interface WorkoutDay {
+  id: string;
+  day: number;
+  dayName: string;
+  blocks: WorkoutBlock[];
+  isRestDay: boolean;
+  notes?: string;
+}
+
+// Props original (retrocompatible)
 interface WorkoutBuilderProps {
   blocks: WorkoutBlock[];
   onChange: (blocks: WorkoutBlock[]) => void;
   availableExercises: Exercise[];
 }
+
+// Props con días de la semana
+interface WorkoutBuilderWithDaysProps {
+  days: WorkoutDay[];
+  onChangeDays: (days: WorkoutDay[]) => void;
+  availableExercises: Exercise[];
+}
+
+// Días iniciales por defecto
+export const initialWorkoutDays: WorkoutDay[] = [
+  { id: "day-1", day: 1, dayName: "Lunes", blocks: [], isRestDay: false, notes: "" },
+  { id: "day-2", day: 2, dayName: "Martes", blocks: [], isRestDay: false, notes: "" },
+  { id: "day-3", day: 3, dayName: "Miércoles", blocks: [], isRestDay: false, notes: "" },
+  { id: "day-4", day: 4, dayName: "Jueves", blocks: [], isRestDay: false, notes: "" },
+  { id: "day-5", day: 5, dayName: "Viernes", blocks: [], isRestDay: false, notes: "" },
+  { id: "day-6", day: 6, dayName: "Sábado", blocks: [], isRestDay: true, notes: "" },
+  { id: "day-7", day: 7, dayName: "Domingo", blocks: [], isRestDay: true, notes: "" },
+];
 
 export function WorkoutBuilder({
   blocks,
@@ -701,5 +731,163 @@ export function WorkoutBuilder({
         </ScrollArea>
       </Modal>
     </>
+  );
+}
+
+// ============ NUEVO: WorkoutBuilder con días de la semana ============
+
+export function WorkoutBuilderWithDays({
+  days,
+  onChangeDays,
+  availableExercises,
+}: WorkoutBuilderWithDaysProps) {
+  const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "day-1");
+
+  const currentDay = days.find((d) => d.id === activeDay);
+
+  // Handler para actualizar bloques del día actual
+  const handleBlocksChange = (newBlocks: WorkoutBlock[]) => {
+    onChangeDays(
+      days.map((d) =>
+        d.id === activeDay ? { ...d, blocks: newBlocks } : d
+      )
+    );
+  };
+
+  // Toggle día de descanso
+  const toggleRestDay = (dayId: string) => {
+    onChangeDays(
+      days.map((d) =>
+        d.id === dayId ? { ...d, isRestDay: !d.isRestDay, blocks: d.isRestDay ? [] : d.blocks } : d
+      )
+    );
+  };
+
+  // Copiar día actual a todos
+  const copyToAllDays = () => {
+    if (!currentDay) return;
+
+    onChangeDays(
+      days.map((d) =>
+        d.id === activeDay
+          ? d
+          : {
+              ...d,
+              blocks: currentDay.blocks.map((b) => ({
+                ...b,
+                id: `block-${Date.now()}-${Math.random()}`,
+                exercises: b.exercises.map((e) => ({
+                  ...e,
+                  id: `ex-${Date.now()}-${Math.random()}`,
+                })),
+              })),
+              isRestDay: false,
+            }
+      )
+    );
+  };
+
+  // Contar ejercicios del día
+  const getDayExerciseCount = (day: WorkoutDay) => {
+    if (day.isRestDay) return 0;
+    return day.blocks.reduce((sum, b) => sum + b.exercises.length, 0);
+  };
+
+  return (
+    <Box>
+      {/* Resumen de la semana */}
+      <Paper p="md" radius="lg" mb="md" withBorder>
+        <Group justify="space-between" mb="md">
+          <Text fw={600}>Resumen Semanal</Text>
+          <Button
+            variant="light"
+            size="xs"
+            leftSection={<IconCopy size={14} />}
+            onClick={copyToAllDays}
+            disabled={!currentDay || currentDay.blocks.length === 0}
+          >
+            Copiar a todos los días
+          </Button>
+        </Group>
+        <SimpleGrid cols={7}>
+          {days.map((day) => (
+            <Paper
+              key={day.id}
+              p="xs"
+              radius="md"
+              withBorder
+              style={{
+                borderColor: day.id === activeDay ? "var(--mantine-color-blue-5)" : undefined,
+                backgroundColor: day.isRestDay ? "var(--mantine-color-gray-0)" : undefined,
+                cursor: "pointer",
+              }}
+              onClick={() => setActiveDay(day.id)}
+            >
+              <Text ta="center" size="xs" fw={600}>
+                {day.dayName.slice(0, 3)}
+              </Text>
+              <Text ta="center" size="xs" c={day.isRestDay ? "dimmed" : "blue"}>
+                {day.isRestDay ? "Descanso" : `${getDayExerciseCount(day)} ej.`}
+              </Text>
+            </Paper>
+          ))}
+        </SimpleGrid>
+      </Paper>
+
+      {/* Tabs por día */}
+      <Tabs value={activeDay} onChange={(v) => setActiveDay(v || days[0]?.id)}>
+        <Tabs.List mb="md">
+          {days.map((day) => (
+            <Tabs.Tab
+              key={day.id}
+              value={day.id}
+              color={day.isRestDay ? "gray" : "blue"}
+              leftSection={
+                day.isRestDay ? undefined : (
+                  <Badge size="xs" variant="filled" color="blue">
+                    {getDayExerciseCount(day)}
+                  </Badge>
+                )
+              }
+            >
+              {day.dayName}
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+
+        {days.map((day) => (
+          <Tabs.Panel key={day.id} value={day.id}>
+            {/* Opciones del día */}
+            <Group mb="md" justify="space-between">
+              <Group gap="sm">
+                <Button
+                  variant={day.isRestDay ? "filled" : "light"}
+                  color={day.isRestDay ? "gray" : "blue"}
+                  size="xs"
+                  onClick={() => toggleRestDay(day.id)}
+                >
+                  {day.isRestDay ? "Marcar como día de entrenamiento" : "Marcar como día de descanso"}
+                </Button>
+              </Group>
+            </Group>
+
+            {day.isRestDay ? (
+              <Paper p="xl" ta="center" radius="lg" withBorder>
+                <Text c="dimmed" size="lg">🛌 Día de descanso</Text>
+                <Text c="dimmed" size="sm" mt="xs">
+                  Este día está marcado como descanso. Haz clic en el botón para añadir entrenamiento.
+                </Text>
+              </Paper>
+            ) : (
+              <WorkoutBuilder
+                blocks={day.blocks}
+                onChange={handleBlocksChange}
+                availableExercises={availableExercises}
+              />
+            )}
+          </Tabs.Panel>
+        ))}
+      </Tabs>
+    </Box>
   );
 }

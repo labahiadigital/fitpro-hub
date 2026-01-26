@@ -6,13 +6,16 @@ All data is filtered to only show what belongs to the authenticated client.
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, date
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import uuid as uuid_module
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, func
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
+from supabase import acreate_client
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.client import Client
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.nutrition import MealPlan
@@ -157,7 +160,7 @@ class NutritionLogResponse(BaseModel):
 
 class MeasurementCreate(BaseModel):
     """Create body measurement."""
-    measured_at: str  # YYYY-MM-DD
+    measured_at: str  # YYYY-MM-DD or ISO datetime
     weight_kg: Optional[float] = None
     body_fat_percentage: Optional[float] = None
     muscle_mass_kg: Optional[float] = None
@@ -168,7 +171,7 @@ class MeasurementCreate(BaseModel):
 class MeasurementResponse(BaseModel):
     """Measurement response."""
     id: UUID
-    measured_at: str
+    measured_at: Optional[datetime] = None
     weight_kg: Optional[float] = None
     body_fat_percentage: Optional[float] = None
     muscle_mass_kg: Optional[float] = None
@@ -528,13 +531,25 @@ async def log_nutrition(
     }
     
     # Update adherence in meal plan
-    adherence = meal_plan.adherence or {"logs": []}
-    if "logs" not in adherence:
-        adherence["logs"] = []
-    adherence["logs"].append(log_entry)
-    meal_plan.adherence = adherence
+    # Force SQLAlchemy to detect changes by reassigning the entire dictionary
+    current_adherence = dict(meal_plan.adherence) if meal_plan.adherence else {"logs": []}
+    if "logs" not in current_adherence:
+        current_adherence["logs"] = []
     
+    current_adherence["logs"].append(log_entry)
+    
+    # Reassign to trigger SQLAlchemy change detection
+    meal_plan.adherence = current_adherence
+    
+    # Debug: print to verify
+    import logging
+    logging.info(f"[NUTRITION LOG] Saving adherence with {len(current_adherence['logs'])} logs")
+    
+    # Commit changes
     await db.commit()
+    await db.refresh(meal_plan)
+    
+    logging.info(f"[NUTRITION LOG] After refresh: {len(meal_plan.adherence.get('logs', []))} logs")
     
     return NutritionLogResponse(
         date=data.date,
@@ -659,9 +674,23 @@ async def create_measurement(
     """Record body measurement."""
     client = await get_client_for_user(current_user.id, db)
     
+    # Parse measured_at to datetime
+    measured_at_dt = None
+    if data.measured_at:
+        try:
+            # Try ISO format first
+            measured_at_dt = datetime.fromisoformat(data.measured_at.replace('Z', '+00:00'))
+        except ValueError:
+            try:
+                # Try YYYY-MM-DD format
+                measured_at_dt = datetime.strptime(data.measured_at, "%Y-%m-%d")
+            except ValueError:
+                # Default to now if parsing fails
+                measured_at_dt = datetime.now()
+    
     measurement = ClientMeasurement(
         client_id=client.id,
-        measured_at=data.measured_at,
+        measured_at=measured_at_dt,
         weight_kg=data.weight_kg,
         body_fat_percentage=data.body_fat_percentage,
         muscle_mass_kg=data.muscle_mass_kg,
@@ -678,6 +707,141 @@ async def create_measurement(
         await db.commit()
     
     return measurement
+
+
+@router.post("/progress/photos")
+async def upload_progress_photo(
+    file: UploadFile = File(...),
+    photo_type: str = Query("front", description="Type: front, back, side"),
+    notes: Optional[str] = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Upload a progress photo. Returns the photo URL."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File type {file.content_type} not allowed. Use JPEG, PNG, or WebP."
+        )
+    
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    unique_id = str(uuid_module.uuid4())
+    filename = f"progress-photos/{client.id}/{unique_id}.{ext}"
+    
+    try:
+        # Initialize Supabase client (async)
+        supabase = await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        
+        # Read file content
+        content = await file.read()
+        
+        # Upload to Supabase Storage (async method)
+        bucket_name = "progress-photos"
+        try:
+            upload_result = await supabase.storage.from_(bucket_name).upload(
+                path=filename,
+                file=content,
+                file_options={"content-type": file.content_type, "upsert": "true"}
+            )
+        except Exception as upload_err:
+            # If bucket doesn't exist or other error, try alternative approach
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Storage upload failed: {str(upload_err)}"
+            )
+        
+        # Build public URL manually (sync, doesn't need await)
+        public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{filename}"
+        
+        # Create a photo entry (stored in a measurement or separate)
+        photo_data = {
+            "url": public_url,
+            "type": photo_type,
+            "notes": notes,
+            "uploaded_at": datetime.now().isoformat(),
+            "filename": filename
+        }
+        
+        # Get or create today's measurement to attach the photo
+        # Use first() instead of scalar_one_or_none() to handle multiple measurements per day
+        db_result = await db.execute(
+            select(ClientMeasurement)
+            .where(
+                and_(
+                    ClientMeasurement.client_id == client.id,
+                    ClientMeasurement.measured_at >= datetime.combine(date.today(), datetime.min.time())
+                )
+            )
+            .order_by(ClientMeasurement.measured_at.desc())
+            .limit(1)
+        )
+        measurement = db_result.scalar_one_or_none()
+        
+        if measurement:
+            # Append photo to existing measurement
+            current_photos = list(measurement.photos or [])
+            current_photos.append(photo_data)
+            measurement.photos = current_photos
+        else:
+            # Create new measurement with just the photo
+            measurement = ClientMeasurement(
+                client_id=client.id,
+                measured_at=datetime.now(),
+                photos=[photo_data]
+            )
+            db.add(measurement)
+        
+        await db.commit()
+        
+        return {
+            "success": True,
+            "url": public_url,
+            "photo": photo_data
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error uploading photo: {str(e)}"
+        )
+
+
+@router.get("/progress/photos")
+async def get_progress_photos(
+    limit: int = Query(20, le=100),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all progress photos for the client."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    result = await db.execute(
+        select(ClientMeasurement)
+        .where(ClientMeasurement.client_id == client.id)
+        .where(ClientMeasurement.photos != None)
+        .order_by(desc(ClientMeasurement.measured_at))
+        .limit(limit)
+    )
+    measurements = result.scalars().all()
+    
+    # Flatten all photos with their dates
+    all_photos = []
+    for m in measurements:
+        if m.photos:
+            for photo in m.photos:
+                photo["measurement_date"] = m.measured_at.isoformat() if m.measured_at else None
+                all_photos.append(photo)
+    
+    return all_photos
 
 
 @router.get("/progress/summary")
@@ -776,3 +940,306 @@ async def get_booking_detail(
 
 # NOTE: Documents endpoint removed - documents table does not exist yet
 # TODO: Implement when documents table is created
+
+
+# ============ MESSAGES / CHAT ============
+
+from app.models.message import (
+    Conversation, Message, ConversationType, MessageType,
+    MessageSource, MessageDirection, MessageStatus
+)
+
+
+class ClientMessageCreate(BaseModel):
+    content: str
+    message_type: str = "text"
+
+
+class ClientMessageResponse(BaseModel):
+    id: UUID
+    conversation_id: UUID
+    sender_id: Optional[UUID]
+    source: str
+    direction: str
+    message_type: str
+    content: Optional[str]
+    external_status: str
+    is_sent: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ClientConversationResponse(BaseModel):
+    id: UUID
+    trainer_name: Optional[str] = None
+    trainer_avatar_url: Optional[str] = None
+    last_message_at: Optional[datetime]
+    last_message_preview: Optional[str]
+    unread_count: int
+    created_at: datetime
+
+
+@router.get("/messages/conversation", response_model=ClientConversationResponse)
+async def get_or_create_client_conversation(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get or create the client's conversation with their trainer.
+    Clients only have one conversation - with their assigned trainer/workspace.
+    """
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Try to find existing conversation
+    result = await db.execute(
+        select(Conversation).where(
+            and_(
+                Conversation.client_id == client.id,
+                Conversation.workspace_id == client.workspace_id
+            )
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    
+    # Create if doesn't exist
+    if not conversation:
+        conversation = Conversation(
+            workspace_id=client.workspace_id,
+            client_id=client.id,
+            name=f"Chat con {client.full_name}",
+            conversation_type='direct',
+            participant_ids=[current_user.id],
+            preferred_channel='platform',
+            unread_count=0
+        )
+        db.add(conversation)
+        await db.commit()
+        await db.refresh(conversation)
+    
+    # Get trainer info (the one who created the client)
+    from app.models.user import User
+    trainer_name = None
+    trainer_avatar = None
+    if client.created_by:
+        trainer_result = await db.execute(
+            select(User).where(User.id == client.created_by)
+        )
+        trainer = trainer_result.scalar_one_or_none()
+        if trainer:
+            trainer_name = trainer.full_name
+            trainer_avatar = trainer.avatar_url
+    
+    return ClientConversationResponse(
+        id=conversation.id,
+        trainer_name=trainer_name or "Tu Entrenador",
+        trainer_avatar_url=trainer_avatar,
+        last_message_at=conversation.last_message_at,
+        last_message_preview=conversation.last_message_preview,
+        unread_count=conversation.unread_count or 0,
+        created_at=conversation.created_at
+    )
+
+
+@router.get("/messages", response_model=List[ClientMessageResponse])
+async def get_client_messages(
+    limit: int = Query(50, le=200),
+    before: Optional[datetime] = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get messages for the client's conversation."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Get client's conversation
+    result = await db.execute(
+        select(Conversation).where(
+            and_(
+                Conversation.client_id == client.id,
+                Conversation.workspace_id == client.workspace_id
+            )
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    
+    if not conversation:
+        return []
+    
+    # Get messages
+    query = select(Message).where(
+        and_(
+            Message.conversation_id == conversation.id,
+            Message.is_deleted == False
+        )
+    )
+    
+    if before:
+        query = query.where(Message.created_at < before)
+    
+    result = await db.execute(
+        query.order_by(desc(Message.created_at)).limit(limit)
+    )
+    messages = result.scalars().all()
+    
+    # Return in chronological order
+    return [
+        ClientMessageResponse(
+            id=m.id,
+            conversation_id=m.conversation_id,
+            sender_id=m.sender_id,
+            source=str(m.source) if m.source else "platform",
+            direction=str(m.direction) if m.direction else "outbound",
+            message_type=str(m.message_type) if m.message_type else "text",
+            content=m.content,
+            external_status=str(m.external_status) if m.external_status else "sent",
+            is_sent=m.is_sent,
+            created_at=m.created_at
+        )
+        for m in reversed(messages)
+    ]
+
+
+@router.post("/messages", response_model=ClientMessageResponse)
+async def send_client_message(
+    data: ClientMessageCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Send a message from client to trainer."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Get or create conversation
+    result = await db.execute(
+        select(Conversation).where(
+            and_(
+                Conversation.client_id == client.id,
+                Conversation.workspace_id == client.workspace_id
+            )
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    
+    if not conversation:
+        conversation = Conversation(
+            workspace_id=client.workspace_id,
+            client_id=client.id,
+            name=f"Chat con {client.full_name}",
+            conversation_type='direct',
+            participant_ids=[current_user.id],
+            preferred_channel='platform',
+            unread_count=0
+        )
+        db.add(conversation)
+        await db.commit()
+        await db.refresh(conversation)
+    
+    # Create message
+    message = Message(
+        conversation_id=conversation.id,
+        sender_id=current_user.id,
+        source='platform',
+        direction='inbound',  # From client's perspective, it's inbound to trainer
+        message_type='text',
+        content=data.content,
+        external_status='sent',
+        is_sent=True
+    )
+    db.add(message)
+    
+    # Update conversation
+    conversation.last_message_at = datetime.now()
+    conversation.last_message_preview = data.content[:100] if data.content else None
+    conversation.last_message_source = 'platform'
+    conversation.unread_count = (conversation.unread_count or 0) + 1
+    
+    await db.commit()
+    await db.refresh(message)
+    
+    return ClientMessageResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        sender_id=message.sender_id,
+        source=str(message.source) if message.source else "platform",
+        direction=str(message.direction) if message.direction else "outbound",
+        message_type=str(message.message_type) if message.message_type else "text",
+        content=message.content,
+        external_status=str(message.external_status) if message.external_status else "sent",
+        is_sent=message.is_sent,
+        created_at=message.created_at
+    )
+
+
+@router.post("/messages/mark-read")
+async def mark_client_messages_read(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Mark all messages in client's conversation as read."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Get conversation
+    result = await db.execute(
+        select(Conversation).where(
+            and_(
+                Conversation.client_id == client.id,
+                Conversation.workspace_id == client.workspace_id
+            )
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    
+    if not conversation:
+        return {"success": True, "marked_count": 0}
+    
+    # For client, we reset unread_count to 0 (messages from trainer are now read)
+    # Note: This is simplified - in a real app you'd track read status per-user
+    # For now, we'll just reset the count as the client views the chat
+    old_count = conversation.unread_count or 0
+    conversation.unread_count = 0
+    
+    await db.commit()
+    
+    return {"success": True, "marked_count": old_count}
+
+
+@router.get("/messages/unread-count")
+async def get_client_unread_count(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get unread message count for the client."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Get conversation
+    result = await db.execute(
+        select(Conversation).where(
+            and_(
+                Conversation.client_id == client.id,
+                Conversation.workspace_id == client.workspace_id
+            )
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    
+    # Count unread messages (messages from trainer that client hasn't read)
+    # For simplicity, we track unread at conversation level
+    # In this context, unread for client = messages from trainer not yet viewed
+    if not conversation:
+        return {"unread_count": 0}
+    
+    # The unread_count in conversation tracks trainer's perspective
+    # For client, we need to count outbound messages not read by client
+    result = await db.execute(
+        select(func.count(Message.id)).where(
+            and_(
+                Message.conversation_id == conversation.id,
+                Message.direction == MessageDirection.OUTBOUND,  # From trainer
+                Message.is_deleted == False,
+                ~Message.read_by.contains([current_user.id])  # Not read by this user
+            )
+        )
+    )
+    count = result.scalar() or 0
+    
+    return {"unread_count": count}

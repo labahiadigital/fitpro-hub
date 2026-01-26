@@ -268,13 +268,14 @@ export function ClientsPage() {
 
   const handleInviteClient = async (values: typeof inviteForm.values) => {
     try {
-      const result = await createInvitation.mutateAsync({
+      await createInvitation.mutateAsync({
         email: values.email,
         first_name: values.first_name || undefined,
         last_name: values.last_name || undefined,
         message: values.message || undefined,
       });
-      setLastInvitationUrl(result.invitation_url);
+      // Set a placeholder to show success state (email was sent)
+      setLastInvitationUrl("sent");
       inviteForm.reset();
     } catch {
       // Error handled by mutation
@@ -758,45 +759,27 @@ export function ClientsPage() {
             <Box 
               p="lg" 
               style={{ 
-                background: "var(--nv-success-bg)", 
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--nv-success)"
+                background: "#10B98115", 
+                borderRadius: "12px",
+                border: "1px solid #10B981"
               }}
             >
               <Group gap="sm" mb="sm">
-                <IconCheck size={20} color="var(--nv-success)" />
-                <Text fw={600} style={{ color: "var(--nv-success)" }}>
+                <IconCheck size={20} color="#10B981" />
+                <Text fw={600} style={{ color: "#10B981" }}>
                   ¡Invitación enviada!
                 </Text>
               </Group>
               <Text size="sm" c="dimmed">
-                Se ha enviado un email con el enlace de registro al cliente.
+                Se ha enviado un email con el enlace de registro al cliente. 
+                El enlace es válido por 7 días.
               </Text>
             </Box>
             
-            <Box>
-              <Text size="sm" fw={500} mb="xs">Enlace de invitación:</Text>
-              <Group gap="xs">
-                <TextInput
-                  value={lastInvitationUrl}
-                  readOnly
-                  style={{ flex: 1 }}
-                  radius="md"
-                />
-                <ActionIcon 
-                  size="lg" 
-                  variant="light" 
-                  onClick={handleCopyInvitationUrl}
-                  color={copied ? "green" : "blue"}
-                  radius="md"
-                >
-                  {copied ? <IconCheck size={18} /> : <IconCopy size={18} />}
-                </ActionIcon>
-              </Group>
-              <Text size="xs" c="dimmed" mt="xs">
-                También puedes copiar este enlace y enviarlo manualmente.
-              </Text>
-            </Box>
+            <Text size="sm" c="dimmed">
+              El cliente recibirá un correo con un enlace para completar su registro 
+              e introducir toda su información personal, objetivos y datos de salud.
+            </Text>
 
             <Button 
               onClick={handleCloseInviteModal}
