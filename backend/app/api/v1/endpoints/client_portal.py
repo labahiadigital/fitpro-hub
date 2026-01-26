@@ -5,7 +5,7 @@ All data is filtered to only show what belongs to the authenticated client.
 """
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import uuid as uuid_module
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -423,6 +423,27 @@ async def log_workout(
             detail="No tienes acceso a este programa"
         )
     
+    # Check if workout was already logged today for this program
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    existing_log_result = await db.execute(
+        select(WorkoutLog)
+        .where(
+            WorkoutLog.client_id == client.id,
+            WorkoutLog.program_id == data.program_id,
+            WorkoutLog.created_at >= today_start,
+            WorkoutLog.created_at <= today_end
+        )
+    )
+    existing_log = existing_log_result.scalar_one_or_none()
+    
+    if existing_log:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya has registrado este entrenamiento hoy"
+        )
+    
     log = WorkoutLog(
         program_id=data.program_id,
         client_id=client.id,
@@ -432,6 +453,44 @@ async def log_workout(
     await db.commit()
     await db.refresh(log)
     return log
+
+
+@router.get("/workouts/logs/today")
+async def get_today_workout_logs(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get workout logs for today to check completion status."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    result = await db.execute(
+        select(WorkoutLog)
+        .where(
+            WorkoutLog.client_id == client.id,
+            WorkoutLog.created_at >= today_start,
+            WorkoutLog.created_at <= today_end
+        )
+    )
+    logs = result.scalars().all()
+    
+    # Return list of completed program IDs
+    completed_program_ids = [str(log.program_id) for log in logs]
+    
+    return {
+        "completed_program_ids": completed_program_ids,
+        "logs": [
+            {
+                "id": str(log.id),
+                "program_id": str(log.program_id),
+                "log": log.log,
+                "created_at": log.created_at.isoformat()
+            }
+            for log in logs
+        ]
+    }
 
 
 @router.get("/workouts/logs/history", response_model=List[WorkoutLogResponse])
@@ -511,6 +570,24 @@ async def log_nutrition(
             detail="No tienes un plan nutricional asignado"
         )
     
+    # Check if this meal was already logged for this date
+    current_adherence = dict(meal_plan.adherence) if meal_plan.adherence else {"logs": []}
+    if "logs" not in current_adherence:
+        current_adherence["logs"] = []
+    
+    # Check for duplicate: same date and meal_name
+    existing_log = next(
+        (log for log in current_adherence["logs"] 
+         if log.get("date") == data.date and log.get("meal_name") == data.meal_name),
+        None
+    )
+    
+    if existing_log:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya has registrado {data.meal_name} para el día {data.date}"
+        )
+    
     # Calculate totals from foods
     total_calories = sum(f.get("calories", 0) * f.get("quantity", 1) for f in data.foods)
     total_protein = sum(f.get("protein", 0) * f.get("quantity", 1) for f in data.foods)
@@ -529,12 +606,6 @@ async def log_nutrition(
         "notes": data.notes,
         "logged_at": datetime.now().isoformat()
     }
-    
-    # Update adherence in meal plan
-    # Force SQLAlchemy to detect changes by reassigning the entire dictionary
-    current_adherence = dict(meal_plan.adherence) if meal_plan.adherence else {"logs": []}
-    if "logs" not in current_adherence:
-        current_adherence["logs"] = []
     
     current_adherence["logs"].append(log_entry)
     
@@ -607,6 +678,79 @@ async def get_nutrition_logs(
         )
         for log in logs
     ]
+
+
+@router.get("/nutrition/history")
+async def get_nutrition_history(
+    days: int = Query(30, le=365),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get nutrition history for the last N days, grouped by date."""
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Get active meal plan
+    result = await db.execute(
+        select(MealPlan)
+        .where(MealPlan.client_id == client.id)
+        .order_by(desc(MealPlan.created_at))
+        .limit(1)
+    )
+    meal_plan = result.scalar_one_or_none()
+    
+    if not meal_plan or not meal_plan.adherence:
+        return {"days": [], "summary": {"total_days": 0, "avg_calories": 0}}
+    
+    logs = meal_plan.adherence.get("logs", [])
+    
+    # Calculate date range
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+    
+    # Filter logs by date range
+    filtered_logs = [
+        log for log in logs 
+        if start_date.isoformat() <= log.get("date", "") <= end_date.isoformat()
+    ]
+    
+    # Group by date
+    from collections import defaultdict
+    days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
+    
+    for log in filtered_logs:
+        log_date = log.get("date", "")
+        days_data[log_date]["meals"].append({
+            "meal_name": log.get("meal_name"),
+            "total_calories": log.get("total_calories", 0),
+            "total_protein": log.get("total_protein", 0),
+            "total_carbs": log.get("total_carbs", 0),
+            "total_fat": log.get("total_fat", 0),
+            "foods": log.get("foods", []),
+            "logged_at": log.get("logged_at"),
+        })
+        days_data[log_date]["totals"]["calories"] += log.get("total_calories", 0)
+        days_data[log_date]["totals"]["protein"] += log.get("total_protein", 0)
+        days_data[log_date]["totals"]["carbs"] += log.get("total_carbs", 0)
+        days_data[log_date]["totals"]["fat"] += log.get("total_fat", 0)
+    
+    # Convert to list sorted by date descending
+    days_list = [
+        {"date": d, **data}
+        for d, data in sorted(days_data.items(), key=lambda x: x[0], reverse=True)
+    ]
+    
+    # Calculate summary
+    total_days = len(days_list)
+    avg_calories = sum(d["totals"]["calories"] for d in days_list) / total_days if total_days > 0 else 0
+    
+    return {
+        "days": days_list,
+        "summary": {
+            "total_days": total_days,
+            "avg_calories": round(avg_calories),
+            "target_calories": meal_plan.target_calories,
+        }
+    }
 
 
 @router.delete("/nutrition/logs/{log_index}", status_code=status.HTTP_204_NO_CONTENT)

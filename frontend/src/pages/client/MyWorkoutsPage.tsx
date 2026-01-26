@@ -35,7 +35,7 @@ import {
   IconRepeat,
   IconWeight,
 } from "@tabler/icons-react";
-import { useMyWorkouts, useWorkoutHistory, useLogWorkout } from "../../hooks/useClientPortal";
+import { useMyWorkouts, useWorkoutHistory, useLogWorkout, useTodayWorkoutLogs } from "../../hooks/useClientPortal";
 
 // No mock data - all data comes from backend
 
@@ -225,6 +225,7 @@ interface ProgramDay {
 export function MyWorkoutsPage() {
   const { data: workouts, isLoading: isLoadingWorkouts } = useMyWorkouts();
   const { data: history } = useWorkoutHistory(10);
+  const { data: todayLogs } = useTodayWorkoutLogs();
   const logWorkoutMutation = useLogWorkout();
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
 
@@ -301,6 +302,9 @@ export function MyWorkoutsPage() {
     };
   });
 
+  // Check if today's workout has already been completed
+  const isTodayCompleted = activeProgram && todayLogs?.completed_program_ids?.includes(activeProgram.id);
+
   // Use only API data - no mocks
   const data = {
     assignedProgram: activeProgram ? {
@@ -316,11 +320,12 @@ export function MyWorkoutsPage() {
       name: todayWorkoutDay?.dayName || activeProgram?.name || "Entrenamiento",
       duration: "60 min",
       exercises: allExercises.length,
-      completed: false,
+      completed: isTodayCompleted || false,
       exercises_list: allExercises,
       blocks: todayBlocks,
     } : null,
     isTodayRestDay,
+    isTodayCompleted: isTodayCompleted || false,
     weekSchedule,
     history: history?.map(h => ({
       date: new Date(h.created_at).toLocaleDateString('es-ES'),
@@ -404,7 +409,14 @@ export function MyWorkoutsPage() {
             <Card shadow="sm" padding="lg" radius="lg" withBorder>
               <Group justify="space-between" mb="lg">
                 <Box>
-                  <Title order={4}>{data.todayWorkout.name}</Title>
+                  <Group gap="xs">
+                    <Title order={4}>{data.todayWorkout.name}</Title>
+                    {data.isTodayCompleted && (
+                      <Badge color="green" variant="filled" leftSection={<IconCheck size={12} />}>
+                        Completado
+                      </Badge>
+                    )}
+                  </Group>
                   <Group gap="md" mt="xs">
                     <Group gap={4}>
                       <IconClock size={14} />
@@ -416,14 +428,25 @@ export function MyWorkoutsPage() {
                     </Group>
                   </Group>
                 </Box>
-                <Button 
-                  leftSection={<IconPlayerPlay size={16} />} 
-                  color="yellow"
-                  onClick={openModal}
-                  disabled={!data.assignedProgram?.id}
-                >
-                  Iniciar Entrenamiento
-                </Button>
+                {data.isTodayCompleted ? (
+                  <Button 
+                    leftSection={<IconCheck size={16} />} 
+                    color="green"
+                    variant="light"
+                    disabled
+                  >
+                    Completado Hoy
+                  </Button>
+                ) : (
+                  <Button 
+                    leftSection={<IconPlayerPlay size={16} />} 
+                    color="yellow"
+                    onClick={openModal}
+                    disabled={!data.assignedProgram?.id}
+                  >
+                    Iniciar Entrenamiento
+                  </Button>
+                )}
               </Group>
 
               {/* Show blocks with exercises */}

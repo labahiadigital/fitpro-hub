@@ -20,14 +20,18 @@ import {
   Select,
   ActionIcon,
   Checkbox,
+  Tabs,
+  Accordion,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconApple,
+  IconCalendarEvent,
   IconCheck,
   IconCoffee,
   IconFlame,
+  IconHistory,
   IconPlus,
   IconSalad,
   IconSoup,
@@ -39,6 +43,7 @@ import {
   useMyMealPlan,
   useNutritionLogs,
   useLogNutrition,
+  useNutritionHistory,
 } from "../../hooks/useClientPortal";
 
 // Tipos de comidas con sus iconos
@@ -474,6 +479,7 @@ export function MyNutritionPage() {
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
   const today = new Date().toISOString().split("T")[0];
   const { data: nutritionLogs } = useNutritionLogs(today, 50);
+  const { data: nutritionHistory } = useNutritionHistory(30);
   const logNutritionMutation = useLogNutrition();
 
   // Obtener el día actual de la semana
@@ -542,35 +548,44 @@ export function MyNutritionPage() {
     return registered;
   }, [nutritionLogs]);
 
-  // Calcular resumen semanal (últimos 7 días)
-  const weekSummary = useMemo(() => {
+  // Calcular datos de la semana desde el historial real
+  const weekData = useMemo(() => {
     const days = ["D", "L", "M", "X", "J", "V", "S"];
-    const todayIndex = new Date().getDay();
+    const todayDate = new Date();
     
-    return days.map((day, i) => {
-      // Calcular qué día de la semana es
-      const dayOffset = (i - todayIndex + 7) % 7;
-      const isToday = dayOffset === 0;
-      const isPast = dayOffset > 0 ? false : i < todayIndex;
+    return days.map((dayLabel, i) => {
+      // Calcular la fecha de este día de la semana
+      const daysFromToday = i - todayDate.getDay();
+      const dateForDay = new Date(todayDate);
+      dateForDay.setDate(todayDate.getDate() + daysFromToday);
+      const dateStr = dateForDay.toISOString().split("T")[0];
       
-      // Por ahora solo mostramos el día actual con datos
+      const isToday = i === todayDate.getDay();
+      
+      // Buscar en el historial
+      const dayHistory = nutritionHistory?.days?.find(d => d.date === dateStr);
+      
       if (isToday) {
         return {
-          day,
+          day: dayLabel,
+          date: dateStr,
           calories: dailyTotals.calories,
           target: targets.calories,
           isToday: true,
+          meals: nutritionLogs?.length || 0,
         };
       }
       
       return {
-        day,
-        calories: isPast ? Math.floor(Math.random() * targets.calories * 0.9 + targets.calories * 0.1) : 0,
+        day: dayLabel,
+        date: dateStr,
+        calories: dayHistory?.totals?.calories || 0,
         target: targets.calories,
         isToday: false,
+        meals: dayHistory?.meals?.length || 0,
       };
     });
-  }, [dailyTotals, targets]);
+  }, [dailyTotals, targets, nutritionHistory, nutritionLogs]);
 
   const handleLogMeal = async (data: {
     meal_name: string;
@@ -589,6 +604,10 @@ export function MyNutritionPage() {
   };
 
   const handleOpenPlanMeal = (meal: PlanMeal) => {
+    // Don't open modal if already registered
+    if (registeredMeals[meal.name]) {
+      return;
+    }
     setSelectedPlanMeal(meal);
     openPlanMealModal();
   };
@@ -657,7 +676,21 @@ export function MyNutritionPage() {
         </Paper>
       )}
 
-      {/* Daily Summary */}
+      <Tabs defaultValue="today" variant="pills">
+        <Tabs.List mb="lg">
+          <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
+            Hoy
+          </Tabs.Tab>
+          <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
+            Esta Semana
+          </Tabs.Tab>
+          <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>
+            Historial
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="today">
+          {/* Daily Summary */}
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
         <Group justify="space-between" align="flex-start">
           <Box>
@@ -764,6 +797,7 @@ export function MyNutritionPage() {
                       color={isRegistered ? "green" : "yellow"}
                       onClick={() => handleOpenPlanMeal(meal)}
                       leftSection={isRegistered ? <IconCheck size={14} /> : undefined}
+                      disabled={isRegistered}
                     >
                       {isRegistered ? "Completado" : "Registrar"}
                     </Button>
@@ -851,50 +885,146 @@ export function MyNutritionPage() {
         </Stack>
       )}
 
-      {/* Weekly Overview */}
-      <Title order={4} mb="md">
-        Resumen Semanal
-      </Title>
-      <Card shadow="sm" padding="lg" radius="lg" withBorder>
-        <Group justify="space-around">
-          {weekSummary.map((day, index) => {
-            const percentage =
-              day.calories > 0 ? (day.calories / day.target) * 100 : 0;
-            return (
-              <Box key={index} ta="center">
-                <Text
-                  size="sm"
-                  c={day.isToday ? "yellow" : "dimmed"}
-                  fw={day.isToday ? 700 : 400}
-                >
-                  {day.day}
-                </Text>
-                <RingProgress
-                  size={50}
-                  thickness={4}
-                  roundCaps
-                  sections={[
-                    {
-                      value: percentage,
-                      color:
-                        percentage >= 90
-                          ? "green"
-                          : percentage > 0
-                            ? "yellow"
-                            : "gray",
-                    },
-                  ]}
-                  label={
-                    <Text size="xs" ta="center">
-                      {percentage > 0 ? `${Math.round(percentage)}%` : "-"}
-                    </Text>
-                  }
-                />
-              </Box>
-            );
-          })}
-        </Group>
-      </Card>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="week">
+          {/* Week View */}
+          <Stack gap="md">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+              {weekData.map((day, index) => {
+                const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
+                return (
+                  <Card 
+                    key={index} 
+                    shadow="sm" 
+                    padding="md" 
+                    radius="md" 
+                    withBorder
+                    style={{
+                      borderColor: day.isToday ? "var(--mantine-color-yellow-5)" : undefined,
+                      backgroundColor: day.isToday ? "var(--mantine-color-yellow-0)" : undefined,
+                    }}
+                  >
+                    <Group justify="space-between" mb="xs">
+                      <Group gap="xs">
+                        <Text fw={600}>{day.day}</Text>
+                        {day.isToday && <Badge size="xs" color="yellow">Hoy</Badge>}
+                      </Group>
+                      <RingProgress
+                        size={40}
+                        thickness={4}
+                        roundCaps
+                        sections={[{
+                          value: Math.min(percentage, 100),
+                          color: percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray",
+                        }]}
+                      />
+                    </Group>
+                    <Text size="lg" fw={700}>{day.calories}</Text>
+                    <Text size="xs" c="dimmed">de {day.target} kcal</Text>
+                    <Text size="xs" c="dimmed" mt="xs">{day.meals} comidas registradas</Text>
+                  </Card>
+                );
+              })}
+            </SimpleGrid>
+
+            {/* Week Summary */}
+            <Card shadow="sm" padding="lg" radius="lg" withBorder>
+              <Title order={5} mb="md">Resumen de la Semana</Title>
+              <SimpleGrid cols={3}>
+                <Box ta="center">
+                  <Text size="xl" fw={700} c="yellow">
+                    {nutritionHistory?.summary?.avg_calories || 0}
+                  </Text>
+                  <Text size="sm" c="dimmed">Promedio kcal/día</Text>
+                </Box>
+                <Box ta="center">
+                  <Text size="xl" fw={700} c="green">
+                    {nutritionHistory?.summary?.total_days || 0}
+                  </Text>
+                  <Text size="sm" c="dimmed">Días registrados</Text>
+                </Box>
+                <Box ta="center">
+                  <Text size="xl" fw={700} c="blue">
+                    {targets.calories}
+                  </Text>
+                  <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
+                </Box>
+              </SimpleGrid>
+            </Card>
+          </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="history">
+          {/* History View */}
+          <Stack gap="md">
+            {nutritionHistory?.days && nutritionHistory.days.length > 0 ? (
+              <Accordion variant="separated">
+                {nutritionHistory.days.map((day) => {
+                  const percentage = day.totals.calories > 0 
+                    ? (day.totals.calories / targets.calories) * 100 
+                    : 0;
+                  const dateFormatted = new Date(day.date).toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  });
+                  
+                  return (
+                    <Accordion.Item key={day.date} value={day.date}>
+                      <Accordion.Control>
+                        <Group justify="space-between" pr="md">
+                          <Group>
+                            <Box>
+                              <Text fw={500} tt="capitalize">{dateFormatted}</Text>
+                              <Text size="sm" c="dimmed">{day.meals.length} comidas</Text>
+                            </Box>
+                          </Group>
+                          <Group gap="md">
+                            <Badge 
+                              variant="light" 
+                              color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"}
+                              size="lg"
+                            >
+                              {day.totals.calories} kcal
+                            </Badge>
+                            <Badge variant="outline" color="red" size="sm">P: {Math.round(day.totals.protein)}g</Badge>
+                            <Badge variant="outline" color="blue" size="sm">C: {Math.round(day.totals.carbs)}g</Badge>
+                            <Badge variant="outline" color="grape" size="sm">G: {Math.round(day.totals.fat)}g</Badge>
+                          </Group>
+                        </Group>
+                      </Accordion.Control>
+                      <Accordion.Panel>
+                        <Stack gap="sm">
+                          {day.meals.map((meal, mealIndex) => (
+                            <Paper key={mealIndex} p="sm" radius="md" withBorder>
+                              <Group justify="space-between" mb="xs">
+                                <Text fw={500}>{meal.meal_name}</Text>
+                                <Badge variant="light" color="orange" size="sm">
+                                  {meal.total_calories} kcal
+                                </Badge>
+                              </Group>
+                              <Text size="sm" c="dimmed">
+                                {meal.foods.map(f => f.name).join(", ")}
+                              </Text>
+                            </Paper>
+                          ))}
+                        </Stack>
+                      </Accordion.Panel>
+                    </Accordion.Item>
+                  );
+                })}
+              </Accordion>
+            ) : (
+              <Paper p="xl" ta="center" radius="lg" withBorder>
+                <IconHistory size={48} color="gray" style={{ opacity: 0.5 }} />
+                <Text c="dimmed" mt="md">No hay historial de nutrición disponible</Text>
+                <Text size="sm" c="dimmed">Registra tus comidas para ver tu historial aquí</Text>
+              </Paper>
+            )}
+          </Stack>
+        </Tabs.Panel>
+      </Tabs>
 
       {/* Modal para registrar comida manual */}
       <LogMealModal

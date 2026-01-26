@@ -321,6 +321,7 @@ export function useLogWorkout() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
       queryClient.invalidateQueries({ queryKey: ["workout-history"] });
+      queryClient.invalidateQueries({ queryKey: ["today-workout-logs"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
         title: "Entrenamiento registrado",
@@ -328,12 +329,21 @@ export function useLogWorkout() {
         color: "green",
       });
     },
-    onError: () => {
-      notifications.show({
-        title: "Error",
-        message: "No se pudo registrar el entrenamiento",
-        color: "red",
-      });
+    onError: (error: Error & { response?: { status?: number; data?: { detail?: string } } }) => {
+      // Check if it's a 409 Conflict (duplicate)
+      if (error.response?.status === 409) {
+        notifications.show({
+          title: "Ya registrado",
+          message: error.response?.data?.detail || "Ya has registrado este entrenamiento hoy",
+          color: "yellow",
+        });
+      } else {
+        notifications.show({
+          title: "Error",
+          message: "No se pudo registrar el entrenamiento",
+          color: "red",
+        });
+      }
     },
   });
 }
@@ -343,6 +353,26 @@ export function useWorkoutHistory(limit?: number) {
     queryKey: ["workout-history", limit],
     queryFn: async () => {
       const response = await clientPortalApi.workoutHistory(limit);
+      return response.data;
+    },
+  });
+}
+
+interface TodayWorkoutLogs {
+  completed_program_ids: string[];
+  logs: Array<{
+    id: string;
+    program_id: string;
+    log: Record<string, unknown>;
+    created_at: string;
+  }>;
+}
+
+export function useTodayWorkoutLogs() {
+  return useQuery<TodayWorkoutLogs>({
+    queryKey: ["today-workout-logs"],
+    queryFn: async () => {
+      const response = await clientPortalApi.todayWorkoutLogs();
       return response.data;
     },
   });
@@ -394,6 +424,7 @@ export function useLogNutrition() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["nutrition-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["nutrition-history"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
         title: "Comida registrada",
@@ -401,12 +432,21 @@ export function useLogNutrition() {
         color: "green",
       });
     },
-    onError: () => {
-      notifications.show({
-        title: "Error",
-        message: "No se pudo registrar la comida",
-        color: "red",
-      });
+    onError: (error: Error & { response?: { status?: number; data?: { detail?: string } } }) => {
+      // Check if it's a 409 Conflict (duplicate)
+      if (error.response?.status === 409) {
+        notifications.show({
+          title: "Ya registrado",
+          message: error.response?.data?.detail || "Ya has registrado esta comida para hoy",
+          color: "yellow",
+        });
+      } else {
+        notifications.show({
+          title: "Error",
+          message: "No se pudo registrar la comida",
+          color: "red",
+        });
+      }
     },
   });
 }
@@ -431,6 +471,7 @@ export function useDeleteNutritionLog() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["nutrition-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["nutrition-history"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
       notifications.show({
         title: "Registro eliminado",
@@ -444,6 +485,44 @@ export function useDeleteNutritionLog() {
         message: "No se pudo eliminar el registro",
         color: "red",
       });
+    },
+  });
+}
+
+interface NutritionHistoryDay {
+  date: string;
+  meals: Array<{
+    meal_name: string;
+    total_calories: number;
+    total_protein: number;
+    total_carbs: number;
+    total_fat: number;
+    foods: Array<{ name: string; calories: number; quantity: number }>;
+    logged_at: string;
+  }>;
+  totals: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+}
+
+interface NutritionHistory {
+  days: NutritionHistoryDay[];
+  summary: {
+    total_days: number;
+    avg_calories: number;
+    target_calories?: number;
+  };
+}
+
+export function useNutritionHistory(days?: number) {
+  return useQuery<NutritionHistory>({
+    queryKey: ["nutrition-history", days],
+    queryFn: async () => {
+      const response = await clientPortalApi.nutritionHistory(days);
+      return response.data;
     },
   });
 }

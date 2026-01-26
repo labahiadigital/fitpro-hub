@@ -380,6 +380,7 @@ export const clientPortalApi = {
     api.post("/my/workouts/logs", data),
   workoutHistory: (limit?: number) => 
     api.get("/my/workouts/logs/history", { params: { limit } }),
+  todayWorkoutLogs: () => api.get("/my/workouts/logs/today"),
   
   // Nutrition
   mealPlan: () => api.get("/my/nutrition/plan"),
@@ -388,6 +389,8 @@ export const clientPortalApi = {
     api.post("/my/nutrition/logs", data),
   nutritionLogs: (date?: string, limit?: number) =>
     api.get("/my/nutrition/logs", { params: { date, limit } }),
+  nutritionHistory: (days?: number) =>
+    api.get("/my/nutrition/history", { params: { days } }),
   deleteNutritionLog: (logIndex: number) =>
     api.delete(`/my/nutrition/logs/${logIndex}`),
   
