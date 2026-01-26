@@ -19,6 +19,10 @@ import {
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 
+// Supabase config - these are public keys, safe to hardcode
+const SUPABASE_URL = "https://ougfmkbjrpnjvujhuuyy.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Zta2JqcnBuanZ1amh1dXl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MDM0MzcsImV4cCI6MjA4MTM3OTQzN30.MfdBfljoorNx5ekcFj1iVVOaZvPQ1Fs-tXiKLizVINk";
+
 export function ConfirmEmailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -40,11 +44,11 @@ export function ConfirmEmailPage() {
         // Call Supabase to verify the token
         // The token_hash is used by Supabase to verify the email
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/verify?token=${tokenHash}&type=${type}`,
+          `${SUPABASE_URL}/auth/v1/verify?token=${tokenHash}&type=${type}`,
           {
             method: "GET",
             headers: {
-              "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+              "apikey": SUPABASE_ANON_KEY,
             },
           }
         );
