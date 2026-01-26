@@ -388,3 +388,116 @@ async def register_client(
             detail=f"Error al registrar cliente: {str(e)}"
         )
 
+
+# ===== SUPABASE AUTH EMAIL WEBHOOK =====
+# This endpoint receives email requests from Supabase Auth hooks
+# and sends branded emails using our email service
+
+class SendEmailRequest(BaseModel):
+    """Request body for Supabase Auth send-email hook"""
+    user: dict  # Contains id, email, user_metadata, etc.
+    email_data: dict  # Contains token, token_hash, redirect_to, email_action_type, etc.
+
+
+class SendEmailResponse(BaseModel):
+    """Response for Supabase Auth send-email hook"""
+    success: bool
+
+
+@router.post("/hooks/send-email", response_model=SendEmailResponse)
+async def supabase_send_email_hook(
+    request: SendEmailRequest,
+):
+    """
+    Webhook endpoint for Supabase Auth to send custom branded emails.
+    
+    This replaces Supabase's default email sending with our own branded emails.
+    Configure this in Supabase Dashboard > Authentication > Hooks > Send Email.
+    
+    Supported email types:
+    - signup: Email confirmation after registration
+    - recovery: Password reset email
+    - magiclink: Magic link login email
+    - invite: User invitation email
+    - email_change: Email change confirmation
+    """
+    from app.services.email import email_service, EmailTemplates
+    
+    try:
+        user = request.user
+        email_data = request.email_data
+        
+        email = user.get("email", "")
+        user_metadata = user.get("user_metadata", {})
+        name = user_metadata.get("full_name", email.split("@")[0])
+        
+        email_action_type = email_data.get("email_action_type", "")
+        token = email_data.get("token", "")
+        token_hash = email_data.get("token_hash", "")
+        redirect_to = email_data.get("redirect_to", settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "https://app.trackfiz.com")
+        
+        # Build confirmation URL based on email type
+        # The URL structure depends on your frontend routing
+        base_url = redirect_to.rstrip("/")
+        
+        if email_action_type == "signup":
+            # Email confirmation after signup
+            confirmation_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=signup"
+            html_content = EmailTemplates.email_confirmation(name, confirmation_url)
+            subject = "Confirma tu cuenta en Trackfiz"
+            
+        elif email_action_type == "recovery":
+            # Password reset
+            reset_url = f"{base_url}/auth/reset-password?token_hash={token_hash}&type=recovery"
+            html_content = EmailTemplates.password_reset(name, reset_url)
+            subject = "Restablecer contraseña - Trackfiz"
+            
+        elif email_action_type == "magiclink":
+            # Magic link login
+            magic_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=magiclink"
+            html_content = EmailTemplates.magic_link(name, magic_url)
+            subject = "Tu enlace de acceso a Trackfiz"
+            
+        elif email_action_type == "invite":
+            # User invitation
+            invite_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=invite"
+            inviter_name = email_data.get("inviter_name", "El equipo de Trackfiz")
+            workspace_name = email_data.get("workspace_name", "Trackfiz")
+            html_content = EmailTemplates.invitation_email(inviter_name, workspace_name, invite_url)
+            subject = f"Has sido invitado a {workspace_name}"
+            
+        elif email_action_type == "email_change":
+            # Email change confirmation
+            confirmation_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=email_change"
+            html_content = EmailTemplates.email_confirmation(name, confirmation_url)
+            subject = "Confirma tu nuevo email en Trackfiz"
+            
+        else:
+            logger.warning(f"Unknown email action type: {email_action_type}")
+            # Default fallback
+            confirmation_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type={email_action_type}"
+            html_content = EmailTemplates.email_confirmation(name, confirmation_url)
+            subject = "Trackfiz - Acción requerida"
+        
+        # Send the email using our email service
+        success = await email_service.send_email(
+            to_email=email,
+            to_name=name,
+            subject=subject,
+            html_content=html_content,
+        )
+        
+        if success:
+            logger.info(f"Successfully sent {email_action_type} email to {email}")
+        else:
+            logger.error(f"Failed to send {email_action_type} email to {email}")
+        
+        return SendEmailResponse(success=success)
+        
+    except Exception as e:
+        logger.error(f"Error in send-email hook: {str(e)}")
+        logger.error(traceback.format_exc())
+        # Return success=false but don't raise exception
+        # so Supabase can handle the fallback
+        return SendEmailResponse(success=False)
+

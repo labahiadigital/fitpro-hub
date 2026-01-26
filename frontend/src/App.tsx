@@ -9,6 +9,7 @@ import { DashboardLayout } from "./components/layout/DashboardLayout";
 // Auth Pages
 import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
+import { ConfirmEmailPage } from "./pages/auth/ConfirmEmailPage";
 import { AutomationsPage } from "./pages/automations/AutomationsPage";
 import { CalendarPage } from "./pages/calendar/CalendarPage";
 import { ChatPage } from "./pages/chat/ChatPage";
@@ -154,6 +155,9 @@ export default function App() {
                 }
                 path="/complete-profile"
               />
+
+              {/* Email confirmation (public, no layout) */}
+              <Route element={<ConfirmEmailPage />} path="/auth/confirm" />
 
               {/* Auth routes */}
               <Route

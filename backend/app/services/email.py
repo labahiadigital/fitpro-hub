@@ -98,6 +98,283 @@ class EmailService:
 # Email templates
 class EmailTemplates:
     @staticmethod
+    def email_confirmation(name: str, confirmation_url: str) -> str:
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Confirma tu cuenta - Trackfiz</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                            <!-- Header con gradiente -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
+                                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Trackfiz</h1>
+                                    <p style="margin: 10px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Tu plataforma de entrenamiento personal</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Contenido -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <h2 style="margin: 0 0 20px 0; color: #1a1a2e; font-size: 24px; font-weight: 600; text-align: center;">
+                                        ¡Confirma tu cuenta!
+                                    </h2>
+                                    
+                                    <p style="margin: 0 0 15px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                        Hola <strong style="color: #2D6A4F;">{name}</strong>,
+                                    </p>
+                                    
+                                    <p style="margin: 0 0 25px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                        Gracias por registrarte en Trackfiz. Para completar tu registro y empezar a usar la plataforma, confirma tu dirección de email haciendo clic en el botón:
+                                    </p>
+                                    
+                                    <!-- Botón CTA -->
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{confirmation_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4); transition: transform 0.2s;">
+                                                    Confirmar mi cuenta
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="margin: 25px 0 0 0; color: #718096; font-size: 14px; line-height: 1.6; text-align: center;">
+                                        Si el botón no funciona, copia y pega este enlace en tu navegador:
+                                    </p>
+                                    <p style="margin: 10px 0 0 0; color: #2D6A4F; font-size: 12px; word-break: break-all; text-align: center; background: #f0fdf4; padding: 12px; border-radius: 8px;">
+                                        {confirmation_url}
+                                    </p>
+                                    
+                                    <p style="margin: 25px 0 0 0; color: #a0aec0; font-size: 13px; text-align: center;">
+                                        Este enlace expirará en 24 horas.
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background: #f8fafc; padding: 25px 30px; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; color: #718096; font-size: 13px; text-align: center; line-height: 1.5;">
+                                        Si no creaste esta cuenta, puedes ignorar este email.
+                                    </p>
+                                    <p style="margin: 15px 0 0 0; color: #a0aec0; font-size: 12px; text-align: center;">
+                                        © 2026 Trackfiz. Todos los derechos reservados.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+    
+    @staticmethod
+    def password_reset(name: str, reset_url: str) -> str:
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Restablecer contraseña - Trackfiz</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                            <!-- Header -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
+                                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Trackfiz</h1>
+                                </td>
+                            </tr>
+                            
+                            <!-- Contenido -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <h2 style="margin: 0 0 20px 0; color: #1a1a2e; font-size: 24px; font-weight: 600; text-align: center;">
+                                        Restablecer contraseña
+                                    </h2>
+                                    
+                                    <p style="margin: 0 0 15px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                        Hola <strong style="color: #2D6A4F;">{name}</strong>,
+                                    </p>
+                                    
+                                    <p style="margin: 0 0 25px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                        Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el botón para crear una nueva contraseña:
+                                    </p>
+                                    
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{reset_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4);">
+                                                    Restablecer contraseña
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="margin: 25px 0 0 0; color: #a0aec0; font-size: 13px; text-align: center;">
+                                        Este enlace expirará en 1 hora.
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background: #f8fafc; padding: 25px 30px; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; color: #718096; font-size: 13px; text-align: center; line-height: 1.5;">
+                                        Si no solicitaste restablecer tu contraseña, ignora este email.
+                                    </p>
+                                    <p style="margin: 15px 0 0 0; color: #a0aec0; font-size: 12px; text-align: center;">
+                                        © 2026 Trackfiz. Todos los derechos reservados.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+    
+    @staticmethod
+    def magic_link(name: str, magic_link_url: str) -> str:
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Acceso rápido - Trackfiz</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
+                                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700;">Trackfiz</h1>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <h2 style="margin: 0 0 20px 0; color: #1a1a2e; font-size: 24px; font-weight: 600; text-align: center;">
+                                        Tu enlace de acceso
+                                    </h2>
+                                    <p style="margin: 0 0 15px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                        Hola <strong style="color: #2D6A4F;">{name}</strong>,
+                                    </p>
+                                    <p style="margin: 0 0 25px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                        Haz clic en el siguiente botón para acceder a tu cuenta:
+                                    </p>
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{magic_link_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4);">
+                                                    Acceder a Trackfiz
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <p style="margin: 25px 0 0 0; color: #a0aec0; font-size: 13px; text-align: center;">
+                                        Este enlace expirará en 1 hora.
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background: #f8fafc; padding: 25px 30px; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; color: #718096; font-size: 13px; text-align: center;">
+                                        Si no solicitaste este enlace, ignora este email.
+                                    </p>
+                                    <p style="margin: 15px 0 0 0; color: #a0aec0; font-size: 12px; text-align: center;">
+                                        © 2026 Trackfiz. Todos los derechos reservados.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+    
+    @staticmethod
+    def invitation_email(inviter_name: str, workspace_name: str, invitation_url: str) -> str:
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Invitación - Trackfiz</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
+                                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700;">Trackfiz</h1>
+                                    <p style="margin: 10px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Tu plataforma de entrenamiento personal</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <h2 style="margin: 0 0 20px 0; color: #1a1a2e; font-size: 24px; font-weight: 600; text-align: center;">
+                                        ¡Has sido invitado!
+                                    </h2>
+                                    <p style="margin: 0 0 25px 0; color: #4a5568; font-size: 16px; line-height: 1.6; text-align: center;">
+                                        <strong style="color: #2D6A4F;">{inviter_name}</strong> te ha invitado a unirte a <strong style="color: #2D6A4F;">{workspace_name}</strong> en Trackfiz.
+                                    </p>
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{invitation_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4);">
+                                                    Aceptar invitación
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <p style="margin: 25px 0 0 0; color: #a0aec0; font-size: 13px; text-align: center;">
+                                        Esta invitación expirará en 7 días.
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background: #f8fafc; padding: 25px 30px; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; color: #718096; font-size: 13px; text-align: center;">
+                                        Si no esperabas esta invitación, puedes ignorar este email.
+                                    </p>
+                                    <p style="margin: 15px 0 0 0; color: #a0aec0; font-size: 12px; text-align: center;">
+                                        © 2026 Trackfiz. Todos los derechos reservados.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+    
+    @staticmethod
     def welcome_email(name: str, workspace_name: str) -> str:
         return f"""
         <!DOCTYPE html>
