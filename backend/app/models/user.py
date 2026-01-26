@@ -70,11 +70,11 @@ class User(BaseModel):
     # Email verification
     email_verified = Column(Boolean, default=False)
     email_verification_token = Column(String(255), nullable=True, index=True)
-    email_verification_sent_at = Column(DateTime, nullable=True)
+    email_verification_sent_at = Column(DateTime(timezone=True), nullable=True)
     
     # Password reset
     password_reset_token = Column(String(255), nullable=True, index=True)
-    password_reset_sent_at = Column(DateTime, nullable=True)
+    password_reset_sent_at = Column(DateTime(timezone=True), nullable=True)
     
     # Legacy: Supabase Auth ID (kept for migration, will be deprecated)
     auth_id = Column(UUID(as_uuid=True), unique=True, nullable=True, index=True)
