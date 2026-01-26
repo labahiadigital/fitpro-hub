@@ -248,13 +248,24 @@ export function InvitationOnboardingPage() {
       const values = form.values;
       
       // Call the backend to complete registration via invitation
+      // Handle birthDate - could be Date object or string
+      let birthDateStr: string | undefined;
+      const birthDateValue = values.birthDate as Date | string | null;
+      if (birthDateValue) {
+        if (birthDateValue instanceof Date) {
+          birthDateStr = birthDateValue.toISOString().split("T")[0];
+        } else if (typeof birthDateValue === "string") {
+          birthDateStr = birthDateValue.split("T")[0];
+        }
+      }
+      
       const response = await api.post(`/invitations/complete/${token}`, {
         email: values.email,
         password: values.password,
         first_name: values.firstName,
         last_name: values.lastName,
         phone: values.phone,
-        birth_date: values.birthDate?.toISOString().split("T")[0],
+        birth_date: birthDateStr,
         gender: values.gender,
         height_cm: values.height,
         weight_kg: values.weight,

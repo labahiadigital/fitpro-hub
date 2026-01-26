@@ -167,12 +167,23 @@ export function OnboardingPage() {
     try {
       const values = form.values;
       
+      // Handle birth_date - could be Date object or string
+      let birthDateStr: string | undefined;
+      const birthDateValue = values.birth_date as Date | string | null;
+      if (birthDateValue) {
+        if (birthDateValue instanceof Date) {
+          birthDateStr = birthDateValue.toISOString().split("T")[0];
+        } else if (typeof birthDateValue === "string") {
+          birthDateStr = birthDateValue.split("T")[0];
+        }
+      }
+      
       // Enviar datos al backend
       await api.post("/clients/onboarding", {
         first_name: values.first_name,
         last_name: values.last_name,
         phone: values.phone,
-        birth_date: values.birth_date?.toISOString().split("T")[0],
+        birth_date: birthDateStr,
         gender: values.gender,
         height_cm: values.height_cm,
         weight_kg: values.weight_kg,
