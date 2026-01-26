@@ -22,10 +22,14 @@ from app.models.workspace import Workspace
 from app.models.client import Client
 from app.models.user import User, UserRole, RoleType
 from app.middleware.auth import require_staff, require_workspace, CurrentUser
-from supabase import acreate_client
-from app.core.config import settings as app_settings
+from app.core.security import (
+    get_password_hash,
+    create_tokens,
+    generate_verification_token,
+)
 import logging
 import traceback
+from datetime import timezone
 
 logger = logging.getLogger(__name__)
 from app.services.email import email_service, EmailTemplates
@@ -151,7 +155,7 @@ def get_invitation_email_html(
             <tr>
                 <td style="background: #1a1a2e; padding: 20px 30px; text-align: center;">
                     <p style="color: #888; font-size: 12px; margin: 0;">
-                        © 2026 {workspace_name} · Powered by E13 Fitness
+                        © 2026 {workspace_name} · Powered by Trackfiz
                     </p>
                 </td>
             </tr>
@@ -524,6 +528,7 @@ async def complete_invitation(
 ):
     """
     Complete an invitation by creating user account and client profile.
+    Uses local authentication (not Supabase).
     """
     # Find invitation
     result = await db.execute(
@@ -551,7 +556,7 @@ async def complete_invitation(
     
     # Check if user already exists
     result = await db.execute(
-        select(User).where(User.email == data.email)
+        select(User).where(User.email == data.email.lower())
     )
     existing_user = result.scalar_one_or_none()
     
@@ -562,31 +567,21 @@ async def complete_invitation(
         )
     
     try:
-        # Create Supabase client
-        supabase = await acreate_client(app_settings.SUPABASE_URL, app_settings.SUPABASE_KEY)
+        full_name = f"{data.first_name} {data.last_name}"
         
-        # Create user in Supabase Auth
-        auth_response = await supabase.auth.sign_up({
-            "email": data.email,
-            "password": data.password,
-            "options": {
-                "data": {
-                    "full_name": f"{data.first_name} {data.last_name}"
-                }
-            }
-        })
+        # Generate email verification token
+        verification_token = generate_verification_token()
         
-        if not auth_response.user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Error al crear usuario en autenticación"
-            )
-        
-        # Create user in our database
+        # Create user in our database with hashed password
         user = User(
-            email=data.email,
-            full_name=f"{data.first_name} {data.last_name}",
-            auth_id=auth_response.user.id
+            email=data.email.lower(),
+            full_name=full_name,
+            phone=data.phone,
+            password_hash=get_password_hash(data.password),
+            email_verified=False,
+            email_verification_token=verification_token,
+            email_verification_sent_at=datetime.now(timezone.utc),
+            is_active=True,
         )
         db.add(user)
         await db.flush()
@@ -606,7 +601,7 @@ async def complete_invitation(
             user_id=user.id,
             first_name=data.first_name,
             last_name=data.last_name,
-            email=data.email,
+            email=data.email.lower(),
             phone=data.phone,
             birth_date=data.birth_date,
             gender=data.gender,
@@ -625,32 +620,34 @@ async def complete_invitation(
         
         await db.commit()
         
-        # Return tokens if session exists
-        if auth_response.session:
-            return {
-                "access_token": auth_response.session.access_token,
-                "token_type": "bearer",
-                "expires_in": auth_response.session.expires_in or 3600,
-                "refresh_token": auth_response.session.refresh_token,
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "full_name": user.full_name
-                }
+        # Send verification email
+        confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
+        html_content = EmailTemplates.email_confirmation(full_name, confirmation_url)
+        
+        try:
+            await email_service.send_email(
+                to_email=data.email,
+                to_name=full_name,
+                subject="Confirma tu cuenta en Trackfiz",
+                html_content=html_content,
+            )
+            logger.info(f"Verification email sent to {data.email}")
+        except Exception as e:
+            logger.error(f"Failed to send verification email: {e}")
+        
+        # Return response indicating email verification is required
+        return {
+            "access_token": "pending_email_confirmation",
+            "token_type": "bearer",
+            "expires_in": 0,
+            "refresh_token": "",
+            "requires_email_verification": True,
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "full_name": user.full_name
             }
-        else:
-            # Email confirmation required
-            return {
-                "access_token": "pending_confirmation",
-                "token_type": "bearer",
-                "expires_in": 0,
-                "refresh_token": "",
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "full_name": user.full_name
-                }
-            }
+        }
         
     except HTTPException:
         await db.rollback()

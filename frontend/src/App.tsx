@@ -10,6 +10,8 @@ import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
 import { ConfirmEmailPage } from "./pages/auth/ConfirmEmailPage";
+import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { AutomationsPage } from "./pages/automations/AutomationsPage";
 import { CalendarPage } from "./pages/calendar/CalendarPage";
 import { ChatPage } from "./pages/chat/ChatPage";
@@ -158,6 +160,10 @@ export default function App() {
 
               {/* Email confirmation (public, no layout) */}
               <Route element={<ConfirmEmailPage />} path="/auth/confirm" />
+              
+              {/* Password reset (public, no layout) */}
+              <Route element={<ForgotPasswordPage />} path="/forgot-password" />
+              <Route element={<ResetPasswordPage />} path="/auth/reset-password" />
 
               {/* Auth routes */}
               <Route

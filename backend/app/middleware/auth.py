@@ -1,16 +1,26 @@
 from typing import Optional, List
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
-from app.core.security import decode_supabase_token
+from app.core.security import decode_access_token, decode_supabase_token
 from app.models.user import User, UserRole, RoleType
 
 
-security = HTTPBearer()
+# OAuth2 scheme for OpenAPI documentation
+# This provides proper OpenAPI integration with the authorize button in /docs
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/auth/login",
+    scheme_name="JWT",
+    description="JWT Bearer token authentication",
+    auto_error=True,
+)
+
+# Also keep HTTPBearer for backwards compatibility
+security = HTTPBearer(auto_error=True)
 
 
 class CurrentUser:
@@ -48,34 +58,51 @@ class CurrentUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> CurrentUser:
     """
     Validate JWT token and return current user with workspace context.
-    """
-    token = credentials.credentials
-    payload = decode_supabase_token(token)
+    Supports both new local tokens and legacy Supabase tokens.
     
-    if not payload:
+    Uses OAuth2PasswordBearer for proper OpenAPI integration.
+    """
+    
+    # Try to decode as our local token first
+    payload = decode_access_token(token)
+    user = None
+    
+    if payload:
+        # New local token format - user_id is in 'sub' as UUID string
+        user_id_str = payload.sub
+        if user_id_str:
+            try:
+                user_id = UUID(user_id_str)
+                result = await db.execute(
+                    select(User).where(User.id == user_id)
+                )
+                user = result.scalar_one_or_none()
+            except (ValueError, TypeError):
+                pass
+    
+    # Fallback: try legacy Supabase token format
+    if not user:
+        legacy_payload = decode_supabase_token(token)
+        if legacy_payload:
+            auth_id = legacy_payload.get("sub")
+            if auth_id:
+                result = await db.execute(
+                    select(User).where(User.auth_id == auth_id)
+                )
+                user = result.scalar_one_or_none()
+            payload = legacy_payload  # Use legacy payload for workspace info
+    
+    if not payload and not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # Get user by auth_id (Supabase user ID)
-    auth_id = payload.get("sub")
-    if not auth_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido",
-        )
-    
-    result = await db.execute(
-        select(User).where(User.auth_id == auth_id)
-    )
-    user = result.scalar_one_or_none()
     
     if not user:
         raise HTTPException(
@@ -89,26 +116,47 @@ async def get_current_user(
             detail="Usuario desactivado",
         )
     
-    # Get workspace context - first try app_metadata, then default workspace
+    # Get workspace context from token or user's default workspace
     workspace_id = None
     role = None
     
-    app_metadata = payload.get("app_metadata", {})
-    workspace_id_str = app_metadata.get("workspace_id")
+    # Check if workspace_id is in token payload
+    token_workspace_id = None
+    token_role = None
     
-    if workspace_id_str:
-        workspace_id = UUID(workspace_id_str)
-        # Get user role in this workspace
-        result = await db.execute(
-            select(UserRole).where(
-                UserRole.user_id == user.id,
-                UserRole.workspace_id == workspace_id
+    if isinstance(payload, dict):
+        # Legacy Supabase token format
+        app_metadata = payload.get("app_metadata", {})
+        token_workspace_id = app_metadata.get("workspace_id") or payload.get("workspace_id")
+        token_role = payload.get("role")
+    elif hasattr(payload, 'workspace_id'):
+        # New local token format
+        token_workspace_id = payload.workspace_id
+        token_role = payload.role
+    
+    if token_workspace_id:
+        try:
+            workspace_id = UUID(token_workspace_id) if isinstance(token_workspace_id, str) else token_workspace_id
+            # Get user role in this workspace
+            result = await db.execute(
+                select(UserRole).where(
+                    UserRole.user_id == user.id,
+                    UserRole.workspace_id == workspace_id
+                )
             )
-        )
-        user_role = result.scalar_one_or_none()
-        if user_role:
-            role = user_role.role
-    else:
+            user_role = result.scalar_one_or_none()
+            if user_role:
+                role = user_role.role
+            elif token_role:
+                # Use role from token if not found in DB
+                try:
+                    role = RoleType(token_role)
+                except ValueError:
+                    pass
+        except (ValueError, TypeError):
+            pass
+    
+    if not workspace_id:
         # No workspace in token, try to get user's default workspace
         result = await db.execute(
             select(UserRole).where(
@@ -131,11 +179,14 @@ async def get_current_user(
                 workspace_id = first_role.workspace_id
                 role = first_role.role
     
+    # Convert payload to dict for storage
+    payload_dict = payload.model_dump() if hasattr(payload, 'model_dump') else (payload if isinstance(payload, dict) else {})
+    
     return CurrentUser(
         user=user,
         workspace_id=workspace_id,
         role=role,
-        token_payload=payload
+        token_payload=payload_dict
     )
 
 

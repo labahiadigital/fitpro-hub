@@ -145,6 +145,37 @@ export const authApi = {
   logout: () => api.post("/auth/logout"),
   refreshToken: (refreshToken: string) =>
     api.post("/auth/refresh", { refresh_token: refreshToken }),
+  
+  // Email verification
+  verifyEmail: (token: string) =>
+    api.post("/auth/verify-email", { token }),
+  resendVerification: (email: string) =>
+    api.post("/auth/resend-verification", { email }),
+  
+  // Password reset
+  forgotPassword: (email: string) =>
+    api.post("/auth/forgot-password", { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    api.post("/auth/reset-password", { token, new_password: newPassword }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post("/auth/change-password", { current_password: currentPassword, new_password: newPassword }),
+  
+  // Client registration
+  registerClient: (data: {
+    workspace_id: string;
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    birth_date?: string;
+    gender?: string;
+    height_cm?: number;
+    weight_kg?: number;
+    goals?: string;
+    health_data?: object;
+    consents?: object;
+  }) => api.post("/auth/register-client", data),
 };
 
 // Workspaces API

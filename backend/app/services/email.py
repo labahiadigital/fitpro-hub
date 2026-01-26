@@ -415,7 +415,7 @@ class EmailTemplates:
                     <p>El equipo de Trackfiz</p>
                 </div>
                 <div class="footer">
-                    <p>© 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.</p>
+                    <p>© 2026 Trackfiz. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>
@@ -481,7 +481,7 @@ class EmailTemplates:
                     <p>¡Nos vemos pronto!</p>
                 </div>
                 <div class="footer">
-                    <p>© 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.</p>
+                    <p>© 2026 Trackfiz. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>
@@ -525,7 +525,7 @@ class EmailTemplates:
                     <p>¡Prepárate y nos vemos pronto!</p>
                 </div>
                 <div class="footer">
-                    <p>© 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.</p>
+                    <p>© 2026 Trackfiz. Todos los derechos reservados.</p>
                 </div>
             </div>
         </body>

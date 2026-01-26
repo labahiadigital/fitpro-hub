@@ -281,8 +281,17 @@ export function InvitationOnboardingPage() {
         },
       });
       
-      // If registration succeeded and returned tokens, save them
-      if (response.data?.access_token) {
+      // Check if email verification is required
+      if (response.data?.requires_email_verification || response.data?.access_token === "pending_email_confirmation") {
+        setCompleted(true);
+        notifications.show({
+          title: "¡Registro completado!",
+          message: "Por favor, revisa tu email para confirmar tu cuenta antes de iniciar sesión.",
+          color: "blue",
+          autoClose: 10000,
+        });
+      } else if (response.data?.access_token && response.data?.access_token !== "pending_confirmation") {
+        // If registration succeeded and returned valid tokens, save them
         setUser({
           id: response.data.user?.id,
           email: values.email,
@@ -290,15 +299,21 @@ export function InvitationOnboardingPage() {
           is_active: true,
         });
         setTokens(response.data.access_token, response.data.refresh_token);
+        
+        setCompleted(true);
+        notifications.show({
+          title: "¡Registro completado!",
+          message: "Tu perfil ha sido creado correctamente",
+          color: "green",
+        });
+      } else {
+        setCompleted(true);
+        notifications.show({
+          title: "¡Registro completado!",
+          message: "Por favor, revisa tu email para confirmar tu cuenta.",
+          color: "blue",
+        });
       }
-      
-      setCompleted(true);
-      
-      notifications.show({
-        title: "¡Registro completado!",
-        message: "Tu perfil ha sido creado correctamente",
-        color: "green",
-      });
       
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
@@ -372,9 +387,10 @@ export function InvitationOnboardingPage() {
           </Text>
           <Text c="dimmed" mb="xl">
             Gracias por completar tu registro en {invitationData.workspace_name}. 
+            <strong> Revisa tu email para confirmar tu cuenta</strong> y luego podrás iniciar sesión.
             Tu entrenador revisará tu información y se pondrá en contacto contigo pronto.
           </Text>
-          <Button size="lg" onClick={() => navigate("/dashboard")}>Ir al Dashboard</Button>
+          <Button size="lg" onClick={() => navigate("/login")}>Ir a Iniciar Sesión</Button>
         </Paper>
       </Container>
     );

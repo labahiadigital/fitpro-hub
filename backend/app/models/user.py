@@ -1,14 +1,14 @@
 from enum import Enum as PyEnum
-from sqlalchemy import Column, String, Boolean, Enum, ForeignKey, Text
+from sqlalchemy import Column, String, Boolean, Enum, ForeignKey, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from app.models.base import BaseModel
 
 
 class RoleType(str, PyEnum):
-    """Role types matching Supabase user_role_type enum (lowercase values)."""
-    # NOTE: Supabase only has owner, collaborator, client in the enum
+    """Role types matching user_role_type enum (lowercase values)."""
     owner = "owner"
     collaborator = "collaborator" 
     client = "client"
@@ -64,7 +64,19 @@ class User(BaseModel):
     phone = Column(String(50), nullable=True)
     is_active = Column(Boolean, default=True)
     
-    # Supabase Auth ID (UUID from Supabase Auth)
+    # Password hash for local authentication (replaces Supabase Auth)
+    password_hash = Column(String(255), nullable=True)
+    
+    # Email verification
+    email_verified = Column(Boolean, default=False)
+    email_verification_token = Column(String(255), nullable=True, index=True)
+    email_verification_sent_at = Column(DateTime, nullable=True)
+    
+    # Password reset
+    password_reset_token = Column(String(255), nullable=True, index=True)
+    password_reset_sent_at = Column(DateTime, nullable=True)
+    
+    # Legacy: Supabase Auth ID (kept for migration, will be deprecated)
     auth_id = Column(UUID(as_uuid=True), unique=True, nullable=True, index=True)
     
     # Preferences

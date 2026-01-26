@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+"""
+Authentication endpoints using FastAPI Security with JWT tokens.
+This replaces Supabase Auth with a self-managed authentication system.
+"""
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from supabase import create_client, Client as SupabaseClient, acreate_client
+from datetime import datetime, timezone, timedelta
 import traceback
 import logging
 
@@ -9,30 +13,41 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 from app.core.config import settings
-from app.core.database import get_db, AsyncSessionLocal
+from app.core.database import get_db
+from app.core.security import (
+    get_password_hash,
+    verify_password,
+    create_tokens,
+    create_access_token,
+    decode_refresh_token,
+    generate_verification_token,
+    generate_password_reset_token,
+)
 from app.models.user import User, UserRole, RoleType
 from app.models.workspace import Workspace
 from app.models.client import Client
-from app.schemas.auth import LoginRequest, RegisterRequest, Token
-from pydantic import BaseModel
-from typing import Optional, Any
+from app.schemas.auth import (
+    LoginRequest,
+    RegisterRequest,
+    Token,
+    PasswordResetRequest,
+    PasswordResetConfirm,
+    ChangePasswordRequest,
+    VerifyEmailRequest,
+    ResendVerificationRequest,
+    AuthResponse,
+)
+from pydantic import BaseModel, EmailStr
+from typing import Optional
 from uuid import UUID
 from app.schemas.user import UserResponse
 from app.middleware.auth import get_current_user, CurrentUser
+from app.services.email import email_service, EmailTemplates
 
 router = APIRouter()
 
 
-async def get_supabase_async_client():
-    """Create a new async Supabase client for each request."""
-    logger.info(f"Creating Supabase async client with URL: {settings.SUPABASE_URL[:30]}...")
-    return await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-
-
-def get_supabase_client() -> SupabaseClient:
-    """Create a sync Supabase client (not recommended for async endpoints)."""
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-
+# ===== REGISTRATION =====
 
 @router.post("/register", response_model=Token)
 async def register(
@@ -40,13 +55,12 @@ async def register(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Registrar nuevo usuario y crear workspace.
+    Register a new user and create workspace.
+    Sends email verification link.
     """
-    supabase = await get_supabase_async_client()
-    
     # Check if user already exists
     result = await db.execute(
-        select(User).where(User.email == data.email)
+        select(User).where(User.email == data.email.lower())
     )
     existing_user = result.scalar_one_or_none()
     
@@ -57,33 +71,24 @@ async def register(
         )
     
     try:
-        # Create user in Supabase Auth
-        auth_response = await supabase.auth.sign_up({
-            "email": data.email,
-            "password": data.password,
-            "options": {
-                "data": {
-                    "full_name": data.full_name
-                }
-            }
-        })
+        # Generate email verification token
+        verification_token = generate_verification_token()
         
-        if not auth_response.user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Error al crear usuario en autenticación"
-            )
-        
-        # Create user in our database
+        # Create user with hashed password
         user = User(
-            email=data.email,
+            email=data.email.lower(),
             full_name=data.full_name,
-            auth_id=auth_response.user.id
+            password_hash=get_password_hash(data.password),
+            email_verified=False,
+            email_verification_token=verification_token,
+            email_verification_sent_at=datetime.now(timezone.utc),
+            is_active=True,
         )
         db.add(user)
         await db.flush()
         
         # Create workspace if name provided
+        workspace = None
         if data.workspace_name:
             # Generate slug from workspace name
             slug = data.workspace_name.lower().replace(" ", "-")
@@ -106,23 +111,31 @@ async def register(
         
         await db.commit()
         
-        # Return tokens (session may be None if email confirmation is required)
-        if auth_response.session:
-            return Token(
-                access_token=auth_response.session.access_token,
-                token_type="bearer",
-                expires_in=auth_response.session.expires_in or 3600,
-                refresh_token=auth_response.session.refresh_token
+        # Send verification email
+        confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
+        html_content = EmailTemplates.email_confirmation(data.full_name, confirmation_url)
+        
+        try:
+            await email_service.send_email(
+                to_email=data.email,
+                to_name=data.full_name,
+                subject="Confirma tu cuenta en Trackfiz",
+                html_content=html_content,
             )
-        else:
-            # Email confirmation required - user needs to confirm before logging in
-            # Return a placeholder response indicating pending confirmation
-            return Token(
-                access_token="pending_email_confirmation",
-                token_type="bearer",
-                expires_in=0,
-                refresh_token=""
-            )
+            logger.info(f"Verification email sent to {data.email}")
+        except Exception as e:
+            logger.error(f"Failed to send verification email: {e}")
+            # Don't fail registration if email fails, user can request resend
+        
+        # Return token indicating email verification is required
+        # User cannot fully login until email is verified
+        return Token(
+            access_token="pending_email_confirmation",
+            token_type="bearer",
+            expires_in=0,
+            refresh_token="",
+            requires_email_verification=True
+        )
         
     except HTTPException:
         await db.rollback()
@@ -137,71 +150,133 @@ async def register(
         )
 
 
+# ===== LOGIN =====
+
 @router.post("/login", response_model=Token)
-async def login(data: LoginRequest):
+async def login(
+    data: LoginRequest,
+    db: AsyncSession = Depends(get_db)
+):
     """
-    Iniciar sesión con email y contraseña.
+    Login with email and password.
+    Returns JWT tokens if credentials are valid and email is verified.
+    
+    This endpoint follows OAuth2 password flow conventions.
     """
+    # Define credentials exception once for consistent error handling
+    # Using same message for all auth failures prevents user enumeration
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciales inválidas",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
     try:
-        supabase = await get_supabase_async_client()
+        # Find user by email
+        result = await db.execute(
+            select(User).where(User.email == data.email.lower())
+        )
+        user = result.scalar_one_or_none()
         
-        auth_response = await supabase.auth.sign_in_with_password({
-            "email": data.email,
-            "password": data.password
-        })
+        if not user:
+            raise credentials_exception
         
-        if not auth_response.user:
+        # Verify password
+        if not user.password_hash or not verify_password(data.password, user.password_hash):
+            raise credentials_exception
+        
+        # Check if user is active
+        if not user.is_active:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales inválidas"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tu cuenta ha sido desactivada",
+                headers={"WWW-Authenticate": "Bearer"},
             )
         
+        # Check if email is verified
+        if not user.email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Get user's default workspace and role
+        result = await db.execute(
+            select(UserRole).where(
+                UserRole.user_id == user.id,
+                UserRole.is_default == True
+            )
+        )
+        default_role = result.scalar_one_or_none()
+        
+        workspace_id = None
+        role = None
+        
+        if default_role:
+            workspace_id = str(default_role.workspace_id)
+            role = default_role.role.value
+        else:
+            # Get first workspace if no default
+            result = await db.execute(
+                select(UserRole).where(UserRole.user_id == user.id).limit(1)
+            )
+            first_role = result.scalar_one_or_none()
+            if first_role:
+                workspace_id = str(first_role.workspace_id)
+                role = first_role.role.value
+        
+        # Create tokens
+        access_token, refresh_token, expires_in = create_tokens(
+            user_id=str(user.id),
+            email=user.email,
+            workspace_id=workspace_id,
+            role=role
+        )
+        
         return Token(
-            access_token=auth_response.session.access_token,
+            access_token=access_token,
             token_type="bearer",
-            expires_in=auth_response.session.expires_in or 3600,
-            refresh_token=auth_response.session.refresh_token
+            expires_in=expires_in,
+            refresh_token=refresh_token,
+            requires_email_verification=False
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        if "Invalid login credentials" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales inválidas"
-            )
+        logger.error(f"Error during login: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al iniciar sesión: {str(e)}"
+            detail="Error al iniciar sesión"
         )
 
+
+# ===== LOGOUT =====
 
 @router.post("/logout")
 async def logout(
     current_user: CurrentUser = Depends(get_current_user)
 ):
     """
-    Cerrar sesión.
+    Logout current user.
+    Note: With JWT, we can't truly invalidate tokens server-side without a blacklist.
+    The client should delete the tokens locally.
     """
-    supabase = await get_supabase_async_client()
-    
-    try:
-        await supabase.auth.sign_out()
-        return {"message": "Sesión cerrada correctamente"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al cerrar sesión: {str(e)}"
-        )
+    # In a production system, you might want to add the token to a blacklist
+    # For now, we just return success and let the client clear the tokens
+    return {"message": "Sesión cerrada correctamente"}
 
+
+# ===== GET CURRENT USER =====
 
 @router.get("/me")
 async def get_me(
     current_user: CurrentUser = Depends(get_current_user)
 ):
     """
-    Obtener información del usuario actual con su rol.
+    Get current user information with role.
     """
     user = current_user.user
     return {
@@ -211,6 +286,7 @@ async def get_me(
         "avatar_url": user.avatar_url,
         "phone": user.phone,
         "is_active": user.is_active,
+        "email_verified": user.email_verified,
         "preferences": user.preferences or {},
         "role": current_user.role.value if current_user.role else None,
         "workspace_id": str(current_user.workspace_id) if current_user.workspace_id else None,
@@ -219,42 +295,393 @@ async def get_me(
     }
 
 
+# ===== REFRESH TOKEN =====
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
-    refresh_token: str
+    data: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db)
 ):
     """
-    Refrescar token de acceso.
+    Refresh access token using refresh token.
+    
+    The refresh token has a longer expiration and is used to obtain
+    new access tokens without requiring the user to re-authenticate.
     """
-    supabase = await get_supabase_async_client()
+    # Define exception for consistent error handling
+    token_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token de refresco inválido o expirado",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     
     try:
-        auth_response = await supabase.auth.refresh_session(refresh_token)
+        # Decode refresh token
+        payload = decode_refresh_token(data.refresh_token)
         
-        if not auth_response.session:
+        if not payload:
+            raise token_exception
+        
+        # Get user
+        user_id = payload.sub
+        result = await db.execute(
+            select(User).where(User.id == UUID(user_id))
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user or not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token de refresco inválido"
+                detail="Usuario no encontrado o desactivado",
+                headers={"WWW-Authenticate": "Bearer"},
             )
         
-        return Token(
-            access_token=auth_response.session.access_token,
-            token_type="bearer",
-            expires_in=auth_response.session.expires_in or 3600,
-            refresh_token=auth_response.session.refresh_token
+        # Get user's default workspace and role
+        result = await db.execute(
+            select(UserRole).where(
+                UserRole.user_id == user.id,
+                UserRole.is_default == True
+            )
+        )
+        default_role = result.scalar_one_or_none()
+        
+        workspace_id = None
+        role = None
+        
+        if default_role:
+            workspace_id = str(default_role.workspace_id)
+            role = default_role.role.value
+        else:
+            result = await db.execute(
+                select(UserRole).where(UserRole.user_id == user.id).limit(1)
+            )
+            first_role = result.scalar_one_or_none()
+            if first_role:
+                workspace_id = str(first_role.workspace_id)
+                role = first_role.role.value
+        
+        # Create new tokens
+        access_token, new_refresh_token, expires_in = create_tokens(
+            user_id=str(user.id),
+            email=user.email,
+            workspace_id=workspace_id,
+            role=role
         )
         
+        return Token(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=expires_in,
+            refresh_token=new_refresh_token
+        )
+        
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error refreshing token: {str(e)}")
+        raise token_exception
+
+
+# ===== EMAIL VERIFICATION =====
+
+@router.post("/verify-email", response_model=AuthResponse)
+async def verify_email(
+    data: VerifyEmailRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Verify user's email with the token sent via email.
+    """
+    try:
+        # Find user by verification token
+        result = await db.execute(
+            select(User).where(User.email_verification_token == data.token)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token de verificación inválido"
+            )
+        
+        # Check if token is expired (24 hours)
+        if user.email_verification_sent_at:
+            token_age = datetime.now(timezone.utc) - user.email_verification_sent_at.replace(tzinfo=timezone.utc)
+            if token_age > timedelta(hours=24):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El enlace de verificación ha expirado. Solicita uno nuevo."
+                )
+        
+        # Mark email as verified
+        user.email_verified = True
+        user.email_verification_token = None
+        user.email_verification_sent_at = None
+        
+        await db.commit()
+        
+        logger.info(f"Email verified for user {user.email}")
+        
+        return AuthResponse(
+            success=True,
+            message="Email verificado correctamente. Ya puedes iniciar sesión.",
+            user_id=str(user.id)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying email: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token de refresco inválido o expirado"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al verificar el email"
         )
 
 
-# Schema for client registration
+@router.post("/resend-verification", response_model=AuthResponse)
+async def resend_verification(
+    data: ResendVerificationRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Resend email verification link.
+    """
+    try:
+        # Find user
+        result = await db.execute(
+            select(User).where(User.email == data.email.lower())
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            # Don't reveal if email exists
+            return AuthResponse(
+                success=True,
+                message="Si el email está registrado, recibirás un enlace de verificación."
+            )
+        
+        if user.email_verified:
+            return AuthResponse(
+                success=True,
+                message="Tu email ya está verificado. Puedes iniciar sesión."
+            )
+        
+        # Rate limit: check last sent time
+        if user.email_verification_sent_at:
+            time_since_last = datetime.now(timezone.utc) - user.email_verification_sent_at.replace(tzinfo=timezone.utc)
+            if time_since_last < timedelta(minutes=2):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Espera 2 minutos antes de solicitar otro email de verificación."
+                )
+        
+        # Generate new token
+        verification_token = generate_verification_token()
+        user.email_verification_token = verification_token
+        user.email_verification_sent_at = datetime.now(timezone.utc)
+        
+        await db.commit()
+        
+        # Send email
+        confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
+        html_content = EmailTemplates.email_confirmation(user.full_name or user.email, confirmation_url)
+        
+        await email_service.send_email(
+            to_email=user.email,
+            to_name=user.full_name or user.email,
+            subject="Confirma tu cuenta en Trackfiz",
+            html_content=html_content,
+        )
+        
+        return AuthResponse(
+            success=True,
+            message="Se ha enviado un nuevo enlace de verificación a tu email."
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resending verification: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al enviar el email de verificación"
+        )
+
+
+# ===== PASSWORD RESET =====
+
+@router.post("/forgot-password", response_model=AuthResponse)
+async def forgot_password(
+    data: PasswordResetRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Request password reset email.
+    """
+    try:
+        # Find user
+        result = await db.execute(
+            select(User).where(User.email == data.email.lower())
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            # Don't reveal if email exists
+            return AuthResponse(
+                success=True,
+                message="Si el email está registrado, recibirás instrucciones para restablecer tu contraseña."
+            )
+        
+        # Rate limit
+        if user.password_reset_sent_at:
+            time_since_last = datetime.now(timezone.utc) - user.password_reset_sent_at.replace(tzinfo=timezone.utc)
+            if time_since_last < timedelta(minutes=2):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Espera 2 minutos antes de solicitar otro email de recuperación."
+                )
+        
+        # Generate reset token
+        reset_token = generate_password_reset_token()
+        user.password_reset_token = reset_token
+        user.password_reset_sent_at = datetime.now(timezone.utc)
+        
+        await db.commit()
+        
+        # Send email
+        reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={reset_token}"
+        html_content = EmailTemplates.password_reset(user.full_name or user.email, reset_url)
+        
+        await email_service.send_email(
+            to_email=user.email,
+            to_name=user.full_name or user.email,
+            subject="Restablecer contraseña - Trackfiz",
+            html_content=html_content,
+        )
+        
+        return AuthResponse(
+            success=True,
+            message="Si el email está registrado, recibirás instrucciones para restablecer tu contraseña."
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in forgot-password: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al procesar la solicitud"
+        )
+
+
+@router.post("/reset-password", response_model=AuthResponse)
+async def reset_password(
+    data: PasswordResetConfirm,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reset password using token from email.
+    """
+    try:
+        # Find user by reset token
+        result = await db.execute(
+            select(User).where(User.password_reset_token == data.token)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token de recuperación inválido"
+            )
+        
+        # Check if token is expired (1 hour)
+        if user.password_reset_sent_at:
+            token_age = datetime.now(timezone.utc) - user.password_reset_sent_at.replace(tzinfo=timezone.utc)
+            if token_age > timedelta(hours=1):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El enlace de recuperación ha expirado. Solicita uno nuevo."
+                )
+        
+        # Update password
+        user.password_hash = get_password_hash(data.new_password)
+        user.password_reset_token = None
+        user.password_reset_sent_at = None
+        
+        await db.commit()
+        
+        logger.info(f"Password reset for user {user.email}")
+        
+        return AuthResponse(
+            success=True,
+            message="Tu contraseña ha sido actualizada. Ya puedes iniciar sesión.",
+            user_id=str(user.id)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting password: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al restablecer la contraseña"
+        )
+
+
+# ===== CHANGE PASSWORD (authenticated) =====
+
+@router.post("/change-password", response_model=AuthResponse)
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Change password for authenticated user.
+    """
+    try:
+        user = current_user.user
+        
+        # Verify current password
+        if not user.password_hash or not verify_password(data.current_password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña actual es incorrecta"
+            )
+        
+        # Update password
+        user.password_hash = get_password_hash(data.new_password)
+        
+        await db.commit()
+        
+        return AuthResponse(
+            success=True,
+            message="Tu contraseña ha sido actualizada.",
+            user_id=str(user.id)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error changing password: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al cambiar la contraseña"
+        )
+
+
+# ===== CLIENT REGISTRATION =====
+
 class ClientRegisterRequest(BaseModel):
     workspace_id: UUID
-    email: str
+    email: EmailStr
     password: str
     first_name: str
     last_name: str
@@ -274,13 +701,11 @@ async def register_client(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Registrar nuevo cliente (usuario con rol cliente en un workspace existente).
+    Register new client (user with client role in an existing workspace).
     """
-    supabase = await get_supabase_async_client()
-    
     # Check if user already exists
     result = await db.execute(
-        select(User).where(User.email == data.email)
+        select(User).where(User.email == data.email.lower())
     )
     existing_user = result.scalar_one_or_none()
     
@@ -303,28 +728,20 @@ async def register_client(
         )
     
     try:
-        # Create user in Supabase Auth
-        auth_response = await supabase.auth.sign_up({
-            "email": data.email,
-            "password": data.password,
-            "options": {
-                "data": {
-                    "full_name": f"{data.first_name} {data.last_name}"
-                }
-            }
-        })
+        # Generate email verification token
+        verification_token = generate_verification_token()
+        full_name = f"{data.first_name} {data.last_name}"
         
-        if not auth_response.user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Error al crear usuario en autenticación"
-            )
-        
-        # Create user in our database
+        # Create user with hashed password
         user = User(
-            email=data.email,
-            full_name=f"{data.first_name} {data.last_name}",
-            auth_id=auth_response.user.id
+            email=data.email.lower(),
+            full_name=full_name,
+            phone=data.phone,
+            password_hash=get_password_hash(data.password),
+            email_verified=False,
+            email_verification_token=verification_token,
+            email_verification_sent_at=datetime.now(timezone.utc),
+            is_active=True,
         )
         db.add(user)
         await db.flush()
@@ -344,7 +761,7 @@ async def register_client(
             user_id=user.id,
             first_name=data.first_name,
             last_name=data.last_name,
-            email=data.email,
+            email=data.email.lower(),
             phone=data.phone,
             birth_date=data.birth_date,
             gender=data.gender,
@@ -359,22 +776,27 @@ async def register_client(
         
         await db.commit()
         
-        # Return tokens
-        if auth_response.session:
-            return Token(
-                access_token=auth_response.session.access_token,
-                token_type="bearer",
-                expires_in=auth_response.session.expires_in or 3600,
-                refresh_token=auth_response.session.refresh_token
+        # Send verification email
+        confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
+        html_content = EmailTemplates.email_confirmation(full_name, confirmation_url)
+        
+        try:
+            await email_service.send_email(
+                to_email=data.email,
+                to_name=full_name,
+                subject="Confirma tu cuenta en Trackfiz",
+                html_content=html_content,
             )
-        else:
-            # If no session (email confirmation required), return a placeholder response
-            return Token(
-                access_token="pending_confirmation",
-                token_type="bearer",
-                expires_in=0,
-                refresh_token=""
-            )
+        except Exception as e:
+            logger.error(f"Failed to send verification email to client: {e}")
+        
+        return Token(
+            access_token="pending_email_confirmation",
+            token_type="bearer",
+            expires_in=0,
+            refresh_token="",
+            requires_email_verification=True
+        )
         
     except HTTPException:
         await db.rollback()
@@ -387,117 +809,3 @@ async def register_client(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al registrar cliente: {str(e)}"
         )
-
-
-# ===== SUPABASE AUTH EMAIL WEBHOOK =====
-# This endpoint receives email requests from Supabase Auth hooks
-# and sends branded emails using our email service
-
-class SendEmailRequest(BaseModel):
-    """Request body for Supabase Auth send-email hook"""
-    user: dict  # Contains id, email, user_metadata, etc.
-    email_data: dict  # Contains token, token_hash, redirect_to, email_action_type, etc.
-
-
-class SendEmailResponse(BaseModel):
-    """Response for Supabase Auth send-email hook"""
-    success: bool
-
-
-@router.post("/hooks/send-email", response_model=SendEmailResponse)
-async def supabase_send_email_hook(
-    request: SendEmailRequest,
-):
-    """
-    Webhook endpoint for Supabase Auth to send custom branded emails.
-    
-    This replaces Supabase's default email sending with our own branded emails.
-    Configure this in Supabase Dashboard > Authentication > Hooks > Send Email.
-    
-    Supported email types:
-    - signup: Email confirmation after registration
-    - recovery: Password reset email
-    - magiclink: Magic link login email
-    - invite: User invitation email
-    - email_change: Email change confirmation
-    """
-    from app.services.email import email_service, EmailTemplates
-    
-    try:
-        user = request.user
-        email_data = request.email_data
-        
-        email = user.get("email", "")
-        user_metadata = user.get("user_metadata", {})
-        name = user_metadata.get("full_name", email.split("@")[0])
-        
-        email_action_type = email_data.get("email_action_type", "")
-        token = email_data.get("token", "")
-        token_hash = email_data.get("token_hash", "")
-        redirect_to = email_data.get("redirect_to", settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "https://app.trackfiz.com")
-        
-        # Build confirmation URL based on email type
-        # The URL structure depends on your frontend routing
-        base_url = redirect_to.rstrip("/")
-        
-        if email_action_type == "signup":
-            # Email confirmation after signup
-            confirmation_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=signup"
-            html_content = EmailTemplates.email_confirmation(name, confirmation_url)
-            subject = "Confirma tu cuenta en Trackfiz"
-            
-        elif email_action_type == "recovery":
-            # Password reset
-            reset_url = f"{base_url}/auth/reset-password?token_hash={token_hash}&type=recovery"
-            html_content = EmailTemplates.password_reset(name, reset_url)
-            subject = "Restablecer contraseña - Trackfiz"
-            
-        elif email_action_type == "magiclink":
-            # Magic link login
-            magic_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=magiclink"
-            html_content = EmailTemplates.magic_link(name, magic_url)
-            subject = "Tu enlace de acceso a Trackfiz"
-            
-        elif email_action_type == "invite":
-            # User invitation
-            invite_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=invite"
-            inviter_name = email_data.get("inviter_name", "El equipo de Trackfiz")
-            workspace_name = email_data.get("workspace_name", "Trackfiz")
-            html_content = EmailTemplates.invitation_email(inviter_name, workspace_name, invite_url)
-            subject = f"Has sido invitado a {workspace_name}"
-            
-        elif email_action_type == "email_change":
-            # Email change confirmation
-            confirmation_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type=email_change"
-            html_content = EmailTemplates.email_confirmation(name, confirmation_url)
-            subject = "Confirma tu nuevo email en Trackfiz"
-            
-        else:
-            logger.warning(f"Unknown email action type: {email_action_type}")
-            # Default fallback
-            confirmation_url = f"{base_url}/auth/confirm?token_hash={token_hash}&type={email_action_type}"
-            html_content = EmailTemplates.email_confirmation(name, confirmation_url)
-            subject = "Trackfiz - Acción requerida"
-        
-        # Send the email using our email service
-        success = await email_service.send_email(
-            to_email=email,
-            to_name=name,
-            subject=subject,
-            html_content=html_content,
-        )
-        
-        if success:
-            logger.info(f"Successfully sent {email_action_type} email to {email}")
-        else:
-            logger.error(f"Failed to send {email_action_type} email to {email}")
-        
-        return SendEmailResponse(success=success)
-        
-    except Exception as e:
-        logger.error(f"Error in send-email hook: {str(e)}")
-        logger.error(traceback.format_exc())
-        # Return success=false but don't raise exception
-        # so Supabase can handle the fallback
-        return SendEmailResponse(success=False)
-

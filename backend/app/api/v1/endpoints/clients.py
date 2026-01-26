@@ -773,7 +773,7 @@ async def send_invitation_email(
                 </p>
             </div>
             <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-                <p>© 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.</p>
+                <p>© 2026 Trackfiz. Todos los derechos reservados.</p>
             </div>
         </div>
     </body>

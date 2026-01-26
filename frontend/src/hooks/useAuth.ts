@@ -47,16 +47,27 @@ export function useAuth() {
       navigate("/dashboard");
     } catch (error: unknown) {
       const err = error as {
-        response?: { data?: { detail?: string } };
+        response?: { data?: { detail?: string }; status?: number };
         message?: string;
       };
       const message =
         err.response?.data?.detail || err.message || "Error al iniciar sesión";
-      notifications.show({
-        title: "Error",
-        message,
-        color: "red",
-      });
+      
+      // Check if it's an email verification error
+      if (err.response?.status === 403 && message.includes("verificar")) {
+        notifications.show({
+          title: "Email no verificado",
+          message: "Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.",
+          color: "orange",
+          autoClose: 10000,
+        });
+      } else {
+        notifications.show({
+          title: "Error",
+          message,
+          color: "red",
+        });
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -71,7 +82,7 @@ export function useAuth() {
   ) => {
     setLoading(true);
     try {
-      // Register through backend API (creates user in Supabase Auth AND our DB)
+      // Register through backend API
       const registerResponse = await authApi.register({
         email,
         password,
@@ -79,10 +90,10 @@ export function useAuth() {
         workspace_name: workspaceName,
       });
 
-      const { access_token, refresh_token } = registerResponse.data;
+      const { access_token, refresh_token, requires_email_verification } = registerResponse.data;
 
       // Check if email confirmation is required
-      if (access_token === "pending_email_confirmation") {
+      if (access_token === "pending_email_confirmation" || requires_email_verification) {
         notifications.show({
           title: "¡Cuenta creada!",
           message: "Por favor, revisa tu email para confirmar tu cuenta antes de iniciar sesión.",
@@ -165,10 +176,115 @@ export function useAuth() {
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    setLoading(true);
+    try {
+      await authApi.forgotPassword(email);
+      notifications.show({
+        title: "Email enviado",
+        message: "Si el email está registrado, recibirás instrucciones para restablecer tu contraseña.",
+        color: "green",
+      });
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      notifications.show({
+        title: "Error",
+        message: err.response?.data?.detail || "Error al procesar la solicitud",
+        color: "red",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (token: string, newPassword: string) => {
+    setLoading(true);
+    try {
+      await authApi.resetPassword(token, newPassword);
+      notifications.show({
+        title: "¡Contraseña actualizada!",
+        message: "Ya puedes iniciar sesión con tu nueva contraseña.",
+        color: "green",
+      });
+      navigate("/login");
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      notifications.show({
+        title: "Error",
+        message: err.response?.data?.detail || "Error al restablecer la contraseña",
+        color: "red",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    setLoading(true);
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      notifications.show({
+        title: "¡Contraseña actualizada!",
+        message: "Tu contraseña ha sido actualizada correctamente.",
+        color: "green",
+      });
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      notifications.show({
+        title: "Error",
+        message: err.response?.data?.detail || "Error al cambiar la contraseña",
+        color: "red",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    setLoading(true);
+    try {
+      await authApi.resendVerification(email);
+      notifications.show({
+        title: "Email enviado",
+        message: "Si el email está registrado, recibirás un enlace de verificación.",
+        color: "green",
+      });
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      notifications.show({
+        title: "Error",
+        message: err.response?.data?.detail || "Error al enviar el email",
+        color: "red",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     login,
     register,
     logout,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+    resendVerificationEmail,
     loading,
   };
 }
