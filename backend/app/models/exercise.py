@@ -1,5 +1,5 @@
 """Exercise library models."""
-from sqlalchemy import Column, String, Text, Numeric, Integer, Boolean, ForeignKey, ARRAY, DateTime
+from sqlalchemy import Column, String, Text, Numeric, Integer, Boolean, ForeignKey, ARRAY, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
@@ -32,7 +32,27 @@ class Exercise(BaseModel):
     video_url = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
     thumbnail_url = Column(Text, nullable=True)
+    custom_thumbnail_url = Column(Text, nullable=True)  # Custom thumbnail uploaded by user
     is_global = Column(Boolean, default=False)
+
+
+class ExerciseFavorite(BaseModel):
+    """Exercise favorites for users."""
+    
+    __tablename__ = "exercise_favorites"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'exercise_id', name='unique_user_exercise_favorite'),
+    )
+    
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    exercise_id = Column(UUID(as_uuid=True), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False)
+    
+    # Relationships
+    exercise = relationship("Exercise")
+    
+    def __repr__(self):
+        return f"<ExerciseFavorite user={self.user_id} exercise={self.exercise_id}>"
 
 
 class ClientMeasurement(BaseModel):

@@ -106,16 +106,31 @@ async def register(
         
         await db.commit()
         
-        # Return tokens
-        return Token(
-            access_token=auth_response.session.access_token,
-            token_type="bearer",
-            expires_in=auth_response.session.expires_in or 3600,
-            refresh_token=auth_response.session.refresh_token
-        )
+        # Return tokens (session may be None if email confirmation is required)
+        if auth_response.session:
+            return Token(
+                access_token=auth_response.session.access_token,
+                token_type="bearer",
+                expires_in=auth_response.session.expires_in or 3600,
+                refresh_token=auth_response.session.refresh_token
+            )
+        else:
+            # Email confirmation required - user needs to confirm before logging in
+            # Return a placeholder response indicating pending confirmation
+            return Token(
+                access_token="pending_email_confirmation",
+                token_type="bearer",
+                expires_in=0,
+                refresh_token=""
+            )
         
+    except HTTPException:
+        await db.rollback()
+        raise
     except Exception as e:
         await db.rollback()
+        logger.error(f"Error registering user: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al registrar usuario: {str(e)}"

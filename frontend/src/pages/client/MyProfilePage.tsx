@@ -154,7 +154,7 @@ export function MyProfilePage() {
                   {currentWorkspace?.name?.[0] || "E"}
                 </Avatar>
                 <Box>
-                  <Text fw={600}>{currentWorkspace?.name || "E13 Fitness"}</Text>
+                  <Text fw={600}>{currentWorkspace?.name || "Trackfiz"}</Text>
                   <Text size="sm" c="dimmed">Cliente desde Enero 2026</Text>
                 </Box>
               </Group>

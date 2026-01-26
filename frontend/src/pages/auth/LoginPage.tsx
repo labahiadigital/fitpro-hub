@@ -118,7 +118,7 @@ export function LoginPage() {
           Inicia sesión
         </Title>
         <Text c="gray.5" size="sm" mt={4}>
-          Accede a tu cuenta de E13 Fitness
+          Accede a tu cuenta de Trackfiz
         </Text>
       </Box>
 

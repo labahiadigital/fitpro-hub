@@ -111,7 +111,7 @@ export function AuthLayout() {
         </Group>
 
         <Text c="gray.6" mt="xl" size="xs" ta="center">
-          © 2026 Trackfiz by E13 Fitness. Todos los derechos reservados.
+          © 2026 Trackfiz. Todos los derechos reservados.
         </Text>
       </Container>
 

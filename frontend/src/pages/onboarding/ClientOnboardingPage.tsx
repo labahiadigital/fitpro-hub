@@ -76,8 +76,10 @@ interface OnboardingFormData {
     chestPain: boolean;
     dizziness: boolean;
     boneJoint: boolean;
+    boneJointDetails: string;
     bloodPressure: boolean;
     otherReason: boolean;
+    otherReasonDetails: string;
   };
 
   // Consent
@@ -188,8 +190,10 @@ export function ClientOnboardingPage() {
         chestPain: false,
         dizziness: false,
         boneJoint: false,
+        boneJointDetails: "",
         bloodPressure: false,
         otherReason: false,
+        otherReasonDetails: "",
       },
       acceptTerms: false,
       acceptPrivacy: false,
@@ -363,8 +367,11 @@ export function ClientOnboardingPage() {
             <IconCheck size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            ¡Registro Completado!
+            ¡Te has registrado con ÉXITO!
           </Title>
+          <Text c="dimmed" mb="md">
+            Tu onboarding se ha realizado con éxito.
+          </Text>
           <Text c="dimmed" mb="xl">
             Gracias por completar tu registro en {workspaceInfo.name}. Tu entrenador revisará tu
             información y se pondrá en contacto contigo pronto.
@@ -379,7 +386,7 @@ export function ClientOnboardingPage() {
     <Container py="xl" size="md">
       <Box mb="xl" ta="center">
         <Title mb="xs" order={2}>
-          Bienvenido a {workspaceInfo.name}
+          {workspaceInfo.name}
         </Title>
         <Text c="dimmed">
           Completa tu perfil para empezar tu transformación
@@ -683,6 +690,15 @@ export function ClientOnboardingPage() {
                 </Group>
               </Radio.Group>
 
+              {form.values.parqResponses.boneJoint && (
+                <Textarea
+                  label="Describe tus limitaciones físicas"
+                  placeholder="Ej: No puedo doblar la rodilla derecha completamente, tengo dolor lumbar al agacharme..."
+                  minRows={2}
+                  {...form.getInputProps("parqResponses.boneJointDetails")}
+                />
+              )}
+
               <Radio.Group
                 label="5. ¿Tomas actualmente medicamentos para la presión arterial o el corazón?"
                 {...form.getInputProps("parqResponses.bloodPressure")}
@@ -702,6 +718,15 @@ export function ClientOnboardingPage() {
                   <Radio label="No" value="false" />
                 </Group>
               </Radio.Group>
+
+              {form.values.parqResponses.otherReason && (
+                <Textarea
+                  label="Explica el motivo"
+                  placeholder="Describe la razón por la que crees que no deberías hacer ejercicio..."
+                  minRows={2}
+                  {...form.getInputProps("parqResponses.otherReasonDetails")}
+                />
+              )}
 
               {hasParqRisk && (
                 <Alert color="yellow" icon={<IconAlertCircle size={16} />}>

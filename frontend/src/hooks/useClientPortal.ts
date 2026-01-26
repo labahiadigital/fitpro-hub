@@ -584,3 +584,204 @@ export function useMyBooking(id: string) {
     enabled: !!id,
   });
 }
+
+
+// ============ FEEDBACK ============
+
+interface ClientFeedback {
+  id: string;
+  feedback_type: string;
+  reference_id?: string;
+  reference_name?: string;
+  rating?: number;
+  comment?: string;
+  context: Record<string, unknown>;
+  created_at: string;
+}
+
+export function useClientFeedback(feedbackType?: string) {
+  return useQuery<ClientFeedback[]>({
+    queryKey: ["client-feedback", feedbackType],
+    queryFn: async () => {
+      const response = await clientPortalApi.getFeedback(feedbackType);
+      return response.data;
+    },
+  });
+}
+
+export function useCreateFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      feedback_type: string;
+      reference_id?: string;
+      reference_name?: string;
+      rating?: number;
+      comment?: string;
+      context?: Record<string, unknown>;
+    }) => {
+      const response = await clientPortalApi.createFeedback(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-feedback"] });
+      notifications.show({
+        title: "Feedback enviado",
+        message: "Gracias por tu valoración",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo enviar el feedback",
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useCreateWorkoutFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      program_id: string;
+      overall_rating: number;
+      difficulty_rating?: number;
+      enjoyment_rating?: number;
+      effectiveness_rating?: number;
+      what_liked?: string;
+      what_improve?: string;
+      general_comment?: string;
+    }) => {
+      const response = await clientPortalApi.createWorkoutFeedback(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-feedback"] });
+      notifications.show({
+        title: "Valoración enviada",
+        message: "Gracias por valorar tu programa de entrenamiento",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo enviar la valoración",
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useCreateDietFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      meal_plan_id: string;
+      overall_rating: number;
+      taste_rating?: number;
+      satiety_rating?: number;
+      variety_rating?: number;
+      practicality_rating?: number;
+      favorite_meals?: string;
+      disliked_meals?: string;
+      general_comment?: string;
+      adherence_percentage?: number;
+    }) => {
+      const response = await clientPortalApi.createDietFeedback(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-feedback"] });
+      notifications.show({
+        title: "Valoración enviada",
+        message: "Gracias por valorar tu plan nutricional",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo enviar la valoración",
+        color: "red",
+      });
+    },
+  });
+}
+
+
+// ============ EMOTIONS ============
+
+interface ClientEmotion {
+  id: string;
+  emotion_date: string;
+  mood_level: number;
+  emotions: string[];
+  energy_level?: number;
+  sleep_quality?: number;
+  stress_level?: number;
+  notes?: string;
+  context: Record<string, unknown>;
+  created_at: string;
+}
+
+export function useClientEmotions(startDate?: string, endDate?: string) {
+  return useQuery<ClientEmotion[]>({
+    queryKey: ["client-emotions", startDate, endDate],
+    queryFn: async () => {
+      const response = await clientPortalApi.getEmotions(startDate, endDate);
+      return response.data;
+    },
+  });
+}
+
+export function useTodayEmotion() {
+  return useQuery<ClientEmotion | null>({
+    queryKey: ["today-emotion"],
+    queryFn: async () => {
+      const response = await clientPortalApi.getTodayEmotion();
+      return response.data;
+    },
+  });
+}
+
+export function useCreateEmotion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      emotion_date: string;
+      mood_level: number;
+      emotions?: string[];
+      energy_level?: number;
+      sleep_quality?: number;
+      stress_level?: number;
+      notes?: string;
+      context?: Record<string, unknown>;
+    }) => {
+      const response = await clientPortalApi.createEmotion(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-emotions"] });
+      queryClient.invalidateQueries({ queryKey: ["today-emotion"] });
+      notifications.show({
+        title: "Estado de ánimo registrado",
+        message: "Tu registro del día ha sido guardado",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo registrar tu estado de ánimo",
+        color: "red",
+      });
+    },
+  });
+}

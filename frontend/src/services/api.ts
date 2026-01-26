@@ -396,6 +396,55 @@ export const clientPortalApi = {
     api.post("/my/messages", { content, message_type: "text" }),
   markMessagesRead: () => api.post("/my/messages/mark-read"),
   getUnreadCount: () => api.get("/my/messages/unread-count"),
+  
+  // Feedback
+  getFeedback: (feedbackType?: string) =>
+    api.get("/my/feedback", { params: { feedback_type: feedbackType } }),
+  createFeedback: (data: {
+    feedback_type: string;
+    reference_id?: string;
+    reference_name?: string;
+    rating?: number;
+    comment?: string;
+    context?: object;
+  }) => api.post("/my/feedback", data),
+  createWorkoutFeedback: (data: {
+    program_id: string;
+    overall_rating: number;
+    difficulty_rating?: number;
+    enjoyment_rating?: number;
+    effectiveness_rating?: number;
+    what_liked?: string;
+    what_improve?: string;
+    general_comment?: string;
+  }) => api.post("/my/feedback/workout-program", data),
+  createDietFeedback: (data: {
+    meal_plan_id: string;
+    overall_rating: number;
+    taste_rating?: number;
+    satiety_rating?: number;
+    variety_rating?: number;
+    practicality_rating?: number;
+    favorite_meals?: string;
+    disliked_meals?: string;
+    general_comment?: string;
+    adherence_percentage?: number;
+  }) => api.post("/my/feedback/diet", data),
+  
+  // Emotions
+  getEmotions: (startDate?: string, endDate?: string) =>
+    api.get("/my/emotions", { params: { start_date: startDate, end_date: endDate } }),
+  getTodayEmotion: () => api.get("/my/emotions/today"),
+  createEmotion: (data: {
+    emotion_date: string;
+    mood_level: number;
+    emotions?: string[];
+    energy_level?: number;
+    sleep_quality?: number;
+    stress_level?: number;
+    notes?: string;
+    context?: object;
+  }) => api.post("/my/emotions", data),
 };
 
 // Messages API (Staff/Trainer)

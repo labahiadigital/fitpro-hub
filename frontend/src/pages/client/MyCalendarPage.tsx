@@ -60,7 +60,7 @@ export function MyCalendarPage() {
     date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
     time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
     title: b.title,
-    trainer: "E13 Fitness",
+    trainer: "Trackfiz",
     type: b.booking_type || "presencial",
     location: b.location || "Gimnasio",
     status: b.status,

@@ -1243,3 +1243,321 @@ async def get_client_unread_count(
     count = result.scalar() or 0
     
     return {"unread_count": count}
+
+
+# ============ FEEDBACK SCHEMAS ============
+
+class ClientFeedbackCreate(BaseModel):
+    """Create feedback for a specific item."""
+    feedback_type: str  # 'exercise', 'meal', 'workout_program', 'meal_plan'
+    reference_id: Optional[UUID] = None
+    reference_name: Optional[str] = None
+    rating: Optional[int] = None
+    comment: Optional[str] = None
+    context: Optional[dict] = {}
+
+
+class ClientFeedbackResponse(BaseModel):
+    """Feedback response."""
+    id: UUID
+    feedback_type: str
+    reference_id: Optional[UUID] = None
+    reference_name: Optional[str] = None
+    rating: Optional[int] = None
+    comment: Optional[str] = None
+    context: dict = {}
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ClientWorkoutFeedbackCreate(BaseModel):
+    """Create overall feedback for a workout program."""
+    program_id: UUID
+    overall_rating: int
+    difficulty_rating: Optional[int] = None
+    enjoyment_rating: Optional[int] = None
+    effectiveness_rating: Optional[int] = None
+    what_liked: Optional[str] = None
+    what_improve: Optional[str] = None
+    general_comment: Optional[str] = None
+
+
+class ClientDietFeedbackCreate(BaseModel):
+    """Create overall feedback for a meal plan."""
+    meal_plan_id: UUID
+    overall_rating: int
+    taste_rating: Optional[int] = None
+    satiety_rating: Optional[int] = None
+    variety_rating: Optional[int] = None
+    practicality_rating: Optional[int] = None
+    favorite_meals: Optional[str] = None
+    disliked_meals: Optional[str] = None
+    general_comment: Optional[str] = None
+    adherence_percentage: Optional[int] = None
+
+
+class ClientEmotionCreate(BaseModel):
+    """Create emotion/mood log."""
+    emotion_date: date
+    mood_level: int  # 1-5
+    emotions: Optional[List[str]] = []
+    energy_level: Optional[int] = None
+    sleep_quality: Optional[int] = None
+    stress_level: Optional[int] = None
+    notes: Optional[str] = None
+    context: Optional[dict] = {}
+
+
+class ClientEmotionResponse(BaseModel):
+    """Emotion log response."""
+    id: UUID
+    emotion_date: date
+    mood_level: int
+    emotions: List[str] = []
+    energy_level: Optional[int] = None
+    sleep_quality: Optional[int] = None
+    stress_level: Optional[int] = None
+    notes: Optional[str] = None
+    context: dict = {}
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# ============ FEEDBACK ENDPOINTS ============
+
+@router.post("/feedback", response_model=ClientFeedbackResponse)
+async def create_client_feedback(
+    data: ClientFeedbackCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create feedback for a specific exercise, meal, workout or diet."""
+    from app.models.feedback import ClientFeedback
+    
+    client = await get_client_for_user(current_user.id, db)
+    
+    feedback = ClientFeedback(
+        workspace_id=client.workspace_id,
+        client_id=client.id,
+        feedback_type=data.feedback_type,
+        reference_id=data.reference_id,
+        reference_name=data.reference_name,
+        rating=data.rating,
+        comment=data.comment,
+        context=data.context or {}
+    )
+    
+    db.add(feedback)
+    await db.commit()
+    await db.refresh(feedback)
+    
+    return feedback
+
+
+@router.get("/feedback", response_model=List[ClientFeedbackResponse])
+async def get_client_feedback(
+    feedback_type: Optional[str] = None,
+    limit: int = Query(50, le=200),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get client's feedback history."""
+    from app.models.feedback import ClientFeedback
+    
+    client = await get_client_for_user(current_user.id, db)
+    
+    query = select(ClientFeedback).where(ClientFeedback.client_id == client.id)
+    
+    if feedback_type:
+        query = query.where(ClientFeedback.feedback_type == feedback_type)
+    
+    result = await db.execute(
+        query.order_by(desc(ClientFeedback.created_at)).limit(limit)
+    )
+    
+    return result.scalars().all()
+
+
+@router.post("/feedback/workout-program")
+async def create_workout_program_feedback(
+    data: ClientWorkoutFeedbackCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create overall feedback for a complete workout program."""
+    from app.models.feedback import ClientWorkoutFeedback
+    
+    client = await get_client_for_user(current_user.id, db)
+    
+    feedback = ClientWorkoutFeedback(
+        workspace_id=client.workspace_id,
+        client_id=client.id,
+        program_id=data.program_id,
+        overall_rating=data.overall_rating,
+        difficulty_rating=data.difficulty_rating,
+        enjoyment_rating=data.enjoyment_rating,
+        effectiveness_rating=data.effectiveness_rating,
+        what_liked=data.what_liked,
+        what_improve=data.what_improve,
+        general_comment=data.general_comment
+    )
+    
+    db.add(feedback)
+    await db.commit()
+    await db.refresh(feedback)
+    
+    return {
+        "id": str(feedback.id),
+        "overall_rating": feedback.overall_rating,
+        "created_at": feedback.created_at
+    }
+
+
+@router.post("/feedback/diet")
+async def create_diet_feedback(
+    data: ClientDietFeedbackCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create overall feedback for a complete meal plan / diet."""
+    from app.models.feedback import ClientDietFeedback
+    
+    client = await get_client_for_user(current_user.id, db)
+    
+    feedback = ClientDietFeedback(
+        workspace_id=client.workspace_id,
+        client_id=client.id,
+        meal_plan_id=data.meal_plan_id,
+        overall_rating=data.overall_rating,
+        taste_rating=data.taste_rating,
+        satiety_rating=data.satiety_rating,
+        variety_rating=data.variety_rating,
+        practicality_rating=data.practicality_rating,
+        favorite_meals=data.favorite_meals,
+        disliked_meals=data.disliked_meals,
+        general_comment=data.general_comment,
+        adherence_percentage=data.adherence_percentage
+    )
+    
+    db.add(feedback)
+    await db.commit()
+    await db.refresh(feedback)
+    
+    return {
+        "id": str(feedback.id),
+        "overall_rating": feedback.overall_rating,
+        "created_at": feedback.created_at
+    }
+
+
+# ============ EMOTIONS ENDPOINTS ============
+
+@router.post("/emotions", response_model=ClientEmotionResponse)
+async def create_client_emotion(
+    data: ClientEmotionCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Log client's daily mood/emotion."""
+    from app.models.feedback import ClientEmotion
+    
+    client = await get_client_for_user(current_user.id, db)
+    
+    # Check if already logged for this date
+    existing = await db.execute(
+        select(ClientEmotion).where(
+            and_(
+                ClientEmotion.client_id == client.id,
+                ClientEmotion.emotion_date == data.emotion_date
+            )
+        )
+    )
+    existing_emotion = existing.scalar_one_or_none()
+    
+    if existing_emotion:
+        # Update existing
+        existing_emotion.mood_level = data.mood_level
+        existing_emotion.emotions = data.emotions or []
+        existing_emotion.energy_level = data.energy_level
+        existing_emotion.sleep_quality = data.sleep_quality
+        existing_emotion.stress_level = data.stress_level
+        existing_emotion.notes = data.notes
+        existing_emotion.context = data.context or {}
+        await db.commit()
+        await db.refresh(existing_emotion)
+        return existing_emotion
+    
+    # Create new
+    emotion = ClientEmotion(
+        workspace_id=client.workspace_id,
+        client_id=client.id,
+        emotion_date=data.emotion_date,
+        mood_level=data.mood_level,
+        emotions=data.emotions or [],
+        energy_level=data.energy_level,
+        sleep_quality=data.sleep_quality,
+        stress_level=data.stress_level,
+        notes=data.notes,
+        context=data.context or {}
+    )
+    
+    db.add(emotion)
+    await db.commit()
+    await db.refresh(emotion)
+    
+    return emotion
+
+
+@router.get("/emotions", response_model=List[ClientEmotionResponse])
+async def get_client_emotions(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    limit: int = Query(30, le=365),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get client's emotion/mood history."""
+    from app.models.feedback import ClientEmotion
+    
+    client = await get_client_for_user(current_user.id, db)
+    
+    query = select(ClientEmotion).where(ClientEmotion.client_id == client.id)
+    
+    if start_date:
+        query = query.where(ClientEmotion.emotion_date >= start_date)
+    if end_date:
+        query = query.where(ClientEmotion.emotion_date <= end_date)
+    
+    result = await db.execute(
+        query.order_by(desc(ClientEmotion.emotion_date)).limit(limit)
+    )
+    
+    return result.scalars().all()
+
+
+@router.get("/emotions/today", response_model=Optional[ClientEmotionResponse])
+async def get_today_emotion(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get client's emotion for today."""
+    from app.models.feedback import ClientEmotion
+    from datetime import date as date_type
+    
+    client = await get_client_for_user(current_user.id, db)
+    today = date_type.today()
+    
+    result = await db.execute(
+        select(ClientEmotion).where(
+            and_(
+                ClientEmotion.client_id == client.id,
+                ClientEmotion.emotion_date == today
+            )
+        )
+    )
+    
+    return result.scalar_one_or_none()

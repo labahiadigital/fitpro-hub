@@ -81,6 +81,18 @@ export function useAuth() {
 
       const { access_token, refresh_token } = registerResponse.data;
 
+      // Check if email confirmation is required
+      if (access_token === "pending_email_confirmation") {
+        notifications.show({
+          title: "¡Cuenta creada!",
+          message: "Por favor, revisa tu email para confirmar tu cuenta antes de iniciar sesión.",
+          color: "blue",
+          autoClose: 10000,
+        });
+        navigate("/login");
+        return;
+      }
+
       // Save tokens
       setTokens(access_token, refresh_token);
 

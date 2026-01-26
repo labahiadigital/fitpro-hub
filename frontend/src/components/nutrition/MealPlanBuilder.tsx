@@ -73,6 +73,9 @@ export interface MealItem {
   supplement?: Supplement;
   quantity_grams: number;
   notes?: string;
+  // New fields for food preparation details
+  cooking_method?: string;  // e.g., "a la plancha", "hervido", "al horno", "crudo"
+  brand?: string;           // Brand of the specific food product
   type: "food" | "supplement";
 }
 
@@ -376,6 +379,35 @@ export function MealPlanBuilder({
               meals: d.meals.map((m) =>
                 m.id === mealId
                   ? { ...m, items: m.items.filter((i) => i.id !== itemId) }
+                  : m
+              ),
+            }
+          : d
+      )
+    );
+  };
+
+  const updateItemDetails = (
+    mealId: string,
+    itemId: string,
+    cooking_method?: string,
+    brand?: string
+  ) => {
+    onChange(
+      days.map((d) =>
+        d.id === activeDay
+          ? {
+              ...d,
+              meals: d.meals.map((m) =>
+                m.id === mealId
+                  ? {
+                      ...m,
+                      items: m.items.map((i) =>
+                        i.id === itemId
+                          ? { ...i, cooking_method, brand }
+                          : i
+                      ),
+                    }
                   : m
               ),
             }
@@ -693,6 +725,20 @@ export function MealPlanBuilder({
                                   <Text fw={500} size="sm">
                                     {itemData?.name}
                                   </Text>
+                                  {item.type === "food" && (item.cooking_method || item.brand) && (
+                                    <Group gap={4}>
+                                      {item.cooking_method && (
+                                        <Badge size="xs" variant="light" color="cyan">
+                                          {item.cooking_method}
+                                        </Badge>
+                                      )}
+                                      {item.brand && (
+                                        <Badge size="xs" variant="outline" color="gray">
+                                          {item.brand}
+                                        </Badge>
+                                      )}
+                                    </Group>
+                                  )}
                                   {item.type === "supplement" &&
                                     item.supplement?.how_to_take && (
                                       <Text size="xs" c="dimmed" lineClamp={1}>
@@ -728,6 +774,25 @@ export function MealPlanBuilder({
                                   suffix="g"
                                   radius="md"
                                 />
+                                {item.type === "food" && (
+                                  <Tooltip label="Editar cocción/marca">
+                                    <ActionIcon
+                                      color="blue"
+                                      onClick={() => {
+                                        const cookingMethod = prompt("Método de cocción (ej: a la plancha, hervido, al horno, crudo):", item.cooking_method || "");
+                                        const brand = prompt("Marca del producto (opcional):", item.brand || "");
+                                        if (cookingMethod !== null || brand !== null) {
+                                          updateItemDetails(meal.id, item.id, cookingMethod || undefined, brand || undefined);
+                                        }
+                                      }}
+                                      size="sm"
+                                      variant="subtle"
+                                      radius="md"
+                                    >
+                                      <IconEdit size={14} />
+                                    </ActionIcon>
+                                  </Tooltip>
+                                )}
                                 <ActionIcon
                                   color="red"
                                   onClick={() =>
