@@ -32,7 +32,6 @@ class Exercise(BaseModel):
     video_url = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
     thumbnail_url = Column(Text, nullable=True)
-    custom_thumbnail_url = Column(Text, nullable=True)  # Custom thumbnail uploaded by user
     is_global = Column(Boolean, default=False)
 
 
