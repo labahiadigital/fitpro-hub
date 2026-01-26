@@ -36,6 +36,7 @@ export interface FormField {
   placeholder?: string;
   required: boolean;
   options?: string[];
+  order?: number;
   validation?: {
     min?: number;
     max?: number;

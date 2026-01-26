@@ -118,7 +118,7 @@ export function FormsPage() {
   const [documents] = useState<Document[]>([]);
   
   // API hooks
-  const { data: formsData = [], isLoading: formsLoading } = useForms();
+  const { data: formsData = [] } = useForms();
   const createForm = useCreateForm();
   const updateForm = useUpdateForm();
   const deleteFormMutation = useDeleteForm();
@@ -129,7 +129,7 @@ export function FormsPage() {
     name: f.name,
     description: f.description,
     type: f.form_type === "assessment" ? "custom" : f.form_type === "survey" ? "feedback" : f.form_type as FormTemplate["type"],
-    fields: f.fields || [],
+    fields: (f.fields || []).map((field, idx) => ({ ...field, order: field.order ?? idx })) as FormField[],
     is_active: f.is_active === true || f.is_active === "Y" || f.is_active === "true",
     send_on_onboarding: f.send_on_onboarding ?? false,
     submissions_count: f.submissions_count ?? 0,
@@ -211,7 +211,7 @@ export function FormsPage() {
     const formData = {
       name: values.name,
       description: values.description || undefined,
-      form_type: formTypeMap[values.type] || "custom",
+      form_type: (formTypeMap[values.type] || "custom") as "health" | "consent" | "assessment" | "survey" | "custom",
       fields: formFields,
       is_active: editingForm?.is_active ?? true,
       send_on_onboarding: values.send_on_onboarding,

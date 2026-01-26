@@ -238,10 +238,8 @@ export function DocumentsPage() {
               icon={<IconFileText size={48} />}
               title="No hay documentos"
               description="Crea tu primer documento para empezar a gestionar contratos y consentimientos."
-              action={{
-                label: "Crear Documento",
-                onClick: openDocumentModal,
-              }}
+              actionLabel="Crear Documento"
+              onAction={openDocumentModal}
             />
           ) : (
           <Stack gap="md">

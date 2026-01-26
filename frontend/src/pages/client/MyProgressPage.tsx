@@ -25,7 +25,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
-import { notifications } from "@mantine/notifications";
+// notifications is available via useCreateMeasurement/useUploadProgressPhoto hooks
 import {
   IconCamera,
   IconChartLine,
@@ -36,7 +36,7 @@ import {
   IconTrendingDown,
   IconUpload,
 } from "@tabler/icons-react";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos } from "../../hooks/useClientPortal";
 
 function StatProgress({ 

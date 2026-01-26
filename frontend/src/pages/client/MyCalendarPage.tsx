@@ -7,7 +7,6 @@ import {
   Title,
   Badge,
   Button,
-  SimpleGrid,
   Paper,
   ThemeIcon,
   Center,
@@ -69,7 +68,7 @@ export function MyCalendarPage() {
 
   const data = {
     upcomingSessions,
-    pastSessions: [], // TODO: Fetch past sessions from API
+    pastSessions: [] as { id: string; title: string; date: string; time: string }[],
     weekDays: getWeekDays(),
   };
 

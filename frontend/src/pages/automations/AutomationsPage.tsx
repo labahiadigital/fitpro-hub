@@ -273,7 +273,7 @@ export function AutomationsPage() {
       trigger_type: values.trigger_type,
       trigger_config: values.trigger_config,
       actions: actions.map((a) => ({
-        type: a.type,
+        type: a.type as "send_email" | "send_in_app" | "create_task" | "update_tag" | "webhook" | "send_form",
         config: a.config,
       })),
       is_active: editingAutomation?.is_active ?? true,

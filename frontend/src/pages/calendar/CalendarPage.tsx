@@ -31,7 +31,6 @@ import {
   IconChevronRight,
   IconClock,
   IconMapPin,
-  IconRepeat,
   IconUser,
   IconUsers,
   IconVideo,

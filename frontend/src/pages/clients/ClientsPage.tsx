@@ -31,7 +31,6 @@ import {
   IconPhone,
   IconCalendar,
   IconSend,
-  IconCopy,
   IconCheck,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -192,7 +191,6 @@ export function ClientsPage() {
   // Estado para invitación
   const [inviteModalOpened, { open: openInviteModal, close: closeInviteModal }] = useDisclosure(false);
   const [lastInvitationUrl, setLastInvitationUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const clientForm = useForm({
     initialValues: {
@@ -279,19 +277,6 @@ export function ClientsPage() {
       inviteForm.reset();
     } catch {
       // Error handled by mutation
-    }
-  };
-
-  const handleCopyInvitationUrl = () => {
-    if (lastInvitationUrl) {
-      navigator.clipboard.writeText(lastInvitationUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      notifications.show({
-        title: "Enlace copiado",
-        message: "El enlace de invitación ha sido copiado al portapapeles",
-        color: "green",
-      });
     }
   };
 

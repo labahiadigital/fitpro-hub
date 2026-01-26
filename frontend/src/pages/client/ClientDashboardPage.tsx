@@ -14,7 +14,6 @@ import {
   ThemeIcon,
   Timeline,
   Button,
-  Skeleton,
   Center,
   Loader,
 } from "@mantine/core";
@@ -86,7 +85,7 @@ function NutrientProgress({
 }
 
 export function ClientDashboardPage() {
-  const { data: dashboardData, isLoading, error } = useClientDashboard();
+  const { data: dashboardData, isLoading } = useClientDashboard();
   const navigate = useNavigate();
   
   // Fallback data while loading or if no data

@@ -2,7 +2,6 @@ import {
   Box,
   Card,
   Group,
-  Stack,
   Text,
   Title,
   Badge,
@@ -19,7 +18,8 @@ import {
   IconPhoto,
   IconUpload,
 } from "@tabler/icons-react";
-import { useAuthStore } from "../../stores/auth";
+// TODO: Will use auth when documents API is implemented
+// import { useAuthStore } from "../../stores/auth";
 
 // TODO: Replace with real API calls when documents API is implemented
 // Currently using placeholder data
@@ -81,7 +81,7 @@ function getFileIcon(type: string) {
 }
 
 export function MyDocumentsPage() {
-  const { user } = useAuthStore();
+  // TODO: In the future, filter documents by user when documents API is ready
   const data = mockDocumentsData;
 
   return (

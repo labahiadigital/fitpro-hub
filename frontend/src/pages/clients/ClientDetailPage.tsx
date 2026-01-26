@@ -450,11 +450,11 @@ export function ClientDetailPage() {
     }
     
     try {
-      // Convert number fields to strings for API
+      // Convert string/null fields to number/undefined for API
       const data = {
         ...values,
-        height_cm: values.height_cm ? String(values.height_cm) : null,
-        weight_kg: values.weight_kg ? String(values.weight_kg) : null,
+        height_cm: values.height_cm ? Number(values.height_cm) : undefined,
+        weight_kg: values.weight_kg ? Number(values.weight_kg) : undefined,
       };
       await updateClient.mutateAsync({ id, data });
       notifications.show({
