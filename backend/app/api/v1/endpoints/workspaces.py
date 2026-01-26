@@ -117,6 +117,40 @@ async def get_workspace_by_slug(
     }
 
 
+@router.get("/members", response_model=List[dict])
+async def list_workspace_members(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Listar todos los miembros del workspace actual.
+    """
+    from app.models.user import User
+    
+    result = await db.execute(
+        select(UserRole, User)
+        .join(User, UserRole.user_id == User.id)
+        .where(UserRole.workspace_id == current_user.workspace_id)
+    )
+    
+    members = []
+    for user_role, user in result.all():
+        members.append({
+            "id": str(user_role.id),
+            "user_id": str(user.id),
+            "workspace_id": str(user_role.workspace_id),
+            "name": user.full_name,
+            "full_name": user.full_name,
+            "email": user.email,
+            "role": user_role.role.value,
+            "avatar_url": user.avatar_url,
+            "is_active": user.is_active,
+            "created_at": user_role.created_at.isoformat() if user_role.created_at else None
+        })
+    
+    return members
+
+
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 async def get_workspace(
     workspace_id: UUID,
@@ -265,4 +299,3 @@ async def switch_workspace(
         "role": user_role.role.value,
         "message": "Workspace cambiado correctamente"
     }
-

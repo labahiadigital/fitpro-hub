@@ -342,15 +342,16 @@ export const automationsApi = {
 export const reportsApi = {
   kpis: () => api.get("/reports/kpis"),
   revenueChart: (months: number) =>
-    api.get("/reports/revenue", { params: { months } }),
+    api.get("/reports/revenue-chart", { params: { months } }),
   clientsChart: (months: number) =>
-    api.get("/reports/clients", { params: { months } }),
+    api.get("/reports/clients-chart", { params: { months } }),
   overview: (period: string) =>
     api.get("/reports/overview", { params: { period } }),
   export: (type: string, format: string, params?: object) =>
-    api.get(`/reports/export/${type}`, {
-      params: { format, ...params },
-      responseType: "blob",
+    api.post("/reports/export", {
+      report_type: type,
+      format,
+      ...params,
     }),
 };
 
