@@ -20,7 +20,7 @@ pydantic-settings==2.8.1
 email-validator==2.2.0
 
 # Caching and Background Tasks
-redis==7.1.0
+redis==5.2.1
 celery[redis]==5.6.2
 
 # HTTP Client
