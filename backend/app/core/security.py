@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Tuple
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import BaseModel, ValidationError
 import secrets
 import re
@@ -9,22 +9,14 @@ import re
 from app.core.config import settings
 
 
-# Password hashing configuration using bcrypt
-# bcrypt is considered secure and is the recommended choice
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=12  # Recommended: 12 rounds for good security/performance balance
-)
-
 # JWT Configuration
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 REFRESH_TOKEN_EXPIRE_DAYS = 30  # 30 days
 
-# Password validation regex
+# Password validation
 PASSWORD_MIN_LENGTH = 8
-PASSWORD_PATTERN = re.compile(r'^.{8,}$')  # At least 8 characters
+BCRYPT_ROUNDS = 12  # Recommended: 12 rounds for good security/performance balance
 
 
 class TokenPayload(BaseModel):
@@ -44,10 +36,13 @@ class TokenPayload(BaseModel):
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a plain password against a hashed password.
-    Uses constant-time comparison to prevent timing attacks.
+    Uses bcrypt's constant-time comparison to prevent timing attacks.
     """
     try:
-        return pwd_context.verify(plain_password, hashed_password)
+        # Encode strings to bytes
+        password_bytes = plain_password.encode('utf-8')
+        hash_bytes = hashed_password.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hash_bytes)
     except Exception:
         # If verification fails for any reason, return False
         # This prevents information leakage about the hash format
@@ -58,8 +53,20 @@ def get_password_hash(password: str) -> str:
     """
     Hash a password using bcrypt.
     Returns a secure hash suitable for storage.
+    
+    bcrypt automatically handles:
+    - Salt generation
+    - Secure hashing with configurable work factor
+    - Constant-time comparison
     """
-    return pwd_context.hash(password)
+    # Encode password to bytes (required by bcrypt)
+    password_bytes = password.encode('utf-8')
+    # Generate salt with specified rounds
+    salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
+    # Hash the password
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    # Return as string for storage
+    return hashed.decode('utf-8')
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
@@ -70,11 +77,9 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     if len(password) < PASSWORD_MIN_LENGTH:
         return False, f"La contraseña debe tener al menos {PASSWORD_MIN_LENGTH} caracteres"
     
-    # Additional checks can be added here:
-    # - Require uppercase/lowercase
-    # - Require numbers
-    # - Require special characters
-    # - Check against common passwords
+    # bcrypt has a maximum of 72 bytes
+    if len(password.encode('utf-8')) > 72:
+        return False, "La contraseña es demasiado larga (máximo 72 caracteres)"
     
     return True, ""
 

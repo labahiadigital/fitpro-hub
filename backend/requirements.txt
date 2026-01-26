@@ -39,7 +39,7 @@ reportlab==4.4.9
 sib-api-v3-sdk==7.6.0
 
 # Security
-passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
 python-dotenv==1.0.1
 
 # Utilities
