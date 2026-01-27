@@ -123,14 +123,20 @@ async def list_workspace_members(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar todos los miembros del workspace actual.
+    Listar todos los miembros del equipo del workspace actual.
+    Excluye a los usuarios con rol 'client' - estos se muestran en la sección de clientes.
+    Solo devuelve owners y collaborators (miembros del equipo).
     """
     from app.models.user import User
     
     result = await db.execute(
         select(UserRole, User)
         .join(User, UserRole.user_id == User.id)
-        .where(UserRole.workspace_id == current_user.workspace_id)
+        .where(
+            UserRole.workspace_id == current_user.workspace_id,
+            # Excluir clientes - solo mostrar miembros del equipo (owner, collaborator)
+            UserRole.role != RoleType.client
+        )
     )
     
     members = []
