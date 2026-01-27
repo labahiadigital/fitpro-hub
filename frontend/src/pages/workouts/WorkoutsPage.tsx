@@ -45,6 +45,7 @@ import {
   useExercises,
   useUpdateWorkoutProgram,
   useWorkoutPrograms,
+  useWorkoutProgram,
 } from "../../hooks/useWorkouts";
 
 // Exercises are fetched from the API via useExercises hook
@@ -72,8 +73,11 @@ export function WorkoutsPage() {
 
   const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
+  // When editing a client's program, we need to fetch all programs (not just templates)
   const { data: programs, isLoading: loadingPrograms } =
-    useWorkoutPrograms(true);
+    useWorkoutPrograms(clientId ? undefined : true);
+  // Also fetch the specific program if editing a client's program
+  const { data: specificClientProgram } = useWorkoutProgram(editProgramId && clientId ? editProgramId : "");
   const createExercise = useCreateExercise();
   const createProgram = useCreateWorkoutProgram();
   const updateProgram = useUpdateWorkoutProgram();
@@ -81,13 +85,20 @@ export function WorkoutsPage() {
   
   // Auto-open builder when edit param is in URL
   useEffect(() => {
-    if (editProgramId && programs && !builderOpened) {
-      const program = programs.find((p: any) => p.id === editProgramId);
+    if (editProgramId && !builderOpened) {
+      // First try to find in the programs list
+      let program = programs?.find((p: any) => p.id === editProgramId);
+      
+      // If not found and we have a specific client program loaded, use that
+      if (!program && specificClientProgram) {
+        program = specificClientProgram;
+      }
+      
       if (program) {
         openProgramBuilderFromUrl(program);
       }
     }
-  }, [editProgramId, programs]);
+  }, [editProgramId, programs, specificClientProgram, builderOpened]);
   
   const openProgramBuilderFromUrl = (program: any) => {
     setEditingProgram(program);

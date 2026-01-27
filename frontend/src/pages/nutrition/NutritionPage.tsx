@@ -66,6 +66,7 @@ import {
   useSupabaseFoodsCount,
   useSupabaseFoodsPaginated,
   useSupabaseMealPlans,
+  useSupabaseMealPlan,
   useSupplements,
   useUpdateFood,
   useUpdateMealPlan,
@@ -202,8 +203,12 @@ export function NutritionPage() {
     isFetching: isFetchingFoods,
   } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch);
   const { data: totalFoodsCount } = useSupabaseFoodsCount();
+  // When editing a client's plan, we need to fetch all plans (not just templates)
   const { data: supabaseMealPlans, isLoading: isLoadingPlans } =
-    useSupabaseMealPlans({ is_template: true });
+    useSupabaseMealPlans(clientId ? {} : { is_template: true });
+  
+  // Also fetch the specific plan if editing a client's plan
+  const { data: specificClientPlan } = useSupabaseMealPlan(editPlanId && clientId ? editPlanId : "");
   const { data: supabaseSupplements } = useSupplements();
   
   // Favoritos
@@ -333,13 +338,31 @@ export function NutritionPage() {
   
   // Auto-open builder when edit param is in URL
   useEffect(() => {
-    if (editPlanId && mealPlans.length > 0 && !builderOpened) {
-      const plan = mealPlans.find((p: any) => p.id === editPlanId);
+    if (editPlanId && !builderOpened) {
+      // First try to find in the mealPlans list
+      let plan = mealPlans.find((p: any) => p.id === editPlanId);
+      
+      // If not found and we have a specific client plan loaded, use that
+      if (!plan && specificClientPlan) {
+        plan = {
+          id: specificClientPlan.id,
+          name: specificClientPlan.name,
+          description: specificClientPlan.description,
+          duration_days: specificClientPlan.duration_days || 7,
+          target_calories: specificClientPlan.target_calories || 2000,
+          target_protein: specificClientPlan.target_protein || 150,
+          target_carbs: specificClientPlan.target_carbs || 200,
+          target_fat: specificClientPlan.target_fat || 70,
+          dietary_tags: specificClientPlan.dietary_tags || [],
+          plan: specificClientPlan.plan || { days: [] },
+        };
+      }
+      
       if (plan) {
         openPlanBuilderFromUrl(plan);
       }
     }
-  }, [editPlanId, mealPlans, builderOpened]);
+  }, [editPlanId, mealPlans, specificClientPlan, builderOpened]);
   
   const openPlanBuilderFromUrl = (plan: any) => {
     setEditingPlan(plan);

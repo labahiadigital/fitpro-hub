@@ -1749,65 +1749,68 @@ export function ClientDetailPage() {
 
                   <Stack gap="sm">
                     {mealPlans.map((plan: { id: string; name: string; target_calories: number; status: string; created_at: string }) => (
-                      <Box 
-                        key={plan.id} 
-                        p="md" 
-                        style={{ 
-                          border: "1px solid var(--border-subtle)", 
-                          borderRadius: "var(--radius-md)",
-                          transition: "all 0.2s",
-                          cursor: "pointer"
-                        }}
-                        className="hover-lift"
-                        onClick={() => setViewingMealPlanId(plan.id)}
-                      >
-                        <Group justify="space-between">
+                      <Card key={plan.id} padding="lg" radius="md" withBorder>
+                        <Group justify="space-between" align="flex-start">
                           <Box>
-                            <Text fw={600} size="sm">{plan.name}</Text>
-                            <Text c="dimmed" size="xs">{plan.target_calories} kcal/día</Text>
+                            <Group gap="sm" mb="xs">
+                              <ThemeIcon size="lg" radius="xl" variant="light" color="green">
+                                <IconSalad size={18} />
+                              </ThemeIcon>
+                              <Text fw={600} size="md">{plan.name}</Text>
+                            </Group>
+                            <Group gap="md">
+                              <Badge variant="light" color="green" size="sm">
+                                {plan.target_calories} kcal/día
+                              </Badge>
+                              <Badge 
+                                variant="light"
+                                color={plan.status === "active" ? "green" : "gray"}
+                                size="sm"
+                              >
+                                {plan.status === "active" ? "Activo" : "Inactivo"}
+                              </Badge>
+                              <Text size="xs" c="dimmed">
+                                Asignado: {new Date(plan.created_at).toLocaleDateString('es-ES')}
+                              </Text>
+                            </Group>
                           </Box>
-                          <Group gap="xs">
-                            <Badge 
-                              size="sm" 
-                              variant="light"
-                              radius="xl"
-                              color={plan.status === "active" ? "green" : "gray"}
-                            >
-                              {plan.status === "active" ? "Activo" : "Inactivo"}
-                            </Badge>
-                            <ActionIcon 
-                              variant="subtle" 
-                              color="blue" 
-                              radius="xl"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setViewingMealPlanId(plan.id);
-                              }}
-                            >
-                              <IconEye size={16} />
-                            </ActionIcon>
-                            <ActionIcon 
-                              variant="subtle" 
-                              color="gray" 
-                              radius="xl"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <IconDownload size={16} />
-                            </ActionIcon>
-                            <ActionIcon 
-                              variant="subtle" 
-                              color="red" 
-                              radius="xl"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteMealPlan(plan.id);
-                              }}
-                            >
-                              <IconTrash size={16} />
-                            </ActionIcon>
-                          </Group>
+                          <Menu position="bottom-end" withArrow shadow="md">
+                            <Menu.Target>
+                              <ActionIcon variant="subtle" color="gray" size="lg">
+                                <IconDotsVertical size={18} />
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item 
+                                leftSection={<IconEye size={16} />}
+                                onClick={() => setViewingMealPlanId(plan.id)}
+                              >
+                                Ver detalles
+                              </Menu.Item>
+                              <Menu.Item 
+                                leftSection={<IconEdit size={16} />}
+                                onClick={() => navigate(`/nutrition?edit=${plan.id}&clientId=${id}`)}
+                              >
+                                Editar plan
+                              </Menu.Item>
+                              <Menu.Item 
+                                leftSection={<IconDownload size={16} />}
+                                onClick={() => {/* TODO: Export PDF */}}
+                              >
+                                Descargar PDF
+                              </Menu.Item>
+                              <Menu.Divider />
+                              <Menu.Item 
+                                color="red"
+                                leftSection={<IconTrash size={16} />}
+                                onClick={() => handleDeleteMealPlan(plan.id)}
+                              >
+                                Eliminar asignación
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
                         </Group>
-                      </Box>
+                      </Card>
                     ))}
                     
                     {mealPlans.length === 0 && (

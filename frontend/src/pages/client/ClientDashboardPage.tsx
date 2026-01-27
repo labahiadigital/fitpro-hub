@@ -364,7 +364,7 @@ export function ClientDashboardPage() {
                 fullWidth
                 justify="flex-start"
                 color="blue"
-                onClick={() => navigate("/chat")}
+                onClick={() => navigate("/my-messages")}
               >
                 Mensaje a mi entrenador
               </Button>
