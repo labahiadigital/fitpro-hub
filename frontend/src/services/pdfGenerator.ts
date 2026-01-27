@@ -72,6 +72,13 @@ const SECONDARY_COLOR = "#40916C";
 const DANGER_COLOR = "#DC3545";
 const WARNING_BG = "#FFF3CD";
 
+// Helper to ensure value is a number
+function toNumber(value: any, defaultValue = 0): number {
+  if (value === null || value === undefined) return defaultValue;
+  const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+  return isNaN(num) ? defaultValue : num;
+}
+
 export function generateMealPlanPDF(
   mealPlan: MealPlanData,
   options: PDFOptions = {}
@@ -166,11 +173,16 @@ export function generateMealPlanPDF(
   doc.text(splitNote, margin, yPos);
   yPos += splitNote.length * 4 + 5;
 
-  // Energy table
-  const maintenanceKcal = mealPlan.target_calories;
+  // Energy table - ensure all values are numbers
+  const targetCalories = toNumber(mealPlan.target_calories, 2000);
+  const targetProtein = toNumber(mealPlan.target_protein, 150);
+  const targetCarbs = toNumber(mealPlan.target_carbs, 200);
+  const targetFat = toNumber(mealPlan.target_fat, 70);
+  
+  const maintenanceKcal = targetCalories;
   const energyData = [
     ["Tipo de Objetivo", "Calorías Estimadas"],
-    ["Energía Estimada para Mantenimiento", `${maintenanceKcal.toFixed(0)} kcal`],
+    ["Energía Estimada para Mantenimiento", `${Math.round(maintenanceKcal)} kcal`],
     ["Hipertrofia o Aumento de Peso", `${Math.round(maintenanceKcal * 1.25)} kcal`],
     ["Definición o Pérdida de Peso", `${Math.round(maintenanceKcal * 0.75)} kcal`],
   ];
@@ -196,9 +208,9 @@ export function generateMealPlanPDF(
   doc.text("Objetivos Nutricionales Diarios", margin, yPos);
   yPos += 5;
 
-  const proteinKcal = mealPlan.target_protein * 4;
-  const carbsKcal = mealPlan.target_carbs * 4;
-  const fatKcal = mealPlan.target_fat * 9;
+  const proteinKcal = targetProtein * 4;
+  const carbsKcal = targetCarbs * 4;
+  const fatKcal = targetFat * 9;
   const totalKcal = proteinKcal + carbsKcal + fatKcal;
   const proteinPct = totalKcal > 0 ? Math.round((proteinKcal / totalKcal) * 100) : 33;
   const carbsPct = totalKcal > 0 ? Math.round((carbsKcal / totalKcal) * 100) : 34;
@@ -208,10 +220,10 @@ export function generateMealPlanPDF(
     ["", "Calorías", "Proteína", "Carbohidratos", "Grasas"],
     [
       "Cantidad",
-      `${mealPlan.target_calories.toFixed(0)} kcal`,
-      `${mealPlan.target_protein.toFixed(0)}g`,
-      `${mealPlan.target_carbs.toFixed(0)}g`,
-      `${mealPlan.target_fat.toFixed(0)}g`,
+      `${Math.round(targetCalories)} kcal`,
+      `${Math.round(targetProtein)}g`,
+      `${Math.round(targetCarbs)}g`,
+      `${Math.round(targetFat)}g`,
     ],
     ["% Kcal", "100%", `${proteinPct}%`, `${carbsPct}%`, `${fatPct}%`],
     [
@@ -278,7 +290,7 @@ export function generateMealPlanPDF(
 
       if (meal.foods && meal.foods.length > 0) {
         const foodData = meal.foods.map((food) => {
-          let foodName = food.name;
+          let foodName = food.name || "Alimento";
           const foodAllergens = food.allergens || [];
           const hasAllergen = foodAllergens.some((a) =>
             allRestrictions.map((r) => r.toLowerCase()).includes(a.toLowerCase())
@@ -286,13 +298,20 @@ export function generateMealPlanPDF(
           if (hasAllergen) {
             foodName = `⚠️ ${foodName}`;
           }
+          // Ensure all numeric values are actual numbers
+          const quantity = toNumber(food.quantity, 0);
+          const calories = toNumber(food.calories, 0);
+          const protein = toNumber(food.protein, 0);
+          const carbs = toNumber(food.carbs, 0);
+          const fat = toNumber(food.fat, 0);
+          
           return [
             foodName,
-            `${food.quantity}g`,
-            food.calories.toFixed(0),
-            food.protein.toFixed(1),
-            food.carbs.toFixed(1),
-            food.fat.toFixed(1),
+            `${Math.round(quantity)}g`,
+            Math.round(calories).toString(),
+            protein.toFixed(1),
+            carbs.toFixed(1),
+            fat.toFixed(1),
           ];
         });
 
