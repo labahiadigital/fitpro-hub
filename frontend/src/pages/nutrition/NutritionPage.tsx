@@ -510,11 +510,16 @@ export function NutritionPage() {
         target_fat: values.target_fat,
         dietary_tags: values.dietary_tags,
         plan: { days: mealPlanDays },
-        is_template: true,
+        // When editing a client's plan (clientId exists), don't save as template
+        is_template: !clientId,
       };
 
       if (editingPlan) {
-        await updateMealPlan.mutateAsync({ id: editingPlan.id, ...planData });
+        // When editing a client's plan, keep original is_template status
+        const updateData = clientId 
+          ? { ...planData, is_template: editingPlan.is_template ?? false }
+          : planData;
+        await updateMealPlan.mutateAsync({ id: editingPlan.id, ...updateData });
         notifications.show({
           title: "Plan actualizado",
           message: `${values.name} se ha actualizado correctamente`,

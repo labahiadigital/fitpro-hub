@@ -78,6 +78,8 @@ import {
 } from "../../hooks/useSupabaseData";
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
+import { generateMealPlanPDF } from "../../services/pdfGenerator";
+import { useAuthStore } from "../../stores/auth";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
 
 // Lista de alérgenos comunes
@@ -171,6 +173,7 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentWorkspace, user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   
   const { data: fetchedClient, isLoading } = useClient(id || "");
@@ -1595,7 +1598,66 @@ export function ClientDetailPage() {
                   allergies: (client as any).health_data?.allergens || [],
                   intolerances: (client as any).health_data?.intolerances || [],
                 }}
-                onEdit={() => navigate(`/nutrition/plans/${viewingMealPlanId}/edit?clientId=${id}`)}
+                onEdit={() => navigate(`/nutrition?edit=${viewingMealPlanId}&clientId=${id}`)}
+                onExportPDF={() => {
+                  if (viewingMealPlan) {
+                    notifications.show({
+                      id: "pdf-export",
+                      title: "Generando PDF",
+                      message: "Por favor espera mientras se genera el documento...",
+                      loading: true,
+                      autoClose: false,
+                    });
+                    try {
+                      generateMealPlanPDF(
+                        {
+                          id: viewingMealPlan.id,
+                          name: viewingMealPlan.name,
+                          description: viewingMealPlan.description,
+                          target_calories: viewingMealPlan.target_calories || 2000,
+                          target_protein: viewingMealPlan.target_protein || 150,
+                          target_carbs: viewingMealPlan.target_carbs || 200,
+                          target_fat: viewingMealPlan.target_fat || 70,
+                          plan: viewingMealPlan.plan || { days: [] },
+                          supplements: viewingMealPlan.supplements || [],
+                          notes: viewingMealPlan.notes,
+                          nutritional_advice: viewingMealPlan.nutritional_advice,
+                        },
+                        {
+                          workspaceName: currentWorkspace?.name || "Trackfiz",
+                          trainerName: user?.full_name || "Entrenador",
+                          client: {
+                            first_name: client.first_name,
+                            last_name: client.last_name,
+                            weight_kg: client.weight_kg,
+                            height_cm: client.height_cm,
+                            allergies: (client as any).health_data?.allergens || [],
+                            intolerances: (client as any).health_data?.intolerances || [],
+                            goals: client.goals,
+                          },
+                        }
+                      );
+                      notifications.update({
+                        id: "pdf-export",
+                        title: "PDF Generado",
+                        message: "El documento se ha descargado correctamente",
+                        color: "green",
+                        loading: false,
+                        autoClose: 3000,
+                      });
+                    } catch (error) {
+                      console.error("Error generating PDF:", error);
+                      notifications.update({
+                        id: "pdf-export",
+                        title: "Error",
+                        message: "No se pudo generar el PDF",
+                        color: "red",
+                        loading: false,
+                        autoClose: 5000,
+                      });
+                    }
+                  }
+                }}
               />
             </Box>
           ) : (

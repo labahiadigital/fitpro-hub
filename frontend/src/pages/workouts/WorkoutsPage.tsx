@@ -255,15 +255,19 @@ export function WorkoutsPage() {
           }))
         ),
       },
-      is_template: true,
+      // When editing a client's plan (clientId exists), don't save as template
+      is_template: !clientId,
     };
 
     try {
       if (editingProgram) {
-        // Update existing program
+        // Update existing program - keep original is_template status if editing client's plan
+        const updateData = clientId 
+          ? { ...programData, is_template: editingProgram.is_template ?? false }
+          : programData;
         await updateProgram.mutateAsync({
           id: editingProgram.id,
-          data: programData,
+          data: updateData,
         });
       } else {
         // Create new program
