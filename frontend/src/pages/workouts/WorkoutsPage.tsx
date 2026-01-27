@@ -32,8 +32,10 @@ import {
   IconTemplate,
   IconTrash,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { EmptyState } from "../../components/common/EmptyState";
+import { useClient } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
 import { WorkoutBuilderWithDays, initialWorkoutDays, type WorkoutDay } from "../../components/workouts/WorkoutBuilder";
 import {
@@ -48,6 +50,14 @@ import {
 // Exercises are fetched from the API via useExercises hook
 
 export function WorkoutsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const editProgramId = searchParams.get("edit");
+  const clientId = searchParams.get("clientId");
+  
+  // If editing for a specific client, get client info
+  const { data: clientData } = useClient(clientId || "");
+  
   const [activeTab, setActiveTab] = useState<string | null>("programs");
   const [
     exerciseModalOpened,
@@ -68,6 +78,48 @@ export function WorkoutsPage() {
   const createProgram = useCreateWorkoutProgram();
   const updateProgram = useUpdateWorkoutProgram();
   const deleteProgram = useDeleteWorkoutProgram();
+  
+  // Auto-open builder when edit param is in URL
+  useEffect(() => {
+    if (editProgramId && programs && !builderOpened) {
+      const program = programs.find((p: any) => p.id === editProgramId);
+      if (program) {
+        openProgramBuilderFromUrl(program);
+      }
+    }
+  }, [editProgramId, programs]);
+  
+  const openProgramBuilderFromUrl = (program: any) => {
+    setEditingProgram(program);
+    if (program.template?.days) {
+      setWorkoutDays(program.template.days);
+    } else if (program.template?.blocks) {
+      const newDays = initialWorkoutDays.map((d, i) => 
+        i === 0 
+          ? { ...d, blocks: program.template.blocks, isRestDay: false }
+          : { ...d }
+      );
+      setWorkoutDays(newDays);
+    } else {
+      setWorkoutDays(initialWorkoutDays);
+    }
+    programForm.setValues({
+      name: program.name,
+      description: program.description || "",
+      duration_weeks: program.duration_weeks,
+      difficulty: program.difficulty,
+      tags: program.tags || [],
+    });
+    openBuilder();
+  };
+  
+  const handleCloseBuilder = () => {
+    closeBuilder();
+    // Clear URL params when closing
+    if (editProgramId || clientId) {
+      setSearchParams({});
+    }
+  };
 
   const exerciseForm = useForm({
     initialValues: {
@@ -206,10 +258,15 @@ export function WorkoutsPage() {
         // Create new program
         await createProgram.mutateAsync(programData);
       }
-      closeBuilder();
+      handleCloseBuilder();
       programForm.reset();
       setWorkoutDays(initialWorkoutDays);
       setEditingProgram(null);
+      
+      // If editing for a specific client, redirect back to client page
+      if (clientId) {
+        navigate(`/clients/${clientId}`);
+      }
     } catch {
       // Error handled
     }
@@ -659,11 +716,18 @@ export function WorkoutsPage() {
 
       {/* Drawer para el constructor de programas */}
       <Drawer
-        onClose={closeBuilder}
+        onClose={handleCloseBuilder}
         opened={builderOpened}
         position="right"
         size="xl"
-        title={editingProgram ? "Editar Programa" : "Nuevo Programa"}
+        title={
+          clientId && clientData ? (
+            <Box>
+              <Text fw={600}>Editar Programa de {clientData.first_name} {clientData.last_name}</Text>
+              <Badge color="blue" size="sm" variant="light">Plan individual del cliente</Badge>
+            </Box>
+          ) : editingProgram ? "Editar Programa" : "Nuevo Programa"
+        }
         styles={{ 
           content: { backgroundColor: "var(--nv-paper-bg)" }, 
           header: { backgroundColor: "var(--nv-paper-bg)", borderBottom: "1px solid var(--nv-border)" }

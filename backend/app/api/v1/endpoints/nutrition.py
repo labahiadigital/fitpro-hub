@@ -480,3 +480,117 @@ async def remove_food_favorite(
     
     await db.delete(favorite)
     await db.commit()
+
+
+# ============ CLIENT LOGS (for trainers) ============
+
+@router.get("/clients/{client_id}/logs")
+async def get_client_nutrition_logs(
+    client_id: UUID,
+    days: int = Query(30, le=365),
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Obtener los logs de nutrición de un cliente específico.
+    Solo accesible por staff (entrenadores).
+    """
+    from datetime import date, timedelta
+    from sqlalchemy import desc
+    
+    # Verify client belongs to this workspace
+    from app.models.client import Client
+    client_result = await db.execute(
+        select(Client).where(
+            Client.id == client_id,
+            Client.workspace_id == current_user.workspace_id
+        )
+    )
+    client = client_result.scalar_one_or_none()
+    
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cliente no encontrado"
+        )
+    
+    # Get client's active meal plan
+    result = await db.execute(
+        select(MealPlan)
+        .where(MealPlan.client_id == client_id)
+        .order_by(desc(MealPlan.created_at))
+        .limit(1)
+    )
+    meal_plan = result.scalar_one_or_none()
+    
+    if not meal_plan or not meal_plan.adherence:
+        return {
+            "client_id": str(client_id),
+            "client_name": client.full_name,
+            "logs": [],
+            "summary": {"total_days": 0, "avg_calories": 0},
+            "targets": {
+                "calories": float(meal_plan.target_calories) if meal_plan and meal_plan.target_calories else 2000,
+                "protein": float(meal_plan.target_protein) if meal_plan and meal_plan.target_protein else 140,
+                "carbs": float(meal_plan.target_carbs) if meal_plan and meal_plan.target_carbs else 250,
+                "fat": float(meal_plan.target_fat) if meal_plan and meal_plan.target_fat else 70,
+            }
+        }
+    
+    logs = meal_plan.adherence.get("logs", [])
+    
+    # Calculate date range
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+    
+    # Filter logs by date range
+    filtered_logs = [
+        log for log in logs 
+        if start_date.isoformat() <= log.get("date", "") <= end_date.isoformat()
+    ]
+    
+    # Group by date
+    from collections import defaultdict
+    days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
+    
+    for log in filtered_logs:
+        log_date = log.get("date", "")
+        days_data[log_date]["meals"].append({
+            "meal_name": log.get("meal_name"),
+            "total_calories": log.get("total_calories", 0),
+            "total_protein": log.get("total_protein", 0),
+            "total_carbs": log.get("total_carbs", 0),
+            "total_fat": log.get("total_fat", 0),
+            "foods": log.get("foods", []),
+            "logged_at": log.get("logged_at"),
+        })
+        days_data[log_date]["totals"]["calories"] += log.get("total_calories", 0)
+        days_data[log_date]["totals"]["protein"] += log.get("total_protein", 0)
+        days_data[log_date]["totals"]["carbs"] += log.get("total_carbs", 0)
+        days_data[log_date]["totals"]["fat"] += log.get("total_fat", 0)
+    
+    # Convert to list sorted by date descending
+    days_list = [
+        {"date": d, **data}
+        for d, data in sorted(days_data.items(), key=lambda x: x[0], reverse=True)
+    ]
+    
+    # Calculate summary
+    total_days = len(days_list)
+    avg_calories = sum(d["totals"]["calories"] for d in days_list) / total_days if total_days > 0 else 0
+    
+    return {
+        "client_id": str(client_id),
+        "client_name": client.full_name,
+        "logs": days_list,
+        "summary": {
+            "total_days": total_days,
+            "avg_calories": round(avg_calories),
+        },
+        "targets": {
+            "calories": float(meal_plan.target_calories) if meal_plan.target_calories else 2000,
+            "protein": float(meal_plan.target_protein) if meal_plan.target_protein else 140,
+            "carbs": float(meal_plan.target_carbs) if meal_plan.target_carbs else 250,
+            "fat": float(meal_plan.target_fat) if meal_plan.target_fat else 70,
+        }
+    }

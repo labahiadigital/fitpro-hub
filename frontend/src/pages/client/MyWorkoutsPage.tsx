@@ -228,6 +228,7 @@ export function MyWorkoutsPage() {
   const { data: todayLogs } = useTodayWorkoutLogs();
   const logWorkoutMutation = useLogWorkout();
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
 
   if (isLoadingWorkouts) {
     return (
@@ -273,32 +274,56 @@ export function MyWorkoutsPage() {
     
     if (dayData) {
       const exerciseCount = dayData.blocks?.reduce((sum: number, b: { exercises?: Array<unknown> }) => sum + (b.exercises?.length || 0), 0) || 0;
+      const exercises = dayData.blocks?.flatMap((block: { exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }) => 
+        (block.exercises || []).map(ex => ({
+          name: ex.exercise?.name || ex.name || "Ejercicio",
+          sets: ex.sets || 3,
+          reps: ex.reps || "10-12",
+          weight: ex.rest_seconds ? `${ex.rest_seconds}s descanso` : "",
+          notes: ex.notes,
+        }))
+      ) || [];
       return {
         day: dayName,
+        dayName: dayData.dayName || dayName,
         type: dayData.isRestDay ? "Descanso" : `${exerciseCount} ejercicios`,
         completed: false,
         isRestDay: dayData.isRestDay,
         blocks: dayData.blocks,
+        exercises_list: exercises,
       };
     }
     
     // Retrocompatibilidad: solo mostrar bloques en el primer día
     if (index === 0 && legacyBlocks.length > 0) {
+      const exercises = legacyBlocks.flatMap((block: { exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }) => 
+        (block.exercises || []).map(ex => ({
+          name: ex.exercise?.name || ex.name || "Ejercicio",
+          sets: ex.sets || 3,
+          reps: ex.reps || "10-12",
+          weight: ex.rest_seconds ? `${ex.rest_seconds}s descanso` : "",
+          notes: ex.notes,
+        }))
+      );
       return {
         day: dayName,
+        dayName: dayName,
         type: `${legacyBlocks.reduce((sum: number, b: { exercises?: Array<unknown> }) => sum + (b.exercises?.length || 0), 0)} ejercicios`,
         completed: false,
         isRestDay: false,
         blocks: legacyBlocks,
+        exercises_list: exercises,
       };
     }
     
     return {
       day: dayName,
+      dayName: dayName,
       type: "Sin asignar",
       completed: false,
       isRestDay: true,
       blocks: [],
+      exercises_list: [],
     };
   });
 
@@ -579,39 +604,151 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-            {data.weekSchedule.map((day, index) => {
-              const isToday = index + 1 === todayDayNum;
-              return (
-                <Card 
-                  key={index} 
-                  shadow="sm" 
-                  padding="md" 
-                  radius="md" 
-                  withBorder
-                  style={{
-                    borderColor: isToday ? "var(--mantine-color-yellow-5)" : undefined,
-                    backgroundColor: isToday ? "var(--mantine-color-yellow-0)" : undefined,
-                  }}
-                >
-                  <Group justify="space-between" mb="xs">
-                    <Group gap="xs">
-                      <Text fw={600}>{day.day}</Text>
-                      {isToday && <Badge size="xs" color="yellow">Hoy</Badge>}
+          <Stack gap="lg">
+            {/* Week day cards */}
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+              {data.weekSchedule.map((day, index) => {
+                const isToday = index + 1 === todayDayNum;
+                const isSelected = selectedDayIndex === index;
+                return (
+                  <Card 
+                    key={index} 
+                    shadow="sm" 
+                    padding="md" 
+                    radius="md" 
+                    withBorder
+                    style={{
+                      borderColor: isSelected ? "var(--mantine-color-blue-5)" : isToday ? "var(--mantine-color-yellow-5)" : undefined,
+                      backgroundColor: isSelected ? "var(--mantine-color-blue-0)" : isToday ? "var(--mantine-color-yellow-0)" : undefined,
+                      cursor: day.isRestDay ? "default" : "pointer",
+                    }}
+                    onClick={() => !day.isRestDay && setSelectedDayIndex(isSelected ? null : index)}
+                  >
+                    <Group justify="space-between" mb="xs">
+                      <Group gap="xs">
+                        <Text fw={600}>{day.day}</Text>
+                        {isToday && <Badge size="xs" color="yellow">Hoy</Badge>}
+                        {isSelected && <Badge size="xs" color="blue">Seleccionado</Badge>}
+                      </Group>
+                      {day.completed && (
+                        <ThemeIcon color="green" size="sm" radius="xl">
+                          <IconCheck size={12} />
+                        </ThemeIcon>
+                      )}
                     </Group>
-                    {day.completed && (
-                      <ThemeIcon color="green" size="sm" radius="xl">
-                        <IconCheck size={12} />
-                      </ThemeIcon>
+                    <Text size="sm" c={day.isRestDay ? "dimmed" : undefined} fw={day.isRestDay ? 400 : 500}>
+                      {day.isRestDay ? "🛌 Descanso" : `💪 ${day.type}`}
+                    </Text>
+                    {!day.isRestDay && (
+                      <Text size="xs" c="dimmed" mt="xs">
+                        Haz clic para ver detalles
+                      </Text>
                     )}
-                  </Group>
-                  <Text size="sm" c={day.isRestDay ? "dimmed" : undefined} fw={day.isRestDay ? 400 : 500}>
-                    {day.isRestDay ? "🛌 Descanso" : `💪 ${day.type}`}
-                  </Text>
-                </Card>
-              );
-            })}
-          </SimpleGrid>
+                  </Card>
+                );
+              })}
+            </SimpleGrid>
+
+            {/* Selected day detail */}
+            {selectedDayIndex !== null && data.weekSchedule[selectedDayIndex] && !data.weekSchedule[selectedDayIndex].isRestDay && (
+              <Card shadow="sm" padding="lg" radius="lg" withBorder>
+                <Group justify="space-between" mb="lg">
+                  <Box>
+                    <Title order={4}>{data.weekSchedule[selectedDayIndex].dayName || data.weekSchedule[selectedDayIndex].day}</Title>
+                    <Group gap="md" mt="xs">
+                      <Group gap={4}>
+                        <IconClock size={14} />
+                        <Text size="sm" c="dimmed">60 min</Text>
+                      </Group>
+                      <Group gap={4}>
+                        <IconBarbell size={14} />
+                        <Text size="sm" c="dimmed">{data.weekSchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios</Text>
+                      </Group>
+                    </Group>
+                  </Box>
+                  <Button 
+                    variant="light" 
+                    color="gray"
+                    size="sm"
+                    onClick={() => setSelectedDayIndex(null)}
+                  >
+                    Cerrar
+                  </Button>
+                </Group>
+
+                {/* Show blocks with exercises */}
+                {data.weekSchedule[selectedDayIndex].blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }, blockIndex: number) => (
+                  <Box key={block.id || blockIndex} mb="lg">
+                    <Group gap="xs" mb="sm">
+                      <Badge 
+                        color={block.type === 'warmup' ? 'orange' : block.type === 'cooldown' ? 'blue' : 'yellow'} 
+                        variant="light"
+                      >
+                        {block.type === 'warmup' ? 'Calentamiento' : block.type === 'cooldown' ? 'Enfriamiento' : 'Principal'}
+                      </Badge>
+                      <Text fw={600}>{block.name}</Text>
+                      <Text size="sm" c="dimmed">{block.exercises?.length || 0} ejercicios</Text>
+                    </Group>
+                    <Accordion variant="separated">
+                      {block.exercises?.map((exercise, exIndex) => {
+                        const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+                        return (
+                          <Accordion.Item key={exIndex} value={`${blockIndex}-${exIndex}`}>
+                            <Accordion.Control>
+                              <Group justify="space-between" pr="md">
+                                <Group>
+                                  <ThemeIcon variant="light" color="gray" size="sm">
+                                    <IconBarbell size={14} />
+                                  </ThemeIcon>
+                                  <Text fw={500}>{exName}</Text>
+                                </Group>
+                                <Group gap="xs">
+                                  <Badge variant="light" color="blue">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
+                                  {exercise.rest_seconds && (
+                                    <Badge variant="light" color="gray">{exercise.rest_seconds}s</Badge>
+                                  )}
+                                </Group>
+                              </Group>
+                            </Accordion.Control>
+                            <Accordion.Panel>
+                              <SimpleGrid cols={3} spacing="md">
+                                <Paper p="sm" radius="md" withBorder>
+                                  <Group gap={4}>
+                                    <IconRepeat size={14} />
+                                    <Text size="sm" fw={500}>Series</Text>
+                                  </Group>
+                                  <Text size="lg" fw={700}>{exercise.sets || 3}</Text>
+                                </Paper>
+                                <Paper p="sm" radius="md" withBorder>
+                                  <Group gap={4}>
+                                    <IconBarbell size={14} />
+                                    <Text size="sm" fw={500}>Repeticiones</Text>
+                                  </Group>
+                                  <Text size="lg" fw={700}>{exercise.reps || "10-12"}</Text>
+                                </Paper>
+                                <Paper p="sm" radius="md" withBorder>
+                                  <Group gap={4}>
+                                    <IconClock size={14} />
+                                    <Text size="sm" fw={500}>Descanso</Text>
+                                  </Group>
+                                  <Text size="lg" fw={700}>{exercise.rest_seconds || 60}s</Text>
+                                </Paper>
+                              </SimpleGrid>
+                              {exercise.notes && (
+                                <Text size="sm" c="dimmed" mt="sm">
+                                  <strong>Notas:</strong> {exercise.notes}
+                                </Text>
+                              )}
+                            </Accordion.Panel>
+                          </Accordion.Item>
+                        );
+                      })}
+                    </Accordion>
+                  </Box>
+                ))}
+              </Card>
+            )}
+          </Stack>
         </Tabs.Panel>
 
         <Tabs.Panel value="history">

@@ -44,9 +44,10 @@ import {
   IconTemplate,
   IconTrash,
 } from "@tabler/icons-react";
-import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { EmptyState } from "../../components/common/EmptyState";
+import { useClient } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   type DayPlan,
@@ -160,6 +161,13 @@ const FOODS_PER_PAGE = 50;
 
 export function NutritionPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editPlanId = searchParams.get("edit");
+  const clientId = searchParams.get("clientId");
+  
+  // If editing for a specific client, get client info
+  const { data: clientData } = useClient(clientId || "");
+  
   const [activeTab, setActiveTab] = useState<string | null>("plans");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
@@ -322,6 +330,44 @@ export function NutritionPage() {
         : null,
     }));
   }, [supabaseMealPlans]);
+  
+  // Auto-open builder when edit param is in URL
+  useEffect(() => {
+    if (editPlanId && mealPlans.length > 0 && !builderOpened) {
+      const plan = mealPlans.find((p: any) => p.id === editPlanId);
+      if (plan) {
+        openPlanBuilderFromUrl(plan);
+      }
+    }
+  }, [editPlanId, mealPlans, builderOpened]);
+  
+  const openPlanBuilderFromUrl = (plan: any) => {
+    setEditingPlan(plan);
+    planForm.setValues({
+      name: plan.name,
+      description: plan.description || "",
+      duration_days: plan.duration_days,
+      target_calories: plan.target_calories,
+      target_protein: plan.target_protein,
+      target_carbs: plan.target_carbs,
+      target_fat: plan.target_fat,
+      dietary_tags: plan.dietary_tags || [],
+    });
+    if (plan.plan?.days?.length > 0) {
+      setMealPlanDays(plan.plan.days);
+    } else {
+      setMealPlanDays(initialDays);
+    }
+    openBuilder();
+  };
+  
+  const handleCloseBuilder = () => {
+    closeBuilder();
+    // Clear URL params when closing
+    if (editPlanId || clientId) {
+      setSearchParams({});
+    }
+  };
 
   const foodForm = useForm({
     initialValues: {
@@ -462,10 +508,15 @@ export function NutritionPage() {
         });
       }
 
-      closeBuilder();
+      handleCloseBuilder();
       planForm.reset();
       setMealPlanDays(initialDays);
       setEditingPlan(null);
+      
+      // If editing for a specific client, redirect back to client page
+      if (clientId) {
+        navigate(`/clients/${clientId}`);
+      }
     } catch {
       notifications.show({
         title: "Error",
@@ -2019,12 +2070,17 @@ export function NutritionPage() {
 
       {/* Drawer para el constructor de planes */}
       <Drawer
-        onClose={closeBuilder}
+        onClose={handleCloseBuilder}
         opened={builderOpened}
         position="right"
         size="xl"
         title={
-          editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"
+          clientId && clientData ? (
+            <Box>
+              <Text fw={600}>Editar Plan de {clientData.first_name} {clientData.last_name}</Text>
+              <Badge color="blue" size="sm" variant="light">Plan individual del cliente</Badge>
+            </Box>
+          ) : editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"
         }
         styles={{ 
           content: { backgroundColor: "var(--nv-paper-bg)" }, 

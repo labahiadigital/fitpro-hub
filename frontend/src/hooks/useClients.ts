@@ -1,6 +1,6 @@
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { clientsApi } from "../services/api";
+import { clientsApi, workoutsApi, nutritionApi } from "../services/api";
 
 interface Client {
   id: string;
@@ -255,6 +255,80 @@ export function useClientProgressSummary(clientId: string) {
     queryKey: ["client-progress-summary", clientId],
     queryFn: async () => clientsApi.getProgressSummary(clientId),
     select: (response) => response.data as ClientProgressSummary,
+    enabled: !!clientId && !clientId.startsWith("demo-"),
+  });
+}
+
+// Workout logs for a client (trainer view)
+interface WorkoutLogEntry {
+  id: string;
+  program_id: string;
+  log: {
+    workout_name?: string;
+    duration_minutes?: number;
+    calories_burned?: number;
+    exercises?: Array<{
+      name: string;
+      completed: boolean;
+      sets_completed: number;
+      notes?: string;
+    }>;
+    notes?: string;
+    completed_at?: string;
+  };
+  created_at: string;
+}
+
+export function useClientWorkoutLogs(clientId: string, programId?: string) {
+  return useQuery({
+    queryKey: ["client-workout-logs", clientId, programId],
+    queryFn: async () => workoutsApi.logs(clientId),
+    select: (response) => response.data as WorkoutLogEntry[],
+    enabled: !!clientId && !clientId.startsWith("demo-"),
+  });
+}
+
+// Nutrition logs for a client (trainer view)
+interface NutritionLogDay {
+  date: string;
+  meals: Array<{
+    meal_name: string;
+    total_calories: number;
+    total_protein: number;
+    total_carbs: number;
+    total_fat: number;
+    foods: Array<{ name: string; calories: number; quantity: number }>;
+    logged_at: string;
+  }>;
+  totals: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+}
+
+interface ClientNutritionLogs {
+  client_id: string;
+  client_name: string;
+  logs: NutritionLogDay[];
+  summary: {
+    total_days: number;
+    avg_calories: number;
+  };
+  targets: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+}
+
+export function useClientNutritionLogs(clientId: string, days = 30) {
+  return useQuery({
+    queryKey: ["client-nutrition-logs", clientId, days],
+    queryFn: async () => nutritionApi.clientLogs(clientId, days),
+    select: (response) => response.data as ClientNutritionLogs,
     enabled: !!clientId && !clientId.startsWith("demo-"),
   });
 }

@@ -64,7 +64,7 @@ import {
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary } from "../../hooks/useClients";
+import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary, useClientWorkoutLogs, useClientNutritionLogs } from "../../hooks/useClients";
 import { 
   useClientMealPlans,
   useWorkoutProgramTemplates,
@@ -179,6 +179,8 @@ export function ClientDetailPage() {
   const { data: clientMeasurements = [] } = useClientMeasurements(id || "");
   const { data: clientPhotos = [] } = useClientPhotos(id || "");
   const { data: clientProgressSummary } = useClientProgressSummary(id || "");
+  const { data: clientWorkoutLogs = [] } = useClientWorkoutLogs(id || "");
+  const { data: clientNutritionLogs } = useClientNutritionLogs(id || "", 30);
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   
@@ -1593,7 +1595,7 @@ export function ClientDetailPage() {
                   allergies: (client as any).health_data?.allergens || [],
                   intolerances: (client as any).health_data?.intolerances || [],
                 }}
-                onEdit={() => navigate(`/nutrition/plans/${viewingMealPlanId}/edit`)}
+                onEdit={() => navigate(`/nutrition/plans/${viewingMealPlanId}/edit?clientId=${id}`)}
               />
             </Box>
           ) : (
@@ -2232,6 +2234,156 @@ export function ClientDetailPage() {
               )}
             </Box>
 
+            {/* Registro de Entrenamientos */}
+            <Box className="nv-card" p="xl">
+              <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Registro de Entrenamientos ({clientWorkoutLogs.length} sesiones)
+              </Text>
+              {clientWorkoutLogs.length === 0 ? (
+                <Text c="dimmed" ta="center" py="xl">
+                  El cliente no ha registrado entrenamientos aún
+                </Text>
+              ) : (
+                <Stack gap="sm">
+                  {clientWorkoutLogs.slice(0, 10).map((log, index) => (
+                    <Card key={log.id || index} padding="md" radius="md" withBorder>
+                      <Group justify="space-between">
+                        <Group>
+                          <ThemeIcon size="lg" radius="xl" variant="light" color="blue">
+                            <IconBarbell size={18} />
+                          </ThemeIcon>
+                          <Box>
+                            <Text fw={600} size="sm">
+                              {log.log?.workout_name || "Entrenamiento"}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {new Date(log.created_at).toLocaleDateString("es-ES", {
+                                weekday: "long",
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </Text>
+                          </Box>
+                        </Group>
+                        <Group gap="md">
+                          {log.log?.duration_minutes && (
+                            <Badge variant="light" color="blue" size="sm">
+                              {log.log.duration_minutes} min
+                            </Badge>
+                          )}
+                          {log.log?.calories_burned && (
+                            <Badge variant="light" color="orange" size="sm">
+                              {log.log.calories_burned} kcal
+                            </Badge>
+                          )}
+                          {log.log?.exercises && (
+                            <Badge variant="light" color="green" size="sm">
+                              {log.log.exercises.filter((e: { completed?: boolean }) => e.completed).length}/{log.log.exercises.length} ejercicios
+                            </Badge>
+                          )}
+                        </Group>
+                      </Group>
+                      {log.log?.notes && (
+                        <Text size="xs" c="dimmed" mt="xs" fs="italic">
+                          "{log.log.notes}"
+                        </Text>
+                      )}
+                    </Card>
+                  ))}
+                  {clientWorkoutLogs.length > 10 && (
+                    <Text size="sm" c="dimmed" ta="center">
+                      Mostrando 10 de {clientWorkoutLogs.length} registros
+                    </Text>
+                  )}
+                </Stack>
+              )}
+            </Box>
+
+            {/* Registro de Nutrición */}
+            <Box className="nv-card" p="xl">
+              <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Registro de Nutrición ({clientNutritionLogs?.summary?.total_days || 0} días)
+              </Text>
+              {!clientNutritionLogs?.logs?.length ? (
+                <Text c="dimmed" ta="center" py="xl">
+                  El cliente no ha registrado comidas aún
+                </Text>
+              ) : (
+                <>
+                  {/* Resumen */}
+                  <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg">
+                    <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                      <Text size="xl" fw={700}>{clientNutritionLogs.summary.avg_calories}</Text>
+                      <Text size="xs" c="dimmed">Promedio kcal/día</Text>
+                    </Box>
+                    <Box ta="center" p="md" style={{ background: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                      <Text size="xl" fw={700}>{clientNutritionLogs.targets.calories}</Text>
+                      <Text size="xs" c="dimmed">Objetivo kcal/día</Text>
+                    </Box>
+                    <Box ta="center" p="md" style={{ background: "var(--mantine-color-green-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                      <Text size="xl" fw={700}>{clientNutritionLogs.targets.protein}g</Text>
+                      <Text size="xs" c="dimmed">Objetivo proteína</Text>
+                    </Box>
+                    <Box ta="center" p="md" style={{ background: "var(--mantine-color-grape-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                      <Text size="xl" fw={700}>{clientNutritionLogs.summary.total_days}</Text>
+                      <Text size="xs" c="dimmed">Días registrados</Text>
+                    </Box>
+                  </SimpleGrid>
+                  
+                  {/* Lista de días */}
+                  <Stack gap="sm">
+                    {clientNutritionLogs.logs.slice(0, 7).map((day, index) => {
+                      const percentage = clientNutritionLogs.targets.calories > 0 
+                        ? Math.round((day.totals.calories / clientNutritionLogs.targets.calories) * 100)
+                        : 0;
+                      return (
+                        <Card key={day.date || index} padding="md" radius="md" withBorder>
+                          <Group justify="space-between">
+                            <Group>
+                              <ThemeIcon size="lg" radius="xl" variant="light" color="yellow">
+                                <IconSalad size={18} />
+                              </ThemeIcon>
+                              <Box>
+                                <Text fw={600} size="sm" tt="capitalize">
+                                  {new Date(day.date).toLocaleDateString("es-ES", {
+                                    weekday: "long",
+                                    day: "numeric",
+                                    month: "short",
+                                  })}
+                                </Text>
+                                <Text size="xs" c="dimmed">
+                                  {day.meals.length} comidas registradas
+                                </Text>
+                              </Box>
+                            </Group>
+                            <Group gap="md">
+                              <Badge 
+                                variant="light" 
+                                color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"} 
+                                size="lg"
+                              >
+                                {day.totals.calories} kcal ({percentage}%)
+                              </Badge>
+                              <Group gap={4}>
+                                <Badge variant="outline" color="red" size="xs">P: {Math.round(day.totals.protein)}g</Badge>
+                                <Badge variant="outline" color="blue" size="xs">C: {Math.round(day.totals.carbs)}g</Badge>
+                                <Badge variant="outline" color="grape" size="xs">G: {Math.round(day.totals.fat)}g</Badge>
+                              </Group>
+                            </Group>
+                          </Group>
+                        </Card>
+                      );
+                    })}
+                    {clientNutritionLogs.logs.length > 7 && (
+                      <Text size="sm" c="dimmed" ta="center">
+                        Mostrando 7 de {clientNutritionLogs.logs.length} días registrados
+                      </Text>
+                    )}
+                  </Stack>
+                </>
+              )}
+            </Box>
+
             {/* Fotos de progreso */}
             <Box className="nv-card" p="xl">
               <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -2348,7 +2500,7 @@ export function ClientDetailPage() {
                           <Menu.Item 
                             leftSection={<IconEdit size={16} />}
                             onClick={() => {
-                              navigate(`/workouts?edit=${program.id}`);
+                              navigate(`/workouts?edit=${program.id}&clientId=${id}`);
                             }}
                           >
                             Editar programa
@@ -2944,7 +3096,7 @@ export function ClientDetailPage() {
                 leftSection={<IconEdit size={16} />}
                 onClick={() => {
                   closeViewProgramModal();
-                  navigate(`/workouts?edit=${selectedProgramForView.id}`);
+                  navigate(`/workouts?edit=${selectedProgramForView.id}&clientId=${id}`);
                 }}
               >
                 Editar programa

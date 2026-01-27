@@ -48,11 +48,11 @@ import {
 
 // Tipos de comidas con sus iconos
 const MEAL_TYPES = [
-  { value: "Desayuno", label: "Desayuno", icon: IconCoffee, time: "08:00" },
-  { value: "Almuerzo", label: "Almuerzo", icon: IconSoup, time: "13:00" },
-  { value: "Merienda", label: "Merienda", icon: IconApple, time: "17:00" },
-  { value: "Cena", label: "Cena", icon: IconSalad, time: "21:00" },
-  { value: "Snack", label: "Snack", icon: IconMoon, time: "23:00" },
+  { value: "Desayuno", label: "Desayuno", icon: IconCoffee, time: "08:00", color: "orange" },
+  { value: "Almuerzo", label: "Almuerzo", icon: IconSoup, time: "13:00", color: "green" },
+  { value: "Merienda", label: "Merienda", icon: IconApple, time: "17:00", color: "yellow" },
+  { value: "Cena", label: "Cena", icon: IconSalad, time: "21:00", color: "blue" },
+  { value: "Snack", label: "Snack", icon: IconMoon, time: "23:00", color: "grape" },
 ];
 
 interface FoodItem {
@@ -273,6 +273,16 @@ function LogMealModal({
 }
 
 // Interface para comidas del plan
+interface PlanMealFoodItem {
+  name: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  quantity: number;
+  unit: string;
+}
+
 interface PlanMeal {
   id: string;
   name: string;
@@ -292,6 +302,8 @@ interface PlanMeal {
     quantity_grams: number;
     type: "food" | "supplement";
   }>;
+  // Also support alternate structure with foods array
+  foods?: PlanMealFoodItem[];
 }
 
 interface PlanDay {
@@ -474,6 +486,7 @@ export function MyNutritionPage() {
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
   const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
+  const [selectedWeekDayIndex, setSelectedWeekDayIndex] = useState<number | null>(null);
   
   // Hooks para datos reales del backend
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
@@ -551,6 +564,8 @@ export function MyNutritionPage() {
   // Calcular datos de la semana desde el historial real
   const weekData = useMemo(() => {
     const days = ["D", "L", "M", "X", "J", "V", "S"];
+    const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const dayMappingToPlan = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
     const todayDate = new Date();
     
     return days.map((dayLabel, i) => {
@@ -565,27 +580,42 @@ export function MyNutritionPage() {
       // Buscar en el historial
       const dayHistory = nutritionHistory?.days?.find(d => d.date === dateStr);
       
+      // Obtener las comidas del plan para este día
+      const planDayNum = dayMappingToPlan[i];
+      const dayPlan = mealPlan?.plan?.days?.find((d: PlanDay) => d.day === planDayNum);
+      const planMeals = dayPlan?.meals || [];
+      
       if (isToday) {
         return {
           day: dayLabel,
+          dayName: dayNames[i],
           date: dateStr,
           calories: dailyTotals.calories,
           target: targets.calories,
           isToday: true,
-          meals: nutritionLogs?.length || 0,
+          mealsLogged: nutritionLogs?.length || 0,
+          planMeals: planMeals,
+          totals: {
+            protein: dailyTotals.protein,
+            carbs: dailyTotals.carbs,
+            fat: dailyTotals.fats,
+          },
         };
       }
       
       return {
         day: dayLabel,
+        dayName: dayNames[i],
         date: dateStr,
         calories: dayHistory?.totals?.calories || 0,
         target: targets.calories,
         isToday: false,
-        meals: dayHistory?.meals?.length || 0,
+        mealsLogged: dayHistory?.meals?.length || 0,
+        planMeals: planMeals,
+        totals: dayHistory?.totals || { protein: 0, carbs: 0, fat: 0 },
       };
     });
-  }, [dailyTotals, targets, nutritionHistory, nutritionLogs]);
+  }, [dailyTotals, targets, nutritionHistory, nutritionLogs, mealPlan]);
 
   const handleLogMeal = async (data: {
     meal_name: string;
@@ -893,6 +923,7 @@ export function MyNutritionPage() {
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
               {weekData.map((day, index) => {
                 const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
+                const isSelected = selectedWeekDayIndex === index;
                 return (
                   <Card 
                     key={index} 
@@ -901,14 +932,17 @@ export function MyNutritionPage() {
                     radius="md" 
                     withBorder
                     style={{
-                      borderColor: day.isToday ? "var(--mantine-color-yellow-5)" : undefined,
-                      backgroundColor: day.isToday ? "var(--mantine-color-yellow-0)" : undefined,
+                      borderColor: isSelected ? "var(--mantine-color-blue-5)" : day.isToday ? "var(--mantine-color-yellow-5)" : undefined,
+                      backgroundColor: isSelected ? "var(--mantine-color-blue-0)" : day.isToday ? "var(--mantine-color-yellow-0)" : undefined,
+                      cursor: "pointer",
                     }}
+                    onClick={() => setSelectedWeekDayIndex(isSelected ? null : index)}
                   >
                     <Group justify="space-between" mb="xs">
                       <Group gap="xs">
                         <Text fw={600}>{day.day}</Text>
                         {day.isToday && <Badge size="xs" color="yellow">Hoy</Badge>}
+                        {isSelected && <Badge size="xs" color="blue">Seleccionado</Badge>}
                       </Group>
                       <RingProgress
                         size={40}
@@ -922,11 +956,141 @@ export function MyNutritionPage() {
                     </Group>
                     <Text size="lg" fw={700}>{day.calories}</Text>
                     <Text size="xs" c="dimmed">de {day.target} kcal</Text>
-                    <Text size="xs" c="dimmed" mt="xs">{day.meals} comidas registradas</Text>
+                    <Text size="xs" c="dimmed" mt="xs">{day.mealsLogged} comidas registradas</Text>
+                    <Text size="xs" c="dimmed">Haz clic para ver detalles</Text>
                   </Card>
                 );
               })}
             </SimpleGrid>
+
+            {/* Selected day detail */}
+            {selectedWeekDayIndex !== null && weekData[selectedWeekDayIndex] && (
+              <Card shadow="sm" padding="lg" radius="lg" withBorder>
+                <Group justify="space-between" mb="lg">
+                  <Box>
+                    <Title order={4}>{weekData[selectedWeekDayIndex].dayName}</Title>
+                    <Text size="sm" c="dimmed">
+                      {new Date(weekData[selectedWeekDayIndex].date).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                      })}
+                    </Text>
+                  </Box>
+                  <Button 
+                    variant="light" 
+                    color="gray"
+                    size="sm"
+                    onClick={() => setSelectedWeekDayIndex(null)}
+                  >
+                    Cerrar
+                  </Button>
+                </Group>
+
+                {/* Macros summary for selected day */}
+                <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg">
+                  <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                    <Text size="xl" fw={700}>
+                      {weekData[selectedWeekDayIndex].calories}
+                    </Text>
+                    <Text size="xs" c="dimmed">kcal consumidas</Text>
+                    <Progress 
+                      value={Math.min((weekData[selectedWeekDayIndex].calories / targets.calories) * 100, 100)} 
+                      color="yellow" 
+                      size="sm" 
+                      mt="xs"
+                    />
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "var(--mantine-color-red-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                    <Text size="xl" fw={700}>
+                      {Math.round(weekData[selectedWeekDayIndex].totals?.protein || 0)}g
+                    </Text>
+                    <Text size="xs" c="dimmed">Proteína</Text>
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                    <Text size="xl" fw={700}>
+                      {Math.round(weekData[selectedWeekDayIndex].totals?.carbs || 0)}g
+                    </Text>
+                    <Text size="xs" c="dimmed">Carbohidratos</Text>
+                  </Box>
+                  <Box ta="center" p="md" style={{ background: "var(--mantine-color-grape-light)", borderRadius: "var(--mantine-radius-md)" }}>
+                    <Text size="xl" fw={700}>
+                      {Math.round(weekData[selectedWeekDayIndex].totals?.fat || 0)}g
+                    </Text>
+                    <Text size="xs" c="dimmed">Grasas</Text>
+                  </Box>
+                </SimpleGrid>
+
+                {/* Plan meals for this day */}
+                {weekData[selectedWeekDayIndex].planMeals && weekData[selectedWeekDayIndex].planMeals.length > 0 ? (
+                  <Box>
+                    <Text fw={600} mb="sm">Comidas del plan para {weekData[selectedWeekDayIndex].dayName}</Text>
+                    <Stack gap="sm">
+                      {weekData[selectedWeekDayIndex].planMeals.map((meal: PlanMeal, mealIndex: number) => {
+                        const mealType = MEAL_TYPES.find(m => m.value === meal.name);
+                        // Support both foods array and items array
+                        const mealFoods = meal.foods || meal.items?.map(item => ({
+                          name: item.food?.name || "Alimento",
+                          calories: item.food?.calories || 0,
+                          protein_g: item.food?.protein || 0,
+                          carbs_g: item.food?.carbs || 0,
+                          fat_g: item.food?.fat || 0,
+                          quantity: item.quantity_grams || 0,
+                          unit: "g",
+                        })) || [];
+                        
+                        const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.calories || 0), 0);
+                        const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.protein_g || 0), 0);
+                        const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.carbs_g || 0), 0);
+                        const totalFat = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.fat_g || 0), 0);
+                        
+                        const MealIcon = mealType?.icon || IconSalad;
+                        
+                        return (
+                          <Card key={mealIndex} padding="md" radius="md" withBorder>
+                            <Group justify="space-between">
+                              <Group>
+                                <ThemeIcon 
+                                  variant="light" 
+                                  color={mealType?.color || "gray"} 
+                                  size="lg" 
+                                  radius="xl"
+                                >
+                                  <MealIcon size={18} />
+                                </ThemeIcon>
+                                <Box>
+                                  <Text fw={600} size="sm">{mealType?.label || meal.name}</Text>
+                                  <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
+                                </Box>
+                              </Group>
+                              <Group gap="xs">
+                                <Badge variant="light" color="yellow" size="sm">{totalCalories} kcal</Badge>
+                                <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
+                                <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
+                                <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                              </Group>
+                            </Group>
+                            {mealFoods.length > 0 && (
+                              <Stack gap="xs" mt="sm" ml={54}>
+                                {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
+                                  <Group key={foodIndex} justify="space-between">
+                                    <Text size="sm">{food.name}</Text>
+                                    <Text size="xs" c="dimmed">
+                                      {food.quantity}{food.unit} - {food.calories} kcal
+                                    </Text>
+                                  </Group>
+                                ))}
+                              </Stack>
+                            )}
+                          </Card>
+                        );
+                      })}
+                    </Stack>
+                  </Box>
+                ) : (
+                  <Text c="dimmed" ta="center">No hay comidas asignadas en el plan para este día</Text>
+                )}
+              </Card>
+            )}
 
             {/* Week Summary */}
             <Card shadow="sm" padding="lg" radius="lg" withBorder>

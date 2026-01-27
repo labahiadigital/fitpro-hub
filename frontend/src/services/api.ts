@@ -285,6 +285,10 @@ export const nutritionApi = {
       end_date: endDate,
       notes: notes
     }),
+
+  // Client logs (for trainers)
+  clientLogs: (clientId: string, days?: number) => 
+    api.get(`/nutrition/clients/${clientId}/logs`, { params: { days } }),
 };
 
 // Forms API

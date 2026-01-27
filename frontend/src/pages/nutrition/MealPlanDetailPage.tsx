@@ -1,7 +1,7 @@
 import { Box, Center, Container, Loader } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconCheck } from "@tabler/icons-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
 import { useSupabaseMealPlan, useClient } from "../../hooks/useSupabaseData";
@@ -10,6 +10,8 @@ import { useAuthStore } from "../../stores/auth";
 
 export function MealPlanDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const clientIdFromUrl = searchParams.get("clientId");
   const navigate = useNavigate();
   const { currentWorkspace, user } = useAuthStore();
 
@@ -91,7 +93,13 @@ export function MealPlanDetailPage() {
   };
 
   const handleEdit = () => {
-    navigate(`/nutrition?edit=${id}`);
+    // Include clientId if editing a client's assigned plan
+    const clientParam = clientIdFromUrl || mealPlan?.client_id;
+    if (clientParam) {
+      navigate(`/nutrition?edit=${id}&clientId=${clientParam}`);
+    } else {
+      navigate(`/nutrition?edit=${id}`);
+    }
   };
 
   if (isLoadingPlan) {
