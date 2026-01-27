@@ -76,7 +76,7 @@ import {
   useDeleteAssignedProgram,
   useDeleteAssignedMealPlan,
 } from "../../hooks/useSupabaseData";
-import { AllergenList } from "../../components/common/AllergenBadge";
+// AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
 
@@ -1033,6 +1033,7 @@ export function ClientDetailPage() {
       <Tabs onChange={setActiveTab} value={activeTab}>
         <Tabs.List mb="xl">
           <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">Resumen</Tabs.Tab>
+          <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">Salud</Tabs.Tab>
           <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
           <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
           <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
@@ -1119,7 +1120,7 @@ export function ClientDetailPage() {
               </Timeline>
             </Box>
 
-            {/* Alergias e Intolerancias */}
+            {/* Alergias e Intolerancias - Resumen simplificado */}
             <Box className="nv-card" p="xl">
               <Group justify="space-between" mb="lg">
                 <Group gap="xs">
@@ -1138,230 +1139,69 @@ export function ClientDetailPage() {
                 </ActionIcon>
               </Group>
 
-              {(((client as any).health_data?.allergens?.length > 0) || ((client as any).health_data?.intolerances?.length > 0)) ? (
-                <Stack gap="md">
-                  {(client as any).health_data?.allergens?.length > 0 && (
-                    <Box>
-                      <Text size="sm" c="dimmed" mb="xs">Alergias</Text>
-                      <AllergenList 
-                        allergens={(client as any).health_data?.allergens || []} 
-                        clientAllergens={(client as any).health_data?.allergens || []}
-                        clientIntolerances={(client as any).health_data?.intolerances || []}
-                      />
-                    </Box>
-                  )}
-                  {(client as any).health_data?.intolerances?.length > 0 && (
-                    <Box>
-                      <Text size="sm" c="dimmed" mb="xs">Intolerancias</Text>
-                      <AllergenList 
-                        allergens={(client as any).health_data?.intolerances || []} 
-                        clientAllergens={(client as any).health_data?.allergens || []}
-                        clientIntolerances={(client as any).health_data?.intolerances || []}
-                      />
-                    </Box>
-                  )}
-                </Stack>
-              ) : (
-                <Text c="dimmed" size="sm">Sin alergias ni intolerancias registradas</Text>
-              )}
-
-              {/* Lesiones desde health_data */}
-              {((client as any).health_data?.injuries?.length > 0 || client.injuries?.length > 0) && (
-                <Box mt="lg">
-                  <Divider mb="lg" />
-                  <Text size="sm" c="dimmed" mb="xs">Lesiones</Text>
-                  <Stack gap="xs">
-                    {((client as any).health_data?.injuries || client.injuries || []).map((injury: any, idx: number) => (
-                      <Badge 
-                        key={idx} 
-                        size="lg" 
-                        variant="light"
-                        radius="xl"
-                        styles={{
-                          root: {
-                            backgroundColor: "var(--nv-warning-bg)",
-                            color: "var(--nv-warning)"
-                          }
-                        }}
-                      >
-                        {typeof injury === 'string' ? injury : injury.name || injury}
-                        {injury.status && ` (${injury.status})`}
-                      </Badge>
-                    ))}
+              {(() => {
+                // Combinar alergias de ambas fuentes (allergens del modal y allergies del onboarding)
+                const allergens = (client as any).health_data?.allergens || [];
+                const allergiesOnboarding = (client as any).health_data?.allergies || [];
+                const allAllergies = [...new Set([...allergens, ...allergiesOnboarding])];
+                const intolerances = (client as any).health_data?.intolerances || [];
+                const injuries = (client as any).health_data?.injuries || client.injuries || [];
+                
+                const hasData = allAllergies.length > 0 || intolerances.length > 0 || injuries.length > 0;
+                
+                if (!hasData) {
+                  return <Text c="dimmed" size="sm">Sin alergias ni intolerancias registradas</Text>;
+                }
+                
+                return (
+                  <Stack gap="md">
+                    {allAllergies.length > 0 && (
+                      <Box>
+                        <Text size="sm" c="dimmed" mb="xs">Alergias</Text>
+                        <Group gap="xs">
+                          {allAllergies.map((allergy: string, idx: number) => (
+                            <Badge key={idx} color="red" variant="light" size="md">
+                              {allergy}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </Box>
+                    )}
+                    {intolerances.length > 0 && (
+                      <Box>
+                        <Text size="sm" c="dimmed" mb="xs">Intolerancias</Text>
+                        <Group gap="xs">
+                          {intolerances.map((intolerance: string, idx: number) => (
+                            <Badge key={idx} color="orange" variant="light" size="md">
+                              {intolerance}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </Box>
+                    )}
+                    {injuries.length > 0 && (
+                      <Box>
+                        <Divider my="md" />
+                        <Text size="sm" c="dimmed" mb="xs">Lesiones</Text>
+                        <Group gap="xs">
+                          {injuries.map((injury: any, idx: number) => (
+                            <Badge 
+                              key={idx} 
+                              color="yellow" 
+                              variant="light"
+                              size="md"
+                            >
+                              {typeof injury === 'string' ? injury : injury.name || injury}
+                              {injury.status === 'active' && ' (activa)'}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </Box>
+                    )}
                   </Stack>
-                </Box>
-              )}
+                );
+              })()}
             </Box>
-
-            {/* Información de Salud Completa del Onboarding */}
-            {(client as any).health_data && Object.keys((client as any).health_data).length > 0 && (
-              <Box className="nv-card" p="xl">
-                <Group gap="xs" mb="lg">
-                  <IconHeart size={20} color="var(--nv-primary)" />
-                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Información de Salud Completa
-                  </Text>
-                </Group>
-
-                <Stack gap="md">
-                  {/* Nivel de actividad y objetivos */}
-                  {((client as any).health_data.activity_level || (client as any).health_data.fitness_goal) && (
-                    <Box>
-                      <Text size="sm" c="dimmed" mb="xs">Nivel de Actividad y Objetivos</Text>
-                      <SimpleGrid cols={2} spacing="md">
-                        {(client as any).health_data.activity_level && (
-                          <Box>
-                            <Text size="xs" c="dimmed">Nivel de actividad</Text>
-                            <Badge color="blue" variant="light" size="lg" tt="capitalize">
-                              {(client as any).health_data.activity_level.replace('_', ' ')}
-                            </Badge>
-                          </Box>
-                        )}
-                        {(client as any).health_data.fitness_goal && (
-                          <Box>
-                            <Text size="xs" c="dimmed">Objetivo principal</Text>
-                            <Badge color="green" variant="light" size="lg" tt="capitalize">
-                              {(client as any).health_data.fitness_goal.replace('_', ' ')}
-                            </Badge>
-                          </Box>
-                        )}
-                        {(client as any).health_data.training_days_per_week && (
-                          <Box>
-                            <Text size="xs" c="dimmed">Días de entrenamiento/semana</Text>
-                            <Badge color="yellow" variant="light" size="lg">
-                              {(client as any).health_data.training_days_per_week} días
-                            </Badge>
-                          </Box>
-                        )}
-                        {(client as any).health_data.target_weight && (
-                          <Box>
-                            <Text size="xs" c="dimmed">Peso objetivo</Text>
-                            <Badge color="cyan" variant="light" size="lg">
-                              {(client as any).health_data.target_weight} kg
-                            </Badge>
-                          </Box>
-                        )}
-                      </SimpleGrid>
-                    </Box>
-                  )}
-
-                  {/* Objetivos secundarios */}
-                  {(client as any).health_data.secondary_goals?.length > 0 && (
-                    <Box>
-                      <Text size="sm" c="dimmed" mb="xs">Objetivos Secundarios</Text>
-                      <Group gap="xs">
-                        {(client as any).health_data.secondary_goals.map((goal: string, idx: number) => (
-                          <Badge key={idx} color="teal" variant="light" size="md" tt="capitalize">
-                            {goal.replace('_', ' ')}
-                          </Badge>
-                        ))}
-                      </Group>
-                    </Box>
-                  )}
-
-                  {/* PAR-Q */}
-                  {(client as any).health_data.parq_responses && (
-                    <Box>
-                      <Divider my="md" />
-                      <Group gap="xs" mb="xs">
-                        <Text size="sm" c="dimmed">Cuestionario PAR-Q</Text>
-                        {(client as any).health_data.parq_risk && (
-                          <Badge color="red" variant="filled" size="sm">⚠ Riesgo identificado</Badge>
-                        )}
-                      </Group>
-                      <Stack gap="xs">
-                        {(client as any).health_data.parq_responses.heartCondition && (
-                          <Text size="sm" c="orange">✓ Condición cardíaca reportada</Text>
-                        )}
-                        {(client as any).health_data.parq_responses.chestPain && (
-                          <Text size="sm" c="orange">✓ Dolor en el pecho al hacer actividad física</Text>
-                        )}
-                        {(client as any).health_data.parq_responses.dizziness && (
-                          <Text size="sm" c="orange">✓ Mareos o pérdida de conocimiento</Text>
-                        )}
-                        {(client as any).health_data.parq_responses.boneJoint && (
-                          <>
-                            <Text size="sm" c="orange">✓ Problemas óseos o articulares</Text>
-                            {(client as any).health_data.parq_responses.boneJointDetails && (
-                              <Text size="xs" c="dimmed" ml="md">
-                                Detalle: {(client as any).health_data.parq_responses.boneJointDetails}
-                              </Text>
-                            )}
-                          </>
-                        )}
-                        {(client as any).health_data.parq_responses.bloodPressure && (
-                          <Text size="sm" c="orange">✓ Medicamentos para presión arterial/corazón</Text>
-                        )}
-                        {(client as any).health_data.parq_responses.otherReason && (
-                          <>
-                            <Text size="sm" c="orange">✓ Otra razón para no hacer ejercicio</Text>
-                            {(client as any).health_data.parq_responses.otherReasonDetails && (
-                              <Text size="xs" c="dimmed" ml="md">
-                                Detalle: {(client as any).health_data.parq_responses.otherReasonDetails}
-                              </Text>
-                            )}
-                          </>
-                        )}
-                        {!(client as any).health_data.parq_risk && (
-                          <Text size="sm" c="green">✓ Sin riesgos identificados en PAR-Q</Text>
-                        )}
-                      </Stack>
-                    </Box>
-                  )}
-
-                  {/* Condiciones médicas */}
-                  {(client as any).health_data.medical_conditions && (
-                    <Box>
-                      <Divider my="md" />
-                      <Text size="sm" c="dimmed" mb="xs">Condiciones Médicas</Text>
-                      <Text size="sm">{(client as any).health_data.medical_conditions}</Text>
-                    </Box>
-                  )}
-
-                  {/* Medicaciones */}
-                  {(client as any).health_data.medications && (
-                    <Box>
-                      <Group gap="xs" mb="xs">
-                        <IconPill size={16} color="var(--mantine-color-grape-5)" />
-                        <Text size="sm" c="dimmed">Medicaciones Actuales</Text>
-                      </Group>
-                      <Text size="sm">{(client as any).health_data.medications}</Text>
-                    </Box>
-                  )}
-
-                  {/* Alergias alimentarias (del onboarding) */}
-                  {((client as any).health_data.allergies?.length > 0 && 
-                    JSON.stringify((client as any).health_data.allergies) !== JSON.stringify((client as any).health_data.allergens)) && (
-                    <Box>
-                      <Divider my="md" />
-                      <Text size="sm" c="dimmed" mb="xs">Alergias Alimentarias (Onboarding)</Text>
-                      <Group gap="xs">
-                        {(client as any).health_data.allergies.map((allergy: string, idx: number) => (
-                          <Badge key={idx} color="red" variant="light" size="md">
-                            {allergy}
-                          </Badge>
-                        ))}
-                      </Group>
-                    </Box>
-                  )}
-
-                  {/* Intolerancias (del onboarding) */}
-                  {((client as any).health_data.intolerances?.length > 0 && 
-                    !(client as any).health_data.allergens) && (
-                    <Box>
-                      <Text size="sm" c="dimmed" mb="xs">Intolerancias (Onboarding)</Text>
-                      <Group gap="xs">
-                        {(client as any).health_data.intolerances.map((intolerance: string, idx: number) => (
-                          <Badge key={idx} color="orange" variant="light" size="md">
-                            {intolerance}
-                          </Badge>
-                        ))}
-                      </Group>
-                    </Box>
-                  )}
-                </Stack>
-              </Box>
-            )}
 
             {/* Configuración de Chat */}
             <Box className="nv-card" p="xl">
@@ -1396,6 +1236,313 @@ export function ClientDetailPage() {
                   size="lg"
                 />
               </Group>
+            </Box>
+          </SimpleGrid>
+        </Tabs.Panel>
+
+        {/* Salud */}
+        <Tabs.Panel value="health">
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+            {/* Alergias e Intolerancias */}
+            <Box className="nv-card" p="xl">
+              <Group justify="space-between" mb="lg">
+                <Group gap="xs">
+                  <IconAlertTriangle size={20} color="var(--nv-error)" />
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Alergias e Intolerancias
+                  </Text>
+                </Group>
+                <ActionIcon 
+                  variant="subtle" 
+                  color="gray" 
+                  radius="xl"
+                  onClick={handleOpenAllergyModal}
+                >
+                  <IconEdit size={18} />
+                </ActionIcon>
+              </Group>
+
+              {(() => {
+                const allergens = (client as any).health_data?.allergens || [];
+                const allergiesOnboarding = (client as any).health_data?.allergies || [];
+                const allAllergies = [...new Set([...allergens, ...allergiesOnboarding])];
+                const intolerances = (client as any).health_data?.intolerances || [];
+                
+                const hasData = allAllergies.length > 0 || intolerances.length > 0;
+                
+                if (!hasData) {
+                  return <Text c="dimmed" size="sm">Sin alergias ni intolerancias registradas</Text>;
+                }
+                
+                return (
+                  <Stack gap="md">
+                    {allAllergies.length > 0 && (
+                      <Box>
+                        <Text size="sm" c="dimmed" mb="xs">Alergias</Text>
+                        <Group gap="xs">
+                          {allAllergies.map((allergy: string, idx: number) => (
+                            <Badge key={idx} color="red" variant="light" size="lg">
+                              {allergy}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </Box>
+                    )}
+                    {intolerances.length > 0 && (
+                      <Box>
+                        <Text size="sm" c="dimmed" mb="xs">Intolerancias</Text>
+                        <Group gap="xs">
+                          {intolerances.map((intolerance: string, idx: number) => (
+                            <Badge key={idx} color="orange" variant="light" size="lg">
+                              {intolerance}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </Box>
+                    )}
+                  </Stack>
+                );
+              })()}
+            </Box>
+
+            {/* Lesiones */}
+            <Box className="nv-card" p="xl">
+              <Group gap="xs" mb="lg">
+                <IconAlertTriangle size={20} color="var(--nv-warning)" />
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Lesiones
+                </Text>
+              </Group>
+
+              {(() => {
+                const injuries = (client as any).health_data?.injuries || client.injuries || [];
+                
+                if (injuries.length === 0) {
+                  return <Text c="dimmed" size="sm">Sin lesiones registradas</Text>;
+                }
+                
+                return (
+                  <Stack gap="xs">
+                    {injuries.map((injury: any, idx: number) => (
+                      <Badge 
+                        key={idx} 
+                        color="yellow" 
+                        variant="light"
+                        size="lg"
+                      >
+                        {typeof injury === 'string' ? injury : injury.name || injury}
+                        {injury.status === 'active' && ' (activa)'}
+                      </Badge>
+                    ))}
+                  </Stack>
+                );
+              })()}
+            </Box>
+
+            {/* Nivel de Actividad y Objetivos */}
+            <Box className="nv-card" p="xl">
+              <Group gap="xs" mb="lg">
+                <IconActivity size={20} color="var(--nv-primary)" />
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Nivel de Actividad y Objetivos
+                </Text>
+              </Group>
+
+              {(() => {
+                const healthData = (client as any).health_data || {};
+                
+                // Traducciones
+                const activityLevelMap: Record<string, string> = {
+                  'sedentary': 'Sedentario',
+                  'light': 'Ligero',
+                  'moderate': 'Moderado',
+                  'active': 'Activo',
+                  'very_active': 'Muy activo',
+                };
+                
+                const fitnessGoalMap: Record<string, string> = {
+                  'lose_weight': 'Perder peso',
+                  'gain_muscle': 'Ganar músculo',
+                  'maintain': 'Mantener',
+                  'improve_health': 'Mejorar salud',
+                  'improve_endurance': 'Mejorar resistencia',
+                  'gain_strength': 'Ganar fuerza',
+                  'flexibility': 'Flexibilidad',
+                  'general_fitness': 'Fitness general',
+                };
+                
+                const secondaryGoalMap: Record<string, string> = {
+                  'strength': 'Fuerza',
+                  'endurance': 'Resistencia',
+                  'flexibility': 'Flexibilidad',
+                  'posture': 'Postura',
+                  'balance': 'Equilibrio',
+                  'mobility': 'Movilidad',
+                  'stress_relief': 'Reducir estrés',
+                  'energy': 'Más energía',
+                };
+                
+                const hasData = healthData.activity_level || healthData.fitness_goal || 
+                               healthData.training_days_per_week || healthData.target_weight ||
+                               healthData.secondary_goals?.length > 0;
+                
+                if (!hasData) {
+                  return <Text c="dimmed" size="sm">Sin información de actividad registrada</Text>;
+                }
+                
+                return (
+                  <Stack gap="md">
+                    <SimpleGrid cols={2} spacing="md">
+                      {healthData.activity_level && (
+                        <Box>
+                          <Text size="xs" c="dimmed">Nivel de actividad</Text>
+                          <Badge color="blue" variant="light" size="lg">
+                            {activityLevelMap[healthData.activity_level] || healthData.activity_level}
+                          </Badge>
+                        </Box>
+                      )}
+                      {healthData.fitness_goal && (
+                        <Box>
+                          <Text size="xs" c="dimmed">Objetivo principal</Text>
+                          <Badge color="green" variant="light" size="lg">
+                            {fitnessGoalMap[healthData.fitness_goal] || healthData.fitness_goal}
+                          </Badge>
+                        </Box>
+                      )}
+                      {healthData.training_days_per_week && (
+                        <Box>
+                          <Text size="xs" c="dimmed">Días de entrenamiento/semana</Text>
+                          <Badge color="yellow" variant="light" size="lg">
+                            {healthData.training_days_per_week} días
+                          </Badge>
+                        </Box>
+                      )}
+                      {healthData.target_weight && (
+                        <Box>
+                          <Text size="xs" c="dimmed">Peso objetivo</Text>
+                          <Badge color="cyan" variant="light" size="lg">
+                            {healthData.target_weight} kg
+                          </Badge>
+                        </Box>
+                      )}
+                    </SimpleGrid>
+                    
+                    {healthData.secondary_goals?.length > 0 && (
+                      <Box>
+                        <Text size="sm" c="dimmed" mb="xs">Objetivos secundarios</Text>
+                        <Group gap="xs">
+                          {healthData.secondary_goals.map((goal: string, idx: number) => (
+                            <Badge key={idx} color="teal" variant="light" size="md">
+                              {secondaryGoalMap[goal] || goal}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </Box>
+                    )}
+                  </Stack>
+                );
+              })()}
+            </Box>
+
+            {/* Cuestionario PAR-Q */}
+            <Box className="nv-card" p="xl">
+              <Group gap="xs" mb="lg">
+                <IconClipboard size={20} color="var(--nv-primary)" />
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Cuestionario PAR-Q
+                </Text>
+                {(client as any).health_data?.parq_risk && (
+                  <Badge color="red" variant="filled" size="sm">⚠ Riesgo identificado</Badge>
+                )}
+              </Group>
+
+              {(() => {
+                const parqResponses = (client as any).health_data?.parq_responses;
+                
+                if (!parqResponses) {
+                  return <Text c="dimmed" size="sm">Sin cuestionario PAR-Q completado</Text>;
+                }
+                
+                const hasRisks = parqResponses.heartCondition || parqResponses.chestPain || 
+                                parqResponses.dizziness || parqResponses.boneJoint || 
+                                parqResponses.bloodPressure || parqResponses.otherReason;
+                
+                return (
+                  <Stack gap="xs">
+                    {parqResponses.heartCondition && (
+                      <Text size="sm" c="orange">✓ Condición cardíaca reportada</Text>
+                    )}
+                    {parqResponses.chestPain && (
+                      <Text size="sm" c="orange">✓ Dolor en el pecho al hacer actividad física</Text>
+                    )}
+                    {parqResponses.dizziness && (
+                      <Text size="sm" c="orange">✓ Mareos o pérdida de conocimiento</Text>
+                    )}
+                    {parqResponses.boneJoint && (
+                      <>
+                        <Text size="sm" c="orange">✓ Problemas óseos o articulares</Text>
+                        {parqResponses.boneJointDetails && (
+                          <Text size="xs" c="dimmed" ml="md">
+                            Detalle: {parqResponses.boneJointDetails}
+                          </Text>
+                        )}
+                      </>
+                    )}
+                    {parqResponses.bloodPressure && (
+                      <Text size="sm" c="orange">✓ Medicamentos para presión arterial/corazón</Text>
+                    )}
+                    {parqResponses.otherReason && (
+                      <>
+                        <Text size="sm" c="orange">✓ Otra razón para no hacer ejercicio</Text>
+                        {parqResponses.otherReasonDetails && (
+                          <Text size="xs" c="dimmed" ml="md">
+                            Detalle: {parqResponses.otherReasonDetails}
+                          </Text>
+                        )}
+                      </>
+                    )}
+                    {!hasRisks && (
+                      <Text size="sm" c="green">✓ Sin riesgos identificados en PAR-Q</Text>
+                    )}
+                  </Stack>
+                );
+              })()}
+            </Box>
+
+            {/* Condiciones Médicas y Medicaciones */}
+            <Box className="nv-card" p="xl">
+              <Group gap="xs" mb="lg">
+                <IconPill size={20} color="var(--mantine-color-grape-5)" />
+                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Información Médica
+                </Text>
+              </Group>
+
+              {(() => {
+                const healthData = (client as any).health_data || {};
+                const hasData = healthData.medical_conditions || healthData.medications;
+                
+                if (!hasData) {
+                  return <Text c="dimmed" size="sm">Sin información médica registrada</Text>;
+                }
+                
+                return (
+                  <Stack gap="md">
+                    {healthData.medical_conditions && (
+                      <Box>
+                        <Text size="sm" c="dimmed" mb="xs">Condiciones médicas</Text>
+                        <Text size="sm">{healthData.medical_conditions}</Text>
+                      </Box>
+                    )}
+                    {healthData.medications && (
+                      <Box>
+                        <Text size="sm" c="dimmed" mb="xs">Medicaciones actuales</Text>
+                        <Text size="sm">{healthData.medications}</Text>
+                      </Box>
+                    )}
+                  </Stack>
+                );
+              })()}
             </Box>
           </SimpleGrid>
         </Tabs.Panel>
