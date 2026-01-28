@@ -76,6 +76,11 @@ class User(BaseModel):
     password_reset_token = Column(String(255), nullable=True, index=True)
     password_reset_sent_at = Column(DateTime(timezone=True), nullable=True)
     
+    # Account deletion (soft delete with recovery period)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    scheduled_deletion_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    deletion_reason = Column(Text, nullable=True)
+    
     # Legacy: Supabase Auth ID (kept for migration, will be deprecated)
     auth_id = Column(UUID(as_uuid=True), unique=True, nullable=True, index=True)
     
@@ -93,6 +98,16 @@ class User(BaseModel):
     # Relationships
     workspace_roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    
+    @property
+    def is_pending_deletion(self) -> bool:
+        """Check if account is scheduled for deletion."""
+        return self.scheduled_deletion_at is not None and self.deleted_at is None
+    
+    @property
+    def is_deleted(self) -> bool:
+        """Check if account has been soft deleted."""
+        return self.deleted_at is not None
     
     def __repr__(self):
         return f"<User {self.email}>"

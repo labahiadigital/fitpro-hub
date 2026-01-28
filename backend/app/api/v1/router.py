@@ -4,7 +4,7 @@ from app.api.v1.endpoints import (
     auth, workspaces, users, clients, bookings, workouts, nutrition,
     forms, messages, payments, automations, reports, products, exercises,
     foods, notifications, supplements, documents, pdf, roles, redsys, lms, erp, referrals,
-    live_classes, ai, wearables, reminders, health, invitations, client_portal
+    live_classes, ai, wearables, reminders, health, invitations, client_portal, account
 )
 
 api_router = APIRouter()
@@ -101,3 +101,6 @@ api_router.include_router(invitations.router, prefix="/invitations", tags=["Invi
 
 # Client Portal (for authenticated clients to access their own data)
 api_router.include_router(client_portal.router, prefix="/my", tags=["Portal del Cliente"])
+
+# Account Management (deletion, recovery)
+api_router.include_router(account.router, prefix="/account", tags=["Gestión de Cuenta"])
