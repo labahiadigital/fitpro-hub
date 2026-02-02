@@ -848,10 +848,10 @@ export function CalendarPage() {
                 valueFormat="DD/MM/YYYY HH:mm"
                 value={form.values.start_time}
                 onChange={(value) => {
-                  form.setFieldValue("start_time", value);
+                  const dateValue = value ? (typeof value === 'string' ? new Date(value) : value) : null;
+                  form.setFieldValue("start_time", dateValue);
                   // Actualizar fecha de fin automáticamente (+1 hora)
-                  if (value) {
-                    const dateValue = typeof value === 'string' ? new Date(value) : value;
+                  if (dateValue) {
                     const newEndTime = new Date(dateValue.getTime() + 60 * 60 * 1000);
                     form.setFieldValue("end_time", newEndTime);
                   }
@@ -865,7 +865,12 @@ export function CalendarPage() {
                 required
                 valueFormat="DD/MM/YYYY HH:mm"
                 minDate={form.values.start_time instanceof Date ? form.values.start_time : undefined}
-                {...form.getInputProps("end_time")}
+                value={form.values.end_time}
+                onChange={(value) => {
+                  const dateValue = value ? (typeof value === 'string' ? new Date(value) : value) : null;
+                  form.setFieldValue("end_time", dateValue);
+                }}
+                error={form.errors.end_time}
               />
             </Group>
 
