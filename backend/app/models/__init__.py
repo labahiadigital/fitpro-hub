@@ -25,6 +25,7 @@ from app.models.live_classes import (
     ClientClassPackage,
     MeetingLog,
 )
+from app.models.google_calendar import GoogleCalendarToken, CalendarSyncMapping
 
 __all__ = [
     "Base",
@@ -79,4 +80,6 @@ __all__ = [
     "LiveClassPackage",
     "ClientClassPackage",
     "MeetingLog",
+    "GoogleCalendarToken",
+    "CalendarSyncMapping",
 ]

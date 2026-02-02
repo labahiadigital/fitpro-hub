@@ -31,6 +31,7 @@ import {
   IconChevronRight,
   IconClock,
   IconMapPin,
+  IconTrash,
   IconUser,
   IconUsers,
   IconVideo,
@@ -44,9 +45,15 @@ import {
   useCancelBooking,
   useCompleteBooking,
   useCreateBooking,
+  useDeleteBooking,
   useUpdateBooking,
 } from "../../hooks/useBookings";
 import { useClients } from "../../hooks/useClients";
+import {
+  useGoogleCalendarStatus,
+  useGoogleCalendarEvents,
+  type GoogleCalendarEvent,
+} from "../../hooks/useGoogleCalendar";
 import "dayjs/locale/es";
 
 dayjs.locale("es");
@@ -66,6 +73,18 @@ interface Booking {
   color?: string;
 }
 
+// Tipo unificado para mostrar en el calendario
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  type: "booking" | "google";
+  color: string;
+  booking?: Booking;
+  googleEvent?: GoogleCalendarEvent;
+}
+
 export function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("week");
@@ -78,8 +97,8 @@ export function CalendarPage() {
   const startOfMonth = dayjs(currentDate).startOf("month");
   const endOfMonth = dayjs(currentDate).endOf("month");
 
-  // Fetch real data
-  const { data: bookingsData, isLoading: bookingsLoading } = useBookings({
+  // Calcular fechas para las queries
+  const dateParams = {
     start_date:
       view === "month"
         ? startOfMonth.toISOString()
@@ -92,6 +111,20 @@ export function CalendarPage() {
         : view === "week"
           ? endOfWeek.toISOString()
           : dayjs(currentDate).endOf("day").toISOString(),
+  };
+
+  // Fetch bookings de Trackfiz
+  const { data: bookingsData, isLoading: bookingsLoading } = useBookings(dateParams);
+
+  // Verificar si Google Calendar está conectado
+  const { data: gcalStatus } = useGoogleCalendarStatus();
+  
+  // Fetch eventos de Google Calendar (si está conectado, excluyendo los de Trackfiz)
+  const { data: googleEvents } = useGoogleCalendarEvents({
+    start_date: dateParams.start_date,
+    end_date: dateParams.end_date,
+    include_trackfiz: false,
+    enabled: gcalStatus?.connected ?? false,
   });
 
   const { data: clientsData } = useClients({ page: 1 });
@@ -100,10 +133,37 @@ export function CalendarPage() {
     ...b,
     client_name: b.client_name || "Cliente",
   }));
+  
+  // Combinar bookings con eventos de Google Calendar
+  const allEvents: CalendarEvent[] = [
+    // Bookings de Trackfiz
+    ...bookings.map((b): CalendarEvent => ({
+      id: b.id,
+      title: b.title,
+      start_time: b.start_time,
+      end_time: b.end_time,
+      type: "booking",
+      color: b.status === "cancelled" ? "gray" : 
+             b.status === "completed" ? "green" :
+             b.modality === "online" ? "blue" : "teal",
+      booking: b,
+    })),
+    // Eventos de Google Calendar (externos)
+    ...(googleEvents || []).map((e): CalendarEvent => ({
+      id: `gcal-${e.id}`,
+      title: `📅 ${e.title}`,
+      start_time: e.start,
+      end_time: e.end,
+      type: "google",
+      color: "grape", // Color distintivo para eventos externos
+      googleEvent: e,
+    })),
+  ];
 
   const createBooking = useCreateBooking();
   const updateBooking = useUpdateBooking();
   const cancelBooking = useCancelBooking();
+  const deleteBooking = useDeleteBooking();
   const completeBooking = useCompleteBooking();
 
   const form = useForm({
@@ -112,8 +172,8 @@ export function CalendarPage() {
       client_id: "",
       session_type: "individual",
       modality: "in_person",
-      start_time: new Date(),
-      end_time: new Date(Date.now() + 60 * 60 * 1000),
+      start_time: new Date() as Date | null,
+      end_time: new Date(Date.now() + 60 * 60 * 1000) as Date | null,
       location: "",
       notes: "",
       is_recurring: false,
@@ -122,18 +182,34 @@ export function CalendarPage() {
     },
     validate: {
       title: (value) => (value.length < 2 ? "Título requerido" : null),
+      start_time: (value) => (!value ? "Fecha de inicio requerida" : null),
+      end_time: (value) => (!value ? "Fecha de fin requerida" : null),
     },
   });
 
   const handleCreateBooking = async (values: typeof form.values) => {
+    // Validar que las fechas existen
+    if (!values.start_time || !values.end_time) {
+      console.error("Fechas inválidas");
+      return;
+    }
+    
+    // Convertir a Date si no lo es ya
+    const startTime = values.start_time instanceof Date 
+      ? values.start_time 
+      : new Date(values.start_time);
+    const endTime = values.end_time instanceof Date 
+      ? values.end_time 
+      : new Date(values.end_time);
+    
     try {
       await createBooking.mutateAsync({
         title: values.title,
         description: values.notes || undefined,
         session_type: values.session_type as "individual" | "group",
         modality: values.modality as "in_person" | "online",
-        start_time: values.start_time.toISOString(),
-        end_time: values.end_time.toISOString(),
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
         location: {
           type: values.modality,
           address:
@@ -148,7 +224,8 @@ export function CalendarPage() {
       });
       closeModal();
       form.reset();
-    } catch {
+    } catch (error) {
+      console.error("Error creating booking:", error);
       // Error handled by mutation
     }
   };
@@ -157,6 +234,17 @@ export function CalendarPage() {
     if (window.confirm("¿Estás seguro de que quieres cancelar esta sesión?")) {
       try {
         await cancelBooking.mutateAsync(bookingId);
+        setSelectedBooking(null);
+      } catch {
+        // Error handled by mutation
+      }
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (window.confirm("¿Estás seguro de que quieres ELIMINAR esta sesión permanentemente? Esta acción no se puede deshacer.")) {
+      try {
+        await deleteBooking.mutateAsync(bookingId);
         setSelectedBooking(null);
       } catch {
         // Error handled by mutation
@@ -201,6 +289,10 @@ export function CalendarPage() {
 
   const getBookingsForDay = (day: dayjs.Dayjs) =>
     bookings.filter((booking) => dayjs(booking.start_time).isSame(day, "day"));
+  
+  // Incluye también eventos de Google Calendar
+  const getEventsForDay = (day: dayjs.Dayjs) =>
+    allEvents.filter((event) => dayjs(event.start_time).isSame(day, "day"));
 
   const getBookingStyle = (booking: Booking) => {
     const startHour = dayjs(booking.start_time).hour();
@@ -612,7 +704,7 @@ export function CalendarPage() {
                       />
                     ))}
 
-                    {/* Bookings */}
+                    {/* Bookings de Trackfiz */}
                     {getBookingsForDay(day).map((booking) => (
                       <Box
                         key={booking.id}
@@ -641,6 +733,50 @@ export function CalendarPage() {
                         </Text>
                       </Box>
                     ))}
+                    
+                    {/* Eventos de Google Calendar (externos) */}
+                    {getEventsForDay(day)
+                      .filter((e) => e.type === "google")
+                      .map((event) => {
+                        const startHour = dayjs(event.start_time).hour();
+                        const startMinute = dayjs(event.start_time).minute();
+                        const duration = dayjs(event.end_time).diff(
+                          dayjs(event.start_time),
+                          "minute"
+                        );
+                        const top = ((startHour - 7) * 60 + startMinute) * (60 / 60);
+                        const height = Math.max(duration * (60 / 60), 30);
+                        
+                        return (
+                          <Box
+                            key={event.id}
+                            style={{
+                              position: "absolute",
+                              left: 2,
+                              right: 2,
+                              top: `${top}px`,
+                              height: `${height}px`,
+                              backgroundColor: "var(--mantine-color-grape-1)",
+                              borderLeft: "3px solid var(--mantine-color-grape-6)",
+                              borderRadius: 4,
+                              padding: 4,
+                              overflow: "hidden",
+                              opacity: 0.85,
+                            }}
+                            title={`${event.googleEvent?.calendar_name || "Google Calendar"}\n${event.googleEvent?.location || ""}`}
+                          >
+                            <Text fw={600} size="xs" truncate>
+                              📅 {event.title.replace("📅 ", "")}
+                            </Text>
+                            <Text c="dimmed" size="xs" truncate>
+                              {event.googleEvent?.calendar_name}
+                            </Text>
+                            <Text c="dimmed" size="xs">
+                              {dayjs(event.start_time).format("HH:mm")}
+                            </Text>
+                          </Box>
+                        );
+                      })}
                   </Box>
                 )
               )}
@@ -708,12 +844,26 @@ export function CalendarPage() {
                 label="Inicio"
                 leftSection={<IconClock size={16} />}
                 placeholder="Fecha y hora de inicio"
-                {...form.getInputProps("start_time")}
+                required
+                valueFormat="DD/MM/YYYY HH:mm"
+                value={form.values.start_time}
+                onChange={(value) => {
+                  form.setFieldValue("start_time", value);
+                  // Actualizar fecha de fin automáticamente (+1 hora)
+                  if (value && value instanceof Date) {
+                    const newEndTime = new Date(value.getTime() + 60 * 60 * 1000);
+                    form.setFieldValue("end_time", newEndTime);
+                  }
+                }}
+                error={form.errors.start_time}
               />
               <DateTimePicker
                 label="Fin"
                 leftSection={<IconClock size={16} />}
                 placeholder="Fecha y hora de fin"
+                required
+                valueFormat="DD/MM/YYYY HH:mm"
+                minDate={form.values.start_time instanceof Date ? form.values.start_time : undefined}
                 {...form.getInputProps("end_time")}
               />
             </Group>
@@ -929,6 +1079,18 @@ export function CalendarPage() {
                   </Button>
                 </>
               )}
+              
+              {/* Botón eliminar siempre visible */}
+              <Button
+                color="red"
+                leftSection={<IconTrash size={16} />}
+                loading={deleteBooking.isPending}
+                onClick={() => handleDeleteBooking(selectedBooking.id)}
+                variant="outline"
+              >
+                Eliminar
+              </Button>
+              
               <Button
                 onClick={() => setSelectedBooking(null)}
                 variant="default"

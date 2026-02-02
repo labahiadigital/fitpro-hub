@@ -43,7 +43,6 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
-import { useExerciseFavorites, useToggleExerciseFavorite } from "../../hooks/useFavorites";
 
 interface Exercise {
   id: string;
@@ -89,6 +88,8 @@ interface WorkoutBuilderProps {
   blocks: WorkoutBlock[];
   onChange: (blocks: WorkoutBlock[]) => void;
   availableExercises: Exercise[];
+  exerciseFavorites?: string[];
+  onToggleExerciseFavorite?: (exerciseId: string, isFavorite: boolean) => void;
 }
 
 // Props con días de la semana
@@ -96,6 +97,8 @@ interface WorkoutBuilderWithDaysProps {
   days: WorkoutDay[];
   onChangeDays: (days: WorkoutDay[]) => void;
   availableExercises: Exercise[];
+  exerciseFavorites?: string[];
+  onToggleExerciseFavorite?: (exerciseId: string, isFavorite: boolean) => void;
 }
 
 // Días iniciales por defecto
@@ -113,6 +116,8 @@ export function WorkoutBuilder({
   blocks,
   onChange,
   availableExercises,
+  exerciseFavorites = [],
+  onToggleExerciseFavorite,
 }: WorkoutBuilderProps) {
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>(
     blocks.map((b) => b.id)
@@ -123,11 +128,10 @@ export function WorkoutBuilder({
   ] = useDisclosure(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
-  const [exerciseFilter, setExerciseFilter] = useState<string>("all"); // "all" | "favorites"
+  const [exerciseFilter, setExerciseFilter] = useState<string>("all"); // "all" | "favorites" | category
   
-  // Favoritos
-  const { data: favorites = [] } = useExerciseFavorites();
-  const toggleFavorite = useToggleExerciseFavorite();
+  // Helper para verificar si un ejercicio es favorito
+  const isExerciseFavorite = (exerciseId: string) => exerciseFavorites.includes(exerciseId);
 
   const toggleBlock = (blockId: string) => {
     setExpandedBlocks((prev) =>
@@ -313,30 +317,55 @@ export function WorkoutBuilder({
   const selectedBlock = blocks.find((b) => b.id === selectedBlockId);
   const blockType = selectedBlock?.type || "main";
 
-  const filteredExercises = availableExercises.filter((e) => {
-    // Filtro por búsqueda
-    const matchesSearch =
-      e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
-      e.muscle_groups.some((m) =>
-        m.toLowerCase().includes(exerciseSearch.toLowerCase())
-      );
+  // Filtrar y ordenar ejercicios (favoritos primero, como en nutrición)
+  const filteredExercises = (() => {
+    // Primero filtrar
+    const filtered = availableExercises.filter((e) => {
+      // Filtro por búsqueda
+      const matchesSearch =
+        e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+        e.muscle_groups.some((m) =>
+          m.toLowerCase().includes(exerciseSearch.toLowerCase())
+        );
+      
+      // Filtro por favoritos (solo si está en modo favoritos)
+      const matchesFavorites = exerciseFilter === "favorites" ? isExerciseFavorite(e.id) : true;
+      
+      // Filtro por categoría según tipo de bloque y tab seleccionada
+      let matchesCategory = true;
+      
+      // Determinar la categoría por defecto según el tipo de bloque
+      const defaultCategory = blockType === "warmup" ? "calentamiento" 
+                            : blockType === "cooldown" ? "estiramiento" 
+                            : null;
+      
+      if (exerciseFilter === "all") {
+        // En "Todos" - mostrar la categoría por defecto del bloque, o todos si es main
+        if (defaultCategory) {
+          matchesCategory = e.category?.toLowerCase() === defaultCategory;
+        }
+        // Para main/superset/circuit, "Todos" muestra todos los ejercicios
+      } else if (exerciseFilter === "favorites") {
+        // En "Favoritos" - filtrar por la categoría por defecto del bloque
+        if (defaultCategory) {
+          matchesCategory = e.category?.toLowerCase() === defaultCategory;
+        }
+        // Para main/superset/circuit, "Favoritos" muestra todos los favoritos
+      } else {
+        // Se seleccionó una categoría específica
+        matchesCategory = e.category?.toLowerCase() === exerciseFilter.toLowerCase();
+      }
+      
+      return matchesSearch && matchesFavorites && matchesCategory;
+    });
     
-    // Filtro por favoritos
-    const matchesFavorites = exerciseFilter === "all" || favorites.includes(e.id);
-    
-    // Filtro por categoría según tipo de bloque
-    let matchesCategory = true;
-    if (blockType === "warmup") {
-      // Para calentamiento, mostrar ejercicios de calentamiento
-      matchesCategory = e.category?.toLowerCase() === "calentamiento";
-    } else if (blockType === "cooldown") {
-      // Para vuelta calma, mostrar estiramientos
-      matchesCategory = e.category?.toLowerCase() === "estiramiento";
-    }
-    // Para main, superset, circuit - mostrar todos (o los que no son calentamiento/estiramiento)
-    
-    return matchesSearch && matchesFavorites && matchesCategory;
-  });
+    // Ordenar favoritos primero
+    return filtered.sort((a, b) => {
+      const aFav = isExerciseFavorite(a.id) ? 0 : 1;
+      const bFav = isExerciseFavorite(b.id) ? 0 : 1;
+      return aFav - bFav;
+    });
+  })();
 
   return (
     <>
@@ -728,17 +757,38 @@ export function WorkoutBuilder({
           />
           
           <Tabs value={exerciseFilter} onChange={(v) => setExerciseFilter(v || "all")}>
-            <Tabs.List>
-              <Tabs.Tab value="all" leftSection={
-                blockType === "warmup" ? <IconFlame size={14} /> :
-                blockType === "cooldown" ? <IconStretching size={14} /> :
-                <IconBarbell size={14} />
-              }>
+            <Tabs.List style={{ flexWrap: "wrap" }}>
+              <Tabs.Tab value="all" leftSection={<IconBarbell size={14} />}>
                 Todos
               </Tabs.Tab>
               <Tabs.Tab value="favorites" leftSection={<IconStarFilled size={14} />}>
                 Favoritos
               </Tabs.Tab>
+              {/* Categorías según el tipo de bloque */}
+              {blockType === "warmup" && (
+                <Tabs.Tab value="calentamiento" leftSection={<IconFlame size={14} />}>
+                  Calentamiento
+                </Tabs.Tab>
+              )}
+              {blockType === "cooldown" && (
+                <Tabs.Tab value="estiramiento" leftSection={<IconStretching size={14} />}>
+                  Estiramiento
+                </Tabs.Tab>
+              )}
+              {blockType !== "warmup" && blockType !== "cooldown" && (
+                <>
+                  <Tabs.Tab value="calentamiento" leftSection={<IconFlame size={14} />}>
+                    Calentamiento
+                  </Tabs.Tab>
+                  <Tabs.Tab value="estiramiento" leftSection={<IconStretching size={14} />}>
+                    Estiramiento
+                  </Tabs.Tab>
+                  <Tabs.Tab value="fuerza">Fuerza</Tabs.Tab>
+                  <Tabs.Tab value="cardio">Cardio</Tabs.Tab>
+                  <Tabs.Tab value="core">Core</Tabs.Tab>
+                  <Tabs.Tab value="flexibilidad">Flexibilidad</Tabs.Tab>
+                </>
+              )}
             </Tabs.List>
           </Tabs>
         </Stack>
@@ -746,13 +796,17 @@ export function WorkoutBuilder({
         <ScrollArea h={350} mt="md">
           <Stack gap="xs">
             {filteredExercises.map((exercise) => {
-              const isFavorite = favorites.includes(exercise.id);
+              const isFav = isExerciseFavorite(exercise.id);
               return (
                 <Card
                   key={exercise.id}
                   padding="sm"
                   radius="md"
-                  style={{ cursor: "pointer" }}
+                  style={{ 
+                    cursor: "pointer",
+                    borderColor: isFav ? "var(--mantine-color-yellow-5)" : undefined,
+                    backgroundColor: isFav ? "var(--mantine-color-yellow-0)" : undefined,
+                  }}
                   withBorder
                 >
                   <Group justify="space-between">
@@ -768,10 +822,18 @@ export function WorkoutBuilder({
                          <IconBarbell size={18} />}
                       </ThemeIcon>
                       <Box>
-                        <Text fw={500} size="sm">
-                          {exercise.name}
-                        </Text>
+                        <Group gap="xs">
+                          {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}
+                          <Text fw={500} size="sm">
+                            {exercise.name}
+                          </Text>
+                        </Group>
                         <Group gap={4}>
+                          {exercise.category && (
+                            <Badge size="xs" variant="light" color="gray">
+                              {exercise.category}
+                            </Badge>
+                          )}
                           {exercise.muscle_groups.slice(0, 3).map((m) => (
                             <Badge key={m} size="xs" variant="light">
                               {m}
@@ -781,16 +843,19 @@ export function WorkoutBuilder({
                       </Box>
                     </Group>
                     <Group gap="xs">
-                      <ActionIcon 
-                        color="yellow" 
-                        variant={isFavorite ? "filled" : "subtle"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite.mutate({ exerciseId: exercise.id, isFavorite });
-                        }}
-                      >
-                        {isFavorite ? <IconStarFilled size={16} /> : <IconStar size={16} />}
-                      </ActionIcon>
+                      {onToggleExerciseFavorite && (
+                        <ActionIcon 
+                          color="yellow" 
+                          variant={isFav ? "filled" : "subtle"}
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleExerciseFavorite(exercise.id, isFav);
+                          }}
+                        >
+                          {isFav ? <IconStarFilled size={14} /> : <IconStar size={14} />}
+                        </ActionIcon>
+                      )}
                       <ActionIcon color="primary" variant="subtle" onClick={() => addExerciseToBlock(exercise)}>
                         <IconCheck size={18} />
                       </ActionIcon>
@@ -824,6 +889,8 @@ export function WorkoutBuilderWithDays({
   days,
   onChangeDays,
   availableExercises,
+  exerciseFavorites = [],
+  onToggleExerciseFavorite,
 }: WorkoutBuilderWithDaysProps) {
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "day-1");
 
@@ -967,6 +1034,8 @@ export function WorkoutBuilderWithDays({
                 blocks={day.blocks}
                 onChange={handleBlocksChange}
                 availableExercises={availableExercises}
+                exerciseFavorites={exerciseFavorites}
+                onToggleExerciseFavorite={onToggleExerciseFavorite}
               />
             )}
           </Tabs.Panel>

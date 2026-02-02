@@ -959,6 +959,10 @@ export function WorkoutsPage() {
               days={workoutDays}
               onChangeDays={setWorkoutDays}
               availableExercises={exercises || []}
+              exerciseFavorites={exerciseFavorites}
+              onToggleExerciseFavorite={(exerciseId, isFavorite) =>
+                toggleExerciseFavorite.mutate({ exerciseId, isFavorite })
+              }
             />
           </Stack>
         </ScrollArea>

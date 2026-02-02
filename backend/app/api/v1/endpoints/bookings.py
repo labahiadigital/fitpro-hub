@@ -1,16 +1,98 @@
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, delete as sql_delete
 from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.models.booking import Booking, BookingStatus, SessionType, SessionModality
+from app.models.client import Client
+from app.models.google_calendar import CalendarSyncMapping
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
+from app.services.google_calendar import google_calendar_service
 
 router = APIRouter()
+
+
+# ============ GOOGLE CALENDAR SYNC HELPERS ============
+
+async def sync_booking_to_calendars(
+    booking: Booking,
+    db: AsyncSession,
+    organizer_id: Optional[UUID] = None,
+    client_id: Optional[UUID] = None
+):
+    """
+    Sincroniza un booking con Google Calendar de organizador y cliente.
+    Se ejecuta en background para no bloquear la respuesta.
+    """
+    # Obtener cliente si existe
+    client = None
+    if booking.client_id:
+        result = await db.execute(
+            select(Client).where(Client.id == booking.client_id)
+        )
+        client = result.scalar_one_or_none()
+    
+    # Sincronizar al calendario del organizador
+    if organizer_id:
+        try:
+            await google_calendar_service.sync_booking_to_google(
+                booking=booking,
+                user_id=organizer_id,
+                db=db,
+                client=client
+            )
+        except Exception as e:
+            print(f"[Bookings] Error sincronizando a Google Calendar del organizador: {e}")
+    
+    # Sincronizar al calendario del cliente (si tiene cuenta conectada)
+    if client_id and client:
+        try:
+            await google_calendar_service.sync_booking_to_google(
+                booking=booking,
+                user_id=client_id,
+                db=db,
+                client=None  # No incluir al cliente como asistente en su propio calendario
+            )
+        except Exception as e:
+            print(f"[Bookings] Error sincronizando a Google Calendar del cliente: {e}")
+
+
+async def delete_booking_from_calendars(
+    booking_id: UUID,
+    db: AsyncSession,
+    organizer_id: Optional[UUID] = None,
+    client_id: Optional[UUID] = None
+):
+    """
+    Elimina un booking de Google Calendar del organizador y cliente.
+    """
+    # Eliminar del calendario del organizador
+    if organizer_id:
+        try:
+            await google_calendar_service.delete_booking_from_google(
+                booking_id=booking_id,
+                user_id=organizer_id,
+                db=db
+            )
+            print(f"[Bookings] Booking {booking_id} eliminado de Google Calendar del organizador")
+        except Exception as e:
+            print(f"[Bookings] Error eliminando de Google Calendar del organizador: {e}")
+    
+    # Eliminar del calendario del cliente
+    if client_id:
+        try:
+            await google_calendar_service.delete_booking_from_google(
+                booking_id=booking_id,
+                user_id=client_id,
+                db=db
+            )
+            print(f"[Bookings] Booking {booking_id} eliminado de Google Calendar del cliente")
+        except Exception as e:
+            print(f"[Bookings] Error eliminando de Google Calendar del cliente: {e}")
 
 
 # ============ SCHEMAS ============
@@ -78,11 +160,13 @@ async def list_bookings(
     end_date: Optional[datetime] = None,
     client_id: Optional[UUID] = None,
     status: Optional[BookingStatus] = None,
+    sync_calendar: bool = False,  # Opcional: forzar sincronización
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Listar reservas del workspace con filtros opcionales.
+    Si sync_calendar=true, sincroniza los bookings visibles con Google Calendar.
     """
     query = select(Booking).where(Booking.workspace_id == current_user.workspace_id)
     
@@ -108,12 +192,27 @@ async def list_bookings(
     query = query.order_by(Booking.start_time)
     
     result = await db.execute(query)
-    return result.scalars().all()
+    bookings = result.scalars().all()
+    
+    # Sincronizar con Google Calendar si se solicita
+    if sync_calendar and bookings:
+        for booking in bookings:
+            try:
+                await sync_booking_to_calendars(
+                    booking=booking,
+                    db=db,
+                    organizer_id=booking.organizer_id
+                )
+            except Exception as e:
+                print(f"[Bookings] Error sincronizando booking {booking.id}: {e}")
+    
+    return bookings
 
 
 @router.post("", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
     data: BookingCreate,
+    background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
@@ -178,6 +277,14 @@ async def create_booking(
     await db.commit()
     await db.refresh(booking)
     
+    # Sincronizar con Google Calendar en background
+    await sync_booking_to_calendars(
+        booking=booking,
+        db=db,
+        organizer_id=current_user.id,
+        client_id=data.client_id
+    )
+    
     return booking
 
 
@@ -211,6 +318,7 @@ async def get_booking(
 async def update_booking(
     booking_id: UUID,
     data: BookingUpdate,
+    background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
@@ -243,17 +351,76 @@ async def update_booking(
     await db.commit()
     await db.refresh(booking)
     
+    # Sincronizar cambios con Google Calendar
+    await sync_booking_to_calendars(
+        booking=booking,
+        db=db,
+        organizer_id=booking.organizer_id,
+        client_id=booking.client_id
+    )
+    
     return booking
 
 
 @router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_booking(
+    booking_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Eliminar una reserva permanentemente.
+    También elimina el evento de Google Calendar si existe.
+    """
+    result = await db.execute(
+        select(Booking).where(
+            Booking.id == booking_id,
+            Booking.workspace_id == current_user.workspace_id
+        )
+    )
+    booking = result.scalar_one_or_none()
+    
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reserva no encontrada"
+        )
+    
+    # Guardar IDs antes de eliminar
+    organizer_id = booking.organizer_id
+    client_id = booking.client_id
+    
+    # Eliminar de Google Calendar primero (esto también elimina los mappings)
+    await delete_booking_from_calendars(
+        booking_id=booking_id,
+        db=db,
+        organizer_id=organizer_id,
+        client_id=client_id
+    )
+    
+    # Eliminar cualquier mapping restante manualmente (por si quedaron sin eliminar)
+    await db.execute(
+        sql_delete(CalendarSyncMapping).where(CalendarSyncMapping.booking_id == booking_id)
+    )
+    
+    # Eliminar el booking de la base de datos
+    await db.delete(booking)
+    await db.commit()
+    
+    print(f"[Bookings] Booking {booking_id} eliminado permanentemente")
+
+
+@router.post("/{booking_id}/cancel", response_model=BookingResponse)
 async def cancel_booking(
     booking_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(require_any_role),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Cancelar una reserva.
+    Cancelar una reserva (cambiar estado a cancelado).
+    El evento se mantiene en Google Calendar pero marcado como cancelado.
     """
     result = await db.execute(
         select(Booking).where(
@@ -280,11 +447,23 @@ async def cancel_booking(
     
     booking.status = BookingStatus.cancelled
     await db.commit()
+    await db.refresh(booking)
+    
+    # Sincronizar cancelación con Google Calendar (actualiza el evento como cancelado)
+    await sync_booking_to_calendars(
+        booking=booking,
+        db=db,
+        organizer_id=booking.organizer_id,
+        client_id=booking.client_id
+    )
+    
+    return booking
 
 
 @router.post("/{booking_id}/complete", response_model=BookingResponse)
 async def complete_booking(
     booking_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
@@ -308,6 +487,14 @@ async def complete_booking(
     booking.status = BookingStatus.completed
     await db.commit()
     await db.refresh(booking)
+    
+    # Sincronizar estado con Google Calendar
+    await sync_booking_to_calendars(
+        booking=booking,
+        db=db,
+        organizer_id=booking.organizer_id,
+        client_id=booking.client_id
+    )
     
     return booking
 

@@ -121,6 +121,29 @@ export function useCancelBooking() {
   });
 }
 
+export function useDeleteBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => bookingsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      notifications.show({
+        title: "Sesión eliminada",
+        message: "La sesión ha sido eliminada permanentemente",
+        color: "red",
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        title: "Error",
+        message: error.message || "Error al eliminar sesión",
+        color: "red",
+      });
+    },
+  });
+}
+
 export function useCompleteBooking() {
   const queryClient = useQueryClient();
 

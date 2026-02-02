@@ -225,11 +225,12 @@ export const clientsApi = {
 // Bookings API
 export const bookingsApi = {
   list: (params?: object) => api.get("/bookings", { params }),
+  listWithSync: (params?: object) => api.get("/bookings", { params: { ...params, sync_calendar: true } }),
   get: (id: string) => api.get(`/bookings/${id}`),
   create: (data: object) => api.post("/bookings", data),
   update: (id: string, data: object) => api.put(`/bookings/${id}`, data),
-  delete: (id: string) => api.delete(`/bookings/${id}`),
-  cancel: (id: string) => api.post(`/bookings/${id}/cancel`),
+  delete: (id: string) => api.delete(`/bookings/${id}`),  // Eliminar permanentemente
+  cancel: (id: string) => api.post(`/bookings/${id}/cancel`),  // Cancelar (cambiar estado)
   complete: (id: string) => api.post(`/bookings/${id}/complete`),
   noShow: (id: string) => api.post(`/bookings/${id}/no-show`),
 };
@@ -500,6 +501,13 @@ export const messagesApi = {
   markConversationRead: (conversationId: string) =>
     api.post(`/messages/conversations/${conversationId}/read`),
   getUnreadCount: () => api.get("/messages/unread-count"),
+};
+
+// WhatsApp Business API (Kapso Integration)
+export const whatsappApi = {
+  getStatus: () => api.get("/whatsapp/status"),
+  setup: () => api.post("/whatsapp/setup"),
+  disconnect: () => api.post("/whatsapp/disconnect"),
 };
 
 export default api;

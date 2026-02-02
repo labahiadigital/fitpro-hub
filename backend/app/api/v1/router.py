@@ -4,7 +4,8 @@ from app.api.v1.endpoints import (
     auth, workspaces, users, clients, bookings, workouts, nutrition,
     forms, messages, payments, automations, reports, products, exercises,
     foods, notifications, supplements, documents, pdf, roles, redsys, lms, erp, referrals,
-    live_classes, ai, wearables, reminders, health, invitations, client_portal, account
+    live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
+    whatsapp, google_calendar
 )
 
 api_router = APIRouter()
@@ -104,3 +105,9 @@ api_router.include_router(client_portal.router, prefix="/my", tags=["Portal del 
 
 # Account Management (deletion, recovery)
 api_router.include_router(account.router, prefix="/account", tags=["Gestión de Cuenta"])
+
+# WhatsApp Business Integration (Kapso)
+api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["WhatsApp Business"])
+
+# Google Calendar Integration
+api_router.include_router(google_calendar.router, prefix="/google-calendar", tags=["Google Calendar"])

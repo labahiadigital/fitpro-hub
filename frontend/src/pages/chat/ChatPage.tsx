@@ -1,8 +1,10 @@
 import {
   ActionIcon,
+  Alert,
   Avatar,
   Badge,
   Box,
+  Button,
   Container,
   Grid,
   Group,
@@ -17,6 +19,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import {
+  IconAlertCircle,
   IconBrandWhatsapp,
   IconCheck,
   IconChecks,
@@ -30,11 +33,13 @@ import {
   IconPhone,
   IconSearch,
   IconSend,
+  IconSettings,
   IconVideo,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   type Conversation,
@@ -45,7 +50,7 @@ import {
   useMessages,
   useSendMessage,
 } from "../../hooks/useChat";
-// import { useAuthStore } from "../../stores/auth";
+import { useWhatsAppStatus } from "../../hooks/useWhatsApp";
 import "dayjs/locale/es";
 
 dayjs.extend(relativeTime);
@@ -253,6 +258,10 @@ export function ChatPage() {
   // TODO: Determinar vista cliente basándose en rol real del usuario
   const isClientView = false;
 
+  // WhatsApp status
+  const { data: whatsappStatus } = useWhatsAppStatus();
+  const isWhatsAppEnabled = whatsappStatus?.connected ?? false;
+
   // Queries
   const { data: conversations = [], isLoading: loadingConversations } =
     useConversations();
@@ -286,9 +295,14 @@ export function ChatPage() {
   // Update send channel based on conversation preference
   useEffect(() => {
     if (selectedConversation) {
-      setSendVia(selectedConversation.preferred_channel);
+      // If WhatsApp is not enabled, always use platform
+      if (!isWhatsAppEnabled) {
+        setSendVia("platform");
+      } else {
+        setSendVia(selectedConversation.preferred_channel);
+      }
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, isWhatsAppEnabled]);
 
   const handleSendMessage = () => {
     if (!(message.trim() && selectedConversationId)) return;
@@ -511,39 +525,65 @@ export function ChatPage() {
                   p="md"
                   style={{ borderTop: "1px solid var(--nv-border)", backgroundColor: "var(--nv-paper-bg)" }}
                 >
-                  {/* Channel selector */}
+                  {/* Channel selector - only show if conversation has WhatsApp */}
                   {selectedConversation.whatsapp_phone && (
                     <Group justify="center" mb="xs">
-                      <SegmentedControl
-                        data={[
-                          {
-                            value: "platform",
-                            label: (
-                              <Group gap={4}>
-                                <IconMessage size={14} />
-                                <span>Plataforma</span>
-                              </Group>
-                            ),
-                          },
-                          {
-                            value: "whatsapp",
-                            label: (
-                              <Group gap={4}>
-                                <IconBrandWhatsapp size={14} />
-                                <span>WhatsApp</span>
-                              </Group>
-                            ),
-                          },
-                        ]}
-                        onChange={(value) => setSendVia(value as MessageSource)}
-                        size="xs"
-                        value={sendVia}
-                        radius="xl"
-                        styles={{
-                          root: { backgroundColor: "var(--nv-surface)" },
-                          indicator: { borderRadius: "999px" }
-                        }}
-                      />
+                      {isWhatsAppEnabled ? (
+                        <SegmentedControl
+                          data={[
+                            {
+                              value: "platform",
+                              label: (
+                                <Group gap={4}>
+                                  <IconMessage size={14} />
+                                  <span>Plataforma</span>
+                                </Group>
+                              ),
+                            },
+                            {
+                              value: "whatsapp",
+                              label: (
+                                <Group gap={4}>
+                                  <IconBrandWhatsapp size={14} />
+                                  <span>WhatsApp</span>
+                                </Group>
+                              ),
+                            },
+                          ]}
+                          onChange={(value) => setSendVia(value as MessageSource)}
+                          size="xs"
+                          value={sendVia}
+                          radius="xl"
+                          styles={{
+                            root: { backgroundColor: "var(--nv-surface)" },
+                            indicator: { borderRadius: "999px" }
+                          }}
+                        />
+                      ) : (
+                        <Alert
+                          color="yellow"
+                          variant="light"
+                          radius="lg"
+                          icon={<IconAlertCircle size={16} />}
+                          py={6}
+                          px="sm"
+                        >
+                          <Group gap="xs">
+                            <Text size="xs">
+                              Este cliente tiene WhatsApp pero no está configurado.
+                            </Text>
+                            <Button
+                              component={Link}
+                              to="/settings?tab=whatsapp"
+                              size="xs"
+                              variant="subtle"
+                              leftSection={<IconSettings size={12} />}
+                            >
+                              Configurar
+                            </Button>
+                          </Group>
+                        </Alert>
+                      )}
                     </Group>
                   )}
 
@@ -555,7 +595,7 @@ export function ChatPage() {
                       flex={1}
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
-                      placeholder={`Escribe un mensaje${sendVia === "whatsapp" ? " por WhatsApp" : ""}...`}
+                      placeholder={`Escribe un mensaje${sendVia === "whatsapp" && isWhatsAppEnabled ? " por WhatsApp" : ""}...`}
                       radius="xl"
                       styles={{
                         input: {
@@ -568,17 +608,25 @@ export function ChatPage() {
                     <ActionIcon color="gray" size="lg" variant="subtle" radius="xl">
                       <IconMoodSmile size={20} />
                     </ActionIcon>
-                    <ActionIcon
-                      color={sendVia === "whatsapp" ? "green" : "primary"}
-                      disabled={!message.trim()}
-                      loading={sendMessageMutation.isPending}
-                      onClick={handleSendMessage}
-                      size="lg"
-                      variant="filled"
-                      radius="xl"
+                    <Tooltip
+                      label={
+                        sendVia === "whatsapp" && isWhatsAppEnabled
+                          ? "Enviar por WhatsApp"
+                          : "Enviar por plataforma"
+                      }
                     >
-                      <IconSend size={18} />
-                    </ActionIcon>
+                      <ActionIcon
+                        color={sendVia === "whatsapp" && isWhatsAppEnabled ? "green" : "primary"}
+                        disabled={!message.trim()}
+                        loading={sendMessageMutation.isPending}
+                        onClick={handleSendMessage}
+                        size="lg"
+                        variant="filled"
+                        radius="xl"
+                      >
+                        <IconSend size={18} />
+                      </ActionIcon>
+                    </Tooltip>
                   </Group>
                 </Box>
               </Box>

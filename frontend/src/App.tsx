@@ -13,6 +13,7 @@ import { RegisterPage } from "./pages/auth/RegisterPage";
 import { ConfirmEmailPage } from "./pages/auth/ConfirmEmailPage";
 import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
+import { GoogleCallbackPage } from "./pages/auth/GoogleCallbackPage";
 import { AutomationsPage } from "./pages/automations/AutomationsPage";
 import { CalendarPage } from "./pages/calendar/CalendarPage";
 import { ChatPage } from "./pages/chat/ChatPage";
@@ -181,6 +182,16 @@ export default function App() {
               {/* Password reset (public, no layout) */}
               <Route element={<ForgotPasswordPage />} path="/forgot-password" />
               <Route element={<ResetPasswordPage />} path="/auth/reset-password" />
+              
+              {/* Google Calendar OAuth callback */}
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <GoogleCallbackPage />
+                  </ProtectedRoute>
+                }
+                path="/auth/google/callback"
+              />
 
               {/* Auth routes */}
               <Route

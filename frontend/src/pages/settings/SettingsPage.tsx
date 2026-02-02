@@ -10,6 +10,8 @@ import {
   Divider,
   FileInput,
   Group,
+  List,
+  Loader,
   Menu,
   NumberInput,
   Paper,
@@ -29,35 +31,158 @@ import { useForm } from "@mantine/form";
 import {
   IconAlertCircle,
   IconBell,
+  IconBrandGoogle,
+  IconBrandWhatsapp,
   IconBuilding,
   IconCalendar,
+  IconCalendarEvent,
   IconCheck,
   IconCreditCard,
   IconDotsVertical,
   IconEdit,
+  IconExternalLink,
+  IconLink,
   IconLock,
   IconPalette,
+  IconPlug,
+  IconPlugConnected,
   IconPlus,
+  IconRefresh,
   IconShield,
   IconTrash,
   IconUpload,
   IconUser,
   IconUsers,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from "../../hooks/useNotifications";
+import {
+  formatPhoneNumber,
+  getConnectionTime,
+  openWhatsAppSetupPopup,
+  useConnectWhatsApp,
+  useDisconnectWhatsApp,
+  useWhatsAppStatus,
+} from "../../hooks/useWhatsApp";
+import {
+  formatLastSync,
+  startGoogleCalendarAuth,
+  useDisconnectGoogleCalendar,
+  useGoogleCalendarAuthUrl,
+  useGoogleCalendarStatus,
+  useSyncGoogleCalendar,
+  useUpdateGoogleCalendarSettings,
+} from "../../hooks/useGoogleCalendar";
 import { useAuthStore } from "../../stores/auth";
 import { useTeamMembers } from "../../hooks/useTeam";
+import { notifications } from "@mantine/notifications";
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("workspace");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string | null>(
+    searchParams.get("tab") || "workspace"
+  );
   const { user, currentWorkspace } = useAuthStore();
   const { data: notifPrefs } = useNotificationPreferences();
   const updatePrefs = useUpdateNotificationPreferences();
+
+  // WhatsApp integration
+  const { data: whatsappStatus, isLoading: loadingWhatsApp } = useWhatsAppStatus();
+  const connectWhatsApp = useConnectWhatsApp();
+  const disconnectWhatsApp = useDisconnectWhatsApp();
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Google Calendar integration
+  const { data: googleCalendarStatus, isLoading: loadingGoogleCalendar } = useGoogleCalendarStatus();
+  const googleCalendarAuthUrl = useGoogleCalendarAuthUrl();
+  const disconnectGoogleCalendar = useDisconnectGoogleCalendar();
+  const syncGoogleCalendar = useSyncGoogleCalendar();
+  const updateGoogleCalendarSettings = useUpdateGoogleCalendarSettings();
+
+  // Handle WhatsApp setup callback from URL
+  useEffect(() => {
+    const setupResult = searchParams.get("setup");
+    if (setupResult === "success") {
+      notifications.show({
+        title: "WhatsApp conectado",
+        message: "Tu cuenta de WhatsApp Business ha sido conectada correctamente",
+        color: "green",
+        icon: <IconCheck size={16} />,
+      });
+      setIsConnecting(false);
+    } else if (setupResult === "failed") {
+      notifications.show({
+        title: "Error de conexión",
+        message: "No se pudo conectar WhatsApp. Por favor, intenta de nuevo.",
+        color: "red",
+      });
+      setIsConnecting(false);
+    }
+  }, [searchParams]);
+
+  // Handle Google Calendar OAuth callback result from URL
+  useEffect(() => {
+    const googleResult = searchParams.get("google");
+    
+    if (googleResult === "success") {
+      notifications.show({
+        title: "Google Calendar conectado",
+        message: "Tu calendario de Google ha sido conectado correctamente",
+        color: "green",
+        icon: <IconCheck size={16} />,
+      });
+      // Clear URL params
+      window.history.replaceState({}, "", "/settings?tab=integrations");
+    } else if (googleResult === "error") {
+      notifications.show({
+        title: "Error de conexión",
+        message: "No se pudo conectar Google Calendar. Por favor, intenta de nuevo.",
+        color: "red",
+      });
+      // Clear URL params
+      window.history.replaceState({}, "", "/settings?tab=integrations");
+    }
+  }, [searchParams]);
+
+  const handleConnectWhatsApp = async () => {
+    setIsConnecting(true);
+    try {
+      const result = await connectWhatsApp.mutateAsync();
+      if (result.setup_url) {
+        openWhatsAppSetupPopup(result.setup_url);
+      }
+    } catch {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnectWhatsApp = async () => {
+    if (window.confirm("¿Estás seguro de que quieres desconectar WhatsApp? Los mensajes existentes se conservarán.")) {
+      await disconnectWhatsApp.mutateAsync();
+    }
+  };
+
+  const handleConnectGoogleCalendar = async () => {
+    try {
+      const result = await googleCalendarAuthUrl.mutateAsync();
+      if (result.auth_url) {
+        startGoogleCalendarAuth(result.auth_url);
+      }
+    } catch {
+      // Error handled in hook
+    }
+  };
+
+  const handleDisconnectGoogleCalendar = async () => {
+    if (window.confirm("¿Estás seguro de que quieres desconectar Google Calendar? Los eventos existentes se conservarán en Google.")) {
+      await disconnectGoogleCalendar.mutateAsync();
+    }
+  };
 
   // Workspace form - uses real data from workspace settings
   const workspaceForm = useForm({
@@ -156,6 +281,18 @@ export function SettingsPage() {
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconCalendar size={16} />} value="booking" style={{ fontWeight: 500 }}>
             Reservas
+          </Tabs.Tab>
+          <Tabs.Tab 
+            leftSection={<IconLink size={16} />} 
+            value="integrations" 
+            style={{ fontWeight: 500 }}
+            rightSection={
+              (whatsappStatus?.connected || googleCalendarStatus?.connected) ? (
+                <Badge color="green" size="xs" variant="dot" />
+              ) : null
+            }
+          >
+            Integraciones
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing" style={{ fontWeight: 500 }}>
             Facturación
@@ -720,6 +857,325 @@ export function SettingsPage() {
                 </Stack>
               </form>
             </Box>
+          </Tabs.Panel>
+
+          {/* Integrations Settings */}
+          <Tabs.Panel value="integrations">
+            <Stack gap="lg">
+              {/* Google Calendar Integration */}
+              <Box className="nv-card" p="lg">
+                <Group justify="space-between" mb="lg">
+                  <Box>
+                    <Group gap="sm" mb={4}>
+                      <IconBrandGoogle size={24} color="#4285F4" />
+                      <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>
+                        Google Calendar
+                      </Text>
+                    </Group>
+                    <Text c="dimmed" size="sm">
+                      Sincroniza tus reservas con Google Calendar de forma bidireccional
+                    </Text>
+                  </Box>
+                  {googleCalendarStatus?.connected && (
+                    <Badge color="green" size="lg" variant="light" leftSection={<IconCheck size={14} />}>
+                      Conectado
+                    </Badge>
+                  )}
+                </Group>
+
+                {loadingGoogleCalendar ? (
+                  <Box py="xl" ta="center">
+                    <Loader size="sm" />
+                    <Text c="dimmed" size="sm" mt="sm">
+                      Cargando estado de Google Calendar...
+                    </Text>
+                  </Box>
+                ) : googleCalendarStatus?.connected ? (
+                  /* Google Calendar Connected */
+                  <Stack gap="md">
+                    <Paper
+                      p="md"
+                      radius="md"
+                      style={{
+                        backgroundColor: "var(--mantine-color-blue-0)",
+                        border: "1px solid var(--mantine-color-blue-2)",
+                      }}
+                    >
+                      <Group>
+                        <ThemeIcon color="blue" size={48} radius="xl" variant="light">
+                          <IconCalendarEvent size={28} />
+                        </ThemeIcon>
+                        <Box flex={1}>
+                          <Text fw={600} size="lg">
+                            {googleCalendarStatus.email}
+                          </Text>
+                          <Text c="dimmed" size="sm">
+                            Calendario: {googleCalendarStatus.calendar_name || "Principal"}
+                          </Text>
+                          <Text c="dimmed" size="xs">
+                            {formatLastSync(googleCalendarStatus.last_sync_at)}
+                          </Text>
+                        </Box>
+                        <Group>
+                          <Button
+                            variant="light"
+                            leftSection={<IconRefresh size={16} />}
+                            onClick={() => syncGoogleCalendar.mutate()}
+                            loading={syncGoogleCalendar.isPending}
+                          >
+                            Sincronizar
+                          </Button>
+                          <Button
+                            color="red"
+                            variant="subtle"
+                            onClick={handleDisconnectGoogleCalendar}
+                            loading={disconnectGoogleCalendar.isPending}
+                          >
+                            Desconectar
+                          </Button>
+                        </Group>
+                      </Group>
+                    </Paper>
+
+                    <Group>
+                      <Switch
+                        checked={googleCalendarStatus.sync_enabled}
+                        onChange={(e) => updateGoogleCalendarSettings.mutate(e.currentTarget.checked)}
+                        label="Sincronización automática"
+                        description="Las reservas se sincronizan automáticamente con Google Calendar"
+                      />
+                    </Group>
+
+                    <Alert color="blue" variant="light" radius="lg">
+                      <Text size="sm">
+                        Tus reservas se sincronizarán automáticamente con Google Calendar.
+                        Los cambios en cualquier plataforma se reflejarán en la otra.
+                      </Text>
+                    </Alert>
+                  </Stack>
+                ) : (
+                  /* Google Calendar Not Connected */
+                  <Stack gap="md">
+                    <Paper
+                      p="xl"
+                      radius="lg"
+                      style={{
+                        backgroundColor: "var(--nv-surface)",
+                        border: "1px dashed var(--nv-border)",
+                        textAlign: "center",
+                      }}
+                    >
+                      <ThemeIcon
+                        color="blue"
+                        size={64}
+                        radius="xl"
+                        variant="light"
+                        mx="auto"
+                        mb="md"
+                      >
+                        <IconCalendarEvent size={36} />
+                      </ThemeIcon>
+                      <Text fw={600} size="lg" mb="xs">
+                        Conecta tu Google Calendar
+                      </Text>
+                      <Text c="dimmed" size="sm" mb="lg" maw={400} mx="auto">
+                        Sincroniza tus reservas de forma bidireccional con Google Calendar.
+                        Los cambios se reflejarán en ambas plataformas.
+                      </Text>
+                      <Button
+                        color="blue"
+                        size="md"
+                        radius="xl"
+                        leftSection={<IconBrandGoogle size={18} />}
+                        onClick={handleConnectGoogleCalendar}
+                        loading={googleCalendarAuthUrl.isPending}
+                      >
+                        Conectar con Google
+                      </Button>
+                    </Paper>
+
+                    <Box>
+                      <Text fw={500} mb="sm">
+                        Beneficios de conectar Google Calendar:
+                      </Text>
+                      <List spacing="xs" size="sm" icon={<IconCheck size={14} color="var(--mantine-color-green-6)" />}>
+                        <List.Item>Sincronización bidireccional de reservas</List.Item>
+                        <List.Item>Ve tus sesiones junto a tus otros eventos</List.Item>
+                        <List.Item>Recibe recordatorios de Google Calendar</List.Item>
+                        <List.Item>Evita conflictos de horario automáticamente</List.Item>
+                        <List.Item>Comparte disponibilidad fácilmente</List.Item>
+                      </List>
+                    </Box>
+                  </Stack>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* WhatsApp Business Integration */}
+              <Box className="nv-card" p="lg">
+                <Group justify="space-between" mb="lg">
+                  <Box>
+                    <Group gap="sm" mb={4}>
+                      <IconBrandWhatsapp size={24} color="#25D366" />
+                      <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>
+                        WhatsApp Business
+                      </Text>
+                    </Group>
+                    <Text c="dimmed" size="sm">
+                      Conecta tu cuenta de WhatsApp Business para comunicarte con tus clientes
+                    </Text>
+                  </Box>
+                  {whatsappStatus?.connected && (
+                    <Badge color="green" size="lg" variant="light" leftSection={<IconCheck size={14} />}>
+                      Conectado
+                    </Badge>
+                  )}
+                </Group>
+
+                {loadingWhatsApp ? (
+                  <Box py="xl" ta="center">
+                    <Loader size="sm" />
+                    <Text c="dimmed" size="sm" mt="sm">
+                      Cargando estado de WhatsApp...
+                    </Text>
+                  </Box>
+                ) : whatsappStatus?.connected ? (
+                  /* WhatsApp Connected */
+                  <Stack gap="md">
+                    <Paper
+                      p="md"
+                      radius="md"
+                      style={{
+                        backgroundColor: "var(--mantine-color-green-0)",
+                        border: "1px solid var(--mantine-color-green-2)",
+                      }}
+                    >
+                      <Group>
+                        <ThemeIcon color="green" size={48} radius="xl" variant="light">
+                          <IconBrandWhatsapp size={28} />
+                        </ThemeIcon>
+                        <Box flex={1}>
+                          <Text fw={600} size="lg">
+                            {formatPhoneNumber(whatsappStatus.display_phone_number)}
+                          </Text>
+                          <Text c="dimmed" size="sm">
+                            {getConnectionTime(whatsappStatus.connected_at)}
+                          </Text>
+                        </Box>
+                        <Button
+                          color="red"
+                          variant="subtle"
+                          onClick={handleDisconnectWhatsApp}
+                          loading={disconnectWhatsApp.isPending}
+                        >
+                          Desconectar
+                        </Button>
+                      </Group>
+                    </Paper>
+
+                    <Alert color="blue" variant="light" radius="lg">
+                      <Text size="sm">
+                        Los mensajes de WhatsApp ahora aparecerán en tu bandeja de Chat.
+                        Puedes elegir si enviar mensajes por WhatsApp o por la plataforma desde el chat.
+                      </Text>
+                    </Alert>
+                  </Stack>
+                ) : (
+                  /* WhatsApp Not Connected */
+                  <Stack gap="md">
+                    <Paper
+                      p="xl"
+                      radius="lg"
+                      style={{
+                        backgroundColor: "var(--nv-surface)",
+                        border: "1px dashed var(--nv-border)",
+                        textAlign: "center",
+                      }}
+                    >
+                      <ThemeIcon
+                        color="green"
+                        size={64}
+                        radius="xl"
+                        variant="light"
+                        mx="auto"
+                        mb="md"
+                      >
+                        <IconBrandWhatsapp size={36} />
+                      </ThemeIcon>
+                      <Text fw={600} size="lg" mb="xs">
+                        Conecta tu WhatsApp Business
+                      </Text>
+                      <Text c="dimmed" size="sm" mb="lg" maw={400} mx="auto">
+                        Integra tu cuenta de WhatsApp Business para enviar y recibir mensajes
+                        directamente desde la plataforma.
+                      </Text>
+                      <Button
+                        color="green"
+                        size="md"
+                        radius="xl"
+                        leftSection={<IconPlugConnected size={18} />}
+                        onClick={handleConnectWhatsApp}
+                        loading={connectWhatsApp.isPending || isConnecting}
+                      >
+                        {isConnecting ? "Esperando conexión..." : "Conectar WhatsApp"}
+                      </Button>
+                      {isConnecting && (
+                        <Text c="dimmed" size="xs" mt="sm">
+                          Completa el proceso en la ventana emergente
+                        </Text>
+                      )}
+                    </Paper>
+
+                    <Box>
+                      <Text fw={500} mb="sm">
+                        Beneficios de conectar WhatsApp:
+                      </Text>
+                      <List spacing="xs" size="sm" icon={<IconCheck size={14} color="var(--mantine-color-green-6)" />}>
+                        <List.Item>Recibe mensajes de clientes en tu bandeja de chat unificada</List.Item>
+                        <List.Item>Envía mensajes a clientes por WhatsApp o plataforma</List.Item>
+                        <List.Item>Indicadores visuales claros del origen de cada mensaje</List.Item>
+                        <List.Item>Historial completo de conversaciones en un solo lugar</List.Item>
+                        <List.Item>Notificaciones cuando recibas nuevos mensajes</List.Item>
+                      </List>
+                    </Box>
+                  </Stack>
+                )}
+              </Box>
+
+              {/* Información adicional */}
+              <Box className="nv-card" p="lg">
+                <Text fw={600} mb="md" size="lg" style={{ color: "var(--nv-text-primary)" }}>
+                  Información sobre integraciones
+                </Text>
+                <Stack gap="sm">
+                  <Group>
+                    <ThemeIcon color="blue" variant="light" size="sm">
+                      <IconShield size={14} />
+                    </ThemeIcon>
+                    <Text size="sm">
+                      Tus credenciales están seguras. Utilizamos OAuth para autenticación segura.
+                    </Text>
+                  </Group>
+                  <Group>
+                    <ThemeIcon color="blue" variant="light" size="sm">
+                      <IconRefresh size={14} />
+                    </ThemeIcon>
+                    <Text size="sm">
+                      Las sincronizaciones se realizan automáticamente cuando creas o modificas reservas.
+                    </Text>
+                  </Group>
+                  <Group>
+                    <ThemeIcon color="blue" variant="light" size="sm">
+                      <IconExternalLink size={14} />
+                    </ThemeIcon>
+                    <Text size="sm">
+                      Puedes revocar el acceso en cualquier momento desde la configuración de tu cuenta de Google/WhatsApp.
+                    </Text>
+                  </Group>
+                </Stack>
+              </Box>
+            </Stack>
           </Tabs.Panel>
 
           {/* Billing Settings */}

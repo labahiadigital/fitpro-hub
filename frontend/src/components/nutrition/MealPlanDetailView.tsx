@@ -57,10 +57,10 @@ interface ClientData {
 
 interface MealFood {
   id: string;
-  food_id: string;
+  food_id?: string;
   name: string;
   quantity: number;
-  unit: string;
+  unit?: string;
   calories: number;
   protein: number;
   carbs: number;
@@ -68,11 +68,39 @@ interface MealFood {
   allergens?: string[];
 }
 
+// New format from MealPlanBuilder
+interface MealItem {
+  id: string;
+  food_id?: string;
+  supplement_id?: string;
+  food?: {
+    id: string;
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    serving_size?: string;
+  };
+  supplement?: {
+    id: string;
+    name: string;
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    serving_size?: string;
+  };
+  quantity_grams: number;
+  type: "food" | "supplement";
+}
+
 interface Meal {
   id: string;
   name: string;
   time?: string;
-  foods: MealFood[];
+  foods?: MealFood[];
+  items?: MealItem[];
 }
 
 interface DayPlan {
@@ -136,6 +164,51 @@ const BODY_TENDENCY_LABELS = {
   normal: "Normal",
   hard_gain: "Me Cuesta Engordar",
 };
+
+/**
+ * Helper function to normalize meal data - converts new format (items) to legacy format (foods)
+ */
+function getMealFoods(meal: Meal): MealFood[] {
+  // If using legacy format, return foods directly
+  if (meal.foods && meal.foods.length > 0) {
+    return meal.foods;
+  }
+  
+  // If using new format (items), convert to foods
+  if (meal.items && meal.items.length > 0) {
+    return meal.items.map((item) => {
+      const data = item.type === "food" ? item.food : item.supplement;
+      if (!data) {
+        return {
+          id: item.id,
+          name: "Sin nombre",
+          quantity: item.quantity_grams,
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+        };
+      }
+      
+      // Calculate macros based on quantity
+      const servingSize = parseFloat(data.serving_size || "100") || 100;
+      const factor = item.quantity_grams / servingSize;
+      
+      return {
+        id: item.id,
+        food_id: item.food_id || item.supplement_id,
+        name: data.name || "Sin nombre",
+        quantity: item.quantity_grams,
+        calories: Math.round((data.calories || 0) * factor),
+        protein: Math.round(((data.protein || 0) * factor) * 10) / 10,
+        carbs: Math.round(((data.carbs || 0) * factor) * 10) / 10,
+        fat: Math.round(((data.fat || 0) * factor) * 10) / 10,
+      };
+    });
+  }
+  
+  return [];
+}
 
 /**
  * MealPlanDetailView - Vista completa del plan nutricional
@@ -299,7 +372,7 @@ export function MealPlanDetailView({
       let dayFat = 0;
 
       day.meals?.forEach((meal) => {
-        meal.foods?.forEach((food) => {
+        getMealFoods(meal).forEach((food) => {
           dayCalories += food.calories || 0;
           dayProtein += food.protein || 0;
           dayCarbs += food.carbs || 0;
@@ -353,7 +426,7 @@ export function MealPlanDetailView({
 
     mealPlan.plan?.days?.forEach((day) => {
       day.meals?.forEach((meal) => {
-        meal.foods?.forEach((food) => {
+        getMealFoods(meal).forEach((food) => {
           food.allergens?.forEach((allergen) => {
             if (clientAllergens.some((a) => a.toLowerCase() === allergen.toLowerCase())) {
               warnings.push({
@@ -1080,7 +1153,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
     let fat = 0;
 
     currentDay?.meals?.forEach((meal) => {
-      meal.foods?.forEach((food) => {
+      getMealFoods(meal).forEach((food) => {
         calories += food.calories || 0;
         protein += food.protein || 0;
         carbs += food.carbs || 0;
@@ -1188,7 +1261,8 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
           </Table.Thead>
           <Table.Tbody>
             {currentDay?.meals?.map((meal, mealIndex) => {
-              const mealTotals = meal.foods?.reduce(
+              const foods = getMealFoods(meal);
+              const mealTotals = foods.reduce(
                 (acc, food) => ({
                   calories: acc.calories + (food.calories || 0),
                   protein: acc.protein + (food.protein || 0),
@@ -1196,28 +1270,29 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
                   fat: acc.fat + (food.fat || 0),
                 }),
                 { calories: 0, protein: 0, carbs: 0, fat: 0 }
-              ) || { calories: 0, protein: 0, carbs: 0, fat: 0 };
+              );
 
               return (
                 <Table.Tr key={meal.id} style={{ backgroundColor: mealIndex % 2 === 0 ? "var(--mantine-color-green-0)" : "var(--mantine-color-gray-0)" }}>
                   <Table.Td fw={600}>{meal.name}</Table.Td>
                   <Table.Td>
-                    {meal.foods?.map((food, foodIndex) => (
+                    {foods.map((food, foodIndex) => (
                       <Text
                         key={food.id}
                         size="sm"
                         c={isAllergen(food.name, food.allergens) ? "red" : undefined}
                         fw={isAllergen(food.name, food.allergens) ? 700 : undefined}
                       >
-                        {food.quantity}{food.unit} {food.name}
+                        {food.quantity}{food.unit || "g"} {food.name}
                         {isAllergen(food.name, food.allergens) && (
                           <Tooltip label="¡Contiene alérgeno!">
                             <IconAlertTriangle size={14} style={{ marginLeft: 4, verticalAlign: "middle" }} color="red" />
                           </Tooltip>
                         )}
-                        {foodIndex < (meal.foods?.length || 0) - 1 && " + "}
+                        {foodIndex < foods.length - 1 && " + "}
                       </Text>
                     ))}
+                    {foods.length === 0 && <Text size="sm" c="dimmed">(sin alimentos)</Text>}
                   </Table.Td>
                   <Table.Td ta="right">{Math.round(mealTotals.calories)}</Table.Td>
                   <Table.Td ta="right">{mealTotals.protein.toFixed(1)}</Table.Td>

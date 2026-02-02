@@ -8,12 +8,15 @@ from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.message import (
     Conversation, Message, ConversationType, MessageType,
     MessageSource, MessageDirection, MessageStatus
 )
 from app.models.client import Client
+from app.models.workspace import Workspace
 from app.middleware.auth import require_workspace, CurrentUser
+from app.services.kapso import kapso_service, KapsoError
 
 router = APIRouter()
 
@@ -352,9 +355,27 @@ async def send_message(
     
     # Determine which channel to use
     send_via = data.send_via
-    if send_via == MessageSource.WHATSAPP and not conversation.whatsapp_phone:
-        # Fallback to platform if no WhatsApp configured
-        send_via = MessageSource.PLATFORM
+    
+    # Get workspace to check WhatsApp configuration
+    workspace_result = await db.execute(
+        select(Workspace).where(Workspace.id == current_user.workspace_id)
+    )
+    workspace = workspace_result.scalar_one_or_none()
+    
+    # Check if WhatsApp is enabled and configured
+    whatsapp_config = workspace.settings.get("whatsapp", {}) if workspace and workspace.settings else {}
+    whatsapp_enabled = whatsapp_config.get("enabled", False)
+    phone_number_id = whatsapp_config.get("phone_number_id")
+    
+    if send_via == MessageSource.WHATSAPP:
+        if not conversation.whatsapp_phone:
+            # Fallback to platform if conversation has no WhatsApp
+            send_via = MessageSource.PLATFORM
+        elif not whatsapp_enabled or not phone_number_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="WhatsApp no está configurado. Ve a Configuración > WhatsApp para conectar tu cuenta."
+            )
     
     message = Message(
         conversation_id=data.conversation_id,
@@ -381,11 +402,38 @@ async def send_message(
     await db.commit()
     await db.refresh(message)
     
-    # TODO: If WhatsApp, send via WhatsApp Business API
-    # This would be an async task to send the message and update external_id/status
-    if send_via == MessageSource.WHATSAPP:
-        # await send_whatsapp_message(message, conversation.whatsapp_phone)
-        pass
+    # Send via WhatsApp if requested
+    if send_via == MessageSource.WHATSAPP and is_sent:
+        try:
+            # Send message via Kapso
+            kapso_response = await kapso_service.send_text_message(
+                phone_number_id=phone_number_id,
+                to=conversation.whatsapp_phone,
+                body=data.content
+            )
+            
+            # Extract message ID from response
+            messages_list = kapso_response.get("messages", [])
+            if messages_list:
+                message.external_id = messages_list[0].get("id")
+                message.external_status = MessageStatus.SENT
+            
+            await db.commit()
+            await db.refresh(message)
+            
+        except KapsoError as e:
+            # Log error but don't fail the request - message is saved locally
+            print(f"[Messages] Error enviando WhatsApp: {e.message}")
+            message.external_status = MessageStatus.FAILED
+            message.external_error = e.message
+            await db.commit()
+            await db.refresh(message)
+        except Exception as e:
+            print(f"[Messages] Error inesperado enviando WhatsApp: {str(e)}")
+            message.external_status = MessageStatus.FAILED
+            message.external_error = str(e)
+            await db.commit()
+            await db.refresh(message)
     
     return message
 

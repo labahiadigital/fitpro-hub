@@ -258,6 +258,7 @@ async def add_exercise_favorite(
         return {"message": "Already in favorites"}
     
     favorite = ExerciseFavorite(
+        workspace_id=current_user.workspace_id,
         user_id=current_user.id,
         exercise_id=exercise_id
     )

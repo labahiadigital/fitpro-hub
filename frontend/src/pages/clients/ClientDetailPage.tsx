@@ -78,7 +78,7 @@ import {
 } from "../../hooks/useSupabaseData";
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
-import { generateMealPlanPDF } from "../../services/pdfGenerator";
+import { generateClientPlanPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
 
@@ -1880,7 +1880,35 @@ export function ClientDetailPage() {
                       autoClose: false,
                     });
                     try {
-                      generateMealPlanPDF(
+                      // Get workout program if exists
+                      const workoutProgram = clientWorkoutPrograms.length > 0 ? clientWorkoutPrograms[0] : null;
+                      
+                      // Transform workout template to days format
+                      const workoutDays = workoutProgram?.template?.blocks ? [{
+                        id: "day-1",
+                        day: 1,
+                        dayName: "Entrenamiento",
+                        blocks: workoutProgram.template.blocks.map((block: any, idx: number) => ({
+                          id: `block-${idx}`,
+                          name: block.name,
+                          type: (block.type || "main") as "warmup" | "main" | "cooldown" | "superset" | "circuit",
+                          exercises: (block.exercises || []).map((ex: any, exIdx: number) => ({
+                            id: `ex-${exIdx}`,
+                            exercise_id: "",
+                            exercise: {
+                              id: "",
+                              name: ex.exercise?.name || ex.name || "Ejercicio",
+                            },
+                            sets: ex.sets || 3,
+                            reps: ex.reps || "10-12",
+                            rest_seconds: ex.rest_seconds || 60,
+                            notes: ex.notes,
+                          })),
+                        })),
+                        isRestDay: false,
+                      }] : undefined;
+                      
+                      generateClientPlanPDF(
                         {
                           id: viewingMealPlan.id,
                           name: viewingMealPlan.name,
@@ -1894,6 +1922,14 @@ export function ClientDetailPage() {
                           notes: viewingMealPlan.notes,
                           nutritional_advice: viewingMealPlan.nutritional_advice,
                         },
+                        workoutProgram ? {
+                          id: workoutProgram.id,
+                          name: workoutProgram.name,
+                          description: workoutProgram.description,
+                          duration_weeks: workoutProgram.duration_weeks,
+                          difficulty: workoutProgram.difficulty,
+                          days: workoutDays,
+                        } : null,
                         {
                           workspaceName: currentWorkspace?.name || "Trackfiz",
                           trainerName: user?.full_name || "Entrenador",
@@ -3427,6 +3463,108 @@ export function ClientDetailPage() {
             <Group justify="flex-end" mt="md">
               <Button variant="light" onClick={closeViewProgramModal}>
                 Cerrar
+              </Button>
+              <Button 
+                variant="light"
+                color="blue"
+                leftSection={<IconDownload size={16} />}
+                onClick={() => {
+                  try {
+                    notifications.show({
+                      id: "pdf-workout-export",
+                      title: "Generando PDF",
+                      message: "Por favor espera mientras se genera el documento...",
+                      loading: true,
+                      autoClose: false,
+                    });
+                    
+                    // Transform template blocks to days format
+                    const workoutDays = selectedProgramForView.template?.blocks ? [{
+                      id: "day-1",
+                      day: 1,
+                      dayName: "Entrenamiento",
+                      blocks: selectedProgramForView.template.blocks.map((block, idx) => ({
+                        id: `block-${idx}`,
+                        name: block.name,
+                        type: (block.type || "main") as "warmup" | "main" | "cooldown" | "superset" | "circuit",
+                        exercises: (block.exercises || []).map((ex, exIdx) => ({
+                          id: `ex-${exIdx}`,
+                          exercise_id: "",
+                          exercise: {
+                            id: "",
+                            name: ex.exercise?.name || ex.name || "Ejercicio",
+                          },
+                          sets: ex.sets || 3,
+                          reps: ex.reps || "10-12",
+                          rest_seconds: ex.rest_seconds || 60,
+                          notes: ex.notes,
+                        })),
+                      })),
+                      isRestDay: false,
+                    }] : [];
+                    
+                    // Get meal plan if exists
+                    const mealPlan = clientMealPlans && clientMealPlans.length > 0 ? clientMealPlans[0] : null;
+                    
+                    generateClientPlanPDF(
+                      mealPlan ? {
+                        id: mealPlan.id,
+                        name: mealPlan.name,
+                        description: mealPlan.description,
+                        target_calories: mealPlan.target_calories || 2000,
+                        target_protein: mealPlan.target_protein || 150,
+                        target_carbs: mealPlan.target_carbs || 200,
+                        target_fat: mealPlan.target_fat || 70,
+                        plan: mealPlan.plan || { days: [] },
+                        supplements: mealPlan.supplements || [],
+                        notes: mealPlan.notes,
+                        nutritional_advice: mealPlan.nutritional_advice,
+                      } : null,
+                      {
+                        id: selectedProgramForView.id,
+                        name: selectedProgramForView.name,
+                        description: selectedProgramForView.description,
+                        duration_weeks: selectedProgramForView.duration_weeks,
+                        difficulty: selectedProgramForView.difficulty,
+                        days: workoutDays,
+                      },
+                      {
+                        workspaceName: currentWorkspace?.name || "Trackfiz",
+                        trainerName: user?.full_name || "Entrenador",
+                        client: {
+                          first_name: client.first_name,
+                          last_name: client.last_name,
+                          weight_kg: client.weight_kg,
+                          height_cm: client.height_cm,
+                          allergies: (client as any).health_data?.allergens || [],
+                          intolerances: (client as any).health_data?.intolerances || [],
+                          goals: client.goals,
+                        },
+                      }
+                    );
+                    
+                    notifications.update({
+                      id: "pdf-workout-export",
+                      title: "PDF Generado",
+                      message: "El documento se ha descargado correctamente",
+                      color: "green",
+                      loading: false,
+                      autoClose: 3000,
+                    });
+                  } catch (error) {
+                    console.error("Error generating PDF:", error);
+                    notifications.update({
+                      id: "pdf-workout-export",
+                      title: "Error",
+                      message: "No se pudo generar el PDF",
+                      color: "red",
+                      loading: false,
+                      autoClose: 5000,
+                    });
+                  }
+                }}
+              >
+                Exportar PDF
               </Button>
               <Button 
                 leftSection={<IconEdit size={16} />}

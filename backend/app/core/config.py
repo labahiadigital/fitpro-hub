@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     REDSYS_TERMINAL: str = "1"
     REDSYS_ENVIRONMENT: str = "test"  # test o production
     
+    # Kapso (WhatsApp Business API)
+    KAPSO_API_KEY: str = ""
+    KAPSO_API_BASE_URL: str = "https://api.kapso.ai"
+    KAPSO_WEBHOOK_SECRET: str = ""
+    
+    # Google Calendar Integration
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:5173/auth/google/callback"
+    
     # Brevo (Email)
     BREVO_API_KEY: str = ""
     FROM_EMAIL: str = "noreply@trackfiz.com"
