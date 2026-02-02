@@ -28,6 +28,8 @@ import {
   IconEye,
   IconFlame,
   IconSearch,
+  IconStar,
+  IconStarFilled,
   IconStretching,
   IconTemplate,
   IconTrash,
@@ -48,6 +50,7 @@ import {
   useWorkoutProgram,
 } from "../../hooks/useWorkouts";
 import { useUpdateExercise, useDeleteExercise } from "../../hooks/useExercises";
+import { useExerciseFavorites, useToggleExerciseFavorite } from "../../hooks/useFavorites";
 
 // Exercises are fetched from the API via useExercises hook
 
@@ -95,6 +98,10 @@ export function WorkoutsPage() {
   const createProgram = useCreateWorkoutProgram();
   const updateProgram = useUpdateWorkoutProgram();
   const deleteProgram = useDeleteWorkoutProgram();
+  
+  // Favoritos de ejercicios
+  const { data: exerciseFavorites = [] } = useExerciseFavorites();
+  const toggleExerciseFavorite = useToggleExerciseFavorite();
   
   // Estado para editar ejercicios
   const [editingExercise, setEditingExercise] = useState<any>(null);
@@ -521,6 +528,20 @@ export function WorkoutsPage() {
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
               {filteredExercises.map((exercise: any) => (
                 <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
+                  {/* Estrella de favorito */}
+                  <ActionIcon
+                    size="xs"
+                    variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
+                    color="yellow"
+                    style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
+                    }}
+                  >
+                    {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
+                  </ActionIcon>
+                  
                   <Box
                     h={80}
                     style={{
@@ -600,7 +621,21 @@ export function WorkoutsPage() {
                       ))
                 )
                 .map((exercise: any) => (
-                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => openEditExercise(exercise)}>
+                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
+                    {/* Estrella de favorito */}
+                    <ActionIcon
+                      size="xs"
+                      variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
+                      color="yellow"
+                      style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
+                      }}
+                    >
+                      {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
+                    </ActionIcon>
+                    
                     <Box
                       h={80}
                       style={{
@@ -680,7 +715,21 @@ export function WorkoutsPage() {
                       ))
                 )
                 .map((exercise: any) => (
-                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => openEditExercise(exercise)}>
+                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
+                    {/* Estrella de favorito */}
+                    <ActionIcon
+                      size="xs"
+                      variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
+                      color="yellow"
+                      style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
+                      }}
+                    >
+                      {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
+                    </ActionIcon>
+                    
                     <Box
                       h={80}
                       style={{

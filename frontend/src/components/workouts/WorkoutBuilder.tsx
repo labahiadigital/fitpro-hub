@@ -32,13 +32,18 @@ import {
   IconChevronUp,
   IconClock,
   IconCopy,
+  IconFlame,
   IconGripVertical,
   IconPlus,
   IconRepeat,
   IconSearch,
+  IconStar,
+  IconStarFilled,
+  IconStretching,
   IconTrash,
 } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
+import { useExerciseFavorites, useToggleExerciseFavorite } from "../../hooks/useFavorites";
 
 interface Exercise {
   id: string;
@@ -46,6 +51,7 @@ interface Exercise {
   muscle_groups: string[];
   equipment: string[];
   image_url?: string;
+  category?: string;
 }
 
 interface WorkoutExercise {
@@ -117,6 +123,11 @@ export function WorkoutBuilder({
   ] = useDisclosure(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
+  const [exerciseFilter, setExerciseFilter] = useState<string>("all"); // "all" | "favorites"
+  
+  // Favoritos
+  const { data: favorites = [] } = useExerciseFavorites();
+  const toggleFavorite = useToggleExerciseFavorite();
 
   const toggleBlock = (blockId: string) => {
     setExpandedBlocks((prev) =>
@@ -298,13 +309,34 @@ export function WorkoutBuilder({
     }
   };
 
-  const filteredExercises = availableExercises.filter(
-    (e) =>
+  // Obtener el tipo de bloque seleccionado para filtrar ejercicios
+  const selectedBlock = blocks.find((b) => b.id === selectedBlockId);
+  const blockType = selectedBlock?.type || "main";
+
+  const filteredExercises = availableExercises.filter((e) => {
+    // Filtro por búsqueda
+    const matchesSearch =
       e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
       e.muscle_groups.some((m) =>
         m.toLowerCase().includes(exerciseSearch.toLowerCase())
-      )
-  );
+      );
+    
+    // Filtro por favoritos
+    const matchesFavorites = exerciseFilter === "all" || favorites.includes(e.id);
+    
+    // Filtro por categoría según tipo de bloque
+    let matchesCategory = true;
+    if (blockType === "warmup") {
+      // Para calentamiento, mostrar ejercicios de calentamiento
+      matchesCategory = e.category?.toLowerCase() === "calentamiento";
+    } else if (blockType === "cooldown") {
+      // Para vuelta calma, mostrar estiramientos
+      matchesCategory = e.category?.toLowerCase() === "estiramiento";
+    }
+    // Para main, superset, circuit - mostrar todos (o los que no son calentamiento/estiramiento)
+    
+    return matchesSearch && matchesFavorites && matchesCategory;
+  });
 
   return (
     <>
@@ -670,61 +702,113 @@ export function WorkoutBuilder({
 
       {/* Exercise Selection Modal */}
       <Modal
-        onClose={closeExerciseModal}
+        onClose={() => { closeExerciseModal(); setExerciseSearch(""); setExerciseFilter("all"); }}
         opened={exerciseModalOpened}
         size="lg"
-        title="Seleccionar Ejercicio"
+        title={
+          blockType === "warmup" 
+            ? "Seleccionar Calentamiento" 
+            : blockType === "cooldown" 
+              ? "Seleccionar Estiramiento" 
+              : "Seleccionar Ejercicio"
+        }
       >
-        <TextInput
-          leftSection={<IconSearch size={16} />}
-          mb="md"
-          onChange={(e) => setExerciseSearch(e.target.value)}
-          placeholder="Buscar ejercicios..."
-          value={exerciseSearch}
-        />
-        <ScrollArea h={400}>
+        <Stack gap="sm">
+          <TextInput
+            leftSection={<IconSearch size={16} />}
+            onChange={(e) => setExerciseSearch(e.target.value)}
+            placeholder={
+              blockType === "warmup" 
+                ? "Buscar calentamientos..." 
+                : blockType === "cooldown" 
+                  ? "Buscar estiramientos..." 
+                  : "Buscar ejercicios..."
+            }
+            value={exerciseSearch}
+          />
+          
+          <Tabs value={exerciseFilter} onChange={(v) => setExerciseFilter(v || "all")}>
+            <Tabs.List>
+              <Tabs.Tab value="all" leftSection={
+                blockType === "warmup" ? <IconFlame size={14} /> :
+                blockType === "cooldown" ? <IconStretching size={14} /> :
+                <IconBarbell size={14} />
+              }>
+                Todos
+              </Tabs.Tab>
+              <Tabs.Tab value="favorites" leftSection={<IconStarFilled size={14} />}>
+                Favoritos
+              </Tabs.Tab>
+            </Tabs.List>
+          </Tabs>
+        </Stack>
+        
+        <ScrollArea h={350} mt="md">
           <Stack gap="xs">
-            {filteredExercises.map((exercise) => (
-              <Card
-                key={exercise.id}
-                onClick={() => addExerciseToBlock(exercise)}
-                padding="sm"
-                radius="md"
-                style={{ cursor: "pointer" }}
-                withBorder
-              >
-                <Group justify="space-between">
-                  <Group gap="sm">
-                    <ThemeIcon
-                      color="primary"
-                      radius="md"
-                      size="lg"
-                      variant="light"
-                    >
-                      <IconBarbell size={18} />
-                    </ThemeIcon>
-                    <Box>
-                      <Text fw={500} size="sm">
-                        {exercise.name}
-                      </Text>
-                      <Group gap={4}>
-                        {exercise.muscle_groups.slice(0, 3).map((m) => (
-                          <Badge key={m} size="xs" variant="light">
-                            {m}
-                          </Badge>
-                        ))}
-                      </Group>
-                    </Box>
+            {filteredExercises.map((exercise) => {
+              const isFavorite = favorites.includes(exercise.id);
+              return (
+                <Card
+                  key={exercise.id}
+                  padding="sm"
+                  radius="md"
+                  style={{ cursor: "pointer" }}
+                  withBorder
+                >
+                  <Group justify="space-between">
+                    <Group gap="sm" style={{ flex: 1 }} onClick={() => addExerciseToBlock(exercise)}>
+                      <ThemeIcon
+                        color={blockType === "warmup" ? "orange" : blockType === "cooldown" ? "teal" : "blue"}
+                        radius="md"
+                        size="lg"
+                        variant="light"
+                      >
+                        {blockType === "warmup" ? <IconFlame size={18} /> :
+                         blockType === "cooldown" ? <IconStretching size={18} /> :
+                         <IconBarbell size={18} />}
+                      </ThemeIcon>
+                      <Box>
+                        <Text fw={500} size="sm">
+                          {exercise.name}
+                        </Text>
+                        <Group gap={4}>
+                          {exercise.muscle_groups.slice(0, 3).map((m) => (
+                            <Badge key={m} size="xs" variant="light">
+                              {m}
+                            </Badge>
+                          ))}
+                        </Group>
+                      </Box>
+                    </Group>
+                    <Group gap="xs">
+                      <ActionIcon 
+                        color="yellow" 
+                        variant={isFavorite ? "filled" : "subtle"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite.mutate({ exerciseId: exercise.id, isFavorite });
+                        }}
+                      >
+                        {isFavorite ? <IconStarFilled size={16} /> : <IconStar size={16} />}
+                      </ActionIcon>
+                      <ActionIcon color="primary" variant="subtle" onClick={() => addExerciseToBlock(exercise)}>
+                        <IconCheck size={18} />
+                      </ActionIcon>
+                    </Group>
                   </Group>
-                  <ActionIcon color="primary" variant="subtle">
-                    <IconCheck size={18} />
-                  </ActionIcon>
-                </Group>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
             {filteredExercises.length === 0 && (
               <Text c="dimmed" py="xl" ta="center">
-                No se encontraron ejercicios
+                {blockType === "warmup" 
+                  ? "No se encontraron ejercicios de calentamiento. Crea algunos en Entrenamientos > Calentamiento."
+                  : blockType === "cooldown"
+                    ? "No se encontraron estiramientos. Crea algunos en Entrenamientos > Estiramientos."
+                    : exerciseFilter === "favorites"
+                      ? "No tienes ejercicios favoritos. Marca algunos con la estrella."
+                      : "No se encontraron ejercicios"
+                }
               </Text>
             )}
           </Stack>

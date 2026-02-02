@@ -100,3 +100,48 @@ export function useToggleSupplementFavorite() {
     },
   });
 }
+
+// ============ EXERCISE FAVORITES ============
+
+export function useExerciseFavorites() {
+  const userId = useUserId();
+
+  return useQuery({
+    queryKey: ['exercise-favorites', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      
+      try {
+        const response = await api.get('/exercises/favorites/list');
+        return response.data?.map((fav: { exercise_id: string }) => fav.exercise_id) || [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useToggleExerciseFavorite() {
+  const userId = useUserId();
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ exerciseId, isFavorite }: { exerciseId: string; isFavorite: boolean }) => {
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      if (isFavorite) {
+        // Remove from favorites
+        await api.delete(`/exercises/favorites/${exerciseId}`);
+      } else {
+        // Add to favorites
+        await api.post(`/exercises/favorites/${exerciseId}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['exercise-favorites', userId] });
+    },
+  });
+}

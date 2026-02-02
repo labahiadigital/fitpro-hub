@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.middleware.auth import get_current_user, require_workspace, require_staff, CurrentUser
-from app.models.exercise import Exercise
+from app.models.exercise import Exercise, ExerciseFavorite
 from app.models.user import User
 
 router = APIRouter()
@@ -214,3 +214,73 @@ async def delete_exercise(
     
     await db.delete(exercise)
     await db.commit()
+
+
+# ============ EXERCISE FAVORITES ============
+
+class ExerciseFavoriteResponse(BaseModel):
+    exercise_id: UUID
+    
+    class Config:
+        from_attributes = True
+
+
+@router.get("/favorites/list", response_model=List[ExerciseFavoriteResponse])
+async def list_exercise_favorites(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """List user's favorite exercises."""
+    result = await db.execute(
+        select(ExerciseFavorite).where(ExerciseFavorite.user_id == current_user.id)
+    )
+    favorites = result.scalars().all()
+    return favorites
+
+
+@router.post("/favorites/{exercise_id}", status_code=status.HTTP_201_CREATED)
+async def add_exercise_favorite(
+    exercise_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add exercise to favorites."""
+    # Check if already favorited
+    result = await db.execute(
+        select(ExerciseFavorite).where(
+            ExerciseFavorite.user_id == current_user.id,
+            ExerciseFavorite.exercise_id == exercise_id
+        )
+    )
+    existing = result.scalar_one_or_none()
+    
+    if existing:
+        return {"message": "Already in favorites"}
+    
+    favorite = ExerciseFavorite(
+        user_id=current_user.id,
+        exercise_id=exercise_id
+    )
+    db.add(favorite)
+    await db.commit()
+    return {"message": "Added to favorites"}
+
+
+@router.delete("/favorites/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_exercise_favorite(
+    exercise_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove exercise from favorites."""
+    result = await db.execute(
+        select(ExerciseFavorite).where(
+            ExerciseFavorite.user_id == current_user.id,
+            ExerciseFavorite.exercise_id == exercise_id
+        )
+    )
+    favorite = result.scalar_one_or_none()
+    
+    if favorite:
+        await db.delete(favorite)
+        await db.commit()
