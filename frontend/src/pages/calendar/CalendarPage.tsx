@@ -847,12 +847,11 @@ export function CalendarPage() {
                 required
                 valueFormat="DD/MM/YYYY HH:mm"
                 value={form.values.start_time}
-                onChange={(value) => {
-                  const dateValue = value instanceof Date ? value : value ? new Date(value) : null;
-                  form.setFieldValue("start_time", dateValue);
+                onChange={(value: Date | null) => {
+                  form.setFieldValue("start_time", value);
                   // Actualizar fecha de fin automáticamente (+1 hora)
-                  if (dateValue) {
-                    const newEndTime = new Date(dateValue.getTime() + 60 * 60 * 1000);
+                  if (value) {
+                    const newEndTime = new Date(value.getTime() + 60 * 60 * 1000);
                     form.setFieldValue("end_time", newEndTime);
                   }
                 }}
