@@ -48,6 +48,7 @@ interface NavItemProps {
   label: string;
   to: string;
   badge?: number;
+  onNavigate?: () => void;
 }
 
 // Lista de navegación para Entrenadores/Owners/Collaborators (sin badge, se añade dinámicamente)
@@ -86,12 +87,12 @@ const getClientNavItems = (unreadCount: number): NavItemProps[] => [
 
 // --- COMPONENTES ---
 
-function NavItem({ icon, label, to, badge }: NavItemProps) {
+function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
   const location = useLocation();
   const isActive = location.pathname === to;
 
   return (
-    <NavLink to={to} style={{ textDecoration: "none" }}>
+    <NavLink to={to} style={{ textDecoration: "none" }} onClick={onNavigate}>
       <UnstyledButton
         w="100%"
         p="10px"
@@ -168,7 +169,7 @@ function NavItem({ icon, label, to, badge }: NavItemProps) {
 }
 
 // Sidebar Component (Reutilizable para Desktop y Mobile)
-function SidebarContent() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { user, currentWorkspace } = useAuthStore();
   const { logout } = useAuth();
   
@@ -251,7 +252,7 @@ function SidebarContent() {
             {menuTitle}
           </Text>
           {navItems.map((item) => (
-            <NavItem key={item.to} {...item} />
+            <NavItem key={item.to} {...item} onNavigate={onNavigate} />
           ))}
         </Stack>
       </ScrollArea>
@@ -334,7 +335,7 @@ export function DashboardLayout() {
         padding={0}
         styles={{ body: { height: '100%', background: 'var(--nv-dark-surface)' } }}
       >
-        <SidebarContent />
+        <SidebarContent onNavigate={close} />
       </Drawer>
 
       {/* --- MAIN CONTENT AREA --- */}

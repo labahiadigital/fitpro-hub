@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { MantineProvider } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
 import { Notifications } from "@mantine/notifications";
@@ -126,6 +127,22 @@ function TrainerRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  /* iOS/móvil: recentrar vista tras cerrar teclado al salir de un input */
+  useEffect(() => {
+    const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+    if (!isTouch) return;
+    const handleBlur = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.matches?.("input, textarea, [contenteditable=true]")) {
+        window.setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }, 100);
+      }
+    };
+    document.addEventListener("blur", handleBlur, true);
+    return () => document.removeEventListener("blur", handleBlur, true);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider defaultColorScheme="light" theme={theme}>

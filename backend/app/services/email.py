@@ -101,17 +101,18 @@ class EmailTemplates:
     def email_confirmation(name: str, confirmation_url: str) -> str:
         return f"""
         <!DOCTYPE html>
-        <html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
             <title>Confirma tu cuenta - Trackfiz</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%;">
                 <tr>
                     <td align="center" style="padding: 40px 20px;">
-                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
                             <!-- Header con gradiente -->
                             <tr>
                                 <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
@@ -182,17 +183,18 @@ class EmailTemplates:
     def password_reset(name: str, reset_url: str) -> str:
         return f"""
         <!DOCTYPE html>
-        <html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
             <title>Restablecer contraseña - Trackfiz</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%;">
                 <tr>
                     <td align="center" style="padding: 40px 20px;">
-                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
                             <!-- Header -->
                             <tr>
                                 <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
@@ -254,17 +256,18 @@ class EmailTemplates:
     def magic_link(name: str, magic_link_url: str) -> str:
         return f"""
         <!DOCTYPE html>
-        <html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
             <title>Acceso rápido - Trackfiz</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%;">
                 <tr>
                     <td align="center" style="padding: 40px 20px;">
-                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
                             <tr>
                                 <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
                                     <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700;">Trackfiz</h1>
@@ -317,17 +320,18 @@ class EmailTemplates:
     def invitation_email(inviter_name: str, workspace_name: str, invitation_url: str) -> str:
         return f"""
         <!DOCTYPE html>
-        <html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
             <title>Invitación - Trackfiz</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%;">
                 <tr>
                     <td align="center" style="padding: 40px 20px;">
-                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 500px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
                             <tr>
                                 <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
                                     <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700;">Trackfiz</h1>

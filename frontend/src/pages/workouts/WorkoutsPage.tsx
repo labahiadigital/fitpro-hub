@@ -32,7 +32,7 @@ import {
   IconTemplate,
   IconTrash,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { EmptyState } from "../../components/common/EmptyState";
 import { useClient } from "../../hooks/useClients";
@@ -55,9 +55,19 @@ export function WorkoutsPage() {
   const navigate = useNavigate();
   const editProgramId = searchParams.get("edit");
   const clientId = searchParams.get("clientId");
+  const returnTo = searchParams.get("returnTo");
   
   // If editing for a specific client, get client info
   const { data: clientData } = useClient(clientId || "");
+  
+  // Función para volver a la página de origen
+  const goBack = useCallback(() => {
+    if (returnTo) {
+      navigate(returnTo);
+    } else if (clientId) {
+      navigate(`/clients/${clientId}`);
+    }
+  }, [navigate, returnTo, clientId]);
   
   const [activeTab, setActiveTab] = useState<string | null>("programs");
   const [
@@ -129,6 +139,10 @@ export function WorkoutsPage() {
     // Clear URL params when closing
     if (editProgramId || clientId) {
       setSearchParams({});
+    }
+    // If coming from client page, go back
+    if (returnTo || clientId) {
+      goBack();
     }
   };
 
@@ -278,9 +292,9 @@ export function WorkoutsPage() {
       setWorkoutDays(initialWorkoutDays);
       setEditingProgram(null);
       
-      // If editing for a specific client, redirect back to client page
-      if (clientId) {
-        navigate(`/clients/${clientId}`);
+      // If editing for a specific client, redirect back
+      if (clientId || returnTo) {
+        goBack();
       }
     } catch {
       // Error handled

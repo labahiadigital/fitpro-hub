@@ -33,7 +33,7 @@ import {
   IconSend,
   IconCheck,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClientCell,
@@ -171,13 +171,16 @@ export function ClientsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [viewMode] = useState<"table" | "grid">("table");
+  const [activeTab, setActiveTab] = useState<string | null>("all");
   const [
     clientModalOpened,
     { open: openClientModal, close: closeClientModal },
   ] = useDisclosure(false);
   const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false);
 
-  const { data: clientsData, isLoading } = useClients({ page, search });
+  // Filtrar por estado según la pestaña activa
+  const isActiveFilter = activeTab === "active" ? true : activeTab === "inactive" ? false : undefined;
+  const { data: clientsData, isLoading } = useClients({ page, search, is_active: isActiveFilter });
   useClientTags();
   const createClient = useCreateClient();
   const createTag = useCreateClientTag();
@@ -388,13 +391,24 @@ export function ClientsPage() {
     },
   ];
 
-  // Estadísticas
-  const stats = {
-    total: clientsData?.total || 0,
-    active: clientsData?.items?.filter((c: any) => c.is_active).length || 0,
-    inactive: clientsData?.items?.filter((c: any) => !c.is_active).length || 0,
-    newThisMonth: 12, // Mock
-  };
+  // Estadísticas (calculadas desde los datos reales)
+  const stats = useMemo(() => {
+    const items = clientsData?.items || [];
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const newThisMonth = items.filter((c: any) => {
+      const createdAt = new Date(c.created_at);
+      return createdAt >= startOfMonth;
+    }).length;
+
+    return {
+      total: clientsData?.total || 0,
+      active: items.filter((c: any) => c.is_active).length,
+      inactive: items.filter((c: any) => !c.is_active).length,
+      newThisMonth,
+    };
+  }, [clientsData]);
 
   return (
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
@@ -444,7 +458,7 @@ export function ClientsPage() {
 
       {/* Tabs y Filtros */}
       <Box mb="md">
-        <Tabs defaultValue="all">
+        <Tabs value={activeTab} onChange={(value) => { setActiveTab(value); setPage(1); }}>
           <Tabs.List style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <Tabs.Tab 
               leftSection={<IconUsers size={14} />} 
@@ -482,6 +496,7 @@ export function ClientsPage() {
             onEdit={(client) => handleEditClient(client)}
             onSearch={setSearch}
             onView={(client: { id: string }) => navigate(`/clients/${client.id}`)}
+            onRowClick={(client: { id: string }) => navigate(`/clients/${client.id}`)}
             pagination={{
               page,
               pageSize: 10,

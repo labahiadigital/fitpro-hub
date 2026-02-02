@@ -192,6 +192,36 @@ export function ClientDetailPage() {
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [selectedIntolerances, setSelectedIntolerances] = useState<string[]>([]);
   
+  // Modal de lesiones
+  const [injuriesModalOpened, { open: openInjuriesModal, close: closeInjuriesModal }] = useDisclosure(false);
+  const [editingInjuries, setEditingInjuries] = useState<Array<{ name: string; status: string; start_date?: string; end_date?: string; notes?: string }>>([]);
+  
+  // Modal de nivel de actividad y objetivos
+  const [activityModalOpened, { open: openActivityModal, close: closeActivityModal }] = useDisclosure(false);
+  const [editingActivityLevel, setEditingActivityLevel] = useState("");
+  const [editingFitnessGoal, setEditingFitnessGoal] = useState("");
+  const [editingTrainingDays, setEditingTrainingDays] = useState<number | "">("");
+  const [editingTargetWeight, setEditingTargetWeight] = useState<number | "">("");
+  const [editingSecondaryGoals, setEditingSecondaryGoals] = useState<string[]>([]);
+  
+  // Modal de información médica
+  const [medicalModalOpened, { open: openMedicalModal, close: closeMedicalModal }] = useDisclosure(false);
+  const [editingMedicalConditions, setEditingMedicalConditions] = useState("");
+  const [editingMedications, setEditingMedications] = useState("");
+  
+  // Modal de PAR-Q
+  const [parqModalOpened, { open: openParqModal, close: closeParqModal }] = useDisclosure(false);
+  const [editingParq, setEditingParq] = useState({
+    heartCondition: false,
+    chestPain: false,
+    dizziness: false,
+    boneJoint: false,
+    boneJointDetails: "",
+    bloodPressure: false,
+    otherReason: false,
+    otherReasonDetails: "",
+  });
+  
   // Modal de editar cliente
   const [editClientModalOpened, { open: openEditClientModal, close: closeEditClientModal }] = useDisclosure(false);
   
@@ -791,9 +821,13 @@ export function ClientDetailPage() {
 
   // Handlers para el modal de alergias
   const handleOpenAllergyModal = () => {
-    // Lee de health_data.allergens (la clave correcta del modelo)
-    const healthData = (client as { health_data?: { allergens?: string[]; intolerances?: string[] } }).health_data || {};
-    setSelectedAllergies(healthData.allergens || []);
+    // Combinar alergias de ambas fuentes: 'allergens' (del modal) y 'allergies' (del onboarding)
+    const healthData = (client as { health_data?: { allergens?: string[]; allergies?: string[]; intolerances?: string[] } }).health_data || {};
+    const existingAllergens = healthData.allergens || [];
+    const existingAllergies = healthData.allergies || [];
+    // Combinar y eliminar duplicados
+    const combinedAllergies = [...new Set([...existingAllergens, ...existingAllergies])];
+    setSelectedAllergies(combinedAllergies);
     setSelectedIntolerances(healthData.intolerances || []);
     openAllergyModal();
   };
@@ -840,6 +874,158 @@ export function ClientDetailPage() {
     }
   };
 
+  // Handler para abrir modal de lesiones
+  const handleOpenInjuriesModal = () => {
+    const healthData = (client as any).health_data || {};
+    const injuries = healthData.injuries || client.injuries || [];
+    const formattedInjuries = injuries.map((injury: any) => ({
+      name: typeof injury === 'string' ? injury : injury.name || '',
+      status: typeof injury === 'string' ? 'active' : injury.status || 'active',
+      start_date: injury.start_date || '',
+      end_date: injury.end_date || '',
+      notes: injury.notes || '',
+    }));
+    setEditingInjuries(formattedInjuries.length > 0 ? formattedInjuries : [{ name: '', status: 'active', start_date: '', end_date: '', notes: '' }]);
+    openInjuriesModal();
+  };
+
+  const handleSaveInjuries = async () => {
+    if (!id) return;
+    const validInjuries = editingInjuries.filter(i => i.name.trim() !== '');
+    try {
+      await updateClient.mutateAsync({
+        id,
+        data: {
+          health_data: {
+            ...((client as { health_data?: object }).health_data || {}),
+            injuries: validInjuries,
+          },
+        },
+      });
+      notifications.show({ title: "Guardado", message: "Lesiones actualizadas correctamente", color: "green" });
+      closeInjuriesModal();
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudieron guardar las lesiones", color: "red" });
+    }
+  };
+
+  const addInjury = () => {
+    setEditingInjuries([...editingInjuries, { name: '', status: 'active', start_date: '', end_date: '', notes: '' }]);
+  };
+
+  const removeInjury = (index: number) => {
+    setEditingInjuries(editingInjuries.filter((_, i) => i !== index));
+  };
+
+  const updateInjury = (index: number, field: string, value: string) => {
+    const updated = [...editingInjuries];
+    (updated[index] as any)[field] = value;
+    setEditingInjuries(updated);
+  };
+
+  // Handler para abrir modal de actividad y objetivos
+  const handleOpenActivityModal = () => {
+    const healthData = (client as any).health_data || {};
+    setEditingActivityLevel(healthData.activity_level || '');
+    setEditingFitnessGoal(healthData.fitness_goal || '');
+    setEditingTrainingDays(healthData.training_days_per_week || '');
+    setEditingTargetWeight(healthData.target_weight || '');
+    setEditingSecondaryGoals(healthData.secondary_goals || []);
+    openActivityModal();
+  };
+
+  const handleSaveActivity = async () => {
+    if (!id) return;
+    try {
+      await updateClient.mutateAsync({
+        id,
+        data: {
+          health_data: {
+            ...((client as { health_data?: object }).health_data || {}),
+            activity_level: editingActivityLevel || undefined,
+            fitness_goal: editingFitnessGoal || undefined,
+            training_days_per_week: editingTrainingDays || undefined,
+            target_weight: editingTargetWeight || undefined,
+            secondary_goals: editingSecondaryGoals.length > 0 ? editingSecondaryGoals : undefined,
+          },
+        },
+      });
+      notifications.show({ title: "Guardado", message: "Nivel de actividad y objetivos actualizados", color: "green" });
+      closeActivityModal();
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudieron guardar los datos", color: "red" });
+    }
+  };
+
+  // Handler para abrir modal de información médica
+  const handleOpenMedicalModal = () => {
+    const healthData = (client as any).health_data || {};
+    setEditingMedicalConditions(healthData.medical_conditions || '');
+    setEditingMedications(healthData.medications || '');
+    openMedicalModal();
+  };
+
+  const handleSaveMedical = async () => {
+    if (!id) return;
+    try {
+      await updateClient.mutateAsync({
+        id,
+        data: {
+          health_data: {
+            ...((client as { health_data?: object }).health_data || {}),
+            medical_conditions: editingMedicalConditions || undefined,
+            medications: editingMedications || undefined,
+          },
+        },
+      });
+      notifications.show({ title: "Guardado", message: "Información médica actualizada", color: "green" });
+      closeMedicalModal();
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudo guardar la información médica", color: "red" });
+    }
+  };
+
+  // Handler para abrir modal de PAR-Q
+  const handleOpenParqModal = () => {
+    const parqResponses = (client as any).health_data?.parq_responses || {};
+    // Convertir valores string "true"/"false" a boolean
+    const toBool = (val: any) => val === true || val === "true";
+    setEditingParq({
+      heartCondition: toBool(parqResponses.heartCondition),
+      chestPain: toBool(parqResponses.chestPain),
+      dizziness: toBool(parqResponses.dizziness),
+      boneJoint: toBool(parqResponses.boneJoint),
+      boneJointDetails: parqResponses.boneJointDetails || "",
+      bloodPressure: toBool(parqResponses.bloodPressure),
+      otherReason: toBool(parqResponses.otherReason),
+      otherReasonDetails: parqResponses.otherReasonDetails || "",
+    });
+    openParqModal();
+  };
+
+  const handleSaveParq = async () => {
+    if (!id) return;
+    const hasRisks = editingParq.heartCondition || editingParq.chestPain || 
+                    editingParq.dizziness || editingParq.boneJoint || 
+                    editingParq.bloodPressure || editingParq.otherReason;
+    try {
+      await updateClient.mutateAsync({
+        id,
+        data: {
+          health_data: {
+            ...((client as { health_data?: object }).health_data || {}),
+            parq_responses: editingParq,
+            parq_risk: hasRisks,
+          },
+        },
+      });
+      notifications.show({ title: "Guardado", message: "Cuestionario PAR-Q actualizado", color: "green" });
+      closeParqModal();
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudo guardar el cuestionario PAR-Q", color: "red" });
+    }
+  };
+
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
@@ -850,148 +1036,168 @@ export function ClientDetailPage() {
         title=""
       />
 
-      {/* Header del cliente - Premium Design */}
-      <Box className="nv-card" p="xl" mb="xl">
-        <Group align="flex-start" justify="space-between" wrap="nowrap">
-          <Group gap="xl" wrap="nowrap">
-            <Box style={{ position: "relative" }}>
-              <Avatar 
-                size={100} 
-                radius="xl" 
-                src={client.avatar_url}
-                styles={{
-                  root: {
-                    border: "4px solid var(--nv-surface)",
-                    boxShadow: "var(--shadow-lg)"
-                  }
-                }}
-              >
-                <Text size="xl" fw={700}>
-                  {client.first_name.charAt(0)}{client.last_name.charAt(0)}
-                </Text>
-              </Avatar>
-              <Box
-                style={{
-                  position: "absolute",
-                  bottom: 4,
-                  right: 4,
-                  width: 20,
-                  height: 20,
-                  borderRadius: "50%",
-                  backgroundColor: client.is_active ? "var(--nv-success)" : "var(--nv-slate)",
-                  border: "3px solid var(--nv-surface)",
-                }}
-              />
-            </Box>
-            
-            <Box>
-              <Group gap="sm" mb="xs">
+      {/* Header del cliente - Premium Design - Responsive */}
+      <Box className="nv-card" p={{ base: "md", sm: "xl" }} mb="xl">
+        <Stack gap="md">
+          {/* Fila principal: Avatar + Info + Acciones */}
+          <Group align="flex-start" justify="space-between" wrap="wrap" gap="md">
+            {/* Avatar + Nombre + Info */}
+            <Group gap={{ base: "md", sm: "xl" }} wrap="wrap" align="center">
+              <Box style={{ position: "relative", flexShrink: 0 }}>
+                <Avatar 
+                  size={{ base: 70, sm: 100 }} 
+                  radius="xl" 
+                  src={client.avatar_url}
+                  styles={{
+                    root: {
+                      border: "4px solid var(--nv-surface)",
+                      boxShadow: "var(--shadow-lg)"
+                    }
+                  }}
+                >
+                  <Text size="xl" fw={700}>
+                    {client.first_name.charAt(0)}{client.last_name.charAt(0)}
+                  </Text>
+                </Avatar>
+                <Box
+                  style={{
+                    position: "absolute",
+                    bottom: 4,
+                    right: 4,
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    backgroundColor: client.is_active ? "var(--nv-success)" : "var(--nv-slate)",
+                    border: "3px solid var(--nv-surface)",
+                  }}
+                />
+              </Box>
+              
+              <Box style={{ minWidth: 0 }}>
                 <Text 
                   style={{ 
-                    fontSize: "1.75rem", 
+                    fontSize: "clamp(1.25rem, 4vw, 1.75rem)", 
                     fontWeight: 800, 
                     letterSpacing: "-0.02em",
                     fontFamily: "'Space Grotesk', sans-serif",
-                    color: "var(--nv-dark)"
+                    color: "var(--nv-dark)",
+                    wordBreak: "break-word"
                   }}
                 >
                   {client.first_name} {client.last_name}
                 </Text>
-                {client.tags.map((tag: { name: string; color: string }, index: number) => (
-                  <Badge
-                    key={index}
-                    size="md"
-                    variant="light"
-                    radius="xl"
-                    styles={{
-                      root: {
-                        backgroundColor: `${tag.color}15`,
-                        color: tag.color,
-                        border: `1px solid ${tag.color}30`,
-                        fontWeight: 600
-                      }
-                    }}
-                  >
-                    {tag.name}
-                  </Badge>
-                ))}
-              </Group>
-              
-              <Group gap="xl" mt="md">
-                <Group gap="xs">
-                  <IconMail size={16} color="var(--nv-slate)" />
-                  <Text size="sm" c="dimmed">{client.email}</Text>
+                
+                {/* Tags - hidden on mobile, visible as wrap on tablet+ */}
+                <Group gap="xs" mt="xs" wrap="wrap" visibleFrom="sm">
+                  {client.tags.map((tag: { name: string; color: string }, index: number) => (
+                    <Badge
+                      key={index}
+                      size="sm"
+                      variant="light"
+                      radius="xl"
+                      styles={{
+                        root: {
+                          backgroundColor: `${tag.color}15`,
+                          color: tag.color,
+                          border: `1px solid ${tag.color}30`,
+                          fontWeight: 600
+                        }
+                      }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
                 </Group>
-                <Group gap="xs">
-                  <IconPhone size={16} color="var(--nv-slate)" />
-                  <Text size="sm" c="dimmed">{client.phone}</Text>
-                </Group>
-                <Group gap="xs">
-                  <IconCalendarEvent size={16} color="var(--nv-slate)" />
-                  <Text size="sm" c="dimmed">
-                    Cliente desde {new Date(client.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
-                  </Text>
-                </Group>
-              </Group>
-            </Box>
-          </Group>
+              </Box>
+            </Group>
 
-          <Group gap="sm">
-            <Button 
-              leftSection={<IconMessage size={18} />} 
-              variant="default"
-              radius="xl"
-              onClick={handleSendMessage}
-              styles={{
-                root: {
-                  borderColor: "var(--border-medium)",
-                  fontWeight: 600
-                }
-              }}
-            >
-              Mensaje
-            </Button>
-            <Button 
-              leftSection={<IconCalendarEvent size={18} />}
-              radius="xl"
-              onClick={handleNewSession}
-              styles={{
-                root: {
-                  background: "var(--nv-accent)",
-                  color: "var(--nv-dark)",
-                  fontWeight: 700,
-                  "&:hover": {
-                    background: "var(--nv-accent-hover)"
+            {/* Acciones - responsive */}
+            <Group gap="sm" wrap="nowrap">
+              <Button 
+                leftSection={<IconMessage size={18} />} 
+                variant="default"
+                radius="xl"
+                onClick={handleSendMessage}
+                visibleFrom="sm"
+                styles={{
+                  root: {
+                    borderColor: "var(--border-medium)",
+                    fontWeight: 600
                   }
-                }
-              }}
-            >
-              Nueva Sesión
-            </Button>
-            <Menu position="bottom-end" withArrow shadow="lg">
-              <Menu.Target>
-                <ActionIcon size="lg" variant="default" radius="xl">
-                  <IconDotsVertical size={18} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item leftSection={<IconEdit size={16} />} onClick={handleOpenEditClientModal}>
-                  Editar cliente
-                </Menu.Item>
-                <Menu.Item leftSection={<IconBarbell size={16} />} onClick={handleAssignProgram}>
-                  Asignar programa
-                </Menu.Item>
-                <Menu.Item leftSection={<IconSalad size={16} />} onClick={handleAssignNutritionPlan}>
-                  Asignar plan nutricional
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={openDeleteModal}>
-                  Eliminar cliente
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+                }}
+              >
+                Mensaje
+              </Button>
+              <Button 
+                leftSection={<IconCalendarEvent size={18} />}
+                radius="xl"
+                onClick={handleNewSession}
+                visibleFrom="sm"
+                styles={{
+                  root: {
+                    background: "var(--nv-accent)",
+                    color: "var(--nv-dark)",
+                    fontWeight: 700,
+                    "&:hover": {
+                      background: "var(--nv-accent-hover)"
+                    }
+                  }
+                }}
+              >
+                Nueva Sesión
+              </Button>
+              <Menu position="bottom-end" withArrow shadow="lg">
+                <Menu.Target>
+                  <ActionIcon size="lg" variant="default" radius="xl">
+                    <IconDotsVertical size={18} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item leftSection={<IconMessage size={16} />} onClick={handleSendMessage} hiddenFrom="sm">
+                    Enviar mensaje
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconCalendarEvent size={16} />} onClick={handleNewSession} hiddenFrom="sm">
+                    Nueva sesión
+                  </Menu.Item>
+                  <Menu.Divider hiddenFrom="sm" />
+                  <Menu.Item leftSection={<IconEdit size={16} />} onClick={handleOpenEditClientModal}>
+                    Editar cliente
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconBarbell size={16} />} onClick={handleAssignProgram}>
+                    Asignar programa
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconSalad size={16} />} onClick={handleAssignNutritionPlan}>
+                    Asignar plan nutricional
+                  </Menu.Item>
+                  <Menu.Divider />
+                  <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={openDeleteModal}>
+                    Eliminar cliente
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
           </Group>
-        </Group>
+          
+          {/* Info de contacto - Responsive stack on mobile */}
+          <Group gap={{ base: "sm", md: "xl" }} wrap="wrap">
+            <Group gap="xs" style={{ minWidth: 0 }}>
+              <IconMail size={16} color="var(--nv-slate)" style={{ flexShrink: 0 }} />
+              <Text size="sm" c="dimmed" style={{ wordBreak: "break-all" }}>{client.email}</Text>
+            </Group>
+            {client.phone && (
+              <Group gap="xs">
+                <IconPhone size={16} color="var(--nv-slate)" />
+                <Text size="sm" c="dimmed">{client.phone}</Text>
+              </Group>
+            )}
+            <Group gap="xs">
+              <IconCalendarEvent size={16} color="var(--nv-slate)" />
+              <Text size="sm" c="dimmed">
+                Cliente desde {new Date(client.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
+              </Text>
+            </Group>
+          </Group>
+        </Stack>
       </Box>
 
       {/* KPIs del cliente */}
@@ -1034,19 +1240,21 @@ export function ClientDetailPage() {
         />
       </SimpleGrid>
 
-      {/* Tabs con información detallada */}
+      {/* Tabs con información detallada - Responsive con scroll horizontal en mobile */}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="xl">
-          <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">Resumen</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">Salud</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">Sesiones</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">Progreso</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconBarbell size={16} />} value="programs">Programas</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
-        </Tabs.List>
+        <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <Tabs.List mb="xl" style={{ flexWrap: "nowrap", minWidth: "max-content" }}>
+            <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">Resumen</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">Salud</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">Sesiones</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">Progreso</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBarbell size={16} />} value="programs">Programas</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
+          </Tabs.List>
+        </Box>
 
         <Tabs.Panel value="overview">
           <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="lg">
@@ -1312,11 +1520,16 @@ export function ClientDetailPage() {
 
             {/* Lesiones */}
             <Box className="nv-card" p="xl">
-              <Group gap="xs" mb="lg">
-                <IconAlertTriangle size={20} color="var(--nv-warning)" />
-                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Lesiones
-                </Text>
+              <Group justify="space-between" mb="lg">
+                <Group gap="xs">
+                  <IconAlertTriangle size={20} color="var(--nv-warning)" />
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Lesiones
+                  </Text>
+                </Group>
+                <ActionIcon variant="subtle" color="gray" onClick={handleOpenInjuriesModal}>
+                  <IconEdit size={16} />
+                </ActionIcon>
               </Group>
 
               {(() => {
@@ -1326,19 +1539,54 @@ export function ClientDetailPage() {
                   return <Text c="dimmed" size="sm">Sin lesiones registradas</Text>;
                 }
                 
+                const statusColors: Record<string, string> = {
+                  active: 'red',
+                  recovered: 'green',
+                  chronic: 'orange',
+                };
+                const statusLabels: Record<string, string> = {
+                  active: 'Activa',
+                  recovered: 'Recuperada',
+                  chronic: 'Crónica',
+                };
+                
                 return (
-                  <Stack gap="xs">
-                    {injuries.map((injury: any, idx: number) => (
-                      <Badge 
-                        key={idx} 
-                        color="yellow" 
-                        variant="light"
-                        size="lg"
-                      >
-                        {typeof injury === 'string' ? injury : injury.name || injury}
-                        {injury.status === 'active' && ' (activa)'}
-                      </Badge>
-                    ))}
+                  <Stack gap="sm">
+                    {injuries.map((injury: any, idx: number) => {
+                      const isString = typeof injury === 'string';
+                      const name = isString ? injury : injury.name || injury;
+                      const status = isString ? 'active' : injury.status || 'active';
+                      const startDate = !isString && injury.start_date ? new Date(injury.start_date).toLocaleDateString('es-ES') : null;
+                      const endDate = !isString && injury.end_date ? new Date(injury.end_date).toLocaleDateString('es-ES') : null;
+                      
+                      return (
+                        <Box key={idx} p="sm" style={{ background: "var(--nv-surface-subtle)", borderRadius: "8px", borderLeft: `3px solid var(--mantine-color-${statusColors[status]}-5)` }}>
+                          <Group justify="space-between" wrap="nowrap">
+                            <Text fw={600} size="sm">{name}</Text>
+                            <Badge color={statusColors[status]} variant="light" size="sm">
+                              {statusLabels[status] || status}
+                            </Badge>
+                          </Group>
+                          {(startDate || endDate) && (
+                            <Group gap="md" mt="xs">
+                              {startDate && (
+                                <Text size="xs" c="dimmed">
+                                  <Text span fw={500}>Inicio:</Text> {startDate}
+                                </Text>
+                              )}
+                              {endDate && (
+                                <Text size="xs" c="dimmed">
+                                  <Text span fw={500}>Fin:</Text> {endDate}
+                                </Text>
+                              )}
+                            </Group>
+                          )}
+                          {!isString && injury.notes && (
+                            <Text size="xs" c="dimmed" mt="xs" lineClamp={2}>{injury.notes}</Text>
+                          )}
+                        </Box>
+                      );
+                    })}
                   </Stack>
                 );
               })()}
@@ -1346,11 +1594,16 @@ export function ClientDetailPage() {
 
             {/* Nivel de Actividad y Objetivos */}
             <Box className="nv-card" p="xl">
-              <Group gap="xs" mb="lg">
-                <IconActivity size={20} color="var(--nv-primary)" />
-                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Nivel de Actividad y Objetivos
-                </Text>
+              <Group justify="space-between" mb="lg">
+                <Group gap="xs">
+                  <IconActivity size={20} color="var(--nv-primary)" />
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Nivel de Actividad y Objetivos
+                  </Text>
+                </Group>
+                <ActionIcon variant="subtle" color="gray" onClick={handleOpenActivityModal}>
+                  <IconEdit size={16} />
+                </ActionIcon>
               </Group>
 
               {(() => {
@@ -1451,14 +1704,19 @@ export function ClientDetailPage() {
 
             {/* Cuestionario PAR-Q */}
             <Box className="nv-card" p="xl">
-              <Group gap="xs" mb="lg">
-                <IconClipboard size={20} color="var(--nv-primary)" />
-                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Cuestionario PAR-Q
-                </Text>
-                {(client as any).health_data?.parq_risk && (
-                  <Badge color="red" variant="filled" size="sm">⚠ Riesgo identificado</Badge>
-                )}
+              <Group justify="space-between" mb="lg">
+                <Group gap="xs">
+                  <IconClipboard size={20} color="var(--nv-primary)" />
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Cuestionario PAR-Q
+                  </Text>
+                  {(client as any).health_data?.parq_risk && (
+                    <Badge color="red" variant="filled" size="sm">⚠ Riesgo identificado</Badge>
+                  )}
+                </Group>
+                <ActionIcon variant="subtle" color="gray" onClick={handleOpenParqModal}>
+                  <IconEdit size={16} />
+                </ActionIcon>
               </Group>
 
               {(() => {
@@ -1516,11 +1774,16 @@ export function ClientDetailPage() {
 
             {/* Condiciones Médicas y Medicaciones */}
             <Box className="nv-card" p="xl">
-              <Group gap="xs" mb="lg">
-                <IconPill size={20} color="var(--mantine-color-grape-5)" />
-                <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Información Médica
-                </Text>
+              <Group justify="space-between" mb="lg">
+                <Group gap="xs">
+                  <IconPill size={20} color="var(--mantine-color-grape-5)" />
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Información Médica
+                  </Text>
+                </Group>
+                <ActionIcon variant="subtle" color="gray" onClick={handleOpenMedicalModal}>
+                  <IconEdit size={16} />
+                </ActionIcon>
               </Group>
 
               {(() => {
@@ -1598,7 +1861,7 @@ export function ClientDetailPage() {
                   allergies: (client as any).health_data?.allergens || [],
                   intolerances: (client as any).health_data?.intolerances || [],
                 }}
-                onEdit={() => navigate(`/nutrition?edit=${viewingMealPlanId}&clientId=${id}`)}
+                onEdit={() => navigate(`/nutrition?edit=${viewingMealPlanId}&clientId=${id}&returnTo=/clients/${id}`)}
                 onExportPDF={() => {
                   if (viewingMealPlan) {
                     notifications.show({
@@ -1851,7 +2114,7 @@ export function ClientDetailPage() {
                               </Menu.Item>
                               <Menu.Item 
                                 leftSection={<IconEdit size={16} />}
-                                onClick={() => navigate(`/nutrition?edit=${plan.id}&clientId=${id}`)}
+                                onClick={() => navigate(`/nutrition?edit=${plan.id}&clientId=${id}&returnTo=/clients/${id}`)}
                               >
                                 Editar plan
                               </Menu.Item>
@@ -2517,7 +2780,7 @@ export function ClientDetailPage() {
                 </Button>
               </Group>
               <Stack gap="md">
-                {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at: string }) => (
+                {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at: string; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } }) => (
                   <Card key={program.id} padding="lg" radius="md" withBorder>
                     <Group justify="space-between" align="flex-start">
                       <Box>
@@ -2565,7 +2828,7 @@ export function ClientDetailPage() {
                           <Menu.Item 
                             leftSection={<IconEdit size={16} />}
                             onClick={() => {
-                              navigate(`/workouts?edit=${program.id}&clientId=${id}`);
+                              navigate(`/workouts?edit=${program.id}&clientId=${id}&returnTo=/clients/${id}`);
                             }}
                           >
                             Editar programa
@@ -3161,7 +3424,7 @@ export function ClientDetailPage() {
                 leftSection={<IconEdit size={16} />}
                 onClick={() => {
                   closeViewProgramModal();
-                  navigate(`/workouts?edit=${selectedProgramForView.id}&clientId=${id}`);
+                  navigate(`/workouts?edit=${selectedProgramForView.id}&clientId=${id}&returnTo=/clients/${id}`);
                 }}
               >
                 Editar programa
@@ -3169,6 +3432,292 @@ export function ClientDetailPage() {
             </Group>
           </Stack>
         )}
+      </Modal>
+
+      {/* Modal para editar lesiones */}
+      <Modal
+        opened={injuriesModalOpened}
+        onClose={closeInjuriesModal}
+        title="Editar Lesiones"
+        size="lg"
+        radius="lg"
+        centered
+      >
+        <Stack gap="md">
+          {editingInjuries.map((injury, idx) => (
+            <Box key={idx} p="md" style={{ border: "1px solid var(--border-subtle)", borderRadius: "8px" }}>
+              <Group justify="space-between" mb="sm">
+                <Text fw={600} size="sm">Lesión {idx + 1}</Text>
+                <ActionIcon variant="subtle" color="red" size="sm" onClick={() => removeInjury(idx)}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+              <Stack gap="sm">
+                <TextInput
+                  label="Nombre de la lesión"
+                  placeholder="Ej: Tendinitis rotuliana"
+                  value={injury.name}
+                  onChange={(e) => updateInjury(idx, 'name', e.target.value)}
+                  radius="md"
+                />
+                <Group grow>
+                  <Select
+                    label="Estado"
+                    data={[
+                      { value: 'active', label: 'Activa' },
+                      { value: 'recovered', label: 'Recuperada' },
+                      { value: 'chronic', label: 'Crónica' },
+                    ]}
+                    value={injury.status}
+                    onChange={(value) => updateInjury(idx, 'status', value || 'active')}
+                    radius="md"
+                  />
+                  <TextInput
+                    label="Fecha inicio"
+                    type="date"
+                    value={injury.start_date || ''}
+                    onChange={(e) => updateInjury(idx, 'start_date', e.target.value)}
+                    radius="md"
+                  />
+                  <TextInput
+                    label="Fecha fin"
+                    type="date"
+                    value={injury.end_date || ''}
+                    onChange={(e) => updateInjury(idx, 'end_date', e.target.value)}
+                    radius="md"
+                  />
+                </Group>
+                <Textarea
+                  label="Notas"
+                  placeholder="Observaciones adicionales..."
+                  value={injury.notes || ''}
+                  onChange={(e) => updateInjury(idx, 'notes', e.target.value)}
+                  radius="md"
+                  minRows={2}
+                />
+              </Stack>
+            </Box>
+          ))}
+          <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addInjury}>
+            Añadir lesión
+          </Button>
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeInjuriesModal} radius="xl">Cancelar</Button>
+            <Button onClick={handleSaveInjuries} loading={updateClient.isPending} radius="xl"
+              styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
+              Guardar Cambios
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal para editar nivel de actividad y objetivos */}
+      <Modal
+        opened={activityModalOpened}
+        onClose={closeActivityModal}
+        title="Editar Nivel de Actividad y Objetivos"
+        size="lg"
+        radius="lg"
+        centered
+      >
+        <Stack gap="md">
+          <Select
+            label="Nivel de actividad"
+            placeholder="Selecciona el nivel"
+            data={[
+              { value: 'sedentary', label: 'Sedentario' },
+              { value: 'light', label: 'Ligero' },
+              { value: 'moderate', label: 'Moderado' },
+              { value: 'active', label: 'Activo' },
+              { value: 'very_active', label: 'Muy activo' },
+            ]}
+            value={editingActivityLevel}
+            onChange={(value) => setEditingActivityLevel(value || '')}
+            radius="md"
+            clearable
+          />
+          <Select
+            label="Objetivo principal"
+            placeholder="Selecciona el objetivo"
+            data={[
+              { value: 'lose_weight', label: 'Perder peso' },
+              { value: 'gain_muscle', label: 'Ganar músculo' },
+              { value: 'maintain', label: 'Mantener' },
+              { value: 'improve_health', label: 'Mejorar salud' },
+              { value: 'improve_endurance', label: 'Mejorar resistencia' },
+              { value: 'gain_strength', label: 'Ganar fuerza' },
+              { value: 'flexibility', label: 'Flexibilidad' },
+              { value: 'general_fitness', label: 'Fitness general' },
+            ]}
+            value={editingFitnessGoal}
+            onChange={(value) => setEditingFitnessGoal(value || '')}
+            radius="md"
+            clearable
+          />
+          <Group grow>
+            <NumberInput
+              label="Días de entrenamiento/semana"
+              placeholder="3"
+              min={1}
+              max={7}
+              value={editingTrainingDays}
+              onChange={(value) => setEditingTrainingDays(typeof value === 'number' ? value : '')}
+              radius="md"
+            />
+            <NumberInput
+              label="Peso objetivo (kg)"
+              placeholder="70"
+              value={editingTargetWeight}
+              onChange={(value) => setEditingTargetWeight(typeof value === 'number' ? value : '')}
+              radius="md"
+            />
+          </Group>
+          <MultiSelect
+            label="Objetivos secundarios"
+            placeholder="Selecciona uno o más"
+            data={[
+              { value: 'strength', label: 'Fuerza' },
+              { value: 'endurance', label: 'Resistencia' },
+              { value: 'flexibility', label: 'Flexibilidad' },
+              { value: 'posture', label: 'Postura' },
+              { value: 'balance', label: 'Equilibrio' },
+              { value: 'mobility', label: 'Movilidad' },
+              { value: 'stress_relief', label: 'Reducir estrés' },
+              { value: 'energy', label: 'Más energía' },
+            ]}
+            value={editingSecondaryGoals}
+            onChange={setEditingSecondaryGoals}
+            radius="md"
+            clearable
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeActivityModal} radius="xl">Cancelar</Button>
+            <Button onClick={handleSaveActivity} loading={updateClient.isPending} radius="xl"
+              styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
+              Guardar Cambios
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal para editar información médica */}
+      <Modal
+        opened={medicalModalOpened}
+        onClose={closeMedicalModal}
+        title="Editar Información Médica"
+        size="md"
+        radius="lg"
+        centered
+      >
+        <Stack gap="md">
+          <Textarea
+            label="Condiciones médicas"
+            placeholder="Ej: Diabetes tipo 2, hipertensión..."
+            value={editingMedicalConditions}
+            onChange={(e) => setEditingMedicalConditions(e.target.value)}
+            radius="md"
+            minRows={3}
+          />
+          <Textarea
+            label="Medicamentos actuales"
+            placeholder="Lista los medicamentos que toma actualmente..."
+            value={editingMedications}
+            onChange={(e) => setEditingMedications(e.target.value)}
+            radius="md"
+            minRows={3}
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeMedicalModal} radius="xl">Cancelar</Button>
+            <Button onClick={handleSaveMedical} loading={updateClient.isPending} radius="xl"
+              styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
+              Guardar Cambios
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal para editar cuestionario PAR-Q */}
+      <Modal
+        opened={parqModalOpened}
+        onClose={closeParqModal}
+        title="Editar Cuestionario PAR-Q"
+        size="lg"
+        radius="lg"
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Responde las siguientes preguntas sobre la aptitud física del cliente.
+          </Text>
+          
+          <Switch
+            label="1. ¿Alguna vez un médico le ha dicho que tiene una condición cardíaca?"
+            checked={editingParq.heartCondition}
+            onChange={(e) => setEditingParq({ ...editingParq, heartCondition: e.currentTarget.checked })}
+          />
+          
+          <Switch
+            label="2. ¿Siente dolor en el pecho cuando realiza actividad física?"
+            checked={editingParq.chestPain}
+            onChange={(e) => setEditingParq({ ...editingParq, chestPain: e.currentTarget.checked })}
+          />
+          
+          <Switch
+            label="3. ¿Ha experimentado mareos o pérdida de conocimiento?"
+            checked={editingParq.dizziness}
+            onChange={(e) => setEditingParq({ ...editingParq, dizziness: e.currentTarget.checked })}
+          />
+          
+          <Box>
+            <Switch
+              label="4. ¿Tiene algún problema óseo o articular?"
+              checked={editingParq.boneJoint}
+              onChange={(e) => setEditingParq({ ...editingParq, boneJoint: e.currentTarget.checked })}
+            />
+            {editingParq.boneJoint && (
+              <Textarea
+                mt="xs"
+                placeholder="Describe las limitaciones físicas..."
+                value={editingParq.boneJointDetails}
+                onChange={(e) => setEditingParq({ ...editingParq, boneJointDetails: e.target.value })}
+                radius="md"
+                minRows={2}
+              />
+            )}
+          </Box>
+          
+          <Switch
+            label="5. ¿Toma medicamentos para la presión arterial o el corazón?"
+            checked={editingParq.bloodPressure}
+            onChange={(e) => setEditingParq({ ...editingParq, bloodPressure: e.currentTarget.checked })}
+          />
+          
+          <Box>
+            <Switch
+              label="6. ¿Conoce otra razón por la que no debería hacer ejercicio?"
+              checked={editingParq.otherReason}
+              onChange={(e) => setEditingParq({ ...editingParq, otherReason: e.currentTarget.checked })}
+            />
+            {editingParq.otherReason && (
+              <Textarea
+                mt="xs"
+                placeholder="Explica el motivo..."
+                value={editingParq.otherReasonDetails}
+                onChange={(e) => setEditingParq({ ...editingParq, otherReasonDetails: e.target.value })}
+                radius="md"
+                minRows={2}
+              />
+            )}
+          </Box>
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeParqModal} radius="xl">Cancelar</Button>
+            <Button onClick={handleSaveParq} loading={updateClient.isPending} radius="xl"
+              styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
+              Guardar Cambios
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </Container>
   );

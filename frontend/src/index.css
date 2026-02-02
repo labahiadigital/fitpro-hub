@@ -369,6 +369,23 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 100%;
 }
 
+/* iOS: evitar zoom al enfocar inputs y recentrar vista tras escribir */
+@media (max-width: 768px) {
+  .mantine-TextInput-input,
+  .mantine-Textarea-input,
+  .mantine-NumberInput-input,
+  .mantine-Select-input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="number"],
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Pantallas medianas (laptops) */
 @media (max-width: 1024px) {
   .content-area {

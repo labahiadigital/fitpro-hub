@@ -37,7 +37,7 @@ export function RegisterPage() {
       email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
       password: (value) => (value.length < 8 ? "Mínimo 8 caracteres" : null),
       workspace_name: (value) =>
-        value.length < 2 ? "Nombre del negocio requerido" : null,
+        value.length < 2 ? "Nombre de tu gimnasio virtual requerido" : null,
       terms: (value) => (value ? null : "Debes aceptar los términos"),
     },
   });
@@ -131,9 +131,9 @@ export function RegisterPage() {
           />
 
           <TextInput
-            label="Nombre de tu negocio"
+            label="Nombre de tu gimnasio virtual"
             leftSection={<IconBuilding size={18} />}
-            placeholder="Mi Gimnasio"
+            placeholder="Mi espacio virtual"
             required
             styles={inputStyles}
             {...form.getInputProps("workspace_name")}

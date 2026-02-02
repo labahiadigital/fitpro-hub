@@ -709,7 +709,7 @@ export function InvitationOnboardingPage() {
                 </Group>
               </Radio.Group>
 
-              {form.values.parqResponses.boneJoint && (
+              {form.values.parqResponses.boneJoint === "true" && (
                 <Textarea
                   label="Describe tus limitaciones físicas"
                   placeholder="Ej: No puedo doblar la rodilla derecha completamente, tengo dolor lumbar al agacharme..."
@@ -738,7 +738,7 @@ export function InvitationOnboardingPage() {
                 </Group>
               </Radio.Group>
 
-              {form.values.parqResponses.otherReason && (
+              {form.values.parqResponses.otherReason === "true" && (
                 <Textarea
                   label="Explica el motivo"
                   placeholder="Describe la razón por la que crees que no deberías hacer ejercicio..."
