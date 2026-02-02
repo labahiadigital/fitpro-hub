@@ -47,6 +47,7 @@ import {
   useWorkoutPrograms,
   useWorkoutProgram,
 } from "../../hooks/useWorkouts";
+import { useUpdateExercise, useDeleteExercise } from "../../hooks/useExercises";
 
 // Exercises are fetched from the API via useExercises hook
 
@@ -89,9 +90,14 @@ export function WorkoutsPage() {
   // Also fetch the specific program if editing a client's program
   const { data: specificClientProgram } = useWorkoutProgram(editProgramId && clientId ? editProgramId : "");
   const createExercise = useCreateExercise();
+  const updateExercise = useUpdateExercise();
+  const deleteExercise = useDeleteExercise();
   const createProgram = useCreateWorkoutProgram();
   const updateProgram = useUpdateWorkoutProgram();
   const deleteProgram = useDeleteWorkoutProgram();
+  
+  // Estado para editar ejercicios
+  const [editingExercise, setEditingExercise] = useState<any>(null);
   
   // Auto-open builder when edit param is in URL
   useEffect(() => {
@@ -160,6 +166,31 @@ export function WorkoutsPage() {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
     },
   });
+  
+  // Función para abrir modal de edición de ejercicio
+  const openEditExercise = (exercise: any) => {
+    setEditingExercise(exercise);
+    exerciseForm.setValues({
+      name: exercise.name || "",
+      description: exercise.description || "",
+      instructions: exercise.instructions || "",
+      muscle_groups: exercise.muscle_groups || [],
+      equipment: exercise.equipment || [],
+      difficulty: exercise.difficulty || "intermediate",
+      category: exercise.category || "",
+    });
+    openExerciseModal();
+  };
+  
+  // Función para abrir modal de nuevo ejercicio con categoría preseleccionada
+  const openNewExercise = (category?: string) => {
+    setEditingExercise(null);
+    exerciseForm.reset();
+    if (category) {
+      exerciseForm.setFieldValue("category", category);
+    }
+    openExerciseModal();
+  };
 
   const programForm = useForm({
     initialValues: {
@@ -176,9 +207,22 @@ export function WorkoutsPage() {
 
   const handleCreateExercise = async (values: typeof exerciseForm.values) => {
     try {
-      await createExercise.mutateAsync(values);
+      if (editingExercise) {
+        await updateExercise.mutateAsync({ id: editingExercise.id, data: values });
+      } else {
+        await createExercise.mutateAsync(values);
+      }
       closeExerciseModal();
       exerciseForm.reset();
+      setEditingExercise(null);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+  
+  const handleDeleteExercise = async (exerciseId: string) => {
+    try {
+      await deleteExercise.mutateAsync(exerciseId);
     } catch {
       // Error handled by mutation
     }
@@ -348,11 +392,17 @@ export function WorkoutsPage() {
       <PageHeader
         action={{
           label:
-            activeTab === "exercises" ? "Nuevo Ejercicio" : "Nuevo Programa",
+            activeTab === "exercises" ? "Nuevo Ejercicio" : 
+            activeTab === "warmup" ? "Nuevo Calentamiento" :
+            activeTab === "stretching" ? "Nuevo Estiramiento" : "Nuevo Programa",
           onClick:
             activeTab === "exercises"
-              ? openExerciseModal
-              : () => openProgramBuilder(),
+              ? () => openNewExercise()
+              : activeTab === "warmup"
+                ? () => openNewExercise("calentamiento")
+                : activeTab === "stretching"
+                  ? () => openNewExercise("estiramiento")
+                  : () => openProgramBuilder(),
         }}
         description="Gestiona ejercicios y programas de entrenamiento"
         title="Entrenamientos"
@@ -470,7 +520,7 @@ export function WorkoutsPage() {
           {filteredExercises.length > 0 ? (
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
               {filteredExercises.map((exercise: any) => (
-                <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden" }}>
+                <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
                   <Box
                     h={80}
                     style={{
@@ -487,12 +537,17 @@ export function WorkoutsPage() {
                     <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
                       {exercise.name}
                     </Text>
-                    <Group gap={4} mt={4}>
-                      {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
-                        <Badge key={muscle} size="xs" variant="light" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
-                          {muscle}
-                        </Badge>
-                      ))}
+                    <Group gap={4} mt={4} justify="space-between">
+                      <Group gap={4}>
+                        {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                          <Badge key={muscle} size="xs" variant="light" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
+                            {muscle}
+                          </Badge>
+                        ))}
+                      </Group>
+                      <ActionIcon size="xs" variant="subtle" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                        <IconEdit size={12} />
+                      </ActionIcon>
                     </Group>
                   </Box>
                 </Box>
@@ -503,7 +558,7 @@ export function WorkoutsPage() {
               actionLabel="Añadir Ejercicio"
               description="Añade ejercicios a tu biblioteca para usarlos en tus programas."
               icon={<IconBarbell size={36} />}
-              onAction={openExerciseModal}
+              onAction={() => openNewExercise()}
               title="No hay ejercicios"
             />
           )}
@@ -545,7 +600,7 @@ export function WorkoutsPage() {
                       ))
                 )
                 .map((exercise: any) => (
-                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden" }}>
+                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => openEditExercise(exercise)}>
                     <Box
                       h={80}
                       style={{
@@ -562,12 +617,17 @@ export function WorkoutsPage() {
                       <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
                         {exercise.name}
                       </Text>
-                      <Group gap={4} mt={4}>
-                        {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
-                          <Badge key={muscle} size="xs" variant="light" color="orange" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
-                            {muscle}
-                          </Badge>
-                        ))}
+                      <Group gap={4} mt={4} justify="space-between">
+                        <Group gap={4}>
+                          {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                            <Badge key={muscle} size="xs" variant="light" color="orange" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
+                              {muscle}
+                            </Badge>
+                          ))}
+                        </Group>
+                        <ActionIcon size="xs" variant="subtle" color="orange" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                          <IconEdit size={12} />
+                        </ActionIcon>
                       </Group>
                     </Box>
                   </Box>
@@ -578,7 +638,7 @@ export function WorkoutsPage() {
               actionLabel="Añadir Calentamiento"
               description="Añade ejercicios de calentamiento a tu biblioteca."
               icon={<IconFlame size={36} />}
-              onAction={openExerciseModal}
+              onAction={() => openNewExercise("calentamiento")}
               title="No hay ejercicios de calentamiento"
             />
           )}
@@ -620,7 +680,7 @@ export function WorkoutsPage() {
                       ))
                 )
                 .map((exercise: any) => (
-                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden" }}>
+                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => openEditExercise(exercise)}>
                     <Box
                       h={80}
                       style={{
@@ -637,12 +697,17 @@ export function WorkoutsPage() {
                       <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
                         {exercise.name}
                       </Text>
-                      <Group gap={4} mt={4}>
-                        {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
-                          <Badge key={muscle} size="xs" variant="light" color="green" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
-                            {muscle}
-                          </Badge>
-                        ))}
+                      <Group gap={4} mt={4} justify="space-between">
+                        <Group gap={4}>
+                          {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                            <Badge key={muscle} size="xs" variant="light" color="green" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
+                              {muscle}
+                            </Badge>
+                          ))}
+                        </Group>
+                        <ActionIcon size="xs" variant="subtle" color="green" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                          <IconEdit size={12} />
+                        </ActionIcon>
                       </Group>
                     </Box>
                   </Box>
@@ -653,19 +718,19 @@ export function WorkoutsPage() {
               actionLabel="Añadir Estiramiento"
               description="Añade ejercicios de estiramiento a tu biblioteca."
               icon={<IconStretching size={36} />}
-              onAction={openExerciseModal}
+              onAction={() => openNewExercise("estiramiento")}
               title="No hay estiramientos"
             />
           )}
         </Tabs.Panel>
       </Tabs>
 
-      {/* Modal para crear ejercicio */}
+      {/* Modal para crear/editar ejercicio */}
       <Modal
-        onClose={closeExerciseModal}
+        onClose={() => { closeExerciseModal(); setEditingExercise(null); exerciseForm.reset(); }}
         opened={exerciseModalOpened}
         size="lg"
-        title="Nuevo Ejercicio"
+        title={editingExercise ? "Editar Ejercicio" : "Nuevo Ejercicio"}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
@@ -732,11 +797,27 @@ export function WorkoutsPage() {
             </Group>
 
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeExerciseModal} variant="default">
+              {editingExercise && (
+                <Button 
+                  color="red" 
+                  variant="subtle" 
+                  onClick={() => {
+                    handleDeleteExercise(editingExercise.id);
+                    closeExerciseModal();
+                    setEditingExercise(null);
+                    exerciseForm.reset();
+                  }}
+                  loading={deleteExercise.isPending}
+                >
+                  Eliminar
+                </Button>
+              )}
+              <Box style={{ flex: 1 }} />
+              <Button onClick={() => { closeExerciseModal(); setEditingExercise(null); exerciseForm.reset(); }} variant="default">
                 Cancelar
               </Button>
-              <Button loading={createExercise.isPending} type="submit">
-                Crear Ejercicio
+              <Button loading={createExercise.isPending || updateExercise.isPending} type="submit">
+                {editingExercise ? "Guardar Cambios" : "Crear Ejercicio"}
               </Button>
             </Group>
           </Stack>

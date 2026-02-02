@@ -92,6 +92,34 @@ export function useCreateExercise() {
   });
 }
 
+export function useUpdateExercise() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Exercise> }) => {
+      const response = await api.put(`/exercises/${id}`, data);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      queryClient.invalidateQueries({ queryKey: ["exercise", variables.id] });
+    },
+  });
+}
+
+export function useDeleteExercise() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/exercises/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exercises"] });
+    },
+  });
+}
+
 export function useMuscleGroups() {
   return useQuery({
     queryKey: ["muscle-groups"],

@@ -72,13 +72,17 @@ interface OnboardingFormData {
 
   // PAR-Q
   parqResponses: {
-    heartCondition: boolean;
-    chestPain: boolean;
-    dizziness: boolean;
-    boneJoint: boolean;
+    heartCondition: string; // "true" | "false"
+    heartConditionDetails: string;
+    chestPain: string;
+    chestPainDetails: string;
+    dizziness: string;
+    dizzinessDetails: string;
+    boneJoint: string;
     boneJointDetails: string;
-    bloodPressure: boolean;
-    otherReason: boolean;
+    bloodPressure: string;
+    bloodPressureDetails: string;
+    otherReason: string;
     otherReasonDetails: string;
   };
 
@@ -186,13 +190,17 @@ export function ClientOnboardingPage() {
       allergies: [],
       intolerances: [],
       parqResponses: {
-        heartCondition: false,
-        chestPain: false,
-        dizziness: false,
-        boneJoint: false,
+        heartCondition: "",
+        heartConditionDetails: "",
+        chestPain: "",
+        chestPainDetails: "",
+        dizziness: "",
+        dizzinessDetails: "",
+        boneJoint: "",
         boneJointDetails: "",
-        bloodPressure: false,
-        otherReason: false,
+        bloodPressure: "",
+        bloodPressureDetails: "",
+        otherReason: "",
         otherReasonDetails: "",
       },
       acceptTerms: false,
@@ -671,6 +679,15 @@ export function ClientOnboardingPage() {
                 </Group>
               </Radio.Group>
 
+              {form.values.parqResponses.heartCondition === "true" && (
+                <Textarea
+                  label="Describe la condición cardíaca"
+                  placeholder="Ej: Arritmia, insuficiencia cardíaca, marcapasos..."
+                  minRows={2}
+                  {...form.getInputProps("parqResponses.heartConditionDetails")}
+                />
+              )}
+
               <Radio.Group
                 label="2. ¿Sientes dolor en el pecho cuando realizas actividad física?"
                 {...form.getInputProps("parqResponses.chestPain")}
@@ -681,6 +698,15 @@ export function ClientOnboardingPage() {
                 </Group>
               </Radio.Group>
 
+              {form.values.parqResponses.chestPain === "true" && (
+                <Textarea
+                  label="Describe el tipo de dolor y cuándo ocurre"
+                  placeholder="Ej: Dolor punzante al correr, presión en el pecho al subir escaleras..."
+                  minRows={2}
+                  {...form.getInputProps("parqResponses.chestPainDetails")}
+                />
+              )}
+
               <Radio.Group
                 label="3. ¿Has experimentado mareos o pérdida de conocimiento en el último mes?"
                 {...form.getInputProps("parqResponses.dizziness")}
@@ -690,6 +716,15 @@ export function ClientOnboardingPage() {
                   <Radio label="No" value="false" />
                 </Group>
               </Radio.Group>
+
+              {form.values.parqResponses.dizziness === "true" && (
+                <Textarea
+                  label="Describe la frecuencia y circunstancias"
+                  placeholder="Ej: Me mareo al levantarme rápido, he perdido el conocimiento 2 veces..."
+                  minRows={2}
+                  {...form.getInputProps("parqResponses.dizzinessDetails")}
+                />
+              )}
 
               <Radio.Group
                 label="4. ¿Tienes algún problema óseo o articular que pueda empeorar con el ejercicio?"
@@ -719,6 +754,15 @@ export function ClientOnboardingPage() {
                   <Radio label="No" value="false" />
                 </Group>
               </Radio.Group>
+
+              {form.values.parqResponses.bloodPressure === "true" && (
+                <Textarea
+                  label="Lista los medicamentos que tomas"
+                  placeholder="Ej: Enalapril 10mg, Losartán 50mg..."
+                  minRows={2}
+                  {...form.getInputProps("parqResponses.bloodPressureDetails")}
+                />
+              )}
 
               <Radio.Group
                 label="6. ¿Conoces alguna otra razón por la que no deberías hacer ejercicio?"

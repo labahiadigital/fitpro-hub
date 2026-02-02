@@ -213,11 +213,15 @@ export function ClientDetailPage() {
   const [parqModalOpened, { open: openParqModal, close: closeParqModal }] = useDisclosure(false);
   const [editingParq, setEditingParq] = useState({
     heartCondition: false,
+    heartConditionDetails: "",
     chestPain: false,
+    chestPainDetails: "",
     dizziness: false,
+    dizzinessDetails: "",
     boneJoint: false,
     boneJointDetails: "",
     bloodPressure: false,
+    bloodPressureDetails: "",
     otherReason: false,
     otherReasonDetails: "",
   });
@@ -992,11 +996,15 @@ export function ClientDetailPage() {
     const toBool = (val: any) => val === true || val === "true";
     setEditingParq({
       heartCondition: toBool(parqResponses.heartCondition),
+      heartConditionDetails: parqResponses.heartConditionDetails || "",
       chestPain: toBool(parqResponses.chestPain),
+      chestPainDetails: parqResponses.chestPainDetails || "",
       dizziness: toBool(parqResponses.dizziness),
+      dizzinessDetails: parqResponses.dizzinessDetails || "",
       boneJoint: toBool(parqResponses.boneJoint),
       boneJointDetails: parqResponses.boneJointDetails || "",
       bloodPressure: toBool(parqResponses.bloodPressure),
+      bloodPressureDetails: parqResponses.bloodPressureDetails || "",
       otherReason: toBool(parqResponses.otherReason),
       otherReasonDetails: parqResponses.otherReasonDetails || "",
     });
@@ -3650,23 +3658,59 @@ export function ClientDetailPage() {
             Responde las siguientes preguntas sobre la aptitud física del cliente.
           </Text>
           
-          <Switch
-            label="1. ¿Alguna vez un médico le ha dicho que tiene una condición cardíaca?"
-            checked={editingParq.heartCondition}
-            onChange={(e) => setEditingParq({ ...editingParq, heartCondition: e.currentTarget.checked })}
-          />
+          <Box>
+            <Switch
+              label="1. ¿Alguna vez un médico le ha dicho que tiene una condición cardíaca?"
+              checked={editingParq.heartCondition}
+              onChange={(e) => setEditingParq({ ...editingParq, heartCondition: e.currentTarget.checked })}
+            />
+            {editingParq.heartCondition && (
+              <Textarea
+                mt="xs"
+                placeholder="Describe la condición cardíaca..."
+                value={editingParq.heartConditionDetails}
+                onChange={(e) => setEditingParq({ ...editingParq, heartConditionDetails: e.target.value })}
+                radius="md"
+                minRows={2}
+              />
+            )}
+          </Box>
           
-          <Switch
-            label="2. ¿Siente dolor en el pecho cuando realiza actividad física?"
-            checked={editingParq.chestPain}
-            onChange={(e) => setEditingParq({ ...editingParq, chestPain: e.currentTarget.checked })}
-          />
+          <Box>
+            <Switch
+              label="2. ¿Siente dolor en el pecho cuando realiza actividad física?"
+              checked={editingParq.chestPain}
+              onChange={(e) => setEditingParq({ ...editingParq, chestPain: e.currentTarget.checked })}
+            />
+            {editingParq.chestPain && (
+              <Textarea
+                mt="xs"
+                placeholder="Describe el tipo de dolor y cuándo ocurre..."
+                value={editingParq.chestPainDetails}
+                onChange={(e) => setEditingParq({ ...editingParq, chestPainDetails: e.target.value })}
+                radius="md"
+                minRows={2}
+              />
+            )}
+          </Box>
           
-          <Switch
-            label="3. ¿Ha experimentado mareos o pérdida de conocimiento?"
-            checked={editingParq.dizziness}
-            onChange={(e) => setEditingParq({ ...editingParq, dizziness: e.currentTarget.checked })}
-          />
+          <Box>
+            <Switch
+              label="3. ¿Ha experimentado mareos o pérdida de conocimiento?"
+              checked={editingParq.dizziness}
+              onChange={(e) => setEditingParq({ ...editingParq, dizziness: e.currentTarget.checked })}
+            />
+            {editingParq.dizziness && (
+              <Textarea
+                mt="xs"
+                placeholder="Describe la frecuencia y circunstancias..."
+                value={editingParq.dizzinessDetails}
+                onChange={(e) => setEditingParq({ ...editingParq, dizzinessDetails: e.target.value })}
+                radius="md"
+                minRows={2}
+              />
+            )}
+          </Box>
           
           <Box>
             <Switch
@@ -3686,11 +3730,23 @@ export function ClientDetailPage() {
             )}
           </Box>
           
-          <Switch
-            label="5. ¿Toma medicamentos para la presión arterial o el corazón?"
-            checked={editingParq.bloodPressure}
-            onChange={(e) => setEditingParq({ ...editingParq, bloodPressure: e.currentTarget.checked })}
-          />
+          <Box>
+            <Switch
+              label="5. ¿Toma medicamentos para la presión arterial o el corazón?"
+              checked={editingParq.bloodPressure}
+              onChange={(e) => setEditingParq({ ...editingParq, bloodPressure: e.currentTarget.checked })}
+            />
+            {editingParq.bloodPressure && (
+              <Textarea
+                mt="xs"
+                placeholder="Lista los medicamentos que toma..."
+                value={editingParq.bloodPressureDetails}
+                onChange={(e) => setEditingParq({ ...editingParq, bloodPressureDetails: e.target.value })}
+                radius="md"
+                minRows={2}
+              />
+            )}
+          </Box>
           
           <Box>
             <Switch

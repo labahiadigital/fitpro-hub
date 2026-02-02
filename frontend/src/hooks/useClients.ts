@@ -35,6 +35,7 @@ export function useClients(filters: ClientFilters = {}) {
     queryKey: ["clients", filters],
     queryFn: async () => clientsApi.list(filters),
     select: (response) => response.data as ClientsResponse,
+    staleTime: 30 * 1000, // 30 segundos - reduce refetches
   });
 }
 
@@ -67,6 +68,7 @@ export function useClient(clientId: string) {
     queryFn: async () => clientsApi.get(clientId),
     select: (response) => response.data,
     enabled: !!clientId,
+    staleTime: 30 * 1000, // 30 segundos - reduce refetches
   });
 }
 
