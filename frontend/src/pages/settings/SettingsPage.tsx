@@ -44,7 +44,6 @@ import {
   IconLink,
   IconLock,
   IconPalette,
-  IconPlug,
   IconPlugConnected,
   IconPlus,
   IconRefresh,
