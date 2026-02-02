@@ -1050,10 +1050,10 @@ export function ClientDetailPage() {
           {/* Fila principal: Avatar + Info + Acciones */}
           <Group align="flex-start" justify="space-between" wrap="wrap" gap="md">
             {/* Avatar + Nombre + Info */}
-            <Group gap={{ base: "md", sm: "xl" }} wrap="wrap" align="center">
+            <Group gap="lg" wrap="wrap" align="center">
               <Box style={{ position: "relative", flexShrink: 0 }}>
                 <Avatar 
-                  size={{ base: 70, sm: 100 }} 
+                  size={80} 
                   radius="xl" 
                   src={client.avatar_url}
                   styles={{
@@ -1187,7 +1187,7 @@ export function ClientDetailPage() {
           </Group>
           
           {/* Info de contacto - Responsive stack on mobile */}
-          <Group gap={{ base: "sm", md: "xl" }} wrap="wrap">
+          <Group gap="md" wrap="wrap">
             <Group gap="xs" style={{ minWidth: 0 }}>
               <IconMail size={16} color="var(--nv-slate)" style={{ flexShrink: 0 }} />
               <Text size="sm" c="dimmed" style={{ wordBreak: "break-all" }}>{client.email}</Text>

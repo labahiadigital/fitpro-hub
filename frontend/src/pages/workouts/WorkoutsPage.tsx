@@ -159,7 +159,7 @@ export function WorkoutsPage() {
       instructions: "",
       muscle_groups: [] as string[],
       equipment: [] as string[],
-      difficulty: "intermediate",
+      difficulty: "intermediate" as "beginner" | "intermediate" | "advanced",
       category: "",
     },
     validate: {
@@ -176,7 +176,7 @@ export function WorkoutsPage() {
       instructions: exercise.instructions || "",
       muscle_groups: exercise.muscle_groups || [],
       equipment: exercise.equipment || [],
-      difficulty: exercise.difficulty || "intermediate",
+      difficulty: (exercise.difficulty || "intermediate") as "beginner" | "intermediate" | "advanced",
       category: exercise.category || "",
     });
     openExerciseModal();
