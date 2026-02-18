@@ -111,7 +111,9 @@ async def list_foods(
     )
     
     if search:
-        query = query.where(Food.name.ilike(f"%{search}%"))
+        query = query.where(
+            func.unaccent(Food.name).ilike(func.unaccent(f"%{search}%"))
+        )
     
     if category:
         query = query.where(Food.category == category)

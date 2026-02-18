@@ -5,6 +5,7 @@ import {
   Container,
   Group,
   Modal,
+  Select,
   SimpleGrid,
   Stack,
   Tabs,
@@ -15,6 +16,7 @@ import {
   Avatar,
   ActionIcon,
   Menu,
+  Table,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -33,7 +35,7 @@ import {
   IconSend,
   IconCheck,
 } from "@tabler/icons-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClientCell,
@@ -48,9 +50,19 @@ import {
   useClientTags,
   useCreateClient,
   useCreateClientTag,
+  useDeleteClient,
+  usePermanentDeleteClient,
   useUpdateClient,
 } from "../../hooks/useClients";
-import { useCreateInvitation } from "../../hooks/useInvitations";
+import { useCreateInvitation, useInvitations, useResendInvitation } from "../../hooks/useInvitations";
+import { productsApi } from "../../services/api";
+import { useAuthStore } from "../../stores/auth";
+
+function getClientStatus(client: { is_active: boolean; has_user_account?: boolean }): string {
+  if (!client.is_active) return "inactive";
+  if (!client.has_user_account) return "pending";
+  return "active";
+}
 
 // Componente de tarjeta de cliente para vista de grid
 function ClientCard({ client, onView }: { client: any; onView: () => void }) {
@@ -142,7 +154,7 @@ function ClientCard({ client, onView }: { client: any; onView: () => void }) {
           <IconPhone size={14} color="var(--nv-slate-light)" />
           <Text size="xs" c="dimmed">{client.phone || "Sin teléfono"}</Text>
         </Group>
-        <StatusBadge status={client.is_active ? "active" : "inactive"} />
+        <StatusBadge status={getClientStatus(client)} />
       </Group>
     </Box>
   );
@@ -185,7 +197,11 @@ export function ClientsPage() {
   const createClient = useCreateClient();
   const createTag = useCreateClientTag();
   const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
+  const permanentDeleteClient = usePermanentDeleteClient();
   const createInvitation = useCreateInvitation();
+  const { data: invitations } = useInvitations();
+  const resendInvitation = useResendInvitation();
   
   // Estado para el modal de edición
   const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
@@ -194,6 +210,27 @@ export function ClientsPage() {
   // Estado para invitación
   const [inviteModalOpened, { open: openInviteModal, close: closeInviteModal }] = useDisclosure(false);
   const [lastInvitationUrl, setLastInvitationUrl] = useState<string | null>(null);
+
+  // Estado para confirmación de borrado permanente
+  const [deleteConfirmOpened, { open: openDeleteConfirm, close: closeDeleteConfirm }] = useDisclosure(false);
+  const [clientToDelete, setClientToDelete] = useState<any>(null);
+  
+  // Products for invite selector
+  const { currentWorkspace } = useAuthStore();
+  const [productOptions, setProductOptions] = useState<{ value: string; label: string }[]>([]);
+  useEffect(() => {
+    if (currentWorkspace?.id) {
+      productsApi.list(currentWorkspace.id).then((res) => {
+        const opts = (res.data?.items || res.data || [])
+          .filter((p: any) => p.is_active)
+          .map((p: any) => ({
+            value: p.id,
+            label: `${p.name} - ${Number(p.price).toFixed(2)}€/${p.interval || "mes"}`,
+          }));
+        setProductOptions(opts);
+      }).catch(() => {});
+    }
+  }, [currentWorkspace]);
 
   const clientForm = useForm({
     initialValues: {
@@ -216,6 +253,7 @@ export function ClientsPage() {
       first_name: "",
       last_name: "",
       message: "",
+      product_id: "" as string,
     },
     validate: {
       email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
@@ -274,8 +312,8 @@ export function ClientsPage() {
         first_name: values.first_name || undefined,
         last_name: values.last_name || undefined,
         message: values.message || undefined,
+        product_id: values.product_id || undefined,
       });
-      // Set a placeholder to show success state (email was sent)
       setLastInvitationUrl("sent");
       inviteForm.reset();
     } catch {
@@ -287,6 +325,38 @@ export function ClientsPage() {
     closeInviteModal();
     setLastInvitationUrl(null);
     inviteForm.reset();
+  };
+
+  const handleResendInvitation = async (client: any) => {
+    const existingInvitation = invitations?.find(
+      (inv: any) => inv.email === client.email && (inv.status === "pending" || inv.status === "expired")
+    );
+
+    if (existingInvitation) {
+      try {
+        await resendInvitation.mutateAsync(existingInvitation.id);
+        notifications.show({
+          title: "Invitación reenviada",
+          message: `Se ha reenviado la invitación a ${client.email}`,
+          color: "green",
+        });
+      } catch {
+        notifications.show({
+          title: "Error",
+          message: "No se pudo reenviar la invitación",
+          color: "red",
+        });
+      }
+    } else {
+      inviteForm.setValues({
+        email: client.email,
+        first_name: client.first_name || "",
+        last_name: client.last_name || "",
+        message: "",
+        product_id: "",
+      });
+      openInviteModal();
+    }
   };
 
   const handleEditClient = (client: any) => {
@@ -330,6 +400,45 @@ export function ClientsPage() {
     }
   };
 
+  const handleSoftDelete = async (client: any) => {
+    if (client.id.startsWith("demo-client-")) return;
+    try {
+      await deleteClient.mutateAsync(client.id);
+      notifications.show({
+        title: "Cliente desasignado",
+        message: `${client.first_name} ${client.last_name} ha sido desactivado`,
+        color: "yellow",
+      });
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handlePermanentDelete = async (client: any) => {
+    if (!client || client.id.startsWith("demo-client-")) return;
+    try {
+      await permanentDeleteClient.mutateAsync(client.id);
+      notifications.show({
+        title: "Cliente eliminado",
+        message: `${client.first_name} ${client.last_name} ha sido eliminado permanentemente`,
+        color: "red",
+      });
+      closeDeleteConfirm();
+      setClientToDelete(null);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleDelete = (client: any) => {
+    if (client.is_active) {
+      handleSoftDelete(client);
+    } else {
+      setClientToDelete(client);
+      openDeleteConfirm();
+    }
+  };
+
   const columns = [
     {
       key: "name",
@@ -369,9 +478,73 @@ export function ClientsPage() {
     {
       key: "is_active",
       title: "Estado",
-      render: (client: { is_active: boolean }) => (
-        <StatusBadge status={client.is_active ? "active" : "inactive"} />
+      render: (client: { is_active: boolean; has_user_account?: boolean }) => (
+        <StatusBadge status={getClientStatus(client)} />
       ),
+    },
+    {
+      key: "actions_custom",
+      title: "",
+      render: (client: any) =>
+        !client.is_active ? (
+          <Group gap={4} wrap="nowrap">
+            <Button
+              size="xs"
+              variant="light"
+              radius="xl"
+              leftSection={<IconSend size={14} />}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                handleResendInvitation(client);
+              }}
+              styles={{
+                root: {
+                  fontSize: "11px",
+                },
+              }}
+            >
+              Reenviar invitación
+            </Button>
+            <Button
+              size="xs"
+              variant="light"
+              color="red"
+              radius="xl"
+              leftSection={<IconTrash size={14} />}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                setClientToDelete(client);
+                openDeleteConfirm();
+              }}
+              styles={{
+                root: {
+                  fontSize: "11px",
+                },
+              }}
+            >
+              Borrar
+            </Button>
+          </Group>
+        ) : (
+          <Button
+            size="xs"
+            variant="light"
+            color="orange"
+            radius="xl"
+            leftSection={<IconTrash size={14} />}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              handleSoftDelete(client);
+            }}
+            styles={{
+              root: {
+                fontSize: "11px",
+              },
+            }}
+          >
+            Desasignar
+          </Button>
+        ),
     },
     {
       key: "created_at",
@@ -492,7 +665,7 @@ export function ClientsPage() {
             columns={columns}
             data={clientsData.items}
             loading={isLoading}
-            onDelete={(client) => console.log("Delete", client)}
+            onDelete={handleDelete}
             onEdit={(client) => handleEditClient(client)}
             onSearch={setSearch}
             onView={(client: { id: string }) => navigate(`/clients/${client.id}`)}
@@ -526,6 +699,83 @@ export function ClientsPage() {
           title="No hay clientes"
         />
       )}
+
+      {/* Invitaciones pendientes - se muestran en Inactivos y Todos */}
+      {(activeTab === "inactive" || activeTab === "all") && (() => {
+        const pendingInvitations = (invitations || []).filter(
+          (inv: any) => inv.status === "pending" || inv.status === "expired"
+        );
+        if (pendingInvitations.length === 0) return null;
+        return (
+          <Box mt="lg">
+            <Group gap="xs" mb="sm">
+              <IconMail size={16} color="var(--nv-slate)" />
+              <Text fw={600} size="sm" style={{ color: "var(--nv-slate)" }}>
+                Invitaciones pendientes ({pendingInvitations.length})
+              </Text>
+            </Group>
+            <Box
+              className="nv-card"
+              style={{
+                overflow: "hidden",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <Table verticalSpacing="sm" horizontalSpacing="md">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Email</Text></Table.Th>
+                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Nombre</Text></Table.Th>
+                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Estado</Text></Table.Th>
+                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Expira</Text></Table.Th>
+                    <Table.Th />
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {pendingInvitations.map((inv: any) => (
+                    <Table.Tr key={inv.id}>
+                      <Table.Td>
+                        <Text size="sm" fw={500}>{inv.email}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{inv.first_name || ""} {inv.last_name || ""}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge
+                          size="xs"
+                          variant="light"
+                          color={inv.status === "pending" ? "yellow" : "red"}
+                          radius="md"
+                        >
+                          {inv.status === "pending" ? "Pendiente" : "Expirada"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">
+                          {new Date(inv.expires_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          radius="xl"
+                          leftSection={<IconSend size={14} />}
+                          onClick={() => resendInvitation.mutateAsync(inv.id)}
+                          loading={resendInvitation.isPending}
+                          styles={{ root: { fontSize: "11px" } }}
+                        >
+                          Reenviar
+                        </Button>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Box>
+          </Box>
+        );
+      })()}
 
       {/* Modal para crear cliente */}
       <Modal
@@ -836,6 +1086,19 @@ export function ClientsPage() {
                 {...inviteForm.getInputProps("message")}
               />
 
+              <Select
+                label="Plan de suscripción"
+                placeholder="Selecciona un plan..."
+                data={[
+                  { value: "", label: "Gratuito — Sin plan de pago" },
+                  ...productOptions,
+                ]}
+                clearable
+                radius="md"
+                description="Selecciona 'Gratuito' para clientes que pagan en efectivo o no requieren pago online"
+                {...inviteForm.getInputProps("product_id")}
+              />
+
               <Group justify="flex-end" mt="md">
                 <Button 
                   onClick={handleCloseInviteModal} 
@@ -866,6 +1129,39 @@ export function ClientsPage() {
             </Stack>
           </form>
         )}
+      </Modal>
+
+      {/* Modal de confirmación de eliminación permanente */}
+      <Modal
+        opened={deleteConfirmOpened}
+        onClose={() => { closeDeleteConfirm(); setClientToDelete(null); }}
+        title="Confirmar eliminación permanente"
+        radius="lg"
+        centered
+        size="sm"
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            ¿Estás seguro de que deseas eliminar permanentemente a{" "}
+            <Text span fw={700}>{clientToDelete?.first_name} {clientToDelete?.last_name}</Text>?
+          </Text>
+          <Text size="xs" c="red">
+            Esta acción no se puede deshacer. Se eliminarán todos los datos del cliente.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => { closeDeleteConfirm(); setClientToDelete(null); }} radius="xl">
+              Cancelar
+            </Button>
+            <Button
+              color="red"
+              loading={permanentDeleteClient.isPending}
+              onClick={() => handlePermanentDelete(clientToDelete)}
+              radius="xl"
+            >
+              Eliminar permanentemente
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
     </Container>
   );

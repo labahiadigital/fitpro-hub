@@ -17,6 +17,7 @@ export interface InvitationCreate {
   first_name?: string;
   last_name?: string;
   message?: string;
+  product_id?: string;
 }
 
 export function useInvitations(statusFilter?: string) {

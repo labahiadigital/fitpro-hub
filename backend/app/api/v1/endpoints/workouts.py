@@ -107,6 +107,8 @@ class WorkoutLogResponse(BaseModel):
 async def list_exercises(
     search: Optional[str] = None,
     muscle_group: Optional[str] = None,
+    muscle_groups: Optional[str] = None,
+    equipment: Optional[str] = None,
     category: Optional[str] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
@@ -126,6 +128,14 @@ async def list_exercises(
     
     if muscle_group:
         query = query.where(Exercise.muscle_groups.contains([muscle_group]))
+
+    if muscle_groups:
+        groups = [g.strip() for g in muscle_groups.split(",") if g.strip()]
+        for group in groups:
+            query = query.where(Exercise.muscle_groups.contains([group]))
+
+    if equipment:
+        query = query.where(Exercise.equipment.contains([equipment]))
     
     if category:
         query = query.where(Exercise.category == category)

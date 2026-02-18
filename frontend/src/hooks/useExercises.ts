@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "../services/api";
+import api, { workoutsApi } from "../services/api";
 import { useAuthStore } from "../stores/auth";
 
 export interface ExerciseCategory {
@@ -163,5 +163,66 @@ export function useEquipment() {
       { value: "yoga_mat", label: "Esterilla" },
       { value: "none", label: "Sin equipamiento" },
     ],
+  });
+}
+
+
+// ============ EXERCISE ALTERNATIVES ============
+
+export interface ExerciseAlternative {
+  id: string;
+  exercise_id: string;
+  alternative_exercise_id: string;
+  alternative_name: string;
+  alternative_muscle_groups: string[];
+  alternative_equipment: string[];
+  alternative_category?: string;
+  notes?: string;
+  priority: number;
+}
+
+export function useAlternativesCounts() {
+  return useQuery<Record<string, number>>({
+    queryKey: ["exercise-alternatives-counts"],
+    queryFn: async () => {
+      const res = await workoutsApi.getExerciseAlternativesCounts();
+      return res.data as Record<string, number>;
+    },
+  });
+}
+
+export function useExerciseAlternatives(exerciseId?: string) {
+  return useQuery({
+    queryKey: ["exercise-alternatives", exerciseId],
+    queryFn: async () => {
+      if (!exerciseId) return [];
+      const res = await workoutsApi.getExerciseAlternatives(exerciseId);
+      return res.data as ExerciseAlternative[];
+    },
+    enabled: !!exerciseId,
+  });
+}
+
+export function useAddExerciseAlternative() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ exerciseId, alternativeExerciseId, notes }: { exerciseId: string; alternativeExerciseId: string; notes?: string }) => {
+      return workoutsApi.addExerciseAlternative(exerciseId, { alternative_exercise_id: alternativeExerciseId, notes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exercise-alternatives"] });
+    },
+  });
+}
+
+export function useRemoveExerciseAlternative() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ exerciseId, alternativeId }: { exerciseId: string; alternativeId: string }) => {
+      return workoutsApi.removeExerciseAlternative(exerciseId, alternativeId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exercise-alternatives"] });
+    },
   });
 }

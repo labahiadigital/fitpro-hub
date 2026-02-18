@@ -11,6 +11,7 @@ import {
   Menu,
   Modal,
   MultiSelect,
+  SegmentedControl,
   SimpleGrid,
   Stack,
   Switch,
@@ -61,7 +62,7 @@ import {
   IconHeart,
   IconScale,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary, useClientWorkoutLogs, useClientNutritionLogs } from "../../hooks/useClients";
@@ -78,9 +79,12 @@ import {
 } from "../../hooks/useSupabaseData";
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
+import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calories";
 import { generateClientPlanPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
+import { paymentsApi } from "../../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 // Lista de alérgenos comunes
 const COMMON_ALLERGENS = [
@@ -167,6 +171,88 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
       </Group>
       <Text size="sm" fw={600} style={{ color: "var(--nv-dark)" }}>{value}</Text>
     </Group>
+  );
+}
+
+function ClientPaymentsTab({ clientId }: { clientId: string }) {
+  const { data: paymentsData = [], isLoading: loadingPayments } = useQuery({
+    queryKey: ["client-payments", clientId],
+    queryFn: async () => {
+      const res = await paymentsApi.payments({ client_id: clientId });
+      return res.data || [];
+    },
+    enabled: !!clientId,
+  });
+
+  const { data: subsData = [] } = useQuery({
+    queryKey: ["client-subscriptions", clientId],
+    queryFn: async () => {
+      const res = await paymentsApi.subscriptions({ client_id: clientId });
+      return res.data || [];
+    },
+    enabled: !!clientId,
+  });
+
+  const activeSub = subsData.find((s: any) => s.status === "active") || subsData[0];
+
+  const statusMap: Record<string, { label: string; color: string }> = {
+    completed: { label: "Pagado", color: "green" },
+    succeeded: { label: "Pagado", color: "green" },
+    pending: { label: "Pendiente", color: "yellow" },
+    failed: { label: "Fallido", color: "red" },
+    refunded: { label: "Devuelto", color: "gray" },
+  };
+
+  const formatDate = (d: string | null) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
+  };
+
+  return (
+    <Box className="nv-card" p="xl">
+      <Group justify="space-between" mb="lg">
+        <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          Historial de Pagos
+        </Text>
+        {activeSub && (
+          <Badge size="lg" variant="light" radius="xl" color={activeSub.status === "active" ? "green" : "gray"}>
+            {activeSub.name || activeSub.plan_name} - €{activeSub.amount}/{activeSub.interval === "month" ? "mes" : activeSub.interval === "year" ? "año" : activeSub.interval}
+          </Badge>
+        )}
+      </Group>
+
+      {loadingPayments ? (
+        <Center py="xl"><Loader size="sm" /></Center>
+      ) : paymentsData.length === 0 ? (
+        <Text c="dimmed" ta="center" py="xl">No hay pagos registrados para este cliente.</Text>
+      ) : (
+        <Table verticalSpacing="md">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Fecha</Table.Th>
+              <Table.Th>Concepto</Table.Th>
+              <Table.Th ta="right">Importe</Table.Th>
+              <Table.Th ta="center">Estado</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {paymentsData.map((p: any) => {
+              const st = statusMap[p.status] || { label: p.status, color: "gray" };
+              return (
+                <Table.Tr key={p.id}>
+                  <Table.Td><Text size="sm">{formatDate(p.paid_at || p.created_at)}</Text></Table.Td>
+                  <Table.Td><Text size="sm">{p.description || "Pago"}</Text></Table.Td>
+                  <Table.Td ta="right"><Text fw={600} size="sm">€{Number(p.amount).toFixed(2)}</Text></Table.Td>
+                  <Table.Td ta="center">
+                    <Badge color={st.color} size="sm" variant="light" radius="xl">{st.label}</Badge>
+                  </Table.Td>
+                </Table.Tr>
+              );
+            })}
+          </Table.Tbody>
+        </Table>
+      )}
+    </Box>
   );
 }
 
@@ -269,6 +355,9 @@ export function ClientDetailPage() {
   const [selectedProgramForView, setSelectedProgramForView] = useState<{ id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } } | null>(null);
   const [viewProgramModalOpened, { open: openViewProgramModal, close: closeViewProgramModal }] = useDisclosure(false);
 
+  // Fórmula BMR (Mifflin-St Jeor o Harris-Benedict)
+  const [selectedFormula, setSelectedFormula] = useState<FormulaType>("mifflin");
+
   // Use real client data from API - with default empty object to prevent hook errors
   const client = fetchedClient || {
     id: "",
@@ -320,15 +409,13 @@ export function ClientDetailPage() {
 
   const supplements: { id: string; name: string; dosage: string; frequency: string }[] = [];
 
-  // ===== CÁLCULOS NUTRICIONALES BASADOS EN EL CLIENTE =====
-  const ACTIVITY_MULTIPLIERS: Record<string, number> = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    active: 1.725,
-    very_active: 1.9,
-  };
+  // Sync formula from saved client data when loaded
+  useEffect(() => {
+    const saved = (fetchedClient as any)?.health_data?.formula_used;
+    if (saved === "harris" || saved === "mifflin") setSelectedFormula(saved);
+  }, [fetchedClient]);
 
+  // ===== CÁLCULOS NUTRICIONALES BASADOS EN EL CLIENTE =====
   const ACTIVITY_LABELS: Record<string, string> = {
     sedentary: "Sedentario",
     light: "Ligero",
@@ -352,21 +439,17 @@ export function ClientDetailPage() {
   const activityLevel = (client as any).health_data?.activity_level || "moderate";
   const goalType = (client as any).health_data?.goal_type || "maintenance";
 
-  // Calcular BMR (Mifflin-St Jeor)
+  // Calcular BMR (Mifflin-St Jeor o Harris-Benedict según fórmula seleccionada)
   const clientBMR = (() => {
     const weight = parseFloat(String(client.weight_kg)) || 70;
     const height = parseFloat(String(client.height_cm)) || 170;
     const age = clientAge;
-    const gender = client.gender;
-    
-    if (gender === "female") {
-      return 10 * weight + 6.25 * height - 5 * age - 161;
-    }
-    return 10 * weight + 6.25 * height - 5 * age + 5;
+    const gender = (client.gender === "female" ? "female" : "male") as "male" | "female";
+    return calculateBMR({ weight_kg: weight, height_cm: height, age, gender }, selectedFormula);
   })();
 
   // Calcular TDEE
-  const clientTDEE = Math.round(clientBMR * (ACTIVITY_MULTIPLIERS[activityLevel] || 1.55));
+  const clientTDEE = Math.round(calculateTDEE(clientBMR, activityLevel));
 
   // Calcular objetivos según tipo de objetivo
   const nutritionalTargets = (() => {
@@ -1993,6 +2076,20 @@ export function ClientDetailPage() {
                   </Badge>
                 </Group>
 
+                <Group mb="md" gap="sm">
+                  <Text size="sm" c="dimmed">Fórmula BMR:</Text>
+                  <SegmentedControl
+                    value={selectedFormula}
+                    onChange={(v) => setSelectedFormula(v as FormulaType)}
+                    data={[
+                      { label: "Mifflin-St Jeor", value: "mifflin" },
+                      { label: "Harris-Benedict", value: "harris" },
+                    ]}
+                    size="xs"
+                    radius="md"
+                  />
+                </Group>
+
                 <SimpleGrid cols={{ base: 2, sm: 3, md: 6 }} spacing="md" mb="lg">
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
                     <Text size="xs" c="dimmed" mb={4}>Peso</Text>
@@ -2019,6 +2116,43 @@ export function ClientDetailPage() {
                     <Text fw={700} size="lg">{nutritionalTargets.tdee} kcal</Text>
                   </Box>
                 </SimpleGrid>
+
+                {!isDemoClient && id && (
+                <Button
+                  variant="light"
+                  size="sm"
+                  radius="md"
+                  mb="lg"
+                  loading={updateClient.isPending}
+                  onClick={async () => {
+                    if (!id) return;
+                    try {
+                      await updateClient.mutateAsync({
+                        id,
+                        data: {
+                          health_data: {
+                            ...((client as { health_data?: object }).health_data || {}),
+                            bmr: nutritionalTargets.bmr,
+                            tdee: nutritionalTargets.tdee,
+                            target_calories: nutritionalTargets.calories,
+                            formula_used: selectedFormula,
+                            calculated_at: new Date().toISOString(),
+                          },
+                        },
+                      });
+                      notifications.show({
+                        title: "Datos guardados",
+                        message: "BMR, TDEE y objetivos guardados en la ficha del cliente",
+                        color: "green",
+                      });
+                    } catch {
+                      // Error handled by useUpdateClient
+                    }
+                  }}
+                >
+                  Guardar en ficha
+                </Button>
+                )}
 
                 {/* Macros Objetivo - del Plan Asignado o Calculados */}
                 <Box p="lg" style={{ background: "rgba(255,255,255,0.95)", borderRadius: "var(--radius-lg)" }}>
@@ -2922,45 +3056,7 @@ export function ClientDetailPage() {
 
         {/* Pagos */}
         <Tabs.Panel value="payments">
-          <Box className="nv-card" p="xl">
-            <Group justify="space-between" mb="lg">
-              <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Historial de Pagos
-              </Text>
-              <Badge size="lg" variant="light" radius="xl" color="green">
-                Plan Premium - €149/mes
-              </Badge>
-            </Group>
-
-            <Table verticalSpacing="md">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Concepto</Table.Th>
-                  <Table.Th>Importe</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                <Table.Tr>
-                  <Table.Td><Text size="sm">01/01/2024</Text></Table.Td>
-                  <Table.Td><Text size="sm">Plan Premium - Enero 2024</Text></Table.Td>
-                  <Table.Td><Text fw={600} size="sm">€149.00</Text></Table.Td>
-                  <Table.Td>
-                    <Badge color="green" size="sm" variant="light" radius="xl">Pagado</Badge>
-                  </Table.Td>
-                </Table.Tr>
-                <Table.Tr>
-                  <Table.Td><Text size="sm">01/12/2023</Text></Table.Td>
-                  <Table.Td><Text size="sm">Plan Premium - Diciembre 2023</Text></Table.Td>
-                  <Table.Td><Text fw={600} size="sm">€149.00</Text></Table.Td>
-                  <Table.Td>
-                    <Badge color="green" size="sm" variant="light" radius="xl">Pagado</Badge>
-                  </Table.Td>
-                </Table.Tr>
-              </Table.Tbody>
-            </Table>
-          </Box>
+          <ClientPaymentsTab clientId={id || ""} />
         </Tabs.Panel>
       </Tabs>
 

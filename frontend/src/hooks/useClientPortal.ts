@@ -310,6 +310,67 @@ export function useMyWorkout(id: string) {
   });
 }
 
+export function useClientExercises(params?: { search?: string; category?: string; limit?: number }) {
+  return useQuery<Array<{ id: string; name: string; muscle_groups: string[]; equipment: string[]; category?: string; difficulty?: string }>>({
+    queryKey: ["client-exercises", params],
+    queryFn: async () => {
+      const response = await clientPortalApi.exercises(params);
+      return response.data;
+    },
+  });
+}
+
+export function useClientExerciseAlternatives(exerciseId?: string) {
+  return useQuery<Array<{ id: string; name: string; muscle_groups: string[]; equipment: string[]; category?: string; notes?: string }>>({
+    queryKey: ["client-exercise-alternatives", exerciseId],
+    queryFn: async () => {
+      if (!exerciseId) return [];
+      const response = await clientPortalApi.exerciseAlternatives(exerciseId);
+      return response.data;
+    },
+    enabled: !!exerciseId,
+  });
+}
+
+export function useUpdateProgramExercise() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      programId: string;
+      day_index: number;
+      block_index: number;
+      exercise_index: number;
+      new_exercise_id: string;
+      reason?: string;
+    }) => {
+      const response = await clientPortalApi.updateProgramExercise(params.programId, {
+        day_index: params.day_index,
+        block_index: params.block_index,
+        exercise_index: params.exercise_index,
+        new_exercise_id: params.new_exercise_id,
+        reason: params.reason,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      notifications.show({
+        title: "Ejercicio cambiado",
+        message: "Se ha sustituido el ejercicio correctamente",
+        color: "green",
+      });
+    },
+    onError: (error: Error & { response?: { status?: number; data?: { detail?: string } } }) => {
+      notifications.show({
+        title: "Error",
+        message: error.response?.data?.detail || "No se pudo cambiar el ejercicio",
+        color: "red",
+      });
+    },
+  });
+}
+
 export function useLogWorkout() {
   const queryClient = useQueryClient();
 
@@ -345,6 +406,74 @@ export function useLogWorkout() {
         });
       }
     },
+  });
+}
+
+export function useLogWorkoutDetailed() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      program_id: string;
+      day_index: number;
+      exercises: Array<{
+        exercise_id: string;
+        exercise_name: string;
+        sets: Array<{
+          set_number: number;
+          weight_kg?: number;
+          reps_completed?: number;
+          duration_seconds?: number;
+          completed?: boolean;
+          notes?: string;
+        }>;
+        completed?: boolean;
+        notes?: string;
+      }>;
+      duration_minutes?: number;
+      perceived_effort?: number;
+      notes?: string;
+    }) => {
+      const response = await clientPortalApi.logWorkoutDetailed(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["workout-history"] });
+      queryClient.invalidateQueries({ queryKey: ["today-workout-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
+      notifications.show({
+        title: "Entrenamiento registrado",
+        message: "Tu progreso detallado ha sido guardado",
+        color: "green",
+      });
+    },
+    onError: (error: Error & { response?: { status?: number; data?: { detail?: string } } }) => {
+      if (error.response?.status === 409) {
+        notifications.show({
+          title: "Ya registrado",
+          message: error.response?.data?.detail || "Ya has registrado este entrenamiento hoy",
+          color: "yellow",
+        });
+      } else {
+        notifications.show({
+          title: "Error",
+          message: "No se pudo registrar el entrenamiento",
+          color: "red",
+        });
+      }
+    },
+  });
+}
+
+export function useExerciseHistory(exerciseId: string | null, limit = 5) {
+  return useQuery({
+    queryKey: ["exercise-history", exerciseId, limit],
+    queryFn: async () => {
+      const response = await clientPortalApi.getExerciseHistory(exerciseId!, limit);
+      return response.data;
+    },
+    enabled: !!exerciseId,
   });
 }
 

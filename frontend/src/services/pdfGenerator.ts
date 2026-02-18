@@ -90,6 +90,7 @@ interface WorkoutExercise {
   sets: number;
   reps: string;
   rest_seconds: number;
+  duration_type?: "reps" | "seconds" | "minutes";
   notes?: string;
 }
 

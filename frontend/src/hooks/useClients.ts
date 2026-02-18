@@ -11,6 +11,7 @@ interface Client {
   phone?: string;
   avatar_url?: string;
   is_active: boolean;
+  has_user_account?: boolean;
   tags: Array<{ id: string; name: string; color: string }>;
   created_at: string;
 }
@@ -25,6 +26,7 @@ interface ClientsResponse {
 
 interface ClientFilters {
   page?: number;
+  page_size?: number;
   search?: string;
   is_active?: boolean;
   tag_id?: string;
@@ -127,11 +129,24 @@ export function useDeleteClient() {
     mutationFn: (id: string) => clientsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+    },
+    onError: (error: Error) => {
       notifications.show({
-        title: "Cliente eliminado",
-        message: "El cliente ha sido eliminado correctamente",
-        color: "green",
+        title: "Error",
+        message: error.message || "Error al eliminar cliente",
+        color: "red",
       });
+    },
+  });
+}
+
+export function usePermanentDeleteClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => clientsApi.deletePermanent(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
     },
     onError: (error: Error) => {
       notifications.show({

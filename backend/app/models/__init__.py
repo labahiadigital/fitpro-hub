@@ -5,7 +5,7 @@ from app.models.client import Client, ClientTag, COMMON_ALLERGENS
 from app.models.booking import Booking, BookingStatus
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.nutrition import Food, MealPlan, FoodFavorite
-from app.models.exercise import Exercise, ExerciseFavorite, ClientMeasurement, ClientTask
+from app.models.exercise import Exercise, ExerciseAlternative, ExerciseFavorite, ClientMeasurement, ClientTask
 from app.models.form import Form, FormSubmission
 from app.models.message import Message, Conversation
 from app.models.payment import StripeAccount, Subscription, Payment
@@ -25,6 +25,7 @@ from app.models.live_classes import (
     ClientClassPackage,
     MeetingLog,
 )
+from app.models.invitation import ClientInvitation, InvitationStatus
 from app.models.google_calendar import GoogleCalendarToken, CalendarSyncMapping
 
 __all__ = [
@@ -44,6 +45,7 @@ __all__ = [
     "WorkoutProgram",
     "WorkoutLog",
     "Exercise",
+    "ExerciseAlternative",
     "ExerciseFavorite",
     "MealPlan",
     "Food",
@@ -80,6 +82,8 @@ __all__ = [
     "LiveClassPackage",
     "ClientClassPackage",
     "MeetingLog",
+    "ClientInvitation",
+    "InvitationStatus",
     "GoogleCalendarToken",
     "CalendarSyncMapping",
 ]

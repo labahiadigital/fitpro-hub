@@ -159,6 +159,8 @@ export const authApi = {
     api.post("/auth/reset-password", { token, new_password: newPassword }),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post("/auth/change-password", { current_password: currentPassword, new_password: newPassword }),
+  changeEmail: (data: { new_email: string; password: string }) =>
+    api.post("/auth/change-email", data),
   
   // Client registration
   registerClient: (data: {
@@ -195,6 +197,7 @@ export const clientsApi = {
   create: (data: object) => api.post("/clients", data),
   update: (id: string, data: object) => api.put(`/clients/${id}`, data),
   delete: (id: string) => api.delete(`/clients/${id}`),
+  deletePermanent: (id: string) => api.delete(`/clients/${id}/permanent`),
   tags: () => api.get("/clients/tags"),
   createTag: (data: { name: string; color: string }) =>
     api.post("/clients/tags", data),
@@ -212,7 +215,7 @@ export const clientsApi = {
   getProgressSummary: (clientId: string) =>
     api.get(`/clients/${clientId}/progress-summary`),
   // Invitations
-  sendInvitation: (data: { email: string; first_name?: string; last_name?: string; message?: string }) =>
+  sendInvitation: (data: { email: string; first_name?: string; last_name?: string; message?: string; product_id?: string }) =>
     api.post("/clients/invitations", data),
   listInvitations: (status?: string) =>
     api.get("/clients/invitations", { params: status ? { status } : {} }),
@@ -244,6 +247,16 @@ export const workoutsApi = {
   updateExercise: (id: string, data: object) =>
     api.put(`/workouts/exercises/${id}`, data),
   deleteExercise: (id: string) => api.delete(`/workouts/exercises/${id}`),
+
+  // Exercise Alternatives
+  getExerciseAlternativesCounts: () =>
+    api.get("/workouts/exercises/alternatives/counts"),
+  getExerciseAlternatives: (exerciseId: string) =>
+    api.get(`/workouts/exercises/${exerciseId}/alternatives`),
+  addExerciseAlternative: (exerciseId: string, data: { alternative_exercise_id: string; notes?: string; priority?: number }) =>
+    api.post(`/workouts/exercises/${exerciseId}/alternatives`, data),
+  removeExerciseAlternative: (exerciseId: string, alternativeId: string) =>
+    api.delete(`/workouts/exercises/${exerciseId}/alternatives/${alternativeId}`),
 
   // Programs
   programs: (params?: object) => api.get("/workouts/programs", { params }),
@@ -331,6 +344,36 @@ export const paymentsApi = {
   refund: (paymentId: string) => api.post(`/payments/payments/${paymentId}/refund`),
 };
 
+// Products API
+export const productsApi = {
+  list: (workspaceId: string, productType?: string) =>
+    api.get("/products/", { params: { workspace_id: workspaceId, product_type: productType } }),
+  get: (id: string) => api.get(`/products/${id}`),
+  create: (data: object) => api.post("/products/", data),
+  update: (id: string, data: object) => api.patch(`/products/${id}`, data),
+};
+
+// Redsys API
+export const redsysApi = {
+  // Onboarding payments (public, no auth required)
+  createOnboardingPayment: (token: string) =>
+    api.post("/redsys/create-onboarding-payment", { token }),
+  getOnboardingPaymentStatus: (token: string) =>
+    api.get(`/redsys/onboarding-payment-status/${token}`),
+  confirmReturn: (data: {
+    Ds_SignatureVersion: string;
+    Ds_MerchantParameters: string;
+    Ds_Signature: string;
+  }) => api.post("/redsys/confirm-return", data),
+
+  // Staff-only
+  createPayment: (data: object) => api.post("/redsys/create-payment", data),
+  getPaymentStatus: (orderId: string) =>
+    api.get(`/redsys/payment-status/${orderId}`),
+  refund: (data: object) => api.post("/redsys/refund", data),
+  configStatus: () => api.get("/redsys/config-status"),
+};
+
 // Automations API
 export const automationsApi = {
   list: () => api.get("/automations"),
@@ -381,8 +424,39 @@ export const clientPortalApi = {
   // Workouts
   workouts: () => api.get("/my/workouts"),
   getWorkout: (id: string) => api.get(`/my/workouts/${id}`),
-  logWorkout: (data: { program_id: string; log: object }) => 
+  updateProgramExercise: (
+    programId: string,
+    data: { day_index: number; block_index: number; exercise_index: number; new_exercise_id: string; reason?: string }
+  ) => api.put(`/my/workouts/${programId}/exercises`, data),
+  exercises: (params?: { search?: string; category?: string; limit?: number }) =>
+    api.get("/my/exercises", { params }),
+  exerciseAlternatives: (exerciseId: string) =>
+    api.get(`/my/exercises/${exerciseId}/alternatives`),
+  logWorkout: (data: { program_id: string; log: object }) =>
     api.post("/my/workouts/logs", data),
+  logWorkoutDetailed: (data: {
+    program_id: string;
+    day_index: number;
+    exercises: Array<{
+      exercise_id: string;
+      exercise_name: string;
+      sets: Array<{
+        set_number: number;
+        weight_kg?: number;
+        reps_completed?: number;
+        duration_seconds?: number;
+        completed?: boolean;
+        notes?: string;
+      }>;
+      completed?: boolean;
+      notes?: string;
+    }>;
+    duration_minutes?: number;
+    perceived_effort?: number;
+    notes?: string;
+  }) => api.post("/my/workouts/log-detailed", data),
+  getExerciseHistory: (exerciseId: string, limit?: number) =>
+    api.get(`/my/workouts/exercise-history/${exerciseId}`, { params: { limit } }),
   workoutHistory: (limit?: number) => 
     api.get("/my/workouts/logs/history", { params: { limit } }),
   todayWorkoutLogs: () => api.get("/my/workouts/logs/today"),
@@ -485,6 +559,11 @@ export const clientPortalApi = {
     notes?: string;
     context?: object;
   }) => api.post("/my/emotions", data),
+
+  // Subscription & Payments
+  subscription: () => api.get("/my/subscription"),
+  payments: (limit?: number) => api.get("/my/payments", { params: { limit } }),
+  cancelSubscription: () => api.post("/my/subscription/cancel"),
 };
 
 // Messages API (Staff/Trainer)

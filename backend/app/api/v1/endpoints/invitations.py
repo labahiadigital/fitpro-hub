@@ -21,6 +21,8 @@ STATUS_CANCELLED = "cancelled"
 from app.models.workspace import Workspace
 from app.models.client import Client
 from app.models.user import User, UserRole, RoleType
+from app.models.payment import Payment, PaymentStatus, Subscription, SubscriptionStatus
+from app.models.product import Product
 from app.middleware.auth import require_staff, require_workspace, CurrentUser
 from app.core.security import (
     get_password_hash,
@@ -46,6 +48,7 @@ class InvitationCreate(BaseModel):
     last_name: Optional[str] = None
     message: Optional[str] = None
     expires_days: int = 7
+    product_id: Optional[UUID] = None
 
 
 class InvitationResponse(BaseModel):
@@ -72,6 +75,17 @@ class ResendInvitationRequest(BaseModel):
     invitation_id: UUID
 
 
+class ProductInfo(BaseModel):
+    """Product/plan info included in invitation validation."""
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    price: float
+    currency: str = "EUR"
+    interval: Optional[str] = None
+    product_type: str = "subscription"
+
+
 class ValidateTokenResponse(BaseModel):
     valid: bool
     email: Optional[str] = None
@@ -80,6 +94,8 @@ class ValidateTokenResponse(BaseModel):
     workspace_name: Optional[str] = None
     workspace_slug: Optional[str] = None
     message: Optional[str] = None
+    product: Optional[ProductInfo] = None
+    payment_completed: bool = False
 
 
 # ============ Email Templates ============
@@ -221,6 +237,23 @@ async def create_invitation(
             detail="Este cliente ya tiene una cuenta activa"
         )
     
+    # Validate product if provided
+    product = None
+    if data.product_id:
+        product_result = await db.execute(
+            select(Product).where(
+                Product.id == data.product_id,
+                Product.workspace_id == current_user.workspace_id,
+                Product.is_active == True,
+            )
+        )
+        product = product_result.scalar_one_or_none()
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Producto no encontrado o no activo"
+            )
+    
     # Generate unique token
     token = secrets.token_urlsafe(32)
     
@@ -239,6 +272,7 @@ async def create_invitation(
         expires_at=expires_at,
         client_id=existing_client.id if existing_client else None,
         message=data.message,
+        product_id=data.product_id,
     )
     
     db.add(invitation)
@@ -457,6 +491,34 @@ async def validate_invitation_token(
     )
     workspace = workspace_result.scalar_one()
     
+    # Get product info if linked
+    product_info = None
+    if invitation.product_id:
+        product_result = await db.execute(
+            select(Product).where(Product.id == invitation.product_id)
+        )
+        product = product_result.scalar_one_or_none()
+        if product:
+            product_info = ProductInfo(
+                id=product.id,
+                name=product.name,
+                description=product.description,
+                price=float(product.price),
+                currency=product.currency or "EUR",
+                interval=product.interval,
+                product_type=product.product_type,
+            )
+    
+    # Check if payment already completed
+    payment_completed = False
+    if invitation.payment_id:
+        payment_result = await db.execute(
+            select(Payment).where(Payment.id == invitation.payment_id)
+        )
+        payment = payment_result.scalar_one_or_none()
+        if payment and payment.status == PaymentStatus.succeeded:
+            payment_completed = True
+    
     return ValidateTokenResponse(
         valid=True,
         email=invitation.email,
@@ -465,6 +527,8 @@ async def validate_invitation_token(
         workspace_name=workspace.name,
         workspace_slug=workspace.slug,
         message=invitation.message,
+        product=product_info,
+        payment_completed=payment_completed,
     )
 
 
@@ -566,6 +630,23 @@ async def complete_invitation(
             detail="El email ya está registrado"
         )
     
+    # If invitation requires payment, verify it was completed
+    if invitation.product_id:
+        if not invitation.payment_id:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Esta invitación requiere pago. Completa el pago antes de registrarte.",
+            )
+        payment_result = await db.execute(
+            select(Payment).where(Payment.id == invitation.payment_id)
+        )
+        payment_record = payment_result.scalar_one_or_none()
+        if not payment_record or payment_record.status != PaymentStatus.succeeded:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="El pago no se ha completado correctamente.",
+            )
+    
     try:
         full_name = f"{data.first_name} {data.last_name}"
         
@@ -613,10 +694,79 @@ async def complete_invitation(
             is_active=True
         )
         db.add(client)
+        await db.flush()
+        
+        # Create subscription if invitation has a product
+        if invitation.product_id:
+            product_result = await db.execute(
+                select(Product).where(Product.id == invitation.product_id)
+            )
+            product = product_result.scalar_one_or_none()
+            if product:
+                from dateutil.relativedelta import relativedelta
+                
+                now = datetime.now(timezone.utc)
+                interval_map = {
+                    "month": relativedelta(months=product.interval_count or 1),
+                    "year": relativedelta(years=product.interval_count or 1),
+                    "week": timedelta(weeks=product.interval_count or 1),
+                }
+                delta = interval_map.get(product.interval or "month", relativedelta(months=1))
+                period_end = now + delta
+                
+                # Build subscription extra_data with COF tokens from payment
+                sub_extra = {
+                    "product_id": str(product.id),
+                    "gateway": "redsys",
+                    "invitation_id": str(invitation.id),
+                }
+                
+                # Load payment to copy COF tokens for recurring charges
+                pay = None
+                if invitation.payment_id:
+                    pay_result = await db.execute(
+                        select(Payment).where(Payment.id == invitation.payment_id)
+                    )
+                    pay = pay_result.scalar_one_or_none()
+                    if pay and pay.extra_data:
+                        pay_extra = pay.extra_data
+                        for key in ("redsys_identifier", "redsys_cof_txnid",
+                                    "redsys_card_last4", "redsys_card_brand_name",
+                                    "redsys_card_brand"):
+                            if pay_extra.get(key):
+                                sub_extra[key] = pay_extra[key]
+                
+                subscription = Subscription(
+                    workspace_id=invitation.workspace_id,
+                    client_id=client.id,
+                    name=product.name,
+                    description=product.description,
+                    status=SubscriptionStatus.active,
+                    amount=product.price,
+                    currency=product.currency or "EUR",
+                    interval=product.interval or "month",
+                    current_period_start=now,
+                    current_period_end=period_end,
+                    extra_data=sub_extra,
+                )
+                db.add(subscription)
+                await db.flush()
+                
+                # Link the payment to the subscription and client
+                if pay:
+                    pay.subscription_id = subscription.id
+                    pay.client_id = client.id
+                    pay.payment_type = "subscription"
+                
+                logger.info(
+                    f"Subscription created: {subscription.name} for client {client.id}, "
+                    f"amount={product.price} {product.currency}/{product.interval}"
+                )
         
         # Mark invitation as accepted
         invitation.status = STATUS_ACCEPTED
         invitation.accepted_at = datetime.utcnow()
+        invitation.client_id = client.id
         
         await db.commit()
         

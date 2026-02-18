@@ -24,7 +24,7 @@ class Product(BaseModel):
     interval_count = Column(Integer, default=1)
     trial_days = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    extra_data = Column(JSONB, default={})
+    extra_data = Column("metadata", JSONB, default={})
     
     # Relationships
     session_packages = relationship("SessionPackage", back_populates="product")

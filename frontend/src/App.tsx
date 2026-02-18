@@ -1,81 +1,85 @@
-import { useEffect } from "react";
-import { MantineProvider } from "@mantine/core";
+import { Suspense, lazy, useEffect } from "react";
+import { Center, Loader, MantineProvider } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
 import { Notifications } from "@mantine/notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthLayout } from "./components/layout/AuthLayout";
-// Layouts
 import { DashboardLayout } from "./components/layout/DashboardLayout";
-// Auth Pages
-import { LoginPage } from "./pages/auth/LoginPage";
-import { RegisterPage } from "./pages/auth/RegisterPage";
-import { ConfirmEmailPage } from "./pages/auth/ConfirmEmailPage";
-import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
-import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
-import { GoogleCallbackPage } from "./pages/auth/GoogleCallbackPage";
-import { AutomationsPage } from "./pages/automations/AutomationsPage";
-import { CalendarPage } from "./pages/calendar/CalendarPage";
-import { ChatPage } from "./pages/chat/ChatPage";
-import { ClientDetailPage } from "./pages/clients/ClientDetailPage";
-import { ClientsPage } from "./pages/clients/ClientsPage";
-import { CommunityPage } from "./pages/community/CommunityPage";
-// Dashboard Pages
-import { DashboardPage } from "./pages/dashboard/DashboardPage";
-import { DocumentsPage } from "./pages/documents/DocumentsPage";
-import { FormsPage } from "./pages/forms/FormsPage";
-import { NutritionPage } from "./pages/nutrition/NutritionPage";
-import { MealPlanDetailPage } from "./pages/nutrition/MealPlanDetailPage";
-import { ClientOnboardingPage } from "./pages/onboarding/ClientOnboardingPage";
-import { OnboardingPage } from "./pages/onboarding/OnboardingPage";
-import { InvitationOnboardingPage } from "./pages/onboarding/InvitationOnboardingPage";
-import { PackagesPage } from "./pages/packages/PackagesPage";
-import { PaymentsPage } from "./pages/payments/PaymentsPage";
-import { ReportsPage } from "./pages/reports/ReportsPage";
-import { SettingsPage } from "./pages/settings/SettingsPage";
-import { TeamPage } from "./pages/team/TeamPage";
-import { WorkoutsPage } from "./pages/workouts/WorkoutsPage";
-// New Pages
-import { SupplementsPage } from "./pages/supplements/SupplementsPage";
-import { LMSPage } from "./pages/lms/LMSPage";
-import { LiveClassesPage } from "./pages/live-classes/LiveClassesPage";
-// Client-specific pages
-import { 
-  ClientDashboardPage,
-  MyWorkoutsPage,
-  MyNutritionPage,
-  MyProgressPage,
-  MyCalendarPage,
-  MyDocumentsPage,
-  MyProfilePage,
-  MyMessagesPage,
-} from "./pages/client";
 import { useAuthStore } from "./stores/auth";
 import { theme } from "./theme";
 
-// Mantine styles
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
 import "@mantine/charts/styles.css";
 import "dayjs/locale/es";
 
+// Lazy-loaded pages — each becomes a separate chunk
+const LoginPage = lazy(() => import("./pages/auth/LoginPage").then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/auth/RegisterPage").then(m => ({ default: m.RegisterPage })));
+const ConfirmEmailPage = lazy(() => import("./pages/auth/ConfirmEmailPage").then(m => ({ default: m.ConfirmEmailPage })));
+const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage").then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage").then(m => ({ default: m.ResetPasswordPage })));
+const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then(m => ({ default: m.GoogleCallbackPage })));
+const InvitationOnboardingPage = lazy(() => import("./pages/onboarding/InvitationOnboardingPage").then(m => ({ default: m.InvitationOnboardingPage })));
+const ClientOnboardingPage = lazy(() => import("./pages/onboarding/ClientOnboardingPage").then(m => ({ default: m.ClientOnboardingPage })));
+const OnboardingPage = lazy(() => import("./pages/onboarding/OnboardingPage").then(m => ({ default: m.OnboardingPage })));
+
+const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage").then(m => ({ default: m.DashboardPage })));
+const ClientsPage = lazy(() => import("./pages/clients/ClientsPage").then(m => ({ default: m.ClientsPage })));
+const ClientDetailPage = lazy(() => import("./pages/clients/ClientDetailPage").then(m => ({ default: m.ClientDetailPage })));
+const CalendarPage = lazy(() => import("./pages/calendar/CalendarPage").then(m => ({ default: m.CalendarPage })));
+const WorkoutsPage = lazy(() => import("./pages/workouts/WorkoutsPage"));
+const NutritionPage = lazy(() => import("./pages/nutrition/NutritionPage").then(m => ({ default: m.NutritionPage })));
+const MealPlanDetailPage = lazy(() => import("./pages/nutrition/MealPlanDetailPage").then(m => ({ default: m.MealPlanDetailPage })));
+const SupplementsPage = lazy(() => import("./pages/supplements/SupplementsPage").then(m => ({ default: m.SupplementsPage })));
+const FormsPage = lazy(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
+const PaymentsPage = lazy(() => import("./pages/payments/PaymentsPage").then(m => ({ default: m.PaymentsPage })));
+const PackagesPage = lazy(() => import("./pages/packages/PackagesPage").then(m => ({ default: m.PackagesPage })));
+const CommunityPage = lazy(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
+const DocumentsPage = lazy(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
+const TeamPage = lazy(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
+const AutomationsPage = lazy(() => import("./pages/automations/AutomationsPage").then(m => ({ default: m.AutomationsPage })));
+const ReportsPage = lazy(() => import("./pages/reports/ReportsPage").then(m => ({ default: m.ReportsPage })));
+const SettingsPage = lazy(() => import("./pages/settings/SettingsPage").then(m => ({ default: m.SettingsPage })));
+const LiveClassesPage = lazy(() => import("./pages/live-classes/LiveClassesPage").then(m => ({ default: m.LiveClassesPage })));
+const ChatPage = lazy(() => import("./pages/chat/ChatPage").then(m => ({ default: m.ChatPage })));
+const LMSPage = lazy(() => import("./pages/lms/LMSPage").then(m => ({ default: m.LMSPage })));
+
+// Client pages
+const ClientDashboardPage = lazy(() => import("./pages/client").then(m => ({ default: m.ClientDashboardPage })));
+const MyWorkoutsPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyWorkoutsPage })));
+const MyNutritionPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyNutritionPage })));
+const MyProgressPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyProgressPage })));
+const MyCalendarPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyCalendarPage })));
+const MyDocumentsPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyDocumentsPage })));
+const MyProfilePage = lazy(() => import("./pages/client").then(m => ({ default: m.MyProfilePage })));
+const MyMessagesPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyMessagesPage })));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000,
     },
   },
 });
 
+function PageLoader() {
+  return (
+    <Center h="50vh">
+      <Loader size="md" color="var(--nv-primary)" />
+    </Center>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
-  // Wait for Zustand to hydrate from localStorage before checking auth
   if (!_hasHydrated) {
-    return null; // or a loading spinner
+    return null;
   }
 
   if (!isAuthenticated) {
@@ -88,9 +92,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
-  // Wait for Zustand to hydrate from localStorage before checking auth
   if (!_hasHydrated) {
-    return null; // or a loading spinner
+    return null;
   }
 
   if (isAuthenticated) {
@@ -100,7 +103,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Component that shows the right dashboard based on user role
 function SmartDashboard() {
   const { user } = useAuthStore();
   
@@ -111,7 +113,6 @@ function SmartDashboard() {
   return <DashboardPage />;
 }
 
-// Route guard for trainer-only routes
 function TrainerRoute({ children }: { children: React.ReactNode }) {
   const { user, _hasHydrated } = useAuthStore();
 
@@ -119,7 +120,6 @@ function TrainerRoute({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // Redirect clients trying to access trainer routes
   if (user?.role === 'client') {
     return <Navigate replace to="/dashboard" />;
   }
@@ -128,7 +128,6 @@ function TrainerRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  /* iOS/móvil: recentrar vista tras cerrar teclado al salir de un input */
   useEffect(() => {
     const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
     if (!isTouch) return;
@@ -150,108 +149,95 @@ export default function App() {
         <DatesProvider settings={{ locale: "es" }}>
           <Notifications position="top-right" />
           <BrowserRouter>
-            <Routes>
-              {/* Redirect root to login (landing page is now in the web project) */}
-              <Route element={<Navigate replace to="/login" />} path="/" />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route element={<Navigate replace to="/login" />} path="/" />
 
-              {/* Client Onboarding via invitation token (primary method) */}
-              <Route
-                element={<InvitationOnboardingPage />}
-                path="/onboarding/invite/:token"
-              />
+                <Route
+                  element={<InvitationOnboardingPage />}
+                  path="/onboarding/invite/:token"
+                />
 
-              {/* Legacy: Client Onboarding via workspace slug */}
-              <Route
-                element={<ClientOnboardingPage />}
-                path="/onboarding/:workspaceSlug"
-              />
+                <Route
+                  element={<ClientOnboardingPage />}
+                  path="/onboarding/:workspaceSlug"
+                />
 
-              {/* User Onboarding (after registration) */}
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <OnboardingPage />
-                  </ProtectedRoute>
-                }
-                path="/complete-profile"
-              />
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <OnboardingPage />
+                    </ProtectedRoute>
+                  }
+                  path="/complete-profile"
+                />
 
-              {/* Email confirmation (public, no layout) */}
-              <Route element={<ConfirmEmailPage />} path="/auth/confirm" />
-              
-              {/* Password reset (public, no layout) */}
-              <Route element={<ForgotPasswordPage />} path="/forgot-password" />
-              <Route element={<ResetPasswordPage />} path="/auth/reset-password" />
-              
-              {/* Google Calendar OAuth callback */}
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <GoogleCallbackPage />
-                  </ProtectedRoute>
-                }
-                path="/auth/google/callback"
-              />
-
-              {/* Auth routes */}
-              <Route
-                element={
-                  <PublicRoute>
-                    <AuthLayout />
-                  </PublicRoute>
-                }
-              >
-                <Route element={<LoginPage />} path="/login" />
-                <Route element={<RegisterPage />} path="/register" />
-              </Route>
-
-              {/* Protected routes */}
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout />
-                  </ProtectedRoute>
-                }
-              >
-                {/* Smart Dashboard - shows different content based on role */}
-                <Route element={<SmartDashboard />} path="/dashboard" />
+                <Route element={<ConfirmEmailPage />} path="/auth/confirm" />
+                <Route element={<ForgotPasswordPage />} path="/forgot-password" />
+                <Route element={<ResetPasswordPage />} path="/auth/reset-password" />
                 
-                {/* Client-specific routes */}
-                <Route element={<MyWorkoutsPage />} path="/my-workouts" />
-                <Route element={<MyNutritionPage />} path="/my-nutrition" />
-                <Route element={<MyProgressPage />} path="/my-progress" />
-                <Route element={<MyCalendarPage />} path="/my-calendar" />
-                <Route element={<MyDocumentsPage />} path="/my-documents" />
-                <Route element={<MyProfilePage />} path="/my-profile" />
-                <Route element={<MyMessagesPage />} path="/my-messages" />
-                
-                {/* Trainer chat page */}
-                <Route element={<ChatPage />} path="/chat" />
-                <Route element={<LMSPage />} path="/lms" />
-                
-                {/* Trainer-only routes */}
-                <Route element={<TrainerRoute><ClientsPage /></TrainerRoute>} path="/clients" />
-                <Route element={<TrainerRoute><ClientDetailPage /></TrainerRoute>} path="/clients/:id" />
-                <Route element={<TrainerRoute><CalendarPage /></TrainerRoute>} path="/calendar" />
-                <Route element={<TrainerRoute><WorkoutsPage /></TrainerRoute>} path="/workouts" />
-                <Route element={<TrainerRoute><NutritionPage /></TrainerRoute>} path="/nutrition" />
-                <Route element={<TrainerRoute><MealPlanDetailPage /></TrainerRoute>} path="/nutrition/:id" />
-                <Route element={<TrainerRoute><SupplementsPage /></TrainerRoute>} path="/supplements" />
-                <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
-                <Route element={<TrainerRoute><PaymentsPage /></TrainerRoute>} path="/payments" />
-                <Route element={<TrainerRoute><PackagesPage /></TrainerRoute>} path="/packages" />
-                <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
-                <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
-                <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
-                <Route element={<TrainerRoute><AutomationsPage /></TrainerRoute>} path="/automations" />
-                <Route element={<TrainerRoute><ReportsPage /></TrainerRoute>} path="/reports" />
-                <Route element={<TrainerRoute><LiveClassesPage /></TrainerRoute>} path="/live-classes" />
-                <Route element={<TrainerRoute><SettingsPage /></TrainerRoute>} path="/settings" />
-              </Route>
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <GoogleCallbackPage />
+                    </ProtectedRoute>
+                  }
+                  path="/auth/google/callback"
+                />
 
-              {/* 404 */}
-              <Route element={<Navigate replace to="/" />} path="*" />
-            </Routes>
+                <Route
+                  element={
+                    <PublicRoute>
+                      <AuthLayout />
+                    </PublicRoute>
+                  }
+                >
+                  <Route element={<LoginPage />} path="/login" />
+                  <Route element={<RegisterPage />} path="/register" />
+                </Route>
+
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route element={<SmartDashboard />} path="/dashboard" />
+                  
+                  <Route element={<MyWorkoutsPage />} path="/my-workouts" />
+                  <Route element={<MyNutritionPage />} path="/my-nutrition" />
+                  <Route element={<MyProgressPage />} path="/my-progress" />
+                  <Route element={<MyCalendarPage />} path="/my-calendar" />
+                  <Route element={<MyDocumentsPage />} path="/my-documents" />
+                  <Route element={<MyProfilePage />} path="/my-profile" />
+                  <Route element={<MyMessagesPage />} path="/my-messages" />
+                  
+                  <Route element={<ChatPage />} path="/chat" />
+                  <Route element={<LMSPage />} path="/lms" />
+                  
+                  <Route element={<TrainerRoute><ClientsPage /></TrainerRoute>} path="/clients" />
+                  <Route element={<TrainerRoute><ClientDetailPage /></TrainerRoute>} path="/clients/:id" />
+                  <Route element={<TrainerRoute><CalendarPage /></TrainerRoute>} path="/calendar" />
+                  <Route element={<TrainerRoute><WorkoutsPage /></TrainerRoute>} path="/workouts" />
+                  <Route element={<TrainerRoute><NutritionPage /></TrainerRoute>} path="/nutrition" />
+                  <Route element={<TrainerRoute><MealPlanDetailPage /></TrainerRoute>} path="/nutrition/:id" />
+                  <Route element={<TrainerRoute><SupplementsPage /></TrainerRoute>} path="/supplements" />
+                  <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
+                  <Route element={<TrainerRoute><PaymentsPage /></TrainerRoute>} path="/payments" />
+                  <Route element={<TrainerRoute><PackagesPage /></TrainerRoute>} path="/packages" />
+                  <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
+                  <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
+                  <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
+                  <Route element={<TrainerRoute><AutomationsPage /></TrainerRoute>} path="/automations" />
+                  <Route element={<TrainerRoute><ReportsPage /></TrainerRoute>} path="/reports" />
+                  <Route element={<TrainerRoute><LiveClassesPage /></TrainerRoute>} path="/live-classes" />
+                  <Route element={<TrainerRoute><SettingsPage /></TrainerRoute>} path="/settings" />
+                </Route>
+
+                <Route element={<Navigate replace to="/" />} path="*" />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </DatesProvider>
       </MantineProvider>

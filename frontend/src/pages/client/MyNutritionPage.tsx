@@ -774,6 +774,38 @@ export function MyNutritionPage() {
             </Text>
           </Box>
         </Group>
+
+        {/* Distribución de macros P:C:F */}
+        {(dailyTotals.protein > 0 || dailyTotals.carbs > 0 || dailyTotals.fats > 0) && (() => {
+          const totalMacroCals = (dailyTotals.protein * 4) + (dailyTotals.carbs * 4) + (dailyTotals.fats * 9);
+          const protPct = totalMacroCals > 0 ? Math.round((dailyTotals.protein * 4 / totalMacroCals) * 100) : 0;
+          const carbsPct = totalMacroCals > 0 ? Math.round((dailyTotals.carbs * 4 / totalMacroCals) * 100) : 0;
+          const fatPct = totalMacroCals > 0 ? Math.round((dailyTotals.fats * 9 / totalMacroCals) * 100) : 0;
+          return (
+            <Box mt="md">
+              <Text size="sm" fw={600} mb="xs">Distribución de macros</Text>
+              <Group gap="xs" mb={4}>
+                <Box style={{ flex: protPct, height: 8, borderRadius: 4, background: "var(--mantine-color-red-5)", minWidth: protPct > 0 ? 8 : 0 }} />
+                <Box style={{ flex: carbsPct, height: 8, borderRadius: 4, background: "var(--mantine-color-blue-5)", minWidth: carbsPct > 0 ? 8 : 0 }} />
+                <Box style={{ flex: fatPct, height: 8, borderRadius: 4, background: "var(--mantine-color-green-5)", minWidth: fatPct > 0 ? 8 : 0 }} />
+              </Group>
+              <Group gap="md">
+                <Group gap={4}>
+                  <Box style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--mantine-color-red-5)" }} />
+                  <Text size="xs" c="dimmed">Proteínas {protPct}%</Text>
+                </Group>
+                <Group gap={4}>
+                  <Box style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--mantine-color-blue-5)" }} />
+                  <Text size="xs" c="dimmed">Carbohidratos {carbsPct}%</Text>
+                </Group>
+                <Group gap={4}>
+                  <Box style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--mantine-color-green-5)" }} />
+                  <Text size="xs" c="dimmed">Grasas {fatPct}%</Text>
+                </Group>
+              </Group>
+            </Box>
+          );
+        })()}
       </Card>
 
       {/* Comidas del Plan para Hoy */}

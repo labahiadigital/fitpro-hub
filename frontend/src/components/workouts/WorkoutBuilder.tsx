@@ -6,23 +6,30 @@ import {
 } from "@hello-pangea/dnd";
 import {
   ActionIcon,
+  Avatar,
   Badge,
   Box,
   Button,
   Card,
+  Checkbox,
   Collapse,
   Divider,
   Group,
   Modal,
+  MultiSelect,
   NumberInput,
   Paper,
+  Popover,
   ScrollArea,
+  Select,
   SimpleGrid,
   Stack,
   Tabs,
   Text,
+  Textarea,
   TextInput,
   ThemeIcon,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
@@ -32,6 +39,7 @@ import {
   IconChevronUp,
   IconClock,
   IconCopy,
+  IconExchange,
   IconFlame,
   IconGripVertical,
   IconPlus,
@@ -41,8 +49,57 @@ import {
   IconStarFilled,
   IconStretching,
   IconTrash,
+  IconWeight,
 } from "@tabler/icons-react";
-import { useCallback, useState } from "react";
+import { useForm } from "@mantine/form";
+import { useCallback, useMemo, useState } from "react";
+import { useAlternativesCounts } from "../../hooks/useExercises";
+
+// Standardized muscle groups and equipment - exported for reuse
+// Values match the actual data in the exercises table
+export const MUSCLE_GROUPS = [
+  { value: "pecho", label: "Pecho" },
+  { value: "espalda", label: "Espalda" },
+  { value: "espalda baja", label: "Espalda baja (Lumbares)" },
+  { value: "hombros", label: "Hombros (Deltoides)" },
+  { value: "trapecio", label: "Trapecio" },
+  { value: "bíceps", label: "Bíceps" },
+  { value: "tríceps", label: "Tríceps" },
+  { value: "antebrazo", label: "Antebrazo" },
+  { value: "cuadriceps", label: "Cuádriceps" },
+  { value: "isquiotibiales", label: "Isquiotibiales" },
+  { value: "glúteos", label: "Glúteos" },
+  { value: "gemelos", label: "Gemelos" },
+  { value: "abductores", label: "Abductores" },
+  { value: "aductores", label: "Aductores" },
+  { value: "cadera", label: "Cadera" },
+  { value: "core", label: "Core" },
+  { value: "abdominales", label: "Abdominales" },
+  { value: "oblicuos", label: "Oblicuos" },
+  { value: "cardio", label: "Cardio" },
+  { value: "cuerpo completo", label: "Cuerpo completo" },
+];
+
+export const EQUIPMENT_TYPES = [
+  { value: "ninguno", label: "Sin equipo" },
+  { value: "barra", label: "Barra" },
+  { value: "mancuernas", label: "Mancuernas" },
+  { value: "banco", label: "Banco" },
+  { value: "rack", label: "Rack" },
+  { value: "barra de dominadas", label: "Barra de dominadas" },
+  { value: "máquina prensa", label: "Máquina prensa" },
+  { value: "maquina", label: "Máquina" },
+  { value: "poleas", label: "Poleas" },
+  { value: "cinta", label: "Cinta" },
+  { value: "eliptica", label: "Elíptica" },
+  { value: "guiada", label: "Guiada (Multipower)" },
+];
+
+const DURATION_TYPE_OPTIONS = [
+  { value: "reps", label: "Repeticiones" },
+  { value: "seconds", label: "Segundos" },
+  { value: "minutes", label: "Minutos" },
+];
 
 interface Exercise {
   id: string;
@@ -60,8 +117,11 @@ interface WorkoutExercise {
   sets: number;
   reps: string;
   rest_seconds: number;
+  duration_type?: "reps" | "seconds" | "minutes";
   notes?: string;
   order: number;
+  target_weight?: number;
+  target_reps?: number;
 }
 
 interface WorkoutBlock {
@@ -90,6 +150,15 @@ interface WorkoutBuilderProps {
   availableExercises: Exercise[];
   exerciseFavorites?: string[];
   onToggleExerciseFavorite?: (exerciseId: string, isFavorite: boolean) => void;
+  onCreateExercise?: (data: {
+    name: string;
+    category?: string;
+    muscle_groups: string[];
+    equipment: string[];
+    difficulty: string;
+    description?: string;
+  }) => Promise<Exercise>;
+  alternativesCounts?: Record<string, number>;
 }
 
 // Props con días de la semana
@@ -97,8 +166,18 @@ interface WorkoutBuilderWithDaysProps {
   days: WorkoutDay[];
   onChangeDays: (days: WorkoutDay[]) => void;
   availableExercises: Exercise[];
+  /** Selected client for reference (name, goals, injuries) */
+  selectedClient?: { first_name?: string; last_name?: string; goals?: string; health_data?: { injuries?: Array<{ name: string; notes?: string; status?: string }> } } | null;
   exerciseFavorites?: string[];
   onToggleExerciseFavorite?: (exerciseId: string, isFavorite: boolean) => void;
+  onCreateExercise?: (data: {
+    name: string;
+    category?: string;
+    muscle_groups: string[];
+    equipment: string[];
+    difficulty: string;
+    description?: string;
+  }) => Promise<Exercise>;
 }
 
 // Días iniciales por defecto
@@ -112,12 +191,29 @@ export const initialWorkoutDays: WorkoutDay[] = [
   { id: "day-7", day: 7, dayName: "Domingo", blocks: [], isRestDay: true, notes: "" },
 ];
 
+const CATEGORY_OPTIONS = [
+  { value: "fuerza", label: "Fuerza" },
+  { value: "cardio", label: "Cardio" },
+  { value: "flexibilidad", label: "Flexibilidad" },
+  { value: "core", label: "Core" },
+  { value: "calentamiento", label: "Calentamiento" },
+  { value: "estiramiento", label: "Estiramiento" },
+];
+
+const DIFFICULTY_OPTIONS = [
+  { value: "beginner", label: "Principiante" },
+  { value: "intermediate", label: "Intermedio" },
+  { value: "advanced", label: "Avanzado" },
+];
+
 export function WorkoutBuilder({
   blocks,
   onChange,
   availableExercises,
   exerciseFavorites = [],
   onToggleExerciseFavorite,
+  onCreateExercise,
+  alternativesCounts,
 }: WorkoutBuilderProps) {
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>(
     blocks.map((b) => b.id)
@@ -126,9 +222,27 @@ export function WorkoutBuilder({
     exerciseModalOpened,
     { open: openExerciseModal, close: closeExerciseModal },
   ] = useDisclosure(false);
+  const [createExerciseModalOpened, { open: openCreateExerciseModal, close: closeCreateExerciseModal }] = useDisclosure(false);
+  void openCreateExerciseModal; // Used in "Crear ejercicio" button when onCreateExercise is provided
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [exerciseFilter, setExerciseFilter] = useState<string>("all"); // "all" | "favorites" | category
+  const [exerciseMuscleGroups, setExerciseMuscleGroups] = useState<string[]>([]);
+  const [exerciseEquipment, setExerciseEquipment] = useState<string[]>([]);
+  
+  const createExerciseForm = useForm({
+    initialValues: {
+      name: "",
+      category: "",
+      muscle_groups: [] as string[],
+      equipment: [] as string[],
+      difficulty: "intermediate" as string,
+      description: "",
+    },
+    validate: {
+      name: (v: string) => (v.trim().length < 2 ? "Nombre requerido (mín. 2 caracteres)" : null),
+    },
+  });
   
   // Helper para verificar si un ejercicio es favorito
   const isExerciseFavorite = (exerciseId: string) => exerciseFavorites.includes(exerciseId);
@@ -263,6 +377,7 @@ export function WorkoutBuilder({
       sets: 3,
       reps: "10-12",
       rest_seconds: 60,
+      duration_type: "reps",
       order: block.exercises.length,
     };
 
@@ -270,6 +385,26 @@ export function WorkoutBuilder({
       exercises: [...block.exercises, newExercise],
     });
     closeExerciseModal();
+  };
+
+  const handleCreateExercise = async () => {
+    if (!onCreateExercise) return;
+    const values = createExerciseForm.values;
+    try {
+      const newExercise = await onCreateExercise({
+        name: values.name.trim(),
+        category: values.category || undefined,
+        muscle_groups: values.muscle_groups,
+        equipment: values.equipment,
+        difficulty: values.difficulty,
+        description: values.description.trim() || undefined,
+      });
+      closeCreateExerciseModal();
+      createExerciseForm.reset();
+      addExerciseToBlock(newExercise);
+    } catch {
+      // Error handled by mutation
+    }
   };
 
   const updateExercise = (
@@ -317,55 +452,49 @@ export function WorkoutBuilder({
   const selectedBlock = blocks.find((b) => b.id === selectedBlockId);
   const blockType = selectedBlock?.type || "main";
 
-  // Filtrar y ordenar ejercicios (favoritos primero, como en nutrición)
-  const filteredExercises = (() => {
-    // Primero filtrar
+  const filteredExercises = useMemo(() => {
+    const searchLower = exerciseSearch.toLowerCase();
+    const defaultCategory = blockType === "warmup" ? "calentamiento"
+                          : blockType === "cooldown" ? "estiramiento"
+                          : null;
+
     const filtered = availableExercises.filter((e) => {
-      // Filtro por búsqueda
       const matchesSearch =
-        e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
-        e.muscle_groups.some((m) =>
-          m.toLowerCase().includes(exerciseSearch.toLowerCase())
+        e.name.toLowerCase().includes(searchLower) ||
+        e.muscle_groups.some((m) => m.toLowerCase().includes(searchLower));
+
+      const matchesMuscleGroups =
+        exerciseMuscleGroups.length === 0 ||
+        exerciseMuscleGroups.some((selected) =>
+          e.muscle_groups.some((m) => m.toLowerCase().includes(selected.toLowerCase()))
         );
-      
-      // Filtro por favoritos (solo si está en modo favoritos)
+
+      const matchesEquipment =
+        exerciseEquipment.length === 0 ||
+        exerciseEquipment.some((selected) =>
+          e.equipment.some((eq) => eq.toLowerCase().includes(selected.toLowerCase()))
+        );
+
       const matchesFavorites = exerciseFilter === "favorites" ? isExerciseFavorite(e.id) : true;
-      
-      // Filtro por categoría según tipo de bloque y tab seleccionada
+
       let matchesCategory = true;
-      
-      // Determinar la categoría por defecto según el tipo de bloque
-      const defaultCategory = blockType === "warmup" ? "calentamiento" 
-                            : blockType === "cooldown" ? "estiramiento" 
-                            : null;
-      
-      if (exerciseFilter === "all") {
-        // En "Todos" - mostrar la categoría por defecto del bloque, o todos si es main
+      if (exerciseFilter === "all" || exerciseFilter === "favorites") {
         if (defaultCategory) {
           matchesCategory = e.category?.toLowerCase() === defaultCategory;
         }
-        // Para main/superset/circuit, "Todos" muestra todos los ejercicios
-      } else if (exerciseFilter === "favorites") {
-        // En "Favoritos" - filtrar por la categoría por defecto del bloque
-        if (defaultCategory) {
-          matchesCategory = e.category?.toLowerCase() === defaultCategory;
-        }
-        // Para main/superset/circuit, "Favoritos" muestra todos los favoritos
       } else {
-        // Se seleccionó una categoría específica
         matchesCategory = e.category?.toLowerCase() === exerciseFilter.toLowerCase();
       }
-      
-      return matchesSearch && matchesFavorites && matchesCategory;
+
+      return matchesSearch && matchesMuscleGroups && matchesEquipment && matchesFavorites && matchesCategory;
     });
-    
-    // Ordenar favoritos primero
+
     return filtered.sort((a, b) => {
       const aFav = isExerciseFavorite(a.id) ? 0 : 1;
       const bFav = isExerciseFavorite(b.id) ? 0 : 1;
       return aFav - bFav;
     });
-  })();
+  }, [availableExercises, exerciseSearch, exerciseMuscleGroups, exerciseEquipment, exerciseFilter, exerciseFavorites, blockType]);
 
   return (
     <>
@@ -570,9 +699,18 @@ export function WorkoutBuilder({
                                             <Box
                                               style={{ flex: 1, minWidth: 0 }}
                                             >
-                                              <Text fw={500} size="sm" truncate>
-                                                {exercise.exercise.name}
-                                              </Text>
+                                              <Group gap={4} wrap="nowrap">
+                                                <Text fw={500} size="sm" truncate>
+                                                  {exercise.exercise.name}
+                                                </Text>
+                                                {alternativesCounts && alternativesCounts[exercise.exercise.id] && (
+                                                  <Tooltip label={`${alternativesCounts[exercise.exercise.id]} alternativa(s) definida(s)`}>
+                                                    <Badge size="xs" variant="light" color="green" leftSection={<IconExchange size={8} />} style={{ cursor: "default" }}>
+                                                      {alternativesCounts[exercise.exercise.id]}
+                                                    </Badge>
+                                                  </Tooltip>
+                                                )}
+                                              </Group>
                                               <Group gap={4}>
                                                 {exercise.exercise.muscle_groups
                                                   .slice(0, 2)
@@ -590,7 +728,40 @@ export function WorkoutBuilder({
                                             </Box>
                                           </Group>
 
-                                          <Group gap="xs" wrap="nowrap">
+                                          <Group gap="xs" wrap="wrap">
+                                            <NumberInput
+                                              leftSection={<IconWeight size={12} />}
+                                              min={0}
+                                              max={500}
+                                              step={0.5}
+                                              size="xs"
+                                              value={exercise.target_weight ?? ""}
+                                              onChange={(v) =>
+                                                updateExercise(
+                                                  block.id,
+                                                  exercise.id,
+                                                  { target_weight: v ? Number(v) : undefined }
+                                                )
+                                              }
+                                              placeholder="Objet. kg"
+                                              w={75}
+                                            />
+                                            <NumberInput
+                                              leftSection={<IconRepeat size={12} />}
+                                              min={0}
+                                              max={100}
+                                              size="xs"
+                                              value={exercise.target_reps ?? ""}
+                                              onChange={(v) =>
+                                                updateExercise(
+                                                  block.id,
+                                                  exercise.id,
+                                                  { target_reps: v ? Number(v) : undefined }
+                                                )
+                                              }
+                                              placeholder="Objet. reps"
+                                              w={75}
+                                            />
                                             <NumberInput
                                               leftSection={
                                                 <IconRepeat size={12} />
@@ -608,6 +779,19 @@ export function WorkoutBuilder({
                                               value={exercise.sets}
                                               w={60}
                                             />
+                                            <Select
+                                              data={DURATION_TYPE_OPTIONS}
+                                              value={exercise.duration_type ?? "reps"}
+                                              onChange={(v) =>
+                                                updateExercise(
+                                                  block.id,
+                                                  exercise.id,
+                                                  { duration_type: (v as "reps" | "seconds" | "minutes") ?? "reps" }
+                                                )
+                                              }
+                                              size="xs"
+                                              w={100}
+                                            />
                                             <TextInput
                                               onChange={(e) =>
                                                 updateExercise(
@@ -616,12 +800,19 @@ export function WorkoutBuilder({
                                                   { reps: e.target.value }
                                                 )
                                               }
-                                              placeholder="Reps"
+                                              placeholder={
+                                                (exercise.duration_type ?? "reps") === "reps"
+                                                  ? "Reps"
+                                                  : (exercise.duration_type ?? "reps") === "seconds"
+                                                    ? "Seg"
+                                                    : "Min"
+                                              }
                                               size="xs"
                                               value={exercise.reps}
                                               w={70}
                                             />
                                             <NumberInput
+                                              label="Descanso (seg)"
                                               leftSection={
                                                 <IconClock size={12} />
                                               }
@@ -637,7 +828,7 @@ export function WorkoutBuilder({
                                               size="xs"
                                               step={15}
                                               value={exercise.rest_seconds}
-                                              w={70}
+                                              w={90}
                                             />
                                             <ActionIcon
                                               color="red"
@@ -731,7 +922,13 @@ export function WorkoutBuilder({
 
       {/* Exercise Selection Modal */}
       <Modal
-        onClose={() => { closeExerciseModal(); setExerciseSearch(""); setExerciseFilter("all"); }}
+        onClose={() => {
+          closeExerciseModal();
+          setExerciseSearch("");
+          setExerciseFilter("all");
+          setExerciseMuscleGroups([]);
+          setExerciseEquipment([]);
+        }}
         opened={exerciseModalOpened}
         size="lg"
         title={
@@ -755,6 +952,27 @@ export function WorkoutBuilder({
             }
             value={exerciseSearch}
           />
+
+          <Group gap="sm">
+            <MultiSelect
+              data={MUSCLE_GROUPS}
+              placeholder="Grupo muscular"
+              searchable
+              clearable
+              value={exerciseMuscleGroups}
+              onChange={setExerciseMuscleGroups}
+              w="100%"
+            />
+            <MultiSelect
+              data={EQUIPMENT_TYPES}
+              placeholder="Equipo"
+              searchable
+              clearable
+              value={exerciseEquipment}
+              onChange={setExerciseEquipment}
+              w="100%"
+            />
+          </Group>
           
           <Tabs value={exerciseFilter} onChange={(v) => setExerciseFilter(v || "all")}>
             <Tabs.List style={{ flexWrap: "wrap" }}>
@@ -878,6 +1096,78 @@ export function WorkoutBuilder({
             )}
           </Stack>
         </ScrollArea>
+
+        {onCreateExercise && (
+          <Button
+            fullWidth
+            mt="md"
+            variant="light"
+            leftSection={<IconPlus size={16} />}
+            onClick={() => openCreateExerciseModal()}
+          >
+            Crear ejercicio nuevo
+          </Button>
+        )}
+      </Modal>
+
+      {/* Create Exercise Sub-Modal */}
+      <Modal
+        opened={createExerciseModalOpened}
+        onClose={() => { closeCreateExerciseModal(); createExerciseForm.reset(); }}
+        title="Crear ejercicio"
+        size="md"
+      >
+        <form onSubmit={createExerciseForm.onSubmit(handleCreateExercise)}>
+          <Stack gap="sm">
+            <TextInput
+              label="Nombre"
+              placeholder="Nombre del ejercicio"
+              required
+              {...createExerciseForm.getInputProps("name")}
+            />
+            <Select
+              data={CATEGORY_OPTIONS}
+              label="Categoría"
+              placeholder="Selecciona"
+              {...createExerciseForm.getInputProps("category")}
+            />
+            <MultiSelect
+              data={MUSCLE_GROUPS}
+              label="Grupos musculares"
+              placeholder="Selecciona"
+              searchable
+              clearable
+              {...createExerciseForm.getInputProps("muscle_groups")}
+            />
+            <MultiSelect
+              data={EQUIPMENT_TYPES}
+              label="Equipamiento"
+              placeholder="Selecciona"
+              searchable
+              clearable
+              {...createExerciseForm.getInputProps("equipment")}
+            />
+            <Select
+              data={DIFFICULTY_OPTIONS}
+              label="Dificultad"
+              {...createExerciseForm.getInputProps("difficulty")}
+            />
+            <Textarea
+              label="Descripción"
+              placeholder="Descripción opcional"
+              minRows={2}
+              {...createExerciseForm.getInputProps("description")}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={() => { closeCreateExerciseModal(); createExerciseForm.reset(); }}>
+                Cancelar
+              </Button>
+              <Button type="submit" color="green">
+                Crear y añadir
+              </Button>
+            </Group>
+          </Stack>
+        </form>
       </Modal>
     </>
   );
@@ -885,14 +1175,29 @@ export function WorkoutBuilder({
 
 // ============ NUEVO: WorkoutBuilder con días de la semana ============
 
+const WEEK_DAYS = [
+  { id: "day-1", dayName: "Lunes", value: "day-1" },
+  { id: "day-2", dayName: "Martes", value: "day-2" },
+  { id: "day-3", dayName: "Miércoles", value: "day-3" },
+  { id: "day-4", dayName: "Jueves", value: "day-4" },
+  { id: "day-5", dayName: "Viernes", value: "day-5" },
+  { id: "day-6", dayName: "Sábado", value: "day-6" },
+  { id: "day-7", dayName: "Domingo", value: "day-7" },
+];
+
 export function WorkoutBuilderWithDays({
   days,
   onChangeDays,
   availableExercises,
+  selectedClient,
   exerciseFavorites = [],
   onToggleExerciseFavorite,
+  onCreateExercise,
 }: WorkoutBuilderWithDaysProps) {
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "day-1");
+  const [copyDaysPopoverOpened, setCopyDaysPopoverOpened] = useState(false);
+  const [copyToDayIds, setCopyToDayIds] = useState<string[]>([]);
+  const { data: alternativesCounts } = useAlternativesCounts();
 
   const currentDay = days.find((d) => d.id === activeDay);
 
@@ -914,13 +1219,13 @@ export function WorkoutBuilderWithDays({
     );
   };
 
-  // Copiar día actual a todos
-  const copyToAllDays = () => {
-    if (!currentDay) return;
+  // Copiar día actual a los días seleccionados
+  const copyToSelectedDays = () => {
+    if (!currentDay || copyToDayIds.length === 0) return;
 
     onChangeDays(
       days.map((d) =>
-        d.id === activeDay
+        d.id === activeDay || !copyToDayIds.includes(d.id)
           ? d
           : {
               ...d,
@@ -936,6 +1241,8 @@ export function WorkoutBuilderWithDays({
             }
       )
     );
+    setCopyDaysPopoverOpened(false);
+    setCopyToDayIds([]);
   };
 
   // Contar ejercicios del día
@@ -946,19 +1253,68 @@ export function WorkoutBuilderWithDays({
 
   return (
     <Box>
+      {selectedClient && (
+        <Box mb="md" p="sm" style={{ background: "var(--nv-surface-subtle)", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
+          <Group gap="sm">
+            <Avatar size={36} radius="xl">{selectedClient.first_name?.[0] || "?"}</Avatar>
+            <Box>
+              <Text size="sm" fw={600}>{selectedClient.first_name} {selectedClient.last_name}</Text>
+              <Text size="xs" c="dimmed">
+                {selectedClient.goals || "Sin objetivos"}
+              </Text>
+              {selectedClient.health_data?.injuries?.length ? (
+                <Group gap={4} mt={4}>
+                  {selectedClient.health_data.injuries.map((inj: { name: string; notes?: string; status?: string }, idx: number) => (
+                    <Badge key={idx} size="xs" color="orange" variant="light" title={inj.notes}>
+                      {inj.name}{inj.status ? ` (${inj.status})` : ""}
+                    </Badge>
+                  ))}
+                </Group>
+              ) : null}
+            </Box>
+          </Group>
+        </Box>
+      )}
+
       {/* Resumen de la semana */}
       <Paper p="md" radius="lg" mb="md" withBorder>
         <Group justify="space-between" mb="md">
           <Text fw={600}>Resumen Semanal</Text>
-          <Button
-            variant="light"
-            size="xs"
-            leftSection={<IconCopy size={14} />}
-            onClick={copyToAllDays}
-            disabled={!currentDay || currentDay.blocks.length === 0}
+          <Popover
+            opened={copyDaysPopoverOpened}
+            onChange={setCopyDaysPopoverOpened}
+            position="bottom-end"
           >
-            Copiar a todos los días
-          </Button>
+            <Popover.Target>
+              <Button
+                variant="light"
+                size="xs"
+                leftSection={<IconCopy size={14} />}
+                disabled={!currentDay || currentDay.blocks.length === 0}
+                onClick={() => {
+                  setCopyDaysPopoverOpened((o) => !o);
+                  setCopyToDayIds(days.filter((d) => d.id !== activeDay).map((d) => d.id));
+                }}
+              >
+                Copiar día a...
+              </Button>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Stack gap="sm">
+                <Text size="sm" fw={500}>Copiar a días:</Text>
+                <Checkbox.Group value={copyToDayIds} onChange={setCopyToDayIds}>
+                  <Stack gap="xs">
+                    {WEEK_DAYS.filter((wd) => wd.id !== activeDay).map((wd) => (
+                      <Checkbox key={wd.id} value={wd.id} label={wd.dayName} size="sm" />
+                    ))}
+                  </Stack>
+                </Checkbox.Group>
+                <Button size="xs" leftSection={<IconCopy size={12} />} onClick={copyToSelectedDays} disabled={copyToDayIds.length === 0}>
+                  Copiar
+                </Button>
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
         </Group>
         <SimpleGrid cols={7}>
           {days.map((day) => (
@@ -1036,6 +1392,8 @@ export function WorkoutBuilderWithDays({
                 availableExercises={availableExercises}
                 exerciseFavorites={exerciseFavorites}
                 onToggleExerciseFavorite={onToggleExerciseFavorite}
+                onCreateExercise={onCreateExercise}
+                alternativesCounts={alternativesCounts}
               />
             )}
           </Tabs.Panel>

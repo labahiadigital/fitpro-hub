@@ -19,6 +19,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { normalizeText } from "../../utils/text";
 
 interface CommandPaletteProps {
   opened: boolean;
@@ -79,8 +80,8 @@ export function CommandPalette({ opened, close }: CommandPaletteProps) {
       ...group,
       items: group.items.filter(
         (item) =>
-          item.label.toLowerCase().includes(query.toLowerCase()) ||
-          item.description.toLowerCase().includes(query.toLowerCase())
+          normalizeText(item.label).includes(normalizeText(query)) ||
+          normalizeText(item.description).includes(normalizeText(query))
       ),
     }))
     .filter((group) => group.items.length > 0);

@@ -24,7 +24,6 @@ import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconArrowUpRight,
-  IconBrandStripe,
   IconCash,
   IconClock,
   IconCreditCard,
@@ -239,9 +238,6 @@ export function PaymentsPage() {
                 {kpis.activeSubscriptions}
               </Text>
               <Group gap={4} mt="xs">
-                <Badge size="sm" variant="light" color="grape" radius="xl">
-                  +5
-                </Badge>
                 <Text size="xs" c="dimmed">nuevas este mes</Text>
               </Group>
             </Box>
@@ -291,42 +287,46 @@ export function PaymentsPage() {
               <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Distribución de Ingresos
               </Text>
-              <Group justify="center" mb="md">
-                <RingProgress
-                  label={
-                    <Box ta="center">
-                      <Text fw={700} size="lg" style={{ color: "var(--nv-text-primary)" }}>
-                        €8,500
-                      </Text>
-                      <Text c="dimmed" size="xs">
-                        Este mes
-                      </Text>
-                    </Box>
-                  }
-                  roundCaps
-                  sections={[
-                    { value: 65, color: "var(--nv-primary)", tooltip: "Suscripciones: 65%" },
-                    { value: 25, color: "var(--nv-success)", tooltip: "Bonos: 25%" },
-                    { value: 10, color: "var(--nv-warning)", tooltip: "Sesiones: 10%" },
-                  ]}
-                  size={180}
-                  thickness={20}
-                />
-              </Group>
-              <SimpleGrid cols={3} spacing="sm">
-                <Group gap="xs" justify="center">
-                  <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-primary)" }} />
-                  <Text size="xs">Suscripciones (65%)</Text>
-                </Group>
-                <Group gap="xs" justify="center">
-                  <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-success)" }} />
-                  <Text size="xs">Bonos (25%)</Text>
-                </Group>
-                <Group gap="xs" justify="center">
-                  <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-warning)" }} />
-                  <Text size="xs">Sesiones (10%)</Text>
-                </Group>
-              </SimpleGrid>
+              {(() => {
+                const subRevenue = payments.filter(p => p.payment_type === "subscription" && p.status === "completed").reduce((s, p) => s + p.amount, 0);
+                const otherRevenue = payments.filter(p => p.payment_type !== "subscription" && p.status === "completed").reduce((s, p) => s + p.amount, 0);
+                const total = subRevenue + otherRevenue;
+                const subPct = total > 0 ? Math.round((subRevenue / total) * 100) : 100;
+                const otherPct = total > 0 ? 100 - subPct : 0;
+                return (
+                  <>
+                    <Group justify="center" mb="md">
+                      <RingProgress
+                        label={
+                          <Box ta="center">
+                            <Text fw={700} size="lg" style={{ color: "var(--nv-text-primary)" }}>
+                              €{kpis.thisMonthRevenue.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
+                            </Text>
+                            <Text c="dimmed" size="xs">Este mes</Text>
+                          </Box>
+                        }
+                        roundCaps
+                        sections={total > 0 ? [
+                          { value: subPct, color: "var(--nv-primary)", tooltip: `Suscripciones: ${subPct}%` },
+                          { value: otherPct, color: "var(--nv-success)", tooltip: `Otros: ${otherPct}%` },
+                        ] : [{ value: 100, color: "var(--nv-border)", tooltip: "Sin datos" }]}
+                        size={180}
+                        thickness={20}
+                      />
+                    </Group>
+                    <SimpleGrid cols={2} spacing="sm">
+                      <Group gap="xs" justify="center">
+                        <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-primary)" }} />
+                        <Text size="xs">Suscripciones ({subPct}%)</Text>
+                      </Group>
+                      <Group gap="xs" justify="center">
+                        <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-success)" }} />
+                        <Text size="xs">Otros ({otherPct}%)</Text>
+                      </Group>
+                    </SimpleGrid>
+                  </>
+                );
+              })()}
             </Box>
 
             {/* Recent Payments */}
@@ -338,11 +338,15 @@ export function PaymentsPage() {
                   size="xs"
                   variant="subtle"
                   style={{ color: "var(--nv-primary)" }}
+                  onClick={() => setActiveTab("payments")}
                 >
                   Ver todos
                 </Button>
               </Group>
               <Stack gap="sm">
+                {payments.length === 0 && (
+                  <Text c="dimmed" ta="center" py="lg" size="sm">No hay pagos registrados</Text>
+                )}
                 {payments.slice(0, 5).map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
                   return (
@@ -368,7 +372,7 @@ export function PaymentsPage() {
                         </ThemeIcon>
                         <Box>
                           <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                            {payment.client_name}
+                            {payment.client_name || "Cliente"}
                           </Text>
                           <Text c="dimmed" size="xs">
                             {payment.description}
@@ -377,7 +381,7 @@ export function PaymentsPage() {
                       </Group>
                       <Box ta="right">
                         <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          €{payment.amount}
+                          €{Number(payment.amount).toFixed(2)}
                         </Text>
                         <Badge
                           color={getStatusColor(payment.status)}
@@ -400,6 +404,9 @@ export function PaymentsPage() {
                 Próximas Renovaciones
               </Text>
               <Stack gap="sm">
+                {subscriptions.filter((s) => s.status === "active").length === 0 && (
+                  <Text c="dimmed" ta="center" py="lg" size="sm">No hay renovaciones pendientes</Text>
+                )}
                 {subscriptions
                   .filter((s) => s.status === "active")
                   .slice(0, 4)
@@ -412,7 +419,7 @@ export function PaymentsPage() {
                     >
                       <Box>
                         <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          {sub.client_name}
+                          {sub.client_name || "Cliente"}
                         </Text>
                         <Text c="dimmed" size="xs">
                           {sub.plan_name}
@@ -420,10 +427,10 @@ export function PaymentsPage() {
                       </Box>
                       <Box ta="right">
                         <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          €{sub.amount}
+                          €{Number(sub.amount).toFixed(2)}
                         </Text>
                         <Text c="dimmed" size="xs">
-                          {sub.current_period_end}
+                          {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("es-ES") : "—"}
                         </Text>
                       </Box>
                     </Group>
@@ -431,42 +438,42 @@ export function PaymentsPage() {
               </Stack>
             </Box>
 
-            {/* Stripe Integration */}
+            {/* Redsys Integration */}
             <Box className="nv-card" p="lg">
               <Group justify="space-between" mb="lg">
                 <Group gap="sm">
                   <ThemeIcon
-                    color="violet"
+                    color="blue"
                     radius="xl"
                     size="lg"
                     variant="light"
                   >
-                    <IconBrandStripe size={20} />
+                    <IconCreditCard size={20} />
                   </ThemeIcon>
                   <Box>
-                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Stripe Connect</Text>
+                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Redsys TPV</Text>
                     <Text c="dimmed" size="xs">
-                      Gestiona tu cuenta de pagos
+                      Pasarela de pago configurada
                     </Text>
                   </Box>
                 </Group>
                 <Badge color="green" variant="light" radius="xl">
-                  Conectado
+                  Activo
                 </Badge>
               </Group>
               <Stack gap="sm">
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Balance disponible</Text>
-                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€2,450.00</Text>
+                  <Text c="dimmed" size="sm">Ingresos este mes</Text>
+                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{kpis.thisMonthRevenue.toFixed(2)}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Pendiente de liquidación</Text>
-                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€680.00</Text>
+                  <Text c="dimmed" size="sm">Suscripciones activas</Text>
+                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>{kpis.activeSubscriptions}</Text>
                 </Group>
-                <Divider my="xs" style={{ borderColor: "var(--nv-border)" }} />
-                <Button fullWidth variant="light" radius="xl" style={{ backgroundColor: "var(--nv-primary-glow)", color: "var(--nv-primary)" }}>
-                  Ir al Dashboard de Stripe
-                </Button>
+                <Group justify="space-between">
+                  <Text c="dimmed" size="sm">Cobros pendientes</Text>
+                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{kpis.pendingAmount.toFixed(2)}</Text>
+                </Group>
               </Stack>
             </Box>
           </SimpleGrid>
@@ -493,7 +500,7 @@ export function PaymentsPage() {
                     <Table.Tr key={payment.id} style={{ transition: "background 0.2s" }}>
                       <Table.Td>
                         <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          {payment.client_name}
+                          {payment.client_name || "—"}
                         </Text>
                       </Table.Td>
                       <Table.Td>
@@ -519,11 +526,11 @@ export function PaymentsPage() {
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Text c="dimmed" size="sm">{payment.created_at}</Text>
+                        <Text c="dimmed" size="sm">{payment.paid_at ? new Date(payment.paid_at).toLocaleDateString("es-ES") : payment.created_at ? new Date(payment.created_at).toLocaleDateString("es-ES") : "—"}</Text>
                       </Table.Td>
                       <Table.Td ta="right">
                         <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          €{payment.amount}
+                          €{Number(payment.amount).toFixed(2)}
                         </Text>
                       </Table.Td>
                       <Table.Td>
@@ -567,11 +574,11 @@ export function PaymentsPage() {
                   <Table.Tr key={sub.id} style={{ transition: "background 0.2s" }}>
                     <Table.Td>
                       <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                        {sub.client_name}
+                        {sub.client_name || "—"}
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm">{sub.plan_name}</Text>
+                      <Text size="sm">{sub.plan_name || sub.name}</Text>
                     </Table.Td>
                     <Table.Td>
                       <Badge color={getStatusColor(sub.status)} variant="light" radius="xl">
@@ -579,14 +586,14 @@ export function PaymentsPage() {
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      <Text c="dimmed" size="sm">{sub.current_period_end}</Text>
+                      <Text c="dimmed" size="sm">{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("es-ES") : "—"}</Text>
                       {sub.cancel_at_period_end && (
                         <Text c="red" size="xs">Cancela al finalizar</Text>
                       )}
                     </Table.Td>
                     <Table.Td ta="right">
                       <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                        €{sub.amount}/mes
+                        €{Number(sub.amount).toFixed(2)}/{sub.interval === "month" ? "mes" : sub.interval === "year" ? "año" : sub.interval || "mes"}
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -609,6 +616,11 @@ export function PaymentsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="products">
+          {products.length === 0 && (
+            <Box className="nv-card" p="xl">
+              <Text c="dimmed" ta="center">No hay productos creados. Usa "Nuevo Producto" para crear uno.</Text>
+            </Box>
+          )}
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
             {products.map((product) => (
               <Box key={product.id} className="nv-card" p="lg">

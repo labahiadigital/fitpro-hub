@@ -46,10 +46,18 @@ class ClientInvitation(BaseModel):
     # Custom message from trainer
     message = Column(String(1000), nullable=True)
     
+    # Product/plan to pay during onboarding
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    
+    # Payment created during onboarding (set by create-onboarding-payment)
+    payment_id = Column(UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL"), nullable=True)
+    
     # Relationships
     workspace = relationship("Workspace")
     inviter = relationship("User")
     client = relationship("Client")
+    product = relationship("Product")
+    payment = relationship("Payment")
     
     @property
     def is_expired(self) -> bool:
@@ -64,6 +72,21 @@ class ClientInvitation(BaseModel):
     @property
     def is_valid(self) -> bool:
         return self.status == "pending" and not self.is_expired
+    
+    @property
+    def requires_payment(self) -> bool:
+        """Whether this invitation requires payment before completing."""
+        return self.product_id is not None
+    
+    @property
+    def is_payment_completed(self) -> bool:
+        """Whether the required payment has been completed."""
+        if not self.requires_payment:
+            return True
+        if self.payment is None:
+            return False
+        from app.models.payment import PaymentStatus
+        return self.payment.status == PaymentStatus.succeeded
     
     def __repr__(self):
         return f"<ClientInvitation {self.email} - {self.status}>"

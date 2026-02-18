@@ -35,6 +35,28 @@ class Exercise(BaseModel):
     is_global = Column(Boolean, default=False)
 
 
+class ExerciseAlternative(BaseModel):
+    """Predefined alternative exercises assigned by trainers."""
+    
+    __tablename__ = "exercise_alternatives"
+    __table_args__ = (
+        UniqueConstraint('exercise_id', 'alternative_exercise_id', name='unique_exercise_alternative'),
+    )
+    
+    exercise_id = Column(UUID(as_uuid=True), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False, index=True)
+    alternative_exercise_id = Column(UUID(as_uuid=True), ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    priority = Column(Integer, default=0)
+    notes = Column(Text, nullable=True)
+    
+    # Relationships
+    exercise = relationship("Exercise", foreign_keys=[exercise_id])
+    alternative = relationship("Exercise", foreign_keys=[alternative_exercise_id])
+    
+    def __repr__(self):
+        return f"<ExerciseAlternative {self.exercise_id} -> {self.alternative_exercise_id}>"
+
+
 class ExerciseFavorite(BaseModel):
     """Exercise favorites for users."""
     

@@ -43,6 +43,7 @@ import {
   IconExternalLink,
   IconLink,
   IconLock,
+  IconMail,
   IconPalette,
   IconPlugConnected,
   IconPlus,
@@ -80,6 +81,8 @@ import {
 import { useAuthStore } from "../../stores/auth";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { notifications } from "@mantine/notifications";
+import { useMutation } from "@tanstack/react-query";
+import { authApi } from "../../services/api";
 
 export function SettingsPage() {
   const [searchParams] = useSearchParams();
@@ -204,6 +207,55 @@ export function SettingsPage() {
       phone: "",
       timezone: "Europe/Madrid",
       language: "es",
+    },
+  });
+
+  // Change email form
+  const changeEmailForm = useForm({
+    initialValues: {
+      new_email: "",
+      password: "",
+    },
+    validate: {
+      new_email: (value) =>
+        !value
+          ? "El nuevo email es obligatorio"
+          : !/^\S+@\S+\.\S+$/.test(value)
+            ? "Introduce un email válido"
+            : value === user?.email
+              ? "El nuevo email debe ser distinto al actual"
+              : null,
+      password: (value) => (!value ? "La contraseña es obligatoria" : null),
+    },
+  });
+
+  const changeEmailMutation = useMutation({
+    mutationFn: (data: { new_email: string; password: string }) =>
+      authApi.changeEmail(data),
+    onSuccess: (response) => {
+      const { new_email } = response.data as { new_email: string };
+      useAuthStore.getState().setUser({
+        ...useAuthStore.getState().user!,
+        email: new_email,
+      });
+      changeEmailForm.reset();
+      notifications.show({
+        title: "Email actualizado",
+        message: "Tu email ha sido cambiado correctamente.",
+        color: "green",
+        icon: <IconCheck size={16} />,
+      });
+    },
+    onError: (error: { response?: { data?: { detail?: string } } }) => {
+      const detail =
+        typeof error.response?.data?.detail === "string"
+          ? error.response.data.detail
+          : "No se pudo cambiar el email. Inténtalo de nuevo.";
+      notifications.show({
+        title: "Error",
+        message: detail,
+        color: "red",
+      });
     },
   });
 
@@ -446,6 +498,51 @@ export function SettingsPage() {
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>
                       Guardar Cambios
+                    </Button>
+                  </Group>
+                </Stack>
+              </form>
+
+              <Divider my="xl" />
+
+              <Text fw={600} mb="md" size="md" style={{ color: "var(--nv-text-primary)" }}>
+                Cambiar email
+              </Text>
+              <form
+                onSubmit={changeEmailForm.onSubmit((values) =>
+                  changeEmailMutation.mutate({
+                    new_email: values.new_email,
+                    password: values.password,
+                  })
+                )}
+              >
+                <Stack gap="md">
+                  <TextInput
+                    label="Email actual"
+                    value={user?.email || ""}
+                    leftSection={<IconMail size={16} />}
+                    readOnly
+                    disabled
+                  />
+                  <TextInput
+                    label="Nuevo email"
+                    placeholder="nuevo@email.com"
+                    leftSection={<IconMail size={16} />}
+                    {...changeEmailForm.getInputProps("new_email")}
+                  />
+                  <PasswordInput
+                    label="Contraseña actual"
+                    placeholder="Tu contraseña actual"
+                    {...changeEmailForm.getInputProps("password")}
+                  />
+                  <Group justify="flex-end">
+                    <Button
+                      type="submit"
+                      radius="xl"
+                      style={{ backgroundColor: "var(--nv-primary)" }}
+                      loading={changeEmailMutation.isPending}
+                    >
+                      Cambiar email
                     </Button>
                   </Group>
                 </Stack>

@@ -272,6 +272,7 @@ export function useCreateMealPlan() {
       target_fat?: number;
       dietary_tags?: string[];
       plan?: object;
+      client_id?: string;
       is_template?: boolean;
     }) => {
       const response = await nutritionApi.createPlan(data);

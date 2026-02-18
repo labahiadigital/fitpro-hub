@@ -27,18 +27,21 @@ import {
   IconEdit,
   IconEye,
   IconFlame,
+  IconHeartbeat,
   IconSearch,
   IconStar,
   IconStarFilled,
   IconStretching,
   IconTemplate,
   IconTrash,
+  IconUser,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { EmptyState } from "../../components/common/EmptyState";
-import { useClient } from "../../hooks/useClients";
+import { useClient, useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
+import { clientsApi } from "../../services/api";
 import { WorkoutBuilderWithDays, initialWorkoutDays, type WorkoutDay } from "../../components/workouts/WorkoutBuilder";
 import {
   useCreateExercise,
@@ -49,10 +52,125 @@ import {
   useWorkoutPrograms,
   useWorkoutProgram,
 } from "../../hooks/useWorkouts";
-import { useUpdateExercise, useDeleteExercise } from "../../hooks/useExercises";
+import { useUpdateExercise, useDeleteExercise, useExerciseAlternatives, useAddExerciseAlternative, useRemoveExerciseAlternative } from "../../hooks/useExercises";
 import { useExerciseFavorites, useToggleExerciseFavorite } from "../../hooks/useFavorites";
+import { IconPlus, IconX, IconExchange } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 
-// Exercises are fetched from the API via useExercises hook
+function ExerciseAlternativesSection({
+  exerciseId,
+  exerciseName,
+  allExercises,
+}: {
+  exerciseId: string;
+  exerciseName: string;
+  allExercises: Array<{ id: string; name: string; muscle_groups?: string[]; category?: string }>;
+}) {
+  const { data: alternatives, isLoading } = useExerciseAlternatives(exerciseId);
+  const addAlternative = useAddExerciseAlternative();
+  const removeAlternative = useRemoveExerciseAlternative();
+  const [search, setSearch] = useState("");
+
+  const alternativeIds = new Set((alternatives || []).map((a) => a.alternative_exercise_id));
+  const filtered = allExercises.filter(
+    (e) =>
+      e.id !== exerciseId &&
+      !alternativeIds.has(e.id) &&
+      e.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Box mt="xl" pt="md" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+      <Group gap="xs" mb="sm">
+        <IconExchange size={16} />
+        <Text fw={600} size="sm">Ejercicios alternativos para "{exerciseName}"</Text>
+      </Group>
+      <Text size="xs" c="dimmed" mb="sm">
+        Define qué ejercicios puede usar el cliente como sustituto si la máquina no está disponible o tiene alguna lesión.
+      </Text>
+
+      {/* Lista de alternativas actuales */}
+      {isLoading ? (
+        <Text size="sm" c="dimmed">Cargando...</Text>
+      ) : (alternatives || []).length > 0 ? (
+        <Stack gap={4} mb="sm">
+          {(alternatives || []).map((alt) => (
+            <Group key={alt.id} justify="space-between" p="xs" style={{ borderRadius: 8, background: "var(--nv-surface-subtle)" }}>
+              <Group gap="xs">
+                <Badge size="xs" variant="light" color="blue">{alt.alternative_category || "—"}</Badge>
+                <Text size="sm" fw={500}>{alt.alternative_name}</Text>
+                {alt.alternative_muscle_groups?.slice(0, 2).map((m) => (
+                  <Badge key={m} size="xs" variant="light" color="gray">{m}</Badge>
+                ))}
+              </Group>
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                color="red"
+                onClick={() => removeAlternative.mutate({ exerciseId, alternativeId: alt.id })}
+              >
+                <IconX size={12} />
+              </ActionIcon>
+            </Group>
+          ))}
+        </Stack>
+      ) : (
+        <Text size="xs" c="dimmed" mb="sm" ta="center" py="xs">
+          Sin alternativas definidas. Añade ejercicios equivalentes para que el cliente pueda sustituir.
+        </Text>
+      )}
+
+      {/* Buscador para añadir */}
+      <TextInput
+        size="xs"
+        placeholder="Buscar ejercicio para añadir como alternativa..."
+        leftSection={<IconSearch size={12} />}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        mb="xs"
+      />
+      {search.length > 1 && (
+        <ScrollArea h={150}>
+          <Stack gap={2}>
+            {filtered.slice(0, 10).map((e) => (
+              <Group
+                key={e.id}
+                justify="space-between"
+                p={4}
+                px="xs"
+                style={{ borderRadius: 6, cursor: "pointer", background: "var(--nv-surface)" }}
+                onClick={() => {
+                  addAlternative.mutate(
+                    { exerciseId, alternativeExerciseId: e.id },
+                    {
+                      onSuccess: () => {
+                        notifications.show({ title: "Alternativa añadida", message: `${e.name} añadido como alternativa`, color: "green" });
+                        setSearch("");
+                      },
+                    }
+                  );
+                }}
+              >
+                <Group gap="xs">
+                  <Text size="xs" fw={500}>{e.name}</Text>
+                  {e.muscle_groups?.slice(0, 2).map((m) => (
+                    <Badge key={m} size="xs" variant="light" color="gray" styles={{ root: { fontSize: "8px", padding: "0 4px" } }}>{m}</Badge>
+                  ))}
+                </Group>
+                <ActionIcon size="xs" variant="light" color="green">
+                  <IconPlus size={10} />
+                </ActionIcon>
+              </Group>
+            ))}
+            {filtered.length === 0 && (
+              <Text size="xs" c="dimmed" ta="center" py="xs">No se encontraron ejercicios</Text>
+            )}
+          </Stack>
+        </ScrollArea>
+      )}
+    </Box>
+  );
+}
 
 export function WorkoutsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -63,6 +181,12 @@ export function WorkoutsPage() {
   
   // If editing for a specific client, get client info
   const { data: clientData } = useClient(clientId || "");
+  // For client dropdown when creating/editing programs
+  const { data: clientsData } = useClients({ page: 1, search: "", page_size: 100 });
+  const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
+    value: c.id,
+    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
+  }));
   
   // Función para volver a la página de origen
   const goBack = useCallback(() => {
@@ -84,6 +208,8 @@ export function WorkoutsPage() {
   const [searchExercise, setSearchExercise] = useState("");
   const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>(initialWorkoutDays);
   const [editingProgram, setEditingProgram] = useState<any>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
 
   const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
@@ -125,11 +251,20 @@ export function WorkoutsPage() {
   
   const openProgramBuilderFromUrl = (program: any) => {
     setEditingProgram(program);
+    const planClientId = program.client_id || clientId || null;
+    setSelectedClientId(planClientId);
+    if (planClientId) {
+      clientsApi.get(planClientId).then((res) => {
+        setSelectedClient(res.data);
+      }).catch(() => setSelectedClient(null));
+    } else {
+      setSelectedClient(null);
+    }
     if (program.template?.days) {
       setWorkoutDays(program.template.days);
     } else if (program.template?.blocks) {
-      const newDays = initialWorkoutDays.map((d, i) => 
-        i === 0 
+      const newDays = initialWorkoutDays.map((d, i) =>
+        i === 0
           ? { ...d, blocks: program.template.blocks, isRestDay: false }
           : { ...d }
       );
@@ -143,12 +278,15 @@ export function WorkoutsPage() {
       duration_weeks: program.duration_weeks,
       difficulty: program.difficulty,
       tags: program.tags || [],
+      client_id: planClientId,
     });
     openBuilder();
   };
   
   const handleCloseBuilder = () => {
     closeBuilder();
+    setSelectedClientId(null);
+    setSelectedClient(null);
     // Clear URL params when closing
     if (editProgramId || clientId) {
       setSearchParams({});
@@ -206,11 +344,22 @@ export function WorkoutsPage() {
       duration_weeks: 4,
       difficulty: "intermediate",
       tags: [] as string[],
+      client_id: null as string | null,
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
     },
   });
+
+  const loadClientData = useCallback(async (clientIdValue: string) => {
+    try {
+      const res = await clientsApi.get(clientIdValue);
+      setSelectedClient(res.data);
+      programForm.setFieldValue("client_id", clientIdValue);
+    } catch {
+      setSelectedClient(null);
+    }
+  }, [programForm]);
 
   const handleCreateExercise = async (values: typeof exerciseForm.values) => {
     try {
@@ -238,13 +387,20 @@ export function WorkoutsPage() {
   const openProgramBuilder = (program?: any) => {
     if (program) {
       setEditingProgram(program);
-      // Cargar días desde el template si existen, si no usar los bloques antiguos en el día 1
+      const planClientId = program.client_id || clientId || null;
+      setSelectedClientId(planClientId);
+      if (planClientId) {
+        clientsApi.get(planClientId).then((res) => {
+          setSelectedClient(res.data);
+        }).catch(() => setSelectedClient(null));
+      } else {
+        setSelectedClient(null);
+      }
       if (program.template?.days) {
         setWorkoutDays(program.template.days);
       } else if (program.template?.blocks) {
-        // Retrocompatibilidad: poner bloques antiguos en el lunes
-        const newDays = initialWorkoutDays.map((d, i) => 
-          i === 0 
+        const newDays = initialWorkoutDays.map((d, i) =>
+          i === 0
             ? { ...d, blocks: program.template.blocks, isRestDay: false }
             : { ...d }
         );
@@ -258,11 +414,19 @@ export function WorkoutsPage() {
         duration_weeks: program.duration_weeks,
         difficulty: program.difficulty,
         tags: program.tags || [],
+        client_id: planClientId,
       });
     } else {
       setEditingProgram(null);
       setWorkoutDays(initialWorkoutDays);
       programForm.reset();
+      if (clientId) {
+        setSelectedClientId(clientId);
+        loadClientData(clientId);
+      } else {
+        setSelectedClientId(null);
+        setSelectedClient(null);
+      }
     }
     openBuilder();
   };
@@ -271,8 +435,10 @@ export function WorkoutsPage() {
     const values = programForm.values;
     if (!values.name) return;
 
+    const planClientId = selectedClientId || values.client_id || clientId || null;
     const programData = {
       ...values,
+      client_id: planClientId || undefined,
       template: {
         // Nueva estructura con días
         days: workoutDays.map((day) => ({
@@ -294,8 +460,11 @@ export function WorkoutsPage() {
               sets: ex.sets,
               reps: ex.reps,
               rest_seconds: ex.rest_seconds,
+              duration_type: ex.duration_type ?? "reps",
               notes: ex.notes,
               order: ex.order,
+              target_weight: ex.target_weight,
+              target_reps: ex.target_reps,
             })) || [],
           })),
         })),
@@ -314,20 +483,23 @@ export function WorkoutsPage() {
               sets: ex.sets,
               reps: ex.reps,
               rest_seconds: ex.rest_seconds,
+              duration_type: ex.duration_type ?? "reps",
               notes: ex.notes,
               order: ex.order,
+              target_weight: ex.target_weight,
+              target_reps: ex.target_reps,
             })) || [],
           }))
         ),
       },
-      // When editing a client's plan (clientId exists), don't save as template
-      is_template: !clientId,
+      // When editing a client's plan (clientId exists) or assigning to client, don't save as template
+      is_template: !planClientId,
     };
 
     try {
       if (editingProgram) {
         // Update existing program - keep original is_template status if editing client's plan
-        const updateData = clientId 
+        const updateData = (clientId || planClientId)
           ? { ...programData, is_template: editingProgram.is_template ?? false }
           : programData;
         await updateProgram.mutateAsync({
@@ -401,7 +573,8 @@ export function WorkoutsPage() {
           label:
             activeTab === "exercises" ? "Nuevo Ejercicio" : 
             activeTab === "warmup" ? "Nuevo Calentamiento" :
-            activeTab === "stretching" ? "Nuevo Estiramiento" : "Nuevo Programa",
+            activeTab === "stretching" ? "Nuevo Estiramiento" :
+            activeTab === "cardio" ? "Nuevo Cardio" : "Nuevo Programa",
           onClick:
             activeTab === "exercises"
               ? () => openNewExercise()
@@ -409,7 +582,9 @@ export function WorkoutsPage() {
                 ? () => openNewExercise("calentamiento")
                 : activeTab === "stretching"
                   ? () => openNewExercise("estiramiento")
-                  : () => openProgramBuilder(),
+                  : activeTab === "cardio"
+                    ? () => openNewExercise("cardio")
+                    : () => openProgramBuilder(),
         }}
         description="Gestiona ejercicios y programas de entrenamiento"
         title="Entrenamientos"
@@ -428,6 +603,9 @@ export function WorkoutsPage() {
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconStretching size={14} />} value="stretching" style={{ fontWeight: 600, fontSize: "13px" }}>
             Estiramientos
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconHeartbeat size={14} />} value="cardio" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Cardio
           </Tabs.Tab>
         </Tabs.List>
 
@@ -772,6 +950,99 @@ export function WorkoutsPage() {
             />
           )}
         </Tabs.Panel>
+
+        <Tabs.Panel value="cardio">
+          <TextInput
+            leftSection={<IconSearch size={14} />}
+            mb="md"
+            onChange={(e) => setSearchExercise(e.target.value)}
+            placeholder="Buscar ejercicios de cardio..."
+            value={searchExercise}
+            radius="md"
+            size="sm"
+            styles={{
+              input: {
+                backgroundColor: "var(--nv-surface)",
+                border: "1px solid var(--border-subtle)",
+              }
+            }}
+          />
+
+          {(exercises || []).filter(
+            (e: any) =>
+              e.category?.toLowerCase() === "cardio" &&
+              (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+                e.muscle_groups?.some((m: string) =>
+                  m.toLowerCase().includes(searchExercise.toLowerCase())
+                ))
+          ).length > 0 ? (
+            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
+              {(exercises || [])
+                .filter(
+                  (e: any) =>
+                    e.category?.toLowerCase() === "cardio" &&
+                    (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+                      e.muscle_groups?.some((m: string) =>
+                        m.toLowerCase().includes(searchExercise.toLowerCase())
+                      ))
+                )
+                .map((exercise: any) => (
+                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
+                    <ActionIcon
+                      size="xs"
+                      variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
+                      color="yellow"
+                      style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
+                      }}
+                    >
+                      {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
+                    </ActionIcon>
+                    
+                    <Box
+                      h={80}
+                      style={{
+                        background: "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, var(--nv-surface-subtle) 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <IconHeartbeat color="var(--mantine-color-red-6)" size={28} />
+                    </Box>
+
+                    <Box p="xs">
+                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                        {exercise.name}
+                      </Text>
+                      <Group gap={4} mt={4} justify="space-between">
+                        <Group gap={4}>
+                          {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                            <Badge key={muscle} size="xs" variant="light" color="red" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
+                              {muscle}
+                            </Badge>
+                          ))}
+                        </Group>
+                        <ActionIcon size="xs" variant="subtle" color="red" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                          <IconEdit size={12} />
+                        </ActionIcon>
+                      </Group>
+                    </Box>
+                  </Box>
+                ))}
+            </SimpleGrid>
+          ) : loadingExercises ? null : (
+            <EmptyState
+              actionLabel="Añadir Cardio"
+              description="Añade ejercicios aeróbicos y de cardio a tu biblioteca."
+              icon={<IconHeartbeat size={36} />}
+              onAction={() => openNewExercise("cardio")}
+              title="No hay ejercicios de cardio"
+            />
+          )}
+        </Tabs.Panel>
       </Tabs>
 
       {/* Modal para crear/editar ejercicio */}
@@ -871,36 +1142,120 @@ export function WorkoutsPage() {
             </Group>
           </Stack>
         </form>
+
+        {/* Sección de alternativas (solo al editar) */}
+        {editingExercise && (
+          <ExerciseAlternativesSection
+            exerciseId={editingExercise.id}
+            exerciseName={editingExercise.name}
+            allExercises={exercises || []}
+          />
+        )}
       </Modal>
 
-      {/* Drawer para el constructor de programas */}
+      {/* Fullscreen drawer para el constructor de programas */}
       <Drawer
         onClose={handleCloseBuilder}
         opened={builderOpened}
         position="right"
-        size="xl"
-        title={
-          clientId && clientData ? (
-            <Box>
-              <Text fw={600}>Editar Programa de {clientData.first_name} {clientData.last_name}</Text>
-              <Badge color="blue" size="sm" variant="light">Plan individual del cliente</Badge>
-            </Box>
-          ) : editingProgram ? "Editar Programa" : "Nuevo Programa"
-        }
-        styles={{ 
-          content: { backgroundColor: "var(--nv-paper-bg)" }, 
-          header: { backgroundColor: "var(--nv-paper-bg)", borderBottom: "1px solid var(--nv-border)" }
+        size="100%"
+        withCloseButton={false}
+        styles={{
+          content: { backgroundColor: "var(--nv-bg)", padding: 0 },
+          header: { display: "none" },
+          body: { padding: 0, height: "100vh", display: "flex", flexDirection: "column" },
         }}
       >
-        <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
-          <Stack>
-            <Box className="nv-card" p="md">
-              <Stack gap="sm">
+        {/* Custom header */}
+        <Box
+          px="lg"
+          py="sm"
+          style={{
+            borderBottom: "1px solid var(--nv-border)",
+            backgroundColor: "var(--nv-paper-bg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0,
+          }}
+        >
+          <Group gap="md">
+            <ActionIcon variant="subtle" color="gray" radius="xl" size="lg" onClick={handleCloseBuilder}>
+              <IconX size={20} />
+            </ActionIcon>
+            <Box>
+              <Text fw={700} size="lg" style={{ lineHeight: 1.2 }}>
+                {editingProgram ? "Editar Programa" : "Nuevo Programa"}
+              </Text>
+              {clientId && clientData && (
+                <Badge color="blue" size="sm" variant="light" mt={2}>
+                  {clientData.first_name} {clientData.last_name}
+                </Badge>
+              )}
+            </Box>
+          </Group>
+          <Group gap="sm">
+            <Button onClick={closeBuilder} variant="default" radius="xl" size="sm">
+              Cancelar
+            </Button>
+            <Button
+              loading={createProgram.isPending || updateProgram.isPending}
+              onClick={handleSaveProgram}
+              radius="xl"
+              size="sm"
+              style={{ backgroundColor: "var(--nv-primary)" }}
+            >
+              {editingProgram ? "Guardar Cambios" : "Crear Programa"}
+            </Button>
+          </Group>
+        </Box>
+
+        {/* Two-column layout */}
+        <Box style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {/* Left sidebar - Config */}
+          <Box
+            style={{
+              width: 340,
+              flexShrink: 0,
+              borderRight: "1px solid var(--nv-border)",
+              backgroundColor: "var(--nv-paper-bg)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="md">
+              <Stack gap="md">
+                <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
+                  Configuración
+                </Text>
+
+                <Select
+                  label="Asignar a cliente"
+                  placeholder="Buscar cliente..."
+                  data={clientOptions}
+                  searchable
+                  clearable
+                  radius="md"
+                  size="sm"
+                  leftSection={<IconUser size={14} />}
+                  value={selectedClientId}
+                  onChange={(value) => {
+                    setSelectedClientId(value);
+                    if (value) {
+                      loadClientData(value);
+                    } else {
+                      setSelectedClient(null);
+                      programForm.setFieldValue("client_id", null);
+                    }
+                  }}
+                />
+
                 <TextInput
                   label="Nombre del programa"
                   placeholder="Programa de Hipertrofia"
                   required
                   radius="md"
+                  size="sm"
                   {...programForm.getInputProps("name")}
                 />
 
@@ -909,15 +1264,17 @@ export function WorkoutsPage() {
                   minRows={2}
                   placeholder="Describe el programa..."
                   radius="md"
+                  size="sm"
                   {...programForm.getInputProps("description")}
                 />
 
                 <Group grow>
                   <NumberInput
-                    label="Duración (semanas)"
+                    label="Duración (sem.)"
                     max={52}
                     min={1}
                     radius="md"
+                    size="sm"
                     {...programForm.getInputProps("duration_weeks")}
                   />
                   <Select
@@ -928,6 +1285,7 @@ export function WorkoutsPage() {
                     ]}
                     label="Dificultad"
                     radius="md"
+                    size="sm"
                     {...programForm.getInputProps("difficulty")}
                   />
                 </Group>
@@ -944,47 +1302,35 @@ export function WorkoutsPage() {
                   placeholder="Añade etiquetas"
                   searchable
                   radius="md"
+                  size="sm"
                   {...programForm.getInputProps("tags")}
                 />
               </Stack>
-            </Box>
+            </ScrollArea>
+          </Box>
 
-            <Divider
-              label="Constructor de Entrenamiento por Día"
-              labelPosition="center"
-              style={{ borderColor: "var(--nv-border)" }}
-            />
-
-            <WorkoutBuilderWithDays
-              days={workoutDays}
-              onChangeDays={setWorkoutDays}
-              availableExercises={exercises || []}
-              exerciseFavorites={exerciseFavorites}
-              onToggleExerciseFavorite={(exerciseId, isFavorite) =>
-                toggleExerciseFavorite.mutate({ exerciseId, isFavorite })
-              }
-            />
-          </Stack>
-        </ScrollArea>
-
-        <Group
-          justify="flex-end"
-          mt="md"
-          p="md"
-          style={{ borderTop: "1px solid var(--nv-border)" }}
-        >
-          <Button onClick={closeBuilder} variant="default" radius="xl">
-            Cancelar
-          </Button>
-          <Button 
-            loading={createProgram.isPending || updateProgram.isPending} 
-            onClick={handleSaveProgram}
-            radius="xl"
-            style={{ backgroundColor: "var(--nv-primary)" }}
-          >
-            {editingProgram ? "Guardar Cambios" : "Crear Programa"}
-          </Button>
-        </Group>
+          {/* Right main area - Builder */}
+          <Box style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="lg">
+              <Box style={{ maxWidth: 960, margin: "0 auto" }}>
+                <WorkoutBuilderWithDays
+                  selectedClient={selectedClient}
+                  days={workoutDays}
+                  onChangeDays={setWorkoutDays}
+                  availableExercises={exercises || []}
+                  exerciseFavorites={exerciseFavorites}
+                  onToggleExerciseFavorite={(exerciseId, isFavorite) =>
+                    toggleExerciseFavorite.mutate({ exerciseId, isFavorite })
+                  }
+                  onCreateExercise={async (data: { name: string; category?: string; muscle_groups: string[]; equipment: string[]; difficulty: string; description?: string }) => {
+                    const res = await createExercise.mutateAsync(data);
+                    return res.data;
+                  }}
+                />
+              </Box>
+            </ScrollArea>
+          </Box>
+        </Box>
       </Drawer>
     </Container>
   );

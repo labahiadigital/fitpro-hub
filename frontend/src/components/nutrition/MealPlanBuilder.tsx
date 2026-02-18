@@ -1,10 +1,12 @@
 import {
   ActionIcon,
+  Avatar,
   Badge,
   Box,
   Button,
   Card,
   Center,
+  Checkbox,
   Divider,
   Group,
   Loader,
@@ -12,9 +14,12 @@ import {
   NumberInput,
   Pagination,
   Paper,
+  Popover,
   Progress,
   ScrollArea,
   SegmentedControl,
+  Select,
+  Slider,
   SimpleGrid,
   Stack,
   Tabs,
@@ -24,6 +29,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
+import { useForm } from "@mantine/form";
 import {
   IconApple,
   IconClock,
@@ -37,9 +43,37 @@ import {
   IconStarFilled,
   IconTrash,
 } from "@tabler/icons-react";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
 import { nutritionApi } from "../../services/api";
+import { calculateMacroPercentages, gramsFromPercentages } from "../../utils/calories";
+
+const FOOD_CATEGORIES = [
+  { value: "Carnes", label: "Carnes" },
+  { value: "Pescados y Mariscos", label: "Pescados y Mariscos" },
+  { value: "Huevos", label: "Huevos" },
+  { value: "Leche y Derivados", label: "Leche y Derivados" },
+  { value: "Cereales y Derivados", label: "Cereales y Derivados" },
+  { value: "Legumbres", label: "Legumbres" },
+  { value: "Verduras", label: "Verduras" },
+  { value: "Frutas", label: "Frutas" },
+  { value: "Frutos Secos y Deshidratados", label: "Frutos Secos" },
+  { value: "Aceites y Grasas", label: "Aceites y Grasas" },
+  { value: "Dulces y Chocolate", label: "Dulces y Chocolate" },
+  { value: "Bebidas", label: "Bebidas" },
+  { value: "Suplementos Deportivos", label: "Suplementos Deportivos" },
+];
+
+const DAY_PLAN_OPTIONS = [
+  { id: "day-1", dayName: "Lunes", value: "day-1" },
+  { id: "day-2", dayName: "Martes", value: "day-2" },
+  { id: "day-3", dayName: "Miércoles", value: "day-3" },
+  { id: "day-4", dayName: "Jueves", value: "day-4" },
+  { id: "day-5", dayName: "Viernes", value: "day-5" },
+  { id: "day-6", dayName: "Sábado", value: "day-6" },
+  { id: "day-7", dayName: "Domingo", value: "day-7" },
+];
 
 export interface Food {
   id: string;
@@ -103,6 +137,10 @@ interface MealPlanBuilderProps {
   targetProtein?: number;
   targetCarbs?: number;
   targetFat?: number;
+  /** Callback when target macros are changed via percentage sliders */
+  onTargetMacrosChange?: (targets: { protein: number; carbs: number; fat: number }) => void;
+  /** Selected client for reference (weight, goals, allergies) */
+  selectedClient?: { first_name?: string; last_name?: string; weight_kg?: number; height_cm?: number; goals?: string; health_data?: { allergies?: string[]; intolerances?: string[] } } | null;
   // Favoritos
   foodFavorites?: string[];
   supplementFavorites?: string[];
@@ -119,14 +157,19 @@ export function MealPlanBuilder({
   targetProtein = 150,
   targetCarbs = 200,
   targetFat = 70,
+  selectedClient,
   foodFavorites = [],
   supplementFavorites = [],
   onToggleFoodFavorite,
   onToggleSupplementFavorite,
+  onTargetMacrosChange,
 }: MealPlanBuilderProps) {
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
+  const [createFoodModalOpened, { open: openCreateFoodModal, close: closeCreateFoodModal }] = useDisclosure(false);
+  const [copyDayPopoverOpened, setCopyDayPopoverOpened] = useState(false);
+  const [copyToDayIds, setCopyToDayIds] = useState<string[]>([]);
   const [selectedMealId, setSelectedMealId] = useState<string | null>(null);
   const [foodSearch, setFoodSearch] = useState("");
   const [supplementSearch, setSupplementSearch] = useState("");
@@ -138,6 +181,73 @@ export function MealPlanBuilder({
     shoppingListOpened,
     { open: openShoppingList, close: closeShoppingList },
   ] = useDisclosure(false);
+  const queryClient = useQueryClient();
+
+  // Macro target percentages (for percentage-driven mode)
+  const totalCalsFromTargets = targetProtein * 4 + targetCarbs * 4 + targetFat * 9;
+  const defaultPcts = totalCalsFromTargets > 0
+    ? {
+        protein: Math.round((targetProtein * 4 / totalCalsFromTargets) * 100),
+        carbs: Math.round((targetCarbs * 4 / totalCalsFromTargets) * 100),
+        fat: Math.round((targetFat * 9 / totalCalsFromTargets) * 100),
+      }
+    : { protein: 30, carbs: 40, fat: 30 };
+  const [macroPct, setMacroPct] = useState(defaultPcts);
+  const internalSliderChange = useRef(false);
+  useEffect(() => {
+    if (internalSliderChange.current) {
+      internalSliderChange.current = false;
+      return;
+    }
+    if (totalCalsFromTargets > 0) {
+      setMacroPct({
+        protein: Math.round((targetProtein * 4 / totalCalsFromTargets) * 100),
+        carbs: Math.round((targetCarbs * 4 / totalCalsFromTargets) * 100),
+        fat: Math.round((targetFat * 9 / totalCalsFromTargets) * 100),
+      });
+    }
+  }, [targetProtein, targetCarbs, targetFat, totalCalsFromTargets]);
+
+  const createFoodForm = useForm({
+    initialValues: {
+      name: "",
+      category: "Otros",
+      serving_size: 100,
+      serving_unit: "g",
+      calories: 0,
+      protein_g: 0,
+      carbs_g: 0,
+      fat_g: 0,
+    },
+    validate: {
+      name: (v) => (v.trim().length < 2 ? "Nombre requerido (mín. 2 caracteres)" : null),
+    },
+  });
+
+  const createFoodMutation = useMutation({
+    mutationFn: async (data: typeof createFoodForm.values) => {
+      const res = await nutritionApi.createFood({
+        name: data.name.trim(),
+        category: data.category || undefined,
+        serving_size: data.serving_size,
+        serving_unit: data.serving_unit,
+        calories: data.calories,
+        protein_g: data.protein_g,
+        carbs_g: data.carbs_g,
+        fat_g: data.fat_g,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["foods-modal-search"] });
+      queryClient.invalidateQueries({ queryKey: ["foods"] });
+      notifications.show({
+        title: "Alimento creado",
+        message: "El alimento ha sido creado correctamente",
+        color: "green",
+      });
+    },
+  });
 
   const FOODS_PER_PAGE = 30;
 
@@ -177,7 +287,7 @@ export function MealPlanBuilder({
 
   const currentDay = days.find((d) => d.id === activeDay);
 
-  const calculateItemMacros = (item: MealItem) => {
+  const calculateItemMacros = useCallback((item: MealItem) => {
     const itemData = item.type === "food" ? item.food : item.supplement;
     if (!itemData) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
@@ -190,43 +300,39 @@ export function MealPlanBuilder({
       carbs: (itemData.carbs || 0) * factor,
       fat: (itemData.fat || 0) * factor,
     };
-  };
+  }, []);
 
-  const calculateDayMacros = (day: DayPlan) => {
-    let calories = 0,
-      protein = 0,
-      carbs = 0,
-      fat = 0;
-
+  const calculateDayMacros = useCallback((day: DayPlan) => {
+    let calories = 0, protein = 0, carbs = 0, fat = 0;
     day.meals.forEach((meal) => {
       meal.items.forEach((item) => {
-        const macros = calculateItemMacros(item);
-        calories += macros.calories;
-        protein += macros.protein;
-        carbs += macros.carbs;
-        fat += macros.fat;
+        const itemData = item.type === "food" ? item.food : item.supplement;
+        if (!itemData) return;
+        const servingSizeGrams = parseFloat(itemData.serving_size) || 100;
+        const factor = item.quantity_grams / servingSizeGrams;
+        calories += (itemData.calories || 0) * factor;
+        protein += (itemData.protein || 0) * factor;
+        carbs += (itemData.carbs || 0) * factor;
+        fat += (itemData.fat || 0) * factor;
       });
     });
-
     return { calories, protein, carbs, fat };
-  };
+  }, []);
 
-  const calculateMealMacros = (meal: Meal) => {
-    let calories = 0,
-      protein = 0,
-      carbs = 0,
-      fat = 0;
-
+  const calculateMealMacros = useCallback((meal: Meal) => {
+    let calories = 0, protein = 0, carbs = 0, fat = 0;
     meal.items.forEach((item) => {
-      const macros = calculateItemMacros(item);
-      calories += macros.calories;
-      protein += macros.protein;
-      carbs += macros.carbs;
-      fat += macros.fat;
+      const itemData = item.type === "food" ? item.food : item.supplement;
+      if (!itemData) return;
+      const servingSizeGrams = parseFloat(itemData.serving_size) || 100;
+      const factor = item.quantity_grams / servingSizeGrams;
+      calories += (itemData.calories || 0) * factor;
+      protein += (itemData.protein || 0) * factor;
+      carbs += (itemData.carbs || 0) * factor;
+      fat += (itemData.fat || 0) * factor;
     });
-
     return { calories, protein, carbs, fat };
-  };
+  }, []);
 
   const addMeal = (mealNumber: number) => {
     if (!currentDay) return;
@@ -278,6 +384,30 @@ export function MealPlanBuilder({
           ? { ...d, meals: d.meals.filter((m) => m.id !== mealId) }
           : d
       )
+    );
+  };
+
+  const duplicateMeal = (mealId: string) => {
+    if (!currentDay) return;
+    const meal = currentDay.meals.find((m) => m.id === mealId);
+    if (!meal) return;
+    const newMeal: Meal = {
+      ...meal,
+      id: `meal-${Date.now()}`,
+      name: `${meal.name} (copia)`,
+      items: meal.items.map((item) => ({
+        ...item,
+        id: `item-${Date.now()}-${Math.random()}`,
+      })),
+    };
+    const index = currentDay.meals.findIndex((m) => m.id === mealId);
+    onChange(
+      days.map((d) => {
+        if (d.id !== activeDay) return d;
+        const newMeals = [...d.meals];
+        newMeals.splice(index + 1, 0, newMeal);
+        return { ...d, meals: newMeals };
+      })
     );
   };
 
@@ -416,12 +546,12 @@ export function MealPlanBuilder({
     );
   };
 
-  const copyDayToAll = () => {
-    if (!currentDay) return;
+  const copyToSelectedDays = () => {
+    if (!currentDay || copyToDayIds.length === 0) return;
 
     onChange(
       days.map((d) =>
-        d.id === activeDay
+        d.id === activeDay || !copyToDayIds.includes(d.id)
           ? d
           : {
               ...d,
@@ -436,6 +566,30 @@ export function MealPlanBuilder({
             }
       )
     );
+    setCopyDayPopoverOpened(false);
+    setCopyToDayIds([]);
+  };
+
+  const handleCreateFood = async () => {
+    const values = createFoodForm.values;
+    try {
+      const created = await createFoodMutation.mutateAsync(values);
+      const food: Food = {
+        id: created.id,
+        name: created.name,
+        calories: Number(created.calories ?? values.calories) || 0,
+        protein: Number(created.protein_g ?? values.protein_g) || 0,
+        carbs: Number(created.carbs_g ?? values.carbs_g) || 0,
+        fat: Number(created.fat_g ?? values.fat_g) || 0,
+        serving_size: `${created.serving_size ?? values.serving_size ?? 100}${created.serving_unit ?? values.serving_unit ?? "g"}`,
+        category: created.category || values.category || "Otros",
+      };
+      closeCreateFoodModal();
+      createFoodForm.reset();
+      addFoodToMeal(food);
+    } catch {
+      // Error handled by mutation
+    }
   };
 
   const generateShoppingList = () => {
@@ -466,9 +620,7 @@ export function MealPlanBuilder({
   const isFoodFavorite = (foodId: string) => foodFavorites.includes(foodId);
   const isSupplementFavorite = (supplementId: string) => supplementFavorites.includes(supplementId);
 
-  // Obtener alimentos del servidor o filtrados localmente para favoritos
-  const filteredFoods = (() => {
-    // Si estamos en modo favoritos, filtrar de la lista local
+  const filteredFoods = useMemo(() => {
     if (foodFilter === "favorites") {
       return availableFoods
         .filter((f) => isFoodFavorite(f.id))
@@ -478,48 +630,144 @@ export function MealPlanBuilder({
             f.category.toLowerCase().includes(foodSearch.toLowerCase());
         });
     }
-    // De lo contrario, usar los datos del servidor
     const serverFoods = serverFoodsData?.items || [];
-    // Ordenar favoritos primero
-    return serverFoods.sort((a: Food, b: Food) => {
+    return [...serverFoods].sort((a: Food, b: Food) => {
       const aFav = isFoodFavorite(a.id) ? 0 : 1;
       const bFav = isFoodFavorite(b.id) ? 0 : 1;
       return aFav - bFav;
     });
-  })();
+  }, [foodFilter, availableFoods, foodFavorites, foodSearch, serverFoodsData]);
 
-  // Filtrar y ordenar suplementos (favoritos primero)
-  const filteredSupplements = availableSupplements
-    .filter((s) => {
-      const matchesSearch = s.name.toLowerCase().includes(supplementSearch.toLowerCase());
-      const matchesFilter = supplementFilter === "all" || isSupplementFavorite(s.id);
-      return matchesSearch && matchesFilter;
-    })
-    .sort((a, b) => {
-      const aFav = isSupplementFavorite(a.id) ? 0 : 1;
-      const bFav = isSupplementFavorite(b.id) ? 0 : 1;
-      return aFav - bFav;
-    });
+  const filteredSupplements = useMemo(() =>
+    availableSupplements
+      .filter((s) => {
+        const matchesSearch = s.name.toLowerCase().includes(supplementSearch.toLowerCase());
+        const matchesFilter = supplementFilter === "all" || isSupplementFavorite(s.id);
+        return matchesSearch && matchesFilter;
+      })
+      .sort((a, b) => {
+        const aFav = isSupplementFavorite(a.id) ? 0 : 1;
+        const bFav = isSupplementFavorite(b.id) ? 0 : 1;
+        return aFav - bFav;
+      }),
+    [availableSupplements, supplementSearch, supplementFilter, supplementFavorites]
+  );
 
-  const dayMacros = currentDay
-    ? calculateDayMacros(currentDay)
-    : { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  const dayMacros = useMemo(
+    () => currentDay ? calculateDayMacros(currentDay) : { calories: 0, protein: 0, carbs: 0, fat: 0 },
+    [currentDay]
+  );
+
+  const dayMacroPcts = useMemo(
+    () => calculateMacroPercentages(
+      dayMacros.calories,
+      dayMacros.protein,
+      dayMacros.carbs,
+      dayMacros.fat
+    ),
+    [dayMacros]
+  );
+
+  const applyPercentagesToTargets = (pct: { protein: number; carbs: number; fat: number }) => {
+    internalSliderChange.current = true;
+    const grams = gramsFromPercentages(targetCalories, pct.protein, pct.carbs, pct.fat);
+    onTargetMacrosChange?.({ protein: grams.protein_g, carbs: grams.carbs_g, fat: grams.fat_g });
+  };
+
+  const clampAndNormalize = (
+    changed: "protein" | "carbs" | "fat",
+    newVal: number
+  ): { protein: number; carbs: number; fat: number } => {
+    const clamped = Math.max(0, Math.min(100, newVal));
+    const others =
+      changed === "protein" ? (["carbs", "fat"] as const) : changed === "carbs" ? (["protein", "fat"] as const) : (["protein", "carbs"] as const);
+    const otherSum = macroPct[others[0]] + macroPct[others[1]];
+    const remaining = 100 - clamped;
+    if (otherSum === 0) {
+      const half = Math.round(remaining / 2);
+      return {
+        ...macroPct,
+        [changed]: clamped,
+        [others[0]]: half,
+        [others[1]]: remaining - half,
+      };
+    }
+    const scale = remaining / otherSum;
+    const first = Math.round(macroPct[others[0]] * scale);
+    const second = remaining - first;
+    return {
+      ...macroPct,
+      [changed]: clamped,
+      [others[0]]: first,
+      [others[1]]: second,
+    };
+  };
 
   return (
     <>
+      {selectedClient && (
+        <Box mb="md" p="sm" style={{ background: "var(--nv-surface-subtle)", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
+          <Group gap="sm">
+            <Avatar size={36} radius="xl">{selectedClient.first_name?.[0] || "?"}</Avatar>
+            <Box>
+              <Text size="sm" fw={600}>{selectedClient.first_name} {selectedClient.last_name}</Text>
+              <Text size="xs" c="dimmed">
+                {selectedClient.weight_kg != null ? `${selectedClient.weight_kg}kg` : ""}
+                {selectedClient.weight_kg != null && selectedClient.height_cm != null ? " | " : ""}
+                {selectedClient.height_cm != null ? `${selectedClient.height_cm}cm` : ""}
+                {(selectedClient.weight_kg != null || selectedClient.height_cm != null) && selectedClient.goals ? " | " : ""}
+                {selectedClient.goals || "Sin objetivos"}
+              </Text>
+              {(selectedClient.health_data?.allergies?.length || selectedClient.health_data?.intolerances?.length) ? (
+                <Group gap={4} mt={4}>
+                  {selectedClient.health_data?.allergies?.map((a: string) => (
+                    <Badge key={a} size="xs" color="red" variant="light">{a}</Badge>
+                  ))}
+                  {selectedClient.health_data?.intolerances?.map((i: string) => (
+                    <Badge key={i} size="xs" color="orange" variant="light">{i}</Badge>
+                  ))}
+                </Group>
+              ) : null}
+            </Box>
+          </Group>
+        </Box>
+      )}
+
       <Paper mb="md" p="md" radius="lg" withBorder style={{ backgroundColor: "var(--nv-surface)" }}>
         <Group justify="space-between" mb="md">
           <Text fw={600}>Resumen del Día</Text>
           <Group gap="xs">
-            <Button
-              leftSection={<IconCopy size={14} />}
-              onClick={copyDayToAll}
-              size="xs"
-              variant="light"
-              radius="md"
-            >
-              Copiar a todos los días
-            </Button>
+            <Popover opened={copyDayPopoverOpened} onChange={setCopyDayPopoverOpened} position="bottom-end">
+              <Popover.Target>
+                <Button
+                  leftSection={<IconCopy size={14} />}
+                  size="xs"
+                  variant="light"
+                  radius="md"
+                  onClick={() => {
+                    setCopyDayPopoverOpened((o) => !o);
+                    setCopyToDayIds(days.filter((d) => d.id !== activeDay).map((d) => d.id));
+                  }}
+                >
+                  Copiar día a...
+                </Button>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Stack gap="sm">
+                  <Text size="sm" fw={500}>Copiar a días:</Text>
+                  <Checkbox.Group value={copyToDayIds} onChange={setCopyToDayIds}>
+                    <Stack gap="xs">
+                      {DAY_PLAN_OPTIONS.filter((d) => d.id !== activeDay).map((d) => (
+                        <Checkbox key={d.id} value={d.id} label={d.dayName} size="sm" />
+                      ))}
+                    </Stack>
+                  </Checkbox.Group>
+                  <Button size="xs" leftSection={<IconCopy size={12} />} onClick={copyToSelectedDays} disabled={copyToDayIds.length === 0}>
+                    Copiar
+                  </Button>
+                </Stack>
+              </Popover.Dropdown>
+            </Popover>
             <Button
               leftSection={<IconShoppingCart size={14} />}
               onClick={openShoppingList}
@@ -555,7 +803,7 @@ export function MealPlanBuilder({
                 Proteína
               </Text>
               <Text fw={500} size="xs">
-                {Math.round(dayMacros.protein)}g / {targetProtein}g
+                {Math.round(dayMacros.protein)}g ({dayMacroPcts.protein_pct}%) / {targetProtein}g
               </Text>
             </Group>
             <Progress
@@ -571,7 +819,7 @@ export function MealPlanBuilder({
                 Carbohidratos
               </Text>
               <Text fw={500} size="xs">
-                {Math.round(dayMacros.carbs)}g / {targetCarbs}g
+                {Math.round(dayMacros.carbs)}g ({dayMacroPcts.carbs_pct}%) / {targetCarbs}g
               </Text>
             </Group>
             <Progress
@@ -587,7 +835,7 @@ export function MealPlanBuilder({
                 Grasas
               </Text>
               <Text fw={500} size="xs">
-                {Math.round(dayMacros.fat)}g / {targetFat}g
+                {Math.round(dayMacros.fat)}g ({dayMacroPcts.fat_pct}%) / {targetFat}g
               </Text>
             </Group>
             <Progress
@@ -598,6 +846,77 @@ export function MealPlanBuilder({
             />
           </Box>
         </SimpleGrid>
+
+        {/* Target macro percentages - trainer can set % and recalculate grams */}
+        {onTargetMacrosChange && (
+          <Box mt="md" pt="md" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+            <Text size="sm" fw={500} mb="sm" c="dimmed">
+              Objetivos por porcentaje (recalcula gramos según calorías)
+            </Text>
+            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+              <Box>
+                <Group justify="space-between" mb={4}>
+                  <Text size="xs">Proteína %</Text>
+                  <Text fw={600} size="sm" c="green">{macroPct.protein}%</Text>
+                </Group>
+                <Slider
+                  value={macroPct.protein}
+                  onChange={(v: number) => {
+                    const next = clampAndNormalize("protein", v);
+                    setMacroPct(next);
+                    applyPercentagesToTargets(next);
+                  }}
+                  min={5}
+                  max={60}
+                  step={1}
+                  color="green"
+                  size="sm"
+                />
+              </Box>
+              <Box>
+                <Group justify="space-between" mb={4}>
+                  <Text size="xs">Carbohidratos %</Text>
+                  <Text fw={600} size="sm" c="orange">{macroPct.carbs}%</Text>
+                </Group>
+                <Slider
+                  value={macroPct.carbs}
+                  onChange={(v: number) => {
+                    const next = clampAndNormalize("carbs", v);
+                    setMacroPct(next);
+                    applyPercentagesToTargets(next);
+                  }}
+                  min={5}
+                  max={70}
+                  step={1}
+                  color="orange"
+                  size="sm"
+                />
+              </Box>
+              <Box>
+                <Group justify="space-between" mb={4}>
+                  <Text size="xs">Grasas %</Text>
+                  <Text fw={600} size="sm" c="grape">{macroPct.fat}%</Text>
+                </Group>
+                <Slider
+                  value={macroPct.fat}
+                  onChange={(v: number) => {
+                    const next = clampAndNormalize("fat", v);
+                    setMacroPct(next);
+                    applyPercentagesToTargets(next);
+                  }}
+                  min={5}
+                  max={60}
+                  step={1}
+                  color="grape"
+                  size="sm"
+                />
+              </Box>
+            </SimpleGrid>
+            <Text size="xs" c="dimmed" mt="xs">
+              Total: {macroPct.protein + macroPct.carbs + macroPct.fat}% • Objetivo: {Math.round((targetCalories * macroPct.protein / 100) / 4)}g P, {Math.round((targetCalories * macroPct.carbs / 100) / 4)}g C, {Math.round((targetCalories * macroPct.fat / 100) / 9)}g G
+            </Text>
+          </Box>
+        )}
       </Paper>
 
       <Tabs onChange={(v) => setActiveDay(v || days[0]?.id)} value={activeDay}>
@@ -684,6 +1003,16 @@ export function MealPlanBuilder({
                         <Badge color="grape" variant="outline" radius="md">
                           G: {Math.round(mealMacros.fat)}g
                         </Badge>
+                        <Tooltip label="Duplicar bloque">
+                          <ActionIcon
+                            color="gray"
+                            onClick={() => duplicateMeal(meal.id)}
+                            variant="subtle"
+                            radius="md"
+                          >
+                            <IconCopy size={16} />
+                          </ActionIcon>
+                        </Tooltip>
                         <ActionIcon
                           color="red"
                           onClick={() => removeMeal(meal.id)}
@@ -752,9 +1081,20 @@ export function MealPlanBuilder({
                                       </Badge>
                                     )}
                                 </Box>
-                                <Text c="dimmed" size="xs">
-                                  {Math.round(itemMacros.calories)} kcal
-                                </Text>
+                                <Group gap={4}>
+                                  <Badge size="xs" color="blue" variant="light" radius="sm">
+                                    {Math.round(itemMacros.calories)} kcal
+                                  </Badge>
+                                  <Badge size="xs" color="green" variant="light" radius="sm">
+                                    P: {Math.round(itemMacros.protein)}g
+                                  </Badge>
+                                  <Badge size="xs" color="orange" variant="light" radius="sm">
+                                    C: {Math.round(itemMacros.carbs)}g
+                                  </Badge>
+                                  <Badge size="xs" color="grape" variant="light" radius="sm">
+                                    G: {Math.round(itemMacros.fat)}g
+                                  </Badge>
+                                </Group>
                               </Group>
                               <Group gap="xs">
                                 <NumberInput
@@ -918,6 +1258,15 @@ export function MealPlanBuilder({
 
           <Tabs.Panel value="foods">
             <Group mb="md" gap="sm">
+              <Button
+                variant="light"
+                color="green"
+                leftSection={<IconPlus size={16} />}
+                onClick={openCreateFoodModal}
+                size="xs"
+              >
+                Crear alimento
+              </Button>
               <TextInput
                 leftSection={<IconSearch size={16} />}
                 onChange={(e) => handleFoodSearchChange(e.target.value)}
@@ -1161,6 +1510,58 @@ export function MealPlanBuilder({
             </ScrollArea>
           </Tabs.Panel>
         </Tabs>
+      </Modal>
+
+      {/* Create Food Sub-Modal */}
+      <Modal
+        opened={createFoodModalOpened}
+        onClose={() => { closeCreateFoodModal(); createFoodForm.reset(); }}
+        title="Crear alimento"
+        size="md"
+      >
+        <form onSubmit={createFoodForm.onSubmit(handleCreateFood)}>
+          <Stack gap="sm">
+            <TextInput
+              label="Nombre"
+              placeholder="Nombre del alimento"
+              required
+              {...createFoodForm.getInputProps("name")}
+            />
+            <Select
+              data={FOOD_CATEGORIES}
+              label="Categoría"
+              {...createFoodForm.getInputProps("category")}
+            />
+            <Group grow>
+              <NumberInput
+                label="Porción (cantidad)"
+                min={1}
+                {...createFoodForm.getInputProps("serving_size")}
+              />
+              <TextInput
+                label="Unidad"
+                placeholder="g"
+                {...createFoodForm.getInputProps("serving_unit")}
+              />
+            </Group>
+            <Group grow>
+              <NumberInput label="Calorías" min={0} {...createFoodForm.getInputProps("calories")} />
+              <NumberInput label="Proteínas (g)" min={0} {...createFoodForm.getInputProps("protein_g")} />
+            </Group>
+            <Group grow>
+              <NumberInput label="Carbohidratos (g)" min={0} {...createFoodForm.getInputProps("carbs_g")} />
+              <NumberInput label="Grasas (g)" min={0} {...createFoodForm.getInputProps("fat_g")} />
+            </Group>
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={() => { closeCreateFoodModal(); createFoodForm.reset(); }}>
+                Cancelar
+              </Button>
+              <Button type="submit" color="green" loading={createFoodMutation.isPending}>
+                Crear y añadir
+              </Button>
+            </Group>
+          </Stack>
+        </form>
       </Modal>
 
       {/* Shopping List Modal */}

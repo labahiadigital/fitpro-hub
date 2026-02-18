@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { api, paymentsApi } from "../services/api";
+import { api, paymentsApi, productsApi } from "../services/api";
+import { useAuthStore } from "../stores/auth";
 
 export interface Payment {
   id: string;
@@ -19,9 +20,12 @@ export interface Subscription {
   client_id?: string;
   client_name?: string;
   plan_name: string;
+  name?: string;
   amount: number;
   currency: string;
+  interval?: string;
   status: "active" | "cancelled" | "past_due" | "trialing";
+  current_period_start?: string;
   current_period_end: string;
   cancel_at_period_end: boolean;
 }
@@ -33,6 +37,7 @@ export interface Product {
   price: number;
   currency: string;
   type: "subscription" | "one_time" | "package";
+  interval?: string;
   sessions_included?: number;
   is_active: boolean;
 }
@@ -64,13 +69,27 @@ export function useSubscriptions(params?: { status?: string }) {
 }
 
 export function useProducts() {
+  const { currentWorkspace } = useAuthStore();
+  const workspaceId = currentWorkspace?.id || "";
   return useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      // TODO: Replace with actual products endpoint when available
-      return { data: [] };
+    queryKey: ["products", workspaceId],
+    queryFn: async () => productsApi.list(workspaceId),
+    enabled: !!workspaceId,
+    select: (response) => {
+      const raw = response.data;
+      const items = raw?.items || raw || [];
+      return items.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        currency: p.currency || "EUR",
+        type: p.product_type || "subscription",
+        interval: p.interval,
+        sessions_included: p.sessions_included,
+        is_active: p.is_active ?? true,
+      })) as Product[];
     },
-    select: (response) => response.data as Product[],
   });
 }
 

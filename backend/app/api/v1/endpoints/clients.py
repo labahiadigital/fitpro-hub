@@ -15,6 +15,7 @@ from app.models.client import Client, ClientTag
 from app.models.exercise import ClientMeasurement
 from app.models.user import UserRole, User
 from app.models.invitation import ClientInvitation
+from app.models.product import Product
 from app.models.workspace import Workspace
 from app.schemas.client import (
     ClientCreate, ClientUpdate, ClientResponse, ClientListResponse,
@@ -136,14 +137,14 @@ async def list_clients(
     if search:
         search_filter = f"%{search}%"
         query = query.where(
-            (Client.first_name.ilike(search_filter)) |
-            (Client.last_name.ilike(search_filter)) |
-            (Client.email.ilike(search_filter))
+            (func.unaccent(Client.first_name).ilike(func.unaccent(search_filter))) |
+            (func.unaccent(Client.last_name).ilike(func.unaccent(search_filter))) |
+            (func.unaccent(Client.email).ilike(func.unaccent(search_filter)))
         )
         count_query = count_query.where(
-            (Client.first_name.ilike(search_filter)) |
-            (Client.last_name.ilike(search_filter)) |
-            (Client.email.ilike(search_filter))
+            (func.unaccent(Client.first_name).ilike(func.unaccent(search_filter))) |
+            (func.unaccent(Client.last_name).ilike(func.unaccent(search_filter))) |
+            (func.unaccent(Client.email).ilike(func.unaccent(search_filter)))
         )
     
     if is_active is not None:
@@ -172,6 +173,7 @@ async def list_clients(
             phone=c.phone,
             avatar_url=c.avatar_url,
             is_active=c.is_active,
+            has_user_account=c.user_id is not None,
             tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in c.tags],
             created_at=c.created_at
         )
@@ -701,6 +703,7 @@ class InvitationCreate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     message: Optional[str] = None
+    product_id: Optional[UUID] = None
 
 
 class InvitationResponse(BaseModel):
@@ -872,6 +875,22 @@ async def create_invitation(
     user = result.scalar_one_or_none()
     trainer_name = user.full_name if user else "Tu entrenador"
     
+    # Validate product if provided
+    if data.product_id:
+        product_result = await db.execute(
+            select(Product).where(
+                Product.id == data.product_id,
+                Product.workspace_id == current_user.workspace_id,
+                Product.is_active == True,
+            )
+        )
+        product = product_result.scalar_one_or_none()
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Producto no encontrado o no activo"
+            )
+    
     # Generate unique token
     token = secrets.token_urlsafe(32)
     
@@ -886,7 +905,8 @@ async def create_invitation(
         status="pending",
         expires_at=datetime.utcnow() + timedelta(days=7),
         message=data.message,
-        client_id=existing_client.id if existing_client else None
+        client_id=existing_client.id if existing_client else None,
+        product_id=data.product_id,
     )
     
     db.add(invitation)

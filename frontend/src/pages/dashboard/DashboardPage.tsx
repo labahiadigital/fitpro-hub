@@ -1,8 +1,10 @@
 import {
+  ActionIcon,
   Avatar,
   Badge,
   Box,
   Button,
+  Drawer,
   Group,
   Loader,
   Progress,
@@ -10,10 +12,12 @@ import {
   SimpleGrid,
   Skeleton,
   Stack,
+  Switch,
   Text,
   ThemeIcon,
   UnstyledButton,
 } from "@mantine/core";
+import { useDisclosure, useLocalStorage } from "@mantine/hooks";
 import {
   IconArrowRight,
   IconCalendarEvent,
@@ -24,6 +28,7 @@ import {
   IconMessage,
   IconPlus,
   IconRun,
+  IconSettings,
   IconTarget,
   IconTrendingUp,
   IconUsers,
@@ -40,6 +45,43 @@ import {
   useTodaySessions,
 } from "../../hooks/useDashboard";
 import { useAuthStore } from "../../stores/auth";
+
+// --- Dashboard configuration ---
+interface DashboardConfig {
+  visibleWidgets: string[];
+  widgetOrder: string[];
+}
+
+const DEFAULT_CONFIG: DashboardConfig = {
+  visibleWidgets: [
+    "alerts",
+    "quick-actions",
+    "upcoming-sessions",
+    "recent-clients",
+    "client-progress",
+    "weekly-activity",
+    "client-metrics",
+  ],
+  widgetOrder: [
+    "alerts",
+    "quick-actions",
+    "upcoming-sessions",
+    "recent-clients",
+    "client-progress",
+    "weekly-activity",
+    "client-metrics",
+  ],
+};
+
+const WIDGET_DEFINITIONS = [
+  { id: "alerts", label: "Avisos / Alertas", icon: IconMessage },
+  { id: "quick-actions", label: "Acciones Rápidas", icon: IconPlus },
+  { id: "upcoming-sessions", label: "Próximas sesiones", icon: IconCalendarEvent },
+  { id: "recent-clients", label: "Clientes recientes", icon: IconUsers },
+  { id: "client-progress", label: "Progreso de clientes", icon: IconTarget },
+  { id: "weekly-activity", label: "Actividad semanal", icon: IconChartLine },
+  { id: "client-metrics", label: "Métricas financieras", icon: IconTrendingUp },
+];
 
 // --- KPI Card orientado a clientes ---
 function ClientKPI({
@@ -416,6 +458,28 @@ function WeeklyActivityWidget() {
   const days = ["L", "M", "X", "J", "V", "S", "D"];
   const activity = [0, 0, 0, 0, 0, 0, 0]; // Sin datos hardcodeados
 
+  // Build weekly data with day index. Our array: 0=Mon..5=Sat, 6=Sun.
+  const weeklyData = days.map((day, i) => ({
+    day,
+    sessions: activity[i],
+    dayIndex: i,
+    isWeekend: i === 5 || i === 6,
+    isToday: (() => {
+      const todayDoW = new Date().getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+      const ourIndexToDoW = i === 6 ? 0 : i + 1;
+      return todayDoW === ourIndexToDoW;
+    })(),
+  }));
+
+  // Smart filtering: show weekdays always, show weekend days only if they have activity or are today
+  const filteredDays = weeklyData.filter(
+    (d) => !d.isWeekend || d.sessions > 0 || d.isToday
+  );
+
+  const totalSessions = filteredDays.reduce((acc, d) => acc + d.sessions, 0);
+  const avgPerDay =
+    filteredDays.length > 0 ? totalSessions / filteredDays.length : 0;
+
   return (
     <Box className="premium-card animate-in delay-3" p="lg">
       <Group justify="space-between" mb="md">
@@ -431,15 +495,15 @@ function WeeklyActivityWidget() {
       </Group>
 
       <Group justify="space-between" align="flex-end" h={100} px="xs">
-        {days.map((day, i) => (
+        {filteredDays.map(({ day, sessions }) => (
           <Box key={day} ta="center">
             <Box
               w={32}
-              h={Math.max(activity[i] * 10, 4)}
+              h={Math.max(sessions * 10, 4)}
               bg={
-                activity[i] === 0
+                sessions === 0
                   ? "gray.3"
-                  : activity[i] >= 6
+                  : sessions >= 6
                     ? "var(--nv-accent)"
                     : "var(--nv-primary)"
               }
@@ -449,11 +513,11 @@ function WeeklyActivityWidget() {
               }}
               mb="xs"
             />
-            <Text size="xs" fw={500} c={activity[i] === 0 ? "dimmed" : undefined}>
+            <Text size="xs" fw={500} c={sessions === 0 ? "dimmed" : undefined}>
               {day}
             </Text>
             <Text size="xs" c="dimmed">
-              {activity[i]}
+              {sessions}
             </Text>
           </Box>
         ))}
@@ -470,7 +534,7 @@ function WeeklyActivityWidget() {
             Total sesiones
           </Text>
           <Text fw={700} style={{ color: "var(--nv-dark)" }}>
-            {activity.reduce((a, b) => a + b, 0)}
+            {totalSessions}
           </Text>
         </Box>
         <Box ta="right">
@@ -478,7 +542,7 @@ function WeeklyActivityWidget() {
             Promedio diario
           </Text>
           <Text fw={700} style={{ color: "var(--nv-dark)" }}>
-            {(activity.reduce((a, b) => a + b, 0) / 7).toFixed(1)}
+            {avgPerDay.toFixed(1)}
           </Text>
         </Box>
       </Group>
@@ -589,6 +653,21 @@ function ClientMetricsWidget({
 export function DashboardPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const [configOpened, { open: openConfig, close: closeConfig }] = useDisclosure(false);
+  const [config, setConfig] = useLocalStorage<DashboardConfig>({
+    key: "trackfiz-dashboard-config",
+    defaultValue: DEFAULT_CONFIG,
+  });
+
+  const toggleWidget = (widgetId: string) => {
+    setConfig((prev) => {
+      const isVisible = prev.visibleWidgets.includes(widgetId);
+      const newVisible = isVisible
+        ? prev.visibleWidgets.filter((id) => id !== widgetId)
+        : [...prev.visibleWidgets, widgetId];
+      return { ...prev, visibleWidgets: newVisible };
+    });
+  };
 
   // Fetch real data
   const { data: kpis, isLoading: kpisLoading } = useDashboardKPIs();
@@ -641,6 +720,34 @@ export function DashboardPage() {
 
   return (
     <Box>
+      <Drawer
+        opened={configOpened}
+        onClose={closeConfig}
+        title="Configurar Dashboard"
+        position="right"
+        size="sm"
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Selecciona los widgets que quieres mostrar en tu dashboard
+          </Text>
+          {WIDGET_DEFINITIONS.map((widget) => (
+            <Group key={widget.id} justify="space-between">
+              <Group gap="sm">
+                <widget.icon size={18} />
+                <Text size="sm" fw={500}>
+                  {widget.label}
+                </Text>
+              </Group>
+              <Switch
+                checked={config.visibleWidgets.includes(widget.id)}
+                onChange={() => toggleWidget(widget.id)}
+              />
+            </Group>
+          ))}
+        </Stack>
+      </Drawer>
+
       {/* Header con saludo personalizado */}
       <Group
         justify="space-between"
@@ -664,6 +771,16 @@ export function DashboardPage() {
           </Text>
         </Box>
         <Group gap="sm">
+          <ActionIcon
+            variant="light"
+            size="lg"
+            radius="xl"
+            onClick={openConfig}
+            title="Configurar Dashboard"
+            aria-label="Configurar Dashboard"
+          >
+            <IconSettings size={20} />
+          </ActionIcon>
           <Button
             variant="light"
             leftSection={<IconMessage size={16} />}
@@ -731,29 +848,71 @@ export function DashboardPage() {
 
       {/* Grid principal */}
       <Box className="dashboard-main-grid">
-        {/* Columna Principal */}
+        {/* Columna Principal - orden según widgetOrder */}
         <Stack gap="lg">
-          {/* Sesiones de hoy */}
-          <UpcomingSessionsWidget
-            sessions={sessions}
-            loading={sessionsLoading}
-          />
+          {(() => {
+            const mainIds = ["upcoming-sessions", "alerts", "weekly-activity", "client-metrics"];
+            const visible = mainIds
+              .filter((id) => config.visibleWidgets.includes(id))
+              .sort((a, b) => config.widgetOrder.indexOf(a) - config.widgetOrder.indexOf(b));
+            const showBoth = visible.includes("weekly-activity") && visible.includes("client-metrics");
+            const firstOfPair = showBoth
+              ? visible.indexOf("weekly-activity") < visible.indexOf("client-metrics")
+                ? "weekly-activity"
+                : "client-metrics"
+              : null;
 
-          {/* Actividad semanal + Métricas */}
-          <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
-            <WeeklyActivityWidget />
-            <ClientMetricsWidget kpis={kpis} />
-          </SimpleGrid>
-
-          {/* Alertas */}
-          <AlertsWidget alerts={transformedAlerts} loading={alertsLoading} />
+            return visible.map((id) => {
+              if (showBoth && id !== firstOfPair && (id === "weekly-activity" || id === "client-metrics")) {
+                return null;
+              }
+              if (showBoth && id === firstOfPair) {
+                return (
+                  <SimpleGrid key="weekly-metrics" cols={{ base: 1, lg: 2 }} spacing="lg">
+                    <WeeklyActivityWidget />
+                    <ClientMetricsWidget kpis={kpis} />
+                  </SimpleGrid>
+                );
+              }
+              if (id === "upcoming-sessions")
+                return (
+                  <UpcomingSessionsWidget
+                    key={id}
+                    sessions={sessions}
+                    loading={sessionsLoading}
+                  />
+                );
+              if (id === "alerts")
+                return (
+                  <AlertsWidget
+                    key={id}
+                    alerts={transformedAlerts}
+                    loading={alertsLoading}
+                  />
+                );
+              if (id === "weekly-activity") return <WeeklyActivityWidget key={id} />;
+              if (id === "client-metrics") return <ClientMetricsWidget key={id} kpis={kpis} />;
+              return null;
+            });
+          })()}
         </Stack>
 
-        {/* Columna Lateral */}
+        {/* Columna Lateral - orden según widgetOrder */}
         <Stack gap="lg">
-          <RecentClientsWidget />
-          <ClientProgressSummary kpis={kpis} />
-          <QuickActionsWidget />
+          {["recent-clients", "client-progress", "quick-actions"]
+            .filter((id) => config.visibleWidgets.includes(id))
+            .sort(
+              (a, b) =>
+                config.widgetOrder.indexOf(a) - config.widgetOrder.indexOf(b)
+            )
+            .map((id) => {
+              if (id === "recent-clients") return <RecentClientsWidget key={id} />;
+              if (id === "client-progress")
+                return <ClientProgressSummary key={id} kpis={kpis} />;
+              if (id === "quick-actions")
+                return <QuickActionsWidget key={id} />;
+              return null;
+            })}
         </Stack>
       </Box>
     </Box>

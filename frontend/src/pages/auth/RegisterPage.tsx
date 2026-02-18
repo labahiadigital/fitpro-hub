@@ -28,6 +28,7 @@ export function RegisterPage() {
     initialValues: {
       full_name: "",
       email: "",
+      confirm_email: "",
       password: "",
       workspace_name: "",
       terms: false,
@@ -35,6 +36,8 @@ export function RegisterPage() {
     validate: {
       full_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
       email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      confirm_email: (value, values) =>
+        value !== values.email ? "Los emails no coinciden" : null,
       password: (value) => (value.length < 8 ? "Mínimo 8 caracteres" : null),
       workspace_name: (value) =>
         value.length < 2 ? "Nombre de tu gimnasio virtual requerido" : null,
@@ -119,6 +122,15 @@ export function RegisterPage() {
             required
             styles={inputStyles}
             {...form.getInputProps("email")}
+          />
+
+          <TextInput
+            label="Confirmar Email"
+            leftSection={<IconMail size={18} />}
+            placeholder="Repite tu email"
+            required
+            styles={inputStyles}
+            {...form.getInputProps("confirm_email")}
           />
 
           <PasswordInput

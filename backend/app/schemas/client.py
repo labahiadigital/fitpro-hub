@@ -96,6 +96,7 @@ class ClientListResponse(BaseSchema):
     phone: Optional[str] = None
     avatar_url: Optional[str] = None
     is_active: bool
+    has_user_account: bool = False
     tags: List[ClientTagResponse] = []
     created_at: datetime
 

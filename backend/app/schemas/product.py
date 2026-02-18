@@ -18,7 +18,7 @@ class ProductBase(BaseModel):
     interval_count: int = Field(default=1, ge=1)
     trial_days: int = Field(default=0, ge=0)
     is_active: bool = True
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    extra_data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class ProductCreate(ProductBase):
@@ -35,7 +35,7 @@ class ProductUpdate(BaseModel):
     interval_count: Optional[int] = Field(None, ge=1)
     trial_days: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
-    metadata: Optional[Dict[str, Any]] = None
+    extra_data: Optional[Dict[str, Any]] = None
 
 
 class ProductResponse(ProductBase, BaseSchema):
@@ -43,6 +43,9 @@ class ProductResponse(ProductBase, BaseSchema):
     workspace_id: UUID
     stripe_price_id: Optional[str] = None
     stripe_product_id: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
 
 
 class ProductList(BaseModel):

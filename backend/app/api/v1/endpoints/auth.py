@@ -635,6 +635,54 @@ async def reset_password(
         )
 
 
+# ===== CHANGE EMAIL (authenticated) =====
+
+class ChangeEmailRequest(BaseModel):
+    new_email: EmailStr
+    password: str  # require current password for security
+
+
+@router.post("/change-email")
+async def change_email(
+    data: ChangeEmailRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Change user email. Requires password confirmation.
+    Updates email immediately (in a real production system, you'd want to verify the new email first).
+    """
+    # Get user
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify password
+    if not verify_password(data.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Contraseña incorrecta")
+    
+    # Check if new email is already in use
+    result = await db.execute(select(User).where(User.email == data.new_email.lower()))
+    existing = result.scalar_one_or_none()
+    if existing and existing.id != user.id:
+        raise HTTPException(status_code=400, detail="Este email ya está en uso")
+    
+    # Update email
+    old_email = user.email
+    user.email = data.new_email.lower()
+    
+    # Also update the client profile if exists
+    result = await db.execute(select(Client).where(Client.user_id == user.id))
+    client = result.scalar_one_or_none()
+    if client:
+        client.email = data.new_email.lower()
+    
+    await db.commit()
+    
+    return {"message": "Email actualizado correctamente", "old_email": old_email, "new_email": data.new_email}
+
+
 # ===== CHANGE PASSWORD (authenticated) =====
 
 @router.post("/change-password", response_model=AuthResponse)

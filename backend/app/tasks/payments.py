@@ -1,49 +1,188 @@
-"""Payment tasks for Celery."""
+"""Payment tasks for Celery – Redsys recurring (MIT) and Stripe stubs."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 from uuid import UUID
 
 from celery import shared_task
-import stripe
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Initialize Stripe
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
+# ---------------------------------------------------------------------------
+# Redsys recurring payment helpers (synchronous – called from Celery workers)
+# ---------------------------------------------------------------------------
+
+def _process_single_renewal_sync(subscription_id: str) -> Dict[str, Any]:
+    """
+    Process a single subscription renewal using Redsys MIT (server-to-server).
+
+    Runs synchronously inside a Celery worker:
+      1. Load subscription and verify it has a stored Redsys identifier.
+      2. Create a new Payment record (pending).
+      3. Send MIT request to Redsys REST API.
+      4. On success: mark payment as succeeded, advance subscription period.
+      5. On failure: mark payment as failed, set subscription to past_due.
+    """
+    import httpx
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.core.config import settings as app_settings
+    from app.models.payment import Subscription, Payment, PaymentStatus, SubscriptionStatus
+    from app.services.redsys import redsys_service, RedsysMITPayment, _decode_merchant_params
+
+    db_url = str(app_settings.DATABASE_URL)
+    if db_url.startswith("postgresql+asyncpg"):
+        db_url = db_url.replace("postgresql+asyncpg", "postgresql+psycopg2", 1)
+
+    engine = create_engine(db_url)
+    session = Session(engine)
+
+    try:
+        sub = session.query(Subscription).filter(Subscription.id == subscription_id).first()
+        if not sub:
+            return {"status": "error", "detail": "subscription not found"}
+
+        if sub.status != SubscriptionStatus.active:
+            return {"status": "skipped", "detail": f"subscription status is {sub.status}"}
+
+        extra = sub.extra_data or {}
+        identifier = extra.get("redsys_identifier")
+        if not identifier:
+            logger.warning(f"Subscription {subscription_id} has no redsys_identifier – cannot renew via MIT")
+            return {"status": "skipped", "detail": "no redsys_identifier"}
+
+        cof_txnid = extra.get("redsys_cof_txnid")
+        amount_cents = int(round(float(sub.amount) * 100))
+        order_id = redsys_service.generate_order_id()
+
+        # Create pending payment
+        payment = Payment(
+            workspace_id=sub.workspace_id,
+            client_id=sub.client_id,
+            subscription_id=sub.id,
+            description=f"Renovación: {sub.name}",
+            amount=sub.amount,
+            currency=sub.currency or "EUR",
+            status=PaymentStatus.pending,
+            payment_type="subscription",
+            extra_data={
+                "gateway": "redsys",
+                "redsys_order_id": order_id,
+                "redsys_environment": redsys_service.config.environment,
+                "renewal": True,
+                "subscription_id": str(sub.id),
+            },
+        )
+        session.add(payment)
+        session.flush()
+
+        # Build MIT request
+        mit = RedsysMITPayment(
+            order_id=order_id,
+            amount=amount_cents,
+            identifier=identifier,
+            description=f"Renovación: {sub.name}"[:125],
+            cof_type="R",
+            cof_txnid=cof_txnid,
+        )
+        req_data = redsys_service.create_mit_payment_request(mit)
+
+        logger.info(
+            f"Sending MIT renewal: order={order_id}, sub={subscription_id}, "
+            f"amount={amount_cents}c"
+        )
+
+        # Send request to Redsys REST
+        with httpx.Client(timeout=30.0) as http_client:
+            response = http_client.post(
+                req_data["rest_url"],
+                json={
+                    "Ds_SignatureVersion": req_data["Ds_SignatureVersion"],
+                    "Ds_MerchantParameters": req_data["Ds_MerchantParameters"],
+                    "Ds_Signature": req_data["Ds_Signature"],
+                },
+                headers={"Content-Type": "application/json"},
+            )
+
+        if response.status_code != 200:
+            payment.status = PaymentStatus.failed
+            payment.extra_data = {**payment.extra_data, "http_error": response.status_code}
+            sub.status = SubscriptionStatus.past_due
+            session.commit()
+            return {"status": "failed", "detail": f"HTTP {response.status_code}"}
+
+        resp_json = response.json()
+        resp_params_b64 = resp_json.get("Ds_MerchantParameters", "")
+
+        if not resp_params_b64:
+            error_code = resp_json.get("errorCode", "UNKNOWN")
+            payment.status = PaymentStatus.failed
+            payment.extra_data = {**payment.extra_data, "redsys_error": error_code}
+            sub.status = SubscriptionStatus.past_due
+            session.commit()
+            return {"status": "failed", "detail": f"Redsys error: {error_code}"}
+
+        resp_params = _decode_merchant_params(resp_params_b64)
+        resp_code = resp_params.get("Ds_Response", "9999")
+        is_success = redsys_service.is_successful_response(resp_code)
+        resp_message = redsys_service.get_response_code_message(resp_code)
+
+        payment.extra_data = {
+            **payment.extra_data,
+            "redsys_response": resp_params,
+            "redsys_response_code": resp_code,
+            "redsys_response_message": resp_message,
+            "redsys_auth_code": resp_params.get("Ds_AuthorisationCode", ""),
+        }
+
+        if is_success:
+            payment.status = PaymentStatus.succeeded
+            payment.paid_at = datetime.now(timezone.utc)
+
+            # Advance subscription period
+            from dateutil.relativedelta import relativedelta
+            interval_map = {
+                "month": relativedelta(months=1),
+                "year": relativedelta(years=1),
+                "week": timedelta(weeks=1),
+            }
+            delta = interval_map.get(sub.interval or "month", relativedelta(months=1))
+            now = datetime.now(timezone.utc)
+            sub.current_period_start = now
+            sub.current_period_end = now + delta
+
+            session.commit()
+            logger.info(f"Renewal succeeded for sub {subscription_id}: next period ends {sub.current_period_end}")
+            return {"status": "succeeded", "order_id": order_id}
+        else:
+            payment.status = PaymentStatus.failed
+            sub.status = SubscriptionStatus.past_due
+            session.commit()
+            logger.warning(f"Renewal failed for sub {subscription_id}: {resp_code} - {resp_message}")
+            return {"status": "failed", "response_code": resp_code, "message": resp_message}
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error processing renewal for {subscription_id}: {e}", exc_info=True)
+        return {"status": "error", "detail": str(e)}
+    finally:
+        session.close()
+        engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# Celery tasks
+# ---------------------------------------------------------------------------
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=300)
-def process_subscription_renewal(
-    self,
-    subscription_id: str,
-    workspace_id: str,
-):
-    """Process a subscription renewal."""
+def process_subscription_renewal(self, subscription_id: str, workspace_id: str = ""):
+    """Process a single subscription renewal via Redsys MIT."""
     try:
-        logger.info(f"Processing renewal for subscription {subscription_id}")
-        
-        # This would:
-        # 1. Load subscription from database
-        # 2. Create Stripe invoice or charge
-        # 3. Update subscription status
-        # 4. Send receipt email
-        # 5. Log the transaction
-        
-        return {
-            "status": "completed",
-            "subscription_id": subscription_id,
-        }
-        
-    except stripe.error.CardError as e:
-        logger.error(f"Card error for subscription {subscription_id}: {e}")
-        # Mark payment as failed and notify
-        from app.tasks.notifications import send_payment_failed_notification
-        # send_payment_failed_notification.delay(...)
-        return {"status": "failed", "error": str(e)}
-        
+        return _process_single_renewal_sync(subscription_id)
     except Exception as exc:
         logger.error(f"Failed to process renewal for {subscription_id}: {exc}")
         raise self.retry(exc=exc)
@@ -51,270 +190,105 @@ def process_subscription_renewal(
 
 @shared_task
 def process_all_renewals():
-    """Process all subscriptions due for renewal."""
-    logger.info("Processing subscription renewals...")
-    
-    # This would:
-    # 1. Query subscriptions with renewal_date <= now
-    # 2. Dispatch individual renewal tasks
-    
-    return {"status": "completed", "renewals_processed": 0}
+    """
+    Process all active subscriptions that are past their current_period_end.
+    Dispatches individual renewal tasks.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.core.config import settings as app_settings
+    from app.models.payment import Subscription, SubscriptionStatus
+
+    db_url = str(app_settings.DATABASE_URL)
+    if db_url.startswith("postgresql+asyncpg"):
+        db_url = db_url.replace("postgresql+asyncpg", "postgresql+psycopg2", 1)
+
+    engine = create_engine(db_url)
+    session = Session(engine)
+
+    try:
+        now = datetime.now(timezone.utc)
+        subs = (
+            session.query(Subscription)
+            .filter(
+                Subscription.status == SubscriptionStatus.active,
+                Subscription.current_period_end <= now,
+            )
+            .all()
+        )
+
+        logger.info(f"Found {len(subs)} subscriptions due for renewal")
+
+        dispatched = 0
+        for sub in subs:
+            extra = sub.extra_data or {}
+            if not extra.get("redsys_identifier"):
+                logger.info(f"Skipping sub {sub.id}: no redsys_identifier")
+                continue
+            process_subscription_renewal.delay(str(sub.id), str(sub.workspace_id))
+            dispatched += 1
+
+        return {"status": "completed", "found": len(subs), "dispatched": dispatched}
+
+    except Exception as e:
+        logger.error(f"Error in process_all_renewals: {e}", exc_info=True)
+        return {"status": "error", "detail": str(e)}
+    finally:
+        session.close()
+        engine.dispose()
 
 
 @shared_task
 def check_expiring_subscriptions():
-    """Check for subscriptions expiring soon and send reminders."""
-    logger.info("Checking for expiring subscriptions...")
-    
-    # This would:
-    # 1. Query subscriptions expiring in 7 days
-    # 2. Send reminder emails
-    # 3. Create tasks for follow-up
-    
-    return {"status": "completed", "reminders_sent": 0}
+    """Check for subscriptions expiring in the next 7 days and log them."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.core.config import settings as app_settings
+    from app.models.payment import Subscription, SubscriptionStatus
+
+    db_url = str(app_settings.DATABASE_URL)
+    if db_url.startswith("postgresql+asyncpg"):
+        db_url = db_url.replace("postgresql+asyncpg", "postgresql+psycopg2", 1)
+
+    engine = create_engine(db_url)
+    session = Session(engine)
+
+    try:
+        now = datetime.now(timezone.utc)
+        week_from_now = now + timedelta(days=7)
+
+        subs = (
+            session.query(Subscription)
+            .filter(
+                Subscription.status == SubscriptionStatus.active,
+                Subscription.current_period_end > now,
+                Subscription.current_period_end <= week_from_now,
+            )
+            .all()
+        )
+
+        logger.info(f"Found {len(subs)} subscriptions expiring within 7 days")
+        return {"status": "completed", "expiring_count": len(subs)}
+
+    except Exception as e:
+        logger.error(f"Error checking expiring subscriptions: {e}", exc_info=True)
+        return {"status": "error", "detail": str(e)}
+    finally:
+        session.close()
+        engine.dispose()
 
 
 @shared_task(bind=True, max_retries=3)
-def process_failed_payment_retry(
-    self,
-    payment_id: str,
-    workspace_id: str,
-    attempt_number: int = 1,
-):
-    """Retry a failed payment."""
-    try:
-        logger.info(f"Retrying payment {payment_id}, attempt {attempt_number}")
-        
-        # Stripe automatically retries, but we can also manually retry
-        # This would:
-        # 1. Load the failed payment
-        # 2. Attempt to charge again
-        # 3. Update status accordingly
-        
-        return {
-            "status": "completed",
-            "payment_id": payment_id,
-            "attempt": attempt_number,
-        }
-        
-    except Exception as exc:
-        logger.error(f"Failed to retry payment {payment_id}: {exc}")
-        raise self.retry(exc=exc)
+def process_failed_payment_retry(self, payment_id: str, workspace_id: str = "", attempt_number: int = 1):
+    """Retry a failed payment (placeholder for future retry logic)."""
+    logger.info(f"Retrying payment {payment_id}, attempt {attempt_number}")
+    return {"status": "completed", "payment_id": payment_id, "attempt": attempt_number}
 
 
 @shared_task
 def retry_all_failed_payments():
-    """Retry all failed payments that are eligible for retry."""
+    """Retry all failed payments that are eligible for retry (placeholder)."""
     logger.info("Retrying failed payments...")
-    
-    # This would:
-    # 1. Query payments with status='failed' and retry_count < max_retries
-    # 2. Dispatch individual retry tasks
-    
     return {"status": "completed", "retries_dispatched": 0}
-
-
-@shared_task(bind=True, max_retries=3)
-def create_stripe_customer(
-    self,
-    client_id: str,
-    email: str,
-    name: str,
-    workspace_id: str,
-    metadata: Optional[Dict[str, Any]] = None,
-):
-    """Create a Stripe customer for a client."""
-    try:
-        logger.info(f"Creating Stripe customer for client {client_id}")
-        
-        customer = stripe.Customer.create(
-            email=email,
-            name=name,
-            metadata={
-                "client_id": client_id,
-                "workspace_id": workspace_id,
-                **(metadata or {}),
-            },
-        )
-        
-        # Update client with stripe_customer_id
-        # This would be done via database update
-        
-        return {
-            "status": "completed",
-            "client_id": client_id,
-            "stripe_customer_id": customer.id,
-        }
-        
-    except Exception as exc:
-        logger.error(f"Failed to create Stripe customer for {client_id}: {exc}")
-        raise self.retry(exc=exc)
-
-
-@shared_task(bind=True, max_retries=3)
-def create_stripe_subscription(
-    self,
-    client_id: str,
-    stripe_customer_id: str,
-    price_id: str,
-    workspace_id: str,
-    trial_days: int = 0,
-    coupon_id: Optional[str] = None,
-):
-    """Create a Stripe subscription for a client."""
-    try:
-        logger.info(f"Creating Stripe subscription for customer {stripe_customer_id}")
-        
-        subscription_data = {
-            "customer": stripe_customer_id,
-            "items": [{"price": price_id}],
-            "expand": ["latest_invoice.payment_intent"],
-        }
-        
-        if trial_days > 0:
-            subscription_data["trial_period_days"] = trial_days
-        
-        if coupon_id:
-            subscription_data["coupon"] = coupon_id
-        
-        subscription = stripe.Subscription.create(**subscription_data)
-        
-        return {
-            "status": "completed",
-            "client_id": client_id,
-            "stripe_subscription_id": subscription.id,
-            "status": subscription.status,
-        }
-        
-    except Exception as exc:
-        logger.error(f"Failed to create subscription for {stripe_customer_id}: {exc}")
-        raise self.retry(exc=exc)
-
-
-@shared_task(bind=True, max_retries=3)
-def cancel_stripe_subscription(
-    self,
-    stripe_subscription_id: str,
-    immediately: bool = False,
-):
-    """Cancel a Stripe subscription."""
-    try:
-        logger.info(f"Cancelling Stripe subscription {stripe_subscription_id}")
-        
-        if immediately:
-            subscription = stripe.Subscription.delete(stripe_subscription_id)
-        else:
-            subscription = stripe.Subscription.modify(
-                stripe_subscription_id,
-                cancel_at_period_end=True,
-            )
-        
-        return {
-            "status": "completed",
-            "stripe_subscription_id": stripe_subscription_id,
-            "cancelled_at": subscription.canceled_at,
-        }
-        
-    except Exception as exc:
-        logger.error(f"Failed to cancel subscription {stripe_subscription_id}: {exc}")
-        raise self.retry(exc=exc)
-
-
-@shared_task(bind=True, max_retries=3)
-def process_stripe_webhook(
-    self,
-    event_type: str,
-    event_data: Dict[str, Any],
-):
-    """Process a Stripe webhook event."""
-    try:
-        logger.info(f"Processing Stripe webhook: {event_type}")
-        
-        handlers = {
-            "invoice.paid": handle_invoice_paid,
-            "invoice.payment_failed": handle_invoice_payment_failed,
-            "customer.subscription.created": handle_subscription_created,
-            "customer.subscription.updated": handle_subscription_updated,
-            "customer.subscription.deleted": handle_subscription_deleted,
-            "payment_intent.succeeded": handle_payment_succeeded,
-            "payment_intent.payment_failed": handle_payment_failed,
-        }
-        
-        handler = handlers.get(event_type)
-        if handler:
-            return handler(event_data)
-        else:
-            logger.info(f"Unhandled webhook event: {event_type}")
-            return {"status": "ignored", "event_type": event_type}
-        
-    except Exception as exc:
-        logger.error(f"Failed to process webhook {event_type}: {exc}")
-        raise self.retry(exc=exc)
-
-
-def handle_invoice_paid(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle invoice.paid webhook."""
-    invoice = event_data.get("object", {})
-    logger.info(f"Invoice paid: {invoice.get('id')}")
-    
-    # Update payment status in database
-    # Send receipt email
-    
-    return {"status": "processed", "invoice_id": invoice.get("id")}
-
-
-def handle_invoice_payment_failed(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle invoice.payment_failed webhook."""
-    invoice = event_data.get("object", {})
-    logger.info(f"Invoice payment failed: {invoice.get('id')}")
-    
-    # Update payment status
-    # Send failure notification
-    
-    return {"status": "processed", "invoice_id": invoice.get("id")}
-
-
-def handle_subscription_created(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle customer.subscription.created webhook."""
-    subscription = event_data.get("object", {})
-    logger.info(f"Subscription created: {subscription.get('id')}")
-    
-    # Create subscription record in database
-    
-    return {"status": "processed", "subscription_id": subscription.get("id")}
-
-
-def handle_subscription_updated(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle customer.subscription.updated webhook."""
-    subscription = event_data.get("object", {})
-    logger.info(f"Subscription updated: {subscription.get('id')}")
-    
-    # Update subscription record
-    
-    return {"status": "processed", "subscription_id": subscription.get("id")}
-
-
-def handle_subscription_deleted(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle customer.subscription.deleted webhook."""
-    subscription = event_data.get("object", {})
-    logger.info(f"Subscription deleted: {subscription.get('id')}")
-    
-    # Mark subscription as cancelled
-    
-    return {"status": "processed", "subscription_id": subscription.get("id")}
-
-
-def handle_payment_succeeded(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle payment_intent.succeeded webhook."""
-    payment_intent = event_data.get("object", {})
-    logger.info(f"Payment succeeded: {payment_intent.get('id')}")
-    
-    return {"status": "processed", "payment_intent_id": payment_intent.get("id")}
-
-
-def handle_payment_failed(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle payment_intent.payment_failed webhook."""
-    payment_intent = event_data.get("object", {})
-    logger.info(f"Payment failed: {payment_intent.get('id')}")
-    
-    return {"status": "processed", "payment_intent_id": payment_intent.get("id")}

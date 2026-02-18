@@ -43,12 +43,16 @@ import {
   IconStarFilled,
   IconTemplate,
   IconTrash,
+  IconUser,
+  IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { EmptyState } from "../../components/common/EmptyState";
-import { useClient } from "../../hooks/useClients";
+import { useClient, useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
+import { clientsApi } from "../../services/api";
+import { calculateBMR, calculateTDEE } from "../../utils/calories";
 import {
   type DayPlan,
   type Food,
@@ -160,6 +164,16 @@ const initialDays: DayPlan[] = [
 
 const FOODS_PER_PAGE = 50;
 
+function calculateAge(birthDate: string | null | undefined): number {
+  if (!birthDate) return 30;
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return Math.max(1, age);
+}
+
 export function NutritionPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -169,6 +183,12 @@ export function NutritionPage() {
   
   // If editing for a specific client, get client info
   const { data: clientData } = useClient(clientId || "");
+  // For client dropdown when creating/editing plans
+  const { data: clientsData } = useClients({ page: 1, search: "", page_size: 100 });
+  const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
+    value: c.id,
+    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
+  }));
   
   // Función para volver a la página de origen
   const goBack = useCallback(() => {
@@ -198,6 +218,8 @@ export function NutritionPage() {
   const [editingSupplement, setEditingSupplement] = useState<any>(null);
   const [editSupplementModalOpened, { open: openEditSupplementModal, close: closeEditSupplementModal }] = useDisclosure(false);
   const [supplementModalOpened, { open: openSupplementModal, close: closeSupplementModal }] = useDisclosure(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   
   // Modales de detalle
   const [viewingFood, setViewingFood] = useState<any>(null);
@@ -340,6 +362,7 @@ export function NutritionPage() {
       target_fat: plan.target_fat || 70,
       dietary_tags: plan.dietary_tags || [],
       plan: plan.plan || { days: [] },
+      client_id: plan.client_id,
       client_name: plan.clients
         ? `${plan.clients.first_name} ${plan.clients.last_name}`
         : null,
@@ -365,6 +388,7 @@ export function NutritionPage() {
           target_fat: specificClientPlan.target_fat || 70,
           dietary_tags: specificClientPlan.dietary_tags || [],
           plan: specificClientPlan.plan || { days: [] },
+          client_id: specificClientPlan.client_id,
         };
       }
       
@@ -376,6 +400,15 @@ export function NutritionPage() {
   
   const openPlanBuilderFromUrl = (plan: any) => {
     setEditingPlan(plan);
+    const planClientId = plan.client_id || clientId || null;
+    setSelectedClientId(planClientId);
+    if (planClientId) {
+      clientsApi.get(planClientId).then((res) => {
+        setSelectedClient(res.data);
+      }).catch(() => setSelectedClient(null));
+    } else {
+      setSelectedClient(null);
+    }
     planForm.setValues({
       name: plan.name,
       description: plan.description || "",
@@ -385,6 +418,7 @@ export function NutritionPage() {
       target_carbs: plan.target_carbs,
       target_fat: plan.target_fat,
       dietary_tags: plan.dietary_tags || [],
+      client_id: planClientId,
     });
     if (plan.plan?.days?.length > 0) {
       setMealPlanDays(plan.plan.days);
@@ -396,6 +430,8 @@ export function NutritionPage() {
   
   const handleCloseBuilder = () => {
     closeBuilder();
+    setSelectedClientId(null);
+    setSelectedClient(null);
     // Clear URL params when closing
     if (editPlanId || clientId) {
       setSearchParams({});
@@ -431,11 +467,38 @@ export function NutritionPage() {
       target_carbs: 200,
       target_fat: 70,
       dietary_tags: [] as string[],
+      client_id: null as string | null,
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
     },
   });
+
+  const loadClientData = useCallback(async (clientIdValue: string) => {
+    try {
+      const res = await clientsApi.get(clientIdValue);
+      const client = res.data;
+      setSelectedClient(client);
+      planForm.setFieldValue("client_id", clientIdValue);
+
+      if (client.weight_kg && client.height_cm && client.birth_date && client.gender) {
+        const age = calculateAge(client.birth_date);
+        const bmr = calculateBMR({
+          weight_kg: Number(client.weight_kg),
+          height_cm: Number(client.height_cm),
+          age,
+          gender: client.gender === "masculino" ? "male" : "female",
+        });
+        const tdee = calculateTDEE(bmr, (client.health_data?.activity_level as string) || "moderate");
+        planForm.setFieldValue("target_calories", Math.round(tdee));
+        planForm.setFieldValue("target_protein", Math.round((tdee * 0.3) / 4));
+        planForm.setFieldValue("target_carbs", Math.round((tdee * 0.4) / 4));
+        planForm.setFieldValue("target_fat", Math.round((tdee * 0.3) / 9));
+      }
+    } catch {
+      setSelectedClient(null);
+    }
+  }, [planForm]);
 
   const handleCreateFood = async (values: typeof foodForm.values) => {
     try {
@@ -485,6 +548,15 @@ export function NutritionPage() {
   const openPlanBuilder = (plan?: any) => {
     if (plan) {
       setEditingPlan(plan);
+      const planClientId = plan.client_id || clientId || null;
+      setSelectedClientId(planClientId);
+      if (planClientId) {
+        clientsApi.get(planClientId).then((res) => {
+          setSelectedClient(res.data);
+        }).catch(() => setSelectedClient(null));
+      } else {
+        setSelectedClient(null);
+      }
       planForm.setValues({
         name: plan.name,
         description: plan.description || "",
@@ -494,8 +566,8 @@ export function NutritionPage() {
         target_carbs: plan.target_carbs,
         target_fat: plan.target_fat,
         dietary_tags: plan.dietary_tags || [],
+        client_id: planClientId,
       });
-      // Cargar los días del plan si existen
       if (plan.plan?.days?.length > 0) {
         setMealPlanDays(plan.plan.days);
       } else {
@@ -505,6 +577,13 @@ export function NutritionPage() {
       setEditingPlan(null);
       setMealPlanDays(initialDays);
       planForm.reset();
+      if (clientId) {
+        setSelectedClientId(clientId);
+        loadClientData(clientId);
+      } else {
+        setSelectedClientId(null);
+        setSelectedClient(null);
+      }
     }
     openBuilder();
   };
@@ -514,6 +593,7 @@ export function NutritionPage() {
     if (!values.name) return;
 
     try {
+      const planClientId = selectedClientId || values.client_id || clientId || null;
       const planData = {
         name: values.name,
         description: values.description,
@@ -524,13 +604,14 @@ export function NutritionPage() {
         target_fat: values.target_fat,
         dietary_tags: values.dietary_tags,
         plan: { days: mealPlanDays },
-        // When editing a client's plan (clientId exists), don't save as template
-        is_template: !clientId,
+        client_id: planClientId || undefined,
+        // When editing a client's plan (clientId exists) or assigning to client, don't save as template
+        is_template: !planClientId,
       };
 
       if (editingPlan) {
         // When editing a client's plan, keep original is_template status
-        const updateData = clientId 
+        const updateData = (clientId || planClientId)
           ? { ...planData, is_template: editingPlan.is_template ?? false }
           : planData;
         await updateMealPlan.mutateAsync({ id: editingPlan.id, ...updateData });
@@ -2110,33 +2191,109 @@ export function NutritionPage() {
         )}
       </Modal>
 
-      {/* Drawer para el constructor de planes */}
+      {/* Fullscreen drawer para el constructor de planes */}
       <Drawer
         onClose={handleCloseBuilder}
         opened={builderOpened}
         position="right"
-        size="xl"
-        title={
-          clientId && clientData ? (
-            <Box>
-              <Text fw={600}>Editar Plan de {clientData.first_name} {clientData.last_name}</Text>
-              <Badge color="blue" size="sm" variant="light">Plan individual del cliente</Badge>
-            </Box>
-          ) : editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"
-        }
-        styles={{ 
-          content: { backgroundColor: "var(--nv-paper-bg)" }, 
-          header: { backgroundColor: "var(--nv-paper-bg)", borderBottom: "1px solid var(--nv-border)" }
+        size="100%"
+        withCloseButton={false}
+        styles={{
+          content: { backgroundColor: "var(--nv-bg)", padding: 0 },
+          header: { display: "none" },
+          body: { padding: 0, height: "100vh", display: "flex", flexDirection: "column" },
         }}
       >
-        <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
-          <Stack>
-            <Box className="nv-card" p="md">
-              <Stack gap="sm">
+        {/* Custom header */}
+        <Box
+          px="lg"
+          py="sm"
+          style={{
+            borderBottom: "1px solid var(--nv-border)",
+            backgroundColor: "var(--nv-paper-bg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0,
+          }}
+        >
+          <Group gap="md">
+            <ActionIcon variant="subtle" color="gray" radius="xl" size="lg" onClick={handleCloseBuilder}>
+              <IconX size={20} />
+            </ActionIcon>
+            <Box>
+              <Text fw={700} size="lg" style={{ lineHeight: 1.2 }}>
+                {editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"}
+              </Text>
+              {clientId && clientData && (
+                <Badge color="green" size="sm" variant="light" mt={2}>
+                  {clientData.first_name} {clientData.last_name}
+                </Badge>
+              )}
+            </Box>
+          </Group>
+          <Group gap="sm">
+            <Button onClick={closeBuilder} variant="default" radius="xl" size="sm">
+              Cancelar
+            </Button>
+            <Button
+              loading={createMealPlan.isPending || updateMealPlan.isPending}
+              onClick={handleSavePlan}
+              radius="xl"
+              size="sm"
+              style={{ backgroundColor: "var(--nv-success)" }}
+            >
+              {editingPlan ? "Guardar Cambios" : "Crear Plan"}
+            </Button>
+          </Group>
+        </Box>
+
+        {/* Two-column layout */}
+        <Box style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {/* Left sidebar - Config & Macros */}
+          <Box
+            style={{
+              width: 340,
+              flexShrink: 0,
+              borderRight: "1px solid var(--nv-border)",
+              backgroundColor: "var(--nv-paper-bg)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="md">
+              <Stack gap="md">
+                <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
+                  Configuración
+                </Text>
+
+                <Select
+                  label="Asignar a cliente"
+                  placeholder="Buscar cliente..."
+                  data={clientOptions}
+                  searchable
+                  clearable
+                  radius="md"
+                  size="sm"
+                  leftSection={<IconUser size={14} />}
+                  value={selectedClientId}
+                  onChange={(value) => {
+                    setSelectedClientId(value);
+                    if (value) {
+                      loadClientData(value);
+                    } else {
+                      setSelectedClient(null);
+                      planForm.setFieldValue("client_id", null);
+                    }
+                  }}
+                />
+
                 <TextInput
                   label="Nombre del plan"
                   placeholder="Plan de Pérdida de Peso"
                   required
+                  radius="md"
+                  size="sm"
                   {...planForm.getInputProps("name")}
                 />
 
@@ -2144,6 +2301,8 @@ export function NutritionPage() {
                   label="Descripción"
                   minRows={2}
                   placeholder="Describe el plan..."
+                  radius="md"
+                  size="sm"
                   {...planForm.getInputProps("description")}
                 />
 
@@ -2152,81 +2311,90 @@ export function NutritionPage() {
                     label="Duración (días)"
                     max={30}
                     min={1}
+                    radius="md"
+                    size="sm"
                     {...planForm.getInputProps("duration_days")}
-                  />
-                  <NumberInput
-                    label="Calorías objetivo"
-                    max={5000}
-                    min={1000}
-                    step={50}
-                    {...planForm.getInputProps("target_calories")}
                   />
                 </Group>
 
-                <Group grow>
+                <Divider
+                  label="Objetivos nutricionales"
+                  labelPosition="center"
+                  styles={{ label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } }}
+                />
+
+                <NumberInput
+                  label="Calorías objetivo"
+                  max={5000}
+                  min={1000}
+                  step={50}
+                  radius="md"
+                  size="sm"
+                  {...planForm.getInputProps("target_calories")}
+                />
+
+                <SimpleGrid cols={3} spacing="xs">
                   <NumberInput
-                    label="Proteína (g)"
+                    label="Prot. (g)"
                     max={500}
                     min={0}
+                    radius="md"
+                    size="sm"
                     {...planForm.getInputProps("target_protein")}
                   />
                   <NumberInput
-                    label="Carbohidratos (g)"
+                    label="Carbs (g)"
                     max={500}
                     min={0}
+                    radius="md"
+                    size="sm"
                     {...planForm.getInputProps("target_carbs")}
                   />
                   <NumberInput
                     label="Grasas (g)"
                     max={300}
                     min={0}
+                    radius="md"
+                    size="sm"
                     {...planForm.getInputProps("target_fat")}
                   />
-                </Group>
+                </SimpleGrid>
               </Stack>
-            </Box>
+            </ScrollArea>
+          </Box>
 
-            <Divider label="Constructor de Plan" labelPosition="center" style={{ borderColor: "var(--nv-border)" }} />
-
-            <MealPlanBuilder
-              availableFoods={foods}
-              availableSupplements={supplements}
-              days={mealPlanDays}
-              onChange={setMealPlanDays}
-              targetCalories={planForm.values.target_calories}
-              targetCarbs={planForm.values.target_carbs}
-              targetFat={planForm.values.target_fat}
-              targetProtein={planForm.values.target_protein}
-              foodFavorites={foodFavorites}
-              supplementFavorites={supplementFavorites}
-              onToggleFoodFavorite={(foodId, isFavorite) => 
-                toggleFoodFavorite.mutate({ foodId, isFavorite })
-              }
-              onToggleSupplementFavorite={(supplementId, isFavorite) => 
-                toggleSupplementFavorite.mutate({ supplementId, isFavorite })
-              }
-            />
-          </Stack>
-        </ScrollArea>
-
-        <Group
-          justify="flex-end"
-          mt="md"
-          p="md"
-          style={{ borderTop: "1px solid var(--nv-border)" }}
-        >
-          <Button onClick={closeBuilder} variant="default" radius="xl">
-            Cancelar
-          </Button>
-          <Button
-            loading={createMealPlan.isPending || updateMealPlan.isPending}
-            onClick={handleSavePlan}
-            radius="xl"
-            style={{ backgroundColor: "var(--nv-success)" }}
-          >
-            {editingPlan ? "Guardar Cambios" : "Crear Plan"}
-          </Button>
-        </Group>
+          {/* Right main area - Builder */}
+          <Box style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="lg">
+              <Box style={{ maxWidth: 960, margin: "0 auto" }}>
+                <MealPlanBuilder
+                  selectedClient={selectedClient}
+                  availableFoods={foods}
+                  availableSupplements={supplements}
+                  days={mealPlanDays}
+                  onChange={setMealPlanDays}
+                  targetCalories={planForm.values.target_calories}
+                  targetCarbs={planForm.values.target_carbs}
+                  targetFat={planForm.values.target_fat}
+                  targetProtein={planForm.values.target_protein}
+                  onTargetMacrosChange={(t) => {
+                    planForm.setFieldValue("target_protein", t.protein);
+                    planForm.setFieldValue("target_carbs", t.carbs);
+                    planForm.setFieldValue("target_fat", t.fat);
+                  }}
+                  foodFavorites={foodFavorites}
+                  supplementFavorites={supplementFavorites}
+                  onToggleFoodFavorite={(foodId, isFavorite) =>
+                    toggleFoodFavorite.mutate({ foodId, isFavorite })
+                  }
+                  onToggleSupplementFavorite={(supplementId, isFavorite) =>
+                    toggleSupplementFavorite.mutate({ supplementId, isFavorite })
+                  }
+                />
+              </Box>
+            </ScrollArea>
+          </Box>
+        </Box>
       </Drawer>
 
       {/* Modal para crear suplemento */}

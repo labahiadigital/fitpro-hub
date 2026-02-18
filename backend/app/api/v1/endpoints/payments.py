@@ -3,13 +3,14 @@ from uuid import UUID
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from pydantic import BaseModel
 import stripe
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.payment import StripeAccount, Subscription, Payment, SubscriptionStatus, PaymentStatus
+from app.models.client import Client
 from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
 
 router = APIRouter()
@@ -38,17 +39,20 @@ class SubscriptionCreate(BaseModel):
 class SubscriptionResponse(BaseModel):
     id: UUID
     workspace_id: UUID
-    client_id: UUID
+    client_id: Optional[UUID] = None
+    client_name: Optional[str] = None
+    plan_name: str = ""
     name: str
-    description: Optional[str]
-    status: SubscriptionStatus
+    description: Optional[str] = None
+    status: str
     amount: float
     currency: str
     interval: str
-    current_period_start: Optional[datetime]
-    current_period_end: Optional[datetime]
+    current_period_start: Optional[datetime] = None
+    current_period_end: Optional[datetime] = None
+    cancel_at_period_end: bool = False
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -56,15 +60,16 @@ class SubscriptionResponse(BaseModel):
 class PaymentResponse(BaseModel):
     id: UUID
     workspace_id: UUID
-    client_id: UUID
-    description: Optional[str]
+    client_id: Optional[UUID] = None
+    client_name: Optional[str] = None
+    description: Optional[str] = None
     amount: float
     currency: str
-    status: PaymentStatus
-    payment_type: str
-    paid_at: Optional[datetime]
+    status: str
+    payment_type: Optional[str] = "one_time"
+    paid_at: Optional[datetime] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -259,7 +264,7 @@ async def get_payment_kpis(
 
 # ============ SUBSCRIPTIONS ============
 
-@router.get("/subscriptions", response_model=List[SubscriptionResponse])
+@router.get("/subscriptions")
 async def list_subscriptions(
     client_id: Optional[UUID] = None,
     status: Optional[SubscriptionStatus] = None,
@@ -267,20 +272,45 @@ async def list_subscriptions(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar suscripciones del workspace.
+    Listar suscripciones del workspace con nombre del cliente.
     """
-    query = select(Subscription).where(
-        Subscription.workspace_id == current_user.workspace_id
+    query = (
+        select(Subscription, Client.first_name, Client.last_name)
+        .outerjoin(Client, Subscription.client_id == Client.id)
+        .where(Subscription.workspace_id == current_user.workspace_id)
     )
-    
+
     if client_id:
         query = query.where(Subscription.client_id == client_id)
-    
+
     if status:
         query = query.where(Subscription.status == status)
-    
+
     result = await db.execute(query.order_by(Subscription.created_at.desc()))
-    return result.scalars().all()
+    rows = result.all()
+
+    subs = []
+    for sub, first_name, last_name in rows:
+        client_name = f"{first_name or ''} {last_name or ''}".strip() or None
+        status_val = sub.status.value if hasattr(sub.status, 'value') else str(sub.status)
+        subs.append(SubscriptionResponse(
+            id=sub.id,
+            workspace_id=sub.workspace_id,
+            client_id=sub.client_id,
+            client_name=client_name,
+            plan_name=sub.name,
+            name=sub.name,
+            description=sub.description,
+            status=status_val,
+            amount=float(sub.amount),
+            currency=sub.currency,
+            interval=sub.interval,
+            current_period_start=sub.current_period_start,
+            current_period_end=sub.current_period_end,
+            cancel_at_period_end=(status_val == "cancelled" and sub.current_period_end and sub.current_period_end > datetime.utcnow()),
+            created_at=sub.created_at,
+        ))
+    return subs
 
 
 @router.post("/subscriptions", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
@@ -340,7 +370,7 @@ async def cancel_subscription(
 
 # ============ PAYMENTS ============
 
-@router.get("/payments", response_model=List[PaymentResponse])
+@router.get("/payments")
 async def list_payments(
     client_id: Optional[UUID] = None,
     status: Optional[PaymentStatus] = None,
@@ -348,20 +378,43 @@ async def list_payments(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar pagos del workspace.
+    Listar pagos del workspace con nombre del cliente.
     """
-    query = select(Payment).where(
-        Payment.workspace_id == current_user.workspace_id
+    query = (
+        select(Payment, Client.first_name, Client.last_name)
+        .outerjoin(Client, Payment.client_id == Client.id)
+        .where(Payment.workspace_id == current_user.workspace_id)
     )
-    
+
     if client_id:
         query = query.where(Payment.client_id == client_id)
-    
+
     if status:
         query = query.where(Payment.status == status)
-    
+
     result = await db.execute(query.order_by(Payment.created_at.desc()))
-    return result.scalars().all()
+    rows = result.all()
+
+    payments = []
+    for pay, first_name, last_name in rows:
+        client_name = f"{first_name or ''} {last_name or ''}".strip() or None
+        status_val = pay.status.value if hasattr(pay.status, 'value') else str(pay.status)
+        # Map backend status to frontend-expected status
+        display_status = "completed" if status_val == "succeeded" else status_val
+        payments.append(PaymentResponse(
+            id=pay.id,
+            workspace_id=pay.workspace_id,
+            client_id=pay.client_id,
+            client_name=client_name,
+            description=pay.description,
+            amount=float(pay.amount),
+            currency=pay.currency,
+            status=display_status,
+            payment_type=pay.payment_type or "one_time",
+            paid_at=pay.paid_at,
+            created_at=pay.created_at,
+        ))
+    return payments
 
 
 # ============ WEBHOOKS ============

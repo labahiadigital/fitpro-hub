@@ -1,5 +1,6 @@
 import {
   Alert,
+  Badge,
   Box,
   Button,
   Checkbox,
@@ -29,17 +30,29 @@ import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
   IconCheck,
+  IconCreditCard,
   IconFileText,
   IconHeartbeat,
   IconLock,
   IconMail,
+  IconShieldCheck,
   IconTarget,
   IconUser,
 } from "@tabler/icons-react";
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../../services/api";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { api, redsysApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+
+interface ProductInfo {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  interval?: string;
+  product_type: string;
+}
 
 interface InvitationData {
   valid: boolean;
@@ -49,6 +62,8 @@ interface InvitationData {
   workspace_name?: string;
   workspace_slug?: string;
   message?: string;
+  product?: ProductInfo;
+  payment_completed?: boolean;
 }
 
 interface OnboardingFormData {
@@ -130,12 +145,58 @@ const INTOLERANCES = [
 export function InvitationOnboardingPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setUser, setTokens } = useAuthStore();
   const [active, setActive] = useState(0);
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(true);
+
+  // Payment state
+  const [paymentRequired, setPaymentRequired] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+
+  // Check if returning from Redsys payment
+  const paymentParam = searchParams.get("payment");
+  const dsSignatureVersion = searchParams.get("Ds_SignatureVersion");
+  const dsMerchantParameters = searchParams.get("Ds_MerchantParameters");
+  const dsSignature = searchParams.get("Ds_Signature");
+
+  // Check payment status after returning from Redsys
+  const checkPaymentStatus = useCallback(async () => {
+    if (!token) return;
+    setCheckingPayment(true);
+    try {
+      // If we have Redsys params in the URL, confirm the payment via backend first
+      if (dsSignatureVersion && dsMerchantParameters && dsSignature) {
+        try {
+          await redsysApi.confirmReturn({
+            Ds_SignatureVersion: dsSignatureVersion,
+            Ds_MerchantParameters: dsMerchantParameters,
+            Ds_Signature: dsSignature,
+          });
+        } catch {
+          // If confirm-return fails, still try checking status
+        }
+      }
+
+      const res = await redsysApi.getOnboardingPaymentStatus(token);
+      if (res.data.payment_completed) {
+        setPaymentCompleted(true);
+        setPaymentRequired(false);
+      } else if (res.data.status === "failed") {
+        setPaymentError("El pago no se ha completado. Puedes intentarlo de nuevo.");
+      }
+    } catch {
+      // Silently fail -- user can retry
+    } finally {
+      setCheckingPayment(false);
+    }
+  }, [token, dsSignatureVersion, dsMerchantParameters, dsSignature]);
 
   // Verificar invitación
   useEffect(() => {
@@ -157,6 +218,16 @@ export function InvitationOnboardingPage() {
             firstName: response.data.first_name || "",
             lastName: response.data.last_name || "",
           });
+
+          // Determine if payment is required
+          if (response.data.product && response.data.product.price > 0) {
+            if (response.data.payment_completed) {
+              setPaymentCompleted(true);
+              setPaymentRequired(false);
+            } else {
+              setPaymentRequired(true);
+            }
+          }
         }
       } catch {
         setInvitationData({ valid: false });
@@ -167,6 +238,50 @@ export function InvitationOnboardingPage() {
     
     validateInvitation();
   }, [token]);
+
+  // If returning from Redsys, check payment status
+  useEffect(() => {
+    if (paymentParam === "success" && !paymentCompleted) {
+      checkPaymentStatus();
+    } else if (paymentParam === "error") {
+      setPaymentError("El pago no se ha completado. Puedes intentarlo de nuevo.");
+    }
+  }, [paymentParam, paymentCompleted, checkPaymentStatus]);
+
+  // Handle payment initiation
+  const handleStartPayment = async () => {
+    if (!token) return;
+    setPaymentLoading(true);
+    setPaymentError(null);
+    try {
+      const res = await redsysApi.createOnboardingPayment(token);
+      const { Ds_SignatureVersion, Ds_MerchantParameters, Ds_Signature, redsys_url } = res.data;
+
+      // Create hidden form and submit to Redsys (redirect)
+      const form_el = document.createElement("form");
+      form_el.method = "POST";
+      form_el.action = redsys_url;
+
+      const addField = (name: string, value: string) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form_el.appendChild(input);
+      };
+
+      addField("Ds_SignatureVersion", Ds_SignatureVersion);
+      addField("Ds_MerchantParameters", Ds_MerchantParameters);
+      addField("Ds_Signature", Ds_Signature);
+
+      document.body.appendChild(form_el);
+      form_el.submit();
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } }; message?: string };
+      setPaymentError(err.response?.data?.detail || err.message || "Error al iniciar el pago");
+      setPaymentLoading(false);
+    }
+  };
 
   const form = useForm<OnboardingFormData>({
     initialValues: {
@@ -410,6 +525,97 @@ export function InvitationOnboardingPage() {
             Tu entrenador revisará tu información y se pondrá en contacto contigo pronto.
           </Text>
           <Button size="lg" onClick={() => navigate("/login")}>Ir a Iniciar Sesión</Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // Payment gate: show payment screen before the registration form
+  if (paymentRequired && !paymentCompleted) {
+    const product = invitationData.product!;
+    const intervalLabel = product.interval === "month" ? "/mes" : product.interval === "year" ? "/año" : product.interval === "week" ? "/semana" : "";
+
+    return (
+      <Container py="xl" size="sm">
+        <Box mb="xl" ta="center">
+          <Title mb="xs" order={2}>
+            {invitationData.workspace_name}
+          </Title>
+          <Text c="dimmed">
+            Para completar tu registro, primero debes activar tu plan
+          </Text>
+        </Box>
+
+        <Paper p="xl" radius="lg" withBorder>
+          {checkingPayment ? (
+            <Stack align="center" gap="md" py="xl">
+              <Loader size="lg" />
+              <Text c="dimmed">Verificando estado del pago...</Text>
+            </Stack>
+          ) : (
+            <>
+              <Stack align="center" gap="lg">
+                <ThemeIcon
+                  color="blue"
+                  radius="xl"
+                  size={64}
+                  variant="light"
+                >
+                  <IconCreditCard size={32} />
+                </ThemeIcon>
+
+                <div style={{ textAlign: "center" }}>
+                  <Title order={3} mb="xs">{product.name}</Title>
+                  {product.description && (
+                    <Text c="dimmed" size="sm" mb="md">{product.description}</Text>
+                  )}
+                </div>
+
+                <Paper p="lg" radius="md" withBorder w="100%" style={{ background: "rgba(45, 106, 79, 0.03)" }}>
+                  <Group justify="center" gap="xs">
+                    <Title order={1} style={{ fontSize: "2.5rem" }}>
+                      {product.price.toFixed(2)}€
+                    </Title>
+                    {intervalLabel && (
+                      <Text c="dimmed" size="lg">{intervalLabel}</Text>
+                    )}
+                  </Group>
+                  <Text c="dimmed" size="sm" ta="center" mt="xs">
+                    {product.product_type === "subscription" ? "Suscripción recurrente" : "Pago único"}
+                  </Text>
+                </Paper>
+
+                {paymentError && (
+                  <Alert color="red" icon={<IconAlertCircle size={16} />} w="100%">
+                    {paymentError}
+                  </Alert>
+                )}
+
+                <Button
+                  size="lg"
+                  fullWidth
+                  loading={paymentLoading}
+                  onClick={handleStartPayment}
+                  leftSection={<IconCreditCard size={20} />}
+                >
+                  Pagar con tarjeta
+                </Button>
+
+                <Group gap="xs" justify="center">
+                  <IconShieldCheck size={16} color="gray" />
+                  <Text c="dimmed" size="xs">
+                    Pago seguro procesado por Redsys
+                  </Text>
+                </Group>
+
+                <Group gap="xs" justify="center">
+                  <Badge variant="light" size="sm">Visa</Badge>
+                  <Badge variant="light" size="sm">Mastercard</Badge>
+                  <Badge variant="light" size="sm">Google Pay</Badge>
+                </Group>
+              </Stack>
+            </>
+          )}
         </Paper>
       </Container>
     );

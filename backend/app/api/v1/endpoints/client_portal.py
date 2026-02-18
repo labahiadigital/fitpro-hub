@@ -9,7 +9,7 @@ from datetime import datetime, date, timedelta
 import uuid as uuid_module
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, func
+from sqlalchemy import select, and_, desc, func, or_
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 from supabase import acreate_client
@@ -18,8 +18,8 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.models.client import Client
 from app.models.workout import WorkoutProgram, WorkoutLog
+from app.models.exercise import Exercise, ExerciseAlternative, ClientMeasurement
 from app.models.nutrition import MealPlan
-from app.models.exercise import ClientMeasurement
 from app.models.booking import Booking
 from app.middleware.auth import get_current_user, CurrentUser
 from app.models.user import RoleType
@@ -106,6 +106,35 @@ class WorkoutLogCreate(BaseModel):
     log: dict  # Exercise data, sets, reps, weights, etc.
     completed_at: Optional[str] = None
     duration_minutes: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class ExerciseSetLog(BaseModel):
+    """Per-set log data for an exercise."""
+    set_number: int
+    weight_kg: Optional[float] = None
+    reps_completed: Optional[int] = None
+    duration_seconds: Optional[int] = None
+    completed: bool = True
+    notes: Optional[str] = None
+
+
+class ExerciseLog(BaseModel):
+    """Exercise log with per-set data."""
+    exercise_id: str
+    exercise_name: str
+    sets: List[ExerciseSetLog] = []
+    completed: bool = True
+    notes: Optional[str] = None
+
+
+class WorkoutLogCreateDetailed(BaseModel):
+    """Create detailed workout log with per-set weight/reps."""
+    program_id: str
+    day_index: int
+    exercises: List[ExerciseLog] = []
+    duration_minutes: Optional[int] = None
+    perceived_effort: Optional[int] = None  # 1-10
     notes: Optional[str] = None
 
 
@@ -353,6 +382,97 @@ async def update_client_profile(
 
 # ============ WORKOUTS ============
 
+class ExerciseListClientResponse(BaseModel):
+    """Exercise item for client exercise library."""
+    id: UUID
+    name: str
+    muscle_groups: List[str] = []
+    equipment: List[str] = []
+    category: Optional[str] = None
+    difficulty: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/exercises", response_model=List[ExerciseListClientResponse])
+async def get_my_exercises(
+    search: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    limit: int = Query(100, le=200),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List exercises available for the client's workspace (for swap modal)."""
+    client = await get_client_for_user(current_user.id, db)
+
+    query = select(Exercise).where(
+        or_(
+            Exercise.workspace_id == client.workspace_id,
+            Exercise.is_global == True
+        )
+    )
+    if search:
+        query = query.where(Exercise.name.ilike(f"%{search}%"))
+    if category:
+        query = query.where(Exercise.category == category)
+
+    result = await db.execute(query.order_by(Exercise.name).limit(limit))
+    exercises = result.scalars().all()
+    return [ExerciseListClientResponse.model_validate(e) for e in exercises]
+
+
+@router.get("/exercises/{exercise_id}/alternatives")
+async def get_exercise_alternatives_for_client(
+    exercise_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get predefined alternatives for an exercise (for swap modal)."""
+    # Forward direction
+    result = await db.execute(
+        select(ExerciseAlternative, Exercise)
+        .join(Exercise, Exercise.id == ExerciseAlternative.alternative_exercise_id)
+        .where(ExerciseAlternative.exercise_id == exercise_id)
+        .order_by(ExerciseAlternative.priority)
+    )
+    rows = result.all()
+    # Reverse direction
+    result_rev = await db.execute(
+        select(ExerciseAlternative, Exercise)
+        .join(Exercise, Exercise.id == ExerciseAlternative.exercise_id)
+        .where(ExerciseAlternative.alternative_exercise_id == exercise_id)
+        .order_by(ExerciseAlternative.priority)
+    )
+    rows_rev = result_rev.all()
+
+    alternatives = []
+    seen = set()
+    for alt, ex in rows:
+        if str(ex.id) not in seen:
+            seen.add(str(ex.id))
+            alternatives.append({
+                "id": str(ex.id),
+                "name": ex.name,
+                "muscle_groups": ex.muscle_groups or [],
+                "equipment": ex.equipment or [],
+                "category": ex.category,
+                "notes": alt.notes,
+            })
+    for alt, ex in rows_rev:
+        if str(ex.id) not in seen:
+            seen.add(str(ex.id))
+            alternatives.append({
+                "id": str(ex.id),
+                "name": ex.name,
+                "muscle_groups": ex.muscle_groups or [],
+                "equipment": ex.equipment or [],
+                "category": ex.category,
+                "notes": alt.notes,
+            })
+    return alternatives
+
+
 @router.get("/workouts", response_model=List[WorkoutProgramClientResponse])
 async def get_my_workouts(
     current_user: CurrentUser = Depends(get_current_user),
@@ -370,6 +490,85 @@ async def get_my_workouts(
         .order_by(desc(WorkoutProgram.created_at))
     )
     return result.scalars().all()
+
+
+class UpdateProgramExerciseRequest(BaseModel):
+    """Request body for swapping an exercise in a program."""
+    day_index: int
+    block_index: int
+    exercise_index: int
+    new_exercise_id: UUID
+    reason: Optional[str] = None
+
+
+@router.put("/workouts/{program_id}/exercises")
+async def update_program_exercise(
+    program_id: UUID,
+    data: UpdateProgramExerciseRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Allow client to swap an exercise in their assigned program."""
+    client = await get_client_for_user(current_user.id, db)
+
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == program_id,
+            WorkoutProgram.client_id == client.id
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Programa no encontrado"
+        )
+
+    template = program.template or {}
+    try:
+        if "days" in template:
+            days = template["days"]
+            if data.day_index < 0 or data.day_index >= len(days):
+                raise HTTPException(status_code=400, detail="Invalid day_index")
+            day = days[data.day_index]
+            blocks = day.get("blocks", [])
+            if data.block_index < 0 or data.block_index >= len(blocks):
+                raise HTTPException(status_code=400, detail="Invalid block_index")
+            block = blocks[data.block_index]
+            exercises = block.get("exercises", [])
+            if data.exercise_index < 0 or data.exercise_index >= len(exercises):
+                raise HTTPException(status_code=400, detail="Invalid exercise_index")
+            exercise = exercises[data.exercise_index]
+            exercise["exercise_id"] = str(data.new_exercise_id)
+            exercise["change_reason"] = data.reason or ""
+            exercise["changed_by"] = "client"
+        elif "weeks" in template:
+            weeks = template["weeks"]
+            for week in weeks:
+                if "days" in week:
+                    day_list = week["days"]
+                    if data.day_index < len(day_list):
+                        day = day_list[data.day_index]
+                        if "exercises" in day:
+                            exercises = day["exercises"]
+                            if data.exercise_index < len(exercises):
+                                ex = exercises[data.exercise_index]
+                                ex["exercise_id"] = str(data.new_exercise_id)
+                                ex["change_reason"] = data.reason or ""
+                                ex["changed_by"] = "client"
+                                break
+        else:
+            raise HTTPException(status_code=400, detail="Invalid program template structure")
+    except HTTPException:
+        raise
+    except (IndexError, KeyError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid exercise position: {str(e)}")
+
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(program, "template")
+    await db.commit()
+
+    return {"message": "Ejercicio actualizado correctamente"}
 
 
 @router.get("/workouts/{program_id}", response_model=WorkoutProgramClientResponse)
@@ -453,6 +652,102 @@ async def log_workout(
     await db.commit()
     await db.refresh(log)
     return log
+
+
+@router.post("/workouts/log-detailed")
+async def create_detailed_workout_log(
+    data: WorkoutLogCreateDetailed,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a detailed workout log with per-set weight/reps data."""
+    client = await get_client_for_user(current_user.id, db)
+
+    # Verify the program belongs to this client
+    result = await db.execute(
+        select(WorkoutProgram)
+        .where(
+            WorkoutProgram.id == UUID(data.program_id),
+            WorkoutProgram.client_id == client.id
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este programa"
+        )
+
+    # Check if workout was already logged today for this program
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    existing_log_result = await db.execute(
+        select(WorkoutLog)
+        .where(
+            WorkoutLog.client_id == client.id,
+            WorkoutLog.program_id == UUID(data.program_id),
+            WorkoutLog.created_at >= today_start,
+            WorkoutLog.created_at <= today_end
+        )
+    )
+    if existing_log_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya has registrado este entrenamiento hoy"
+        )
+
+    log = WorkoutLog(
+        program_id=UUID(data.program_id),
+        client_id=client.id,
+        log={
+            "date": datetime.utcnow().isoformat(),
+            "day_index": data.day_index,
+            "exercises": [ex.model_dump() for ex in data.exercises],
+            "duration_minutes": data.duration_minutes,
+            "perceived_effort": data.perceived_effort,
+            "notes": data.notes,
+        }
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"message": "Workout logged successfully", "id": str(log.id)}
+
+
+@router.get("/workouts/exercise-history/{exercise_id}")
+async def get_exercise_history(
+    exercise_id: str,
+    limit: int = Query(5, le=20),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the last N workout logs containing a specific exercise."""
+    client = await get_client_for_user(current_user.id, db)
+
+    result = await db.execute(
+        select(WorkoutLog)
+        .where(WorkoutLog.client_id == client.id)
+        .order_by(desc(WorkoutLog.created_at))
+        .limit(50)
+    )
+    logs = result.scalars().all()
+
+    matching_logs = []
+    for log in logs:
+        log_data = log.log or {}
+        exercises = log_data.get("exercises", [])
+        for ex in exercises:
+            if ex.get("exercise_id") == exercise_id:
+                matching_logs.append({
+                    "date": log_data.get("date"),
+                    "exercise": ex,
+                    "log_id": str(log.id),
+                })
+                break
+        if len(matching_logs) >= limit:
+            break
+
+    return matching_logs
 
 
 @router.get("/workouts/logs/today")
@@ -1705,3 +2000,186 @@ async def get_today_emotion(
     )
     
     return result.scalar_one_or_none()
+
+
+# ============ SUBSCRIPTION & PAYMENTS ============
+
+class SubscriptionPaymentItem(BaseModel):
+    id: UUID
+    amount: float
+    currency: str
+    status: str
+    description: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ClientSubscriptionResponse(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    status: str
+    amount: float
+    currency: str
+    interval: str
+    current_period_start: Optional[datetime] = None
+    current_period_end: Optional[datetime] = None
+    cancelled_at: Optional[datetime] = None
+    created_at: datetime
+    card_last4: Optional[str] = None
+    card_brand: Optional[str] = None
+    payment_method: Optional[str] = None
+    payments: List[SubscriptionPaymentItem] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ClientPaymentResponse(BaseModel):
+    id: UUID
+    amount: float
+    currency: str
+    status: str
+    payment_type: str
+    description: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/subscription")
+async def get_my_subscription(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the client's active subscription with recent payments."""
+    from app.models.payment import Subscription, Payment
+
+    client = await get_client_for_user(current_user.id, db)
+
+    result = await db.execute(
+        select(Subscription)
+        .where(Subscription.client_id == client.id)
+        .order_by(desc(Subscription.created_at))
+        .limit(1)
+    )
+    subscription = result.scalar_one_or_none()
+
+    if not subscription:
+        return None
+
+    # Load recent payments for this subscription
+    pay_result = await db.execute(
+        select(Payment)
+        .where(Payment.subscription_id == subscription.id)
+        .order_by(desc(Payment.created_at))
+        .limit(20)
+    )
+    payments = pay_result.scalars().all()
+
+    extra = subscription.extra_data or {}
+
+    return ClientSubscriptionResponse(
+        id=subscription.id,
+        name=subscription.name,
+        description=subscription.description,
+        status=subscription.status.value if hasattr(subscription.status, 'value') else str(subscription.status),
+        amount=float(subscription.amount),
+        currency=subscription.currency,
+        interval=subscription.interval,
+        current_period_start=subscription.current_period_start,
+        current_period_end=subscription.current_period_end,
+        cancelled_at=subscription.cancelled_at,
+        created_at=subscription.created_at,
+        card_last4=extra.get("redsys_card_last4"),
+        card_brand=extra.get("redsys_card_brand_name", extra.get("redsys_card_brand")),
+        payment_method=extra.get("gateway", "redsys"),
+        payments=[
+            SubscriptionPaymentItem(
+                id=p.id,
+                amount=float(p.amount),
+                currency=p.currency,
+                status=p.status.value if hasattr(p.status, 'value') else str(p.status),
+                description=p.description,
+                paid_at=p.paid_at,
+                created_at=p.created_at,
+            )
+            for p in payments
+        ],
+    )
+
+
+@router.get("/payments", response_model=List[ClientPaymentResponse])
+async def get_my_payments(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+):
+    """Get the client's payment history."""
+    from app.models.payment import Payment
+
+    client = await get_client_for_user(current_user.id, db)
+
+    result = await db.execute(
+        select(Payment)
+        .where(Payment.client_id == client.id)
+        .order_by(desc(Payment.created_at))
+        .limit(limit)
+    )
+    payments = result.scalars().all()
+
+    return [
+        ClientPaymentResponse(
+            id=p.id,
+            amount=float(p.amount),
+            currency=p.currency,
+            status=p.status.value if hasattr(p.status, 'value') else str(p.status),
+            payment_type=p.payment_type or "one_time",
+            description=p.description,
+            paid_at=p.paid_at,
+            created_at=p.created_at,
+        )
+        for p in payments
+    ]
+
+
+@router.post("/subscription/cancel")
+async def cancel_my_subscription(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancel the client's active subscription. Access continues until period end."""
+    from app.models.payment import Subscription, SubscriptionStatus
+
+    client = await get_client_for_user(current_user.id, db)
+
+    result = await db.execute(
+        select(Subscription).where(
+            and_(
+                Subscription.client_id == client.id,
+                Subscription.status == SubscriptionStatus.active,
+            )
+        )
+    )
+    subscription = result.scalar_one_or_none()
+
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No tienes una suscripción activa",
+        )
+
+    subscription.status = SubscriptionStatus.cancelled
+    subscription.cancelled_at = datetime.now()
+
+    await db.commit()
+
+    return {
+        "message": "Suscripción cancelada. Tu acceso continuará hasta el fin del periodo actual.",
+        "current_period_end": subscription.current_period_end.isoformat() if subscription.current_period_end else None,
+    }

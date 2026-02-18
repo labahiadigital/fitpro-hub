@@ -10,6 +10,7 @@ import {
   Progress,
   RingProgress,
   ScrollArea,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
@@ -37,6 +38,11 @@ import {
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { GlossaryTooltip } from "../common/GlossaryTooltip";
+import {
+  type FormulaType,
+  calculateBMR,
+  calculateTDEE,
+} from "../../utils/calories";
 
 // Types
 interface ClientData {
@@ -142,15 +148,6 @@ interface MealPlanDetailViewProps {
   onEdit?: () => void;
 }
 
-// Activity level multipliers for TDEE calculation
-const ACTIVITY_MULTIPLIERS = {
-  sedentary: 1.2,
-  light: 1.375,
-  moderate: 1.55,
-  active: 1.725,
-  very_active: 1.9,
-};
-
 const ACTIVITY_LABELS = {
   sedentary: "Sedentario",
   light: "Ligero",
@@ -223,6 +220,7 @@ export function MealPlanDetailView({
 }: MealPlanDetailViewProps) {
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [editingClient, setEditingClient] = useState(false);
+  const [selectedFormula, setSelectedFormula] = useState<FormulaType>("mifflin");
 
   // Form for client data (for calculations)
   const clientForm = useForm({
@@ -238,19 +236,18 @@ export function MealPlanDetailView({
     },
   });
 
-  // Calculate BMR using Mifflin-St Jeor equation
+  // Calculate BMR using selected formula (Mifflin-St Jeor or Harris-Benedict)
   const bmr = useMemo(() => {
     const { gender, age, weight_kg, height_cm } = clientForm.values;
-    if (gender === "male") {
-      return 10 * weight_kg + 6.25 * height_cm - 5 * age + 5;
-    }
-    return 10 * weight_kg + 6.25 * height_cm - 5 * age - 161;
-  }, [clientForm.values]);
+    return calculateBMR(
+      { weight_kg, height_cm, age, gender: gender as "male" | "female" },
+      selectedFormula
+    );
+  }, [clientForm.values, selectedFormula]);
 
   // Calculate TDEE
   const tdee = useMemo(() => {
-    const multiplier = ACTIVITY_MULTIPLIERS[clientForm.values.activity_level as keyof typeof ACTIVITY_MULTIPLIERS];
-    return Math.round(bmr * multiplier);
+    return Math.round(calculateTDEE(bmr, clientForm.values.activity_level));
   }, [bmr, clientForm.values.activity_level]);
 
   // Calculate energy targets based on goal
@@ -845,6 +842,17 @@ export function MealPlanDetailView({
               </Group>
 
               <Stack gap="md">
+                <SegmentedControl
+                  value={selectedFormula}
+                  onChange={(v) => setSelectedFormula(v as FormulaType)}
+                  data={[
+                    { label: "Mifflin-St Jeor", value: "mifflin" },
+                    { label: "Harris-Benedict", value: "harris" },
+                  ]}
+                  size="sm"
+                  radius="md"
+                  mb="xs"
+                />
                 <SimpleGrid cols={2} spacing="md">
                   <Select
                     label="Sexo"
