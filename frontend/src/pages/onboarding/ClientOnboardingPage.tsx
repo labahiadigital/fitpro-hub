@@ -459,6 +459,33 @@ export function ClientOnboardingPage() {
     );
   }
 
+  if (productId && !productInfo) {
+    return (
+      <Container py="xl" size="sm">
+        <Paper p="xl" radius="lg" ta="center" withBorder>
+          <ThemeIcon
+            color="orange"
+            mb="lg"
+            mx="auto"
+            radius="xl"
+            size={80}
+            variant="light"
+          >
+            <IconAlertCircle size={40} />
+          </ThemeIcon>
+          <Title mb="sm" order={2}>
+            Producto no disponible
+          </Title>
+          <Text c="dimmed" mb="xl">
+            El plan al que intentas acceder no está disponible en este momento.
+            Contacta con tu entrenador para más información.
+          </Text>
+          <Button size="lg" onClick={() => navigate("/")}>Ir al inicio</Button>
+        </Paper>
+      </Container>
+    );
+  }
+
   if (productId && productInfo) {
     return (
       <Container py="xl" size="sm">
