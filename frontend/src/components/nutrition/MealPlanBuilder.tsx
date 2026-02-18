@@ -28,7 +28,7 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
+import { useDebouncedCallback, useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconApple,
@@ -276,7 +276,8 @@ export function MealPlanBuilder({
         totalPages: Math.ceil((data?.total || 0) / FOODS_PER_PAGE),
       };
     },
-    enabled: foodModalOpened, // Solo buscar cuando el modal está abierto
+    enabled: foodModalOpened,
+    placeholderData: (previousData) => previousData,
   });
 
   // Reset page when search changes
@@ -334,7 +335,7 @@ export function MealPlanBuilder({
     return { calories, protein, carbs, fat };
   }, []);
 
-  const addMeal = (mealNumber: number) => {
+  const addMeal = useCallback((mealNumber: number) => {
     if (!currentDay) return;
 
     const newMeal: Meal = {
@@ -349,9 +350,9 @@ export function MealPlanBuilder({
         d.id === activeDay ? { ...d, meals: [...d.meals, newMeal] } : d
       )
     );
-  };
+  }, [currentDay, activeDay, days, onChange]);
 
-  const updateMealName = (mealId: string, name: string) => {
+  const updateMealName = useCallback((mealId: string, name: string) => {
     onChange(
       days.map((d) =>
         d.id === activeDay
@@ -362,9 +363,9 @@ export function MealPlanBuilder({
           : d
       )
     );
-  };
+  }, [activeDay, days, onChange]);
 
-  const updateMealTime = (mealId: string, time: string) => {
+  const updateMealTime = useCallback((mealId: string, time: string) => {
     onChange(
       days.map((d) =>
         d.id === activeDay
@@ -375,9 +376,9 @@ export function MealPlanBuilder({
           : d
       )
     );
-  };
+  }, [activeDay, days, onChange]);
 
-  const removeMeal = (mealId: string) => {
+  const removeMeal = useCallback((mealId: string) => {
     onChange(
       days.map((d) =>
         d.id === activeDay
@@ -385,9 +386,9 @@ export function MealPlanBuilder({
           : d
       )
     );
-  };
+  }, [activeDay, days, onChange]);
 
-  const duplicateMeal = (mealId: string) => {
+  const duplicateMeal = useCallback((mealId: string) => {
     if (!currentDay) return;
     const meal = currentDay.meals.find((m) => m.id === mealId);
     if (!meal) return;
@@ -409,7 +410,7 @@ export function MealPlanBuilder({
         return { ...d, meals: newMeals };
       })
     );
-  };
+  }, [currentDay, activeDay, days, onChange]);
 
   const openAddFood = (mealId: string) => {
     setSelectedMealId(mealId);
@@ -474,7 +475,7 @@ export function MealPlanBuilder({
     setSupplementSearch("");
   };
 
-  const updateItemQuantityGrams = (
+  const updateItemQuantityGramsImmediate = useCallback((
     mealId: string,
     itemId: string,
     quantity_grams: number
@@ -498,9 +499,16 @@ export function MealPlanBuilder({
           : d
       )
     );
-  };
+  }, [days, activeDay, onChange]);
 
-  const removeItemFromMeal = (mealId: string, itemId: string) => {
+  const updateItemQuantityGrams = useDebouncedCallback(
+    (mealId: string, itemId: string, quantity_grams: number) => {
+      updateItemQuantityGramsImmediate(mealId, itemId, quantity_grams);
+    },
+    150
+  );
+
+  const removeItemFromMeal = useCallback((mealId: string, itemId: string) => {
     onChange(
       days.map((d) =>
         d.id === activeDay
@@ -515,9 +523,9 @@ export function MealPlanBuilder({
           : d
       )
     );
-  };
+  }, [activeDay, days, onChange]);
 
-  const updateItemDetails = (
+  const updateItemDetails = useCallback((
     mealId: string,
     itemId: string,
     cooking_method?: string,
@@ -544,7 +552,7 @@ export function MealPlanBuilder({
           : d
       )
     );
-  };
+  }, [activeDay, days, onChange]);
 
   const copyToSelectedDays = () => {
     if (!currentDay || copyToDayIds.length === 0) return;
@@ -592,9 +600,8 @@ export function MealPlanBuilder({
     }
   };
 
-  const generateShoppingList = () => {
+  const shoppingList = useMemo(() => {
     const items: { [key: string]: { food: Food; totalQuantity: number } } = {};
-
     days.forEach((day) => {
       day.meals.forEach((meal) => {
         meal.items.forEach((item) => {
@@ -612,13 +619,13 @@ export function MealPlanBuilder({
         });
       });
     });
-
     return Object.values(items);
-  };
+  }, [days]);
 
-  // Helper para verificar si un alimento es favorito
-  const isFoodFavorite = (foodId: string) => foodFavorites.includes(foodId);
-  const isSupplementFavorite = (supplementId: string) => supplementFavorites.includes(supplementId);
+  const foodFavoritesSet = useMemo(() => new Set(foodFavorites), [foodFavorites]);
+  const supplementFavoritesSet = useMemo(() => new Set(supplementFavorites), [supplementFavorites]);
+  const isFoodFavorite = useCallback((foodId: string) => foodFavoritesSet.has(foodId), [foodFavoritesSet]);
+  const isSupplementFavorite = useCallback((supplementId: string) => supplementFavoritesSet.has(supplementId), [supplementFavoritesSet]);
 
   const filteredFoods = useMemo(() => {
     if (foodFilter === "favorites") {
@@ -668,11 +675,11 @@ export function MealPlanBuilder({
     [dayMacros]
   );
 
-  const applyPercentagesToTargets = (pct: { protein: number; carbs: number; fat: number }) => {
+  const applyPercentagesToTargets = useCallback((pct: { protein: number; carbs: number; fat: number }) => {
     internalSliderChange.current = true;
     const grams = gramsFromPercentages(targetCalories, pct.protein, pct.carbs, pct.fat);
     onTargetMacrosChange?.({ protein: grams.protein_g, carbs: grams.carbs_g, fat: grams.fat_g });
-  };
+  }, [targetCalories, onTargetMacrosChange]);
 
   const clampAndNormalize = (
     changed: "protein" | "carbs" | "fat",
@@ -928,10 +935,10 @@ export function MealPlanBuilder({
           ))}
         </Tabs.List>
 
-        {days.map((day) => (
-          <Tabs.Panel key={day.id} value={day.id}>
+        {currentDay && (
+          <Tabs.Panel key={currentDay.id} value={currentDay.id}>
             <Stack gap="md">
-              {day.meals.map((meal) => {
+              {currentDay.meals.map((meal) => {
                 const mealMacros = calculateMealMacros(meal);
 
                 return (
@@ -1235,7 +1242,7 @@ export function MealPlanBuilder({
               </SimpleGrid>
             </Stack>
           </Tabs.Panel>
-        ))}
+        )}
       </Tabs>
 
       {/* Food/Supplement Selection Modal */}
@@ -1574,7 +1581,7 @@ export function MealPlanBuilder({
       >
         <ScrollArea h={400}>
           <Stack gap="xs">
-            {generateShoppingList().map(({ food, totalQuantity }) => (
+            {shoppingList.map(({ food, totalQuantity }) => (
               <Card key={food.id} padding="sm" radius="md" withBorder>
                 <Group justify="space-between">
                   <Text size="sm">{food.name}</Text>

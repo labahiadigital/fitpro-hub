@@ -228,7 +228,7 @@ export function NutritionPage() {
   const [supplementDetailModalOpened, { open: openSupplementDetailModal, close: closeSupplementDetailModal }] = useDisclosure(false);
 
   // Cargar datos desde Supabase
-  const { data: supabaseFoods } = useSupabaseFoods(); // Para el MealPlanBuilder (todos los alimentos)
+  const { data: supabaseFoods } = useSupabaseFoods(builderOpened);
   const {
     data: paginatedFoods,
     isLoading: isLoadingPaginatedFoods,
@@ -248,6 +248,14 @@ export function NutritionPage() {
   const toggleFoodFavorite = useToggleFoodFavorite();
   const { data: supplementFavorites = [] } = useSupplementFavorites();
   const toggleSupplementFavorite = useToggleSupplementFavorite();
+
+  const handleToggleFoodFavoriteForBuilder = useCallback((foodId: string, isFavorite: boolean) => {
+    toggleFoodFavorite.mutate({ foodId, isFavorite });
+  }, [toggleFoodFavorite]);
+
+  const handleToggleSupplementFavoriteForBuilder = useCallback((supplementId: string, isFavorite: boolean) => {
+    toggleSupplementFavorite.mutate({ supplementId, isFavorite });
+  }, [toggleSupplementFavorite]);
 
   // Resetear página cuando cambia la búsqueda
   const handleSearchChange = useCallback((value: string) => {
@@ -473,6 +481,12 @@ export function NutritionPage() {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
     },
   });
+
+  const handleTargetMacrosChange = useCallback((t: { protein: number; carbs: number; fat: number }) => {
+    planForm.setFieldValue("target_protein", t.protein);
+    planForm.setFieldValue("target_carbs", t.carbs);
+    planForm.setFieldValue("target_fat", t.fat);
+  }, [planForm]);
 
   const loadClientData = useCallback(async (clientIdValue: string) => {
     try {
@@ -2377,19 +2391,11 @@ export function NutritionPage() {
                   targetCarbs={planForm.values.target_carbs}
                   targetFat={planForm.values.target_fat}
                   targetProtein={planForm.values.target_protein}
-                  onTargetMacrosChange={(t) => {
-                    planForm.setFieldValue("target_protein", t.protein);
-                    planForm.setFieldValue("target_carbs", t.carbs);
-                    planForm.setFieldValue("target_fat", t.fat);
-                  }}
+                  onTargetMacrosChange={handleTargetMacrosChange}
                   foodFavorites={foodFavorites}
                   supplementFavorites={supplementFavorites}
-                  onToggleFoodFavorite={(foodId, isFavorite) =>
-                    toggleFoodFavorite.mutate({ foodId, isFavorite })
-                  }
-                  onToggleSupplementFavorite={(supplementId, isFavorite) =>
-                    toggleSupplementFavorite.mutate({ supplementId, isFavorite })
-                  }
+                  onToggleFoodFavorite={handleToggleFoodFavoriteForBuilder}
+                  onToggleSupplementFavorite={handleToggleSupplementFavoriteForBuilder}
                 />
               </Box>
             </ScrollArea>

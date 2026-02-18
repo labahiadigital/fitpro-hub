@@ -101,15 +101,14 @@ export function useSupabaseExercises() {
 
 // ============ FOODS ============
 
-// Hook para obtener alimentos (sin paginación - para compatibilidad)
-export function useSupabaseFoods() {
+export function useSupabaseFoods(enabled = true) {
   return useQuery({
     queryKey: ["foods"],
     queryFn: async () => {
       const response = await nutritionApi.foods({ limit: 1000 });
-      // La API devuelve { items: [], total: X, ... }
       return response.data?.items || [];
     },
+    enabled,
   });
 }
 

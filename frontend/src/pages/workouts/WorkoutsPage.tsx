@@ -351,6 +351,15 @@ export function WorkoutsPage() {
     },
   });
 
+  const handleToggleExerciseFavorite = useCallback((exerciseId: string, isFavorite: boolean) => {
+    toggleExerciseFavorite.mutate({ exerciseId, isFavorite });
+  }, [toggleExerciseFavorite]);
+
+  const handleCreateExerciseFromBuilder = useCallback(async (data: { name: string; category?: string; muscle_groups: string[]; equipment: string[]; difficulty: string; description?: string }) => {
+    const res = await createExercise.mutateAsync(data);
+    return res.data;
+  }, [createExercise]);
+
   const loadClientData = useCallback(async (clientIdValue: string) => {
     try {
       const res = await clientsApi.get(clientIdValue);
@@ -1319,13 +1328,8 @@ export function WorkoutsPage() {
                   onChangeDays={setWorkoutDays}
                   availableExercises={exercises || []}
                   exerciseFavorites={exerciseFavorites}
-                  onToggleExerciseFavorite={(exerciseId, isFavorite) =>
-                    toggleExerciseFavorite.mutate({ exerciseId, isFavorite })
-                  }
-                  onCreateExercise={async (data: { name: string; category?: string; muscle_groups: string[]; equipment: string[]; difficulty: string; description?: string }) => {
-                    const res = await createExercise.mutateAsync(data);
-                    return res.data;
-                  }}
+                  onToggleExerciseFavorite={handleToggleExerciseFavorite}
+                  onCreateExercise={handleCreateExerciseFromBuilder}
                 />
               </Box>
             </ScrollArea>

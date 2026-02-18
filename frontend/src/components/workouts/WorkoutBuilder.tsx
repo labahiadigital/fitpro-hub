@@ -31,7 +31,7 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDebouncedCallback, useDisclosure } from "@mantine/hooks";
 import {
   IconBarbell,
   IconCheck,
@@ -356,9 +356,9 @@ export function WorkoutBuilder({
     onChange(newBlocks);
   };
 
-  const updateBlock = (blockId: string, updates: Partial<WorkoutBlock>) => {
+  const updateBlock = useCallback((blockId: string, updates: Partial<WorkoutBlock>) => {
     onChange(blocks.map((b) => (b.id === blockId ? { ...b, ...updates } : b)));
-  };
+  }, [blocks, onChange]);
 
   const openAddExercise = (blockId: string) => {
     setSelectedBlockId(blockId);
@@ -407,7 +407,7 @@ export function WorkoutBuilder({
     }
   };
 
-  const updateExercise = (
+  const updateExercise = useCallback((
     blockId: string,
     exerciseId: string,
     updates: Partial<WorkoutExercise>
@@ -420,7 +420,14 @@ export function WorkoutBuilder({
         e.id === exerciseId ? { ...e, ...updates } : e
       ),
     });
-  };
+  }, [blocks, updateBlock]);
+
+  const updateExerciseDebounced = useDebouncedCallback(
+    (blockId: string, exerciseId: string, updates: Partial<WorkoutExercise>) => {
+      updateExercise(blockId, exerciseId, updates);
+    },
+    150
+  );
 
   const removeExercise = (blockId: string, exerciseId: string) => {
     const block = blocks.find((b) => b.id === blockId);
@@ -737,7 +744,7 @@ export function WorkoutBuilder({
                                               size="xs"
                                               value={exercise.target_weight ?? ""}
                                               onChange={(v) =>
-                                                updateExercise(
+                                                updateExerciseDebounced(
                                                   block.id,
                                                   exercise.id,
                                                   { target_weight: v ? Number(v) : undefined }
@@ -753,7 +760,7 @@ export function WorkoutBuilder({
                                               size="xs"
                                               value={exercise.target_reps ?? ""}
                                               onChange={(v) =>
-                                                updateExercise(
+                                                updateExerciseDebounced(
                                                   block.id,
                                                   exercise.id,
                                                   { target_reps: v ? Number(v) : undefined }
@@ -769,7 +776,7 @@ export function WorkoutBuilder({
                                               max={20}
                                               min={1}
                                               onChange={(v) =>
-                                                updateExercise(
+                                                updateExerciseDebounced(
                                                   block.id,
                                                   exercise.id,
                                                   { sets: Number(v) }
@@ -819,7 +826,7 @@ export function WorkoutBuilder({
                                               max={300}
                                               min={0}
                                               onChange={(v) =>
-                                                updateExercise(
+                                                updateExerciseDebounced(
                                                   block.id,
                                                   exercise.id,
                                                   { rest_seconds: Number(v) }
@@ -1201,14 +1208,13 @@ export function WorkoutBuilderWithDays({
 
   const currentDay = days.find((d) => d.id === activeDay);
 
-  // Handler para actualizar bloques del día actual
-  const handleBlocksChange = (newBlocks: WorkoutBlock[]) => {
+  const handleBlocksChange = useCallback((newBlocks: WorkoutBlock[]) => {
     onChangeDays(
       days.map((d) =>
         d.id === activeDay ? { ...d, blocks: newBlocks } : d
       )
     );
-  };
+  }, [days, activeDay, onChangeDays]);
 
   // Toggle día de descanso
   const toggleRestDay = (dayId: string) => {
@@ -1362,23 +1368,22 @@ export function WorkoutBuilderWithDays({
           ))}
         </Tabs.List>
 
-        {days.map((day) => (
-          <Tabs.Panel key={day.id} value={day.id}>
-            {/* Opciones del día */}
+        {currentDay && (
+          <Tabs.Panel key={currentDay.id} value={currentDay.id}>
             <Group mb="md" justify="space-between">
               <Group gap="sm">
                 <Button
-                  variant={day.isRestDay ? "filled" : "light"}
-                  color={day.isRestDay ? "gray" : "blue"}
+                  variant={currentDay.isRestDay ? "filled" : "light"}
+                  color={currentDay.isRestDay ? "gray" : "blue"}
                   size="xs"
-                  onClick={() => toggleRestDay(day.id)}
+                  onClick={() => toggleRestDay(currentDay.id)}
                 >
-                  {day.isRestDay ? "Marcar como día de entrenamiento" : "Marcar como día de descanso"}
+                  {currentDay.isRestDay ? "Marcar como día de entrenamiento" : "Marcar como día de descanso"}
                 </Button>
               </Group>
             </Group>
 
-            {day.isRestDay ? (
+            {currentDay.isRestDay ? (
               <Paper p="xl" ta="center" radius="lg" withBorder>
                 <Text c="dimmed" size="lg">🛌 Día de descanso</Text>
                 <Text c="dimmed" size="sm" mt="xs">
@@ -1387,7 +1392,7 @@ export function WorkoutBuilderWithDays({
               </Paper>
             ) : (
               <WorkoutBuilder
-                blocks={day.blocks}
+                blocks={currentDay.blocks}
                 onChange={handleBlocksChange}
                 availableExercises={availableExercises}
                 exerciseFavorites={exerciseFavorites}
@@ -1397,7 +1402,7 @@ export function WorkoutBuilderWithDays({
               />
             )}
           </Tabs.Panel>
-        ))}
+        )}
       </Tabs>
     </Box>
   );

@@ -76,6 +76,7 @@ export function useExercises(filters: ExerciseFilters = {}) {
       return workoutsApi.exercises(filters);
     },
     select: (response) => response.data as Exercise[],
+    placeholderData: (previousData) => previousData,
   });
 }
 
