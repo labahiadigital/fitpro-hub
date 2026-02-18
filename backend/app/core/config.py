@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     REDSYS_TERMINAL: str = "1"
     REDSYS_ENVIRONMENT: str = "test"  # test o production
     
+    # SeQura (pago fraccionado)
+    SEQURA_USER: str = ""
+    SEQURA_PASSWORD: str = ""
+    SEQURA_MERCHANT_ID: str = ""
+    SEQURA_ENDPOINT: str = "https://sandbox.sequrapi.com"
+    SEQURA_ASSET_KEY: str = ""
+    SEQURA_ENVIRONMENT: str = "sandbox"  # sandbox o production
+    
     # Kapso (WhatsApp Business API)
     KAPSO_API_KEY: str = ""
     KAPSO_API_BASE_URL: str = "https://api.kapso.ai"

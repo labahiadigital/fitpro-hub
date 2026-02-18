@@ -29,6 +29,7 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
+  IconCalendarDollar,
   IconCheck,
   IconCreditCard,
   IconFileText,
@@ -39,9 +40,9 @@ import {
   IconTarget,
   IconUser,
 } from "@tabler/icons-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { api, redsysApi } from "../../services/api";
+import { api, redsysApi, sequraApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 
 interface ProductInfo {
@@ -160,43 +161,93 @@ export function InvitationOnboardingPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
 
-  // Check if returning from Redsys payment
+  // Payment method selection: "redsys" (card) or "sequra" (installments)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"redsys" | "sequra">("redsys");
+
+  // SeQura state
+  const [sequraAvailable, setSequraAvailable] = useState(false);
+  const [sequraMethods, setSequraMethods] = useState<any[]>([]);
+  const [sequraAgreements, setSequraAgreements] = useState<any[]>([]);
+  const [sequraFormHtml, setSequraFormHtml] = useState<string | null>(null);
+  const [showSequraForm, setShowSequraForm] = useState(false);
+  const [sequraAssetKey, setSequraAssetKey] = useState("");
+  const [sequraMerchant, setSequraMerchant] = useState("");
+  const [sequraScriptUri, setSequraScriptUri] = useState("");
+  const sequraFormRef = useRef<HTMLDivElement>(null);
+
+  // Check if returning from payment
   const paymentParam = searchParams.get("payment");
+  const gatewayParam = searchParams.get("gateway");
   const dsSignatureVersion = searchParams.get("Ds_SignatureVersion");
   const dsMerchantParameters = searchParams.get("Ds_MerchantParameters");
   const dsSignature = searchParams.get("Ds_Signature");
 
-  // Check payment status after returning from Redsys
+  // Check payment status after returning from payment gateway
   const checkPaymentStatus = useCallback(async () => {
     if (!token) return;
     setCheckingPayment(true);
     try {
-      // If we have Redsys params in the URL, confirm the payment via backend first
-      if (dsSignatureVersion && dsMerchantParameters && dsSignature) {
-        try {
-          await redsysApi.confirmReturn({
-            Ds_SignatureVersion: dsSignatureVersion,
-            Ds_MerchantParameters: dsMerchantParameters,
-            Ds_Signature: dsSignature,
-          });
-        } catch {
-          // If confirm-return fails, still try checking status
+      if (gatewayParam === "sequra") {
+        // SeQura return: check via SeQura status endpoint
+        const res = await sequraApi.getOnboardingPaymentStatus(token);
+        if (res.data.payment_completed) {
+          setPaymentCompleted(true);
+          setPaymentRequired(false);
+        } else if (res.data.status === "failed") {
+          setPaymentError("El pago con SeQura no se ha completado. Puedes intentarlo de nuevo.");
+        } else {
+          // Might be pending IPN, poll a few times
+          let attempts = 0;
+          const pollInterval = setInterval(async () => {
+            attempts++;
+            try {
+              const pollRes = await sequraApi.getOnboardingPaymentStatus(token);
+              if (pollRes.data.payment_completed) {
+                clearInterval(pollInterval);
+                setPaymentCompleted(true);
+                setPaymentRequired(false);
+                setCheckingPayment(false);
+              } else if (attempts >= 10) {
+                clearInterval(pollInterval);
+                setCheckingPayment(false);
+              }
+            } catch {
+              if (attempts >= 10) {
+                clearInterval(pollInterval);
+                setCheckingPayment(false);
+              }
+            }
+          }, 2000);
+          return;
         }
-      }
+      } else {
+        // Redsys return: confirm via backend if params present
+        if (dsSignatureVersion && dsMerchantParameters && dsSignature) {
+          try {
+            await redsysApi.confirmReturn({
+              Ds_SignatureVersion: dsSignatureVersion,
+              Ds_MerchantParameters: dsMerchantParameters,
+              Ds_Signature: dsSignature,
+            });
+          } catch {
+            // If confirm-return fails, still try checking status
+          }
+        }
 
-      const res = await redsysApi.getOnboardingPaymentStatus(token);
-      if (res.data.payment_completed) {
-        setPaymentCompleted(true);
-        setPaymentRequired(false);
-      } else if (res.data.status === "failed") {
-        setPaymentError("El pago no se ha completado. Puedes intentarlo de nuevo.");
+        const res = await redsysApi.getOnboardingPaymentStatus(token);
+        if (res.data.payment_completed) {
+          setPaymentCompleted(true);
+          setPaymentRequired(false);
+        } else if (res.data.status === "failed") {
+          setPaymentError("El pago no se ha completado. Puedes intentarlo de nuevo.");
+        }
       }
     } catch {
       // Silently fail -- user can retry
     } finally {
       setCheckingPayment(false);
     }
-  }, [token, dsSignatureVersion, dsMerchantParameters, dsSignature]);
+  }, [token, gatewayParam, dsSignatureVersion, dsMerchantParameters, dsSignature]);
 
   // Verificar invitación
   useEffect(() => {
@@ -239,7 +290,7 @@ export function InvitationOnboardingPage() {
     validateInvitation();
   }, [token]);
 
-  // If returning from Redsys, check payment status
+  // If returning from payment, check status
   useEffect(() => {
     if (paymentParam === "success" && !paymentCompleted) {
       checkPaymentStatus();
@@ -248,8 +299,31 @@ export function InvitationOnboardingPage() {
     }
   }, [paymentParam, paymentCompleted, checkPaymentStatus]);
 
-  // Handle payment initiation
-  const handleStartPayment = async () => {
+  // Fetch SeQura available methods when payment is required
+  useEffect(() => {
+    if (!paymentRequired || !token || paymentCompleted) return;
+
+    const fetchSequraMethods = async () => {
+      try {
+        const res = await sequraApi.getAvailableMethods(token);
+        if (res.data.available) {
+          setSequraAvailable(true);
+          setSequraMethods(res.data.methods || []);
+          setSequraAgreements(res.data.credit_agreements || []);
+          setSequraAssetKey(res.data.asset_key || "");
+          setSequraMerchant(res.data.merchant || "");
+          setSequraScriptUri(res.data.script_uri || "");
+        }
+      } catch (err) {
+        console.warn("SeQura available-methods failed:", err);
+      }
+    };
+
+    fetchSequraMethods();
+  }, [paymentRequired, token, paymentCompleted]);
+
+  // Handle Redsys payment initiation
+  const handleStartRedsysPayment = async () => {
     if (!token) return;
     setPaymentLoading(true);
     setPaymentError(null);
@@ -257,7 +331,6 @@ export function InvitationOnboardingPage() {
       const res = await redsysApi.createOnboardingPayment(token);
       const { Ds_SignatureVersion, Ds_MerchantParameters, Ds_Signature, redsys_url } = res.data;
 
-      // Create hidden form and submit to Redsys (redirect)
       const form_el = document.createElement("form");
       form_el.method = "POST";
       form_el.action = redsys_url;
@@ -280,6 +353,136 @@ export function InvitationOnboardingPage() {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       setPaymentError(err.response?.data?.detail || err.message || "Error al iniciar el pago");
       setPaymentLoading(false);
+    }
+  };
+
+  // Handle SeQura payment initiation
+  const handleStartSequraPayment = async () => {
+    if (!token) return;
+    setPaymentLoading(true);
+    setPaymentError(null);
+    try {
+      const productCode = sequraMethods.length > 0 ? sequraMethods[0].code : "pp3";
+      const res = await sequraApi.startOnboarding(token, productCode);
+      const { form_html } = res.data;
+
+      if (form_html) {
+        setSequraFormHtml(form_html);
+        setShowSequraForm(true);
+      } else {
+        setPaymentError("No se pudo cargar el formulario de SeQura. Inténtalo de nuevo.");
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } }; message?: string };
+      setPaymentError(err.response?.data?.detail || err.message || "Error al iniciar el pago con SeQura");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Render SeQura form HTML and initialize it
+  useEffect(() => {
+    if (!showSequraForm || !sequraFormHtml || !sequraFormRef.current) return;
+
+    const container = sequraFormRef.current;
+    container.innerHTML = sequraFormHtml;
+
+    // Execute any <script> tags in the HTML
+    const scripts = container.querySelectorAll("script");
+    scripts.forEach((oldScript) => {
+      const newScript = document.createElement("script");
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
+      Array.from(oldScript.attributes).forEach((attr) => {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      oldScript.parentNode?.replaceChild(newScript, oldScript);
+    });
+
+    // Set up the SeQura form instance callback
+    const initSequraForm = () => {
+      if ((window as any).SequraFormInstance) {
+        (window as any).SequraFormInstance.setCloseCallback(() => {
+          setShowSequraForm(false);
+          setSequraFormHtml(null);
+        });
+        (window as any).SequraFormInstance.show();
+      }
+    };
+
+    // Wait for SeQura scripts to load
+    const timer = setTimeout(initSequraForm, 1000);
+    return () => clearTimeout(timer);
+  }, [showSequraForm, sequraFormHtml]);
+
+  // Load SeQura promotional widget script when SeQura is selected
+  useEffect(() => {
+    if (!sequraAvailable || selectedPaymentMethod !== "sequra" || !sequraAssetKey || !sequraMerchant || !sequraScriptUri) return;
+
+    // Check if script already loaded
+    if ((window as any).SequraConfiguration) {
+      // Just refresh components if already loaded
+      if ((window as any).Sequra?.refreshComponents) {
+        (window as any).Sequra.refreshComponents();
+      }
+      return;
+    }
+
+    // Set up SeQura configuration
+    const sequraConfigParams = {
+      merchant: sequraMerchant,
+      assetKey: sequraAssetKey,
+      products: sequraMethods.map((m: any) => m.code).filter(Boolean),
+      scriptUri: sequraScriptUri,
+      decimalSeparator: ",",
+      thousandSeparator: ".",
+      locale: "es-ES",
+      currency: "EUR",
+    };
+
+    (window as any).SequraConfiguration = sequraConfigParams;
+    (window as any).SequraOnLoad = [];
+    (window as any).Sequra = {
+      onLoad: (callback: () => void) => {
+        (window as any).SequraOnLoad.push(callback);
+      },
+    };
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = sequraScriptUri;
+    document.head.appendChild(script);
+
+    // Refresh components once loaded
+    (window as any).Sequra.onLoad(() => {
+      if ((window as any).Sequra?.refreshComponents) {
+        (window as any).Sequra.refreshComponents();
+      }
+    });
+
+    return () => {
+      // Don't remove the script on cleanup to avoid re-loading
+    };
+  }, [sequraAvailable, selectedPaymentMethod, sequraAssetKey, sequraMerchant, sequraScriptUri, sequraMethods]);
+
+  // Refresh SeQura widgets when the widget DOM elements change
+  useEffect(() => {
+    if (selectedPaymentMethod === "sequra" && (window as any).Sequra?.refreshComponents) {
+      setTimeout(() => {
+        (window as any).Sequra.refreshComponents();
+      }, 300);
+    }
+  }, [selectedPaymentMethod]);
+
+  // Dispatch payment based on selected method
+  const handleStartPayment = () => {
+    if (selectedPaymentMethod === "sequra") {
+      handleStartSequraPayment();
+    } else {
+      handleStartRedsysPayment();
     }
   };
 
@@ -535,6 +738,38 @@ export function InvitationOnboardingPage() {
     const product = invitationData.product!;
     const intervalLabel = product.interval === "month" ? "/mes" : product.interval === "year" ? "/año" : product.interval === "week" ? "/semana" : "";
 
+    // If SeQura form is being shown, render it full-screen
+    if (showSequraForm) {
+      return (
+        <Container py="xl" size="sm">
+          <Box mb="md" ta="center">
+            <Title mb="xs" order={3}>
+              Completar pago con SeQura
+            </Title>
+            <Text c="dimmed" size="sm">
+              Completa la verificación de identidad para finalizar el pago fraccionado
+            </Text>
+          </Box>
+
+          <Paper p="md" radius="lg" withBorder>
+            <div ref={sequraFormRef} />
+          </Paper>
+
+          <Group justify="center" mt="md">
+            <Button
+              variant="subtle"
+              onClick={() => {
+                setShowSequraForm(false);
+                setSequraFormHtml(null);
+              }}
+            >
+              Cancelar y volver
+            </Button>
+          </Group>
+        </Container>
+      );
+    }
+
     return (
       <Container py="xl" size="sm">
         <Box mb="xl" ta="center">
@@ -553,21 +788,13 @@ export function InvitationOnboardingPage() {
               <Text c="dimmed">Verificando estado del pago...</Text>
             </Stack>
           ) : (
-            <>
-              <Stack align="center" gap="lg">
-                <ThemeIcon
-                  color="blue"
-                  radius="xl"
-                  size={64}
-                  variant="light"
-                >
-                  <IconCreditCard size={32} />
-                </ThemeIcon>
-
+            <Stack gap="lg">
+              {/* Product info */}
+              <Stack align="center" gap="md">
                 <div style={{ textAlign: "center" }}>
                   <Title order={3} mb="xs">{product.name}</Title>
                   {product.description && (
-                    <Text c="dimmed" size="sm" mb="md">{product.description}</Text>
+                    <Text c="dimmed" size="sm">{product.description}</Text>
                   )}
                 </div>
 
@@ -584,37 +811,129 @@ export function InvitationOnboardingPage() {
                     {product.product_type === "subscription" ? "Suscripción recurrente" : "Pago único"}
                   </Text>
                 </Paper>
-
-                {paymentError && (
-                  <Alert color="red" icon={<IconAlertCircle size={16} />} w="100%">
-                    {paymentError}
-                  </Alert>
-                )}
-
-                <Button
-                  size="lg"
-                  fullWidth
-                  loading={paymentLoading}
-                  onClick={handleStartPayment}
-                  leftSection={<IconCreditCard size={20} />}
-                >
-                  Pagar con tarjeta
-                </Button>
-
-                <Group gap="xs" justify="center">
-                  <IconShieldCheck size={16} color="gray" />
-                  <Text c="dimmed" size="xs">
-                    Pago seguro procesado por Redsys
-                  </Text>
-                </Group>
-
-                <Group gap="xs" justify="center">
-                  <Badge variant="light" size="sm">Visa</Badge>
-                  <Badge variant="light" size="sm">Mastercard</Badge>
-                  <Badge variant="light" size="sm">Google Pay</Badge>
-                </Group>
               </Stack>
-            </>
+
+              <Divider label="Elige tu método de pago" labelPosition="center" />
+
+              {/* Payment method selector */}
+              <Stack gap="sm">
+                {/* Redsys (Card) option */}
+                <Paper
+                  p="md"
+                  radius="md"
+                  withBorder
+                  style={{
+                    cursor: "pointer",
+                    borderColor: selectedPaymentMethod === "redsys" ? "var(--mantine-color-blue-6)" : undefined,
+                    borderWidth: selectedPaymentMethod === "redsys" ? 2 : 1,
+                    background: selectedPaymentMethod === "redsys" ? "rgba(34, 139, 230, 0.04)" : undefined,
+                  }}
+                  onClick={() => setSelectedPaymentMethod("redsys")}
+                >
+                  <Group>
+                    <Radio
+                      checked={selectedPaymentMethod === "redsys"}
+                      onChange={() => setSelectedPaymentMethod("redsys")}
+                      styles={{ radio: { cursor: "pointer" } }}
+                    />
+                    <ThemeIcon color="blue" radius="md" size={40} variant="light">
+                      <IconCreditCard size={22} />
+                    </ThemeIcon>
+                    <div style={{ flex: 1 }}>
+                      <Text fw={600} size="sm">Pagar con tarjeta</Text>
+                      <Group gap={6} mt={2}>
+                        <Badge variant="light" size="xs">Visa</Badge>
+                        <Badge variant="light" size="xs">Mastercard</Badge>
+                        <Badge variant="light" size="xs">Google Pay</Badge>
+                      </Group>
+                    </div>
+                    <Text fw={700} size="lg">{product.price.toFixed(2)}€</Text>
+                  </Group>
+                </Paper>
+
+                {/* SeQura (Installments) option */}
+                {sequraAvailable && (
+                  <Paper
+                    p="md"
+                    radius="md"
+                    withBorder
+                    style={{
+                      cursor: "pointer",
+                      borderColor: selectedPaymentMethod === "sequra" ? "var(--mantine-color-teal-6)" : undefined,
+                      borderWidth: selectedPaymentMethod === "sequra" ? 2 : 1,
+                      background: selectedPaymentMethod === "sequra" ? "rgba(18, 184, 134, 0.04)" : undefined,
+                    }}
+                    onClick={() => setSelectedPaymentMethod("sequra")}
+                  >
+                    <Group>
+                      <Radio
+                        checked={selectedPaymentMethod === "sequra"}
+                        onChange={() => setSelectedPaymentMethod("sequra")}
+                        styles={{ radio: { cursor: "pointer" } }}
+                      />
+                      <ThemeIcon color="teal" radius="md" size={40} variant="light">
+                        <IconCalendarDollar size={22} />
+                      </ThemeIcon>
+                      <div style={{ flex: 1 }}>
+                        <Text fw={600} size="sm">Pagar a plazos con SeQura</Text>
+                        <Text c="dimmed" size="xs" mt={2}>
+                          {sequraAgreements.length > 0
+                            ? `Fracciona tu pago en cómodos plazos`
+                            : "Paga en cuotas sin intereses"}
+                        </Text>
+                      </div>
+                    </Group>
+
+                    {/* SeQura promotional widget placeholder */}
+                    {selectedPaymentMethod === "sequra" && sequraAssetKey && (
+                      <Box mt="sm" ml={58}>
+                        <div
+                          className="sequra-promotion-widget"
+                          data-amount={String(Math.round(product.price * 100))}
+                          data-product={sequraMethods.length > 0 ? sequraMethods[0].code : "pp3"}
+                          data-size="M"
+                          data-alignment="left"
+                          data-branding="default"
+                          style={{ minHeight: 40 }}
+                        />
+                      </Box>
+                    )}
+                  </Paper>
+                )}
+              </Stack>
+
+              {paymentError && (
+                <Alert color="red" icon={<IconAlertCircle size={16} />} w="100%">
+                  {paymentError}
+                </Alert>
+              )}
+
+              <Button
+                size="lg"
+                fullWidth
+                loading={paymentLoading}
+                onClick={handleStartPayment}
+                color={selectedPaymentMethod === "sequra" ? "teal" : "blue"}
+                leftSection={
+                  selectedPaymentMethod === "sequra"
+                    ? <IconCalendarDollar size={20} />
+                    : <IconCreditCard size={20} />
+                }
+              >
+                {selectedPaymentMethod === "sequra"
+                  ? "Continuar con SeQura"
+                  : "Pagar con tarjeta"}
+              </Button>
+
+              <Group gap="xs" justify="center">
+                <IconShieldCheck size={16} color="gray" />
+                <Text c="dimmed" size="xs">
+                  {selectedPaymentMethod === "sequra"
+                    ? "Pago seguro procesado por SeQura"
+                    : "Pago seguro procesado por Redsys"}
+                </Text>
+              </Group>
+            </Stack>
           )}
         </Paper>
       </Container>

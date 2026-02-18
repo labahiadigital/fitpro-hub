@@ -376,6 +376,21 @@ export const redsysApi = {
   configStatus: () => api.get("/redsys/config-status"),
 };
 
+// SeQura API (pago fraccionado)
+export const sequraApi = {
+  startOnboarding: (token: string, productCode: string = "pp3") =>
+    api.post("/sequra/start-onboarding", { token, product_code: productCode }),
+  getIdentificationForm: (orderUri: string, product: string = "pp3") =>
+    api.get("/sequra/identification-form", {
+      params: { order_uri: orderUri, product },
+    }),
+  getOnboardingPaymentStatus: (token: string) =>
+    api.get(`/sequra/onboarding-payment-status/${token}`),
+  getAvailableMethods: (token: string) =>
+    api.get("/sequra/available-methods", { params: { token } }),
+  configStatus: () => api.get("/sequra/config-status"),
+};
+
 // Automations API
 export const automationsApi = {
   list: () => api.get("/automations"),

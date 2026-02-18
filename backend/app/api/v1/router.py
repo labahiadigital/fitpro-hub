@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, workspaces, users, clients, bookings, workouts, nutrition,
     forms, messages, payments, automations, reports, products, exercises,
-    foods, notifications, supplements, documents, pdf, roles, redsys, lms, erp, referrals,
+    foods, notifications, supplements, documents, pdf, roles, redsys, sequra, lms, erp, referrals,
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
     whatsapp, google_calendar
 )
@@ -57,6 +57,9 @@ api_router.include_router(payments.router, prefix="/payments", tags=["Pagos Stri
 
 # Redsys Payments
 api_router.include_router(redsys.router, prefix="/redsys", tags=["Pagos Redsys"])
+
+# SeQura Payments (pago fraccionado)
+api_router.include_router(sequra.router, prefix="/sequra", tags=["Pagos SeQura"])
 
 # Products & Packages
 api_router.include_router(products.router, prefix="/products", tags=["Productos y Bonos"])
