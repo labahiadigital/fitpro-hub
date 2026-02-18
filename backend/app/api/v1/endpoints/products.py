@@ -8,6 +8,7 @@ from sqlalchemy import select, func
 from app.core.database import get_db
 from app.middleware.auth import get_current_user, require_roles
 from app.models.product import Product, SessionPackage, ClientPackage, Coupon
+from app.models.payment import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.schemas.product import (
     ProductCreate, ProductUpdate, ProductResponse, ProductList,
@@ -71,6 +72,23 @@ async def create_product(
     return ProductResponse.model_validate(product)
 
 
+@router.get("/public/{product_id}", response_model=ProductResponse)
+async def get_product_public(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a product's public info (no auth required). Only returns active products."""
+    result = await db.execute(
+        select(Product).where(Product.id == product_id, Product.is_active == True)
+    )
+    product = result.scalar_one_or_none()
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado o no disponible")
+    
+    return ProductResponse.model_validate(product)
+
+
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: UUID,
@@ -110,18 +128,48 @@ async def update_product(
     return ProductResponse.model_validate(product)
 
 
+@router.get("/{product_id}/active-subscribers", response_model=dict)
+async def get_product_active_subscribers(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get count of active subscribers for a product."""
+    count_result = await db.execute(
+        select(func.count()).select_from(Subscription).where(
+            Subscription.extra_data["product_id"].astext == str(product_id),
+            Subscription.status == SubscriptionStatus.active,
+        )
+    )
+    count = count_result.scalar() or 0
+    return {"product_id": str(product_id), "active_subscribers": count}
+
+
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product(
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(["owner"])),
 ):
-    """Delete a product."""
+    """Delete a product. Fails if there are active subscribers."""
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()
     
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    active_subs = await db.execute(
+        select(func.count()).select_from(Subscription).where(
+            Subscription.extra_data["product_id"].astext == str(product_id),
+            Subscription.status == SubscriptionStatus.active,
+        )
+    )
+    count = active_subs.scalar() or 0
+    if count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No se puede eliminar: hay {count} suscripción(es) activa(s) en este producto"
+        )
     
     await db.delete(product)
     await db.commit()

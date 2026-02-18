@@ -810,3 +810,90 @@ async def complete_invitation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al completar registro: {str(e)}"
         )
+
+
+class PublicProductSignupRequest(BaseModel):
+    email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
+class PublicProductSignupResponse(BaseModel):
+    invitation_token: str
+    invitation_url: str
+
+
+@router.post("/public-signup/{workspace_slug}/{product_id}", response_model=PublicProductSignupResponse)
+async def public_product_signup(
+    workspace_slug: str,
+    product_id: UUID,
+    data: PublicProductSignupRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Public endpoint: create a self-service invitation for a product.
+    Used from the public product link to start the onboarding flow.
+    """
+    workspace_result = await db.execute(
+        select(Workspace).where(Workspace.slug == workspace_slug)
+    )
+    workspace = workspace_result.scalar_one_or_none()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace no encontrado")
+
+    product_result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == workspace.id,
+            Product.is_active == True,
+        )
+    )
+    product = product_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado o no disponible")
+
+    existing_user = await db.execute(
+        select(User).where(User.email == data.email.lower())
+    )
+    if existing_user.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Este email ya tiene una cuenta. Inicia sesión."
+        )
+
+    owner_result = await db.execute(
+        select(UserRole.user_id).where(
+            UserRole.workspace_id == workspace.id,
+            UserRole.role == RoleType.owner,
+        ).limit(1)
+    )
+    owner_id = owner_result.scalar_one_or_none()
+    if not owner_id:
+        raise HTTPException(status_code=500, detail="Workspace sin propietario configurado")
+
+    token = secrets.token_urlsafe(48)
+    expires_at = datetime.utcnow() + timedelta(days=7)
+
+    invitation = ClientInvitation(
+        workspace_id=workspace.id,
+        invited_by=owner_id,
+        email=data.email.lower(),
+        first_name=data.first_name,
+        last_name=data.last_name,
+        token=token,
+        status=STATUS_PENDING,
+        expires_at=expires_at,
+        product_id=product_id,
+    )
+
+    db.add(invitation)
+    await db.commit()
+    await db.refresh(invitation)
+
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    invitation_url = f"{frontend_url}/onboarding/invite/{token}"
+
+    return PublicProductSignupResponse(
+        invitation_token=token,
+        invitation_url=invitation_url,
+    )

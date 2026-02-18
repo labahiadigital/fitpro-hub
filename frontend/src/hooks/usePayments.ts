@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, paymentsApi, productsApi } from "../services/api";
 import { useAuthStore } from "../stores/auth";
+import { notifications } from "@mantine/notifications";
 
 export interface Payment {
   id: string;
@@ -128,6 +129,72 @@ export function useStripeStatus() {
         balance: data?.balance,
         dashboard_url: data?.dashboard_url,
       };
+    },
+  });
+}
+
+export function useCreateProduct() {
+  const queryClient = useQueryClient();
+  const { currentWorkspace } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async (data: { name: string; description?: string; price: number; product_type: string; interval?: string; sessions_included?: number }) => {
+      return productsApi.create({ ...data, workspace_id: currentWorkspace?.id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({ title: "Producto creado", message: "El producto ha sido creado correctamente", color: "green" });
+    },
+    onError: (error: any) => {
+      notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al crear producto", color: "red" });
+    },
+  });
+}
+
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Product> }) => {
+      return productsApi.update(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({ title: "Producto actualizado", message: "El producto ha sido actualizado correctamente", color: "green" });
+    },
+    onError: (error: any) => {
+      notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al actualizar producto", color: "red" });
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return productsApi.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({ title: "Producto eliminado", message: "El producto ha sido eliminado correctamente", color: "green" });
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail || "Error al eliminar producto";
+      notifications.show({ title: "No se puede eliminar", message: detail, color: "red" });
+    },
+  });
+}
+
+export function useToggleProductActive() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      return productsApi.update(id, { is_active });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 }

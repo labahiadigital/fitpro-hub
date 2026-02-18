@@ -3,6 +3,7 @@ import {
   Badge,
   Box,
   Button,
+  CopyButton,
   Container,
   Divider,
   Group,
@@ -19,17 +20,20 @@ import {
   Textarea,
   TextInput,
   ThemeIcon,
+  Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconArrowUpRight,
   IconCash,
+  IconCheck,
   IconClock,
   IconCreditCard,
   IconDownload,
   IconEdit,
   IconEye,
+  IconLink,
   IconPackage,
   IconPlus,
   IconReceipt,
@@ -40,7 +44,7 @@ import {
   IconUsers,
   IconX,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   usePayments,
@@ -48,10 +52,16 @@ import {
   useProducts,
   usePaymentKPIs,
   useStripeStatus,
+  useCreateProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+  useToggleProductActive,
   type Payment,
   type Subscription,
+  type Product,
 } from "../../hooks/usePayments";
 import { useClients } from "../../hooks/useClients";
+import { useAuthStore } from "../../stores/auth";
 
 // Types are imported from usePayments hook
 
@@ -65,14 +75,23 @@ export function PaymentsPage() {
     chargeModalOpened,
     { open: openChargeModal, close: closeChargeModal },
   ] = useDisclosure(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const { currentWorkspace } = useAuthStore();
 
   // Fetch real data
   const { data: payments = [] } = usePayments();
   const { data: subscriptions = [] } = useSubscriptions();
   const { data: products = [] } = useProducts();
   const { data: kpisData } = usePaymentKPIs();
-  useStripeStatus(); // Check Stripe connection status
+  useStripeStatus();
   const { data: clientsData } = useClients({ page: 1 });
+
+  // Mutations
+  const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
+  const toggleProductActive = useToggleProductActive();
 
   const productForm = useForm({
     initialValues: {
@@ -80,6 +99,7 @@ export function PaymentsPage() {
       description: "",
       price: 0,
       type: "subscription",
+      interval: "month",
       sessions_included: 0,
     },
     validate: {
@@ -96,6 +116,65 @@ export function PaymentsPage() {
       description: "",
     },
   });
+
+  const handleOpenNewProduct = useCallback(() => {
+    setEditingProduct(null);
+    productForm.reset();
+    openProductModal();
+  }, [productForm, openProductModal]);
+
+  const handleOpenEditProduct = useCallback((product: Product) => {
+    setEditingProduct(product);
+    productForm.setValues({
+      name: product.name,
+      description: product.description || "",
+      price: product.price,
+      type: product.type,
+      interval: product.interval || "month",
+      sessions_included: product.sessions_included || 0,
+    });
+    openProductModal();
+  }, [productForm, openProductModal]);
+
+  const handleSaveProduct = useCallback(async (values: typeof productForm.values) => {
+    const data = {
+      name: values.name,
+      description: values.description || undefined,
+      price: values.price,
+      product_type: values.type,
+      interval: values.type === "subscription" ? values.interval : undefined,
+    };
+    try {
+      if (editingProduct) {
+        await updateProduct.mutateAsync({ id: editingProduct.id, data });
+      } else {
+        await createProduct.mutateAsync(data);
+      }
+      closeProductModal();
+      productForm.reset();
+      setEditingProduct(null);
+    } catch {
+      // Error handled by mutation
+    }
+  }, [editingProduct, updateProduct, createProduct, closeProductModal, productForm]);
+
+  const handleDeleteProduct = useCallback(async (product: Product) => {
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?`)) return;
+    try {
+      await deleteProduct.mutateAsync(product.id);
+    } catch {
+      // Error handled by mutation
+    }
+  }, [deleteProduct]);
+
+  const handleToggleActive = useCallback((product: Product) => {
+    toggleProductActive.mutate({ id: product.id, is_active: !product.is_active });
+  }, [toggleProductActive]);
+
+  const getPublicLink = useCallback((product: Product) => {
+    const slug = currentWorkspace?.slug || currentWorkspace?.id || "";
+    return `${window.location.origin}/onboarding/${slug}?product=${product.id}`;
+  }, [currentWorkspace]);
 
   // Use real KPIs or default values
   const kpis = {
@@ -184,7 +263,7 @@ export function PaymentsPage() {
         secondaryAction={{
           label: "Nuevo Producto",
           icon: <IconPlus size={16} />,
-          onClick: openProductModal,
+          onClick: handleOpenNewProduct,
           variant: "default",
         }}
         title="Pagos y Suscripciones"
@@ -642,7 +721,29 @@ export function PaymentsPage() {
                         ? "Bono"
                         : "Puntual"}
                   </Badge>
-                  <Switch checked={product.is_active} color="green" size="sm" />
+                  <Group gap="xs">
+                    <Switch
+                      checked={product.is_active}
+                      color="green"
+                      size="sm"
+                      onChange={() => handleToggleActive(product)}
+                    />
+                    <CopyButton value={getPublicLink(product)}>
+                      {({ copied, copy }) => (
+                        <Tooltip label={copied ? "¡Copiado!" : "Copiar enlace público"}>
+                          <ActionIcon
+                            color={copied ? "green" : "gray"}
+                            variant="light"
+                            radius="xl"
+                            size="sm"
+                            onClick={copy}
+                          >
+                            {copied ? <IconCheck size={14} /> : <IconLink size={14} />}
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
+                    </CopyButton>
+                  </Group>
                 </Group>
 
                 <Text fw={600} mb="xs" size="lg" style={{ color: "var(--nv-text-primary)" }}>
@@ -666,16 +767,26 @@ export function PaymentsPage() {
                       €{product.price}
                     </Text>
                     <Text c="dimmed" size="xs">
-                      {product.type === "subscription" ? "/mes" : ""}
+                      {product.type === "subscription" ? `/${product.interval === "year" ? "año" : "mes"}` : ""}
                     </Text>
                   </Box>
                   <Group gap="xs">
-                    <ActionIcon color="blue" variant="light" radius="xl">
-                      <IconEdit size={16} />
-                    </ActionIcon>
-                    <ActionIcon color="red" variant="light" radius="xl">
-                      <IconTrash size={16} />
-                    </ActionIcon>
+                    <Tooltip label="Editar producto">
+                      <ActionIcon color="blue" variant="light" radius="xl" onClick={() => handleOpenEditProduct(product)}>
+                        <IconEdit size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label="Eliminar producto">
+                      <ActionIcon
+                        color="red"
+                        variant="light"
+                        radius="xl"
+                        onClick={() => handleDeleteProduct(product)}
+                        loading={deleteProduct.isPending}
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </Tooltip>
                   </Group>
                 </Group>
               </Box>
@@ -684,16 +795,16 @@ export function PaymentsPage() {
         </Tabs.Panel>
       </Tabs>
 
-      {/* New Product Modal */}
+      {/* Product Modal (Create/Edit) */}
       <Modal
-        onClose={closeProductModal}
+        onClose={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }}
         opened={productModalOpened}
         size="md"
-        title="Nuevo Producto"
+        title={editingProduct ? "Editar Producto" : "Nuevo Producto"}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
-        <form onSubmit={productForm.onSubmit((values) => console.log(values))}>
+        <form onSubmit={productForm.onSubmit(handleSaveProduct)}>
           <Stack>
             <TextInput
               label="Nombre"
@@ -715,6 +826,7 @@ export function PaymentsPage() {
                 min={0}
                 placeholder="0"
                 required
+                decimalScale={2}
                 {...productForm.getInputProps("price")}
               />
               <Select
@@ -728,6 +840,18 @@ export function PaymentsPage() {
               />
             </Group>
 
+            {productForm.values.type === "subscription" && (
+              <Select
+                data={[
+                  { value: "month", label: "Mensual" },
+                  { value: "year", label: "Anual" },
+                  { value: "week", label: "Semanal" },
+                ]}
+                label="Intervalo de cobro"
+                {...productForm.getInputProps("interval")}
+              />
+            )}
+
             {productForm.values.type === "package" && (
               <NumberInput
                 label="Sesiones incluidas"
@@ -738,10 +862,12 @@ export function PaymentsPage() {
             )}
 
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeProductModal} variant="default">
+              <Button onClick={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }} variant="default">
                 Cancelar
               </Button>
-              <Button type="submit">Crear Producto</Button>
+              <Button type="submit" loading={createProduct.isPending || updateProduct.isPending}>
+                {editingProduct ? "Guardar Cambios" : "Crear Producto"}
+              </Button>
             </Group>
           </Stack>
         </form>

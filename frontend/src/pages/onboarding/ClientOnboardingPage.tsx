@@ -37,7 +37,7 @@ import {
   IconUser,
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 
@@ -119,6 +119,8 @@ const INTOLERANCES = [
 
 export function ClientOnboardingPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+  const [searchParams] = useSearchParams();
+  const productId = searchParams.get("product");
   const navigate = useNavigate();
   const { setUser, setTokens } = useAuthStore();
   const [active, setActive] = useState(0);
@@ -126,6 +128,8 @@ export function ClientOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [workspaceInfo, setWorkspaceInfo] = useState<{ name: string; id: string } | null>(null);
   const [loadingWorkspace, setLoadingWorkspace] = useState(true);
+  const [productInfo, setProductInfo] = useState<{ name: string; description?: string; price: number; interval?: string } | null>(null);
+  const [creatingInvitation, setCreatingInvitation] = useState(false);
 
   // Verificar que el workspace existe
   useEffect(() => {
@@ -150,6 +154,26 @@ export function ClientOnboardingPage() {
         }
         
         setWorkspaceInfo({ name: data.name, id: data.id });
+
+        if (productId) {
+          try {
+            const prodRes = await api.get(`/products/public/${productId}`);
+            if (prodRes.data) {
+              setProductInfo({
+                name: prodRes.data.name,
+                description: prodRes.data.description,
+                price: prodRes.data.price,
+                interval: prodRes.data.interval,
+              });
+            }
+          } catch {
+            notifications.show({
+              title: "Producto no disponible",
+              message: "El producto al que intentas acceder no está disponible",
+              color: "orange",
+            });
+          }
+        }
       } catch {
         notifications.show({
           title: "Error",
@@ -163,7 +187,41 @@ export function ClientOnboardingPage() {
     };
     
     checkWorkspace();
-  }, [workspaceSlug, navigate]);
+  }, [workspaceSlug, productId, navigate]);
+
+  const handleProductSignup = async () => {
+    if (!workspaceSlug || !productId) return;
+
+    const emailVal = form.values.email;
+    const firstNameVal = form.values.firstName;
+    const lastNameVal = form.values.lastName;
+
+    if (!emailVal || !firstNameVal) {
+      notifications.show({ title: "Error", message: "Completa al menos tu nombre y email", color: "red" });
+      return;
+    }
+
+    setCreatingInvitation(true);
+    try {
+      const res = await api.post(`/invitations/public-signup/${workspaceSlug}/${productId}`, {
+        email: emailVal,
+        first_name: firstNameVal,
+        last_name: lastNameVal,
+      });
+      if (res.data?.invitation_token) {
+        navigate(`/onboarding/invite/${res.data.invitation_token}`);
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } };
+      notifications.show({
+        title: "Error",
+        message: err?.response?.data?.detail || "Error al iniciar el registro",
+        color: "red",
+      });
+    } finally {
+      setCreatingInvitation(false);
+    }
+  };
 
   const form = useForm<OnboardingFormData>({
     initialValues: {
@@ -396,6 +454,65 @@ export function ClientOnboardingPage() {
             información y se pondrá en contacto contigo pronto.
           </Text>
           <Button size="lg" onClick={() => navigate("/dashboard")}>Ir al Dashboard</Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  if (productId && productInfo) {
+    return (
+      <Container py="xl" size="sm">
+        <Box mb="xl" ta="center">
+          <Title mb="xs" order={2}>
+            {workspaceInfo.name}
+          </Title>
+          <Text c="dimmed">
+            Regístrate para acceder a tu plan
+          </Text>
+        </Box>
+
+        <Paper p="xl" radius="lg" withBorder>
+          <Box mb="lg" p="md" style={{ backgroundColor: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
+            <Text fw={700} size="lg" mb={4}>{productInfo.name}</Text>
+            {productInfo.description && <Text size="sm" c="dimmed" mb="xs">{productInfo.description}</Text>}
+            <Text fw={700} size="xl" c="blue">
+              €{Number(productInfo.price).toFixed(2)}
+              {productInfo.interval && <Text span size="sm" c="dimmed" fw={400}>/{productInfo.interval === "year" ? "año" : productInfo.interval === "week" ? "semana" : "mes"}</Text>}
+            </Text>
+          </Box>
+
+          <Stack gap="md">
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <TextInput
+                label="Nombre"
+                placeholder="Tu nombre"
+                required
+                {...form.getInputProps("firstName")}
+              />
+              <TextInput
+                label="Apellidos"
+                placeholder="Tus apellidos"
+                {...form.getInputProps("lastName")}
+              />
+            </SimpleGrid>
+            <TextInput
+              label="Email"
+              placeholder="tu@email.com"
+              required
+              leftSection={<IconMail size={16} />}
+              {...form.getInputProps("email")}
+            />
+
+            <Button
+              size="lg"
+              fullWidth
+              mt="md"
+              loading={creatingInvitation}
+              onClick={handleProductSignup}
+            >
+              Continuar con el registro
+            </Button>
+          </Stack>
         </Paper>
       </Container>
     );
