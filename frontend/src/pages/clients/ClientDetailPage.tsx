@@ -1096,9 +1096,9 @@ export function ClientDetailPage() {
 
   const handleSaveParq = async () => {
     if (!id) return;
-    const hasRisks = editingParq.heartCondition || editingParq.chestPain || 
-                    editingParq.dizziness || editingParq.boneJoint || 
-                    editingParq.bloodPressure || editingParq.otherReason;
+    const hasRisks = editingParq.heartCondition === true || editingParq.chestPain === true ||
+                    editingParq.dizziness === true || editingParq.boneJoint === true ||
+                    editingParq.bloodPressure === true || editingParq.otherReason === true;
     try {
       await updateClient.mutateAsync({
         id,
@@ -1711,13 +1711,17 @@ export function ClientDetailPage() {
                 
                 const fitnessGoalMap: Record<string, string> = {
                   'lose_weight': 'Perder peso',
-                  'gain_muscle': 'Ganar músculo',
-                  'maintain': 'Mantener',
-                  'improve_health': 'Mejorar salud',
+                  'gain_muscle': 'Ganar masa muscular',
+                  'improve_fitness': 'Mejorar condición física',
+                  'maintain': 'Mantener peso actual',
+                  'improve_health': 'Mejorar salud general',
                   'improve_endurance': 'Mejorar resistencia',
                   'gain_strength': 'Ganar fuerza',
                   'flexibility': 'Flexibilidad',
                   'general_fitness': 'Fitness general',
+                  'general_health': 'Salud general',
+                  'sports_performance': 'Rendimiento deportivo',
+                  'rehabilitation': 'Rehabilitación',
                 };
                 
                 const secondaryGoalMap: Record<string, string> = {
@@ -1812,27 +1816,29 @@ export function ClientDetailPage() {
 
               {(() => {
                 const parqResponses = (client as any).health_data?.parq_responses;
-                
+
                 if (!parqResponses) {
                   return <Text c="dimmed" size="sm">Sin cuestionario PAR-Q completado</Text>;
                 }
-                
-                const hasRisks = parqResponses.heartCondition || parqResponses.chestPain || 
-                                parqResponses.dizziness || parqResponses.boneJoint || 
-                                parqResponses.bloodPressure || parqResponses.otherReason;
-                
+
+                const isYes = (val: unknown) => val === true || val === "true";
+
+                const hasRisks = isYes(parqResponses.heartCondition) || isYes(parqResponses.chestPain) ||
+                                isYes(parqResponses.dizziness) || isYes(parqResponses.boneJoint) ||
+                                isYes(parqResponses.bloodPressure) || isYes(parqResponses.otherReason);
+
                 return (
                   <Stack gap="xs">
-                    {parqResponses.heartCondition && (
+                    {isYes(parqResponses.heartCondition) && (
                       <Text size="sm" c="orange">✓ Condición cardíaca reportada</Text>
                     )}
-                    {parqResponses.chestPain && (
+                    {isYes(parqResponses.chestPain) && (
                       <Text size="sm" c="orange">✓ Dolor en el pecho al hacer actividad física</Text>
                     )}
-                    {parqResponses.dizziness && (
+                    {isYes(parqResponses.dizziness) && (
                       <Text size="sm" c="orange">✓ Mareos o pérdida de conocimiento</Text>
                     )}
-                    {parqResponses.boneJoint && (
+                    {isYes(parqResponses.boneJoint) && (
                       <>
                         <Text size="sm" c="orange">✓ Problemas óseos o articulares</Text>
                         {parqResponses.boneJointDetails && (
@@ -1842,10 +1848,10 @@ export function ClientDetailPage() {
                         )}
                       </>
                     )}
-                    {parqResponses.bloodPressure && (
+                    {isYes(parqResponses.bloodPressure) && (
                       <Text size="sm" c="orange">✓ Medicamentos para presión arterial/corazón</Text>
                     )}
-                    {parqResponses.otherReason && (
+                    {isYes(parqResponses.otherReason) && (
                       <>
                         <Text size="sm" c="orange">✓ Otra razón para no hacer ejercicio</Text>
                         {parqResponses.otherReasonDetails && (
@@ -1963,34 +1969,40 @@ export function ClientDetailPage() {
                       autoClose: false,
                     });
                     try {
-                      // Get workout program if exists
                       const workoutProgram = clientWorkoutPrograms.length > 0 ? clientWorkoutPrograms[0] : null;
-                      
-                      // Transform workout template to days format
-                      const workoutDays = workoutProgram?.template?.blocks ? [{
-                        id: "day-1",
-                        day: 1,
-                        dayName: "Entrenamiento",
-                        blocks: workoutProgram.template.blocks.map((block: any, idx: number) => ({
-                          id: `block-${idx}`,
-                          name: block.name,
-                          type: (block.type || "main") as "warmup" | "main" | "cooldown" | "superset" | "circuit",
-                          exercises: (block.exercises || []).map((ex: any, exIdx: number) => ({
-                            id: `ex-${exIdx}`,
-                            exercise_id: "",
-                            exercise: {
-                              id: "",
-                              name: ex.exercise?.name || ex.name || "Ejercicio",
-                            },
-                            sets: ex.sets || 3,
-                            reps: ex.reps || "10-12",
-                            rest_seconds: ex.rest_seconds || 60,
-                            notes: ex.notes,
+
+                      const transformDays = (template: any) => {
+                        if (!template) return undefined;
+                        const rawDays = template.days || [];
+                        if (rawDays.length === 0 && template.blocks) {
+                          return [{
+                            id: "day-1", day: 1, dayName: "Entrenamiento",
+                            blocks: template.blocks.map((b: any, i: number) => ({
+                              id: `block-${i}`, name: b.name,
+                              type: (b.type || "main") as any,
+                              exercises: (b.exercises || []).map((ex: any, j: number) => ({
+                                id: `ex-${j}`, exercise_id: "", exercise: { id: "", name: ex.exercise?.name || ex.name || "Ejercicio" },
+                                sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
+                              })),
+                            })),
+                            isRestDay: false,
+                          }];
+                        }
+                        return rawDays.map((d: any) => ({
+                          id: d.id, day: d.day, dayName: d.dayName, isRestDay: d.isRestDay || false,
+                          notes: d.notes,
+                          blocks: (d.blocks || []).map((b: any, i: number) => ({
+                            id: b.id || `block-${i}`, name: b.name,
+                            type: (b.type || "main") as any,
+                            exercises: (b.exercises || []).map((ex: any, j: number) => ({
+                              id: ex.id || `ex-${j}`, exercise_id: ex.exercise_id || "",
+                              exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups },
+                              sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
+                            })),
                           })),
-                        })),
-                        isRestDay: false,
-                      }] : undefined;
-                      
+                        }));
+                      };
+
                       generateClientPlanPDF(
                         {
                           id: viewingMealPlan.id,
@@ -2011,7 +2023,7 @@ export function ClientDetailPage() {
                           description: workoutProgram.description,
                           duration_weeks: workoutProgram.duration_weeks,
                           difficulty: workoutProgram.difficulty,
-                          days: workoutDays,
+                          days: transformDays(workoutProgram.template),
                         } : null,
                         {
                           workspaceName: currentWorkspace?.name || "Trackfiz",
@@ -2019,11 +2031,17 @@ export function ClientDetailPage() {
                           client: {
                             first_name: client.first_name,
                             last_name: client.last_name,
+                            email: client.email,
+                            phone: client.phone,
+                            birth_date: (client as any).birth_date,
+                            gender: client.gender,
                             weight_kg: client.weight_kg,
                             height_cm: client.height_cm,
+                            activity_level: (client as any).activity_level,
                             allergies: (client as any).health_data?.allergens || [],
                             intolerances: (client as any).health_data?.intolerances || [],
                             goals: client.goals,
+                            health_data: (client as any).health_data,
                           },
                         }
                       );
@@ -3574,34 +3592,37 @@ export function ClientDetailPage() {
                       autoClose: false,
                     });
                     
-                    // Transform template blocks to days format
-                    const workoutDays = selectedProgramForView.template?.blocks ? [{
-                      id: "day-1",
-                      day: 1,
-                      dayName: "Entrenamiento",
-                      blocks: selectedProgramForView.template.blocks.map((block, idx) => ({
-                        id: `block-${idx}`,
-                        name: block.name,
-                        type: (block.type || "main") as "warmup" | "main" | "cooldown" | "superset" | "circuit",
-                        exercises: (block.exercises || []).map((ex, exIdx) => ({
-                          id: `ex-${exIdx}`,
-                          exercise_id: "",
-                          exercise: {
-                            id: "",
-                            name: ex.exercise?.name || ex.name || "Ejercicio",
-                          },
-                          sets: ex.sets || 3,
-                          reps: ex.reps || "10-12",
-                          rest_seconds: ex.rest_seconds || 60,
-                          notes: ex.notes,
+                    const transformDays2 = (template: any) => {
+                      if (!template) return [];
+                      const rawDays = template.days || [];
+                      if (rawDays.length === 0 && template.blocks) {
+                        return [{
+                          id: "day-1", day: 1, dayName: "Entrenamiento",
+                          blocks: template.blocks.map((b: any, i: number) => ({
+                            id: `block-${i}`, name: b.name, type: (b.type || "main") as any,
+                            exercises: (b.exercises || []).map((ex: any, j: number) => ({
+                              id: `ex-${j}`, exercise_id: "", exercise: { id: "", name: ex.exercise?.name || ex.name || "Ejercicio" },
+                              sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
+                            })),
+                          })),
+                          isRestDay: false,
+                        }];
+                      }
+                      return rawDays.map((d: any) => ({
+                        id: d.id, day: d.day, dayName: d.dayName, isRestDay: d.isRestDay || false, notes: d.notes,
+                        blocks: (d.blocks || []).map((b: any, i: number) => ({
+                          id: b.id || `block-${i}`, name: b.name, type: (b.type || "main") as any,
+                          exercises: (b.exercises || []).map((ex: any, j: number) => ({
+                            id: ex.id || `ex-${j}`, exercise_id: ex.exercise_id || "",
+                            exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups },
+                            sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
+                          })),
                         })),
-                      })),
-                      isRestDay: false,
-                    }] : [];
-                    
-                    // Get meal plan if exists
+                      }));
+                    };
+
                     const mealPlan = clientMealPlans && clientMealPlans.length > 0 ? clientMealPlans[0] : null;
-                    
+
                     generateClientPlanPDF(
                       mealPlan ? {
                         id: mealPlan.id,
@@ -3622,7 +3643,7 @@ export function ClientDetailPage() {
                         description: selectedProgramForView.description,
                         duration_weeks: selectedProgramForView.duration_weeks,
                         difficulty: selectedProgramForView.difficulty,
-                        days: workoutDays,
+                        days: transformDays2(selectedProgramForView.template),
                       },
                       {
                         workspaceName: currentWorkspace?.name || "Trackfiz",
@@ -3630,11 +3651,17 @@ export function ClientDetailPage() {
                         client: {
                           first_name: client.first_name,
                           last_name: client.last_name,
+                          email: client.email,
+                          phone: client.phone,
+                          birth_date: (client as any).birth_date,
+                          gender: client.gender,
                           weight_kg: client.weight_kg,
                           height_cm: client.height_cm,
+                          activity_level: (client as any).activity_level,
                           allergies: (client as any).health_data?.allergens || [],
                           intolerances: (client as any).health_data?.intolerances || [],
                           goals: client.goals,
+                          health_data: (client as any).health_data,
                         },
                       }
                     );
@@ -3783,11 +3810,14 @@ export function ClientDetailPage() {
             placeholder="Selecciona el objetivo"
             data={[
               { value: 'lose_weight', label: 'Perder peso' },
-              { value: 'gain_muscle', label: 'Ganar músculo' },
-              { value: 'maintain', label: 'Mantener' },
-              { value: 'improve_health', label: 'Mejorar salud' },
+              { value: 'gain_muscle', label: 'Ganar masa muscular' },
+              { value: 'improve_fitness', label: 'Mejorar condición física' },
+              { value: 'maintain', label: 'Mantener peso actual' },
+              { value: 'improve_health', label: 'Mejorar salud general' },
               { value: 'improve_endurance', label: 'Mejorar resistencia' },
               { value: 'gain_strength', label: 'Ganar fuerza' },
+              { value: 'sports_performance', label: 'Rendimiento deportivo' },
+              { value: 'rehabilitation', label: 'Rehabilitación' },
               { value: 'flexibility', label: 'Flexibilidad' },
               { value: 'general_fitness', label: 'Fitness general' },
             ]}

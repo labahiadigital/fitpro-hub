@@ -190,6 +190,27 @@ export const workspacesApi = {
     api.post(`/workspaces/${id}/invite`, data),
 };
 
+// Users API
+export const usersApi = {
+  get: (userId: string) => api.get(`/users/${userId}`),
+  update: (userId: string, data: object) => api.put(`/users/${userId}`, data),
+  updateRole: (userId: string, data: { role: string }) =>
+    api.put(`/users/${userId}/role`, data),
+  remove: (userId: string) => api.delete(`/users/${userId}`),
+  invite: (data: { email: string; role: string }) =>
+    api.post("/users/invite", data),
+};
+
+// Account API
+export const accountApi = {
+  deletionStatus: () => api.get("/account/deletion-status"),
+  requestDeletion: (data: { password: string; reason?: string }) =>
+    api.post("/account/request-deletion", data),
+  cancelDeletion: (data: { password: string }) =>
+    api.post("/account/cancel-deletion", data),
+  deletePermanently: () => api.delete("/account/permanent"),
+};
+
 // Clients API
 export const clientsApi = {
   list: (params?: object) => api.get("/clients", { params }),
@@ -340,6 +361,9 @@ export const paymentsApi = {
 
   // Payments
   payments: (params?: object) => api.get("/payments/payments", { params }),
+  createPayment: (data: object) => api.post("/payments/payments/create", data),
+  markPaid: (paymentId: string) => api.patch(`/payments/payments/${paymentId}/mark-paid`),
+  deletePayment: (paymentId: string) => api.delete(`/payments/payments/${paymentId}`),
   createPaymentIntent: (data: object) => api.post("/payments/intent", data),
   refund: (paymentId: string) => api.post(`/payments/payments/${paymentId}/refund`),
 };
@@ -389,6 +413,18 @@ export const sequraApi = {
   getAvailableMethods: (token: string) =>
     api.get("/sequra/available-methods", { params: { token } }),
   configStatus: () => api.get("/sequra/config-status"),
+};
+
+// Supplements API
+export const supplementsApi = {
+  list: (params?: { search?: string; category?: string }) =>
+    api.get("/supplements", { params }),
+  get: (id: string) => api.get(`/supplements/${id}`),
+  create: (data: object) => api.post("/supplements", data),
+  update: (id: string, data: object) => api.put(`/supplements/${id}`, data),
+  delete: (id: string) => api.delete(`/supplements/${id}`),
+  seed: (data: object[], replaceAll?: boolean) =>
+    api.post("/supplements/seed", data, { params: { replace_all: replaceAll } }),
 };
 
 // Automations API

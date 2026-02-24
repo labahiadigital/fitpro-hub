@@ -56,6 +56,10 @@ import {
   useUpdateProduct,
   useDeleteProduct,
   useToggleProductActive,
+  useCreatePayment,
+  useMarkPaymentPaid,
+  useDeletePayment,
+  useCancelSubscription,
   type Payment,
   type Subscription,
   type Product,
@@ -76,6 +80,11 @@ export function PaymentsPage() {
     { open: openChargeModal, close: closeChargeModal },
   ] = useDisclosure(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [
+    paymentDetailOpened,
+    { open: openPaymentDetail, close: closePaymentDetail },
+  ] = useDisclosure(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
   const { currentWorkspace } = useAuthStore();
 
@@ -92,6 +101,10 @@ export function PaymentsPage() {
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const toggleProductActive = useToggleProductActive();
+  const createPayment = useCreatePayment();
+  const markPaymentPaid = useMarkPaymentPaid();
+  const deletePayment = useDeletePayment();
+  const cancelSubscription = useCancelSubscription();
 
   const productForm = useForm({
     initialValues: {
@@ -171,6 +184,57 @@ export function PaymentsPage() {
     toggleProductActive.mutate({ id: product.id, is_active: !product.is_active });
   }, [toggleProductActive]);
 
+  const handleViewPayment = useCallback((payment: Payment) => {
+    setSelectedPayment(payment);
+    openPaymentDetail();
+  }, [openPaymentDetail]);
+
+  const handleMarkPaid = useCallback(async (payment: Payment) => {
+    if (!window.confirm(`¿Marcar el cobro de €${Number(payment.amount).toFixed(2)} como pagado?`)) return;
+    try {
+      await markPaymentPaid.mutateAsync(payment.id);
+    } catch {
+      // Error handled by mutation
+    }
+  }, [markPaymentPaid]);
+
+  const handleDeletePaymentAction = useCallback(async (payment: Payment) => {
+    if (!window.confirm(`¿Eliminar este cobro de €${Number(payment.amount).toFixed(2)}?`)) return;
+    try {
+      await deletePayment.mutateAsync(payment.id);
+    } catch {
+      // Error handled by mutation
+    }
+  }, [deletePayment]);
+
+  const handleCancelSubscription = useCallback(async (sub: Subscription) => {
+    if (!window.confirm(`¿Cancelar la suscripción "${sub.plan_name || sub.name}" de ${sub.client_name || "este cliente"}?`)) return;
+    try {
+      await cancelSubscription.mutateAsync(sub.id);
+    } catch {
+      // Error handled by mutation
+    }
+  }, [cancelSubscription]);
+
+  const handleCreateCharge = useCallback(async (values: typeof chargeForm.values) => {
+    const selectedProduct = values.product_id ? products.find(p => p.id === values.product_id) : null;
+    const amount = values.amount || selectedProduct?.price || 0;
+    if (amount <= 0) return;
+    try {
+      await createPayment.mutateAsync({
+        client_id: values.client_id || undefined,
+        product_id: values.product_id || undefined,
+        amount,
+        description: values.description || selectedProduct?.name || "Cobro manual",
+        payment_type: selectedProduct?.type || "one_time",
+      });
+      closeChargeModal();
+      chargeForm.reset();
+    } catch {
+      // Error handled by mutation
+    }
+  }, [createPayment, closeChargeModal, chargeForm, products]);
+
   const getPublicLink = useCallback((product: Product) => {
     const slug = currentWorkspace?.slug || currentWorkspace?.id || "";
     return `${window.location.origin}/onboarding/${slug}?product=${product.id}`;
@@ -181,6 +245,7 @@ export function PaymentsPage() {
     mrr: kpisData?.mrr || 0,
     mrrChange: kpisData?.mrr_change || 0,
     activeSubscriptions: kpisData?.active_subscriptions || 0,
+    newSubsThisMonth: kpisData?.new_subs_this_month || 0,
     pendingPayments: kpisData?.pending_payments || 0,
     pendingAmount: kpisData?.pending_amount || 0,
     thisMonthRevenue: kpisData?.this_month_revenue || 0,
@@ -276,7 +341,7 @@ export function PaymentsPage() {
             <Box>
               <Text className="text-label" mb="xs">MRR</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
-                €{kpis.mrr.toLocaleString()}
+                €{kpis.mrr.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
               </Text>
               <Group gap={4} mt="xs">
                 <Badge size="sm" variant="light" color="green" radius="xl">
@@ -295,7 +360,7 @@ export function PaymentsPage() {
             <Box>
               <Text className="text-label" mb="xs">Ingresos del Mes</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-primary)" }}>
-                €{kpis.thisMonthRevenue.toLocaleString()}
+                €{kpis.thisMonthRevenue.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
               </Text>
               <Group gap={4} mt="xs">
                 <Badge size="sm" variant="light" color="blue" radius="xl">
@@ -317,7 +382,7 @@ export function PaymentsPage() {
                 {kpis.activeSubscriptions}
               </Text>
               <Group gap={4} mt="xs">
-                <Text size="xs" c="dimmed">nuevas este mes</Text>
+                <Text size="xs" c="dimmed">{kpis.newSubsThisMonth} nueva{kpis.newSubsThisMonth !== 1 ? "s" : ""} este mes</Text>
               </Group>
             </Box>
             <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "rgba(190, 75, 219, 0.1)", color: "var(--nv-brand)" }}>
@@ -333,7 +398,7 @@ export function PaymentsPage() {
                 {kpis.pendingPayments}
               </Text>
               <Text c="orange" fw={500} mt="xs" size="sm">
-                €{kpis.pendingAmount} por cobrar
+                €{kpis.pendingAmount.toLocaleString("es-ES", { minimumFractionDigits: 2 })} por cobrar
               </Text>
             </Box>
             <ThemeIcon size={48} radius="xl" style={{ backgroundColor: "var(--nv-warning-bg)", color: "var(--nv-warning)" }}>
@@ -573,6 +638,13 @@ export function PaymentsPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
+                {payments.length === 0 && (
+                  <Table.Tr>
+                    <Table.Td colSpan={7}>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay pagos registrados</Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
                 {payments.map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
                   return (
@@ -614,16 +686,36 @@ export function PaymentsPage() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs" justify="flex-end">
-                          <ActionIcon color="blue" variant="subtle" radius="xl">
-                            <IconEye size={16} />
-                          </ActionIcon>
-                          <ActionIcon color="gray" variant="subtle" radius="xl">
-                            <IconDownload size={16} />
-                          </ActionIcon>
-                          {payment.status === "pending" && (
-                            <ActionIcon color="green" variant="subtle" radius="xl">
-                              <IconSend size={16} />
+                          <Tooltip label="Ver detalle">
+                            <ActionIcon color="blue" variant="subtle" radius="xl" onClick={() => handleViewPayment(payment)}>
+                              <IconEye size={16} />
                             </ActionIcon>
+                          </Tooltip>
+                          {payment.status === "pending" && (
+                            <Tooltip label="Marcar como pagado">
+                              <ActionIcon
+                                color="green"
+                                variant="subtle"
+                                radius="xl"
+                                onClick={() => handleMarkPaid(payment)}
+                                loading={markPaymentPaid.isPending}
+                              >
+                                <IconCheck size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {payment.status === "pending" && (
+                            <Tooltip label="Eliminar cobro">
+                              <ActionIcon
+                                color="red"
+                                variant="subtle"
+                                radius="xl"
+                                onClick={() => handleDeletePaymentAction(payment)}
+                                loading={deletePayment.isPending}
+                              >
+                                <IconTrash size={16} />
+                              </ActionIcon>
+                            </Tooltip>
                           )}
                         </Group>
                       </Table.Td>
@@ -649,6 +741,13 @@ export function PaymentsPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
+                {subscriptions.length === 0 && (
+                  <Table.Tr>
+                    <Table.Td colSpan={6}>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay suscripciones</Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
                 {subscriptions.map((sub) => (
                   <Table.Tr key={sub.id} style={{ transition: "background 0.2s" }}>
                     <Table.Td>
@@ -677,13 +776,18 @@ export function PaymentsPage() {
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs" justify="flex-end">
-                        <ActionIcon color="blue" variant="subtle" radius="xl">
-                          <IconEye size={16} />
-                        </ActionIcon>
                         {sub.status === "active" && (
-                          <ActionIcon color="red" variant="subtle" radius="xl">
-                            <IconX size={16} />
-                          </ActionIcon>
+                          <Tooltip label="Cancelar suscripción">
+                            <ActionIcon
+                              color="red"
+                              variant="subtle"
+                              radius="xl"
+                              onClick={() => handleCancelSubscription(sub)}
+                              loading={cancelSubscription.isPending}
+                            >
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Tooltip>
                         )}
                       </Group>
                     </Table.Td>
@@ -882,13 +986,14 @@ export function PaymentsPage() {
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
-        <form onSubmit={chargeForm.onSubmit((values) => console.log(values))}>
+        <form onSubmit={chargeForm.onSubmit(handleCreateCharge)}>
           <Stack>
             <Select
               data={clientOptions}
               label="Cliente"
               placeholder="Selecciona un cliente"
               searchable
+              clearable
               {...chargeForm.getInputProps("client_id")}
             />
 
@@ -898,14 +1003,27 @@ export function PaymentsPage() {
                 label: `${p.name} - €${p.price}`,
               }))}
               label="Producto"
-              placeholder="Selecciona un producto"
-              {...chargeForm.getInputProps("product_id")}
+              placeholder="Selecciona un producto (opcional)"
+              clearable
+              onChange={(val) => {
+                chargeForm.setFieldValue("product_id", val || "");
+                if (val) {
+                  const prod = products.find(p => p.id === val);
+                  if (prod) {
+                    chargeForm.setFieldValue("amount", prod.price);
+                    chargeForm.setFieldValue("description", prod.name);
+                  }
+                }
+              }}
+              value={chargeForm.values.product_id || null}
             />
 
             <NumberInput
               label="Importe (€)"
-              min={0}
+              min={0.01}
               placeholder="0"
+              decimalScale={2}
+              required
               {...chargeForm.getInputProps("amount")}
             />
 
@@ -919,12 +1037,92 @@ export function PaymentsPage() {
               <Button onClick={closeChargeModal} variant="default">
                 Cancelar
               </Button>
-              <Button leftSection={<IconCreditCard size={16} />} type="submit">
+              <Button leftSection={<IconCreditCard size={16} />} type="submit" loading={createPayment.isPending}>
                 Crear Cobro
               </Button>
             </Group>
           </Stack>
         </form>
+      </Modal>
+
+      {/* Payment Detail Modal */}
+      <Modal
+        onClose={closePaymentDetail}
+        opened={paymentDetailOpened}
+        size="md"
+        title="Detalle del Pago"
+        radius="lg"
+        styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
+      >
+        {selectedPayment && (
+          <Stack>
+            <Group justify="space-between">
+              <Text c="dimmed" size="sm">Cliente</Text>
+              <Text fw={500} size="sm">{selectedPayment.client_name || "—"}</Text>
+            </Group>
+            <Divider style={{ borderColor: "var(--nv-border)" }} />
+            <Group justify="space-between">
+              <Text c="dimmed" size="sm">Descripción</Text>
+              <Text fw={500} size="sm">{selectedPayment.description || "—"}</Text>
+            </Group>
+            <Divider style={{ borderColor: "var(--nv-border)" }} />
+            <Group justify="space-between">
+              <Text c="dimmed" size="sm">Importe</Text>
+              <Text fw={700} size="lg" style={{ color: "var(--nv-primary)" }}>€{Number(selectedPayment.amount).toFixed(2)}</Text>
+            </Group>
+            <Divider style={{ borderColor: "var(--nv-border)" }} />
+            <Group justify="space-between">
+              <Text c="dimmed" size="sm">Estado</Text>
+              <Badge color={getStatusColor(selectedPayment.status)} variant="light" radius="xl">
+                {getStatusLabel(selectedPayment.status)}
+              </Badge>
+            </Group>
+            <Divider style={{ borderColor: "var(--nv-border)" }} />
+            <Group justify="space-between">
+              <Text c="dimmed" size="sm">Tipo</Text>
+              <Text size="sm">{selectedPayment.payment_type === "subscription" ? "Suscripción" : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
+            </Group>
+            <Divider style={{ borderColor: "var(--nv-border)" }} />
+            <Group justify="space-between">
+              <Text c="dimmed" size="sm">Fecha de creación</Text>
+              <Text size="sm">{selectedPayment.created_at ? new Date(selectedPayment.created_at).toLocaleString("es-ES") : "—"}</Text>
+            </Group>
+            {selectedPayment.paid_at && (
+              <>
+                <Divider style={{ borderColor: "var(--nv-border)" }} />
+                <Group justify="space-between">
+                  <Text c="dimmed" size="sm">Fecha de pago</Text>
+                  <Text size="sm">{new Date(selectedPayment.paid_at).toLocaleString("es-ES")}</Text>
+                </Group>
+              </>
+            )}
+            <Group justify="flex-end" mt="md" gap="sm">
+              {selectedPayment.status === "pending" && (
+                <>
+                  <Button
+                    color="green"
+                    variant="light"
+                    leftSection={<IconCheck size={16} />}
+                    onClick={() => { handleMarkPaid(selectedPayment); closePaymentDetail(); }}
+                  >
+                    Marcar como pagado
+                  </Button>
+                  <Button
+                    color="red"
+                    variant="light"
+                    leftSection={<IconTrash size={16} />}
+                    onClick={() => { handleDeletePaymentAction(selectedPayment); closePaymentDetail(); }}
+                  >
+                    Eliminar
+                  </Button>
+                </>
+              )}
+              <Button onClick={closePaymentDetail} variant="default">
+                Cerrar
+              </Button>
+            </Group>
+          </Stack>
+        )}
       </Modal>
     </Container>
   );

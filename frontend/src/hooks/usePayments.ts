@@ -47,6 +47,7 @@ export interface PaymentKPIs {
   mrr: number;
   mrr_change: number;
   active_subscriptions: number;
+  new_subs_this_month: number;
   pending_payments: number;
   pending_amount: number;
   this_month_revenue: number;
@@ -195,6 +196,78 @@ export function useToggleProductActive() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useCreatePayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { client_id?: string; product_id?: string; amount: number; description?: string; payment_type?: string }) => {
+      return paymentsApi.createPayment(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
+      notifications.show({ title: "Cobro creado", message: "El cobro ha sido registrado correctamente", color: "green" });
+    },
+    onError: (error: any) => {
+      notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al crear cobro", color: "red" });
+    },
+  });
+}
+
+export function useMarkPaymentPaid() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (paymentId: string) => {
+      return paymentsApi.markPaid(paymentId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
+      notifications.show({ title: "Pago completado", message: "El pago ha sido marcado como completado", color: "green" });
+    },
+    onError: (error: any) => {
+      notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al marcar pago", color: "red" });
+    },
+  });
+}
+
+export function useDeletePayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (paymentId: string) => {
+      return paymentsApi.deletePayment(paymentId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
+      notifications.show({ title: "Pago eliminado", message: "El pago ha sido eliminado", color: "green" });
+    },
+    onError: (error: any) => {
+      notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al eliminar pago", color: "red" });
+    },
+  });
+}
+
+export function useCancelSubscription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      return paymentsApi.cancelSubscription(subscriptionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-kpis"] });
+      notifications.show({ title: "Suscripción cancelada", message: "La suscripción ha sido cancelada", color: "green" });
+    },
+    onError: (error: any) => {
+      notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al cancelar suscripción", color: "red" });
     },
   });
 }

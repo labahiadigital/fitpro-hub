@@ -251,10 +251,21 @@ async def get_payment_kpis(
     if last_month_revenue > 0:
         revenue_change = round(((this_month_revenue - last_month_revenue) / last_month_revenue) * 100, 1)
     
+    # New subscriptions this month
+    new_subs_result = await db.execute(
+        select(func.count()).where(
+            Subscription.workspace_id == current_user.workspace_id,
+            Subscription.status == SubscriptionStatus.active,
+            Subscription.created_at >= first_of_month
+        )
+    )
+    new_subs_this_month = new_subs_result.scalar() or 0
+
     return {
         "mrr": mrr,
-        "mrr_change": 0,  # Would need historical data
+        "mrr_change": revenue_change,
         "active_subscriptions": active_subscriptions,
+        "new_subs_this_month": new_subs_this_month,
         "pending_payments": pending_payments,
         "pending_amount": pending_amount,
         "this_month_revenue": this_month_revenue,
@@ -415,6 +426,105 @@ async def list_payments(
             created_at=pay.created_at,
         ))
     return payments
+
+
+# ============ CREATE MANUAL PAYMENT ============
+
+class ManualPaymentCreate(BaseModel):
+    client_id: Optional[UUID] = None
+    product_id: Optional[UUID] = None
+    amount: float
+    description: Optional[str] = None
+    payment_type: str = "one_time"
+
+
+@router.post("/payments/create", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
+async def create_manual_payment(
+    data: ManualPaymentCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Crear un pago/cobro manual."""
+    payment = Payment(
+        workspace_id=current_user.workspace_id,
+        client_id=data.client_id,
+        amount=data.amount,
+        description=data.description or "Cobro manual",
+        currency="EUR",
+        status=PaymentStatus.pending,
+        payment_type=data.payment_type,
+    )
+    db.add(payment)
+    await db.commit()
+    await db.refresh(payment)
+
+    client_name = None
+    if payment.client_id:
+        c = await db.execute(select(Client).where(Client.id == payment.client_id))
+        cl = c.scalar_one_or_none()
+        if cl:
+            client_name = f"{cl.first_name or ''} {cl.last_name or ''}".strip() or None
+
+    return PaymentResponse(
+        id=payment.id,
+        workspace_id=payment.workspace_id,
+        client_id=payment.client_id,
+        client_name=client_name,
+        description=payment.description,
+        amount=float(payment.amount),
+        currency=payment.currency,
+        status="pending",
+        payment_type=payment.payment_type or "one_time",
+        paid_at=payment.paid_at,
+        created_at=payment.created_at,
+    )
+
+
+@router.patch("/payments/{payment_id}/mark-paid")
+async def mark_payment_paid(
+    payment_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Marcar un pago pendiente como pagado."""
+    result = await db.execute(
+        select(Payment).where(
+            Payment.id == payment_id,
+            Payment.workspace_id == current_user.workspace_id
+        )
+    )
+    payment = result.scalar_one_or_none()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+    if payment.status != PaymentStatus.pending:
+        raise HTTPException(status_code=400, detail="Solo se pueden marcar como pagados los cobros pendientes")
+
+    payment.status = PaymentStatus.succeeded
+    payment.paid_at = datetime.utcnow()
+    await db.commit()
+    return {"status": "ok", "message": "Pago marcado como completado"}
+
+
+@router.delete("/payments/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_payment(
+    payment_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Eliminar un pago pendiente."""
+    result = await db.execute(
+        select(Payment).where(
+            Payment.id == payment_id,
+            Payment.workspace_id == current_user.workspace_id
+        )
+    )
+    payment = result.scalar_one_or_none()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+    if payment.status == PaymentStatus.succeeded:
+        raise HTTPException(status_code=400, detail="No se pueden eliminar pagos completados")
+    await db.delete(payment)
+    await db.commit()
 
 
 # ============ WEBHOOKS ============
