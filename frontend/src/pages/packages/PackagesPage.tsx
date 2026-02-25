@@ -73,7 +73,7 @@ interface ClientPackage {
 }
 
 const sessionTypeOptions = [
-  { value: "Personal Training", label: "Personal Training" },
+  { value: "Personal Training", label: "Entrenamiento Personal" },
   { value: "HIIT", label: "HIIT Grupal" },
   { value: "Nutrición", label: "Consulta Nutricional" },
   { value: "Yoga", label: "Yoga" },

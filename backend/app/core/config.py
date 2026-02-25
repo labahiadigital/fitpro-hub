@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     # CORS (comma-separated list of allowed origins)
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.trackfiz.com"
     
+    # Certificate encryption (AES-256-GCM for FNMT private keys at rest)
+    # Generate with: python -c "import os; print(os.urandom(32).hex())"
+    CERTIFICATE_ENCRYPTION_KEY: str = ""
+    
     # Celery (uses REDIS_URL by default)
     CELERY_BROKER_URL: str = ""
     CELERY_RESULT_BACKEND: str = ""

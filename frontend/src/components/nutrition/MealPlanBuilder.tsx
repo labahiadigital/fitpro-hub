@@ -84,6 +84,7 @@ export interface Food {
   fat: number;
   serving_size: string;
   category: string;
+  is_global?: boolean;
 }
 
 export interface Supplement {
@@ -97,6 +98,7 @@ export interface Supplement {
   serving_size: string;
   how_to_take?: string;
   timing?: string;
+  is_global?: boolean;
 }
 
 export interface MealItem {
@@ -340,7 +342,7 @@ export function MealPlanBuilder({
 
     const newMeal: Meal = {
       id: `meal-${Date.now()}`,
-      name: mealNumber === 999 ? "Snack" : `Comida ${mealNumber}`,
+      name: mealNumber === 999 ? "Tentempié" : `Comida ${mealNumber}`,
       time: mealNumber === 999 ? "16:00" : `${7 + mealNumber * 3}:00`,
       items: [],
     };

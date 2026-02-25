@@ -13,6 +13,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Text,
@@ -34,9 +35,11 @@ class InvoiceSettings(Base):
     # Datos fiscales del negocio
     business_name = Column(String, nullable=False)
     tax_id = Column(String, nullable=True)  # NIF/CIF
+    nif_type = Column(String, default="NIF")  # NIF, NIE, CIF, otro
     address = Column(Text, nullable=True)
     city = Column(String, nullable=True)
     postal_code = Column(String, nullable=True)
+    province = Column(String, nullable=True)
     country = Column(String, default="España")
     phone = Column(String, nullable=True)
     email = Column(String, nullable=True)
@@ -45,6 +48,8 @@ class InvoiceSettings(Base):
     invoice_prefix = Column(String, default="F")
     invoice_next_number = Column(Integer, default=1)
     invoice_number_format = Column(String, default="{prefix}{year}-{number}")
+    rectificative_prefix = Column(String, default="R")
+    rectificative_next_number = Column(Integer, default=1)
 
     # Impuestos por defecto
     default_tax_rate = Column(Numeric, default=21)
@@ -63,6 +68,28 @@ class InvoiceSettings(Base):
     # Logo
     logo_url = Column(String, nullable=True)
 
+    # VeriFactu
+    verifactu_enabled = Column(Boolean, default=False)
+    verifactu_mode = Column(String, default="none")  # none, direct_aeat_test, direct_aeat_prod
+
+    # Certificate (public cert stored as text, private key encrypted at rest)
+    certificate_pem = Column(Text, nullable=True)
+    certificate_key_encrypted = Column(LargeBinary, nullable=True)
+    certificate_key_iv = Column(LargeBinary, nullable=True)
+    certificate_subject = Column(String, nullable=True)
+    certificate_serial_number = Column(String, nullable=True)
+    certificate_nif = Column(String, nullable=True)
+    certificate_expires_at = Column(DateTime(timezone=True), nullable=True)
+    certificate_uploaded_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Software informático (obligatorio AEAT)
+    software_company_name = Column(String, nullable=True)
+    software_company_nif = Column(String, nullable=True)
+    software_name = Column(String, default="E13Fitness")
+    software_id = Column(String(2), default="EF")
+    software_version = Column(String, default="1.0")
+    software_install_number = Column(String, default="00001")
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -74,11 +101,12 @@ class Invoice(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.extensions.uuid_generate_v4())
     workspace_id = Column(PG_UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
 
-    # Número de factura
+    # Número y serie de factura
     invoice_number = Column(String, nullable=False)
+    invoice_series = Column(String, default="F")  # F=ordinaria, R=rectificativa
 
-    # Tipo de factura
-    invoice_type = Column(String, default="invoice")
+    # Tipo de factura (F1=ordinaria, F2=simplificada, F3=rectificativa, R1-R5=rectificativas)
+    invoice_type = Column(String, default="F1")
 
     # Cliente
     client_id = Column(PG_UUID(as_uuid=True), ForeignKey("clients.id", ondelete="SET NULL"), nullable=True)
@@ -95,7 +123,7 @@ class Invoice(Base):
     due_date = Column(Date, nullable=True)
     paid_date = Column(Date, nullable=True)
 
-    # Estado
+    # Estado: draft, finalized, sent, paid, overdue, cancelled, rectified
     status = Column(String, default="draft")
 
     # Totales
@@ -122,20 +150,31 @@ class Invoice(Base):
     payment_reference = Column(String, nullable=True)
     payment_id = Column(PG_UUID(as_uuid=True), ForeignKey("payments.id"), nullable=True)
 
-    # Factura relacionada
+    # Factura relacionada (para rectificativas)
     related_invoice_id = Column(PG_UUID(as_uuid=True), ForeignKey("invoices.id"), nullable=True)
 
     # PDF
     pdf_url = Column(String, nullable=True)
 
+    # VeriFactu fields
+    verifactu_hash = Column(String, nullable=True)
+    verifactu_prev_hash = Column(String, nullable=True)
+    verifactu_status = Column(String, default="none")  # none, pending, sent, accepted, rejected
+    verifactu_response = Column(JSONB, nullable=True)
+    verifactu_uuid = Column(String, nullable=True)
+    verifactu_qr_data = Column(Text, nullable=True)
+    verifactu_sent_at = Column(DateTime(timezone=True), nullable=True)
+    verifactu_registration_datetime = Column(DateTime(timezone=True), nullable=True)
+
     # Metadatos
-    extra_data = Column(JSONB, default={})
+    extra_data = Column("metadata", JSONB, default={})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relaciones
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
+    audit_logs = relationship("InvoiceAuditLog", back_populates="invoice", cascade="all, delete-orphan")
 
 
 class InvoiceItem(Base):
@@ -251,6 +290,27 @@ class ExpenseCategory(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class InvoiceAuditLog(Base):
+    """Registro de auditoría para trazabilidad completa de facturas"""
+    __tablename__ = "invoice_audit_logs"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.extensions.uuid_generate_v4())
+    invoice_id = Column(PG_UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False)
+    workspace_id = Column(PG_UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+
+    action = Column(String, nullable=False)  # created, updated, finalized, sent, paid, cancelled, rectified, email_sent, pdf_generated
+    old_values = Column(JSONB, nullable=True)
+    new_values = Column(JSONB, nullable=True)
+    user_id = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    user_name = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relaciones
+    invoice = relationship("Invoice", back_populates="audit_logs")
 
 
 class Quote(Base):

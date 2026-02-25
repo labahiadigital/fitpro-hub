@@ -30,6 +30,7 @@ class SupplementCreate(BaseModel):
     usage_instructions: Optional[str] = None
     warnings: Optional[str] = None
     image_url: Optional[str] = None
+    purchase_url: Optional[str] = None
 
 
 class SupplementResponse(BaseModel):
@@ -48,6 +49,7 @@ class SupplementResponse(BaseModel):
     usage_instructions: Optional[str] = None
     warnings: Optional[str] = None
     image_url: Optional[str] = None
+    purchase_url: Optional[str] = None
     is_global: bool = False
     
     class Config:
@@ -107,6 +109,7 @@ async def create_supplement(
         usage_instructions=data.usage_instructions,
         warnings=data.warnings,
         image_url=data.image_url,
+        purchase_url=data.purchase_url,
         is_global=False
     )
     db.add(supplement)
@@ -151,22 +154,14 @@ async def update_supplement(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Actualizar un suplemento.
-    """
-    result = await db.execute(
-        select(Supplement).where(
-            Supplement.id == supplement_id,
-            Supplement.workspace_id == current_user.workspace_id
-        )
-    )
+    result = await db.execute(select(Supplement).where(Supplement.id == supplement_id))
     supplement = result.scalar_one_or_none()
-    
     if not supplement:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Suplemento no encontrado"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suplemento no encontrado")
+    if supplement.is_global:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No se pueden modificar datos del sistema")
+    if supplement.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suplemento no encontrado")
     
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(supplement, field, value)
@@ -182,25 +177,68 @@ async def delete_supplement(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Eliminar un suplemento.
-    """
-    result = await db.execute(
-        select(Supplement).where(
-            Supplement.id == supplement_id,
-            Supplement.workspace_id == current_user.workspace_id
-        )
-    )
+    result = await db.execute(select(Supplement).where(Supplement.id == supplement_id))
     supplement = result.scalar_one_or_none()
-    
     if not supplement:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Suplemento no encontrado"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suplemento no encontrado")
+    if supplement.is_global:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No se pueden modificar datos del sistema")
+    if supplement.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suplemento no encontrado")
     
     await db.delete(supplement)
     await db.commit()
+
+
+# ============ BULK SEED ============
+
+@router.post("/seed", status_code=status.HTTP_201_CREATED)
+async def seed_supplements(
+    supplements_data: List[SupplementCreate],
+    replace_all: bool = False,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Bulk-create supplements. If replace_all=True, delete existing workspace supplements first.
+    """
+    if replace_all:
+        result = await db.execute(
+            select(Supplement).where(
+                Supplement.workspace_id == current_user.workspace_id
+            )
+        )
+        existing = result.scalars().all()
+        for s in existing:
+            await db.delete(s)
+
+    created = []
+    for data in supplements_data:
+        supplement = Supplement(
+            workspace_id=current_user.workspace_id,
+            name=data.name,
+            brand=data.brand,
+            description=data.description,
+            category=data.category,
+            serving_size=data.serving_size,
+            serving_unit=data.serving_unit,
+            calories=data.calories,
+            protein=data.protein,
+            carbs=data.carbs,
+            fat=data.fat,
+            usage_instructions=data.usage_instructions,
+            warnings=data.warnings,
+            image_url=data.image_url,
+            purchase_url=data.purchase_url,
+            is_global=False,
+        )
+        db.add(supplement)
+        created.append(supplement)
+
+    await db.commit()
+    for s in created:
+        await db.refresh(s)
+    return {"message": f"Created {len(created)} supplements", "count": len(created)}
 
 
 # ============ FAVORITES ============

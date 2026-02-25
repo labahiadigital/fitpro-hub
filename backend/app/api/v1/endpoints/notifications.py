@@ -1,4 +1,4 @@
-"""Notification endpoints."""
+"""Notification endpoints with preference management."""
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, timedelta
@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
 
 from app.core.database import get_db
-from app.middleware.auth import get_current_user, require_workspace
+from app.middleware.auth import get_current_user, require_workspace, CurrentUser
 from app.models.notification import Notification
 from app.models.user import User
 from app.models.client import Client
@@ -190,6 +190,56 @@ async def delete_notification(
     await db.commit()
 
 
-# NOTE: Notification Preferences endpoints disabled - table does not exist in DB
-# User preferences are stored in the 'preferences' JSONB field of the users table
+# Notification preferences stored in users.preferences JSONB
+
+@router.get("/preferences")
+async def get_notification_preferences(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    prefs = (current_user.preferences or {}).get("notifications", {})
+    defaults = {
+        "email_booking_created": True,
+        "email_booking_cancelled": True,
+        "email_payment_received": True,
+        "email_payment_failed": True,
+        "email_new_message": True,
+        "email_new_client": True,
+        "email_form_submitted": True,
+        "push_enabled": True,
+    }
+    return {**defaults, **prefs}
+
+
+@router.patch("/preferences")
+async def update_notification_preferences(
+    data: dict,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.models.user import User
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    current_prefs = dict(user.preferences or {})
+    notif_prefs = current_prefs.get("notifications", {})
+    allowed_keys = {
+        "email_booking_created", "email_booking_cancelled",
+        "email_payment_received", "email_payment_failed",
+        "email_new_message", "email_new_client",
+        "email_form_submitted", "push_enabled",
+    }
+    for key, value in data.items():
+        if key in allowed_keys and isinstance(value, bool):
+            notif_prefs[key] = value
+
+    current_prefs["notifications"] = notif_prefs
+    user.preferences = current_prefs
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(user, "preferences")
+    await db.commit()
+    await db.refresh(user)
+    return current_prefs.get("notifications", {})
 

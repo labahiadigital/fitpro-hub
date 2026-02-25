@@ -564,7 +564,14 @@ export function InvitationOnboardingPage() {
 
   const prevStep = () => setActive((current) => current - 1);
 
-  const hasParqRisk = Object.values(form.values.parqResponses).some((v) => v);
+  const hasParqRisk = [
+    form.values.parqResponses.heartCondition,
+    form.values.parqResponses.chestPain,
+    form.values.parqResponses.dizziness,
+    form.values.parqResponses.boneJoint,
+    form.values.parqResponses.bloodPressure,
+    form.values.parqResponses.otherReason,
+  ].some((v) => v === "true" || v === true);
 
   const handleSubmit = async () => {
     if (!invitationData || !token) return;

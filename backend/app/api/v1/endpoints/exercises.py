@@ -221,23 +221,18 @@ async def update_exercise(
     db: AsyncSession = Depends(get_db),
 ):
     """Update an exercise."""
-    result = await db.execute(
-        select(Exercise).where(
-            Exercise.id == exercise_id,
-            Exercise.workspace_id == current_user.workspace_id
-        )
-    )
+    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
     exercise = result.scalar_one_or_none()
-    
     if not exercise:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ejercicio no encontrado")
+    if exercise.is_global:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No se pueden modificar datos del sistema")
+    if exercise.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ejercicio no encontrado")
+
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(exercise, field, value)
-    
+
     await db.commit()
     await db.refresh(exercise)
     return exercise
@@ -250,19 +245,14 @@ async def delete_exercise(
     db: AsyncSession = Depends(get_db),
 ):
     """Delete an exercise."""
-    result = await db.execute(
-        select(Exercise).where(
-            Exercise.id == exercise_id,
-            Exercise.workspace_id == current_user.workspace_id
-        )
-    )
+    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
     exercise = result.scalar_one_or_none()
-    
     if not exercise:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ejercicio no encontrado")
+    if exercise.is_global:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No se pueden modificar datos del sistema")
+    if exercise.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ejercicio no encontrado")
     
     await db.delete(exercise)
     await db.commit()

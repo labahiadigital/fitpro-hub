@@ -5,9 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from pydantic import BaseModel
 
+from sqlalchemy import func
+
 from app.core.database import get_db
 from app.models.workout import WorkoutProgram, WorkoutLog
-from app.models.exercise import Exercise
+from app.models.exercise import Exercise, ExerciseAlternative
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 
 router = APIRouter()
@@ -171,6 +173,204 @@ async def create_exercise(
     await db.commit()
     await db.refresh(exercise)
     return exercise
+
+
+@router.put("/exercises/{exercise_id}", response_model=ExerciseResponse)
+async def update_exercise(
+    exercise_id: UUID,
+    data: ExerciseCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update an exercise."""
+    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    exercise = result.scalar_one_or_none()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Ejercicio no encontrado")
+    if exercise.is_global:
+        raise HTTPException(status_code=403, detail="No se pueden modificar datos del sistema")
+    if exercise.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Ejercicio no encontrado")
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(exercise, field, value)
+
+    await db.commit()
+    await db.refresh(exercise)
+    return exercise
+
+
+@router.delete("/exercises/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_exercise(
+    exercise_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete an exercise."""
+    result = await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    exercise = result.scalar_one_or_none()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Ejercicio no encontrado")
+    if exercise.is_global:
+        raise HTTPException(status_code=403, detail="No se pueden modificar datos del sistema")
+    if exercise.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Ejercicio no encontrado")
+
+    await db.delete(exercise)
+    await db.commit()
+
+
+# ============ EXERCISE ALTERNATIVES ============
+
+class AlternativeCreate(BaseModel):
+    alternative_exercise_id: str
+    notes: Optional[str] = None
+    priority: int = 0
+
+
+class AlternativeResponse(BaseModel):
+    id: str
+    exercise_id: str
+    alternative_exercise_id: str
+    alternative_name: str
+    alternative_muscle_groups: List[str] = []
+    alternative_equipment: List[str] = []
+    alternative_category: Optional[str] = None
+    notes: Optional[str] = None
+    priority: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/exercises/alternatives/counts")
+async def get_alternatives_counts(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get count of alternatives for each exercise."""
+    fwd = await db.execute(
+        select(
+            ExerciseAlternative.exercise_id,
+            func.count(ExerciseAlternative.id).label("cnt")
+        ).group_by(ExerciseAlternative.exercise_id)
+    )
+    counts: dict = {}
+    for row in fwd:
+        eid = str(row.exercise_id)
+        counts[eid] = counts.get(eid, 0) + row.cnt
+    rev = await db.execute(
+        select(
+            ExerciseAlternative.alternative_exercise_id,
+            func.count(ExerciseAlternative.id).label("cnt")
+        ).group_by(ExerciseAlternative.alternative_exercise_id)
+    )
+    for row in rev:
+        eid = str(row.alternative_exercise_id)
+        counts[eid] = counts.get(eid, 0) + row.cnt
+    return counts
+
+
+@router.get("/exercises/{exercise_id}/alternatives", response_model=List[AlternativeResponse])
+async def list_exercise_alternatives(
+    exercise_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """List predefined alternatives for an exercise (bidirectional)."""
+    result = await db.execute(
+        select(ExerciseAlternative, Exercise)
+        .join(Exercise, Exercise.id == ExerciseAlternative.alternative_exercise_id)
+        .where(ExerciseAlternative.exercise_id == exercise_id)
+        .order_by(ExerciseAlternative.priority)
+    )
+    rows = result.all()
+
+    result_reverse = await db.execute(
+        select(ExerciseAlternative, Exercise)
+        .join(Exercise, Exercise.id == ExerciseAlternative.exercise_id)
+        .where(ExerciseAlternative.alternative_exercise_id == exercise_id)
+        .order_by(ExerciseAlternative.priority)
+    )
+    rows_reverse = result_reverse.all()
+
+    alternatives = []
+    seen_ids = set()
+    for alt, ex in rows:
+        if str(ex.id) not in seen_ids:
+            seen_ids.add(str(ex.id))
+            alternatives.append(AlternativeResponse(
+                id=str(alt.id), exercise_id=str(alt.exercise_id),
+                alternative_exercise_id=str(ex.id), alternative_name=ex.name,
+                alternative_muscle_groups=ex.muscle_groups or [],
+                alternative_equipment=ex.equipment or [],
+                alternative_category=ex.category,
+                notes=alt.notes, priority=alt.priority or 0,
+            ))
+    for alt, ex in rows_reverse:
+        if str(ex.id) not in seen_ids:
+            seen_ids.add(str(ex.id))
+            alternatives.append(AlternativeResponse(
+                id=str(alt.id), exercise_id=str(alt.exercise_id),
+                alternative_exercise_id=str(ex.id), alternative_name=ex.name,
+                alternative_muscle_groups=ex.muscle_groups or [],
+                alternative_equipment=ex.equipment or [],
+                alternative_category=ex.category,
+                notes=alt.notes, priority=alt.priority or 0,
+            ))
+    return alternatives
+
+
+@router.post("/exercises/{exercise_id}/alternatives", status_code=status.HTTP_201_CREATED)
+async def add_exercise_alternative(
+    exercise_id: UUID,
+    data: AlternativeCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a predefined alternative for an exercise."""
+    alt_id = UUID(data.alternative_exercise_id)
+    if exercise_id == alt_id:
+        raise HTTPException(400, "An exercise cannot be its own alternative")
+
+    result = await db.execute(
+        select(ExerciseAlternative).where(
+            or_(
+                (ExerciseAlternative.exercise_id == exercise_id) & (ExerciseAlternative.alternative_exercise_id == alt_id),
+                (ExerciseAlternative.exercise_id == alt_id) & (ExerciseAlternative.alternative_exercise_id == exercise_id),
+            )
+        )
+    )
+    if result.scalar_one_or_none():
+        return {"message": "Alternative already exists"}
+
+    alternative = ExerciseAlternative(
+        exercise_id=exercise_id,
+        alternative_exercise_id=alt_id,
+        workspace_id=current_user.workspace_id,
+        notes=data.notes,
+        priority=data.priority,
+    )
+    db.add(alternative)
+    await db.commit()
+    return {"message": "Alternative added"}
+
+
+@router.delete("/exercises/{exercise_id}/alternatives/{alternative_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_exercise_alternative(
+    exercise_id: UUID,
+    alternative_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove an exercise alternative."""
+    result = await db.execute(
+        select(ExerciseAlternative).where(ExerciseAlternative.id == alternative_id)
+    )
+    alt = result.scalar_one_or_none()
+    if alt:
+        await db.delete(alt)
+        await db.commit()
 
 
 # ============ PROGRAMS ============

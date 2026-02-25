@@ -97,7 +97,7 @@ export function useUpdateExercise() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Exercise> }) => {
-      const response = await api.put(`/exercises/${id}`, data);
+      const response = await workoutsApi.updateExercise(id, data);
       return response.data;
     },
     onSuccess: (_, variables) => {
@@ -112,7 +112,7 @@ export function useDeleteExercise() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/exercises/${id}`);
+      await workoutsApi.deleteExercise(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exercises"] });

@@ -493,6 +493,11 @@ export function ClientDetailPage() {
       email: client.email || "",
       phone: client.phone || "",
       goals: client.goals || "",
+      tax_id: client.tax_id || "",
+      billing_address: client.billing_address || "",
+      billing_city: client.billing_city || "",
+      billing_postal_code: client.billing_postal_code || "",
+      billing_country: client.billing_country || "España",
     },
   });
   
@@ -653,6 +658,11 @@ export function ClientDetailPage() {
       email: client.email || "",
       phone: client.phone || "",
       goals: client.goals || "",
+      tax_id: client.tax_id || "",
+      billing_address: client.billing_address || "",
+      billing_city: client.billing_city || "",
+      billing_postal_code: client.billing_postal_code || "",
+      billing_country: client.billing_country || "España",
     });
     openEditClientModal();
   };
@@ -3192,6 +3202,36 @@ export function ClientDetailPage() {
               radius="md"
               {...editClientForm.getInputProps("goals")}
             />
+
+            <Divider label="Datos de facturación" labelPosition="center" my="xs" />
+
+            <TextInput
+              label="NIF / CIF / NIE"
+              placeholder="12345678A"
+              radius="md"
+              {...editClientForm.getInputProps("tax_id")}
+            />
+            <TextInput
+              label="Dirección fiscal"
+              placeholder="Calle Ejemplo 1, 2º B"
+              radius="md"
+              {...editClientForm.getInputProps("billing_address")}
+            />
+            <Group grow>
+              <TextInput
+                label="Ciudad"
+                placeholder="Madrid"
+                radius="md"
+                {...editClientForm.getInputProps("billing_city")}
+              />
+              <TextInput
+                label="Código postal"
+                placeholder="28001"
+                radius="md"
+                {...editClientForm.getInputProps("billing_postal_code")}
+              />
+            </Group>
+
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeEditClientModal} radius="xl">
                 Cancelar

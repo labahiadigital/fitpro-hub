@@ -1,0 +1,10 @@
+{
+    "autoload": {
+        "psr-4": {
+            "": "."
+        }
+    },
+    "require": {
+        "Sequra/php-client": "^0.0.3"
+    }
+}

@@ -1,0 +1,143 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<style type="text/css">
+		label {
+			width: 120px;
+			display: inline-block;
+		}
+		.sequra-educational-popup {
+			cursor: pointer; 
+			color: rgb(0, 156, 92);
+			white-space: nowrap;
+		}
+		</style>
+		<script>
+			var sequraConfigParams = {
+			  merchant: "dummy", // Your merchant reference given by SeQura.
+			  assetKey: "ADc3ZdOLh4", // Your asset key given by SeQura.
+			  products: ["i1", "pp3"], // List of SeQura products that you want to include components.
+			  scriptUri: "https://sandbox.sequracdn.com/assets/sequra-checkout.min.js", // SeQura Javascript library uri for production or sandbox.
+			  decimalSeparator: ",", // Decimal separator used in currencies formatting. Optional, default `,`.
+			  thousandSeparator: ".", // Thousand separator used in currencies formatting. Optional, default `.`.
+			};
+
+			(function(i, s, o, g, r, a, m) {i["SequraConfiguration"] = g;i["SequraOnLoad"] = [];i[r] = {};i[r][a] = function(callback) {i["SequraOnLoad"].push(callback);};(a = s.createElement(o)), (m = s.getElementsByTagName(o)[0]);a.async = 1;a.src = g.scriptUri;m.parentNode.insertBefore(a, m);})(window, document, "script", sequraConfigParams, "Sequra", "onLoad");
+
+
+			function calc_total(){
+				var total =
+					document.getElementById('p0').value * document.getElementById('q0').value +
+					document.getElementById('p1').value * document.getElementById('q1').value;
+
+				total =  Math.round(100*total)/100;
+
+				document.getElementById('total').innerText = total + ' €';
+
+				//Update simulator
+				document.querySelector('div[data-product="pp3"]').setAttribute("data-amount",total*100);
+				Sequra.refreshComponents();
+
+			}
+
+			calc_total();
+		  </script>
+
+	</head>
+	<body>
+  <form action="checkout.php" method="POST">
+  <h1>Checkout</h1>
+
+	<table id="cart">
+		<tr>
+			<td>Producto 0: </td>
+			<td><input id="p0" name="p[0]" step='0.01' type="number" style="width:150px;text-align:right" value='82.33' onchange="calc_total();"/>  EUR</td>
+			<td><input id="q0" name="q[0]" type="number" style="width:50px;text-align:right" value='1' onchange="calc_total();"/> unidades</td>
+		</tr>
+		<tr>
+			<td>Producto 1:</td>
+			<td><input id="p1" name="p[1]" step='0.01' type="number" style="width:150px;text-align:right" value='12.33' onchange="calc_total();"/>  EUR</td>
+			<td><input id="q1" name="q[1]" type="number" style="width:50px;text-align:right" value='1' onchange="calc_total();"/> unidades</td>
+		</tr>
+		<tr>
+			<td>TOTAL</td>
+			<td id="total">100,01 EUR</td>
+		</tr>
+	</table>
+
+	<!-- simulador cuotas-->
+	<div
+	class="sequra-promotion-widget"
+	data-product="pp3"
+	data-amount="100001"
+	data-type="text"
+	data-alignment="left"
+	></div>
+
+	<h2>Datos de registro</h2>
+	<div>
+		<div><input type="radio" name="customer-title" value="sr" checked="true"> Sr. <input type="radio" name="customer-title" value="sra"/> Sra. </div>
+		<div><label for="customer-firstname">Nombre:</label><input type="text" id="customer-firstname" name="customer-firstname" value="Mario"/></div>
+		<div><label for="customer-lastname">Apellidos:</label><input type="text" id="customer-lastname" name="customer-lastname" value="García Rivero"/></div>
+		<div><label for="customer-email">Email:</label><input type="email" id="customer-email" name="customer-email" value="integrations@sequra.es"/></div>
+		<div><label for="customer-phone">Tel:</label><input type="tel" id="customer-phone" name="customer-phone" value="666999666"/></div>
+		<div><label for="customer-address">Dirección:</label><input type="text" id="customer-address" name="customer-address" value="C/ Archenilla 23, 5º izq."/></div>
+		<div><label for="customer-city">Ciudad:</label><input type="text" id="customer-city" name="customer-city" value="Barcelona"/></div>
+		<div><label for="customer-cp">CP:</label><input type="text" id="customer-cp" name="customer-cp" value="08080"/></div>
+		<div><label for="customer-state">Provincia:</label><input type="text" id="customer-state" name="customer-state" value="Barcelona"/></div>
+		<div><label for="customer-country">Provincia:</label><input type="text" id="customer-country" name="customer-country" value="España"/></div>
+		<div><label for="customer-nin">NIF:</label><input type="text" id="customer-nin" name="customer-nin" value="23232323T"/></div>
+		<br style="clear:both"/>
+		<div><label for="customer-pass">Contraseña:</label><input type="password" id="customer-pass" name="customer-pass" value="xxxxx"/></div>
+		<div><label for="customer-pass2">Repetir contraseña:</label><input type="password2" id="customer-pass2" name="customer-pass2" value="xxxxx"/></div>
+	</div>
+	<h2>Direccion de envío</h2>
+		<div><label for="shipping-firstname">Nombre:</label><input type="text" id="shipping-firstname" name="shipping-firstname" value="Mario"/></div>
+		<div><label for="shipping-lastname">Apellidos:</label><input type="text" id="shipping-lastname" name="shipping-lastname" value="García Rivero"/></div>
+		<div><label for="shipping-email">Email:</label><input type="email" id="shipping-email" name="shipping-email" value="integrations@sequra.es"/></div>
+		<div><label for="shipping-phone">Tel:</label><input type="tel" id="shipping-phone" name="shipping-phone" value="666999666"/></div>
+		<div><label for="shipping-address">Dirección:</label><input type="text" id="shipping-address" name="shipping-address" value="C/ Archenilla 23, 5º izq."/></div>
+		<div><label for="shipping-city">Ciudad:</label><input type="text" id="shipping-city" name="shipping-city" value="Barcelona"/></div>
+		<div><label for="shipping-cp">CP:</label><input type="text" id="shipping-cp" name="shipping-cp" value="08080"/></div>
+		<div><label for="shipping-state">Provincia:</label><input type="text" id="shipping-state" name="shipping-state" value="Barcelona"/></div>
+		<div><label for="shipping-country">Provincia:</label><input type="text" id="shipping-country" name="shipping-country" value="España"/></div>
+		<div><label for="shipping-vat">NIF:</label><input type="text" id="shipping-vat" name="shipping-vat" value="23232323T"/></div>
+	<h2>Dirección de facturación</h2>
+		<div><label for="billing-firstname">Nombre:</label><input type="text" id="billing-firstname" name="billing-firstname" value="Mario"/></div>
+		<div><label for="billing-lastname">Apellidos:</label><input type="text" id="billing-lastname" name="billing-lastname" value="García Rivero"/></div>
+		<div><label for="billing-email">Email:</label><input type="email" id="billing-email" name="billing-email" value="integrations@sequra.es"/></div>
+		<div><label for="billing-phone">Tel:</label><input type="tel" id="billing-phone" name="billing-phone" value="666999666"/></div>
+		<div><label for="billing-address">Dirección:</label><input type="text" id="billing-address" name="billing-address" value="C/ Archenilla 23, 5º izq."/></div>
+		<div><label for="billing-city">Ciudad:</label><input type="text" id="billing-city" name="billing-city" value="Barcelona"/></div>
+		<div><label for="billing-cp">CP:</label><input type="text" id="billing-cp" name="billing-cp" value="08080"/></div>
+		<div><label for="billing-state">Provincia:</label><input type="text" id="billing-state" name="billing-state" value="Barcelona"/></div>
+		<div><label for="billing-country">Provincia:</label><input type="text" id="billing-country" name="billing-country" value="España"/></div>
+		<div><label for="billing-vat">NIF para la factura:</label><input type="text" id="billing-vat" name="billing-vat" value="23232323T"/></div>
+	<h2>Método de envío</h2>
+	<ul>
+		<li><input type="radio" name="shipping_method" value="normal" checked="true">Envío normal 72 horas</li>
+		<li><input type="radio" name="shipping_method" value="urgente">Envío urgente en 24 horas</li>
+	</ul>
+	<h2>Métodos de pago</h2>
+	<ul>
+		<li id="i1"><input type="radio" name="payment_method" value="i1" checked="true">Copra ahora, paga después   <span id="sequra_invoice_method_link" class="sequra-educational-popup" data-product="i1"> + info</span></li>
+		<li id="cc"><input type="radio" name="payment_method" value="cc">Tarjeta de crédito</li>
+		<li id="pp3"><input type="radio" name="payment_method" value="pp3">Pago fraccionado   <span id="sequra_partpayment_method_link" class="sequra-educational-popup" data-product="pp3"> + info</span><br/>
+		</li>
+	</ul>
+	<input type="submit" value="pagar"/>
+
+
+	<!-- Teaser Copra ahora, paga después -->
+	<div
+	class="sequra-promotion-widget"
+	data-product="i1"
+	data-type="text"
+	data-amount="100"
+	></div>
+
+	</form>
+
+
+	</body>
+</html>

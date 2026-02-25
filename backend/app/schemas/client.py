@@ -45,6 +45,11 @@ class ClientCreate(BaseSchema):
     internal_notes: Optional[str] = None
     consents: Optional[ConsentSchema] = None
     tag_ids: Optional[List[UUID]] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
 
 
 class ClientUpdate(BaseSchema):
@@ -63,6 +68,11 @@ class ClientUpdate(BaseSchema):
     consents: Optional[ConsentSchema] = None
     tag_ids: Optional[List[UUID]] = None
     is_active: Optional[bool] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
 
 
 class ClientResponse(BaseSchema):
@@ -83,6 +93,11 @@ class ClientResponse(BaseSchema):
     consents: Dict[str, Any]
     is_active: bool
     tags: List[ClientTagResponse] = []
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

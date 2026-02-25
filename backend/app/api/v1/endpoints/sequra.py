@@ -27,6 +27,7 @@ from app.models.payment import Payment, PaymentStatus
 from app.models.invitation import ClientInvitation
 from app.models.product import Product
 from app.services.sequra import sequra_service
+from app.services.auto_invoice import create_invoice_for_payment
 
 logger = logging.getLogger(__name__)
 
@@ -381,6 +382,12 @@ async def sequra_ipn(
         "sequra_approved_since": approved_since,
         "sequra_needs_review_since": needs_review_since,
     }
+
+    if sq_state == "approved" and payment.status == PaymentStatus.succeeded:
+        try:
+            await create_invoice_for_payment(db, payment, ip_address=client_ip)
+        except Exception as e:
+            logger.error(f"Auto-invoice failed for SeQura payment {payment.id}: {e}")
 
     await db.commit()
 

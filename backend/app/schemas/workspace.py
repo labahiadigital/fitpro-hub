@@ -12,15 +12,31 @@ class BrandingSchema(BaseSchema):
 
 
 class BookingPoliciesSchema(BaseSchema):
+    default_duration: int = 60
+    buffer_time: int = 15
+    max_advance_days: int = 30
+    min_advance_hours: int = 2
     cancellation_hours: int = 24
     reschedule_hours: int = 12
-    max_advance_days: int = 30
+    allow_client_booking: bool = True
+    allow_client_cancellation: bool = True
+    require_payment_upfront: bool = False
+    send_reminders: bool = True
+    reminder_hours: int = 24
+
+
+class WorkspaceContactSchema(BaseSchema):
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
 
 
 class WorkspaceSettingsSchema(BaseSchema):
     timezone: str = "Europe/Madrid"
     currency: str = "EUR"
     language: str = "es"
+    contact: WorkspaceContactSchema = WorkspaceContactSchema()
     booking_policies: BookingPoliciesSchema = BookingPoliciesSchema()
 
 

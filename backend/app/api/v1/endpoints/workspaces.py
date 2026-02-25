@@ -220,18 +220,18 @@ async def update_workspace(
             detail="Workspace no encontrado"
         )
     
-    # Update fields
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         if value is not None:
             if field in ["branding", "settings"] and isinstance(value, dict):
-                # Merge with existing data
-                current_value = getattr(workspace, field) or {}
+                current_value = dict(getattr(workspace, field) or {})
                 current_value.update(value)
                 setattr(workspace, field, current_value)
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(workspace, field)
             else:
                 setattr(workspace, field, value)
-    
+
     await db.commit()
     await db.refresh(workspace)
     

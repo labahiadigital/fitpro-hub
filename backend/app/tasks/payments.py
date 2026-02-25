@@ -157,6 +157,33 @@ def _process_single_renewal_sync(subscription_id: str) -> Dict[str, Any]:
 
             session.commit()
             logger.info(f"Renewal succeeded for sub {subscription_id}: next period ends {sub.current_period_end}")
+
+            try:
+                import asyncio
+                from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession as _AsyncSession
+                from app.services.auto_invoice import create_invoice_for_payment as _create_inv
+
+                async_url = str(app_settings.DATABASE_URL)
+                if not async_url.startswith("postgresql+asyncpg"):
+                    async_url = async_url.replace("postgresql+psycopg2", "postgresql+asyncpg", 1)
+                    async_url = async_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+                async def _gen_invoice():
+                    eng = create_async_engine(async_url)
+                    async with _AsyncSession(eng) as adb:
+                        from sqlalchemy import select as _sel
+                        from app.models.payment import Payment as _Pay
+                        res = await adb.execute(_sel(_Pay).where(_Pay.id == payment.id))
+                        pay = res.scalar_one_or_none()
+                        if pay:
+                            await _create_inv(adb, pay)
+                            await adb.commit()
+                    await eng.dispose()
+
+                asyncio.run(_gen_invoice())
+            except Exception as inv_err:
+                logger.error(f"Auto-invoice failed for renewal payment {payment.id}: {inv_err}")
+
             return {"status": "succeeded", "order_id": order_id}
         else:
             payment.status = PaymentStatus.failed

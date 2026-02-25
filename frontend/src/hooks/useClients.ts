@@ -29,6 +29,7 @@ interface ClientFilters {
   page_size?: number;
   search?: string;
   is_active?: boolean;
+  status?: string;
   tag_id?: string;
 }
 
@@ -62,6 +63,11 @@ interface ClientDetail extends Client {
     injuries?: Array<{ name: string; date?: string; notes?: string; status?: string }>;
     [key: string]: unknown;
   };
+  tax_id?: string;
+  billing_address?: string;
+  billing_city?: string;
+  billing_postal_code?: string;
+  billing_country?: string;
 }
 
 export function useClient(clientId: string) {

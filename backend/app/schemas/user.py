@@ -8,9 +8,14 @@ from app.models.user import RoleType
 
 
 class NotificationPreferences(BaseSchema):
-    email: bool = True
-    push: bool = True
-    sms: bool = False
+    email_booking_created: bool = True
+    email_booking_cancelled: bool = True
+    email_payment_received: bool = True
+    email_payment_failed: bool = True
+    email_new_message: bool = True
+    email_new_client: bool = True
+    email_form_submitted: bool = True
+    push_enabled: bool = True
 
 
 class UserPreferences(BaseSchema):

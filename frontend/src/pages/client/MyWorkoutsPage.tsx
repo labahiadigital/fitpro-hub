@@ -170,7 +170,7 @@ function ExerciseLogRow({
               w={70}
             />
             <NumberInput
-              placeholder="reps"
+              placeholder="reps."
               size="xs"
               value={set.reps_completed ?? ""}
               onChange={(v) => updateSet(idx, { reps_completed: v ? Number(v) : undefined })}

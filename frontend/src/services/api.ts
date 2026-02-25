@@ -400,6 +400,45 @@ export const redsysApi = {
   configStatus: () => api.get("/redsys/config-status"),
 };
 
+// ERP / Invoicing API
+export const erpApi = {
+  // Settings
+  getSettings: () => api.get("/erp/settings"),
+  saveSettings: (data: object) => api.post("/erp/settings", data),
+
+  // Invoices
+  listInvoices: (params?: object) => api.get("/erp/invoices", { params }),
+  getInvoice: (id: string) => api.get(`/erp/invoices/${id}`),
+  createInvoice: (data: object) => api.post("/erp/invoices", data),
+  updateInvoice: (id: string, data: object) => api.put(`/erp/invoices/${id}`, data),
+  deleteInvoice: (id: string) => api.delete(`/erp/invoices/${id}`),
+  finalizeInvoice: (id: string) => api.post(`/erp/invoices/${id}/finalize`),
+  markInvoicePaid: (id: string, params?: object) => api.post(`/erp/invoices/${id}/mark-paid`, null, { params }),
+  rectifyInvoice: (id: string) => api.post(`/erp/invoices/${id}/rectify`),
+  duplicateInvoice: (id: string) => api.post(`/erp/invoices/${id}/duplicate`),
+  sendInvoiceEmail: (id: string) => api.post(`/erp/invoices/${id}/send-email`),
+  getInvoicePdfUrl: (id: string) => `${API_URL}/erp/invoices/${id}/pdf`,
+  getInvoiceAuditLog: (id: string) => api.get(`/erp/invoices/${id}/audit-log`),
+  getNextNumber: (series?: string) => api.get("/erp/invoices/next-number", { params: { series } }),
+
+  // Stats
+  getInvoiceStats: (params?: object) => api.get("/erp/invoice-stats", { params }),
+
+  // VeriFactu test
+  testVerifactu: (data?: object) => api.post("/erp/verifactu-test", data || {}),
+
+  // Summary
+  getSummary: (params?: object) => api.get("/erp/summary", { params }),
+
+  // Certificate
+  getCertificateStatus: () => api.get("/erp/certificate/status"),
+  uploadCertificate: (formData: FormData) =>
+    api.post("/erp/certificate", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  revokeCertificate: () => api.delete("/erp/certificate"),
+};
+
 // SeQura API (pago fraccionado)
 export const sequraApi = {
   startOnboarding: (token: string, productCode: string = "pp3") =>

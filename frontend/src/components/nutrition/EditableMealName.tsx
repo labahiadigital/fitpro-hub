@@ -19,7 +19,7 @@ export const DEFAULT_MEAL_NAMES: Record<string, string> = {
   meal_5: "Cena",
   meal_6: "Pre-entreno",
   meal_7: "Post-entreno",
-  snack: "Snack",
+  snack: "Tentempié",
 };
 
 interface EditableMealNameProps {

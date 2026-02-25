@@ -40,6 +40,9 @@ class Supplement(BaseModel):
     # Media
     image_url = Column(Text, nullable=True)
     
+    # Purchase / affiliate link
+    purchase_url = Column(Text, nullable=True)
+    
     # Visibility
     is_global = Column(Boolean, default=False)
     

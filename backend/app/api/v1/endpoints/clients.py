@@ -117,43 +117,73 @@ async def delete_tag(
 
 # ============ CLIENTS ============
 
-@router.get("", response_model=PaginatedResponse[ClientListResponse])
+@router.get("")
 async def list_clients(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
     tag_id: Optional[UUID] = None,
     is_active: Optional[bool] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Listar clientes del workspace con paginación y filtros.
+    Incluye stats globales independientes de los filtros aplicados.
+    status_filter: 'active' | 'inactive' | 'pending' (active sin cuenta de usuario)
     """
-    query = select(Client).where(Client.workspace_id == current_user.workspace_id)
-    count_query = select(func.count(Client.id)).where(Client.workspace_id == current_user.workspace_id)
+    base_where = Client.workspace_id == current_user.workspace_id
+    query = select(Client).where(base_where)
+    count_query = select(func.count(Client.id)).where(base_where)
     
-    # Apply filters
+    # Search filter
     if search:
         search_filter = f"%{search}%"
-        query = query.where(
+        search_cond = (
             (func.unaccent(Client.first_name).ilike(func.unaccent(search_filter))) |
             (func.unaccent(Client.last_name).ilike(func.unaccent(search_filter))) |
             (func.unaccent(Client.email).ilike(func.unaccent(search_filter)))
         )
-        count_query = count_query.where(
-            (func.unaccent(Client.first_name).ilike(func.unaccent(search_filter))) |
-            (func.unaccent(Client.last_name).ilike(func.unaccent(search_filter))) |
-            (func.unaccent(Client.email).ilike(func.unaccent(search_filter)))
-        )
+        query = query.where(search_cond)
+        count_query = count_query.where(search_cond)
     
-    if is_active is not None:
+    # Status filter (new: supports 'pending' = active + no user account)
+    if status_filter == "active":
+        query = query.where(Client.is_active == True, Client.user_id != None)
+        count_query = count_query.where(Client.is_active == True, Client.user_id != None)
+    elif status_filter == "pending":
+        query = query.where(Client.is_active == True, Client.user_id == None)
+        count_query = count_query.where(Client.is_active == True, Client.user_id == None)
+    elif status_filter == "inactive":
+        query = query.where(Client.is_active == False)
+        count_query = count_query.where(Client.is_active == False)
+    elif is_active is not None:
         query = query.where(Client.is_active == is_active)
         count_query = count_query.where(Client.is_active == is_active)
     
-    # Get total count
+    # Get filtered count
     total_result = await db.execute(count_query)
     total = total_result.scalar()
+    
+    # Global stats (always unfiltered for KPI cards)
+    stats_base = Client.workspace_id == current_user.workspace_id
+    total_all = await db.scalar(select(func.count(Client.id)).where(stats_base)) or 0
+    total_active = await db.scalar(
+        select(func.count(Client.id)).where(stats_base, Client.is_active == True, Client.user_id != None)
+    ) or 0
+    total_pending = await db.scalar(
+        select(func.count(Client.id)).where(stats_base, Client.is_active == True, Client.user_id == None)
+    ) or 0
+    total_inactive = await db.scalar(
+        select(func.count(Client.id)).where(stats_base, Client.is_active == False)
+    ) or 0
+    
+    now = func.now()
+    start_of_month = func.date_trunc('month', now)
+    total_new_month = await db.scalar(
+        select(func.count(Client.id)).where(stats_base, Client.created_at >= start_of_month)
+    ) or 0
     
     # Apply pagination
     offset = (page - 1) * page_size
@@ -162,7 +192,6 @@ async def list_clients(
     result = await db.execute(query)
     clients = result.scalars().all()
     
-    # Convert to response model
     items = [
         ClientListResponse(
             id=c.id,
@@ -180,7 +209,18 @@ async def list_clients(
         for c in clients
     ]
     
-    return PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
+    paginated = PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
+    
+    return {
+        **paginated.model_dump(),
+        "stats": {
+            "total": total_all,
+            "active": total_active,
+            "pending": total_pending,
+            "inactive": total_inactive,
+            "new_this_month": total_new_month,
+        }
+    }
 
 
 @router.post("", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)

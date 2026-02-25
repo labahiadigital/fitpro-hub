@@ -190,9 +190,8 @@ export function ClientsPage() {
   ] = useDisclosure(false);
   const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false);
 
-  // Filtrar por estado según la pestaña activa
-  const isActiveFilter = activeTab === "active" ? true : activeTab === "inactive" ? false : undefined;
-  const { data: clientsData, isLoading } = useClients({ page, search, is_active: isActiveFilter });
+  const statusFilter = activeTab === "active" ? "active" : activeTab === "inactive" ? "inactive" : activeTab === "pending" ? "pending" : undefined;
+  const { data: clientsData, isLoading } = useClients({ page, search, status: statusFilter });
   useClientTags();
   const createClient = useCreateClient();
   const createTag = useCreateClientTag();
@@ -564,23 +563,18 @@ export function ClientsPage() {
     },
   ];
 
-  // Estadísticas (calculadas desde los datos reales)
   const stats = useMemo(() => {
-    const items = clientsData?.items || [];
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    const newThisMonth = items.filter((c: any) => {
-      const createdAt = new Date(c.created_at);
-      return createdAt >= startOfMonth;
-    }).length;
-
-    return {
-      total: clientsData?.total || 0,
-      active: items.filter((c: any) => c.is_active).length,
-      inactive: items.filter((c: any) => !c.is_active).length,
-      newThisMonth,
-    };
+    const backendStats = (clientsData as any)?.stats;
+    if (backendStats) {
+      return {
+        total: backendStats.total,
+        active: backendStats.active,
+        pending: backendStats.pending,
+        inactive: backendStats.inactive,
+        newThisMonth: backendStats.new_this_month,
+      };
+    }
+    return { total: 0, active: 0, pending: 0, inactive: 0, newThisMonth: 0 };
   }, [clientsData]);
 
   return (
@@ -602,7 +596,7 @@ export function ClientsPage() {
       />
 
       {/* KPIs */}
-      <SimpleGrid cols={{ base: 2, sm: 4, xl: 6 }} mb="lg" spacing="sm" className="stagger">
+      <SimpleGrid cols={{ base: 2, sm: 5, xl: 6 }} mb="lg" spacing="sm" className="stagger">
         <KPICard 
           title="Total Clientes" 
           value={stats.total} 
@@ -614,6 +608,12 @@ export function ClientsPage() {
           value={stats.active} 
           subtitle="Con plan activo"
           color="var(--nv-success)"
+        />
+        <KPICard 
+          title="Pendientes" 
+          value={stats.pending} 
+          subtitle="Sin cuenta creada"
+          color="var(--nv-primary)"
         />
         <KPICard 
           title="Inactivos" 
@@ -642,6 +642,9 @@ export function ClientsPage() {
             </Tabs.Tab>
             <Tabs.Tab value="active" style={{ fontWeight: 600, fontSize: "13px" }}>
               Activos ({stats.active})
+            </Tabs.Tab>
+            <Tabs.Tab value="pending" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Pendientes ({stats.pending})
             </Tabs.Tab>
             <Tabs.Tab value="inactive" style={{ fontWeight: 600, fontSize: "13px" }}>
               Inactivos ({stats.inactive})
@@ -700,8 +703,8 @@ export function ClientsPage() {
         />
       )}
 
-      {/* Invitaciones pendientes - se muestran en Inactivos y Todos */}
-      {(activeTab === "inactive" || activeTab === "all") && (() => {
+      {/* Invitaciones pendientes - se muestran en Pendientes, Inactivos y Todos */}
+      {(activeTab === "pending" || activeTab === "inactive" || activeTab === "all") && (() => {
         const pendingInvitations = (invitations || []).filter(
           (inv: any) => inv.status === "pending" || inv.status === "expired"
         );

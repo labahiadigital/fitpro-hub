@@ -463,7 +463,7 @@ export function ChatPage() {
                           <IconVideo size={18} />
                         </ActionIcon>
                       </Tooltip>
-                      <Tooltip label="Info">
+                      <Tooltip label="Información">
                         <ActionIcon color="gray" size="lg" variant="subtle">
                           <IconInfoCircle size={18} />
                         </ActionIcon>

@@ -11,6 +11,7 @@ import {
   MultiSelect,
   NumberInput,
   ScrollArea,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
@@ -36,7 +37,7 @@ import {
   IconTrash,
   IconUser,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { EmptyState } from "../../components/common/EmptyState";
 import { useClient, useClients } from "../../hooks/useClients";
@@ -206,6 +207,7 @@ export function WorkoutsPage() {
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [searchExercise, setSearchExercise] = useState("");
+  const [exerciseSourceFilter, setExerciseSourceFilter] = useState("all");
   const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>(initialWorkoutDays);
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -213,6 +215,13 @@ export function WorkoutsPage() {
 
   const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
+
+  const sourceFilteredExercises = useMemo(() => {
+    if (exerciseSourceFilter === "system") return exercises.filter((e: any) => e.is_global);
+    if (exerciseSourceFilter === "custom") return exercises.filter((e: any) => !e.is_global);
+    return exercises;
+  }, [exercises, exerciseSourceFilter]);
+
   // When editing a client's program, we need to fetch all programs (not just templates)
   const { data: programs, isLoading: loadingPrograms } =
     useWorkoutPrograms(clientId ? undefined : true);
@@ -567,7 +576,7 @@ export function WorkoutsPage() {
     { value: "barra de dominadas", label: "Barra de dominadas" },
   ];
 
-  const filteredExercises = (exercises || []).filter(
+  const filteredExercises = (sourceFilteredExercises || []).filter(
     (e: any) =>
       e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
       e.muscle_groups?.some((m: string) =>
@@ -695,21 +704,34 @@ export function WorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="exercises">
-          <TextInput
-            leftSection={<IconSearch size={14} />}
-            mb="md"
-            onChange={(e) => setSearchExercise(e.target.value)}
-            placeholder="Buscar ejercicios..."
-            value={searchExercise}
-            radius="md"
-            size="sm"
-            styles={{
-              input: {
-                backgroundColor: "var(--nv-surface)",
-                border: "1px solid var(--border-subtle)",
-              }
-            }}
-          />
+          <Group gap="sm" mb="md">
+            <TextInput
+              leftSection={<IconSearch size={14} />}
+              onChange={(e) => setSearchExercise(e.target.value)}
+              placeholder="Buscar ejercicios..."
+              value={searchExercise}
+              radius="md"
+              size="sm"
+              style={{ flex: 1 }}
+              styles={{
+                input: {
+                  backgroundColor: "var(--nv-surface)",
+                  border: "1px solid var(--border-subtle)",
+                }
+              }}
+            />
+            <SegmentedControl
+              value={exerciseSourceFilter}
+              onChange={setExerciseSourceFilter}
+              size="xs"
+              radius="md"
+              data={[
+                { label: "Todos", value: "all" },
+                { label: "Sistema", value: "system" },
+                { label: "Propios", value: "custom" },
+              ]}
+            />
+          </Group>
 
           {filteredExercises.length > 0 ? (
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
@@ -742,9 +764,12 @@ export function WorkoutsPage() {
                   </Box>
 
                   <Box p="xs">
-                    <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                      {exercise.name}
-                    </Text>
+                    <Group gap={4} wrap="nowrap">
+                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                        {exercise.name}
+                      </Text>
+                      {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
+                    </Group>
                     <Group gap={4} mt={4} justify="space-between">
                       <Group gap={4}>
                         {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
@@ -753,9 +778,11 @@ export function WorkoutsPage() {
                           </Badge>
                         ))}
                       </Group>
-                      <ActionIcon size="xs" variant="subtle" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
-                        <IconEdit size={12} />
-                      </ActionIcon>
+                      {!exercise.is_global && (
+                        <ActionIcon size="xs" variant="subtle" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                          <IconEdit size={12} />
+                        </ActionIcon>
+                      )}
                     </Group>
                   </Box>
                 </Box>
@@ -789,7 +816,7 @@ export function WorkoutsPage() {
             }}
           />
 
-          {(exercises || []).filter(
+          {(sourceFilteredExercises || []).filter(
             (e: any) =>
               e.category?.toLowerCase() === "calentamiento" &&
               (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
@@ -798,7 +825,7 @@ export function WorkoutsPage() {
                 ))
           ).length > 0 ? (
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
-              {(exercises || [])
+              {(sourceFilteredExercises || [])
                 .filter(
                   (e: any) =>
                     e.category?.toLowerCase() === "calentamiento" &&
@@ -836,9 +863,12 @@ export function WorkoutsPage() {
                     </Box>
 
                     <Box p="xs">
-                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                        {exercise.name}
-                      </Text>
+                      <Group gap={4} wrap="nowrap">
+                        <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                          {exercise.name}
+                        </Text>
+                        {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
+                      </Group>
                       <Group gap={4} mt={4} justify="space-between">
                         <Group gap={4}>
                           {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
@@ -847,9 +877,11 @@ export function WorkoutsPage() {
                             </Badge>
                           ))}
                         </Group>
-                        <ActionIcon size="xs" variant="subtle" color="orange" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
-                          <IconEdit size={12} />
-                        </ActionIcon>
+                        {!exercise.is_global && (
+                          <ActionIcon size="xs" variant="subtle" color="orange" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                            <IconEdit size={12} />
+                          </ActionIcon>
+                        )}
                       </Group>
                     </Box>
                   </Box>
@@ -883,7 +915,7 @@ export function WorkoutsPage() {
             }}
           />
 
-          {(exercises || []).filter(
+          {(sourceFilteredExercises || []).filter(
             (e: any) =>
               e.category?.toLowerCase() === "estiramiento" &&
               (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
@@ -892,7 +924,7 @@ export function WorkoutsPage() {
                 ))
           ).length > 0 ? (
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
-              {(exercises || [])
+              {(sourceFilteredExercises || [])
                 .filter(
                   (e: any) =>
                     e.category?.toLowerCase() === "estiramiento" &&
@@ -930,9 +962,12 @@ export function WorkoutsPage() {
                     </Box>
 
                     <Box p="xs">
-                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                        {exercise.name}
-                      </Text>
+                      <Group gap={4} wrap="nowrap">
+                        <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                          {exercise.name}
+                        </Text>
+                        {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
+                      </Group>
                       <Group gap={4} mt={4} justify="space-between">
                         <Group gap={4}>
                           {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
@@ -941,9 +976,11 @@ export function WorkoutsPage() {
                             </Badge>
                           ))}
                         </Group>
-                        <ActionIcon size="xs" variant="subtle" color="green" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
-                          <IconEdit size={12} />
-                        </ActionIcon>
+                        {!exercise.is_global && (
+                          <ActionIcon size="xs" variant="subtle" color="green" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                            <IconEdit size={12} />
+                          </ActionIcon>
+                        )}
                       </Group>
                     </Box>
                   </Box>
@@ -977,7 +1014,7 @@ export function WorkoutsPage() {
             }}
           />
 
-          {(exercises || []).filter(
+          {(sourceFilteredExercises || []).filter(
             (e: any) =>
               e.category?.toLowerCase() === "cardio" &&
               (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
@@ -986,7 +1023,7 @@ export function WorkoutsPage() {
                 ))
           ).length > 0 ? (
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
-              {(exercises || [])
+              {(sourceFilteredExercises || [])
                 .filter(
                   (e: any) =>
                     e.category?.toLowerCase() === "cardio" &&
@@ -1023,9 +1060,12 @@ export function WorkoutsPage() {
                     </Box>
 
                     <Box p="xs">
-                      <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                        {exercise.name}
-                      </Text>
+                      <Group gap={4} wrap="nowrap">
+                        <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
+                          {exercise.name}
+                        </Text>
+                        {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
+                      </Group>
                       <Group gap={4} mt={4} justify="space-between">
                         <Group gap={4}>
                           {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
@@ -1034,9 +1074,11 @@ export function WorkoutsPage() {
                             </Badge>
                           ))}
                         </Group>
-                        <ActionIcon size="xs" variant="subtle" color="red" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
-                          <IconEdit size={12} />
-                        </ActionIcon>
+                        {!exercise.is_global && (
+                          <ActionIcon size="xs" variant="subtle" color="red" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                            <IconEdit size={12} />
+                          </ActionIcon>
+                        )}
                       </Group>
                     </Box>
                   </Box>
@@ -1059,16 +1101,20 @@ export function WorkoutsPage() {
         onClose={() => { closeExerciseModal(); setEditingExercise(null); exerciseForm.reset(); }}
         opened={exerciseModalOpened}
         size="lg"
-        title={editingExercise ? "Editar Ejercicio" : "Nuevo Ejercicio"}
+        title={editingExercise?.is_global ? "Detalle del Ejercicio (Sistema)" : editingExercise ? "Editar Ejercicio" : "Nuevo Ejercicio"}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
+        {editingExercise?.is_global && (
+          <Badge color="gray" variant="light" size="sm" mb="sm">Dato del sistema — solo lectura</Badge>
+        )}
         <form onSubmit={exerciseForm.onSubmit(handleCreateExercise)}>
           <Stack>
             <TextInput
               label="Nombre"
               placeholder="Press de Banca"
               required
+              disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("name")}
             />
 
@@ -1076,6 +1122,7 @@ export function WorkoutsPage() {
               label="Descripción"
               minRows={2}
               placeholder="Breve descripción del ejercicio..."
+              disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("description")}
             />
 
@@ -1083,6 +1130,7 @@ export function WorkoutsPage() {
               label="Instrucciones"
               minRows={3}
               placeholder="Pasos para realizar el ejercicio correctamente..."
+              disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("instructions")}
             />
 
@@ -1091,12 +1139,14 @@ export function WorkoutsPage() {
                 data={muscleGroups}
                 label="Grupos musculares"
                 placeholder="Selecciona"
+                disabled={editingExercise?.is_global}
                 {...exerciseForm.getInputProps("muscle_groups")}
               />
               <MultiSelect
                 data={equipmentOptions}
                 label="Equipamiento"
                 placeholder="Selecciona"
+                disabled={editingExercise?.is_global}
                 {...exerciseForm.getInputProps("equipment")}
               />
             </Group>
@@ -1109,6 +1159,7 @@ export function WorkoutsPage() {
                   { value: "advanced", label: "Avanzado" },
                 ]}
                 label="Dificultad"
+                disabled={editingExercise?.is_global}
                 {...exerciseForm.getInputProps("difficulty")}
               />
               <Select
@@ -1121,34 +1172,44 @@ export function WorkoutsPage() {
                   { value: "estiramiento", label: "Estiramiento" },
                 ]}
                 label="Categoría"
+                disabled={editingExercise?.is_global}
                 {...exerciseForm.getInputProps("category")}
               />
             </Group>
 
-            <Group justify="flex-end" mt="md">
-              {editingExercise && (
-                <Button 
-                  color="red" 
-                  variant="subtle" 
-                  onClick={() => {
-                    handleDeleteExercise(editingExercise.id);
-                    closeExerciseModal();
-                    setEditingExercise(null);
-                    exerciseForm.reset();
-                  }}
-                  loading={deleteExercise.isPending}
-                >
-                  Eliminar
+            {!editingExercise?.is_global && (
+              <Group justify="flex-end" mt="md">
+                {editingExercise && (
+                  <Button 
+                    color="red" 
+                    variant="subtle" 
+                    onClick={() => {
+                      handleDeleteExercise(editingExercise.id);
+                      closeExerciseModal();
+                      setEditingExercise(null);
+                      exerciseForm.reset();
+                    }}
+                    loading={deleteExercise.isPending}
+                  >
+                    Eliminar
+                  </Button>
+                )}
+                <Box style={{ flex: 1 }} />
+                <Button onClick={() => { closeExerciseModal(); setEditingExercise(null); exerciseForm.reset(); }} variant="default">
+                  Cancelar
                 </Button>
-              )}
-              <Box style={{ flex: 1 }} />
-              <Button onClick={() => { closeExerciseModal(); setEditingExercise(null); exerciseForm.reset(); }} variant="default">
-                Cancelar
-              </Button>
-              <Button loading={createExercise.isPending || updateExercise.isPending} type="submit">
-                {editingExercise ? "Guardar Cambios" : "Crear Ejercicio"}
-              </Button>
-            </Group>
+                <Button loading={createExercise.isPending || updateExercise.isPending} type="submit">
+                  {editingExercise ? "Guardar Cambios" : "Crear Ejercicio"}
+                </Button>
+              </Group>
+            )}
+            {editingExercise?.is_global && (
+              <Group justify="flex-end" mt="md">
+                <Button onClick={() => { closeExerciseModal(); setEditingExercise(null); exerciseForm.reset(); }} variant="default">
+                  Cerrar
+                </Button>
+              </Group>
+            )}
           </Stack>
         </form>
 

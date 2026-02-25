@@ -52,7 +52,7 @@ const MEAL_TYPES = [
   { value: "Almuerzo", label: "Almuerzo", icon: IconSoup, time: "13:00", color: "green" },
   { value: "Merienda", label: "Merienda", icon: IconApple, time: "17:00", color: "yellow" },
   { value: "Cena", label: "Cena", icon: IconSalad, time: "21:00", color: "blue" },
-  { value: "Snack", label: "Snack", icon: IconMoon, time: "23:00", color: "grape" },
+  { value: "Snack", label: "Tentempié", icon: IconMoon, time: "23:00", color: "grape" },
 ];
 
 interface FoodItem {

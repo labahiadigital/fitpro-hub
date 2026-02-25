@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.models.payment import StripeAccount, Subscription, Payment, SubscriptionStatus, PaymentStatus
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
+from app.services.auto_invoice import create_invoice_for_payment
 
 router = APIRouter()
 
@@ -501,8 +502,19 @@ async def mark_payment_paid(
 
     payment.status = PaymentStatus.succeeded
     payment.paid_at = datetime.utcnow()
+
+    invoice = await create_invoice_for_payment(
+        db, payment,
+        user_id=getattr(current_user, "user_id", None) or getattr(getattr(current_user, "user", None), "id", None),
+        user_name=getattr(getattr(current_user, "user", current_user), "full_name", None),
+    )
+
     await db.commit()
-    return {"status": "ok", "message": "Pago marcado como completado"}
+    return {
+        "status": "ok",
+        "message": "Pago marcado como completado",
+        "invoice_id": str(invoice.id) if invoice else None,
+    }
 
 
 @router.delete("/payments/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)

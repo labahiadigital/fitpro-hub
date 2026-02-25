@@ -1096,7 +1096,7 @@ export function MealPlanDetailView({
             )}
 
             {/* Example supplementation recommendations */}
-            <Divider my="lg" label="Recomendaciones Ejemplo" labelPosition="center" />
+            <Divider my="lg" label="Recomendaciones de ejemplo" labelPosition="center" />
             <Stack gap="xs">
               <Text size="sm">
                 <strong>1 Multivitamínico</strong> con comida 1 y comida 5

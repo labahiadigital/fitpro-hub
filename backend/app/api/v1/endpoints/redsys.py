@@ -27,6 +27,7 @@ from app.models.client import Client
 from app.models.invitation import ClientInvitation
 from app.models.product import Product
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
+from app.services.auto_invoice import create_invoice_for_payment
 from app.services.redsys import (
     redsys_service,
     RedsysRedirectPayment,
@@ -606,6 +607,12 @@ async def redsys_notification(
     if redsys_cof_txnid:
         payment.extra_data["redsys_cof_txnid"] = redsys_cof_txnid
 
+    if is_success:
+        try:
+            await create_invoice_for_payment(db, payment, ip_address=client_ip)
+        except Exception as e:
+            logger.error(f"Auto-invoice failed for payment {payment.id}: {e}")
+
     await db.commit()
 
     logger.info(
@@ -733,6 +740,12 @@ async def confirm_return(
         payment.extra_data["redsys_identifier"] = redsys_identifier
     if redsys_cof_txnid:
         payment.extra_data["redsys_cof_txnid"] = redsys_cof_txnid
+
+    if is_success:
+        try:
+            await create_invoice_for_payment(db, payment)
+        except Exception as e:
+            logger.error(f"Auto-invoice failed for payment {payment.id} (confirm-return): {e}")
 
     await db.commit()
 

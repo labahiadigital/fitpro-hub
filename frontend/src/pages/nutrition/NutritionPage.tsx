@@ -211,8 +211,10 @@ export function NutritionPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [mealPlanDays, setMealPlanDays] = useState(initialDays);
   const [editingPlan, setEditingPlan] = useState<any>(null);
-  const [foodFilter, setFoodFilter] = useState<string>("all"); // "all" | "favorites"
-  const [supplementFilter, setSupplementFilter] = useState<string>("all"); // "all" | "favorites"
+  const [foodFilter, setFoodFilter] = useState<string>("all");
+  const [foodSourceFilter, setFoodSourceFilter] = useState<string>("all");
+  const [supplementFilter, setSupplementFilter] = useState<string>("all");
+  const [supplementSourceFilter, setSupplementSourceFilter] = useState<string>("all");
   const [editingFood, setEditingFood] = useState<any>(null);
   const [editFoodModalOpened, { open: openEditFoodModal, close: closeEditFoodModal }] = useDisclosure(false);
   const [editingSupplement, setEditingSupplement] = useState<any>(null);
@@ -303,6 +305,7 @@ export function NutritionPage() {
       serving_size: supp.serving_size || "30g",
       how_to_take: supp.usage_instructions,
       timing: supp.extra_data?.timing,
+      is_global: supp.is_global ?? false,
     }));
   }, [supabaseSupplements]);
 
@@ -762,14 +765,16 @@ export function NutritionPage() {
       fat: food.fat_g || 0,
       serving_size: food.quantity || "100g",
       category: mapCategory(food.category),
+      is_global: food.is_global ?? false,
     }));
 
-    // Filtrar solo favoritos si está activo el filtro
+    if (foodSourceFilter === "system") foodsList = foodsList.filter((f: Food) => f.is_global);
+    else if (foodSourceFilter === "custom") foodsList = foodsList.filter((f: Food) => !f.is_global);
+
     if (foodFilter === "favorites") {
       foodsList = foodsList.filter((food: Food) => isFoodFavorite(food.id));
     }
 
-    // Ordenar favoritos primero
     foodsList.sort((a: Food, b: Food) => {
       const aFav = isFoodFavorite(a.id);
       const bFav = isFoodFavorite(b.id);
@@ -779,27 +784,26 @@ export function NutritionPage() {
     });
 
     return foodsList;
-  }, [paginatedFoods, foodFilter, isFoodFavorite]);
+  }, [paginatedFoods, foodFilter, foodSourceFilter, isFoodFavorite]);
 
-  // Mapear suplementos con filtro de favoritos
   const filteredSupplements = useMemo(() => {
     let suppList = supplements;
-    
-    // Filtrar por búsqueda
+
+    if (supplementSourceFilter === "system") suppList = suppList.filter((s: any) => s.is_global);
+    else if (supplementSourceFilter === "custom") suppList = suppList.filter((s: any) => !s.is_global);
+
     if (debouncedSupplementSearch) {
       const search = debouncedSupplementSearch.toLowerCase();
-      suppList = suppList.filter((supp: any) => 
+      suppList = suppList.filter((supp: any) =>
         supp.name.toLowerCase().includes(search) ||
         (supp.brand && supp.brand.toLowerCase().includes(search))
       );
     }
-    
-    // Filtrar solo favoritos si está activo el filtro
+
     if (supplementFilter === "favorites") {
       suppList = suppList.filter((supp: any) => isSupplementFavorite(supp.id));
     }
 
-    // Ordenar favoritos primero
     suppList.sort((a: any, b: any) => {
       const aFav = isSupplementFavorite(a.id);
       const bFav = isSupplementFavorite(b.id);
@@ -809,7 +813,7 @@ export function NutritionPage() {
     });
 
     return suppList;
-  }, [supplements, supplementFilter, isSupplementFavorite, debouncedSupplementSearch]);
+  }, [supplements, supplementFilter, supplementSourceFilter, isSupplementFavorite, debouncedSupplementSearch]);
 
   return (
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
@@ -988,6 +992,23 @@ export function NutritionPage() {
                 }
               }}
             />
+            <SegmentedControl
+              value={foodSourceFilter}
+              onChange={setFoodSourceFilter}
+              size="xs"
+              radius="md"
+              data={[
+                { label: "Todos", value: "all" },
+                { label: "Sistema", value: "system" },
+                { label: "Propios", value: "custom" },
+              ]}
+              styles={{
+                root: {
+                  backgroundColor: "var(--nv-surface)",
+                  border: "1px solid var(--border-subtle)",
+                }
+              }}
+            />
           </Group>
 
           {isLoadingPaginatedFoods ? (
@@ -1022,7 +1043,10 @@ export function NutritionPage() {
                           <CategoryIcon size={20} />
                         </Box>
                         <Box className="food-card-info">
-                          <Text className="food-card-name">{food.name}</Text>
+                          <Group gap={4} wrap="nowrap">
+                            <Text className="food-card-name">{food.name}</Text>
+                            {food.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>Sistema</Badge>}
+                          </Group>
                           <Text className="food-card-serving">{food.serving_size}</Text>
                         </Box>
                         <Box className="food-card-actions">
@@ -1066,32 +1090,36 @@ export function NutritionPage() {
                               <IconEye size={16} />
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label="Editar">
-                            <ActionIcon
-                              color="gray"
-                              onClick={() => {
-                                const originalFood = paginatedFoods?.items?.find((f: any) => f.id === food.id);
-                                setEditingFood(originalFood || food);
-                                openEditFoodModal();
-                              }}
-                              size="sm"
-                              variant="subtle"
-                              radius="md"
-                            >
-                              <IconEdit size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                          <Tooltip label="Eliminar">
-                            <ActionIcon
-                              color="red"
-                              onClick={() => handleDeleteFood(food.id, food.name)}
-                              size="sm"
-                              variant="subtle"
-                              radius="md"
-                            >
+                          {!food.is_global && (
+                            <Tooltip label="Editar">
+                              <ActionIcon
+                                color="gray"
+                                onClick={() => {
+                                  const originalFood = paginatedFoods?.items?.find((f: any) => f.id === food.id);
+                                  setEditingFood(originalFood || food);
+                                  openEditFoodModal();
+                                }}
+                                size="sm"
+                                variant="subtle"
+                                radius="md"
+                              >
+                                <IconEdit size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {!food.is_global && (
+                            <Tooltip label="Eliminar">
+                              <ActionIcon
+                                color="red"
+                                onClick={() => handleDeleteFood(food.id, food.name)}
+                                size="sm"
+                                variant="subtle"
+                                radius="md"
+                              >
                               <IconTrash size={16} />
                             </ActionIcon>
                           </Tooltip>
+                          )}
                         </Group>
                       </Group>
 
@@ -1181,6 +1209,23 @@ export function NutritionPage() {
                 }
               }}
             />
+            <SegmentedControl
+              value={supplementSourceFilter}
+              onChange={setSupplementSourceFilter}
+              size="xs"
+              radius="md"
+              data={[
+                { label: "Todos", value: "all" },
+                { label: "Sistema", value: "system" },
+                { label: "Propios", value: "custom" },
+              ]}
+              styles={{
+                root: {
+                  backgroundColor: "var(--nv-surface)",
+                  border: "1px solid var(--border-subtle)",
+                }
+              }}
+            />
             <Button
               leftSection={<IconPill size={14} />}
               onClick={openSupplementModal}
@@ -1216,7 +1261,10 @@ export function NutritionPage() {
                         <IconPill size={20} />
                       </Box>
                       <Box className="food-card-info">
-                        <Text className="food-card-name">{supp.name}</Text>
+                        <Group gap={4} wrap="nowrap">
+                          <Text className="food-card-name">{supp.name}</Text>
+                          {supp.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>Sistema</Badge>}
+                        </Group>
                         <Text className="food-card-serving">{supp.brand || supp.serving_size}</Text>
                       </Box>
                       <Box className="food-card-actions">
@@ -1266,20 +1314,22 @@ export function NutritionPage() {
                             <IconEye size={16} />
                           </ActionIcon>
                         </Tooltip>
-                        <Tooltip label="Editar">
-                          <ActionIcon
-                            color="gray"
-                            onClick={() => {
-                              setEditingSupplement(supp);
-                              openEditSupplementModal();
-                            }}
-                            size="sm"
-                            variant="subtle"
-                            radius="md"
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Tooltip>
+                        {!supp.is_global && (
+                          <Tooltip label="Editar">
+                            <ActionIcon
+                              color="gray"
+                              onClick={() => {
+                                setEditingSupplement(supp);
+                                openEditSupplementModal();
+                              }}
+                              size="sm"
+                              variant="subtle"
+                              radius="md"
+                            >
+                              <IconEdit size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
                       </Group>
                     </Group>
 
