@@ -1,8 +1,12 @@
+import logging
+import ssl
+from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
-from typing import AsyncGenerator
-import ssl
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 
@@ -57,7 +61,7 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
-print("[DB] Database URL configured (host hidden for security)")
+logger.info("Database URL configured (host hidden for security)")
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

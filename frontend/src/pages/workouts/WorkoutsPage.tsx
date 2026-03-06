@@ -203,7 +203,6 @@ export function WorkoutsPage() {
     exerciseModalOpened,
     { open: openExerciseModal, close: closeExerciseModal },
   ] = useDisclosure(false);
-  useDisclosure(false);
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [searchExercise, setSearchExercise] = useState("");

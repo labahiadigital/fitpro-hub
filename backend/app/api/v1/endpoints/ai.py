@@ -111,12 +111,15 @@ async def get_ai_configuration(
     db: AsyncSession = Depends(get_db),
 ):
     """Obtener configuración de IA del workspace"""
+    from sqlalchemy import text
     result = await db.execute(
-        select("*").select_from(db.get_bind().dialect.identifier_preparer.quote("ai_configurations"))
-        .where("workspace_id" == current_user.workspace_id)
+        text("SELECT * FROM ai_configurations WHERE workspace_id = :wid"),
+        {"wid": str(current_user.workspace_id)},
     )
-    # Simplificado - en producción usar modelo SQLAlchemy
-    return None
+    row = result.mappings().first()
+    if not row:
+        return None
+    return AIConfigurationResponse(**dict(row))
 
 
 @router.post("/configuration", response_model=Dict[str, str])
@@ -146,7 +149,10 @@ async def generate_workout_plan(
 
     if request.client_id:
         result = await db.execute(
-            select(Client).where(Client.id == request.client_id)
+            select(Client).where(
+                Client.id == request.client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
         )
         client = result.scalar_one_or_none()
 
@@ -214,7 +220,10 @@ async def generate_meal_plan(
 
     if request.client_id:
         result = await db.execute(
-            select(Client).where(Client.id == request.client_id)
+            select(Client).where(
+                Client.id == request.client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
         )
         client = result.scalar_one_or_none()
 
@@ -280,7 +289,10 @@ async def analyze_client_progress(
     """Analizar progreso del cliente con IA"""
     # Obtener datos del cliente
     result = await db.execute(
-        select(Client).where(Client.id == request.client_id)
+        select(Client).where(
+            Client.id == request.client_id,
+            Client.workspace_id == current_user.workspace_id,
+        )
     )
     client = result.scalar_one_or_none()
 

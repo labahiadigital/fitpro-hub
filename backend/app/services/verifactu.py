@@ -257,7 +257,7 @@ class AEATSoapClient:
                 method="POST",
             )
 
-            with urllib.request.urlopen(req, context=context) as response:
+            with urllib.request.urlopen(req, context=context, timeout=30) as response:
                 status_code = response.getcode()
                 body = response.read().decode("utf-8")
 

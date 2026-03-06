@@ -1,11 +1,15 @@
 """
 Email service using Brevo (formerly Sendinblue)
 """
+import asyncio
+import logging
 from typing import List, Optional, Dict, Any
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EmailService:
@@ -40,11 +44,14 @@ class EmailService:
                 attachment=attachments,
             )
             
-            self.api_instance.send_transac_email(send_smtp_email)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, self.api_instance.send_transac_email, send_smtp_email
+            )
             return True
             
         except ApiException as e:
-            print(f"Error sending email: {e}")
+            logger.error("Error sending email to %s: %s", to_email, e)
             return False
     
     async def send_template_email(
@@ -64,11 +71,14 @@ class EmailService:
                 params=params,
             )
             
-            self.api_instance.send_transac_email(send_smtp_email)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, self.api_instance.send_transac_email, send_smtp_email
+            )
             return True
             
         except ApiException as e:
-            print(f"Error sending template email: {e}")
+            logger.error("Error sending template email to %s: %s", to_email, e)
             return False
     
     async def send_bulk_email(
@@ -91,7 +101,7 @@ class EmailService:
             return True
             
         except Exception as e:
-            print(f"Error sending bulk email: {e}")
+            logger.error("Error sending bulk email: %s", e)
             return False
 
 

@@ -256,6 +256,20 @@ async def create_booking(
             detail="Ya existe una reserva en ese horario"
         )
     
+    # Verify client belongs to workspace if provided
+    if data.client_id:
+        client_check = await db.execute(
+            select(Client.id).where(
+                Client.id == data.client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+        if not client_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cliente no encontrado en este workspace"
+            )
+
     booking = Booking(
         workspace_id=current_user.workspace_id,
         organizer_id=current_user.id,
@@ -439,7 +453,15 @@ async def cancel_booking(
     # Check if user can cancel (staff or own booking)
     if not current_user.is_collaborator():
         # Client can only cancel their own bookings
-        if booking.client_id != current_user.id:
+        # booking.client_id references clients.id, so look up the client by user_id
+        client_result = await db.execute(
+            select(Client.id).where(
+                Client.user_id == current_user.id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+        client_row = client_result.scalar_one_or_none()
+        if not client_row or booking.client_id != client_row:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permisos para cancelar esta reserva"

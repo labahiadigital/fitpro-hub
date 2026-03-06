@@ -362,7 +362,7 @@ export function SettingsPage() {
       return workspacesApi.update(id, { branding: values });
     },
     onSuccess: (res) => {
-      setCurrentWorkspace(res.data);
+      setWorkspace(res.data);
       notifications.show({ title: "Marca actualizada", message: "Colores guardados", color: "green", icon: <IconCheck size={16} /> });
     },
     onError: () => {
@@ -411,7 +411,7 @@ export function SettingsPage() {
       });
     },
     onSuccess: (res) => {
-      setCurrentWorkspace(res.data);
+      setWorkspace(res.data);
       notifications.show({ title: "Reservas actualizado", message: "Políticas guardadas", color: "green", icon: <IconCheck size={16} /> });
     },
     onError: () => {

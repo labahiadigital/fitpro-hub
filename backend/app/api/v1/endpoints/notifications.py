@@ -192,12 +192,25 @@ async def delete_notification(
 
 # Notification preferences stored in users.preferences JSONB
 
+from pydantic import BaseModel as _BaseModel
+
+class NotificationPreferencesUpdate(_BaseModel):
+    email_booking_created: Optional[bool] = None
+    email_booking_cancelled: Optional[bool] = None
+    email_payment_received: Optional[bool] = None
+    email_payment_failed: Optional[bool] = None
+    email_new_message: Optional[bool] = None
+    email_new_client: Optional[bool] = None
+    email_form_submitted: Optional[bool] = None
+    push_enabled: Optional[bool] = None
+
+
 @router.get("/preferences")
 async def get_notification_preferences(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    prefs = (current_user.preferences or {}).get("notifications", {})
+    prefs = (current_user.user.preferences or {}).get("notifications", {})
     defaults = {
         "email_booking_created": True,
         "email_booking_cancelled": True,
@@ -213,7 +226,7 @@ async def get_notification_preferences(
 
 @router.patch("/preferences")
 async def update_notification_preferences(
-    data: dict,
+    data: NotificationPreferencesUpdate,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -225,14 +238,8 @@ async def update_notification_preferences(
 
     current_prefs = dict(user.preferences or {})
     notif_prefs = current_prefs.get("notifications", {})
-    allowed_keys = {
-        "email_booking_created", "email_booking_cancelled",
-        "email_payment_received", "email_payment_failed",
-        "email_new_message", "email_new_client",
-        "email_form_submitted", "push_enabled",
-    }
-    for key, value in data.items():
-        if key in allowed_keys and isinstance(value, bool):
+    for key, value in data.model_dump(exclude_unset=True).items():
+        if value is not None:
             notif_prefs[key] = value
 
     current_prefs["notifications"] = notif_prefs

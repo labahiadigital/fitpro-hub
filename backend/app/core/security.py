@@ -77,9 +77,17 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     if len(password) < PASSWORD_MIN_LENGTH:
         return False, f"La contraseña debe tener al menos {PASSWORD_MIN_LENGTH} caracteres"
     
-    # bcrypt has a maximum of 72 bytes
     if len(password.encode('utf-8')) > 72:
         return False, "La contraseña es demasiado larga (máximo 72 caracteres)"
+    
+    if not re.search(r'[A-Z]', password):
+        return False, "La contraseña debe contener al menos una letra mayúscula"
+    
+    if not re.search(r'[a-z]', password):
+        return False, "La contraseña debe contener al menos una letra minúscula"
+    
+    if not re.search(r'[0-9]', password):
+        return False, "La contraseña debe contener al menos un número"
     
     return True, ""
 

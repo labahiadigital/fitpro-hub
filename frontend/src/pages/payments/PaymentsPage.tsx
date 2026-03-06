@@ -411,9 +411,6 @@ export function PaymentsPage() {
     const url = erpApi.getInvoicePdfUrl(inv.id);
     const token = useAuthStore.getState().accessToken;
     const wsId = useAuthStore.getState().currentWorkspace?.id;
-    const link = document.createElement("a");
-    link.href = `${url}?token=${token}`;
-    link.target = "_blank";
 
     fetch(url, {
       headers: {
@@ -424,6 +421,7 @@ export function PaymentsPage() {
       .then((r) => r.blob())
       .then((blob) => {
         const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
         link.href = blobUrl;
         link.download = `Factura_${inv.invoice_number}.pdf`;
         link.click();

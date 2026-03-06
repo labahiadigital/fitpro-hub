@@ -28,6 +28,7 @@ from app.models.invitation import ClientInvitation
 from app.models.product import Product
 from app.services.sequra import sequra_service
 from app.services.auto_invoice import create_invoice_for_payment
+from app.middleware.auth import require_staff
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +270,10 @@ async def get_identification_form(
     if not sequra_service.config.is_configured:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="SeQura no configurado")
 
+    # Validate order_uri points to SeQura domains only (prevent SSRF)
+    if not order_uri.startswith("https://") or "sequra" not in order_uri.lower():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="URI de pedido no válida")
+
     html = await sequra_service.get_identification_form(order_uri, product=product, ajax=True)
     if not html:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="No se pudo obtener el formulario")
@@ -305,6 +310,12 @@ async def sequra_ipn(
     needs_review_since = form.get("needs_review_since", "")
 
     client_ip = request.client.host if request.client else "unknown"
+
+    # Validate IPN source IP if configured
+    allowed_ips = getattr(settings, "SEQURA_ALLOWED_IPS", None)
+    if allowed_ips and client_ip not in allowed_ips:
+        logger.warning(f"SeQura IPN: rejected from untrusted IP={client_ip}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     logger.info(
         f"SeQura IPN received: order_ref={order_ref}, sq_state={sq_state}, "
@@ -514,7 +525,7 @@ async def get_available_methods(
 
 
 @router.get("/config-status", response_model=SequraConfigStatusResponse)
-async def get_config_status():
+async def get_config_status(_=Depends(require_staff)):
     """Check SeQura configuration status."""
     config = sequra_service.config
     return SequraConfigStatusResponse(

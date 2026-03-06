@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, func
 from sqlalchemy.orm import selectinload
@@ -180,9 +180,12 @@ async def create_conversation(
         if existing:
             return _conversation_to_response(existing)
         
-        # Get client info
+        # Get client info (verify workspace ownership)
         client_result = await db.execute(
-            select(Client).where(Client.id == data.client_id)
+            select(Client).where(
+                Client.id == data.client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
         )
         client = client_result.scalar_one_or_none()
         if client:
@@ -503,17 +506,28 @@ async def delete_message(
 @router.post("/webhook/whatsapp")
 async def whatsapp_webhook(
     data: WhatsAppIncomingMessage,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Webhook para recibir mensajes entrantes de WhatsApp Business API.
-    Este endpoint sería llamado por el proveedor de WhatsApp (Meta, Twilio, etc.)
-    
-    NOTA: En producción, este endpoint necesitaría:
-    - Verificación de firma del webhook
-    - Autenticación del proveedor
-    - Manejo de diferentes tipos de eventos (message, status, etc.)
+    Verifica la firma del webhook antes de procesar.
     """
+    # Verify webhook signature from Kapso/WhatsApp provider
+    webhook_secret = settings.WHATSAPP_WEBHOOK_SECRET if hasattr(settings, "WHATSAPP_WEBHOOK_SECRET") else None
+    if webhook_secret:
+        import hmac
+        import hashlib
+        signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")
+        if not signature:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing webhook signature")
+        body_bytes = await request.body()
+        expected = "sha256=" + hmac.new(
+            webhook_secret.encode(), body_bytes, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook signature")
+
     # Find or create conversation by WhatsApp phone
     # First, try to find by phone number
     result = await db.execute(
@@ -590,13 +604,28 @@ async def whatsapp_webhook(
 @router.post("/webhook/whatsapp/status")
 async def whatsapp_status_webhook(
     message_id: str,
-    status: str,
+    wa_status: str,
     timestamp: datetime,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Webhook para actualizaciones de estado de mensajes de WhatsApp.
     """
+    webhook_secret = settings.WHATSAPP_WEBHOOK_SECRET if hasattr(settings, "WHATSAPP_WEBHOOK_SECRET") else None
+    if webhook_secret:
+        import hmac
+        import hashlib
+        signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")
+        if not signature:
+            return {"status": "error", "message": "Missing signature"}
+        body_bytes = await request.body()
+        expected = "sha256=" + hmac.new(
+            webhook_secret.encode(), body_bytes, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            return {"status": "error", "message": "Invalid signature"}
+
     result = await db.execute(
         select(Message).where(Message.external_id == message_id)
     )
@@ -609,7 +638,7 @@ async def whatsapp_status_webhook(
             "read": MessageStatus.READ,
             "failed": MessageStatus.FAILED,
         }
-        message.external_status = status_map.get(status, MessageStatus.PENDING)
+        message.external_status = status_map.get(wa_status, MessageStatus.PENDING)
         await db.commit()
     
     return {"status": "ok"}

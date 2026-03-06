@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
         if v == "change-me-in-production":
+            import os
+            if os.getenv("APP_ENV", "development") == "production":
+                raise ValueError(
+                    "SECRET_KEY usa el valor por defecto inseguro en producción. "
+                    "Configura un SECRET_KEY fuerte y aleatorio en tu .env"
+                )
             import warnings
             warnings.warn(
                 "SECRET_KEY is using the insecure default value. "

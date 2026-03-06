@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.middleware.auth import require_workspace
+from app.middleware.auth import require_workspace, require_staff
 from app.models.referrals import (
     Affiliate,
     AffiliateSupplementLink,
@@ -293,7 +293,7 @@ async def list_programs(
 @router.post("/programs", response_model=ReferralProgramResponse, status_code=status.HTTP_201_CREATED)
 async def create_program(
     program_data: ReferralProgramBase,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     """Crear programa de referidos"""
@@ -311,7 +311,7 @@ async def create_program(
 async def update_program(
     program_id: UUID,
     program_data: ReferralProgramBase,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     """Actualizar programa de referidos"""
@@ -375,7 +375,10 @@ async def create_affiliate(
     level = 1
     if affiliate_data.parent_affiliate_code:
         parent_result = await db.execute(
-            select(Affiliate).where(Affiliate.affiliate_code == affiliate_data.parent_affiliate_code)
+            select(Affiliate).where(
+                Affiliate.affiliate_code == affiliate_data.parent_affiliate_code,
+                Affiliate.workspace_id == current_user.workspace_id,
+            )
         )
         parent = parent_result.scalar_one_or_none()
         if parent:
@@ -422,7 +425,7 @@ async def get_affiliate(
 @router.put("/affiliates/{affiliate_id}/approve")
 async def approve_affiliate(
     affiliate_id: UUID,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     """Aprobar afiliado"""
@@ -630,13 +633,16 @@ async def track_click(
 @router.post("/conversions", response_model=ConversionResponse, status_code=status.HTTP_201_CREATED)
 async def register_conversion(
     conversion_data: ConversionCreate,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     """Registrar conversión"""
-    # Buscar afiliado por código
+    # Buscar afiliado por código dentro del workspace
     affiliate_result = await db.execute(
-        select(Affiliate).where(Affiliate.affiliate_code == conversion_data.affiliate_code)
+        select(Affiliate).where(
+            Affiliate.affiliate_code == conversion_data.affiliate_code,
+            Affiliate.workspace_id == current_user.workspace_id,
+        )
     )
     affiliate = affiliate_result.scalar_one_or_none()
 
@@ -750,7 +756,7 @@ async def list_conversions(
 @router.put("/conversions/{conversion_id}/approve")
 async def approve_conversion(
     conversion_id: UUID,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     """Aprobar conversión"""
@@ -800,7 +806,7 @@ async def list_payouts(
 async def generate_payouts(
     period_start: date,
     period_end: date,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     """Generar pagos pendientes para el período"""
@@ -867,7 +873,7 @@ async def list_supplement_referrals(
 @router.post("/supplements", response_model=SupplementReferralResponse, status_code=status.HTTP_201_CREATED)
 async def create_supplement_referral(
     supplement_data: SupplementReferralBase,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     """Crear suplemento con programa de referidos (admin)"""

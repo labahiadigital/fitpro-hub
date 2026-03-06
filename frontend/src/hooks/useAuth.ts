@@ -1,4 +1,5 @@
 import { notifications } from "@mantine/notifications";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi, workspacesApi } from "../services/api";
@@ -6,6 +7,7 @@ import { useAuthStore } from "../stores/auth";
 
 export function useAuth() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const {
     setUser,
     setTokens,
@@ -157,6 +159,7 @@ export function useAuth() {
       }
 
       clearStore();
+      queryClient.clear();
       navigate("/login");
 
       notifications.show({

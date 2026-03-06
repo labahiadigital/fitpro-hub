@@ -217,6 +217,17 @@ async def connect_device(
             detail=f"Dispositivo no soportado. Dispositivos válidos: {list(SUPPORTED_DEVICES.keys())}"
         )
 
+    # Verify client belongs to this workspace
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client).where(
+            Client.id == request.client_id,
+            Client.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado en este workspace")
+
     # Verificar si ya existe
     existing = await db.execute(
         select(ConnectedDevice)
@@ -304,6 +315,13 @@ async def list_health_metrics(
     limit: int = Query(100, le=1000),
 ):
     """Listar métricas de salud de un cliente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     query = select(HealthMetric).where(HealthMetric.client_id == client_id)
 
     if metric_type:
@@ -326,6 +344,13 @@ async def create_health_metric(
     db: AsyncSession = Depends(get_db),
 ):
     """Registrar una métrica de salud manualmente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == metric.client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     if metric.metric_type not in METRIC_TYPES:
         raise HTTPException(
             status_code=400,
@@ -362,6 +387,13 @@ async def list_activities(
     limit: int = Query(50, le=200),
 ):
     """Listar actividades sincronizadas de un cliente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     query = select(SyncedActivity).where(SyncedActivity.client_id == client_id)
 
     if activity_type:
@@ -390,6 +422,13 @@ async def get_daily_summaries(
     to_date: Optional[date] = Query(None),
 ):
     """Obtener resúmenes diarios de un cliente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     query = select(DailyHealthSummary).where(DailyHealthSummary.client_id == client_id)
 
     if from_date:
@@ -410,6 +449,13 @@ async def get_today_summary(
     client_id: UUID = Query(...),
 ):
     """Obtener resumen del día actual"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     today = date.today()
 
     result = await db.execute(
@@ -431,6 +477,13 @@ async def get_health_goals(
     db: AsyncSession = Depends(get_db),
 ):
     """Obtener objetivos de salud de un cliente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     result = await db.execute(
         select(ClientHealthGoals).where(ClientHealthGoals.client_id == client_id)
     )
@@ -459,6 +512,13 @@ async def update_health_goals(
     db: AsyncSession = Depends(get_db),
 ):
     """Actualizar objetivos de salud de un cliente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     result = await db.execute(
         select(ClientHealthGoals).where(ClientHealthGoals.client_id == client_id)
     )
@@ -490,6 +550,13 @@ async def list_health_alerts(
     limit: int = Query(50, le=200),
 ):
     """Listar alertas de salud de un cliente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     query = select(HealthAlert).where(HealthAlert.client_id == client_id)
 
     if unread_only:
@@ -508,8 +575,12 @@ async def mark_alert_read(
     db: AsyncSession = Depends(get_db),
 ):
     """Marcar alerta como leída"""
+    from app.models.client import Client
     result = await db.execute(
-        select(HealthAlert).where(HealthAlert.id == alert_id)
+        select(HealthAlert).join(Client, HealthAlert.client_id == Client.id).where(
+            HealthAlert.id == alert_id,
+            Client.workspace_id == current_user.workspace_id,
+        )
     )
     alert = result.scalar_one_or_none()
 
@@ -532,6 +603,13 @@ async def get_health_dashboard(
     db: AsyncSession = Depends(get_db),
 ):
     """Obtener dashboard de salud completo de un cliente"""
+    from app.models.client import Client
+    client_check = await db.execute(
+        select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     today = date.today()
     week_ago = today - timedelta(days=7)
 

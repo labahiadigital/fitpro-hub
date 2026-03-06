@@ -199,7 +199,7 @@ function RecentClientsWidget() {
     lastSession: client.updated_at
       ? new Date(client.updated_at).toLocaleDateString()
       : "Sin actividad",
-    progress: Math.floor(Math.random() * 40) + 60, // TODO: Get real progress from backend
+    progress: client.progress ?? null,
     goal: client.goals || "Sin objetivo definido",
     avatar: (client.first_name || "?")[0].toUpperCase(),
   }));
@@ -272,6 +272,7 @@ function RecentClientsWidget() {
                   <Text size="xs" c="dimmed">
                     {client.lastSession}
                   </Text>
+                  {client.progress != null && (
                   <Group gap={4} mt={4}>
                     <Progress
                       value={client.progress}
@@ -299,6 +300,7 @@ function RecentClientsWidget() {
                       {client.progress}%
                     </Text>
                   </Group>
+                  )}
                 </Box>
               </Group>
             </UnstyledButton>

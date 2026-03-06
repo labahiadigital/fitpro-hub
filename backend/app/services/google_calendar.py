@@ -8,6 +8,7 @@ Servicio para integración bidireccional con Google Calendar:
 - Push notifications (webhooks)
 """
 import json
+import logging
 import secrets
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +16,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 from urllib.parse import urlencode
+
+logger = logging.getLogger(__name__)
 
 import httpx
 from google.oauth2.credentials import Credentials
@@ -79,7 +82,7 @@ class GoogleCalendarService:
             raise GoogleCalendarError("Google Calendar no está configurado")
         
         # Log para debug
-        print(f"[Google Calendar] Generating auth URL with redirect_uri: {self.redirect_uri}")
+        logger.debug("[Google Calendar] Generating auth URL with redirect_uri: %s", self.redirect_uri)
         
         params = {
             "client_id": self.client_id,
@@ -94,7 +97,7 @@ class GoogleCalendarService:
         # Usar urlencode para codificar correctamente los parámetros
         query = urlencode(params)
         auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{query}"
-        print(f"[Google Calendar] Auth URL: {auth_url}")
+        logger.debug("[Google Calendar] Auth URL: %s", auth_url)
         return auth_url
     
     async def exchange_code_for_tokens(self, code: str) -> dict:
@@ -258,10 +261,10 @@ class GoogleCalendarService:
         """
         try:
             service = self._get_calendar_service(token)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             
             # Buscar si ya existe un calendario Trackfiz (ejecutar en thread pool)
-            print("[Google Calendar] Buscando calendarios existentes...")
+            logger.info("[Google Calendar] Buscando calendarios existentes...")
             calendar_list = await loop.run_in_executor(
                 _executor,
                 lambda: service.calendarList().list().execute()
@@ -270,7 +273,7 @@ class GoogleCalendarService:
             for calendar in calendar_list.get('items', []):
                 if calendar.get('summary') == 'Trackfiz':
                     calendar_id = calendar['id']
-                    print(f"[Google Calendar] Calendario Trackfiz encontrado: {calendar_id}")
+                    logger.info("[Google Calendar] Calendario Trackfiz encontrado: %s", calendar_id)
                     
                     # Actualizar el token con el calendar_id si no lo tiene
                     if token.calendar_id != calendar_id:
@@ -281,7 +284,7 @@ class GoogleCalendarService:
                     return calendar_id
             
             # No existe, crear uno nuevo
-            print("[Google Calendar] Creando calendario Trackfiz...")
+            logger.info("[Google Calendar] Creando calendario Trackfiz...")
             new_calendar = {
                 'summary': 'Trackfiz',
                 'description': 'Sesiones y reservas de Trackfiz',
@@ -294,7 +297,7 @@ class GoogleCalendarService:
             )
             calendar_id = created_calendar['id']
             
-            print(f"[Google Calendar] Calendario Trackfiz creado: {calendar_id}")
+            logger.info("[Google Calendar] Calendario Trackfiz creado: %s", calendar_id)
             
             # Actualizar el token con el nuevo calendar_id
             token.calendar_id = calendar_id
@@ -304,13 +307,13 @@ class GoogleCalendarService:
             return calendar_id
             
         except HttpError as e:
-            print(f"[Google Calendar] Error al crear/obtener calendario Trackfiz: {e.reason}")
+            logger.error("[Google Calendar] Error al crear/obtener calendario Trackfiz: %s", e.reason)
             import traceback
             traceback.print_exc()
             # Fallback al calendario principal
             return token.calendar_id or 'primary'
         except Exception as e:
-            print(f"[Google Calendar] Error inesperado en get_or_create_trackfiz_calendar: {e}")
+            logger.error("[Google Calendar] Error inesperado en get_or_create_trackfiz_calendar: %s", e)
             import traceback
             traceback.print_exc()
             return token.calendar_id or 'primary'
@@ -444,7 +447,7 @@ class GoogleCalendarService:
             event = self._booking_to_event(booking, client)
             calendar_id = token.calendar_id or 'primary'
             
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             created = await loop.run_in_executor(
                 _executor,
                 lambda: service.events().insert(
@@ -480,7 +483,7 @@ class GoogleCalendarService:
             event = self._booking_to_event(booking, client)
             calendar_id = token.calendar_id or 'primary'
             
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             await loop.run_in_executor(
                 _executor,
                 lambda: service.events().update(
@@ -511,7 +514,7 @@ class GoogleCalendarService:
         """
         try:
             service = self._get_calendar_service(token)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             
             calendar_id = token.calendar_id or 'primary'
             await loop.run_in_executor(
@@ -548,7 +551,7 @@ class GoogleCalendarService:
         Returns:
             ID del evento en Google o None si no hay token
         """
-        print(f"[Google Calendar] sync_booking_to_google llamado para booking {booking.id}, user {user_id}")
+        logger.info("[Google Calendar] sync_booking_to_google llamado para booking %s, user %s", booking.id, user_id)
         
         # Buscar token del usuario
         result = await db.execute(
@@ -563,20 +566,20 @@ class GoogleCalendarService:
         token = result.scalar_one_or_none()
         
         if not token:
-            print(f"[Google Calendar] No hay token para usuario {user_id} en workspace {booking.workspace_id}")
+            logger.info("[Google Calendar] No hay token para usuario %s en workspace %s", user_id, booking.workspace_id)
             return None
         
-        print(f"[Google Calendar] Token encontrado, calendar_id: {token.calendar_id}")
+        logger.info("[Google Calendar] Token encontrado, calendar_id: %s", token.calendar_id)
         
         # Asegurar token válido
         token = await self.ensure_valid_token(token, db)
         
         # Asegurar que existe el calendario Trackfiz y actualizar token.calendar_id si es necesario
         if not token.calendar_id or token.calendar_id == 'primary':
-            print(f"[Google Calendar] Creando/obteniendo calendario Trackfiz...")
+            logger.info("[Google Calendar] Creando/obteniendo calendario Trackfiz...")
             calendar_id = await self.get_or_create_trackfiz_calendar(token, db)
             await db.refresh(token)
-            print(f"[Google Calendar] Usando calendario: {token.calendar_id}")
+            logger.info("[Google Calendar] Usando calendario: %s", token.calendar_id)
         
         # Buscar mapping existente
         result = await db.execute(
@@ -592,14 +595,14 @@ class GoogleCalendarService:
         try:
             if mapping:
                 # Actualizar evento existente
-                print(f"[Google Calendar] Actualizando evento existente {mapping.google_event_id} para booking {booking.id}")
+                logger.info("[Google Calendar] Actualizando evento existente %s para booking %s", mapping.google_event_id, booking.id)
                 await self.update_event(mapping.google_event_id, booking, token, client)
                 mapping.last_synced_at = datetime.now(timezone.utc)
             else:
                 # Crear nuevo evento
-                print(f"[Google Calendar] Creando nuevo evento para booking {booking.id} en calendario {token.calendar_id}")
+                logger.info("[Google Calendar] Creando nuevo evento para booking %s en calendario %s", booking.id, token.calendar_id)
                 google_event_id = await self.create_event(booking, token, client)
-                print(f"[Google Calendar] Evento creado con ID: {google_event_id}")
+                logger.info("[Google Calendar] Evento creado con ID: %s", google_event_id)
                 
                 # Guardar mapping
                 mapping = CalendarSyncMapping(
@@ -616,10 +619,10 @@ class GoogleCalendarService:
             return mapping.google_event_id
             
         except GoogleCalendarError as e:
-            print(f"[Google Calendar] GoogleCalendarError sincronizando booking {booking.id}: {e.message}")
+            logger.error("[Google Calendar] GoogleCalendarError sincronizando booking %s: %s", booking.id, e.message)
             return None
         except Exception as e:
-            print(f"[Google Calendar] Error inesperado sincronizando booking {booking.id}: {e}")
+            logger.error("[Google Calendar] Error inesperado sincronizando booking %s: %s", booking.id, e)
             import traceback
             traceback.print_exc()
             return None
@@ -677,7 +680,7 @@ class GoogleCalendarService:
             return True
             
         except GoogleCalendarError as e:
-            print(f"[Google Calendar] Error eliminando evento: {e.message}")
+            logger.error("[Google Calendar] Error eliminando evento: %s", e.message)
             return False
     
     async def get_events_from_google(
@@ -703,7 +706,7 @@ class GoogleCalendarService:
         """
         try:
             service = self._get_calendar_service(token)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             
             target_calendar = calendar_id or token.calendar_id or 'primary'
             
@@ -761,10 +764,10 @@ class GoogleCalendarService:
         """
         try:
             service = self._get_calendar_service(token)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             
             # Obtener lista de calendarios del usuario (en thread pool)
-            print("[Google Calendar] Obteniendo lista de calendarios del usuario...")
+            logger.info("[Google Calendar] Obteniendo lista de calendarios del usuario...")
             calendar_list = await loop.run_in_executor(
                 _executor,
                 lambda: service.calendarList().list().execute()
@@ -773,7 +776,7 @@ class GoogleCalendarService:
             all_events = []
             trackfiz_calendar_id = token.calendar_id if token.calendar_name == 'Trackfiz' else None
             
-            print(f"[Google Calendar] Encontrados {len(calendar_list.get('items', []))} calendarios")
+            logger.info("[Google Calendar] Encontrados %s calendarios", len(calendar_list.get('items', [])))
             
             for calendar in calendar_list.get('items', []):
                 calendar_id = calendar['id']
@@ -781,7 +784,7 @@ class GoogleCalendarService:
                 
                 # Saltar Trackfiz si no se quiere incluir
                 if not include_trackfiz and calendar_id == trackfiz_calendar_id:
-                    print(f"[Google Calendar] Saltando calendario Trackfiz: {calendar_name}")
+                    logger.debug("[Google Calendar] Saltando calendario Trackfiz: %s", calendar_name)
                     continue
                 
                 # Solo calendarios que el usuario puede ver
@@ -789,7 +792,7 @@ class GoogleCalendarService:
                     continue
                 
                 try:
-                    print(f"[Google Calendar] Obteniendo eventos de: {calendar_name}")
+                    logger.info("[Google Calendar] Obteniendo eventos de: %s", calendar_name)
                     events = await self.get_events_from_google(
                         token=token,
                         time_min=time_min,
@@ -797,7 +800,7 @@ class GoogleCalendarService:
                         calendar_id=calendar_id
                     )
                     
-                    print(f"[Google Calendar] {len(events)} eventos en {calendar_name}")
+                    logger.info("[Google Calendar] %s eventos en %s", len(events), calendar_name)
                     
                     # Añadir metadata del calendario a cada evento
                     for event in events:
@@ -808,7 +811,7 @@ class GoogleCalendarService:
                     all_events.extend(events)
                     
                 except Exception as e:
-                    print(f"[Google Calendar] Error obteniendo eventos de {calendar_name}: {e}")
+                    logger.error("[Google Calendar] Error obteniendo eventos de %s: %s", calendar_name, e)
                     continue
             
             # Ordenar por fecha de inicio

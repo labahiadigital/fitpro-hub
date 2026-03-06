@@ -10,8 +10,11 @@ Este servicio maneja la comunicación con Kapso para:
 import hashlib
 import hmac
 import httpx
+import logging
 from typing import Optional
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 
@@ -368,8 +371,8 @@ class KapsoService:
         """
         secret_key = secret or self.webhook_secret
         if not secret_key:
-            # Si no hay secret configurado, no podemos verificar
-            return True
+            logger.warning("Webhook secret not configured — rejecting request")
+            return False
         
         expected_signature = hmac.new(
             secret_key.encode(),
