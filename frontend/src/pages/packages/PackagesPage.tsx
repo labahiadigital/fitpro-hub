@@ -202,7 +202,6 @@ export function PackagesPage() {
 
   const handleDeletePackage = async (id: string) => {
     // TODO: Add delete mutation when endpoint supports it
-    console.log("Delete package:", id);
   };
 
   const handleToggleActive = async (id: string) => {

@@ -19,15 +19,12 @@ import {
   IconLock,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { authApi, workspacesApi } from "../../services/api";
-import { useAuthStore } from "../../stores/auth";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 export function LoginPage() {
-  const [loading, setLoading] = useState(false);
+  const { login, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const { setUser, setTokens, setWorkspace } = useAuthStore();
 
   const form = useForm({
     initialValues: {
@@ -42,37 +39,12 @@ export function LoginPage() {
   });
 
   const handleSubmit = async (values: typeof form.values) => {
-    setLoading(true);
     setError(null);
-
     try {
-      // Login through backend API
-      const loginResponse = await authApi.login(values.email, values.password);
-      const { access_token, refresh_token } = loginResponse.data;
-      
-      // Save tokens
-      setTokens(access_token, refresh_token);
-      
-      // Get user profile from backend
-      const userResponse = await authApi.me();
-      setUser(userResponse.data);
-      
-      // Get workspaces and set current workspace
-      try {
-        const workspacesResponse = await workspacesApi.list();
-        if (workspacesResponse.data.length > 0) {
-          setWorkspace(workspacesResponse.data[0]);
-        }
-      } catch {
-        console.log("No workspaces found");
-      }
-
-      navigate("/dashboard");
+      await login(values.email, values.password);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError(error.response?.data?.detail || error.message || "Error al iniciar sesión");
-    } finally {
-      setLoading(false);
+      const errObj = err as { response?: { data?: { detail?: string } }; message?: string };
+      setError(errObj.response?.data?.detail || errObj.message || "Error al iniciar sesión");
     }
   };
 

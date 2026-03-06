@@ -23,8 +23,6 @@ export function GoogleCallbackPage() {
     const code = searchParams.get("code");
     const error = searchParams.get("error");
 
-    console.log("[GoogleCallback] code:", code ? "present" : "missing", "error:", error);
-
     if (error) {
       // Usuario canceló o hubo error de Google
       navigate("/settings?tab=integrations&google=error", { replace: true });
@@ -54,7 +52,6 @@ export function GoogleCallbackPage() {
         });
     } else {
       // No hay código, redirigir a settings
-      console.log("[GoogleCallback] No code found, redirecting...");
       navigate("/settings?tab=integrations", { replace: true });
     }
   }, []);

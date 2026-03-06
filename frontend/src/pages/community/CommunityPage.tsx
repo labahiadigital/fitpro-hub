@@ -380,7 +380,6 @@ export function CommunityPage() {
       >
         <form
           onSubmit={challengeForm.onSubmit((values) => {
-            console.log(values);
             closeChallengeModal();
           })}
         >
@@ -441,7 +440,6 @@ export function CommunityPage() {
       >
         <form
           onSubmit={groupForm.onSubmit((values) => {
-            console.log(values);
             closeGroupModal();
           })}
         >

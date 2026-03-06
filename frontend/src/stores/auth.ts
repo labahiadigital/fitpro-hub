@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+}
+
 type UserRole = 'owner' | 'collaborator' | 'client';
 
 interface User {
@@ -77,13 +86,17 @@ export const useAuthStore = create<AuthState>()(
         currentWorkspace: state.currentWorkspace,
       }),
       onRehydrateStorage: () => (state) => {
-        // onRehydrateStorage is called after rehydration completes
-        // state contains the rehydrated values
         if (state) {
-          const hasToken = !!state.accessToken;
-          // Set _hasHydrated immediately so waitForHydration resolves
+          const hasValidToken =
+            !!state.accessToken && !isTokenExpired(state.accessToken);
           state._hasHydrated = true;
-          state.isAuthenticated = hasToken;
+          state.isAuthenticated = hasValidToken;
+          if (!hasValidToken) {
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.user = null;
+            state.currentWorkspace = null;
+          }
         }
       },
     }

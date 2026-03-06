@@ -3,6 +3,9 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.core.config import settings
 from app.api.v1.router import api_router
@@ -12,11 +15,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(f"[START] Starting {settings.APP_NAME}...")
+    logger.info("Starting %s...", settings.APP_NAME)
     yield
-    print(f"[STOP] Shutting down {settings.APP_NAME}...")
+    logger.info("Shutting down %s...", settings.APP_NAME)
 
 
+limiter = Limiter(key_func=get_remote_address, default_limits=[])
 app = FastAPI(
     title=settings.APP_NAME,
     description="Plataforma SaaS multi-tenant para profesionales de fitness, wellness y salud",
@@ -38,12 +42,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Workspace-Id"],
+    allow_headers=["Authorization", "Content-Type", "X-Workspace-ID"],
     expose_headers=["X-Total-Count"],
 )
 

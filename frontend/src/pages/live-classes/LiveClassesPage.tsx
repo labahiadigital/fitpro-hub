@@ -370,7 +370,6 @@ function CreateClassModal({
 
   const handleSubmit = async (values: typeof form.values) => {
     // TODO: Implementar creación de clase
-    console.log(values);
     notifications.show({
       title: "Clase creada",
       message: "La clase se ha programado correctamente",

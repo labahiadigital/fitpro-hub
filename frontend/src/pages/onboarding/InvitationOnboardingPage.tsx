@@ -380,26 +380,58 @@ export function InvitationOnboardingPage() {
     }
   };
 
-  // Render SeQura form HTML and initialize it
+  // Whitelist for SeQura script sources (XSS protection)
+  const SEQURA_ALLOWED_DOMAINS = ["sequrapi.com", "sequra.es"];
+
+  const isAllowedScriptSrc = (src: string): boolean => {
+    try {
+      const url = new URL(src, window.location.origin);
+      return SEQURA_ALLOWED_DOMAINS.some(
+        (domain) =>
+          url.hostname === domain || url.hostname.endsWith(`.${domain}`)
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  // Render SeQura form HTML and initialize it (with XSS protection)
   useEffect(() => {
     if (!showSequraForm || !sequraFormHtml || !sequraFormRef.current) return;
 
     const container = sequraFormRef.current;
-    container.innerHTML = sequraFormHtml;
 
-    // Execute any <script> tags in the HTML
-    const scripts = container.querySelectorAll("script");
-    scripts.forEach((oldScript) => {
-      const newScript = document.createElement("script");
-      if (oldScript.src) {
-        newScript.src = oldScript.src;
-      } else {
-        newScript.textContent = oldScript.textContent;
+    // Parse HTML in a temporary container (scripts are NOT executed when using innerHTML)
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = sequraFormHtml;
+
+    // Extract only whitelisted external scripts (inline scripts are never executed - XSS vector)
+    const scriptsToExecute: { src: string }[] = [];
+    const scriptElements = tempDiv.querySelectorAll("script");
+    scriptElements.forEach((script) => {
+      if (script.src && isAllowedScriptSrc(script.src)) {
+        scriptsToExecute.push({ src: script.src });
       }
-      Array.from(oldScript.attributes).forEach((attr) => {
-        newScript.setAttribute(attr.name, attr.value);
+      script.remove();
+    });
+
+    // Remove event handler attributes from all elements (onclick, onerror, etc.)
+    tempDiv.querySelectorAll("*").forEach((el) => {
+      Array.from(el.attributes).forEach((attr) => {
+        if (attr.name.startsWith("on") && attr.name.length > 2) {
+          el.removeAttribute(attr.name);
+        }
       });
-      oldScript.parentNode?.replaceChild(newScript, oldScript);
+    });
+
+    // Set sanitized HTML (no scripts, no event handlers)
+    container.innerHTML = tempDiv.innerHTML;
+
+    // Execute only whitelisted scripts
+    scriptsToExecute.forEach(({ src }) => {
+      const newScript = document.createElement("script");
+      newScript.src = src;
+      container.appendChild(newScript);
     });
 
     // Set up the SeQura form instance callback

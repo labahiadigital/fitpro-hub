@@ -46,6 +46,7 @@ google-api-python-client>=2.0.0
 # Security
 bcrypt==4.2.1
 python-dotenv==1.0.1
+slowapi==0.1.9
 
 # Utilities
 orjson==3.10.18

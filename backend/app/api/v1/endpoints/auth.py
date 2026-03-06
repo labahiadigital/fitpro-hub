@@ -2,14 +2,17 @@
 Authentication endpoints using FastAPI Security with JWT tokens.
 This replaces Supabase Auth with a self-managed authentication system.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone, timedelta
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import traceback
 import logging
 
 logger = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -49,7 +52,9 @@ router = APIRouter()
 # ===== REGISTRATION =====
 
 @router.post("/register", response_model=Token)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     data: RegisterRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -157,7 +162,9 @@ async def register(
 # ===== LOGIN =====
 
 @router.post("/login", response_model=Token)
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     data: LoginRequest,
     db: AsyncSession = Depends(get_db)
 ):

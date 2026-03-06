@@ -380,7 +380,6 @@ export function TeamPage() {
       >
         <form
           onSubmit={inviteForm.onSubmit((values) => {
-            console.log(values);
             closeInviteModal();
           })}
         >

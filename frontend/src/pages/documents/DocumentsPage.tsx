@@ -433,7 +433,6 @@ export function DocumentsPage() {
       >
         <form
           onSubmit={documentForm.onSubmit((values) => {
-            console.log(values);
             closeDocumentModal();
           })}
         >
@@ -493,7 +492,6 @@ export function DocumentsPage() {
       >
         <form
           onSubmit={folderForm.onSubmit((values) => {
-            console.log(values);
             closeFolderModal();
           })}
         >

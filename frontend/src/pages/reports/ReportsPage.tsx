@@ -88,13 +88,13 @@ export function ReportsPage() {
         action={{
           label: "Exportar Datos",
           icon: <IconDownload size={16} />,
-          onClick: () => console.log("Export"),
+          onClick: () => {},
         }}
         description="Analiza el rendimiento de tu negocio"
         secondaryAction={{
           label: "Actualizar",
           icon: <IconRefresh size={16} />,
-          onClick: () => console.log("Refresh"),
+          onClick: () => {},
           variant: "default",
         }}
         title="Reportes y Analytics"
