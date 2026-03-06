@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models.workspace import Workspace
+from app.models.workspace import Workspace, generate_slug, check_slug_available
 from app.models.user import UserRole, RoleType
 from app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate, WorkspaceResponse, WorkspaceListResponse
 from app.middleware.auth import get_current_user, require_workspace, require_owner, CurrentUser
@@ -50,17 +50,12 @@ async def create_workspace(
     """
     Crear un nuevo workspace.
     """
-    # Generate slug if not provided
-    slug = data.slug or data.name.lower().replace(" ", "-")
+    slug = data.slug or generate_slug(data.name)
     
-    # Check if slug already exists
-    result = await db.execute(
-        select(Workspace).where(Workspace.slug == slug)
-    )
-    if result.scalar_one_or_none():
+    if not await check_slug_available(db, slug):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El slug ya está en uso"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe un espacio con ese nombre. Elige otro nombre."
         )
     
     # Create workspace

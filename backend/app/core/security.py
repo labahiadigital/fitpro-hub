@@ -11,7 +11,7 @@ from app.core.config import settings
 
 # JWT Configuration
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour – refresh token handles renewal
 REFRESH_TOKEN_EXPIRE_DAYS = 30  # 30 days
 
 # Password validation
@@ -205,26 +205,7 @@ def generate_password_reset_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-# Legacy: Keep for backward compatibility during migration
 def decode_supabase_token(token: str) -> Optional[dict]:
-    """Decode Supabase JWT token (legacy, for migration)."""
-    # First try our own token format
-    payload = decode_access_token(token)
-    if payload:
-        return payload.model_dump()
-    
-    # Fallback to Supabase token format (for migration)
-    try:
-        if settings.SUPABASE_JWT_SECRET:
-            payload = jwt.decode(
-                token,
-                settings.SUPABASE_JWT_SECRET,
-                algorithms=[ALGORITHM],
-                options={"verify_aud": False}
-            )
-            return payload
-    except JWTError:
-        pass
-    
+    """Legacy stub — kept to avoid import errors. Always returns None."""
     return None
 

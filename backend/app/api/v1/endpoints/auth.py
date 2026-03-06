@@ -9,7 +9,6 @@ from datetime import datetime, timezone, timedelta
 import traceback
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 from app.core.config import settings
@@ -24,7 +23,7 @@ from app.core.security import (
     generate_password_reset_token,
 )
 from app.models.user import User, UserRole, RoleType
-from app.models.workspace import Workspace
+from app.models.workspace import Workspace, generate_slug, check_slug_available
 from app.models.client import Client
 from app.schemas.auth import (
     LoginRequest,
@@ -90,8 +89,13 @@ async def register(
         # Create workspace if name provided
         workspace = None
         if data.workspace_name:
-            # Generate slug from workspace name
-            slug = data.workspace_name.lower().replace(" ", "-")
+            slug = generate_slug(data.workspace_name)
+            
+            if not await check_slug_available(db, slug):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Ya existe un espacio con un nombre similar ('{slug}'). Elige otro nombre para tu gimnasio virtual."
+                )
             
             workspace = Workspace(
                 name=data.workspace_name,
@@ -146,7 +150,7 @@ async def register(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al registrar usuario: {str(e)}"
+            detail="Error al registrar usuario"
         )
 
 
@@ -855,5 +859,5 @@ async def register_client(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al registrar cliente: {str(e)}"
+            detail="Error al registrar cliente"
         )

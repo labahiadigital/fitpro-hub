@@ -17,6 +17,9 @@ export default defineConfig({
       "@": "/src",
     },
   },
+  esbuild: {
+    drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],
+  },
   build: {
     rollupOptions: {
       output: {
@@ -35,7 +38,6 @@ export default defineConfig({
           "vendor-icons": ["@tabler/icons-react"],
           "vendor-charts": ["recharts"],
           "vendor-dnd": ["@hello-pangea/dnd"],
-          "vendor-pdf": ["jspdf", "jspdf-autotable"],
         },
       },
     },

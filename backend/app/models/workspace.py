@@ -1,8 +1,33 @@
-from sqlalchemy import Column, String, Text
+import re
+import unicodedata
+
+from sqlalchemy import Column, String, Text, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import BaseModel
+
+
+def generate_slug(name: str) -> str:
+    """Convert a name into a URL-safe slug."""
+    slug = unicodedata.normalize("NFKD", name)
+    slug = slug.encode("ascii", "ignore").decode("ascii")
+    slug = slug.lower()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"[\s_]+", "-", slug).strip("-")
+    slug = re.sub(r"-{2,}", "-", slug)
+    return slug or "workspace"
+
+
+async def check_slug_available(db: AsyncSession, slug: str) -> bool:
+    """Return True if the slug is not yet used by any workspace."""
+    from app.models.workspace import Workspace
+
+    result = await db.execute(
+        select(Workspace.id).where(Workspace.slug == slug)
+    )
+    return result.scalar_one_or_none() is None
 
 
 # Default CRM field configuration

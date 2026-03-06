@@ -47,15 +47,15 @@ const LiveClassesPage = lazy(() => import("./pages/live-classes/LiveClassesPage"
 const ChatPage = lazy(() => import("./pages/chat/ChatPage").then(m => ({ default: m.ChatPage })));
 const LMSPage = lazy(() => import("./pages/lms/LMSPage").then(m => ({ default: m.LMSPage })));
 
-// Client pages
-const ClientDashboardPage = lazy(() => import("./pages/client").then(m => ({ default: m.ClientDashboardPage })));
-const MyWorkoutsPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyWorkoutsPage })));
-const MyNutritionPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyNutritionPage })));
-const MyProgressPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyProgressPage })));
-const MyCalendarPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyCalendarPage })));
-const MyDocumentsPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyDocumentsPage })));
-const MyProfilePage = lazy(() => import("./pages/client").then(m => ({ default: m.MyProfilePage })));
-const MyMessagesPage = lazy(() => import("./pages/client").then(m => ({ default: m.MyMessagesPage })));
+// Client pages — import directly to enable per-page code splitting
+const ClientDashboardPage = lazy(() => import("./pages/client/ClientDashboardPage").then(m => ({ default: m.ClientDashboardPage })));
+const MyWorkoutsPage = lazy(() => import("./pages/client/MyWorkoutsPage").then(m => ({ default: m.MyWorkoutsPage })));
+const MyNutritionPage = lazy(() => import("./pages/client/MyNutritionPage").then(m => ({ default: m.MyNutritionPage })));
+const MyProgressPage = lazy(() => import("./pages/client/MyProgressPage").then(m => ({ default: m.MyProgressPage })));
+const MyCalendarPage = lazy(() => import("./pages/client/MyCalendarPage").then(m => ({ default: m.MyCalendarPage })));
+const MyDocumentsPage = lazy(() => import("./pages/client/MyDocumentsPage").then(m => ({ default: m.MyDocumentsPage })));
+const MyProfilePage = lazy(() => import("./pages/client/MyProfilePage").then(m => ({ default: m.MyProfilePage })));
+const MyMessagesPage = lazy(() => import("./pages/client/MyMessagesPage").then(m => ({ default: m.MyMessagesPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,7 +64,7 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000,
       gcTime: 30 * 60 * 1000,
-      refetchOnReconnect: false,
+      refetchOnReconnect: true,
     },
   },
 });

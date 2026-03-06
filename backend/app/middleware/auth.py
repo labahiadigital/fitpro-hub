@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
-from app.core.security import decode_access_token, decode_supabase_token
+from app.core.security import decode_access_token
 from app.models.user import User, UserRole, RoleType
 
 
@@ -85,19 +85,7 @@ async def get_current_user(
             except (ValueError, TypeError):
                 pass
     
-    # Fallback: try legacy Supabase token format
-    if not user:
-        legacy_payload = decode_supabase_token(token)
-        if legacy_payload:
-            auth_id = legacy_payload.get("sub")
-            if auth_id:
-                result = await db.execute(
-                    select(User).where(User.auth_id == auth_id)
-                )
-                user = result.scalar_one_or_none()
-            payload = legacy_payload  # Use legacy payload for workspace info
-    
-    if not payload and not user:
+    if not payload or not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado",
@@ -124,13 +112,7 @@ async def get_current_user(
     token_workspace_id = None
     token_role = None
     
-    if isinstance(payload, dict):
-        # Legacy Supabase token format
-        app_metadata = payload.get("app_metadata", {})
-        token_workspace_id = app_metadata.get("workspace_id") or payload.get("workspace_id")
-        token_role = payload.get("role")
-    elif hasattr(payload, 'workspace_id'):
-        # New local token format
+    if hasattr(payload, 'workspace_id'):
         token_workspace_id = payload.workspace_id
         token_role = payload.role
     
@@ -147,12 +129,6 @@ async def get_current_user(
             user_role = result.scalar_one_or_none()
             if user_role:
                 role = user_role.role
-            elif token_role:
-                # Use role from token if not found in DB
-                try:
-                    role = RoleType(token_role)
-                except ValueError:
-                    pass
         except (ValueError, TypeError):
             pass
     

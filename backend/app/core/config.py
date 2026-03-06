@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import List
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -10,6 +11,18 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEBUG: bool = True
     SECRET_KEY: str = "change-me-in-production"
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        if v == "change-me-in-production":
+            import warnings
+            warnings.warn(
+                "SECRET_KEY is using the insecure default value. "
+                "Set a strong random SECRET_KEY in your .env file.",
+                stacklevel=2,
+            )
+        return v
     API_V1_PREFIX: str = "/api/v1"
     
     # Supabase
