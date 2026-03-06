@@ -379,7 +379,7 @@ export function TeamPage() {
         }}
       >
         <form
-          onSubmit={inviteForm.onSubmit((values) => {
+          onSubmit={inviteForm.onSubmit((_values) => {
             closeInviteModal();
           })}
         >

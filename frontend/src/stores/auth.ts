@@ -20,6 +20,8 @@ interface User {
   is_active: boolean;
   role?: UserRole;
   workspace_id?: string;
+  preferences?: Record<string, any>;
+  phone?: string;
 }
 
 interface Workspace {
@@ -27,6 +29,8 @@ interface Workspace {
   name: string;
   slug: string;
   logo_url?: string;
+  description?: string;
+  settings?: Record<string, any>;
   branding?: {
     primary_color: string;
     secondary_color: string;

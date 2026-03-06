@@ -368,7 +368,7 @@ function CreateClassModal({
     },
   });
 
-  const handleSubmit = async (values: typeof form.values) => {
+  const handleSubmit = async (_values: typeof form.values) => {
     // TODO: Implementar creación de clase
     notifications.show({
       title: "Clase creada",

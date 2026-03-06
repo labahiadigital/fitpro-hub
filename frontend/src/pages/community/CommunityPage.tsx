@@ -379,7 +379,7 @@ export function CommunityPage() {
         title="Nuevo Reto"
       >
         <form
-          onSubmit={challengeForm.onSubmit((values) => {
+          onSubmit={challengeForm.onSubmit((_values) => {
             closeChallengeModal();
           })}
         >
@@ -439,7 +439,7 @@ export function CommunityPage() {
         title="Nuevo Grupo"
       >
         <form
-          onSubmit={groupForm.onSubmit((values) => {
+          onSubmit={groupForm.onSubmit((_values) => {
             closeGroupModal();
           })}
         >

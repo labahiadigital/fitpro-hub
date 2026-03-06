@@ -200,7 +200,7 @@ export function PackagesPage() {
     }
   };
 
-  const handleDeletePackage = async (id: string) => {
+  const handleDeletePackage = async (_id: string) => {
     // TODO: Add delete mutation when endpoint supports it
   };
 

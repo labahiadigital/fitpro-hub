@@ -193,6 +193,7 @@ function RecentClientsWidget() {
     full_name?: string;
     goals?: string;
     updated_at?: string;
+    progress?: number | null;
   }) => ({
     id: client.id,
     name: client.full_name || `${client.first_name} ${client.last_name}`,

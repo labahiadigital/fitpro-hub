@@ -432,7 +432,7 @@ export function DocumentsPage() {
         title="Nuevo Documento"
       >
         <form
-          onSubmit={documentForm.onSubmit((values) => {
+          onSubmit={documentForm.onSubmit((_values) => {
             closeDocumentModal();
           })}
         >
@@ -491,7 +491,7 @@ export function DocumentsPage() {
         title="Nueva Carpeta"
       >
         <form
-          onSubmit={folderForm.onSubmit((values) => {
+          onSubmit={folderForm.onSubmit((_values) => {
             closeFolderModal();
           })}
         >

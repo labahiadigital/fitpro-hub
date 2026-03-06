@@ -603,7 +603,7 @@ export function InvitationOnboardingPage() {
     form.values.parqResponses.boneJoint,
     form.values.parqResponses.bloodPressure,
     form.values.parqResponses.otherReason,
-  ].some((v) => v === "true" || v === true);
+  ].some((v) => v === "true" || (typeof v === "boolean" && v));
 
   const handleSubmit = async () => {
     if (!invitationData || !token) return;
