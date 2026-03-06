@@ -90,7 +90,8 @@ export function useMessages(conversationId: string | null) {
     },
     select: (response) => response.data as Message[],
     enabled: !!conversationId,
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   });
 }
 

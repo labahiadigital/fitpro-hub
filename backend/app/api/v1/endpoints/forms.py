@@ -224,6 +224,15 @@ async def list_submissions(
     """
     Listar respuestas de un formulario.
     """
+    form_result = await db.execute(
+        select(Form.id).where(
+            Form.id == form_id,
+            Form.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not form_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Formulario no encontrado")
+
     query = select(FormSubmission).where(FormSubmission.form_id == form_id)
     
     if status:
@@ -266,7 +275,12 @@ async def get_submission(
     Obtener detalles de una respuesta.
     """
     result = await db.execute(
-        select(FormSubmission).where(FormSubmission.id == submission_id)
+        select(FormSubmission)
+        .join(Form, FormSubmission.form_id == Form.id)
+        .where(
+            FormSubmission.id == submission_id,
+            Form.workspace_id == current_user.workspace_id,
+        )
     )
     submission = result.scalar_one_or_none()
     

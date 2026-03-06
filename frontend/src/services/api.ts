@@ -10,9 +10,8 @@ export const api = axios.create({
   },
 });
 
-// Flag to prevent multiple refresh attempts
 let isRefreshing = false;
-// Queue of failed requests to retry after refresh
+let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (reason?: unknown) => void;
@@ -82,11 +81,14 @@ api.interceptors.response.use(
       
       originalRequest._retry = true;
       
-      // Try to refresh token if we have one
       const refreshToken = useAuthStore.getState().refreshToken;
       
       if (refreshToken) {
         isRefreshing = true;
+        refreshTimeout = setTimeout(() => {
+          isRefreshing = false;
+          processQueue(new Error("Token refresh timeout"), null);
+        }, 15000);
         
         try {
           const response = await axios.post(`${API_URL}/auth/refresh`, {
@@ -96,6 +98,7 @@ api.interceptors.response.use(
           const { access_token, refresh_token } = response.data;
           useAuthStore.getState().setTokens(access_token, refresh_token);
           
+          if (refreshTimeout) clearTimeout(refreshTimeout);
           processQueue(null, access_token);
           isRefreshing = false;
           
@@ -105,6 +108,7 @@ api.interceptors.response.use(
           }
           return api(originalRequest);
         } catch (refreshError) {
+          if (refreshTimeout) clearTimeout(refreshTimeout);
           processQueue(refreshError, null);
           isRefreshing = false;
           // Refresh failed, logout user

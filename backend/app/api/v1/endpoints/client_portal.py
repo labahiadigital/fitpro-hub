@@ -1250,7 +1250,7 @@ async def upload_progress_photo(
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error uploading photo: {str(e)}"
+            detail="Error al subir la foto"
         )
 
 

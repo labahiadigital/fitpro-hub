@@ -494,9 +494,10 @@ async def register_for_class(
     db: AsyncSession = Depends(get_db),
 ):
     """Inscribirse en una clase"""
-    # Verificar que la clase existe y tiene espacio
     class_result = await db.execute(
-        select(LiveClass).where(LiveClass.id == registration_data.class_id)
+        select(LiveClass)
+        .where(LiveClass.id == registration_data.class_id)
+        .with_for_update()
     )
     live_class = class_result.scalar_one_or_none()
 

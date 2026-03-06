@@ -158,12 +158,6 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
           />
         )}
       </UnstyledButton>
-      <style>{`
-        .nav-item:hover {
-          background-color: rgba(255, 255, 255, 0.04) !important;
-          color: rgba(255, 255, 255, 0.8) !important;
-        }
-      `}</style>
     </NavLink>
   );
 }
@@ -285,11 +279,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
           </Group>
         </UnstyledButton>
       </Box>
-      <style>{`
-        .profile-btn:hover {
-          background-color: rgba(255, 255, 255, 0.05);
-        }
-      `}</style>
     </Box>
   );
 }
@@ -358,7 +347,7 @@ export function DashboardLayout() {
         >
           {/* Mobile Menu Toggle & Search */}
           <Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Abrir menú de navegación" />
             
             {/* Breadcrumb simulado / Contexto */}
             <Group gap="xs" visibleFrom="xs">
@@ -395,7 +384,7 @@ export function DashboardLayout() {
 
           {/* Actions */}
           <Group gap="md">
-            <UnstyledButton style={{ position: "relative" }}>
+            <UnstyledButton style={{ position: "relative" }} aria-label="Notificaciones">
               <IconBell size={22} color="var(--nv-text-secondary)" stroke={1.5} />
               <Box
                 style={{
@@ -419,18 +408,6 @@ export function DashboardLayout() {
         </div>
       </Box>
 
-      {/* Media Query for Desktop Sidebar Visibility */}
-      <style>{`
-        @media (min-width: 48em) {
-          .desktop-sidebar {
-            display: flex !important;
-          }
-        }
-        .layout-grid {
-          display: flex;
-          min-height: 100vh;
-        }
-      `}</style>
     </div>
   );
 }

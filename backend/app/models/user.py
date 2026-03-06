@@ -85,7 +85,7 @@ class User(BaseModel):
     auth_id = Column(UUID(as_uuid=True), unique=True, nullable=True, index=True)
     
     # Preferences
-    preferences = Column(JSONB, default={
+    preferences = Column(JSONB, default=lambda: {
         "language": "es",
         "timezone": "Europe/Madrid",
         "notifications": {

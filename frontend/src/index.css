@@ -1269,3 +1269,23 @@ a:focus-visible {
     gap: var(--space-lg);
   }
 }
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.profile-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+@media (min-width: 48em) {
+  .desktop-sidebar {
+    display: flex !important;
+  }
+}
+
+.layout-grid {
+  display: flex;
+  min-height: 100vh;
+}

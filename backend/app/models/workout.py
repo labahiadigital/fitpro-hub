@@ -20,7 +20,7 @@ class WorkoutProgram(BaseModel):
     
     # Template structure
     # Contains: weeks -> days -> exercises with sets, reps, rest, etc.
-    template = Column(JSONB, default={
+    template = Column(JSONB, default=lambda: {
         "weeks": []
     })
     
@@ -46,7 +46,7 @@ class WorkoutLog(BaseModel):
     
     # Log details
     # Contains: completed exercises, actual weights, reps, notes, etc.
-    log = Column(JSONB, default={
+    log = Column(JSONB, default=lambda: {
         "date": None,
         "week": 1,
         "day": 1,

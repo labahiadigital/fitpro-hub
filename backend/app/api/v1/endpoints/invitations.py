@@ -808,7 +808,7 @@ async def complete_invitation(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al completar registro: {str(e)}"
+            detail="Error al completar registro"
         )
 
 

@@ -17,12 +17,12 @@ class Form(BaseModel):
     form_type = Column(String(50), default="custom")  # parq, custom, consent, etc.
     
     # Form schema (fields definition)
-    schema = Column(JSONB, default={
+    schema = Column(JSONB, default=lambda: {
         "fields": []
     })
     
     # Settings
-    settings = Column(JSONB, default={
+    settings = Column(JSONB, default=lambda: {
         "require_signature": False,
         "send_reminder": True,
         "reminder_days": 3,
@@ -47,7 +47,7 @@ class FormSubmission(BaseModel):
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # Submission data
-    answers = Column(JSONB, default={})
+    answers = Column(JSONB, default=lambda: {})
     
     # Status
     status = Column(String(50), default="pending")  # pending, submitted, reviewed

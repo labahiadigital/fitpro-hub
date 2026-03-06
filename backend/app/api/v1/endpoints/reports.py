@@ -169,32 +169,34 @@ async def get_revenue_chart(
     """
     workspace_id = current_user.workspace_id
     now = datetime.utcnow()
-    data = []
-    
-    for i in range(months - 1, -1, -1):
-        # Calculate month boundaries
-        month_start = (now - timedelta(days=30 * i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if i == 0:
-            month_end = now
-        else:
-            month_end = (month_start + timedelta(days=32)).replace(day=1)
-        
-        # Get revenue for this month (succeeded payments)
-        result = await db.execute(
-            select(func.sum(Payment.amount)).where(
-                Payment.workspace_id == workspace_id,
-                Payment.status == PaymentStatus.succeeded,
-                Payment.paid_at >= month_start,
-                Payment.paid_at < month_end
-            )
+    start_date = (now - timedelta(days=30 * (months - 1))).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+
+    month_expr = func.date_trunc("month", Payment.paid_at)
+    result = await db.execute(
+        select(
+            month_expr.label("month"),
+            func.coalesce(func.sum(Payment.amount), 0).label("revenue"),
         )
-        revenue = float(result.scalar() or 0)
-        
-        # Format month label
-        month_label = month_start.strftime("%b %Y")
-        
-        data.append(ChartDataPoint(label=month_label, value=revenue))
-    
+        .where(
+            Payment.workspace_id == workspace_id,
+            Payment.status == PaymentStatus.succeeded,
+            Payment.paid_at >= start_date,
+        )
+        .group_by(month_expr)
+        .order_by(month_expr)
+    )
+    revenue_map = {row.month.strftime("%b %Y"): float(row.revenue) for row in result}
+
+    data = []
+    for i in range(months - 1, -1, -1):
+        month_start = (now - timedelta(days=30 * i)).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+        label = month_start.strftime("%b %Y")
+        data.append(ChartDataPoint(label=label, value=revenue_map.get(label, 0)))
+
     return data
 
 
@@ -209,23 +211,29 @@ async def get_clients_chart(
     """
     workspace_id = current_user.workspace_id
     now = datetime.utcnow()
-    data = []
-    
-    for i in range(months - 1, -1, -1):
-        month_end = (now - timedelta(days=30 * i))
-        
-        # Get client count up to this date
-        result = await db.execute(
-            select(func.count(Client.id)).where(
-                Client.workspace_id == workspace_id,
-                Client.created_at <= month_end
-            )
+
+    month_expr = func.date_trunc("month", Client.created_at)
+    result = await db.execute(
+        select(
+            month_expr.label("month"),
+            func.count(Client.id).label("cnt"),
         )
-        count = result.scalar() or 0
-        
-        month_label = month_end.strftime("%b %Y")
-        data.append(ChartDataPoint(label=month_label, value=count))
-    
+        .where(Client.workspace_id == workspace_id)
+        .group_by(month_expr)
+        .order_by(month_expr)
+    )
+    monthly_new = {row.month.strftime("%b %Y"): int(row.cnt) for row in result}
+
+    cumulative = 0
+    data = []
+    for i in range(months - 1, -1, -1):
+        month_dt = (now - timedelta(days=30 * i)).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+        label = month_dt.strftime("%b %Y")
+        cumulative += monthly_new.get(label, 0)
+        data.append(ChartDataPoint(label=label, value=cumulative))
+
     return data
 
 

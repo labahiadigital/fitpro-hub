@@ -90,21 +90,21 @@ class Workspace(BaseModel):
     
     # Branding
     logo_url = Column(String(500), nullable=True)
-    branding = Column(JSONB, default={
+    branding = Column(JSONB, default=lambda: {
         "primary_color": "#2D6A4F",
         "secondary_color": "#40916C",
-        "accent_color": "#F08A5D"
+        "accent_color": "#F08A5D",
     })
     
     # Settings
-    settings = Column(JSONB, default={
+    settings = Column(JSONB, default=lambda: {
         "timezone": "Europe/Madrid",
         "currency": "EUR",
         "language": "es",
         "booking_policies": {
             "cancellation_hours": 24,
             "reschedule_hours": 12,
-            "max_advance_days": 30
+            "max_advance_days": 30,
         },
         "payment_gateway": "stripe",
         "redsys_enabled": False,

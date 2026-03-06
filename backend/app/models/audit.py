@@ -24,7 +24,7 @@ class AuditLog(BaseModel):
     user_agent = Column(Text, nullable=True)
     
     # Additional extra data
-    extra_data = Column(JSONB, default={})
+    extra_data = Column(JSONB, default=lambda: {})
     
     def __repr__(self):
         return f"<AuditLog {self.action} on {self.table_name}>"

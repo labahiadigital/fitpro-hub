@@ -75,7 +75,7 @@ class Client(BaseModel):
     gender = Column(String(20), nullable=True)
     height_cm = Column(String(10), nullable=True)
     weight_kg = Column(String(10), nullable=True)
-    health_data = Column(JSONB, default={})
+    health_data = Column(JSONB, default=lambda: {})
     
     # Note: allergies, intolerances, diseases, and injuries are stored in health_data JSONB
     # health_data = {
@@ -95,7 +95,7 @@ class Client(BaseModel):
     internal_notes = Column(Text, nullable=True)
     
     # GDPR Consents
-    consents = Column(JSONB, default={
+    consents = Column(JSONB, default=lambda: {
         "data_processing": False,
         "marketing": False,
         "health_data": False,

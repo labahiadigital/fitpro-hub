@@ -86,7 +86,7 @@ class HealthMetric(Base):
     source = Column(String, nullable=True)
 
     # Metadatos adicionales
-    extra_data = Column(JSONB, default={})
+    extra_data = Column(JSONB, default=lambda: {})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -121,8 +121,8 @@ class SyncedActivity(Base):
     elevation_gain_meters = Column(Numeric, nullable=True)
 
     # Datos detallados
-    heart_rate_zones = Column(JSONB, default={})
-    laps = Column(JSONB, default=[])
+    heart_rate_zones = Column(JSONB, default=lambda: {})
+    laps = Column(JSONB, default=lambda: [])
     route_data = Column(JSONB, nullable=True)
 
     # Fuente
@@ -249,7 +249,7 @@ class HealthAlert(Base):
     message = Column(Text, nullable=False)
 
     # Datos relacionados
-    related_data = Column(JSONB, default={})
+    related_data = Column(JSONB, default=lambda: {})
 
     # Estado
     is_read = Column(Boolean, default=False)

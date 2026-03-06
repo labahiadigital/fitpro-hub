@@ -112,7 +112,7 @@ class Food(BaseModel):
     food_groups = Column(Text, nullable=True)
     source_supermarket = Column(Text, nullable=True)
     data_source = Column(Text, default='open_food_facts')
-    nutrients = Column(JSONB, default={})
+    nutrients = Column(JSONB, default=lambda: {})
     
     # Visibility
     is_global = Column(Boolean, default=False)
@@ -170,7 +170,7 @@ class MealPlan(BaseModel):
     target_fat = Column(Numeric, nullable=True)
     
     # Meal times structure: {"meals": [{"name": "Comida 1", "time": "08:00"}, ...]}
-    meal_times = Column(JSONB, default={
+    meal_times = Column(JSONB, default=lambda: {
         "meals": [
             {"name": "Comida 1", "time": "08:00"},
             {"name": "Comida 2", "time": "13:00"},
@@ -179,16 +179,16 @@ class MealPlan(BaseModel):
     })
     
     # Plan structure (days -> meals -> foods with portions)
-    plan = Column(JSONB, default={"days": []})
+    plan = Column(JSONB, default=lambda: {"days": []})
     
     # Shopping list (auto-generated)
-    shopping_list = Column(JSONB, default={"items": []})
+    shopping_list = Column(JSONB, default=lambda: {"items": []})
     
     # Is this a template or assigned plan
     is_template = Column(Boolean, default=True)
     
     # Adherence tracking - MutableDict allows SQLAlchemy to detect in-place changes
-    adherence = Column(MutableDict.as_mutable(JSONB), default={"logs": []})
+    adherence = Column(MutableDict.as_mutable(JSONB), default=lambda: {"logs": []})
     
     # Relationships
     workspace = relationship("Workspace", back_populates="meal_plans")

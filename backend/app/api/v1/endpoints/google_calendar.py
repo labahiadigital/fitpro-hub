@@ -375,7 +375,7 @@ async def sync_calendar(
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al sincronizar: {str(e)}"
+            detail="Error al sincronizar con Google Calendar"
         )
 
 

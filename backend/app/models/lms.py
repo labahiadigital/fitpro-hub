@@ -76,7 +76,7 @@ class Course(Base):
     reviews_count = Column(Integer, default=0)
 
     # Metadatos
-    course_metadata = Column(JSONB, default={})
+    course_metadata = Column(JSONB, default=lambda: {})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -132,7 +132,7 @@ class Lesson(Base):
     thumbnail_url = Column(String, nullable=True)
 
     # Archivos adjuntos
-    attachments = Column(JSONB, default=[])
+    attachments = Column(JSONB, default=lambda: [])
 
     # Configuración
     position = Column(Integer, default=0)
@@ -213,7 +213,7 @@ class LessonProgress(Base):
     quiz_attempts = Column(Integer, default=0)
     quiz_score = Column(Numeric, nullable=True)
     quiz_passed = Column(Boolean, default=False)
-    quiz_answers = Column(JSONB, default=[])
+    quiz_answers = Column(JSONB, default=lambda: [])
 
     # Fechas
     started_at = Column(DateTime(timezone=True), nullable=True)
@@ -265,10 +265,10 @@ class Challenge(Base):
     has_leaderboard = Column(Boolean, default=True)
 
     # Premios
-    prizes = Column(JSONB, default=[])
+    prizes = Column(JSONB, default=lambda: [])
 
     # Contenido del reto
-    challenge_content = Column(JSONB, default={})
+    challenge_content = Column(JSONB, default=lambda: {})
 
     # Estadísticas
     participants_count = Column(Integer, default=0)
@@ -299,12 +299,12 @@ class ChallengeParticipant(Base):
     total_points = Column(Integer, default=0)
 
     # Métricas
-    initial_metrics = Column(JSONB, default={})
-    current_metrics = Column(JSONB, default={})
-    final_metrics = Column(JSONB, default={})
+    initial_metrics = Column(JSONB, default=lambda: {})
+    current_metrics = Column(JSONB, default=lambda: {})
+    final_metrics = Column(JSONB, default=lambda: {})
 
     # Fotos de progreso
-    progress_photos = Column(JSONB, default=[])
+    progress_photos = Column(JSONB, default=lambda: [])
 
     # Fechas
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -332,14 +332,14 @@ class ChallengeDailyProgress(Base):
     date = Column(Date, nullable=False)
 
     # Tareas completadas
-    tasks_completed = Column(JSONB, default=[])
+    tasks_completed = Column(JSONB, default=lambda: [])
 
     # Métricas del día
-    metrics = Column(JSONB, default={})
+    metrics = Column(JSONB, default=lambda: {})
 
     # Notas y fotos
     notes = Column(Text, nullable=True)
-    photos = Column(JSONB, default=[])
+    photos = Column(JSONB, default=lambda: [])
 
     # Puntos
     points_earned = Column(Integer, default=0)
@@ -387,7 +387,7 @@ class Certificate(Base):
 
     # Diseño personalizado
     template_id = Column(String, default="default")
-    custom_data = Column(JSONB, default={})
+    custom_data = Column(JSONB, default=lambda: {})
 
     # Estado
     is_valid = Column(Boolean, default=True)
@@ -443,7 +443,7 @@ class Instructor(Base):
     credentials = Column(ARRAY(String), default=[])
 
     # Redes sociales
-    social_links = Column(JSONB, default={})
+    social_links = Column(JSONB, default=lambda: {})
 
     # Estadísticas
     total_courses = Column(Integer, default=0)

@@ -45,7 +45,7 @@ class Booking(BaseModel):
     end_time = Column(DateTime(timezone=True), nullable=False)
     
     # Location (for in-person or online link)
-    location = Column(JSONB, default={
+    location = Column(JSONB, default=lambda: {
         "type": "in_person",
         "address": None,
         "online_link": None

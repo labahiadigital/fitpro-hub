@@ -58,14 +58,17 @@ export function useClientsChart(months = 6) {
 
 // Get today's sessions
 export function useTodaySessions() {
-  const today = new Date();
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  const start = startOfDay.toISOString();
+  const end = endOfDay.toISOString();
 
   return useQuery({
     queryKey: ["today-sessions"],
     queryFn: async () =>
-      api.get(`/bookings?start_date=${startOfDay}&end_date=${endOfDay}`),
+      api.get(`/bookings?start_date=${start}&end_date=${end}`),
     select: (response) => response.data || [],
     staleTime: 30000,
   });

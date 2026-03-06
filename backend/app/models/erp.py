@@ -167,7 +167,7 @@ class Invoice(Base):
     verifactu_registration_datetime = Column(DateTime(timezone=True), nullable=True)
 
     # Metadatos
-    extra_data = Column("metadata", JSONB, default={})
+    extra_data = Column("metadata", JSONB, default=lambda: {})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -265,7 +265,7 @@ class Expense(Base):
     notes = Column(Text, nullable=True)
 
     # Metadatos
-    extra_data = Column(JSONB, default={})
+    extra_data = Column(JSONB, default=lambda: {})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

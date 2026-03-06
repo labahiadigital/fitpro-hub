@@ -266,7 +266,7 @@ class MeetingLog(Base):
 
     # Evento
     event_type = Column(String, nullable=False)
-    event_data = Column(JSONB, default={})
+    event_data = Column(JSONB, default=lambda: {})
 
     # Participante
     participant_id = Column(String, nullable=True)

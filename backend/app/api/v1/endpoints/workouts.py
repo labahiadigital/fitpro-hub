@@ -10,6 +10,7 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative
+from app.models.client import Client
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 
 router = APIRouter()
@@ -578,6 +579,15 @@ async def create_workout_log(
     """
     Registrar un entrenamiento completado.
     """
+    client_check = await db.execute(
+        select(Client.id).where(
+            Client.id == data.client_id,
+            Client.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     log = WorkoutLog(
         program_id=data.program_id,
         client_id=data.client_id,
@@ -599,6 +609,15 @@ async def get_client_logs(
     """
     Obtener historial de entrenamientos de un cliente.
     """
+    client_check = await db.execute(
+        select(Client.id).where(
+            Client.id == client_id,
+            Client.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not client_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     query = select(WorkoutLog).where(WorkoutLog.client_id == client_id)
     
     if program_id:

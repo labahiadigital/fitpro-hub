@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.middleware.auth import require_owner, require_workspace
+from app.middleware.auth import require_owner, require_staff, require_workspace
 from app.models.erp import (
     Expense,
     ExpenseCategory,
@@ -1689,7 +1689,7 @@ async def list_expenses(
 @router.post("/expenses", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
 async def create_expense(
     expense_data: ExpenseCreate,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     tax_amount = expense_data.amount * (expense_data.tax_rate / 100)
@@ -1711,7 +1711,7 @@ async def create_expense(
 async def update_expense(
     expense_id: UUID,
     expense_data: ExpenseUpdate,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -1742,7 +1742,7 @@ async def update_expense(
 @router.delete("/expenses/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_expense(
     expense_id: UUID,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -1779,7 +1779,7 @@ async def list_expense_categories(
 @router.post("/expense-categories", response_model=ExpenseCategoryResponse, status_code=status.HTTP_201_CREATED)
 async def create_expense_category(
     category_data: ExpenseCategoryBase,
-    current_user: Any = Depends(require_workspace),
+    current_user: Any = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     category = ExpenseCategory(

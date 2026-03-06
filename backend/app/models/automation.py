@@ -41,10 +41,10 @@ class Automation(BaseModel):
     
     # Trigger configuration
     trigger_type = Column(Enum(TriggerType), nullable=False)
-    trigger_config = Column(JSONB, default={})  # Additional trigger parameters
+    trigger_config = Column(JSONB, default=lambda: {})  # Additional trigger parameters
     
     # Actions (can be multiple)
-    actions = Column(JSONB, default=[])
+    actions = Column(JSONB, default=lambda: [])
     # Example action structure:
     # [
     #   {
@@ -59,7 +59,7 @@ class Automation(BaseModel):
     # ]
     
     # Conditions (optional filters)
-    conditions = Column(JSONB, default=[])
+    conditions = Column(JSONB, default=lambda: [])
     # Example condition structure:
     # [
     #   {
@@ -73,7 +73,7 @@ class Automation(BaseModel):
     is_active = Column(Boolean, default=True)
     
     # Statistics
-    stats = Column(JSONB, default={
+    stats = Column(JSONB, default=lambda: {
         "total_runs": 0,
         "successful_runs": 0,
         "failed_runs": 0,
@@ -94,8 +94,8 @@ class AutomationLog(BaseModel):
     automation_id = Column(UUID(as_uuid=True), ForeignKey("automations.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # Execution details
-    trigger_data = Column(JSONB, default={})  # Data that triggered the automation
-    executed_actions = Column(JSONB, default=[])  # Results of each action
+    trigger_data = Column(JSONB, default=lambda: {})  # Data that triggered the automation
+    executed_actions = Column(JSONB, default=lambda: [])  # Results of each action
     
     # Status
     status = Column(String(50), default="pending")  # pending, running, completed, failed

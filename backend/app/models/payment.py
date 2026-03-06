@@ -35,7 +35,7 @@ class StripeAccount(BaseModel):
     onboarding_complete = Column(Boolean, default=False)
     
     # Account details
-    details = Column(JSONB, default={})
+    details = Column(JSONB, default=lambda: {})
     
     # Relationships
     workspace = relationship("Workspace", back_populates="stripe_account")
@@ -74,7 +74,7 @@ class Subscription(BaseModel):
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
     
     # Extra metadata (DB column is 'metadata', but we use different attr name to avoid SQLAlchemy conflict)
-    extra_data = Column("metadata", JSONB, default={})
+    extra_data = Column("metadata", JSONB, default=lambda: {})
     
     # Relationships
     payments = relationship("Payment", back_populates="subscription")
@@ -112,7 +112,7 @@ class Payment(BaseModel):
     refunded_at = Column(DateTime(timezone=True), nullable=True)
     
     # Extra metadata (DB column is 'metadata', but we use different attr name to avoid SQLAlchemy conflict)
-    extra_data = Column("metadata", JSONB, default={})
+    extra_data = Column("metadata", JSONB, default=lambda: {})
     
     # Relationships
     subscription = relationship("Subscription", back_populates="payments")

@@ -31,7 +31,7 @@ class ClientFeedback(BaseModel):
     comment = Column(Text, nullable=True)
     
     # For specific context (e.g., date of workout, meal name)
-    context = Column(JSONB, default={})
+    context = Column(JSONB, default=lambda: {})
     # Example context:
     # For exercise: {"workout_date": "2026-01-26", "difficulty_felt": "too_easy|just_right|too_hard"}
     # For meal: {"meal_date": "2026-01-26", "meal_name": "Desayuno", "taste": "good", "satiety": "satisfied"}
@@ -135,7 +135,7 @@ class ClientEmotion(BaseModel):
     
     # Specific emotions felt (multiple select)
     # e.g., ["motivated", "tired", "stressed", "happy", "anxious", "energetic"]
-    emotions = Column(JSONB, default=[])
+    emotions = Column(JSONB, default=lambda: [])
     
     # Energy level (1-5)
     energy_level = Column(Integer, nullable=True)
@@ -150,7 +150,7 @@ class ClientEmotion(BaseModel):
     notes = Column(Text, nullable=True)
     
     # Context - what might have affected the mood
-    context = Column(JSONB, default={})
+    context = Column(JSONB, default=lambda: {})
     # Example: {"had_workout": true, "slept_hours": 7, "meals_followed": true}
     
     # Relationships

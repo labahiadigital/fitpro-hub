@@ -43,7 +43,7 @@ class ReferralProgram(Base):
     commission_value = Column(Numeric, default=10)
 
     # Niveles multinivel
-    levels = Column(JSONB, default=[{"level": 1, "commission": 10}, {"level": 2, "commission": 5}])
+    levels = Column(JSONB, default=lambda: [{"level": 1, "commission": 10}, {"level": 2, "commission": 5}])
     max_levels = Column(Integer, default=2)
 
     # Productos aplicables
@@ -88,7 +88,7 @@ class Affiliate(Base):
 
     # Datos de pago
     payment_method = Column(String, default="bank_transfer")
-    payment_details = Column(JSONB, default={})
+    payment_details = Column(JSONB, default=lambda: {})
 
     # Estado
     status = Column(String, default="pending")  # pending, active, suspended, inactive

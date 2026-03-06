@@ -96,7 +96,12 @@ async def get_product(
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific product."""
-    result = await db.execute(select(Product).where(Product.id == product_id))
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == current_user.workspace_id,
+        )
+    )
     product = result.scalar_one_or_none()
     
     if not product:
@@ -113,7 +118,12 @@ async def update_product(
     current_user: User = Depends(require_roles(["owner", "collaborator"])),
 ):
     """Update a product."""
-    result = await db.execute(select(Product).where(Product.id == product_id))
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == current_user.workspace_id,
+        )
+    )
     product = result.scalar_one_or_none()
     
     if not product:
@@ -152,7 +162,12 @@ async def delete_product(
     current_user: User = Depends(require_roles(["owner"])),
 ):
     """Delete a product. Fails if there are active subscribers."""
-    result = await db.execute(select(Product).where(Product.id == product_id))
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == current_user.workspace_id,
+        )
+    )
     product = result.scalar_one_or_none()
     
     if not product:

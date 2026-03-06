@@ -136,7 +136,7 @@ async def connect_stripe_account(
     except stripe.error.StripeError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error de Stripe: {str(e)}"
+            detail="Error al procesar el pago"
         )
 
 

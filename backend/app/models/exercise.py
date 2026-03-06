@@ -86,8 +86,8 @@ class ClientMeasurement(BaseModel):
     weight_kg = Column(Numeric(5, 2))
     body_fat_percentage = Column(Numeric(5, 2))
     muscle_mass_kg = Column(Numeric(5, 2))
-    measurements = Column(JSONB, default={})
-    photos = Column(JSONB, default=[])
+    measurements = Column(JSONB, default=lambda: {})
+    photos = Column(JSONB, default=lambda: [])
     notes = Column(Text)
     
     # Relationships
