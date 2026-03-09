@@ -25,6 +25,7 @@ const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").
 const InvitationOnboardingPage = lazy(() => import("./pages/onboarding/InvitationOnboardingPage").then(m => ({ default: m.InvitationOnboardingPage })));
 const ClientOnboardingPage = lazy(() => import("./pages/onboarding/ClientOnboardingPage").then(m => ({ default: m.ClientOnboardingPage })));
 const OnboardingPage = lazy(() => import("./pages/onboarding/OnboardingPage").then(m => ({ default: m.OnboardingPage })));
+const AcceptStaffInvitePage = lazy(() => import("./pages/auth/AcceptStaffInvitePage").then(m => ({ default: m.AcceptStaffInvitePage })));
 
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage").then(m => ({ default: m.DashboardPage })));
 const ClientsPage = lazy(() => import("./pages/clients/ClientsPage").then(m => ({ default: m.ClientsPage })));
@@ -175,6 +176,7 @@ export default function App() {
                 />
 
                 <Route element={<ConfirmEmailPage />} path="/auth/confirm" />
+                <Route element={<AcceptStaffInvitePage />} path="/auth/accept-invite" />
                 <Route element={<ForgotPasswordPage />} path="/forgot-password" />
                 <Route element={<ResetPasswordPage />} path="/auth/reset-password" />
                 

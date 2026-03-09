@@ -203,6 +203,10 @@ export const usersApi = {
   remove: (userId: string) => api.delete(`/users/${userId}`),
   invite: (data: { email: string; role: string }) =>
     api.post("/users/invite", data),
+  validateInvite: (token: string) =>
+    api.get(`/users/validate-invite/${token}`),
+  acceptInvite: (data: { token: string; full_name: string; password: string }) =>
+    api.post("/users/accept-invite", data),
 };
 
 // Account API

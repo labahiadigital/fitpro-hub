@@ -3,6 +3,11 @@
  * Page 1 (portrait): client summary + macros
  * Pages 2+ (landscape): nutrition plan in compact 2-column grid
  * Then (landscape): workout plan in compact layout
+ *
+ * Key design goals:
+ * - Never split a single day across two pages
+ * - Two-column layout where pairs of days sit side-by-side
+ * - Professional, clean aesthetic with consistent spacing
  */
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -165,8 +170,13 @@ const C = {
   fatColor: [249, 115, 22] as [number, number, number],
 };
 
-const M = 10; // margin for landscape pages (compact)
+const M = 10;
 const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+const ROW_H = 4.2;
+const HEAD_ROW_H = 5;
+const DAY_LABEL_H = 7;
+const GAP_BETWEEN_PAIRS = 5;
 
 // ============ HELPERS ============
 
@@ -244,7 +254,6 @@ function difficultyLabel(d?: string): string {
   return map[d.toLowerCase()] || d;
 }
 
-/** Build a flat row array for one nutrition day */
 function buildDayRows(day: NutritionDayPlan) {
   const meals = day.meals || [];
   const rows: string[][] = [];
@@ -288,6 +297,11 @@ function buildDayRows(day: NutritionDayPlan) {
   return rows;
 }
 
+/** Estimate the height a day table will occupy (label + header + rows). */
+function estimateDayHeight(rowCount: number): number {
+  return DAY_LABEL_H + HEAD_ROW_H + rowCount * ROW_H + 2;
+}
+
 // ============ MAIN PDF GENERATOR ============
 
 export function generateClientPlanPDF(
@@ -312,6 +326,19 @@ export function generateClientPlanPDF(
     doc.rect(0, 0, pw, 4, "F");
   };
 
+  const FOOTER_ZONE = 12;
+
+  const ensureLandscapePage = () => {
+    doc.addPage("a4", "landscape");
+    pw = doc.internal.pageSize.getWidth();
+    ph = doc.internal.pageSize.getHeight();
+    contentW = pw - M * 2;
+    drawTopBar();
+    y = 8;
+  };
+
+  const spaceLeft = () => ph - y - FOOTER_ZONE;
+
   // ================================================================
   //  PAGE 1 (PORTRAIT): CLIENT SUMMARY
   // ================================================================
@@ -335,7 +362,6 @@ export function generateClientPlanPDF(
   doc.line(MARGIN_P + 40, y, pw - MARGIN_P - 40, y);
   y += 7;
 
-  // Section: Client summary
   doc.setFontSize(11);
   doc.setTextColor(...C.primary);
   doc.setFont("helvetica", "bold");
@@ -374,7 +400,6 @@ export function generateClientPlanPDF(
   });
   y = (doc as any).lastAutoTable.finalY + 4;
 
-  // IMC
   const wt = toNum(client?.weight_kg);
   const ht = toNum(client?.height_cm);
   if (wt > 0 && ht > 0) {
@@ -395,7 +420,6 @@ export function generateClientPlanPDF(
     y += 13;
   }
 
-  // Allergies
   const allergies = client?.allergies || client?.health_data?.allergens || [];
   const intolerances = client?.intolerances || client?.health_data?.intolerances || [];
   const allRestrictions = [...allergies, ...intolerances];
@@ -480,7 +504,6 @@ export function generateClientPlanPDF(
       },
     });
 
-    // Donut chart on the right
     const chartCX = MARGIN_P + 90 + 38;
     const chartCY = tableStartY + 18;
     const chartR = 16;
@@ -501,12 +524,12 @@ export function generateClientPlanPDF(
       doc.setLineWidth(0.1);
       const pts: [number, number][] = [[chartCX, chartCY]];
       const steps = Math.max(10, Math.round(sweep * 18));
-      for (let i = 0; i <= steps; i++) {
-        const a = startAngle + (sweep * i) / steps;
+      for (let j = 0; j <= steps; j++) {
+        const a = startAngle + (sweep * j) / steps;
         pts.push([chartCX + chartR * Math.cos(a), chartCY + chartR * Math.sin(a)]);
       }
-      for (let i = 1; i < pts.length - 1; i++) {
-        doc.triangle(chartCX, chartCY, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], "F");
+      for (let j = 1; j < pts.length - 1; j++) {
+        doc.triangle(chartCX, chartCY, pts[j][0], pts[j][1], pts[j + 1][0], pts[j + 1][1], "F");
       }
       startAngle = end;
     }
@@ -560,14 +583,7 @@ export function generateClientPlanPDF(
     });
 
     if (days.length > 0) {
-      doc.addPage("a4", "landscape");
-      pw = doc.internal.pageSize.getWidth();
-      ph = doc.internal.pageSize.getHeight();
-      contentW = pw - M * 2;
-      y = M;
-
-      drawTopBar();
-      y = 8;
+      ensureLandscapePage();
 
       doc.setFontSize(12);
       doc.setTextColor(...C.primary);
@@ -591,95 +607,76 @@ export function generateClientPlanPDF(
         6: { halign: "center", cellWidth: 9 },
       };
 
-      for (let i = 0; i < days.length; i += 2) {
-        const leftDay = days[i];
-        const rightDay = i + 1 < days.length ? days[i + 1] : null;
+      const allDayRows = days.map(d => buildDayRows(d));
+      const dayHeights = allDayRows.map(rows => estimateDayHeight(rows.length));
 
-        if (i > 0) {
-          if (y + 30 > ph - M - 8) {
-            doc.addPage("a4", "landscape");
-            pw = doc.internal.pageSize.getWidth();
-            ph = doc.internal.pageSize.getHeight();
-            drawTopBar();
-            y = 8;
-          }
-        }
-
-        // LEFT column
-        const leftName = leftDay.dayName || DAY_NAMES[(leftDay.day - 1) % 7] || `Día ${leftDay.day}`;
-        const leftRows = buildDayRows(leftDay);
+      const renderNutritionDay = (
+        day: NutritionDayPlan,
+        rows: string[][],
+        xOffset: number,
+        startY: number,
+        tableWidth: number
+      ): number => {
+        const dayName = day.dayName || DAY_NAMES[(day.day - 1) % 7] || `Día ${day.day}`;
 
         doc.setFillColor(...C.secondary);
-        doc.roundedRect(M, y, colW, 5.5, 1, 1, "F");
+        doc.roundedRect(xOffset, startY, tableWidth, 5.5, 1, 1, "F");
         doc.setFontSize(8);
         doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.text(leftName, M + 3, y + 4);
+        doc.text(dayName, xOffset + 3, startY + 4);
 
-        const leftStartY = y + 7;
+        const tblY = startY + 7;
         autoTable(doc, {
-          startY: leftStartY,
+          startY: tblY,
           head: tableHead,
-          body: leftRows,
+          body: rows,
           theme: "grid",
-          tableWidth: colW,
-          margin: { left: M, right: pw - M - colW },
+          tableWidth,
+          margin: { left: xOffset, right: pw - xOffset - tableWidth },
           headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
           styles: { fontSize: 5.5, cellPadding: 1.2, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize" },
           columnStyles: colStyles,
+          showHead: "firstPage",
+          rowPageBreak: "avoid",
           didParseCell: (data: any) => {
-            if (data.section === "body" && data.row.index === leftRows.length - 1) {
+            if (data.section === "body" && data.row.index === rows.length - 1) {
               data.cell.styles.fillColor = C.primaryLight;
               data.cell.styles.fontStyle = "bold";
             }
           },
         });
-        const leftEndY = (doc as any).lastAutoTable.finalY;
+        return (doc as any).lastAutoTable.finalY;
+      };
 
-        // RIGHT column
-        let rightEndY = leftStartY;
-        if (rightDay) {
-          const rightName = rightDay.dayName || DAY_NAMES[(rightDay.day - 1) % 7] || `Día ${rightDay.day}`;
-          const rightRows = buildDayRows(rightDay);
-          const rightX = M + colW + 4;
+      for (let i = 0; i < days.length; i += 2) {
+        const leftRows = allDayRows[i];
+        const rightRows = i + 1 < days.length ? allDayRows[i + 1] : null;
+        const leftH = dayHeights[i];
+        const rightH = i + 1 < days.length ? dayHeights[i + 1] : 0;
+        const pairH = Math.max(leftH, rightH);
 
-          doc.setFillColor(...C.secondary);
-          doc.roundedRect(rightX, y, colW, 5.5, 1, 1, "F");
-          doc.setFontSize(8);
-          doc.setTextColor(255, 255, 255);
-          doc.setFont("helvetica", "bold");
-          doc.text(rightName, rightX + 3, y + 4);
-
-          autoTable(doc, {
-            startY: leftStartY,
-            head: tableHead,
-            body: rightRows,
-            theme: "grid",
-            tableWidth: colW,
-            margin: { left: rightX, right: pw - rightX - colW },
-            headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
-            styles: { fontSize: 5.5, cellPadding: 1.2, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize" },
-            columnStyles: colStyles,
-            didParseCell: (data: any) => {
-              if (data.section === "body" && data.row.index === rightRows.length - 1) {
-                data.cell.styles.fillColor = C.primaryLight;
-                data.cell.styles.fontStyle = "bold";
-              }
-            },
-          });
-          rightEndY = (doc as any).lastAutoTable.finalY;
+        if (spaceLeft() < pairH) {
+          ensureLandscapePage();
         }
 
-        y = Math.max(leftEndY, rightEndY) + 5;
+        const leftEnd = renderNutritionDay(days[i], leftRows, M, y, colW);
+
+        let rightEnd = y;
+        if (rightRows) {
+          const rightX = M + colW + 4;
+          rightEnd = renderNutritionDay(days[i + 1], rightRows, rightX, y, colW);
+        }
+
+        y = Math.max(leftEnd, rightEnd) + GAP_BETWEEN_PAIRS;
       }
 
       // Supplements
       const supplements = mealPlan.supplements || [];
       if (supplements.length > 0) {
-        if (y + 20 > ph - M - 8) {
-          doc.addPage("a4", "landscape");
-          drawTopBar();
-          y = 8;
+        const suppH = 8 + supplements.length * 5 + 4;
+        if (spaceLeft() < suppH) {
+          ensureLandscapePage();
         }
         doc.setFontSize(9);
         doc.setTextColor(...C.primary);
@@ -697,16 +694,14 @@ export function generateClientPlanPDF(
           headStyles: { fillColor: C.secondary, textColor: C.white, fontSize: 7 },
           styles: { fontSize: 6.5, cellPadding: 1.8, textColor: C.text, lineColor: C.border, lineWidth: 0.2 },
           alternateRowStyles: { fillColor: C.headerBg },
+          rowPageBreak: "avoid",
         });
         y = (doc as any).lastAutoTable.finalY + 4;
       }
 
-      // Notes
       if (mealPlan.notes || mealPlan.nutritional_advice) {
-        if (y + 12 > ph - M - 8) {
-          doc.addPage("a4", "landscape");
-          drawTopBar();
-          y = 8;
+        if (spaceLeft() < 15) {
+          ensureLandscapePage();
         }
         doc.setFontSize(7.5);
         doc.setTextColor(...C.primary);
@@ -727,12 +722,8 @@ export function generateClientPlanPDF(
   //  WORKOUT PLAN — LANDSCAPE, 2-COLUMN LAYOUT
   // ================================================================
   if (workoutProgram && workoutProgram.days && workoutProgram.days.length > 0) {
-    doc.addPage("a4", "landscape");
-    pw = doc.internal.pageSize.getWidth();
-    ph = doc.internal.pageSize.getHeight();
+    ensureLandscapePage();
     contentW = pw - M * 2;
-    drawTopBar();
-    y = 8;
 
     doc.setFontSize(12);
     doc.setTextColor(...C.primary);
@@ -764,107 +755,93 @@ export function generateClientPlanPDF(
       4: { halign: "center", cellWidth: 10 },
     };
 
-    for (let i = 0; i < activeDays.length; i += 2) {
-      const leftDay = activeDays[i];
-      const rightDay = i + 1 < activeDays.length ? activeDays[i + 1] : null;
-
-      if (i > 0 && y + 30 > ph - M - 8) {
-        doc.addPage("a4", "landscape");
-        pw = doc.internal.pageSize.getWidth();
-        ph = doc.internal.pageSize.getHeight();
-        drawTopBar();
-        y = 8;
-      }
-
-      const buildExRows = (day: WorkoutDay): string[][] => {
-        const rows: string[][] = [];
-        for (const block of day.blocks || []) {
-          const bLabel =
-            block.type === "warmup" ? "Calentam." :
-            block.type === "cooldown" ? "Estiram." :
-            block.type === "superset" ? "Superserie" :
-            block.type === "circuit" ? "Circuito" :
-            block.name || "Principal";
-          const bName = block.name || bLabel;
-          for (let j = 0; j < (block.exercises || []).length; j++) {
-            const ex = block.exercises[j];
-            rows.push([
-              j === 0 ? bName : "",
-              ex.exercise?.name || "Ejercicio",
-              `${ex.sets}`,
-              typeof ex.reps === "string" ? ex.reps : `${ex.reps}`,
-              `${ex.rest_seconds}s`,
-            ]);
-          }
+    const buildExRows = (day: WorkoutDay): string[][] => {
+      const rows: string[][] = [];
+      for (const block of day.blocks || []) {
+        const bName = block.name || (
+          block.type === "warmup" ? "Calentamiento" :
+          block.type === "cooldown" ? "Estiramiento" :
+          block.type === "superset" ? "Superserie" :
+          block.type === "circuit" ? "Circuito" :
+          "Principal"
+        );
+        for (let j = 0; j < (block.exercises || []).length; j++) {
+          const ex = block.exercises[j];
+          rows.push([
+            j === 0 ? bName : "",
+            ex.exercise?.name || "Ejercicio",
+            `${ex.sets}`,
+            typeof ex.reps === "string" ? ex.reps : `${ex.reps}`,
+            `${ex.rest_seconds}s`,
+          ]);
         }
-        return rows;
-      };
+      }
+      return rows;
+    };
 
-      // LEFT
-      const leftName = leftDay.dayName || DAY_NAMES[(leftDay.day - 1) % 7] || `Día ${leftDay.day}`;
-      const leftRows = buildExRows(leftDay);
+    const allExRows = activeDays.map(d => buildExRows(d));
+    const exDayHeights = allExRows.map(rows => estimateDayHeight(rows.length));
+
+    const renderWorkoutDay = (
+      day: WorkoutDay,
+      rows: string[][],
+      xOffset: number,
+      startY: number,
+      tableWidth: number
+    ): number => {
+      const dayName = day.dayName || DAY_NAMES[(day.day - 1) % 7] || `Día ${day.day}`;
 
       doc.setFillColor(...C.primary);
-      doc.roundedRect(M, y, colW, 5.5, 1, 1, "F");
+      doc.roundedRect(xOffset, startY, tableWidth, 5.5, 1, 1, "F");
       doc.setFontSize(8);
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.text(leftName, M + 3, y + 4);
+      doc.text(dayName, xOffset + 3, startY + 4);
 
-      const startY = y + 7;
+      const tblY = startY + 7;
       autoTable(doc, {
-        startY,
+        startY: tblY,
         head: wkHead,
-        body: leftRows,
+        body: rows,
         theme: "grid",
-        tableWidth: colW,
-        margin: { left: M, right: pw - M - colW },
+        tableWidth,
+        margin: { left: xOffset, right: pw - xOffset - tableWidth },
         headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
         styles: { fontSize: 5.5, cellPadding: 1.2, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize" },
         columnStyles: wkColStyles,
         alternateRowStyles: { fillColor: C.headerBg },
+        showHead: "firstPage",
+        rowPageBreak: "avoid",
       });
-      const leftEnd = (doc as any).lastAutoTable.finalY;
+      return (doc as any).lastAutoTable.finalY;
+    };
 
-      // RIGHT
-      let rightEnd = startY;
-      if (rightDay) {
-        const rightName = rightDay.dayName || DAY_NAMES[(rightDay.day - 1) % 7] || `Día ${rightDay.day}`;
-        const rightRows = buildExRows(rightDay);
-        const rightX = M + colW + 4;
+    for (let i = 0; i < activeDays.length; i += 2) {
+      const leftRows = allExRows[i];
+      const rightRows = i + 1 < activeDays.length ? allExRows[i + 1] : null;
+      const leftH = exDayHeights[i];
+      const rightH = i + 1 < activeDays.length ? exDayHeights[i + 1] : 0;
+      const pairH = Math.max(leftH, rightH);
 
-        doc.setFillColor(...C.primary);
-        doc.roundedRect(rightX, y, colW, 5.5, 1, 1, "F");
-        doc.setFontSize(8);
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.text(rightName, rightX + 3, y + 4);
-
-        autoTable(doc, {
-          startY,
-          head: wkHead,
-          body: rightRows,
-          theme: "grid",
-          tableWidth: colW,
-          margin: { left: rightX, right: pw - rightX - colW },
-          headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
-          styles: { fontSize: 5.5, cellPadding: 1.2, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize" },
-          columnStyles: wkColStyles,
-          alternateRowStyles: { fillColor: C.headerBg },
-        });
-        rightEnd = (doc as any).lastAutoTable.finalY;
+      if (spaceLeft() < pairH) {
+        ensureLandscapePage();
       }
 
-      y = Math.max(leftEnd, rightEnd) + 5;
+      const leftEnd = renderWorkoutDay(activeDays[i], leftRows, M, y, colW);
+
+      let rightEnd = y;
+      if (rightRows && i + 1 < activeDays.length) {
+        const rightX = M + colW + 4;
+        rightEnd = renderWorkoutDay(activeDays[i + 1], rightRows, rightX, y, colW);
+      }
+
+      y = Math.max(leftEnd, rightEnd) + GAP_BETWEEN_PAIRS;
     }
 
-    // Rest days summary
     const restDays = workoutProgram.days.filter(d => d.isRestDay);
     if (restDays.length > 0) {
-      if (y + 8 > ph - M - 8) {
-        doc.addPage("a4", "landscape");
-        drawTopBar();
-        y = 8;
+      if (spaceLeft() < 10) {
+        ensureLandscapePage();
       }
       doc.setFillColor(...C.headerBg);
       doc.roundedRect(M, y, contentW, 6, 1, 1, "F");
@@ -880,13 +857,12 @@ export function generateClientPlanPDF(
   // ================================================================
   //  DISCLAIMER + FOOTER ON ALL PAGES
   // ================================================================
-  // Add disclaimer on last page
   const lastPw = doc.internal.pageSize.getWidth();
   const lastPh = doc.internal.pageSize.getHeight();
-  const lastM = doc.internal.pageSize.getWidth() > 250 ? M : MARGIN_P;
+  const lastM = lastPw > 250 ? M : MARGIN_P;
   const lastCW = lastPw - lastM * 2;
 
-  if (y + 14 > lastPh - lastM - 8) {
+  if (y + 14 > lastPh - FOOTER_ZONE) {
     doc.addPage();
     y = lastM;
   }
@@ -905,7 +881,6 @@ export function generateClientPlanPDF(
   doc.setTextColor(...C.text);
   doc.text("Planes orientativos. Consulte con un profesional de salud ante cualquier duda.", lastM + 3, y + 9);
 
-  // Footer on every page
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);

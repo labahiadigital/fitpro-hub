@@ -7,6 +7,7 @@ import {
   Divider,
   Drawer,
   Group,
+  Image,
   Modal,
   MultiSelect,
   NumberInput,
@@ -750,17 +751,27 @@ export function WorkoutsPage() {
                     {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
                   </ActionIcon>
                   
-                  <Box
-                    h={80}
-                    style={{
-                      background: "linear-gradient(135deg, var(--nv-primary-glow) 0%, var(--nv-surface-subtle) 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <IconBarbell color="var(--nv-primary)" size={28} />
-                  </Box>
+                  {exercise.image_url ? (
+                    <Image
+                      src={exercise.image_url}
+                      alt={exercise.name}
+                      h={80}
+                      fit="cover"
+                      fallbackSrc={undefined}
+                    />
+                  ) : (
+                    <Box
+                      h={80}
+                      style={{
+                        background: "linear-gradient(135deg, var(--nv-primary-glow) 0%, var(--nv-surface-subtle) 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <IconBarbell color="var(--nv-primary)" size={28} />
+                    </Box>
+                  )}
 
                   <Box p="xs">
                     <Group gap={4} wrap="nowrap">
@@ -849,17 +860,27 @@ export function WorkoutsPage() {
                       {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
                     </ActionIcon>
                     
-                    <Box
-                      h={80}
-                      style={{
-                        background: "linear-gradient(135deg, rgba(255, 107, 0, 0.2) 0%, var(--nv-surface-subtle) 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <IconFlame color="var(--mantine-color-orange-6)" size={28} />
-                    </Box>
+                    {exercise.image_url ? (
+                      <Image
+                        src={exercise.image_url}
+                        alt={exercise.name}
+                        h={80}
+                        fit="cover"
+                        fallbackSrc={undefined}
+                      />
+                    ) : (
+                      <Box
+                        h={80}
+                        style={{
+                          background: "linear-gradient(135deg, rgba(255, 107, 0, 0.2) 0%, var(--nv-surface-subtle) 100%)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <IconFlame color="var(--mantine-color-orange-6)" size={28} />
+                      </Box>
+                    )}
 
                     <Box p="xs">
                       <Group gap={4} wrap="nowrap">
@@ -948,17 +969,27 @@ export function WorkoutsPage() {
                       {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
                     </ActionIcon>
                     
-                    <Box
-                      h={80}
-                      style={{
-                        background: "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, var(--nv-surface-subtle) 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <IconStretching color="var(--mantine-color-green-6)" size={28} />
-                    </Box>
+                    {exercise.image_url ? (
+                      <Image
+                        src={exercise.image_url}
+                        alt={exercise.name}
+                        h={80}
+                        fit="cover"
+                        fallbackSrc={undefined}
+                      />
+                    ) : (
+                      <Box
+                        h={80}
+                        style={{
+                          background: "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, var(--nv-surface-subtle) 100%)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <IconStretching color="var(--mantine-color-green-6)" size={28} />
+                      </Box>
+                    )}
 
                     <Box p="xs">
                       <Group gap={4} wrap="nowrap">
@@ -1046,17 +1077,27 @@ export function WorkoutsPage() {
                       {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
                     </ActionIcon>
                     
-                    <Box
-                      h={80}
-                      style={{
-                        background: "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, var(--nv-surface-subtle) 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <IconHeartbeat color="var(--mantine-color-red-6)" size={28} />
-                    </Box>
+                    {exercise.image_url ? (
+                      <Image
+                        src={exercise.image_url}
+                        alt={exercise.name}
+                        h={80}
+                        fit="cover"
+                        fallbackSrc={undefined}
+                      />
+                    ) : (
+                      <Box
+                        h={80}
+                        style={{
+                          background: "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, var(--nv-surface-subtle) 100%)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <IconHeartbeat color="var(--mantine-color-red-6)" size={28} />
+                      </Box>
+                    )}
 
                     <Box p="xs">
                       <Group gap={4} wrap="nowrap">
@@ -1104,6 +1145,16 @@ export function WorkoutsPage() {
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
+        {editingExercise?.image_url && (
+          <Image
+            src={editingExercise.image_url}
+            alt={editingExercise.name}
+            h={200}
+            fit="cover"
+            radius="md"
+            mb="md"
+          />
+        )}
         {editingExercise?.is_global && (
           <Badge color="gray" variant="light" size="sm" mb="sm">Dato del sistema — solo lectura</Badge>
         )}

@@ -4,14 +4,23 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+import secrets
+import logging
 
 from app.core.database import get_db
+from app.core.config import settings
+from app.core.security import get_password_hash, generate_verification_token
 from app.models.user import User, UserRole, RoleType
+from app.models.workspace import Workspace
 from app.schemas.user import (
     UserResponse, UserUpdate, UserRoleResponse, 
     InviteUserRequest, UserWithRoleResponse, UserRoleUpdate
 )
 from app.middleware.auth import get_current_user, require_workspace, require_owner, require_staff, CurrentUser
+from app.services.email import email_service, EmailTemplates
+from pydantic import BaseModel, EmailStr
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -51,16 +60,21 @@ async def invite_user(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Invitar a un usuario al workspace (solo propietario).
+    Invite a user to the workspace (owner only).
+    If the user already exists and has a password, they get added directly.
+    If the user doesn't exist, a placeholder is created with an invite token
+    so they can complete registration.
     """
-    # Check if user already exists
+    email_lower = data.email.lower().strip()
+
     result = await db.execute(
-        select(User).where(User.email == data.email)
+        select(User).where(User.email == email_lower)
     )
     user = result.scalar_one_or_none()
-    
+    is_new_user = user is None
+    invite_token: Optional[str] = None
+
     if user:
-        # Check if already in workspace
         result = await db.execute(
             select(UserRole).where(
                 UserRole.user_id == user.id,
@@ -73,24 +87,56 @@ async def invite_user(
                 detail="El usuario ya pertenece a este workspace"
             )
     else:
-        # Create placeholder user (will be completed when they register)
-        user = User(email=data.email)
+        invite_token = secrets.token_urlsafe(32)
+        user = User(
+            email=email_lower,
+            email_verification_token=invite_token,
+            is_active=True,
+            email_verified=False,
+        )
         db.add(user)
         await db.flush()
-    
-    # Create user role
+
     user_role = UserRole(
         user_id=user.id,
         workspace_id=current_user.workspace_id,
-        role=data.role
+        role=data.role,
+        is_default=is_new_user,
     )
     db.add(user_role)
     await db.commit()
-    
-    # TODO: Send invitation email if data.send_email is True
-    
     await db.refresh(user_role)
-    
+
+    if data.send_email:
+        result = await db.execute(
+            select(Workspace).where(Workspace.id == current_user.workspace_id)
+        )
+        workspace = result.scalar_one_or_none()
+        workspace_name = workspace.name if workspace else "Trackfiz"
+        inviter_name = current_user.user.full_name or current_user.email
+
+        if is_new_user and invite_token:
+            invitation_url = f"{settings.FRONTEND_URL}/auth/accept-invite?token={invite_token}"
+        else:
+            invitation_url = f"{settings.FRONTEND_URL}/auth/login"
+
+        html_content = EmailTemplates.invitation_email(
+            inviter_name=inviter_name,
+            workspace_name=workspace_name,
+            invitation_url=invitation_url,
+        )
+
+        try:
+            await email_service.send_email(
+                to_email=email_lower,
+                to_name=user.full_name or email_lower,
+                subject=f"Invitación a {workspace_name} en Trackfiz",
+                html_content=html_content,
+            )
+            logger.info(f"Staff invitation email sent to {email_lower}")
+        except Exception as e:
+            logger.error(f"Failed to send staff invitation email: {e}")
+
     return UserRoleResponse(
         id=user_role.id,
         user_id=user_role.user_id,
@@ -99,6 +145,104 @@ async def invite_user(
         is_default=user_role.is_default,
         created_at=user_role.created_at
     )
+
+
+class AcceptStaffInviteRequest(BaseModel):
+    token: str
+    full_name: str
+    password: str
+
+
+@router.post("/accept-invite")
+async def accept_staff_invite(
+    data: AcceptStaffInviteRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Accept a staff invitation by setting the user's name and password.
+    The token was set as email_verification_token during invite.
+    """
+    result = await db.execute(
+        select(User).where(User.email_verification_token == data.token)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de invitación inválido o expirado"
+        )
+
+    if user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Esta cuenta ya fue activada. Inicia sesión normalmente."
+        )
+
+    if len(data.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña debe tener al menos 8 caracteres"
+        )
+
+    user.full_name = data.full_name
+    user.password_hash = get_password_hash(data.password)
+    user.email_verified = True
+    user.email_verification_token = None
+
+    await db.commit()
+
+    result = await db.execute(
+        select(UserRole).where(UserRole.user_id == user.id).limit(1)
+    )
+    role_record = result.scalar_one_or_none()
+
+    return {
+        "success": True,
+        "message": "Cuenta activada correctamente. Ya puedes iniciar sesión.",
+        "email": user.email,
+        "role": role_record.role.value if role_record else None,
+    }
+
+
+@router.get("/validate-invite/{token}")
+async def validate_staff_invite(
+    token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Validate a staff invite token and return the invited email.
+    """
+    result = await db.execute(
+        select(User).where(User.email_verification_token == token)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitación no encontrada o expirada"
+        )
+
+    if user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Esta invitación ya fue aceptada"
+        )
+
+    result = await db.execute(
+        select(UserRole, Workspace)
+        .join(Workspace, UserRole.workspace_id == Workspace.id)
+        .where(UserRole.user_id == user.id)
+        .limit(1)
+    )
+    row = result.first()
+
+    return {
+        "email": user.email,
+        "workspace_name": row[1].name if row else "Trackfiz",
+        "role": row[0].role.value if row else "collaborator",
+    }
 
 
 @router.get("/{user_id}", response_model=UserResponse)

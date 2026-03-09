@@ -15,6 +15,7 @@ import {
   Collapse,
   Divider,
   Group,
+  Image,
   Modal,
   MultiSelect,
   NumberInput,
@@ -695,14 +696,25 @@ export function WorkoutBuilder({
                                                 size={16}
                                               />
                                             </Box>
-                                            <ThemeIcon
-                                              color={getBlockColor(block.type)}
-                                              radius="md"
-                                              size="md"
-                                              variant="light"
-                                            >
-                                              <IconBarbell size={14} />
-                                            </ThemeIcon>
+                                            {exercise.exercise.image_url ? (
+                                              <Image
+                                                src={exercise.exercise.image_url}
+                                                alt={exercise.exercise.name}
+                                                w={34}
+                                                h={34}
+                                                fit="cover"
+                                                radius="md"
+                                              />
+                                            ) : (
+                                              <ThemeIcon
+                                                color={getBlockColor(block.type)}
+                                                radius="md"
+                                                size="md"
+                                                variant="light"
+                                              >
+                                                <IconBarbell size={14} />
+                                              </ThemeIcon>
+                                            )}
                                             <Box
                                               style={{ flex: 1, minWidth: 0 }}
                                             >
@@ -1036,16 +1048,27 @@ export function WorkoutBuilder({
                 >
                   <Group justify="space-between">
                     <Group gap="sm" style={{ flex: 1 }} onClick={() => addExerciseToBlock(exercise)}>
-                      <ThemeIcon
-                        color={blockType === "warmup" ? "orange" : blockType === "cooldown" ? "teal" : "blue"}
-                        radius="md"
-                        size="lg"
-                        variant="light"
-                      >
-                        {blockType === "warmup" ? <IconFlame size={18} /> :
-                         blockType === "cooldown" ? <IconStretching size={18} /> :
-                         <IconBarbell size={18} />}
-                      </ThemeIcon>
+                      {exercise.image_url ? (
+                        <Image
+                          src={exercise.image_url}
+                          alt={exercise.name}
+                          w={42}
+                          h={42}
+                          fit="cover"
+                          radius="md"
+                        />
+                      ) : (
+                        <ThemeIcon
+                          color={blockType === "warmup" ? "orange" : blockType === "cooldown" ? "teal" : "blue"}
+                          radius="md"
+                          size="lg"
+                          variant="light"
+                        >
+                          {blockType === "warmup" ? <IconFlame size={18} /> :
+                           blockType === "cooldown" ? <IconStretching size={18} /> :
+                           <IconBarbell size={18} />}
+                        </ThemeIcon>
+                      )}
                       <Box>
                         <Group gap="xs">
                           {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}

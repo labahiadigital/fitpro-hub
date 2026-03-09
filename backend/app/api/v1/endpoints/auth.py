@@ -420,6 +420,13 @@ async def verify_email(
                 detail="Token de verificación inválido"
             )
         
+        # Staff invite placeholder users (no password) must use /users/accept-invite instead
+        if not user.password_hash:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Esta cuenta fue creada por invitación. Usa el enlace del email para completar tu registro."
+            )
+        
         # Check if token is expired (24 hours)
         if user.email_verification_sent_at:
             token_age = datetime.now(timezone.utc) - user.email_verification_sent_at.replace(tzinfo=timezone.utc)
