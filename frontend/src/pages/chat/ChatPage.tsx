@@ -10,14 +10,17 @@ import {
   Group,
   Loader,
   Menu,
+  Modal,
   ScrollArea,
   SegmentedControl,
+  Select,
   Stack,
   Text,
   TextInput,
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconAlertCircle,
   IconBrandWhatsapp,
@@ -46,10 +49,12 @@ import {
   type Message,
   type MessageSource,
   useConversations,
+  useCreateConversation,
   useMarkConversationRead,
   useMessages,
   useSendMessage,
 } from "../../hooks/useChat";
+import { useClients } from "../../hooks/useClients";
 import { useWhatsAppStatus } from "../../hooks/useWhatsApp";
 import "dayjs/locale/es";
 
@@ -254,8 +259,9 @@ export function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sendVia, setSendVia] = useState<MessageSource>("platform");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [newChatOpened, { open: openNewChat, close: closeNewChat }] = useDisclosure(false);
+  const [newChatClientId, setNewChatClientId] = useState<string | null>(null);
 
-  // TODO: Determinar vista cliente basándose en rol real del usuario
   const isClientView = false;
 
   // WhatsApp status
@@ -270,6 +276,8 @@ export function ChatPage() {
   );
   const sendMessageMutation = useSendMessage();
   const markReadMutation = useMarkConversationRead();
+  const createConversationMutation = useCreateConversation();
+  const { data: clientsData } = useClients({ page: 1, page_size: 100 });
 
   const selectedConversation = conversations.find(
     (c) => c.id === selectedConversationId
@@ -323,6 +331,32 @@ export function ChatPage() {
     }
   };
 
+  const handleCreateConversation = async () => {
+    if (!newChatClientId) return;
+    const existing = conversations.find((c) => c.client_id === newChatClientId);
+    if (existing) {
+      setSelectedConversationId(existing.id);
+      closeNewChat();
+      setNewChatClientId(null);
+      return;
+    }
+    try {
+      const res = await createConversationMutation.mutateAsync({ client_id: newChatClientId });
+      if (res.data?.id) {
+        setSelectedConversationId(res.data.id);
+      }
+      closeNewChat();
+      setNewChatClientId(null);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
+    value: c.id,
+    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
+  }));
+
   const filteredConversations = conversations.filter((c) =>
     (c.client_name || c.name || "")
       .toLowerCase()
@@ -357,19 +391,35 @@ export function ChatPage() {
               p="md"
               style={{ borderBottom: "1px solid var(--nv-border)" }}
             >
-              <TextInput
-                leftSection={<IconSearch size={16} />}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar conversaciones..."
-                radius="xl"
-                styles={{
-                  input: {
-                    backgroundColor: "var(--nv-surface)",
-                    border: "1px solid var(--nv-border)",
-                  },
-                }}
-                value={searchQuery}
-              />
+              <Group gap="xs">
+                <TextInput
+                  flex={1}
+                  leftSection={<IconSearch size={16} />}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar conversaciones..."
+                  radius="xl"
+                  styles={{
+                    input: {
+                      backgroundColor: "var(--nv-surface)",
+                      border: "1px solid var(--nv-border)",
+                    },
+                  }}
+                  value={searchQuery}
+                />
+                {!isClientView && (
+                  <Tooltip label="Nueva conversación">
+                    <ActionIcon
+                      color="primary"
+                      onClick={openNewChat}
+                      radius="xl"
+                      size="lg"
+                      variant="filled"
+                    >
+                      <IconMessage size={18} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </Group>
             </Box>
 
             <ScrollArea h="calc(100% - 70px)">
@@ -666,6 +716,27 @@ export function ChatPage() {
           </Grid.Col>
         </Grid>
       </Box>
+
+      <Modal opened={newChatOpened} onClose={closeNewChat} title="Nueva conversación" radius="lg">
+        <Stack>
+          <Select
+            data={clientOptions}
+            label="Selecciona un cliente"
+            placeholder="Buscar cliente..."
+            searchable
+            value={newChatClientId}
+            onChange={setNewChatClientId}
+          />
+          <Button
+            disabled={!newChatClientId}
+            loading={createConversationMutation.isPending}
+            onClick={handleCreateConversation}
+            fullWidth
+          >
+            Iniciar conversación
+          </Button>
+        </Stack>
+      </Modal>
     </Container>
   );
 }

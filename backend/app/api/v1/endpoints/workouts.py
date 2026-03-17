@@ -2,10 +2,8 @@ from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func, String
 from pydantic import BaseModel
-
-from sqlalchemy import func
 
 from app.core.database import get_db
 from app.models.workout import WorkoutProgram, WorkoutLog
@@ -127,7 +125,13 @@ async def list_exercises(
     )
     
     if search:
-        query = query.where(Exercise.name.ilike(f"%{search}%"))
+        search_pattern = f"%{search}%"
+        query = query.where(
+            or_(
+                Exercise.name.ilike(search_pattern),
+                Exercise.muscle_groups.cast(String).ilike(search_pattern),
+            )
+        )
     
     if muscle_group:
         query = query.where(Exercise.muscle_groups.contains([muscle_group]))

@@ -357,14 +357,18 @@ function LogPlanMealModal({
     const selectedItems = meal.items.filter((item) => checkedItems[item.id]);
     if (selectedItems.length === 0) return;
 
-    const foods: FoodItem[] = selectedItems.map((item) => ({
-      name: item.food?.name || "Alimento",
-      calories: Math.round((item.food?.calories || 0) * (item.quantity_grams / 100)),
-      protein: Math.round((item.food?.protein || 0) * (item.quantity_grams / 100)),
-      carbs: Math.round((item.food?.carbs || 0) * (item.quantity_grams / 100)),
-      fat: Math.round((item.food?.fat || 0) * (item.quantity_grams / 100)),
-      quantity: item.quantity_grams,
-    }));
+    const foods: FoodItem[] = selectedItems.map((item) => {
+      const servingSize = parseFloat(item.food?.serving_size || "100") || 100;
+      const factor = item.quantity_grams / servingSize;
+      return {
+        name: item.food?.name || "Alimento",
+        calories: Math.round((item.food?.calories || 0) * factor),
+        protein: Math.round((item.food?.protein || 0) * factor),
+        carbs: Math.round((item.food?.carbs || 0) * factor),
+        fat: Math.round((item.food?.fat || 0) * factor),
+        quantity: item.quantity_grams,
+      };
+    });
 
     onSubmit({
       meal_name: meal.name,
@@ -390,12 +394,16 @@ function LogPlanMealModal({
     return meal.items
       .filter((item) => checkedItems[item.id])
       .reduce(
-        (acc, item) => ({
-          calories: acc.calories + Math.round((item.food?.calories || 0) * (item.quantity_grams / 100)),
-          protein: acc.protein + Math.round((item.food?.protein || 0) * (item.quantity_grams / 100)),
-          carbs: acc.carbs + Math.round((item.food?.carbs || 0) * (item.quantity_grams / 100)),
-          fat: acc.fat + Math.round((item.food?.fat || 0) * (item.quantity_grams / 100)),
-        }),
+        (acc, item) => {
+          const servingSize = parseFloat(item.food?.serving_size || "100") || 100;
+          const factor = item.quantity_grams / servingSize;
+          return {
+            calories: acc.calories + Math.round((item.food?.calories || 0) * factor),
+            protein: acc.protein + Math.round((item.food?.protein || 0) * factor),
+            carbs: acc.carbs + Math.round((item.food?.carbs || 0) * factor),
+            fat: acc.fat + Math.round((item.food?.fat || 0) * factor),
+          };
+        },
         { calories: 0, protein: 0, carbs: 0, fat: 0 }
       );
   }, [meal, checkedItems]);
@@ -447,7 +455,7 @@ function LogPlanMealModal({
                       <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
                     </Box>
                     <Badge variant="light" size="sm">
-                      {Math.round((item.food?.calories || 0) * (item.quantity_grams / 100))} kcal
+                      {Math.round((item.food?.calories || 0) * (item.quantity_grams / (parseFloat(item.food?.serving_size || "100") || 100)))} kcal
                     </Badge>
                   </Group>
                 }
@@ -820,7 +828,10 @@ export function MyNutritionPage() {
             const mealLogs = mealsByType[meal.name] || [];
             const mealCalories = isRegistered 
               ? mealLogs.reduce((sum, l) => sum + (l.total_calories || 0), 0)
-              : meal.items.reduce((sum, item) => sum + Math.round((item.food?.calories || 0) * (item.quantity_grams / 100)), 0);
+              : meal.items.reduce((sum, item) => {
+                  const ss = parseFloat(item.food?.serving_size || "100") || 100;
+                  return sum + Math.round((item.food?.calories || 0) * (item.quantity_grams / ss));
+                }, 0);
 
             return (
               <Card key={meal.id} shadow="sm" padding="md" radius="lg" withBorder>

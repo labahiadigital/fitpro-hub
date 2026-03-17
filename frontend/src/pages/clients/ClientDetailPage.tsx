@@ -1346,13 +1346,13 @@ export function ClientDetailPage() {
         <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <Tabs.List mb="xl" style={{ flexWrap: "nowrap", minWidth: "max-content" }}>
             <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">Resumen</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">Salud</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">Sesiones</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">Progreso</Tabs.Tab>
             <Tabs.Tab leftSection={<IconBarbell size={16} />} value="programs">Programas</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">Salud</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">Progreso</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">Sesiones</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
           </Tabs.List>
         </Box>

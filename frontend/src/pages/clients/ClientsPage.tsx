@@ -695,11 +695,21 @@ export function ClientsPage() {
         )
       ) : isLoading ? null : (
         <EmptyState
-          actionLabel="Añadir Cliente"
-          description="Empieza añadiendo tu primer cliente para gestionar sus entrenamientos, nutrición y progreso."
+          actionLabel={activeTab === "all" ? "Añadir Cliente" : undefined}
+          description={
+            activeTab === "active" ? "No hay clientes activos con cuenta creada. Los clientes pendientes de registro aparecen en la pestaña \"Pendientes\"."
+            : activeTab === "pending" ? "No hay clientes pendientes de registro."
+            : activeTab === "inactive" ? "No hay clientes inactivos."
+            : "Empieza añadiendo tu primer cliente para gestionar sus entrenamientos, nutrición y progreso."
+          }
           icon={<IconUsers size={48} />}
-          onAction={openClientModal}
-          title="No hay clientes"
+          onAction={activeTab === "all" ? openClientModal : undefined}
+          title={
+            activeTab === "active" ? "No hay clientes activos"
+            : activeTab === "pending" ? "No hay clientes pendientes"
+            : activeTab === "inactive" ? "No hay clientes inactivos"
+            : "No hay clientes"
+          }
         />
       )}
 

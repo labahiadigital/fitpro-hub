@@ -116,6 +116,25 @@ export function useSendMessage() {
   });
 }
 
+export function useCreateConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { client_id: string; name?: string }) =>
+      api.post("/messages/conversations", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        title: "Error",
+        message: error.message || "Error al crear conversación",
+        color: "red",
+      });
+    },
+  });
+}
+
 export function useMarkConversationRead() {
   const queryClient = useQueryClient();
 

@@ -7,6 +7,7 @@ import {
   Divider,
   Drawer,
   Group,
+  HoverCard,
   Image,
   Modal,
   MultiSelect,
@@ -216,11 +217,16 @@ export function WorkoutsPage() {
   const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
 
+  // Favoritos de ejercicios (must be before sourceFilteredExercises)
+  const { data: exerciseFavorites = [] } = useExerciseFavorites();
+  const toggleExerciseFavorite = useToggleExerciseFavorite();
+
   const sourceFilteredExercises = useMemo(() => {
+    if (exerciseSourceFilter === "favorites") return exercises.filter((e: any) => exerciseFavorites.includes(e.id));
     if (exerciseSourceFilter === "system") return exercises.filter((e: any) => e.is_global);
     if (exerciseSourceFilter === "custom") return exercises.filter((e: any) => !e.is_global);
     return exercises;
-  }, [exercises, exerciseSourceFilter]);
+  }, [exercises, exerciseSourceFilter, exerciseFavorites]);
 
   // When editing a client's program, we need to fetch all programs (not just templates)
   const { data: programs, isLoading: loadingPrograms } =
@@ -233,10 +239,6 @@ export function WorkoutsPage() {
   const createProgram = useCreateWorkoutProgram();
   const updateProgram = useUpdateWorkoutProgram();
   const deleteProgram = useDeleteWorkoutProgram();
-  
-  // Favoritos de ejercicios
-  const { data: exerciseFavorites = [] } = useExerciseFavorites();
-  const toggleExerciseFavorite = useToggleExerciseFavorite();
   
   // Estado para editar ejercicios
   const [editingExercise, setEditingExercise] = useState<any>(null);
@@ -727,6 +729,7 @@ export function WorkoutsPage() {
               radius="md"
               data={[
                 { label: "Todos", value: "all" },
+                { label: "⭐ Favoritos", value: "favorites" },
                 { label: "Sistema", value: "system" },
                 { label: "Propios", value: "custom" },
               ]}
@@ -752,13 +755,30 @@ export function WorkoutsPage() {
                   </ActionIcon>
                   
                   {exercise.image_url ? (
-                    <Image
-                      src={exercise.image_url}
-                      alt={exercise.name}
-                      h={80}
-                      fit="cover"
-                      fallbackSrc={undefined}
-                    />
+                    <HoverCard width={320} shadow="lg" openDelay={300} position="right">
+                      <HoverCard.Target>
+                        <Image
+                          src={exercise.image_url}
+                          alt={exercise.name}
+                          h={80}
+                          fit="cover"
+                          fallbackSrc={undefined}
+                        />
+                      </HoverCard.Target>
+                      <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
+                        <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
+                        <Box p="xs">
+                          <Text fw={600} size="sm">{exercise.name}</Text>
+                          {exercise.muscle_groups?.length > 0 && (
+                            <Group gap={4} mt={4}>
+                              {exercise.muscle_groups.map((m: string) => (
+                                <Badge key={m} size="xs" variant="light">{m}</Badge>
+                              ))}
+                            </Group>
+                          )}
+                        </Box>
+                      </HoverCard.Dropdown>
+                    </HoverCard>
                   ) : (
                     <Box
                       h={80}
@@ -861,13 +881,15 @@ export function WorkoutsPage() {
                     </ActionIcon>
                     
                     {exercise.image_url ? (
-                      <Image
-                        src={exercise.image_url}
-                        alt={exercise.name}
-                        h={80}
-                        fit="cover"
-                        fallbackSrc={undefined}
-                      />
+                      <HoverCard width={320} shadow="lg" openDelay={300} position="right">
+                        <HoverCard.Target>
+                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} />
+                        </HoverCard.Target>
+                        <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
+                          <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
+                          <Box p="xs"><Text fw={600} size="sm">{exercise.name}</Text></Box>
+                        </HoverCard.Dropdown>
+                      </HoverCard>
                     ) : (
                       <Box
                         h={80}
@@ -970,13 +992,15 @@ export function WorkoutsPage() {
                     </ActionIcon>
                     
                     {exercise.image_url ? (
-                      <Image
-                        src={exercise.image_url}
-                        alt={exercise.name}
-                        h={80}
-                        fit="cover"
-                        fallbackSrc={undefined}
-                      />
+                      <HoverCard width={320} shadow="lg" openDelay={300} position="right">
+                        <HoverCard.Target>
+                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} />
+                        </HoverCard.Target>
+                        <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
+                          <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
+                          <Box p="xs"><Text fw={600} size="sm">{exercise.name}</Text></Box>
+                        </HoverCard.Dropdown>
+                      </HoverCard>
                     ) : (
                       <Box
                         h={80}
@@ -1078,13 +1102,15 @@ export function WorkoutsPage() {
                     </ActionIcon>
                     
                     {exercise.image_url ? (
-                      <Image
-                        src={exercise.image_url}
-                        alt={exercise.name}
-                        h={80}
-                        fit="cover"
-                        fallbackSrc={undefined}
-                      />
+                      <HoverCard width={320} shadow="lg" openDelay={300} position="right">
+                        <HoverCard.Target>
+                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} />
+                        </HoverCard.Target>
+                        <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
+                          <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
+                          <Box p="xs"><Text fw={600} size="sm">{exercise.name}</Text></Box>
+                        </HoverCard.Dropdown>
+                      </HoverCard>
                     ) : (
                       <Box
                         h={80}
@@ -1283,7 +1309,7 @@ export function WorkoutsPage() {
         styles={{
           content: { backgroundColor: "var(--nv-bg)", padding: 0 },
           header: { display: "none" },
-          body: { padding: 0, height: "100vh", display: "flex", flexDirection: "column" },
+          body: { padding: 0, height: "100dvh", display: "flex", flexDirection: "column", overflow: "hidden" },
         }}
       >
         {/* Custom header */}
@@ -1330,10 +1356,18 @@ export function WorkoutsPage() {
           </Group>
         </Box>
 
-        {/* Two-column layout */}
-        <Box style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* Two-column layout - responsive: stack on mobile */}
+        <Box style={{ flex: 1, display: "flex", flexDirection: "row", overflow: "hidden" }} className="workout-builder-layout">
+          <style>{`
+            @media (max-width: 768px) {
+              .workout-builder-layout { flex-direction: column !important; }
+              .workout-builder-sidebar { width: 100% !important; max-height: 45vh !important; border-right: none !important; border-bottom: 1px solid var(--nv-border) !important; }
+              .workout-builder-main { min-height: 0 !important; }
+            }
+          `}</style>
           {/* Left sidebar - Config */}
           <Box
+            className="workout-builder-sidebar"
             style={{
               width: 340,
               flexShrink: 0,
@@ -1430,7 +1464,7 @@ export function WorkoutsPage() {
           </Box>
 
           {/* Right main area - Builder */}
-          <Box style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <Box className="workout-builder-main" style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <ScrollArea style={{ flex: 1 }} offsetScrollbars p="lg">
               <Box style={{ maxWidth: 960, margin: "0 auto" }}>
                 <WorkoutBuilderWithDays

@@ -23,6 +23,7 @@ import {
   TextInput,
   ScrollArea,
   Divider,
+  Image,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
@@ -574,12 +575,13 @@ interface ProgramDay {
     name: string;
     type?: string;
     exercises?: Array<{
-      exercise?: { name?: string };
+      exercise?: { name?: string; image_url?: string; video_url?: string; description?: string };
       name?: string;
       sets?: number;
       reps?: string;
       rest_seconds?: number;
       notes?: string;
+      video_url?: string;
     }>;
   }>;
   notes?: string;
@@ -630,7 +632,7 @@ export function MyWorkoutsPage() {
   const isTodayRestDay = todayWorkoutDay?.isRestDay ?? false;
   
   // Flatten all exercises from today's blocks (with exercise_id for history/targets)
-  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; target_weight?: number; target_reps?: number }> }) => 
+  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; target_weight?: number; target_reps?: number }> }) => 
     (block.exercises || []).map(ex => ({
       exercise_id: ex.exercise_id || ex.exercise?.id || "",
       name: ex.exercise?.name || ex.name || "Ejercicio",
@@ -893,7 +895,7 @@ export function MyWorkoutsPage() {
               </Group>
 
               {/* Show blocks with exercises */}
-              {data.todayWorkout.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { id?: string; name?: string }; exercise_id?: string; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; duration_type?: string; target_weight?: number; target_reps?: number }> }, blockIndex: number) => (
+              {data.todayWorkout.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { id?: string; name?: string; image_url?: string; video_url?: string; description?: string }; exercise_id?: string; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number }> }, blockIndex: number) => (
                 <Box key={block.id || blockIndex} mb="lg">
                   <Group gap="xs" mb="sm">
                     <Badge 
@@ -908,14 +910,19 @@ export function MyWorkoutsPage() {
                   <Accordion variant="separated">
                     {block.exercises?.map((exercise, exIndex) => {
                       const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+                      const exImage = exercise.exercise?.image_url;
                       return (
                         <Accordion.Item key={exIndex} value={`${blockIndex}-${exIndex}`}>
                           <Accordion.Control>
                             <Group justify="space-between" pr="md">
                               <Group>
-                                <ThemeIcon variant="light" color="gray" size="sm">
-                                  <IconBarbell size={14} />
-                                </ThemeIcon>
+                                {exImage ? (
+                                  <Image src={exImage} alt={exName} w={36} h={36} fit="cover" radius="md" />
+                                ) : (
+                                  <ThemeIcon variant="light" color="gray" size="md">
+                                    <IconBarbell size={16} />
+                                  </ThemeIcon>
+                                )}
                                 <Text fw={500}>{exName}</Text>
                               </Group>
                               <Group gap="xs">
@@ -993,6 +1000,27 @@ export function MyWorkoutsPage() {
                               <Text size="sm" c="dimmed" mt="sm">
                                 <strong>Notas:</strong> {exercise.notes}
                               </Text>
+                            )}
+                            {exercise.exercise?.description && (
+                              <Text size="sm" c="dimmed" mt="xs">
+                                {exercise.exercise.description}
+                              </Text>
+                            )}
+                            {(exercise.video_url || exercise.exercise?.video_url) && (
+                              <Button
+                                component="a"
+                                href={exercise.video_url || exercise.exercise?.video_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                leftSection={<IconPlayerPlay size={16} />}
+                                variant="light"
+                                color="red"
+                                size="xs"
+                                mt="sm"
+                                radius="md"
+                              >
+                                Ver vídeo del ejercicio
+                              </Button>
                             )}
                           </Accordion.Panel>
                         </Accordion.Item>
@@ -1134,7 +1162,7 @@ export function MyWorkoutsPage() {
                 </Group>
 
                 {/* Show blocks with exercises */}
-                {data.weekSchedule[selectedDayIndex].blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }, blockIndex: number) => (
+                {data.weekSchedule[selectedDayIndex].blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
                   <Box key={block.id || blockIndex} mb="lg">
                     <Group gap="xs" mb="sm">
                       <Badge 
@@ -1149,14 +1177,19 @@ export function MyWorkoutsPage() {
                     <Accordion variant="separated">
                       {block.exercises?.map((exercise, exIndex) => {
                         const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+                        const exImage2 = exercise.exercise?.image_url;
                         return (
                           <Accordion.Item key={exIndex} value={`${blockIndex}-${exIndex}`}>
                             <Accordion.Control>
                               <Group justify="space-between" pr="md">
                                 <Group>
-                                  <ThemeIcon variant="light" color="gray" size="sm">
-                                    <IconBarbell size={14} />
-                                  </ThemeIcon>
+                                  {exImage2 ? (
+                                    <Image src={exImage2} alt={exName} w={36} h={36} fit="cover" radius="md" />
+                                  ) : (
+                                    <ThemeIcon variant="light" color="gray" size="md">
+                                      <IconBarbell size={16} />
+                                    </ThemeIcon>
+                                  )}
                                   <Text fw={500}>{exName}</Text>
                                 </Group>
                                 <Group gap="xs">
@@ -1195,6 +1228,27 @@ export function MyWorkoutsPage() {
                                 <Text size="sm" c="dimmed" mt="sm">
                                   <strong>Notas:</strong> {exercise.notes}
                                 </Text>
+                              )}
+                              {exercise.exercise?.description && (
+                                <Text size="sm" c="dimmed" mt="xs">
+                                  {exercise.exercise.description}
+                                </Text>
+                              )}
+                              {(exercise.video_url || exercise.exercise?.video_url) && (
+                                <Button
+                                  component="a"
+                                  href={exercise.video_url || exercise.exercise?.video_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  leftSection={<IconPlayerPlay size={16} />}
+                                  variant="light"
+                                  color="red"
+                                  size="xs"
+                                  mt="sm"
+                                  radius="md"
+                                >
+                                  Ver vídeo del ejercicio
+                                </Button>
                               )}
                             </Accordion.Panel>
                           </Accordion.Item>

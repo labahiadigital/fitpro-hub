@@ -187,6 +187,9 @@ class MealPlan(BaseModel):
     # Is this a template or assigned plan
     is_template = Column(Boolean, default=True)
     
+    # Whether this plan is the active one for the client
+    is_active = Column(Boolean, default=False, server_default="false")
+    
     # Adherence tracking - MutableDict allows SQLAlchemy to detect in-place changes
     adherence = Column(MutableDict.as_mutable(JSONB), default=lambda: {"logs": []})
     

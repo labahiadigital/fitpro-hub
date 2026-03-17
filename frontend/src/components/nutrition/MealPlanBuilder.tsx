@@ -26,6 +26,7 @@ import {
   Text,
   TextInput,
   ThemeIcon,
+  Switch,
   Tooltip,
 } from "@mantine/core";
 import { useDebouncedCallback, useDebouncedValue, useDisclosure } from "@mantine/hooks";
@@ -42,6 +43,8 @@ import {
   IconStar,
   IconStarFilled,
   IconTrash,
+  IconCalendarOff,
+  IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -110,8 +113,9 @@ export interface MealItem {
   quantity_grams: number;
   notes?: string;
   // New fields for food preparation details
-  cooking_method?: string;  // e.g., "a la plancha", "hervido", "al horno", "crudo"
-  brand?: string;           // Brand of the specific food product
+  cooking_method?: string;
+  brand?: string;
+  recipe_group?: string;
   type: "food" | "supplement";
 }
 
@@ -128,6 +132,7 @@ export interface DayPlan {
   dayName: string;
   meals: Meal[];
   notes?: string;
+  is_free_day?: boolean;
 }
 
 interface MealPlanBuilderProps {
@@ -176,6 +181,7 @@ export function MealPlanBuilder({
   const [foodSearch, setFoodSearch] = useState("");
   const [supplementSearch, setSupplementSearch] = useState("");
   const [foodFilter, setFoodFilter] = useState<string>("all");
+  const [foodCategoryFilter, setFoodCategoryFilter] = useState<string | null>(null);
   const [supplementFilter, setSupplementFilter] = useState<string>("all");
   const [foodPage, setFoodPage] = useState(1);
   const [debouncedFoodSearch] = useDebouncedValue(foodSearch, 300);
@@ -220,6 +226,7 @@ export function MealPlanBuilder({
       protein_g: 0,
       carbs_g: 0,
       fat_g: 0,
+      fiber_g: 0,
     },
     validate: {
       name: (v) => (v.trim().length < 2 ? "Nombre requerido (mín. 2 caracteres)" : null),
@@ -237,6 +244,7 @@ export function MealPlanBuilder({
         protein_g: data.protein_g,
         carbs_g: data.carbs_g,
         fat_g: data.fat_g,
+        fiber_g: data.fiber_g || undefined,
       });
       return res.data;
     },
@@ -527,34 +535,7 @@ export function MealPlanBuilder({
     );
   }, [activeDay, days, onChange]);
 
-  const updateItemDetails = useCallback((
-    mealId: string,
-    itemId: string,
-    cooking_method?: string,
-    brand?: string
-  ) => {
-    onChange(
-      days.map((d) =>
-        d.id === activeDay
-          ? {
-              ...d,
-              meals: d.meals.map((m) =>
-                m.id === mealId
-                  ? {
-                      ...m,
-                      items: m.items.map((i) =>
-                        i.id === itemId
-                          ? { ...i, cooking_method, brand }
-                          : i
-                      ),
-                    }
-                  : m
-              ),
-            }
-          : d
-      )
-    );
-  }, [activeDay, days, onChange]);
+  /* updateItemDetails removed - now handled inline via updateItem for notes */
 
   const copyToSelectedDays = () => {
     if (!currentDay || copyToDayIds.length === 0) return;
@@ -630,22 +611,27 @@ export function MealPlanBuilder({
   const isSupplementFavorite = useCallback((supplementId: string) => supplementFavoritesSet.has(supplementId), [supplementFavoritesSet]);
 
   const filteredFoods = useMemo(() => {
+    const applyCategory = (list: Food[]) =>
+      foodCategoryFilter ? list.filter((f) => f.category.toLowerCase().includes(foodCategoryFilter.toLowerCase())) : list;
+
     if (foodFilter === "favorites") {
-      return availableFoods
-        .filter((f) => isFoodFavorite(f.id))
-        .filter((f) => {
-          if (!foodSearch) return true;
-          return f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
-            f.category.toLowerCase().includes(foodSearch.toLowerCase());
-        });
+      return applyCategory(
+        availableFoods
+          .filter((f) => isFoodFavorite(f.id))
+          .filter((f) => {
+            if (!foodSearch) return true;
+            return f.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
+              f.category.toLowerCase().includes(foodSearch.toLowerCase());
+          })
+      );
     }
     const serverFoods = serverFoodsData?.items || [];
-    return [...serverFoods].sort((a: Food, b: Food) => {
+    return applyCategory([...serverFoods].sort((a: Food, b: Food) => {
       const aFav = isFoodFavorite(a.id) ? 0 : 1;
       const bFav = isFoodFavorite(b.id) ? 0 : 1;
       return aFav - bFav;
-    });
-  }, [foodFilter, availableFoods, foodFavorites, foodSearch, serverFoodsData]);
+    }));
+  }, [foodFilter, availableFoods, foodFavorites, foodSearch, serverFoodsData, foodCategoryFilter]);
 
   const filteredSupplements = useMemo(() =>
     availableSupplements
@@ -932,15 +918,44 @@ export function MealPlanBuilder({
         <Tabs.List mb="md">
           {days.map((day) => (
             <Tabs.Tab key={day.id} value={day.id}>
-              {day.dayName}
+              <Group gap={4}>
+                {day.dayName}
+                {day.is_free_day && <Badge size="xs" color="teal" variant="light">Libre</Badge>}
+              </Group>
             </Tabs.Tab>
           ))}
         </Tabs.List>
 
         {currentDay && (
           <Tabs.Panel key={currentDay.id} value={currentDay.id}>
+            <Group justify="flex-end" mb="sm">
+              <Switch
+                label="Día Libre"
+                checked={currentDay.is_free_day || false}
+                onChange={(e) => {
+                  onChange(
+                    days.map((d) =>
+                      d.id === activeDay
+                        ? { ...d, is_free_day: e.currentTarget.checked }
+                        : d
+                    )
+                  );
+                }}
+                size="sm"
+                color="teal"
+              />
+            </Group>
+            {currentDay.is_free_day ? (
+              <Paper p="xl" radius="lg" withBorder ta="center" style={{ backgroundColor: "var(--nv-surface)" }}>
+                <ThemeIcon size={60} radius="xl" color="teal" variant="light" mb="md" style={{ margin: "0 auto" }}>
+                  <IconCalendarOff size={30} />
+                </ThemeIcon>
+                <Text fw={700} size="lg" mb="xs">Día Libre</Text>
+                <Text c="dimmed" size="sm">Este día no tiene comidas preasignadas. El cliente puede comer libremente.</Text>
+              </Paper>
+            ) : (
             <Stack gap="md">
-              {currentDay.meals.map((meal) => {
+              {[...currentDay.meals].sort((a, b) => (a.time || "").localeCompare(b.time || "")).map((meal) => {
                 const mealMacros = calculateMealMacros(meal);
 
                 return (
@@ -1034,7 +1049,62 @@ export function MealPlanBuilder({
                     </Group>
 
                     <Stack gap="xs">
-                      {meal.items.map((item) => {
+                      {(() => {
+                        const recipeGroups = new Map<string, MealItem[]>();
+                        const ungrouped: MealItem[] = [];
+                        meal.items.forEach((item) => {
+                          if (item.recipe_group) {
+                            const group = recipeGroups.get(item.recipe_group) || [];
+                            group.push(item);
+                            recipeGroups.set(item.recipe_group, group);
+                          } else {
+                            ungrouped.push(item);
+                          }
+                        });
+                        const rendered: React.ReactNode[] = [];
+                        const renderedIds = new Set<string>();
+                        recipeGroups.forEach((items, recipeName) => {
+                          rendered.push(
+                            <Paper key={`recipe-${recipeName}`} p="xs" radius="md" withBorder style={{ borderColor: "var(--mantine-color-teal-3)", borderStyle: "dashed" }}>
+                              <Group justify="space-between" mb={4}>
+                                <Badge color="teal" variant="light" size="sm">🍳 {recipeName}</Badge>
+                                <ActionIcon
+                                  size="xs"
+                                  color="red"
+                                  variant="subtle"
+                                  onClick={() => {
+                                    onChange(days.map((d) =>
+                                      d.id === activeDay
+                                        ? { ...d, meals: d.meals.map((m) =>
+                                            m.id === meal.id
+                                              ? { ...m, items: m.items.map((i) => i.recipe_group === recipeName ? { ...i, recipe_group: undefined } : i) }
+                                              : m
+                                          ) }
+                                        : d
+                                    ));
+                                  }}
+                                >
+                                  <IconX size={10} />
+                                </ActionIcon>
+                              </Group>
+                              <Stack gap={4}>
+                                {items.map((item) => {
+                                  renderedIds.add(item.id);
+                                  const itemData = item.type === "food" ? item.food : item.supplement;
+                                  return (
+                                    <Group key={item.id} justify="space-between" px="xs">
+                                      <Text size="xs">{itemData?.name} — {item.quantity_grams}g</Text>
+                                      <Text size="xs" c="dimmed">{Math.round(calculateItemMacros(item).calories)} kcal</Text>
+                                    </Group>
+                                  );
+                                })}
+                              </Stack>
+                            </Paper>
+                          );
+                        });
+                        return rendered;
+                      })()}
+                      {meal.items.filter((i) => !i.recipe_group).map((item) => {
                         const itemMacros = calculateItemMacros(item);
                         const itemData =
                           item.type === "food" ? item.food : item.supplement;
@@ -1063,6 +1133,9 @@ export function MealPlanBuilder({
                                   <Text fw={500} size="sm">
                                     {itemData?.name}
                                   </Text>
+                                  {item.notes && (
+                                    <Text size="xs" c="blue" fs="italic">{item.notes}</Text>
+                                  )}
                                   {item.type === "food" && (item.cooking_method || item.brand) && (
                                     <Group gap={4}>
                                       {item.cooking_method && (
@@ -1123,25 +1196,51 @@ export function MealPlanBuilder({
                                   suffix="g"
                                   radius="md"
                                 />
-                                {item.type === "food" && (
-                                  <Tooltip label="Editar cocción/marca">
-                                    <ActionIcon
-                                      color="blue"
-                                      onClick={() => {
-                                        const cookingMethod = prompt("Método de cocción (ej: a la plancha, hervido, al horno, crudo):", item.cooking_method || "");
-                                        const brand = prompt("Marca del producto (opcional):", item.brand || "");
-                                        if (cookingMethod !== null || brand !== null) {
-                                          updateItemDetails(meal.id, item.id, cookingMethod || undefined, brand || undefined);
-                                        }
-                                      }}
-                                      size="sm"
-                                      variant="subtle"
-                                      radius="md"
-                                    >
-                                      <IconEdit size={14} />
-                                    </ActionIcon>
-                                  </Tooltip>
-                                )}
+                                <Popover width={250} position="bottom" withArrow shadow="md" radius="md">
+                                  <Popover.Target>
+                                    <Tooltip label="Instrucciones / Nota">
+                                      <ActionIcon
+                                        color={item.notes || item.cooking_method ? "blue" : "gray"}
+                                        size="sm"
+                                        variant={item.notes || item.cooking_method ? "light" : "subtle"}
+                                        radius="md"
+                                      >
+                                        <IconEdit size={14} />
+                                      </ActionIcon>
+                                    </Tooltip>
+                                  </Popover.Target>
+                                  <Popover.Dropdown>
+                                    <Stack gap="xs">
+                                      <TextInput
+                                        label="Instrucciones"
+                                        placeholder="Ej: a la plancha, hervido..."
+                                        size="xs"
+                                        value={item.notes || ""}
+                                        onChange={(e) => {
+                                          onChange(
+                                            days.map((d) =>
+                                              d.id === activeDay
+                                                ? {
+                                                    ...d,
+                                                    meals: d.meals.map((m) =>
+                                                      m.id === meal.id
+                                                        ? {
+                                                            ...m,
+                                                            items: m.items.map((i) =>
+                                                              i.id === item.id ? { ...i, notes: e.target.value } : i
+                                                            ),
+                                                          }
+                                                        : m
+                                                    ),
+                                                  }
+                                                : d
+                                            )
+                                          );
+                                        }}
+                                      />
+                                    </Stack>
+                                  </Popover.Dropdown>
+                                </Popover>
                                 <ActionIcon
                                   color="red"
                                   onClick={() =>
@@ -1160,16 +1259,42 @@ export function MealPlanBuilder({
                       })}
                     </Stack>
 
-                    <Button
-                      leftSection={<IconPlus size={14} />}
-                      mt="sm"
-                      onClick={() => openAddFood(meal.id)}
-                      size="xs"
-                      variant="light"
-                      radius="md"
-                    >
-                      Añadir Alimento o Suplemento
-                    </Button>
+                    <Group mt="sm" gap="xs">
+                      <Button
+                        leftSection={<IconPlus size={14} />}
+                        onClick={() => openAddFood(meal.id)}
+                        size="xs"
+                        variant="light"
+                        radius="md"
+                      >
+                        Añadir Alimento o Suplemento
+                      </Button>
+                      {meal.items.filter((i) => !i.recipe_group).length >= 2 && (
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          color="teal"
+                          radius="md"
+                          onClick={() => {
+                            const recipeName = prompt("Nombre de la receta:");
+                            if (recipeName?.trim()) {
+                              const ungroupedIds = meal.items.filter((i) => !i.recipe_group).map((i) => i.id);
+                              onChange(days.map((d) =>
+                                d.id === activeDay
+                                  ? { ...d, meals: d.meals.map((m) =>
+                                      m.id === meal.id
+                                        ? { ...m, items: m.items.map((i) => ungroupedIds.includes(i.id) ? { ...i, recipe_group: recipeName.trim() } : i) }
+                                        : m
+                                    ) }
+                                  : d
+                              ));
+                            }
+                          }}
+                        >
+                          Agrupar como Receta
+                        </Button>
+                      )}
+                    </Group>
                   </Paper>
                 );
               })}
@@ -1243,6 +1368,7 @@ export function MealPlanBuilder({
                 </Button>
               </SimpleGrid>
             </Stack>
+            )}
           </Tabs.Panel>
         )}
       </Tabs>
@@ -1296,6 +1422,18 @@ export function MealPlanBuilder({
                 ]}
                 size="xs"
                 radius="md"
+              />
+            </Group>
+            <Group mb="xs">
+              <Select
+                data={FOOD_CATEGORIES}
+                placeholder="Filtrar por categoría"
+                clearable
+                size="xs"
+                radius="md"
+                value={foodCategoryFilter}
+                onChange={setFoodCategoryFilter}
+                style={{ flex: 1 }}
               />
             </Group>
             
@@ -1561,6 +1699,7 @@ export function MealPlanBuilder({
               <NumberInput label="Carbohidratos (g)" min={0} {...createFoodForm.getInputProps("carbs_g")} />
               <NumberInput label="Grasas (g)" min={0} {...createFoodForm.getInputProps("fat_g")} />
             </Group>
+            <NumberInput label="Fibra (g)" min={0} {...createFoodForm.getInputProps("fiber_g")} />
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={() => { closeCreateFoodModal(); createFoodForm.reset(); }}>
                 Cancelar

@@ -161,6 +161,7 @@ class MealPlanClientResponse(BaseModel):
     meal_times: Optional[dict] = None
     plan: Optional[dict] = None
     adherence: Optional[dict] = None
+    is_active: Optional[bool] = False
     created_at: datetime
     
     class Config:
@@ -334,7 +335,7 @@ async def get_client_dashboard(
         next_session=next_session,
         week_progress={
             "workouts_completed": len(week_logs),
-            "workouts_total": len(assigned_programs) * 4 if assigned_programs else 4,
+            "workouts_total": (client.health_data or {}).get("training_days_per_week", 4) if client.health_data else (len(assigned_programs) if assigned_programs else 4),
             "calories_burned": sum(log.log.get("calories_burned", 0) for log in week_logs if log.log),
         },
         nutrition_today=nutrition_totals,
@@ -816,13 +817,25 @@ async def get_my_meal_plan(
     """Get the active meal plan for the client."""
     client = await get_client_for_user(current_user.id, db)
     
+    # First try to find an explicitly active plan
     result = await db.execute(
         select(MealPlan)
-        .where(MealPlan.client_id == client.id)
-        .order_by(desc(MealPlan.created_at))
+        .where(MealPlan.client_id == client.id, MealPlan.is_active == True)
         .limit(1)
     )
-    return result.scalar_one_or_none()
+    plan = result.scalar_one_or_none()
+    
+    # Fallback: most recent plan
+    if not plan:
+        result = await db.execute(
+            select(MealPlan)
+            .where(MealPlan.client_id == client.id)
+            .order_by(desc(MealPlan.created_at))
+            .limit(1)
+        )
+        plan = result.scalar_one_or_none()
+    
+    return plan
 
 
 @router.get("/nutrition/plans", response_model=List[MealPlanClientResponse])

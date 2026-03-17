@@ -4,7 +4,7 @@ from uuid import UUID
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, func, update
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -84,6 +84,7 @@ class MealPlanResponse(BaseModel):
     dietary_tags: List[str] = []
     plan: dict = {}
     is_template: bool
+    is_active: Optional[bool] = False
     
     class Config:
         from_attributes = True
@@ -242,6 +243,15 @@ async def create_meal_plan(
     """
     Crear un plan nutricional.
     """
+    should_activate = data.client_id is not None and not data.is_template
+    
+    if should_activate:
+        await db.execute(
+            update(MealPlan)
+            .where(MealPlan.client_id == data.client_id)
+            .values(is_active=False)
+        )
+    
     meal_plan = MealPlan(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -255,7 +265,8 @@ async def create_meal_plan(
         target_fat=data.target_fat,
         dietary_tags=data.dietary_tags,
         plan=data.plan,
-        is_template=data.is_template
+        is_template=data.is_template,
+        is_active=should_activate,
     )
     db.add(meal_plan)
     await db.commit()
@@ -350,6 +361,36 @@ async def delete_meal_plan(
     await db.commit()
 
 
+@router.post("/meal-plans/{plan_id}/activate", response_model=MealPlanResponse)
+async def activate_meal_plan(
+    plan_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Mark a plan as active and deactivate all other plans for the same client."""
+    result = await db.execute(
+        select(MealPlan).where(
+            MealPlan.id == plan_id,
+            MealPlan.workspace_id == current_user.workspace_id
+        )
+    )
+    plan = result.scalar_one_or_none()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan no encontrado")
+    if not plan.client_id:
+        raise HTTPException(status_code=400, detail="Solo se pueden activar planes asignados a un cliente")
+    
+    await db.execute(
+        update(MealPlan)
+        .where(MealPlan.client_id == plan.client_id)
+        .values(is_active=False)
+    )
+    plan.is_active = True
+    await db.commit()
+    await db.refresh(plan)
+    return plan
+
+
 # Schema for assign request
 class AssignMealPlanRequest(BaseModel):
     client_id: UUID
@@ -384,6 +425,13 @@ async def assign_meal_plan_to_client(
             detail="Plan nutricional no encontrado"
         )
     
+    # Deactivate all existing plans for this client
+    await db.execute(
+        update(MealPlan)
+        .where(MealPlan.client_id == data.client_id)
+        .values(is_active=False)
+    )
+    
     # Create a copy assigned to the client
     assigned_plan = MealPlan(
         workspace_id=current_user.workspace_id,
@@ -399,7 +447,8 @@ async def assign_meal_plan_to_client(
         dietary_tags=template.dietary_tags,
         plan=template.plan,
         meal_times=template.meal_times,
-        is_template=False  # This is an assigned instance, not a template
+        is_template=False,
+        is_active=True,
     )
     
     db.add(assigned_plan)

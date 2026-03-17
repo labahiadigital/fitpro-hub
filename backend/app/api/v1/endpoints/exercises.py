@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, String
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -79,8 +79,12 @@ async def list_exercises(
     )
     
     if search:
+        search_pattern = f"%{search}%"
         query = query.where(
-            func.unaccent(Exercise.name).ilike(func.unaccent(f"%{search}%"))
+            or_(
+                func.unaccent(Exercise.name).ilike(func.unaccent(search_pattern)),
+                Exercise.muscle_groups.cast(String).ilike(search_pattern),
+            )
         )
     
     if category:

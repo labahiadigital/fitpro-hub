@@ -52,7 +52,7 @@ import { EmptyState } from "../../components/common/EmptyState";
 import { useClient, useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
 import { clientsApi } from "../../services/api";
-import { calculateBMR, calculateTDEE } from "../../utils/calories";
+import { calculateBMR, calculateTDEE, gramsFromPercentages } from "../../utils/calories";
 import {
   type DayPlan,
   type Food,
@@ -237,9 +237,8 @@ export function NutritionPage() {
     isFetching: isFetchingFoods,
   } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch);
   const { data: totalFoodsCount } = useSupabaseFoodsCount();
-  // When editing a client's plan, we need to fetch all plans (not just templates)
   const { data: supabaseMealPlans, isLoading: isLoadingPlans } =
-    useSupabaseMealPlans(clientId ? {} : { is_template: true });
+    useSupabaseMealPlans(clientId ? {} : {});
   
   // Also fetch the specific plan if editing a client's plan
   const { data: specificClientPlan } = useSupabaseMealPlan(editPlanId && clientId ? editPlanId : "");
@@ -2394,7 +2393,25 @@ export function NutritionPage() {
                   step={50}
                   radius="md"
                   size="sm"
-                  {...planForm.getInputProps("target_calories")}
+                  value={planForm.values.target_calories}
+                  onChange={(v) => {
+                    const cal = Number(v) || 1000;
+                    planForm.setFieldValue("target_calories", cal);
+                    const curP = planForm.values.target_protein;
+                    const curC = planForm.values.target_carbs;
+                    const curF = planForm.values.target_fat;
+                    const curCal = (curP * 4) + (curC * 4) + (curF * 9);
+                    if (curCal > 0) {
+                      const pPct = (curP * 4 / curCal) * 100;
+                      const cPct = (curC * 4 / curCal) * 100;
+                      const fPct = (curF * 9 / curCal) * 100;
+                      const g = gramsFromPercentages(cal, pPct, cPct, fPct);
+                      planForm.setFieldValue("target_protein", g.protein_g);
+                      planForm.setFieldValue("target_carbs", g.carbs_g);
+                      planForm.setFieldValue("target_fat", g.fat_g);
+                    }
+                  }}
+                  error={planForm.errors.target_calories}
                 />
 
                 <SimpleGrid cols={3} spacing="xs">
