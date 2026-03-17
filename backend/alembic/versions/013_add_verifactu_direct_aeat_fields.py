@@ -7,7 +7,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "013"
-down_revision = "012_check_constraints"
+down_revision = "011_client_billing"
 branch_labels = None
 depends_on = None
 

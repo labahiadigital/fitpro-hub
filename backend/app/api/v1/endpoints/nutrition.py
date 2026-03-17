@@ -8,7 +8,7 @@ from sqlalchemy import select, or_, func, update
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models.nutrition import Food, MealPlan, FoodFavorite
+from app.models.nutrition import Food, MealPlan, FoodFavorite, Recipe
 from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
 
 router = APIRouter()
@@ -645,3 +645,112 @@ async def get_client_nutrition_logs(
             "fat": float(meal_plan.target_fat) if meal_plan.target_fat else 70,
         }
     }
+
+
+# ============ RECIPES ============
+
+class RecipeCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    items: list = []
+    total_calories: float = 0
+    total_protein: float = 0
+    total_carbs: float = 0
+    total_fat: float = 0
+
+
+class RecipeUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    items: Optional[list] = None
+    total_calories: Optional[float] = None
+    total_protein: Optional[float] = None
+    total_carbs: Optional[float] = None
+    total_fat: Optional[float] = None
+
+
+class RecipeResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    name: str
+    description: Optional[str] = None
+    items: list = []
+    total_calories: Optional[Decimal] = 0
+    total_protein: Optional[Decimal] = 0
+    total_carbs: Optional[Decimal] = 0
+    total_fat: Optional[Decimal] = 0
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/recipes", response_model=List[RecipeResponse])
+async def list_recipes(
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Recipe)
+        .where(Recipe.workspace_id == current_user.workspace_id)
+        .order_by(Recipe.name)
+    )
+    return result.scalars().all()
+
+
+@router.post("/recipes", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
+async def create_recipe(
+    data: RecipeCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    recipe = Recipe(
+        workspace_id=current_user.workspace_id,
+        created_by=current_user.id,
+        name=data.name,
+        description=data.description,
+        items=data.items,
+        total_calories=data.total_calories,
+        total_protein=data.total_protein,
+        total_carbs=data.total_carbs,
+        total_fat=data.total_fat,
+    )
+    db.add(recipe)
+    await db.commit()
+    await db.refresh(recipe)
+    return recipe
+
+
+@router.put("/recipes/{recipe_id}", response_model=RecipeResponse)
+async def update_recipe(
+    recipe_id: UUID,
+    data: RecipeUpdate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Recipe).where(Recipe.id == recipe_id, Recipe.workspace_id == current_user.workspace_id)
+    )
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Receta no encontrada")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(recipe, field, value)
+    await db.commit()
+    await db.refresh(recipe)
+    return recipe
+
+
+@router.delete("/recipes/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_recipe(
+    recipe_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Recipe).where(Recipe.id == recipe_id, Recipe.workspace_id == current_user.workspace_id)
+    )
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Receta no encontrada")
+    await db.delete(recipe)
+    await db.commit()

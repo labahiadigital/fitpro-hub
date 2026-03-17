@@ -332,6 +332,12 @@ export const nutritionApi = {
   // Client logs (for trainers)
   clientLogs: (clientId: string, days?: number) => 
     api.get(`/nutrition/clients/${clientId}/logs`, { params: { days } }),
+
+  // Recipes
+  recipes: () => api.get("/nutrition/recipes"),
+  createRecipe: (data: object) => api.post("/nutrition/recipes", data),
+  updateRecipe: (id: string, data: object) => api.put(`/nutrition/recipes/${id}`, data),
+  deleteRecipe: (id: string) => api.delete(`/nutrition/recipes/${id}`),
 };
 
 // Forms API

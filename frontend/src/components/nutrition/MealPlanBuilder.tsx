@@ -45,6 +45,8 @@ import {
   IconTrash,
   IconCalendarOff,
   IconX,
+  IconChevronUp,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -153,6 +155,8 @@ interface MealPlanBuilderProps {
   supplementFavorites?: string[];
   onToggleFoodFavorite?: (foodId: string, isFavorite: boolean) => void;
   onToggleSupplementFavorite?: (supplementId: string, isFavorite: boolean) => void;
+  // Recetas
+  recipes?: any[];
 }
 
 export function MealPlanBuilder({
@@ -170,6 +174,7 @@ export function MealPlanBuilder({
   onToggleFoodFavorite,
   onToggleSupplementFavorite,
   onTargetMacrosChange,
+  recipes = [],
 }: MealPlanBuilderProps) {
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
@@ -267,7 +272,7 @@ export function MealPlanBuilder({
     queryFn: async () => {
       const response = await nutritionApi.foods({
         page: foodPage,
-        limit: FOODS_PER_PAGE,
+        page_size: FOODS_PER_PAGE,
         search: debouncedFoodSearch || undefined,
       });
       const data = response.data;
@@ -397,6 +402,21 @@ export function MealPlanBuilder({
       )
     );
   }, [activeDay, days, onChange]);
+
+  const moveMeal = useCallback((mealId: string, direction: "up" | "down") => {
+    if (!currentDay) return;
+    const sorted = [...currentDay.meals].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    const idx = sorted.findIndex((m) => m.id === mealId);
+    if (idx < 0) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const tempTime = sorted[idx].time;
+    sorted[idx] = { ...sorted[idx], time: sorted[swapIdx].time };
+    sorted[swapIdx] = { ...sorted[swapIdx], time: tempTime };
+    onChange(
+      days.map((d) => d.id === activeDay ? { ...d, meals: sorted } : d)
+    );
+  }, [activeDay, currentDay, days, onChange]);
 
   const duplicateMeal = useCallback((mealId: string) => {
     if (!currentDay) return;
@@ -1027,6 +1047,28 @@ export function MealPlanBuilder({
                         <Badge color="grape" variant="outline" radius="md">
                           G: {Math.round(mealMacros.fat)}g
                         </Badge>
+                        <Tooltip label="Subir">
+                          <ActionIcon
+                            color="gray"
+                            onClick={() => moveMeal(meal.id, "up")}
+                            variant="subtle"
+                            radius="md"
+                            size="sm"
+                          >
+                            <IconChevronUp size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Bajar">
+                          <ActionIcon
+                            color="gray"
+                            onClick={() => moveMeal(meal.id, "down")}
+                            variant="subtle"
+                            radius="md"
+                            size="sm"
+                          >
+                            <IconChevronDown size={16} />
+                          </ActionIcon>
+                        </Tooltip>
                         <Tooltip label="Duplicar bloque">
                           <ActionIcon
                             color="gray"
@@ -1389,6 +1431,9 @@ export function MealPlanBuilder({
             <Tabs.Tab value="supplements" leftSection={<IconPill size={14} />}>
               Suplementos
             </Tabs.Tab>
+            <Tabs.Tab value="recipes" leftSection={<IconStar size={14} />}>
+              Recetas
+            </Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="foods">
@@ -1654,6 +1699,74 @@ export function MealPlanBuilder({
                   </Text>
                 )}
               </Stack>
+            </ScrollArea>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="recipes">
+            <ScrollArea h={400}>
+              {recipes.length > 0 ? (
+                <Stack gap="xs">
+                  {recipes.map((recipe: any) => (
+                    <Card
+                      key={recipe.id}
+                      p="sm"
+                      radius="md"
+                      withBorder
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        if (!selectedMealId) return;
+                        const items = (recipe.items || []).map((item: any) => ({
+                          id: crypto.randomUUID(),
+                          food_id: item.food_id || null,
+                          food: {
+                            id: item.food_id || recipe.id,
+                            name: item.name,
+                            calories: item.calories || 0,
+                            protein: item.protein || 0,
+                            carbs: item.carbs || 0,
+                            fat: item.fat || 0,
+                            serving_size: "100g",
+                          },
+                          quantity_grams: item.quantity_grams || 100,
+                          type: item.type || "food",
+                          recipe_group: recipe.name,
+                        }));
+                        onChange(
+                          days.map((d) =>
+                            d.id === activeDay
+                              ? {
+                                  ...d,
+                                  meals: d.meals.map((m) =>
+                                    m.id === selectedMealId
+                                      ? { ...m, items: [...m.items, ...items] }
+                                      : m
+                                  ),
+                                }
+                              : d
+                          )
+                        );
+                        closeFoodModal();
+                        notifications.show({ title: "Receta añadida", message: recipe.name, color: "teal" });
+                      }}
+                    >
+                      <Group justify="space-between">
+                        <Box>
+                          <Text fw={500} size="sm">{recipe.name}</Text>
+                          <Text size="xs" c="dimmed">{recipe.items?.length || 0} ingredientes</Text>
+                        </Box>
+                        <Group gap={4}>
+                          <Badge size="xs" variant="light" color="blue">{Math.round(recipe.total_calories || 0)} kcal</Badge>
+                          <Badge size="xs" variant="light" color="green">P:{Math.round(recipe.total_protein || 0)}g</Badge>
+                        </Group>
+                      </Group>
+                    </Card>
+                  ))}
+                </Stack>
+              ) : (
+                <Center py="xl">
+                  <Text c="dimmed" size="sm">No hay recetas. Crea recetas desde la pestaña "Recetas" en Nutrición.</Text>
+                </Center>
+              )}
             </ScrollArea>
           </Tabs.Panel>
         </Tabs>

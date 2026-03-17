@@ -17,6 +17,7 @@ import {
   Select,
   SimpleGrid,
   Stack,
+  Switch,
   Tabs,
   Text,
   Textarea,
@@ -42,16 +43,19 @@ import {
   IconStar,
   IconStarFilled,
   IconTemplate,
+  IconToolsKitchen2,
   IconTrash,
   IconUser,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "../../components/common/EmptyState";
 import { useClient, useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
-import { clientsApi } from "../../services/api";
+import { clientsApi, nutritionApi } from "../../services/api";
 import { calculateBMR, calculateTDEE, gramsFromPercentages } from "../../utils/calories";
 import {
   type DayPlan,
@@ -199,7 +203,7 @@ export function NutritionPage() {
     }
   }, [navigate, returnTo, clientId]);
   
-  const [activeTab, setActiveTab] = useState<string | null>("plans");
+  const [activeTab, setActiveTab] = useState<string | null>("templates");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
@@ -222,7 +226,47 @@ export function NutritionPage() {
   const [supplementModalOpened, { open: openSupplementModal, close: closeSupplementModal }] = useDisclosure(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
-  
+  const [isTemplateModeOn, setIsTemplateModeOn] = useState(true);
+
+  // Recipes
+  const [recipeModalOpened, { open: openRecipeModal, close: closeRecipeModal }] = useDisclosure(false);
+  const [editingRecipe, setEditingRecipe] = useState<any>(null);
+  const tanstackQueryClient = useQueryClient();
+  const { data: recipes = [], isLoading: isLoadingRecipes } = useQuery({
+    queryKey: ["recipes"],
+    queryFn: async () => {
+      const res = await nutritionApi.recipes();
+      return res.data;
+    },
+  });
+  const createRecipeMutation = useMutation({
+    mutationFn: (data: object) => nutritionApi.createRecipe(data),
+    onSuccess: () => tanstackQueryClient.invalidateQueries({ queryKey: ["recipes"] }),
+  });
+  const updateRecipeMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => nutritionApi.updateRecipe(id, data),
+    onSuccess: () => tanstackQueryClient.invalidateQueries({ queryKey: ["recipes"] }),
+  });
+  const deleteRecipeMutation = useMutation({
+    mutationFn: (id: string) => nutritionApi.deleteRecipe(id),
+    onSuccess: () => tanstackQueryClient.invalidateQueries({ queryKey: ["recipes"] }),
+  });
+  const recipeForm = useForm({
+    initialValues: { name: "", description: "", items: [] as any[] },
+    validate: { name: (v) => (v.length < 2 ? "Nombre requerido" : null) },
+  });
+  const [recipeFoodSearch, setRecipeFoodSearch] = useState("");
+  const [debouncedRecipeFoodSearch] = useDebouncedValue(recipeFoodSearch, 300);
+  const { data: recipeFoodSearchResults = [] } = useQuery({
+    queryKey: ["recipe-food-search", debouncedRecipeFoodSearch],
+    queryFn: async () => {
+      if (!debouncedRecipeFoodSearch) return [];
+      const res = await nutritionApi.foods({ search: debouncedRecipeFoodSearch, page_size: 20 });
+      return res.data?.items || [];
+    },
+    enabled: !!debouncedRecipeFoodSearch && recipeModalOpened,
+  });
+
   // Modales de detalle
   const [viewingFood, setViewingFood] = useState<any>(null);
   const [foodDetailModalOpened, { open: openFoodDetailModal, close: closeFoodDetailModal }] = useDisclosure(false);
@@ -373,11 +417,16 @@ export function NutritionPage() {
       dietary_tags: plan.dietary_tags || [],
       plan: plan.plan || { days: [] },
       client_id: plan.client_id,
+      is_template: plan.is_template ?? true,
+      is_active: plan.is_active ?? false,
       client_name: plan.clients
         ? `${plan.clients.first_name} ${plan.clients.last_name}`
         : null,
     }));
   }, [supabaseMealPlans]);
+
+  const templates = useMemo(() => mealPlans.filter((p: any) => p.is_template), [mealPlans]);
+  const clientPlans = useMemo(() => mealPlans.filter((p: any) => !p.is_template), [mealPlans]);
   
   // Auto-open builder when edit param is in URL
   useEffect(() => {
@@ -412,6 +461,7 @@ export function NutritionPage() {
     setEditingPlan(plan);
     const planClientId = plan.client_id || clientId || null;
     setSelectedClientId(planClientId);
+    setIsTemplateModeOn(plan.is_template ?? !planClientId);
     if (planClientId) {
       clientsApi.get(planClientId).then((res) => {
         setSelectedClient(res.data);
@@ -566,6 +616,7 @@ export function NutritionPage() {
       setEditingPlan(plan);
       const planClientId = plan.client_id || clientId || null;
       setSelectedClientId(planClientId);
+      setIsTemplateModeOn(plan.is_template ?? !planClientId);
       if (planClientId) {
         clientsApi.get(planClientId).then((res) => {
           setSelectedClient(res.data);
@@ -595,10 +646,12 @@ export function NutritionPage() {
       planForm.reset();
       if (clientId) {
         setSelectedClientId(clientId);
+        setIsTemplateModeOn(false);
         loadClientData(clientId);
       } else {
         setSelectedClientId(null);
         setSelectedClient(null);
+        setIsTemplateModeOn(true);
       }
     }
     openBuilder();
@@ -609,7 +662,7 @@ export function NutritionPage() {
     if (!values.name) return;
 
     try {
-      const planClientId = selectedClientId || values.client_id || clientId || null;
+      const planClientId = isTemplateModeOn ? null : (selectedClientId || values.client_id || clientId || null);
       const planData = {
         name: values.name,
         description: values.description,
@@ -621,15 +674,11 @@ export function NutritionPage() {
         dietary_tags: values.dietary_tags,
         plan: { days: mealPlanDays },
         client_id: planClientId || undefined,
-        // When editing a client's plan (clientId exists) or assigning to client, don't save as template
-        is_template: !planClientId,
+        is_template: isTemplateModeOn,
       };
 
       if (editingPlan) {
-        // When editing a client's plan, keep original is_template status
-        const updateData = (clientId || planClientId)
-          ? { ...planData, is_template: editingPlan.is_template ?? false }
-          : planData;
+        const updateData = planData;
         await updateMealPlan.mutateAsync({ id: editingPlan.id, ...updateData });
         notifications.show({
           title: "Plan actualizado",
@@ -818,9 +867,15 @@ export function NutritionPage() {
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: activeTab === "foods" ? "Nuevo Alimento" : "Nuevo Plan",
+          label: activeTab === "foods" ? "Nuevo Alimento" : activeTab === "recipes" ? "Nueva Receta" : activeTab === "templates" ? "Nueva Plantilla" : "Nuevo Plan",
           onClick:
-            activeTab === "foods" ? openFoodModal : () => openPlanBuilder(),
+            activeTab === "foods" ? openFoodModal
+            : activeTab === "recipes" ? openRecipeModal
+            : () => {
+                if (activeTab === "templates") setIsTemplateModeOn(true);
+                else setIsTemplateModeOn(false);
+                openPlanBuilder();
+              },
         }}
         description="Gestiona planes nutricionales y alimentos"
         title="Nutrición"
@@ -828,13 +883,24 @@ export function NutritionPage() {
 
       <Tabs onChange={setActiveTab} value={activeTab}>
         <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="plans" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Planes{" "}
-            {mealPlans.length > 0 && (
+          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="templates" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Plantillas{" "}
+            {templates.length > 0 && (
               <Badge ml="xs" size="xs" radius="md" variant="light">
-                {mealPlans.length}
+                {templates.length}
               </Badge>
             )}
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconUsers size={14} />} value="plans" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Planes de Clientes{" "}
+            {clientPlans.length > 0 && (
+              <Badge ml="xs" size="xs" radius="md" variant="light">
+                {clientPlans.length}
+              </Badge>
+            )}
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconToolsKitchen2 size={14} />} value="recipes" style={{ fontWeight: 600, fontSize: "13px" }}>
+            Recetas
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconApple size={14} />} value="foods" style={{ fontWeight: 600, fontSize: "13px" }}>
             Alimentos{" "}
@@ -854,95 +920,85 @@ export function NutritionPage() {
           </Tabs.Tab>
         </Tabs.List>
 
-        <Tabs.Panel value="plans">
+        <Tabs.Panel value="templates">
           {isLoadingPlans ? (
-            <Center py="xl">
-              <Loader size="md" />
-            </Center>
-          ) : mealPlans.length > 0 ? (
+            <Center py="xl"><Loader size="md" /></Center>
+          ) : templates.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
-              {mealPlans.map((plan: { id: string; name: string; description?: string; duration_days: number; target_calories: number; target_protein: number; target_carbs: number; target_fat: number; dietary_tags: string[]; plan: { days: unknown[] }; client_name: string | null }) => (
+              {templates.map((plan: any) => (
                 <Box key={plan.id} className="nv-card" p="md">
                   <Group justify="space-between" mb="sm">
                     <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{plan.name}</Text>
-                    <Badge color="green" variant="light" radius="md" size="xs">
-                      {plan.duration_days}d
-                    </Badge>
+                    <Badge color="teal" variant="light" radius="md" size="xs">Plantilla</Badge>
                   </Group>
-
-                  <Text c="dimmed" lineClamp={2} size="xs">
-                    {plan.description || "Sin descripción"}
-                  </Text>
-
-                  {plan.client_name && (
-                    <Badge color="blue" mt="xs" size="xs" variant="outline" radius="md">
-                      {plan.client_name}
-                    </Badge>
-                  )}
-
+                  <Text c="dimmed" lineClamp={2} size="xs">{plan.description || "Sin descripción"}</Text>
                   <Stack gap={4} mt="sm">
                     <Group justify="space-between">
                       <Text c="dimmed" size="xs">Calorías</Text>
-                      <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>
-                        {plan.target_calories} kcal
-                      </Text>
+                      <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>{plan.target_calories} kcal</Text>
                     </Group>
                     <Group gap={4}>
-                      <Badge color="green" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>
-                        P:{plan.target_protein}g
-                      </Badge>
-                      <Badge color="orange" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>
-                        C:{plan.target_carbs}g
-                      </Badge>
-                      <Badge color="grape" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>
-                        G:{plan.target_fat}g
-                      </Badge>
+                      <Badge color="green" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>P:{plan.target_protein}g</Badge>
+                      <Badge color="orange" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>C:{plan.target_carbs}g</Badge>
+                      <Badge color="grape" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>G:{plan.target_fat}g</Badge>
                     </Group>
                   </Stack>
-
                   <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
-
                   <Group gap={6}>
-                    <Button
-                      flex={1}
-                      leftSection={<IconEdit size={12} />}
-                      onClick={() => openPlanBuilder(plan)}
-                      size="xs"
-                      variant="light"
-                      radius="md"
-                      styles={{ root: { height: 28 } }}
-                    >
-                      Editar
-                    </Button>
-                    <ActionIcon 
-                      color="blue" 
-                      variant="light"
-                      radius="md"
-                      size="sm"
-                      onClick={() => navigate(`/nutrition/${plan.id}`)}
-                    >
-                      <IconEye size={14} />
-                    </ActionIcon>
-                    <ActionIcon
-                      color="gray"
-                      loading={createMealPlan.isPending}
-                      onClick={() => handleDuplicatePlan(plan)}
-                      variant="light"
-                      radius="md"
-                      size="sm"
-                    >
-                      <IconCopy size={14} />
-                    </ActionIcon>
-                    <ActionIcon
-                      color="red"
-                      loading={deleteMealPlan.isPending}
-                      onClick={() => handleDeletePlan(plan.id, plan.name)}
-                      variant="light"
-                      radius="md"
-                      size="sm"
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
+                    <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => openPlanBuilder(plan)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>Editar</Button>
+                    <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => navigate(`/nutrition/${plan.id}`)}><IconEye size={14} /></ActionIcon>
+                    <ActionIcon color="gray" loading={createMealPlan.isPending} onClick={() => handleDuplicatePlan(plan)} variant="light" radius="md" size="sm"><IconCopy size={14} /></ActionIcon>
+                    <ActionIcon color="red" loading={deleteMealPlan.isPending} onClick={() => handleDeletePlan(plan.id, plan.name)} variant="light" radius="md" size="sm"><IconTrash size={14} /></ActionIcon>
+                  </Group>
+                </Box>
+              ))}
+            </SimpleGrid>
+          ) : (
+            <EmptyState
+              actionLabel="Crear Plantilla"
+              description="Crea tu primera plantilla nutricional reutilizable para asignarla a tus clientes."
+              icon={<IconTemplate size={36} />}
+              onAction={() => { setIsTemplateModeOn(true); openPlanBuilder(); }}
+              title="No hay plantillas"
+            />
+          )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="plans">
+          {isLoadingPlans ? (
+            <Center py="xl"><Loader size="md" /></Center>
+          ) : clientPlans.length > 0 ? (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
+              {clientPlans.map((plan: any) => (
+                <Box key={plan.id} className="nv-card" p="md">
+                  <Group justify="space-between" mb="sm">
+                    <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{plan.name}</Text>
+                    <Group gap={4}>
+                      {plan.is_active && <Badge color="green" variant="filled" radius="md" size="xs">Activo</Badge>}
+                      <Badge color="blue" variant="light" radius="md" size="xs">{plan.duration_days}d</Badge>
+                    </Group>
+                  </Group>
+                  <Text c="dimmed" lineClamp={2} size="xs">{plan.description || "Sin descripción"}</Text>
+                  {plan.client_name && (
+                    <Badge color="blue" mt="xs" size="xs" variant="outline" radius="md">{plan.client_name}</Badge>
+                  )}
+                  <Stack gap={4} mt="sm">
+                    <Group justify="space-between">
+                      <Text c="dimmed" size="xs">Calorías</Text>
+                      <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>{plan.target_calories} kcal</Text>
+                    </Group>
+                    <Group gap={4}>
+                      <Badge color="green" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>P:{plan.target_protein}g</Badge>
+                      <Badge color="orange" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>C:{plan.target_carbs}g</Badge>
+                      <Badge color="grape" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>G:{plan.target_fat}g</Badge>
+                    </Group>
+                  </Stack>
+                  <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
+                  <Group gap={6}>
+                    <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => openPlanBuilder(plan)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>Editar</Button>
+                    <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => navigate(`/nutrition/${plan.id}`)}><IconEye size={14} /></ActionIcon>
+                    <ActionIcon color="gray" loading={createMealPlan.isPending} onClick={() => handleDuplicatePlan(plan)} variant="light" radius="md" size="sm"><IconCopy size={14} /></ActionIcon>
+                    <ActionIcon color="red" loading={deleteMealPlan.isPending} onClick={() => handleDeletePlan(plan.id, plan.name)} variant="light" radius="md" size="sm"><IconTrash size={14} /></ActionIcon>
                   </Group>
                 </Box>
               ))}
@@ -950,10 +1006,63 @@ export function NutritionPage() {
           ) : (
             <EmptyState
               actionLabel="Crear Plan"
-              description="Crea tu primer plan nutricional para asignarlo a tus clientes."
-              icon={<IconTemplate size={36} />}
-              onAction={() => openPlanBuilder()}
-              title="No hay planes nutricionales"
+              description="Crea un plan nutricional personalizado para un cliente."
+              icon={<IconUsers size={36} />}
+              onAction={() => { setIsTemplateModeOn(false); openPlanBuilder(); }}
+              title="No hay planes de clientes"
+            />
+          )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="recipes">
+          {isLoadingRecipes ? (
+            <Center py="xl"><Loader size="md" /></Center>
+          ) : recipes.length > 0 ? (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
+              {recipes.map((recipe: any) => (
+                <Box key={recipe.id} className="nv-card" p="md">
+                  <Group justify="space-between" mb="sm">
+                    <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{recipe.name}</Text>
+                    <Badge color="teal" variant="light" radius="md" size="xs">{recipe.items?.length || 0} items</Badge>
+                  </Group>
+                  {recipe.description && <Text c="dimmed" lineClamp={2} size="xs">{recipe.description}</Text>}
+                  <Group gap={4} mt="sm">
+                    <Badge color="blue" size="xs" variant="light" radius="md">{Math.round(recipe.total_calories || 0)} kcal</Badge>
+                    <Badge color="green" size="xs" variant="light" radius="md">P:{Math.round(recipe.total_protein || 0)}g</Badge>
+                    <Badge color="orange" size="xs" variant="light" radius="md">C:{Math.round(recipe.total_carbs || 0)}g</Badge>
+                    <Badge color="grape" size="xs" variant="light" radius="md">G:{Math.round(recipe.total_fat || 0)}g</Badge>
+                  </Group>
+                  <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
+                  <Group gap={6}>
+                    <Button
+                      flex={1}
+                      leftSection={<IconEdit size={12} />}
+                      onClick={() => {
+                        setEditingRecipe(recipe);
+                        recipeForm.setValues({ name: recipe.name, description: recipe.description || "", items: recipe.items || [] });
+                        openRecipeModal();
+                      }}
+                      size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}
+                    >Editar</Button>
+                    <ActionIcon
+                      color="red" loading={deleteRecipeMutation.isPending}
+                      onClick={async () => {
+                        await deleteRecipeMutation.mutateAsync(recipe.id);
+                        notifications.show({ title: "Receta eliminada", message: recipe.name, color: "green" });
+                      }}
+                      variant="light" radius="md" size="sm"
+                    ><IconTrash size={14} /></ActionIcon>
+                  </Group>
+                </Box>
+              ))}
+            </SimpleGrid>
+          ) : (
+            <EmptyState
+              actionLabel="Crear Receta"
+              description="Crea recetas reutilizables combinando alimentos y suplementos."
+              icon={<IconToolsKitchen2 size={36} />}
+              onAction={() => { setEditingRecipe(null); recipeForm.reset(); openRecipeModal(); }}
+              title="No hay recetas"
             />
           )}
         </Tabs.Panel>
@@ -2330,26 +2439,45 @@ export function NutritionPage() {
                   Configuración
                 </Text>
 
-                <Select
-                  label="Asignar a cliente"
-                  placeholder="Buscar cliente..."
-                  data={clientOptions}
-                  searchable
-                  clearable
-                  radius="md"
-                  size="sm"
-                  leftSection={<IconUser size={14} />}
-                  value={selectedClientId}
-                  onChange={(value) => {
-                    setSelectedClientId(value);
-                    if (value) {
-                      loadClientData(value);
-                    } else {
+                <Switch
+                  label="Guardar como plantilla reutilizable"
+                  description="Las plantillas se pueden asignar a múltiples clientes"
+                  checked={isTemplateModeOn}
+                  onChange={(e) => {
+                    setIsTemplateModeOn(e.currentTarget.checked);
+                    if (e.currentTarget.checked) {
+                      setSelectedClientId(null);
                       setSelectedClient(null);
                       planForm.setFieldValue("client_id", null);
                     }
                   }}
+                  size="sm"
+                  color="teal"
+                  disabled={!!clientId}
                 />
+
+                {!isTemplateModeOn && (
+                  <Select
+                    label="Asignar a cliente"
+                    placeholder="Buscar cliente..."
+                    data={clientOptions}
+                    searchable
+                    clearable
+                    radius="md"
+                    size="sm"
+                    leftSection={<IconUser size={14} />}
+                    value={selectedClientId}
+                    onChange={(value) => {
+                      setSelectedClientId(value);
+                      if (value) {
+                        loadClientData(value);
+                      } else {
+                        setSelectedClient(null);
+                        planForm.setFieldValue("client_id", null);
+                      }
+                    }}
+                  />
+                )}
 
                 <TextInput
                   label="Nombre del plan"
@@ -2463,6 +2591,7 @@ export function NutritionPage() {
                   supplementFavorites={supplementFavorites}
                   onToggleFoodFavorite={handleToggleFoodFavoriteForBuilder}
                   onToggleSupplementFavorite={handleToggleSupplementFavoriteForBuilder}
+                  recipes={recipes}
                 />
               </Box>
             </ScrollArea>
@@ -2767,6 +2896,205 @@ export function NutritionPage() {
             </Stack>
           </form>
         )}
+      </Modal>
+      {/* Recipe Modal */}
+      <Modal
+        opened={recipeModalOpened}
+        onClose={() => { closeRecipeModal(); setEditingRecipe(null); recipeForm.reset(); setRecipeFoodSearch(""); }}
+        title={editingRecipe ? "Editar Receta" : "Nueva Receta"}
+        size="xl"
+        radius="lg"
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Nombre de la receta"
+            placeholder="Ej: Tortitas de avena y plátano"
+            required
+            radius="md"
+            {...recipeForm.getInputProps("name")}
+          />
+          <Textarea
+            label="Descripción"
+            placeholder="Descripción opcional..."
+            radius="md"
+            minRows={2}
+            {...recipeForm.getInputProps("description")}
+          />
+          <Divider label="Ingredientes de la receta" />
+          {recipeForm.values.items.length > 0 ? (
+            <Stack gap="xs">
+              {recipeForm.values.items.map((item: any, idx: number) => {
+                const ratio = (item.quantity_grams || 100) / 100;
+                return (
+                  <Group key={idx} justify="space-between" p="xs" style={{ border: "1px solid var(--nv-border)", borderRadius: 8 }}>
+                    <Box style={{ flex: 1 }}>
+                      <Group gap={4}>
+                        <Text size="sm" fw={500}>{item.name}</Text>
+                        <Badge size="xs" variant="light" color={item.type === "supplement" ? "grape" : "blue"}>
+                          {item.type === "supplement" ? "Supl." : "Alim."}
+                        </Badge>
+                      </Group>
+                      <Text size="xs" c="dimmed">
+                        {Math.round((item.calories || 0) * ratio)} kcal · P:{Math.round((item.protein || 0) * ratio)}g · C:{Math.round((item.carbs || 0) * ratio)}g · G:{Math.round((item.fat || 0) * ratio)}g
+                      </Text>
+                    </Box>
+                    <NumberInput
+                      size="xs"
+                      w={80}
+                      min={1}
+                      value={item.quantity_grams}
+                      onChange={(v) => {
+                        const items = [...recipeForm.values.items];
+                        items[idx] = { ...items[idx], quantity_grams: Number(v) || 1 };
+                        recipeForm.setFieldValue("items", items);
+                      }}
+                      suffix="g"
+                      radius="md"
+                    />
+                    <ActionIcon color="red" variant="subtle" onClick={() => {
+                      recipeForm.setFieldValue("items", recipeForm.values.items.filter((_: any, i: number) => i !== idx));
+                    }}><IconTrash size={14} /></ActionIcon>
+                  </Group>
+                );
+              })}
+            </Stack>
+          ) : (
+            <Text c="dimmed" size="sm" ta="center" py="md">No hay ingredientes. Busca alimentos o suplementos abajo.</Text>
+          )}
+
+          <Divider label="Buscar y añadir" />
+          <Tabs defaultValue="foods">
+            <Tabs.List mb="sm">
+              <Tabs.Tab value="foods" leftSection={<IconApple size={14} />}>Alimentos</Tabs.Tab>
+              <Tabs.Tab value="supplements" leftSection={<IconPill size={14} />}>Suplementos</Tabs.Tab>
+            </Tabs.List>
+            <Tabs.Panel value="foods">
+              <TextInput
+                leftSection={<IconSearch size={14} />}
+                placeholder="Buscar alimento..."
+                value={recipeFoodSearch}
+                onChange={(e) => setRecipeFoodSearch(e.target.value)}
+                radius="md"
+                size="sm"
+                mb="sm"
+              />
+              <ScrollArea h={200}>
+                {recipeFoodSearchResults.length > 0 ? (
+                  <Stack gap={4}>
+                    {recipeFoodSearchResults.map((food: any) => (
+                      <Group
+                        key={food.id}
+                        p="xs"
+                        style={{ cursor: "pointer", borderRadius: 8, border: "1px solid transparent" }}
+                        className="nv-card"
+                        onClick={() => {
+                          recipeForm.setFieldValue("items", [
+                            ...recipeForm.values.items,
+                            {
+                              food_id: food.id,
+                              name: food.name,
+                              type: "food",
+                              quantity_grams: 100,
+                              calories: food.calories || 0,
+                              protein: food.protein_g || 0,
+                              carbs: food.carbs_g || 0,
+                              fat: food.fat_g || 0,
+                            },
+                          ]);
+                          setRecipeFoodSearch("");
+                        }}
+                      >
+                        <Box style={{ flex: 1 }}>
+                          <Text size="sm" fw={500}>{food.name}</Text>
+                          <Text size="xs" c="dimmed">{food.calories} kcal/100g · P:{food.protein_g}g C:{food.carbs_g}g G:{food.fat_g}g</Text>
+                        </Box>
+                      </Group>
+                    ))}
+                  </Stack>
+                ) : recipeFoodSearch ? (
+                  <Text c="dimmed" size="xs" ta="center" py="md">Sin resultados para "{recipeFoodSearch}"</Text>
+                ) : (
+                  <Text c="dimmed" size="xs" ta="center" py="md">Escribe para buscar alimentos...</Text>
+                )}
+              </ScrollArea>
+            </Tabs.Panel>
+            <Tabs.Panel value="supplements">
+              <ScrollArea h={200}>
+                {supplements.length > 0 ? (
+                  <Stack gap={4}>
+                    {supplements.map((supp: any) => (
+                      <Group
+                        key={supp.id}
+                        p="xs"
+                        style={{ cursor: "pointer", borderRadius: 8 }}
+                        className="nv-card"
+                        onClick={() => {
+                          recipeForm.setFieldValue("items", [
+                            ...recipeForm.values.items,
+                            {
+                              food_id: supp.id,
+                              name: supp.name,
+                              type: "supplement",
+                              quantity_grams: Number(supp.serving_size) || 30,
+                              calories: 0, protein: 0, carbs: 0, fat: 0,
+                            },
+                          ]);
+                        }}
+                      >
+                        <Box style={{ flex: 1 }}>
+                          <Text size="sm" fw={500}>{supp.name}</Text>
+                          <Text size="xs" c="dimmed">{supp.brand || "Sin marca"} · {supp.serving_size}{supp.serving_unit || "g"}</Text>
+                        </Box>
+                      </Group>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text c="dimmed" size="xs" ta="center" py="md">No hay suplementos registrados.</Text>
+                )}
+              </ScrollArea>
+            </Tabs.Panel>
+          </Tabs>
+
+          <Divider />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => { closeRecipeModal(); setEditingRecipe(null); }}>Cancelar</Button>
+            <Button
+              loading={createRecipeMutation.isPending || updateRecipeMutation.isPending}
+              onClick={async () => {
+                if (!recipeForm.values.name) return;
+                const items = recipeForm.values.items;
+                const totals = items.reduce((acc: any, i: any) => {
+                  const r = (i.quantity_grams || 100) / 100;
+                  return {
+                    calories: acc.calories + (i.calories || 0) * r,
+                    protein: acc.protein + (i.protein || 0) * r,
+                    carbs: acc.carbs + (i.carbs || 0) * r,
+                    fat: acc.fat + (i.fat || 0) * r,
+                  };
+                }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+                const data = {
+                  name: recipeForm.values.name,
+                  description: recipeForm.values.description,
+                  items,
+                  total_calories: Math.round(totals.calories),
+                  total_protein: Math.round(totals.protein),
+                  total_carbs: Math.round(totals.carbs),
+                  total_fat: Math.round(totals.fat),
+                };
+                if (editingRecipe) {
+                  await updateRecipeMutation.mutateAsync({ id: editingRecipe.id, ...data });
+                  notifications.show({ title: "Receta actualizada", message: data.name, color: "green", icon: <IconCheck size={16} /> });
+                } else {
+                  await createRecipeMutation.mutateAsync(data);
+                  notifications.show({ title: "Receta creada", message: data.name, color: "green", icon: <IconCheck size={16} /> });
+                }
+                closeRecipeModal();
+                setEditingRecipe(null);
+                recipeForm.reset();
+              }}
+            >{editingRecipe ? "Guardar Cambios" : "Crear Receta"}</Button>
+          </Group>
+        </Stack>
       </Modal>
     </Container>
   );

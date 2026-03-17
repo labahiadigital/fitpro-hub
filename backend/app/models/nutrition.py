@@ -256,3 +256,27 @@ class FoodFavorite(BaseModel):
     
     def __repr__(self):
         return f"<FoodFavorite user={self.user_id} food={self.food_id}>"
+
+
+class Recipe(BaseModel):
+    """Reusable recipe composed of foods and supplements."""
+    
+    __tablename__ = "recipes"
+    
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    name = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
+    
+    # Items in the recipe: [{"food_id": "...", "quantity_grams": 100, "name": "...", "type": "food"|"supplement"}]
+    items = Column(JSONB, default=lambda: [])
+    
+    # Aggregated macros (cached, computed from items)
+    total_calories = Column(Numeric, default=0)
+    total_protein = Column(Numeric, default=0)
+    total_carbs = Column(Numeric, default=0)
+    total_fat = Column(Numeric, default=0)
+    
+    def __repr__(self):
+        return f"<Recipe {self.name}>"
