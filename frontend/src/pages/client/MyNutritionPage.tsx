@@ -20,6 +20,7 @@ import {
   Select,
   ActionIcon,
   Checkbox,
+  Menu,
   Tabs,
   Accordion,
 } from "@mantine/core";
@@ -27,9 +28,11 @@ import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconApple,
+  IconArrowsExchange,
   IconCalendarEvent,
   IconCheck,
   IconCoffee,
+  IconDotsVertical,
   IconFlame,
   IconHistory,
   IconPlus,
@@ -495,6 +498,7 @@ export function MyNutritionPage() {
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
   const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
   const [selectedWeekDayIndex, setSelectedWeekDayIndex] = useState<number | null>(null);
+  const [mealDayOverrides, setMealDayOverrides] = useState<Record<string, number>>({});
   
   // Hooks para datos reales del backend
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
@@ -1088,6 +1092,9 @@ export function MyNutritionPage() {
                         
                         const MealIcon = mealType?.icon || IconSalad;
                         
+                        const mealKey = `${selectedWeekDayIndex}-${mealIndex}`;
+                        const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                        
                         return (
                           <Card key={mealIndex} padding="md" radius="md" withBorder>
                             <Group justify="space-between">
@@ -1110,8 +1117,37 @@ export function MyNutritionPage() {
                                 <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
                                 <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
                                 <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                                <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+                                  <Menu.Target>
+                                    <ActionIcon variant="subtle" color="gray" size="sm">
+                                      <IconDotsVertical size={14} />
+                                    </ActionIcon>
+                                  </Menu.Target>
+                                  <Menu.Dropdown>
+                                    <Menu.Label>Mover a</Menu.Label>
+                                    {dayLabels.map((targetDay, targetIndex) => {
+                                      if (targetIndex === selectedWeekDayIndex) return null;
+                                      return (
+                                        <Menu.Item
+                                          key={targetIndex}
+                                          leftSection={<IconArrowsExchange size={14} />}
+                                          onClick={() => {
+                                            setMealDayOverrides((prev) => ({ ...prev, [mealKey]: targetIndex }));
+                                          }}
+                                        >
+                                          {targetDay}
+                                        </Menu.Item>
+                                      );
+                                    })}
+                                  </Menu.Dropdown>
+                                </Menu>
                               </Group>
                             </Group>
+                            {mealDayOverrides[mealKey] !== undefined && (
+                              <Badge variant="light" color="blue" size="xs" mt="xs">
+                                Movida a {dayLabels[mealDayOverrides[mealKey]]}
+                              </Badge>
+                            )}
                             {mealFoods.length > 0 && (
                               <Stack gap="xs" mt="sm" ml={54}>
                                 {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (

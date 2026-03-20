@@ -9,6 +9,7 @@ import {
   Group,
   Menu,
   Modal,
+  MultiSelect,
   Select,
   SimpleGrid,
   Stack,
@@ -34,8 +35,15 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
-import { useTeamMembers } from "../../hooks/useTeam";
+import {
+  useTeamMembers,
+  useInviteTeamMember,
+  useUpdateMemberPermissions,
+  useRemoveTeamMember,
+  useResendInvitation,
+} from "../../hooks/useTeam";
 import { useAuthStore } from "../../stores/auth";
+import { useClients } from "../../hooks/useClients";
 
 interface TeamMember {
   id: string;
@@ -51,6 +59,7 @@ interface TeamMember {
     reports: boolean;
     settings: boolean;
   };
+  assigned_clients?: string[];
   stats: {
     clients: number;
     sessionsThisMonth: number;
@@ -81,13 +90,21 @@ export function TeamPage() {
     useDisclosure(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
-  // Fetch real data
   const { data: teamMembersData = [] } = useTeamMembers();
   const { user } = useAuthStore();
+  const { data: clientsData } = useClients({ page_size: 200 });
+  const clientOptions = (clientsData?.items || []).map((c) => ({
+    value: c.id,
+    label: c.full_name || `${c.first_name} ${c.last_name}`,
+  }));
+  const inviteMutation = useInviteTeamMember();
+  const updatePermissionsMutation = useUpdateMemberPermissions();
+  const removeMemberMutation = useRemoveTeamMember();
+  const resendMutation = useResendInvitation();
   
   // Transform API data to TeamMember format
   const teamMembers: TeamMember[] = teamMembersData.length > 0 
-    ? teamMembersData.map((m: { id: string; full_name?: string; name?: string; email: string; role: string; is_active: boolean; permissions?: { clients?: boolean; calendar?: boolean; payments?: boolean; reports?: boolean; settings?: boolean } }) => ({
+    ? teamMembersData.map((m: { id: string; full_name?: string; name?: string; email: string; role: string; is_active: boolean; permissions?: { clients?: boolean; calendar?: boolean; payments?: boolean; reports?: boolean; settings?: boolean }; assigned_clients?: string[] }) => ({
         id: m.id,
         name: m.full_name || m.name || m.email,
         email: m.email,
@@ -100,6 +117,7 @@ export function TeamPage() {
           reports: m.permissions?.reports ?? (m.role === "owner"),
           settings: m.permissions?.settings ?? (m.role === "owner"),
         },
+        assigned_clients: m.assigned_clients || [],
         stats: { clients: 0, sessionsThisMonth: 0, revenue: 0 },
       }))
     : [{
@@ -129,6 +147,7 @@ export function TeamPage() {
         reports: false,
         settings: false,
       },
+      assigned_clients: [] as string[],
     },
   });
 
@@ -136,8 +155,15 @@ export function TeamPage() {
   const activeMembers = teamMembers.filter((m) => m.status === "active").length;
   const totalRevenue = teamMembers.reduce((sum, m) => sum + m.stats.revenue, 0);
 
+  const [editRole, setEditRole] = useState<string>("");
+  const [editPermissions, setEditPermissions] = useState<Record<string, boolean>>({});
+  const [editAssignedClients, setEditAssignedClients] = useState<string[]>([]);
+
   const handleEditMember = (member: TeamMember) => {
     setSelectedMember(member);
+    setEditRole(member.role);
+    setEditPermissions({ ...member.permissions });
+    setEditAssignedClients(member.assigned_clients || []);
     openEditModal();
   };
 
@@ -344,7 +370,10 @@ export function TeamPage() {
                       Editar Permisos
                     </Menu.Item>
                     {member.status === "pending" && (
-                      <Menu.Item leftSection={<IconMail size={14} />}>
+                      <Menu.Item
+                        leftSection={<IconMail size={14} />}
+                        onClick={() => resendMutation.mutate({ email: member.email, role: member.role })}
+                      >
                         Reenviar Invitación
                       </Menu.Item>
                     )}
@@ -354,6 +383,11 @@ export function TeamPage() {
                         <Menu.Item
                           color="red"
                           leftSection={<IconTrash size={14} />}
+                          onClick={() => {
+                            if (confirm(`¿Eliminar a ${member.name} del equipo?`)) {
+                              removeMemberMutation.mutate(member.id);
+                            }
+                          }}
                         >
                           Eliminar del Equipo
                         </Menu.Item>
@@ -379,8 +413,16 @@ export function TeamPage() {
         }}
       >
         <form
-          onSubmit={inviteForm.onSubmit((_values) => {
-            closeInviteModal();
+          onSubmit={inviteForm.onSubmit((values) => {
+            inviteMutation.mutate(
+              { email: values.email, role: values.role, send_email: true },
+              {
+                onSuccess: () => {
+                  closeInviteModal();
+                  inviteForm.reset();
+                },
+              }
+            );
           })}
         >
           <Stack>
@@ -437,11 +479,21 @@ export function TeamPage() {
                 })}
               />
             </Stack>
+            <Divider label="Visibilidad de Clientes" labelPosition="center" />
+            <MultiSelect
+              data={clientOptions}
+              label="Clientes asignados"
+              description="Selecciona qué clientes podrá ver este miembro. Vacío = todos."
+              placeholder="Todos los clientes"
+              searchable
+              clearable
+              {...inviteForm.getInputProps("assigned_clients")}
+            />
             <Group justify="flex-end" mt="md">
               <Button onClick={closeInviteModal} variant="default">
                 Cancelar
               </Button>
-              <Button leftSection={<IconMail size={14} />} type="submit" className="nv-button">
+              <Button leftSection={<IconMail size={14} />} type="submit" className="nv-button" loading={inviteMutation.isPending}>
                 Enviar Invitación
               </Button>
             </Group>
@@ -470,41 +522,70 @@ export function TeamPage() {
               ]}
               disabled={selectedMember.role === "owner"}
               label="Rol"
-              value={selectedMember.role}
+              value={editRole}
+              onChange={(v) => v && setEditRole(v)}
             />
             <Divider label="Permisos" labelPosition="center" />
             <Stack gap="xs">
               <Switch
-                checked={selectedMember.permissions.clients}
+                checked={editPermissions.clients ?? true}
                 disabled={selectedMember.role === "owner"}
                 label="Gestión de Clientes"
+                onChange={(e) => setEditPermissions(p => ({ ...p, clients: e.currentTarget.checked }))}
               />
               <Switch
-                checked={selectedMember.permissions.calendar}
+                checked={editPermissions.calendar ?? true}
                 disabled={selectedMember.role === "owner"}
                 label="Calendario"
+                onChange={(e) => setEditPermissions(p => ({ ...p, calendar: e.currentTarget.checked }))}
               />
               <Switch
-                checked={selectedMember.permissions.payments}
+                checked={editPermissions.payments ?? false}
                 disabled={selectedMember.role === "owner"}
                 label="Pagos"
+                onChange={(e) => setEditPermissions(p => ({ ...p, payments: e.currentTarget.checked }))}
               />
               <Switch
-                checked={selectedMember.permissions.reports}
+                checked={editPermissions.reports ?? false}
                 disabled={selectedMember.role === "owner"}
                 label="Reportes"
+                onChange={(e) => setEditPermissions(p => ({ ...p, reports: e.currentTarget.checked }))}
               />
               <Switch
-                checked={selectedMember.permissions.settings}
+                checked={editPermissions.settings ?? false}
                 disabled={selectedMember.role === "owner"}
                 label="Configuración"
+                onChange={(e) => setEditPermissions(p => ({ ...p, settings: e.currentTarget.checked }))}
               />
             </Stack>
+            <Divider label="Visibilidad de Clientes" labelPosition="center" />
+            <MultiSelect
+              data={clientOptions}
+              label="Clientes asignados"
+              description="Selecciona qué clientes podrá ver este miembro. Vacío = todos."
+              placeholder="Todos los clientes"
+              searchable
+              clearable
+              value={editAssignedClients}
+              onChange={setEditAssignedClients}
+              disabled={selectedMember.role === "owner"}
+            />
             <Group justify="flex-end" mt="md">
               <Button onClick={closeEditModal} variant="default">
                 Cancelar
               </Button>
-              <Button onClick={closeEditModal} className="nv-button">Guardar Cambios</Button>
+              <Button
+                className="nv-button"
+                loading={updatePermissionsMutation.isPending}
+                onClick={() => {
+                  updatePermissionsMutation.mutate(
+                    { userId: selectedMember.id, role: editRole, permissions: editPermissions, assigned_clients: editAssignedClients },
+                    { onSuccess: () => closeEditModal() }
+                  );
+                }}
+              >
+                Guardar Cambios
+              </Button>
             </Group>
           </Stack>
         )}

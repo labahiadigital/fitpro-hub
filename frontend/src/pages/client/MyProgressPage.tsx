@@ -36,7 +36,7 @@ import {
   IconTrendingDown,
   IconUpload,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos } from "../../hooks/useClientPortal";
 
 function StatProgress({ 
@@ -408,7 +408,43 @@ export function MyProgressPage() {
   const uploadPhotoMutation = useUploadProgressPhoto();
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [photoModalOpened, { open: openPhotoModal, close: closePhotoModal }] = useDisclosure(false);
-  const [selectedComparison, setSelectedComparison] = useState<number>(1); // Index of measurement to compare with
+  const [enlargedPhoto, setEnlargedPhoto] = useState<{ url: string; type: string; date?: string } | null>(null);
+  const [enlargeOpened, { open: openEnlarge, close: closeEnlarge }] = useDisclosure(false);
+  const [selectedComparison, setSelectedComparison] = useState<number>(1);
+
+  const photosByDate = useMemo(() => {
+    if (!photos || photos.length === 0) return [];
+    const groups: Record<string, typeof photos> = {};
+    for (const photo of photos) {
+      const rawDate = photo.measurement_date || photo.uploaded_at || "";
+      const dateKey = rawDate.split("T")[0] || "sin-fecha";
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(photo);
+    }
+    return Object.entries(groups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([dateKey, items]) => ({
+        dateKey,
+        label:
+          dateKey === "sin-fecha"
+            ? "Sin fecha"
+            : new Date(dateKey + "T12:00:00").toLocaleDateString("es-ES", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+        photos: items,
+      }));
+  }, [photos]);
+
+  const handlePhotoClick = (photo: { url: string; type: string; measurement_date?: string; uploaded_at?: string }) => {
+    setEnlargedPhoto({
+      url: photo.url,
+      type: photo.type,
+      date: photo.measurement_date || photo.uploaded_at,
+    });
+    openEnlarge();
+  };
 
   if (isLoadingSummary) {
     return (
@@ -926,53 +962,67 @@ export function MyProgressPage() {
                 Subir foto
               </Button>
             </Group>
-            <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }}>
-              {photos.map((photo, index) => (
-                <Card key={index} padding="xs" radius="md" withBorder>
-                  <Card.Section>
-                    <Image
-                      src={photo.url}
-                      height={180}
-                      alt={`Foto ${photo.type}`}
-                      fallbackSrc="https://placehold.co/200x180?text=Foto"
-                    />
-                  </Card.Section>
-                  <Stack gap={2} mt="xs">
-                    <Badge size="xs" variant="light" color="yellow">
-                      {photo.type === "front" ? "Frontal" : 
-                       photo.type === "back" ? "Espalda" : 
-                       photo.type === "side" ? "Lateral" : photo.type}
-                    </Badge>
-                    <Text size="xs" c="dimmed">
-                      {photo.measurement_date 
-                        ? new Date(photo.measurement_date).toLocaleDateString("es-ES")
-                        : photo.uploaded_at 
-                          ? new Date(photo.uploaded_at).toLocaleDateString("es-ES")
-                          : "Sin fecha"}
+
+            {photosByDate.length > 0 ? (
+              <Stack gap="xl">
+                {photosByDate.map((group) => (
+                  <Box key={group.dateKey}>
+                    <Text fw={600} size="sm" c="dimmed" mb="sm" tt="capitalize">
+                      {group.label}
                     </Text>
-                  </Stack>
-                </Card>
-              ))}
-              <Paper 
-                h={220} 
-                radius="md" 
-                withBorder
-                style={{ 
-                  background: "var(--mantine-color-yellow-light)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-                onClick={openPhotoModal}
-              >
-                <ThemeIcon size="xl" color="yellow" variant="light" radius="xl">
-                  <IconPlus size={24} />
-                </ThemeIcon>
-                <Text size="sm" fw={500} mt="xs">Subir nueva foto</Text>
-              </Paper>
-            </SimpleGrid>
+                    <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }}>
+                      {group.photos.map((photo, index) => (
+                        <Card
+                          key={index}
+                          padding="xs"
+                          radius="md"
+                          withBorder
+                          style={{ cursor: "pointer" }}
+                          onClick={() => handlePhotoClick(photo)}
+                        >
+                          <Card.Section>
+                            <Image
+                              src={photo.url}
+                              height={180}
+                              alt={`Foto ${photo.type}`}
+                              fallbackSrc="https://placehold.co/200x180?text=Foto"
+                            />
+                          </Card.Section>
+                          <Stack gap={2} mt="xs">
+                            <Badge size="xs" variant="light" color="yellow">
+                              {photo.type === "front" ? "Frontal" : 
+                               photo.type === "back" ? "Espalda" : 
+                               photo.type === "side" ? "Lateral" : photo.type}
+                            </Badge>
+                          </Stack>
+                        </Card>
+                      ))}
+                    </SimpleGrid>
+                  </Box>
+                ))}
+              </Stack>
+            ) : null}
+
+            <Paper 
+              h={120} 
+              radius="md" 
+              withBorder
+              mt="lg"
+              style={{ 
+                background: "var(--mantine-color-yellow-light)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+              onClick={openPhotoModal}
+            >
+              <ThemeIcon size="xl" color="yellow" variant="light" radius="xl">
+                <IconPlus size={24} />
+              </ThemeIcon>
+              <Text size="sm" fw={500} mt="xs">Subir nueva foto</Text>
+            </Paper>
           </Card>
         </Tabs.Panel>
       </Tabs>
@@ -992,6 +1042,41 @@ export function MyProgressPage() {
         onUpload={handleUploadPhoto}
         isLoading={uploadPhotoMutation.isPending}
       />
+
+      {/* Modal para ampliar foto */}
+      <Modal
+        opened={enlargeOpened}
+        onClose={closeEnlarge}
+        size="xl"
+        title={
+          enlargedPhoto
+            ? `Foto ${enlargedPhoto.type === "front" ? "Frontal" : enlargedPhoto.type === "back" ? "Espalda" : enlargedPhoto.type === "side" ? "Lateral" : enlargedPhoto.type}`
+            : "Foto"
+        }
+        centered
+      >
+        {enlargedPhoto && (
+          <Stack align="center" gap="md">
+            <Image
+              src={enlargedPhoto.url}
+              alt={`Foto ${enlargedPhoto.type}`}
+              radius="md"
+              fit="contain"
+              mah="70vh"
+              fallbackSrc="https://placehold.co/600x800?text=Foto"
+            />
+            {enlargedPhoto.date && (
+              <Text size="sm" c="dimmed">
+                {new Date(enlargedPhoto.date).toLocaleDateString("es-ES", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </Text>
+            )}
+          </Stack>
+        )}
+      </Modal>
     </Box>
   );
 }

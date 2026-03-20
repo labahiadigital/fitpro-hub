@@ -1172,7 +1172,6 @@ async def upload_progress_photo(
     """Upload a progress photo. Returns the photo URL."""
     client = await get_client_for_user(current_user.id, db)
     
-    # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -1180,35 +1179,35 @@ async def upload_progress_photo(
             detail=f"File type {file.content_type} not allowed. Use JPEG, PNG, or WebP."
         )
     
-    # Generate unique filename
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
     ext = file.filename.split(".")[-1] if file.filename else "jpg"
     unique_id = str(uuid_module.uuid4())
-    filename = f"progress-photos/{client.id}/{unique_id}.{ext}"
+    storage_path = f"{client.id}/{unique_id}.{ext}"
     
     try:
-        # Initialize Supabase client (async)
         supabase = await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
         
-        # Read file content
         content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El archivo supera el límite de 10 MB"
+            )
         
-        # Upload to Supabase Storage (async method)
         bucket_name = "progress-photos"
         try:
             upload_result = await supabase.storage.from_(bucket_name).upload(
-                path=filename,
+                path=storage_path,
                 file=content,
                 file_options={"content-type": file.content_type, "upsert": "true"}
             )
         except Exception as upload_err:
-            # If bucket doesn't exist or other error, try alternative approach
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Storage upload failed: {str(upload_err)}"
             )
         
-        # Build public URL manually (sync, doesn't need await)
-        public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{filename}"
+        public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
         
         # Create a photo entry (stored in a measurement or separate)
         photo_data = {
@@ -1216,7 +1215,7 @@ async def upload_progress_photo(
             "type": photo_type,
             "notes": notes,
             "uploaded_at": datetime.now().isoformat(),
-            "filename": filename
+            "filename": storage_path
         }
         
         # Get or create today's measurement to attach the photo

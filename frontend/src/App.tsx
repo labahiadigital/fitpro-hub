@@ -36,8 +36,9 @@ const NutritionPage = lazy(() => import("./pages/nutrition/NutritionPage").then(
 const MealPlanDetailPage = lazy(() => import("./pages/nutrition/MealPlanDetailPage").then(m => ({ default: m.MealPlanDetailPage })));
 const SupplementsPage = lazy(() => import("./pages/supplements/SupplementsPage").then(m => ({ default: m.SupplementsPage })));
 const FormsPage = lazy(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
-const PaymentsPage = lazy(() => import("./pages/payments/PaymentsPage").then(m => ({ default: m.PaymentsPage })));
-const PackagesPage = lazy(() => import("./pages/packages/PackagesPage").then(m => ({ default: m.PackagesPage })));
+const CatalogPage = lazy(() => import("./pages/payments/CatalogPage").then(m => ({ default: m.CatalogPage })));
+const BillingPage = lazy(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
+const SuggestionsPage = lazy(() => import("./pages/suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
 const CommunityPage = lazy(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
 const DocumentsPage = lazy(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
 const TeamPage = lazy(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
@@ -228,8 +229,10 @@ export default function App() {
                   <Route element={<TrainerRoute><MealPlanDetailPage /></TrainerRoute>} path="/nutrition/:id" />
                   <Route element={<TrainerRoute><SupplementsPage /></TrainerRoute>} path="/supplements" />
                   <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
-                  <Route element={<TrainerRoute><PaymentsPage /></TrainerRoute>} path="/payments" />
-                  <Route element={<TrainerRoute><PackagesPage /></TrainerRoute>} path="/packages" />
+                  <Route element={<TrainerRoute><CatalogPage /></TrainerRoute>} path="/catalog" />
+                  <Route element={<TrainerRoute><BillingPage /></TrainerRoute>} path="/billing" />
+                  <Route element={<Navigate replace to="/billing" />} path="/payments" />
+                  <Route element={<Navigate replace to="/catalog" />} path="/packages" />
                   <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
                   <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
                   <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
@@ -237,6 +240,7 @@ export default function App() {
                   <Route element={<TrainerRoute><ReportsPage /></TrainerRoute>} path="/reports" />
                   <Route element={<TrainerRoute><LiveClassesPage /></TrainerRoute>} path="/live-classes" />
                   <Route element={<TrainerRoute><SettingsPage /></TrainerRoute>} path="/settings" />
+                  <Route element={<SuggestionsPage />} path="/suggestions" />
                 </Route>
 
                 <Route element={<Navigate replace to="/" />} path="*" />

@@ -221,6 +221,7 @@ export function WorkoutBuilder({
   onCreateExercise,
   alternativesCounts,
 }: WorkoutBuilderProps) {
+  const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>(
     blocks.map((b) => b.id)
   );
@@ -441,6 +442,19 @@ export function WorkoutBuilder({
 
     updateBlock(blockId, {
       exercises: block.exercises.filter((e) => e.id !== exerciseId),
+    });
+  };
+
+  const moveExercise = (blockId: string, exerciseIndex: number, direction: 'up' | 'down') => {
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    const newIndex = direction === 'up' ? exerciseIndex - 1 : exerciseIndex + 1;
+    if (newIndex < 0 || newIndex >= block.exercises.length) return;
+    const exercises = Array.from(block.exercises);
+    const [moved] = exercises.splice(exerciseIndex, 1);
+    exercises.splice(newIndex, 0, moved);
+    updateBlock(blockId, {
+      exercises: exercises.map((e, i) => ({ ...e, order: i })),
     });
   };
 
@@ -692,15 +706,37 @@ export function WorkoutBuilder({
                                             style={{ flex: 1 }}
                                             wrap="nowrap"
                                           >
-                                            <Box
-                                              {...provided.dragHandleProps}
-                                              style={{ cursor: "grab" }}
-                                            >
-                                              <IconGripVertical
-                                                color="var(--mantine-color-gray-4)"
-                                                size={16}
-                                              />
-                                            </Box>
+                                            <Group gap={2} wrap="nowrap">
+                                              <Stack gap={0}>
+                                                <ActionIcon
+                                                  size="xs"
+                                                  variant="subtle"
+                                                  color="gray"
+                                                  disabled={exIndex === 0}
+                                                  onClick={() => moveExercise(block.id, exIndex, 'up')}
+                                                >
+                                                  <IconChevronUp size={12} />
+                                                </ActionIcon>
+                                                <ActionIcon
+                                                  size="xs"
+                                                  variant="subtle"
+                                                  color="gray"
+                                                  disabled={exIndex === block.exercises.length - 1}
+                                                  onClick={() => moveExercise(block.id, exIndex, 'down')}
+                                                >
+                                                  <IconChevronDown size={12} />
+                                                </ActionIcon>
+                                              </Stack>
+                                              <Box
+                                                {...provided.dragHandleProps}
+                                                style={{ cursor: "grab" }}
+                                              >
+                                                <IconGripVertical
+                                                  color="var(--mantine-color-gray-4)"
+                                                  size={16}
+                                                />
+                                              </Box>
+                                            </Group>
                                             {exercise.exercise.image_url ? (
                                               <Image
                                                 src={exercise.exercise.image_url}
@@ -709,6 +745,8 @@ export function WorkoutBuilder({
                                                 h={34}
                                                 fit="cover"
                                                 radius="md"
+                                                onClick={() => setEnlargedImage({url: exercise.exercise.image_url!, name: exercise.exercise.name})}
+                                                style={{cursor: 'pointer'}}
                                               />
                                             ) : (
                                               <ThemeIcon
@@ -1172,6 +1210,11 @@ export function WorkoutBuilder({
             Crear ejercicio nuevo
           </Button>
         )}
+      </Modal>
+
+      {/* Image Enlargement Modal */}
+      <Modal opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} size="lg" title={enlargedImage?.name} centered>
+        {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
       </Modal>
 
       {/* Create Exercise Sub-Modal */}

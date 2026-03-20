@@ -242,6 +242,7 @@ export function WorkoutsPage() {
   
   // Estado para editar ejercicios
   const [editingExercise, setEditingExercise] = useState<any>(null);
+  const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
   
   // Auto-open builder when edit param is in URL
   useEffect(() => {
@@ -763,6 +764,8 @@ export function WorkoutsPage() {
                           h={80}
                           fit="cover"
                           fallbackSrc={undefined}
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }}
+                          style={{cursor: 'pointer'}}
                         />
                       </HoverCard.Target>
                       <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
@@ -883,7 +886,7 @@ export function WorkoutsPage() {
                     {exercise.image_url ? (
                       <HoverCard width={320} shadow="lg" openDelay={300} position="right">
                         <HoverCard.Target>
-                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} />
+                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }} style={{cursor: 'pointer'}} />
                         </HoverCard.Target>
                         <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
                           <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
@@ -994,7 +997,7 @@ export function WorkoutsPage() {
                     {exercise.image_url ? (
                       <HoverCard width={320} shadow="lg" openDelay={300} position="right">
                         <HoverCard.Target>
-                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} />
+                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }} style={{cursor: 'pointer'}} />
                         </HoverCard.Target>
                         <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
                           <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
@@ -1104,7 +1107,7 @@ export function WorkoutsPage() {
                     {exercise.image_url ? (
                       <HoverCard width={320} shadow="lg" openDelay={300} position="right">
                         <HoverCard.Target>
-                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} />
+                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }} style={{cursor: 'pointer'}} />
                         </HoverCard.Target>
                         <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
                           <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
@@ -1481,6 +1484,11 @@ export function WorkoutsPage() {
           </Box>
         </Box>
       </Drawer>
+
+      {/* Image Enlargement Modal */}
+      <Modal opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} size="lg" title={enlargedImage?.name} centered>
+        {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
+      </Modal>
     </Container>
   );
 }

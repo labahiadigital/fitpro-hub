@@ -405,16 +405,14 @@ export function MealPlanBuilder({
 
   const moveMeal = useCallback((mealId: string, direction: "up" | "down") => {
     if (!currentDay) return;
-    const sorted = [...currentDay.meals].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-    const idx = sorted.findIndex((m) => m.id === mealId);
+    const meals = [...currentDay.meals];
+    const idx = meals.findIndex((m) => m.id === mealId);
     if (idx < 0) return;
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= sorted.length) return;
-    const tempTime = sorted[idx].time;
-    sorted[idx] = { ...sorted[idx], time: sorted[swapIdx].time };
-    sorted[swapIdx] = { ...sorted[swapIdx], time: tempTime };
+    if (swapIdx < 0 || swapIdx >= meals.length) return;
+    [meals[idx], meals[swapIdx]] = [meals[swapIdx], meals[idx]];
     onChange(
-      days.map((d) => d.id === activeDay ? { ...d, meals: sorted } : d)
+      days.map((d) => d.id === activeDay ? { ...d, meals } : d)
     );
   }, [activeDay, currentDay, days, onChange]);
 
@@ -536,6 +534,31 @@ export function MealPlanBuilder({
       updateItemQuantityGramsImmediate(mealId, itemId, quantity_grams);
     },
     150
+  );
+
+  const updateItemNotes = useDebouncedCallback(
+    (mealId: string, itemId: string, notes: string) => {
+      onChange(
+        days.map((d) =>
+          d.id === activeDay
+            ? {
+                ...d,
+                meals: d.meals.map((m) =>
+                  m.id === mealId
+                    ? {
+                        ...m,
+                        items: m.items.map((i) =>
+                          i.id === itemId ? { ...i, notes } : i
+                        ),
+                      }
+                    : m
+                ),
+              }
+            : d
+        )
+      );
+    },
+    300
   );
 
   const removeItemFromMeal = useCallback((mealId: string, itemId: string) => {
@@ -975,7 +998,7 @@ export function MealPlanBuilder({
               </Paper>
             ) : (
             <Stack gap="md">
-              {[...currentDay.meals].sort((a, b) => (a.time || "").localeCompare(b.time || "")).map((meal) => {
+              {currentDay.meals.map((meal) => {
                 const mealMacros = calculateMealMacros(meal);
 
                 return (
@@ -1220,7 +1243,7 @@ export function MealPlanBuilder({
                                   </Badge>
                                 </Group>
                               </Group>
-                              <Group gap="xs">
+                              <Group gap="xs" wrap="nowrap">
                                 <NumberInput
                                   value={item.quantity_grams}
                                   onChange={(v) =>
@@ -1237,6 +1260,16 @@ export function MealPlanBuilder({
                                   w={80}
                                   suffix="g"
                                   radius="md"
+                                />
+                                <TextInput
+                                  defaultValue={item.notes || ""}
+                                  placeholder="Notas (ej: 1 pieza, a la plancha...)"
+                                  size="xs"
+                                  w={200}
+                                  radius="md"
+                                  onChange={(e) =>
+                                    updateItemNotes(meal.id, item.id, e.target.value)
+                                  }
                                 />
                                 <Popover width={250} position="bottom" withArrow shadow="md" radius="md">
                                   <Popover.Target>

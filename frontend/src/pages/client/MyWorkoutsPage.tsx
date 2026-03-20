@@ -17,6 +17,7 @@ import {
   Center,
   Loader,
   Modal,
+  Menu,
   NumberInput,
   Textarea,
   Checkbox,
@@ -29,11 +30,13 @@ import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { useState } from "react";
 import {
+  IconArrowsExchange,
   IconBarbell,
   IconCalendarEvent,
   IconCheck,
   IconChevronRight,
   IconClock,
+  IconDotsVertical,
   IconFlame,
   IconPlayerPlay,
   IconRepeat,
@@ -597,6 +600,7 @@ export function MyWorkoutsPage() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [swapModalOpened, { open: openSwapModal, close: closeSwapModal }] = useDisclosure(false);
+  const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
   const [swapTarget, setSwapTarget] = useState<{
     programId: string;
     dayIndex: number;
@@ -703,6 +707,22 @@ export function MyWorkoutsPage() {
       exercises_list: [],
     };
   });
+
+  // Mutable schedule for moving workouts between days
+  const [customSchedule, setCustomSchedule] = useState<typeof weekSchedule | null>(null);
+  const displaySchedule = customSchedule ?? weekSchedule;
+
+  const handleMoveDayTo = (fromIndex: number, toIndex: number) => {
+    setCustomSchedule((prev) => {
+      const base = prev ?? [...weekSchedule];
+      const updated = [...base];
+      const fromContent = { ...updated[fromIndex] };
+      const toContent = { ...updated[toIndex] };
+      updated[fromIndex] = { ...toContent, day: weekDays[fromIndex] };
+      updated[toIndex] = { ...fromContent, day: weekDays[toIndex] };
+      return updated;
+    });
+  };
 
   // Check if today's workout has already been completed
   const isTodayCompleted = activeProgram && todayLogs?.completed_program_ids?.includes(activeProgram.id);
@@ -917,7 +937,7 @@ export function MyWorkoutsPage() {
                             <Group justify="space-between" pr="md">
                               <Group>
                                 {exImage ? (
-                                  <Image src={exImage} alt={exName} w={36} h={36} fit="cover" radius="md" />
+                                  <Image src={exImage} alt={exName} w={36} h={36} fit="cover" radius="md" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exImage, name: exName}); }} style={{cursor: 'pointer'}} />
                                 ) : (
                                   <ThemeIcon variant="light" color="gray" size="md">
                                     <IconBarbell size={16} />
@@ -1092,7 +1112,7 @@ export function MyWorkoutsPage() {
           <Stack gap="lg">
             {/* Week day cards */}
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-              {data.weekSchedule.map((day, index) => {
+              {displaySchedule.map((day, index) => {
                 const isToday = index + 1 === todayDayNum;
                 const isSelected = selectedDayIndex === index;
                 return (
@@ -1111,19 +1131,56 @@ export function MyWorkoutsPage() {
                   >
                     <Group justify="space-between" mb="xs">
                       <Group gap="xs">
-                        <Text fw={600}>{day.day}</Text>
+                        <Text fw={600}>{weekDays[index]}</Text>
                         {isToday && <Badge size="xs" color="yellow">Hoy</Badge>}
                         {isSelected && <Badge size="xs" color="blue">Seleccionado</Badge>}
                       </Group>
-                      {day.completed && (
-                        <ThemeIcon color="green" size="sm" radius="xl">
-                          <IconCheck size={12} />
-                        </ThemeIcon>
-                      )}
+                      <Group gap={4}>
+                        {day.completed && (
+                          <ThemeIcon color="green" size="sm" radius="xl">
+                            <IconCheck size={12} />
+                          </ThemeIcon>
+                        )}
+                        {!day.isRestDay && (
+                          <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+                            <Menu.Target>
+                              <ActionIcon
+                                variant="subtle"
+                                color="gray"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <IconDotsVertical size={14} />
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Label>Mover a</Menu.Label>
+                              {weekDays.map((targetDay, targetIndex) => {
+                                if (targetIndex === index) return null;
+                                return (
+                                  <Menu.Item
+                                    key={targetIndex}
+                                    leftSection={<IconArrowsExchange size={14} />}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleMoveDayTo(index, targetIndex);
+                                    }}
+                                  >
+                                    {targetDay}
+                                  </Menu.Item>
+                                );
+                              })}
+                            </Menu.Dropdown>
+                          </Menu>
+                        )}
+                      </Group>
                     </Group>
                     <Text size="sm" c={day.isRestDay ? "dimmed" : undefined} fw={day.isRestDay ? 400 : 500}>
                       {day.isRestDay ? "🛌 Descanso" : `💪 ${day.type}`}
                     </Text>
+                    {day.dayName && day.dayName !== weekDays[index] && !day.isRestDay && (
+                      <Text size="xs" c="blue" mt={2}>{day.dayName}</Text>
+                    )}
                     {!day.isRestDay && (
                       <Text size="xs" c="dimmed" mt="xs">
                         Haz clic para ver detalles
@@ -1135,11 +1192,11 @@ export function MyWorkoutsPage() {
             </SimpleGrid>
 
             {/* Selected day detail */}
-            {selectedDayIndex !== null && data.weekSchedule[selectedDayIndex] && !data.weekSchedule[selectedDayIndex].isRestDay && (
+            {selectedDayIndex !== null && displaySchedule[selectedDayIndex] && !displaySchedule[selectedDayIndex].isRestDay && (
               <Card shadow="sm" padding="lg" radius="lg" withBorder>
                 <Group justify="space-between" mb="lg">
                   <Box>
-                    <Title order={4}>{data.weekSchedule[selectedDayIndex].dayName || data.weekSchedule[selectedDayIndex].day}</Title>
+                    <Title order={4}>{displaySchedule[selectedDayIndex].dayName || displaySchedule[selectedDayIndex].day}</Title>
                     <Group gap="md" mt="xs">
                       <Group gap={4}>
                         <IconClock size={14} />
@@ -1147,7 +1204,7 @@ export function MyWorkoutsPage() {
                       </Group>
                       <Group gap={4}>
                         <IconBarbell size={14} />
-                        <Text size="sm" c="dimmed">{data.weekSchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios</Text>
+                        <Text size="sm" c="dimmed">{displaySchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios</Text>
                       </Group>
                     </Group>
                   </Box>
@@ -1162,7 +1219,7 @@ export function MyWorkoutsPage() {
                 </Group>
 
                 {/* Show blocks with exercises */}
-                {data.weekSchedule[selectedDayIndex].blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
+                {displaySchedule[selectedDayIndex].blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
                   <Box key={block.id || blockIndex} mb="lg">
                     <Group gap="xs" mb="sm">
                       <Badge 
@@ -1184,7 +1241,7 @@ export function MyWorkoutsPage() {
                               <Group justify="space-between" pr="md">
                                 <Group>
                                   {exImage2 ? (
-                                    <Image src={exImage2} alt={exName} w={36} h={36} fit="cover" radius="md" />
+                                    <Image src={exImage2} alt={exName} w={36} h={36} fit="cover" radius="md" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exImage2, name: exName}); }} style={{cursor: 'pointer'}} />
                                   ) : (
                                     <ThemeIcon variant="light" color="gray" size="md">
                                       <IconBarbell size={16} />
@@ -1326,6 +1383,11 @@ export function MyWorkoutsPage() {
           onSuccess={() => setSwapTarget(null)}
         />
       )}
+
+      {/* Image Enlargement Modal */}
+      <Modal opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} size="lg" title={enlargedImage?.name} centered>
+        {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
+      </Modal>
 
       {/* Modal de resultados tras registrar entrenamiento */}
       <Modal

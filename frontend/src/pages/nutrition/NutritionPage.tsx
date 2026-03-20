@@ -4,6 +4,8 @@ import {
   Box,
   Button,
   Center,
+  Checkbox,
+  Collapse,
   Container,
   Divider,
   Drawer,
@@ -31,6 +33,8 @@ import {
   IconApple,
   IconBread,
   IconCheck,
+  IconChevronDown,
+  IconChevronUp,
   IconCopy,
   IconEdit,
   IconEgg,
@@ -257,6 +261,8 @@ export function NutritionPage() {
   });
   const [recipeFoodSearch, setRecipeFoodSearch] = useState("");
   const [debouncedRecipeFoodSearch] = useDebouncedValue(recipeFoodSearch, 300);
+  const [selectedRecipeFoods, setSelectedRecipeFoods] = useState<any[]>([]);
+  const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
   const { data: recipeFoodSearchResults = [] } = useQuery({
     queryKey: ["recipe-food-search", debouncedRecipeFoodSearch],
     queryFn: async () => {
@@ -662,7 +668,10 @@ export function NutritionPage() {
     if (!values.name) return;
 
     try {
-      const planClientId = isTemplateModeOn ? null : (selectedClientId || values.client_id || clientId || null);
+      const hasClient = !!(selectedClientId || values.client_id || clientId);
+      const planClientId = hasClient ? (selectedClientId || values.client_id || clientId) : null;
+      const savingAsTemplate = !hasClient || isTemplateModeOn;
+
       const planData = {
         name: values.name,
         description: values.description,
@@ -673,13 +682,12 @@ export function NutritionPage() {
         target_fat: values.target_fat,
         dietary_tags: values.dietary_tags,
         plan: { days: mealPlanDays },
-        client_id: planClientId || undefined,
-        is_template: isTemplateModeOn,
+        client_id: hasClient ? (planClientId || undefined) : undefined,
+        is_template: hasClient ? false : true,
       };
 
       if (editingPlan) {
-        const updateData = planData;
-        await updateMealPlan.mutateAsync({ id: editingPlan.id, ...updateData });
+        await updateMealPlan.mutateAsync({ id: editingPlan.id, ...planData });
         notifications.show({
           title: "Plan actualizado",
           message: `${values.name} se ha actualizado correctamente`,
@@ -696,12 +704,22 @@ export function NutritionPage() {
         });
       }
 
+      if (hasClient && savingAsTemplate && !editingPlan) {
+        const templateData = { ...planData, client_id: undefined, is_template: true, name: `${values.name} (Plantilla)` };
+        await createMealPlan.mutateAsync(templateData);
+        notifications.show({
+          title: "Plantilla creada",
+          message: `Se guardó también como plantilla reutilizable`,
+          color: "teal",
+          icon: <IconTemplate size={16} />,
+        });
+      }
+
       handleCloseBuilder();
       planForm.reset();
       setMealPlanDays(initialDays);
       setEditingPlan(null);
       
-      // If editing for a specific client, redirect back
       if (clientId || returnTo) {
         goBack();
       }
@@ -1019,42 +1037,90 @@ export function NutritionPage() {
             <Center py="xl"><Loader size="md" /></Center>
           ) : recipes.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md">
-              {recipes.map((recipe: any) => (
-                <Box key={recipe.id} className="nv-card" p="md">
-                  <Group justify="space-between" mb="sm">
-                    <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{recipe.name}</Text>
-                    <Badge color="teal" variant="light" radius="md" size="xs">{recipe.items?.length || 0} items</Badge>
-                  </Group>
-                  {recipe.description && <Text c="dimmed" lineClamp={2} size="xs">{recipe.description}</Text>}
-                  <Group gap={4} mt="sm">
-                    <Badge color="blue" size="xs" variant="light" radius="md">{Math.round(recipe.total_calories || 0)} kcal</Badge>
-                    <Badge color="green" size="xs" variant="light" radius="md">P:{Math.round(recipe.total_protein || 0)}g</Badge>
-                    <Badge color="orange" size="xs" variant="light" radius="md">C:{Math.round(recipe.total_carbs || 0)}g</Badge>
-                    <Badge color="grape" size="xs" variant="light" radius="md">G:{Math.round(recipe.total_fat || 0)}g</Badge>
-                  </Group>
-                  <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
-                  <Group gap={6}>
-                    <Button
-                      flex={1}
-                      leftSection={<IconEdit size={12} />}
-                      onClick={() => {
-                        setEditingRecipe(recipe);
-                        recipeForm.setValues({ name: recipe.name, description: recipe.description || "", items: recipe.items || [] });
-                        openRecipeModal();
-                      }}
-                      size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}
-                    >Editar</Button>
-                    <ActionIcon
-                      color="red" loading={deleteRecipeMutation.isPending}
-                      onClick={async () => {
-                        await deleteRecipeMutation.mutateAsync(recipe.id);
-                        notifications.show({ title: "Receta eliminada", message: recipe.name, color: "green" });
-                      }}
-                      variant="light" radius="md" size="sm"
-                    ><IconTrash size={14} /></ActionIcon>
-                  </Group>
-                </Box>
-              ))}
+              {recipes.map((recipe: any) => {
+                const isExpanded = expandedRecipes.has(recipe.id);
+                return (
+                  <Box key={recipe.id} className="nv-card" p="md">
+                    <Group justify="space-between" mb="sm">
+                      <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{recipe.name}</Text>
+                      <Badge color="teal" variant="light" radius="md" size="xs">{recipe.items?.length || 0} items</Badge>
+                    </Group>
+                    {recipe.description && <Text c="dimmed" lineClamp={2} size="xs" mb="xs">{recipe.description}</Text>}
+                    <Group gap={4} mt="xs">
+                      <Badge color="blue" size="xs" variant="light" radius="md">{Math.round(recipe.total_calories || 0)} kcal</Badge>
+                      <Badge color="green" size="xs" variant="light" radius="md">P:{Math.round(recipe.total_protein || 0)}g</Badge>
+                      <Badge color="orange" size="xs" variant="light" radius="md">C:{Math.round(recipe.total_carbs || 0)}g</Badge>
+                      <Badge color="grape" size="xs" variant="light" radius="md">G:{Math.round(recipe.total_fat || 0)}g</Badge>
+                    </Group>
+
+                    {recipe.items?.length > 0 && (
+                      <>
+                        <Button
+                          variant="subtle"
+                          size="xs"
+                          fullWidth
+                          mt="xs"
+                          color="gray"
+                          rightSection={isExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+                          onClick={() => setExpandedRecipes((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(recipe.id)) next.delete(recipe.id);
+                            else next.add(recipe.id);
+                            return next;
+                          })}
+                          styles={{ root: { height: 26, fontWeight: 500 } }}
+                        >
+                          {isExpanded ? "Ocultar ingredientes" : "Ver ingredientes"}
+                        </Button>
+                        <Collapse in={isExpanded}>
+                          <Stack gap={2} mt="xs">
+                            {recipe.items.map((item: any, idx: number) => {
+                              const ratio = (item.quantity_grams || 100) / 100;
+                              return (
+                                <Box key={idx} p={6} style={{ borderRadius: 6, backgroundColor: "var(--nv-surface)" }}>
+                                  <Group justify="space-between" gap={4}>
+                                    <Text size="xs" fw={500} lineClamp={1} style={{ flex: 1 }}>
+                                      {item.name} <Text span c="dimmed" size="xs">({item.quantity_grams || 100}g)</Text>
+                                    </Text>
+                                  </Group>
+                                  <Group gap={6} mt={2}>
+                                    <Text size="xs" c="blue">{Math.round((item.calories || 0) * ratio)} kcal</Text>
+                                    <Text size="xs" c="green">P:{Math.round((item.protein || 0) * ratio)}g</Text>
+                                    <Text size="xs" c="orange">C:{Math.round((item.carbs || 0) * ratio)}g</Text>
+                                    <Text size="xs" c="grape">G:{Math.round((item.fat || 0) * ratio)}g</Text>
+                                  </Group>
+                                </Box>
+                              );
+                            })}
+                          </Stack>
+                        </Collapse>
+                      </>
+                    )}
+
+                    <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
+                    <Group gap={6}>
+                      <Button
+                        flex={1}
+                        leftSection={<IconEdit size={12} />}
+                        onClick={() => {
+                          setEditingRecipe(recipe);
+                          recipeForm.setValues({ name: recipe.name, description: recipe.description || "", items: recipe.items || [] });
+                          openRecipeModal();
+                        }}
+                        size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}
+                      >Editar</Button>
+                      <ActionIcon
+                        color="red" loading={deleteRecipeMutation.isPending}
+                        onClick={async () => {
+                          await deleteRecipeMutation.mutateAsync(recipe.id);
+                          notifications.show({ title: "Receta eliminada", message: recipe.name, color: "green" });
+                        }}
+                        variant="light" radius="md" size="sm"
+                      ><IconTrash size={14} /></ActionIcon>
+                    </Group>
+                  </Box>
+                );
+              })}
             </SimpleGrid>
           ) : (
             <EmptyState
@@ -2439,43 +2505,39 @@ export function NutritionPage() {
                   Configuración
                 </Text>
 
-                <Switch
-                  label="Guardar como plantilla reutilizable"
-                  description="Las plantillas se pueden asignar a múltiples clientes"
-                  checked={isTemplateModeOn}
-                  onChange={(e) => {
-                    setIsTemplateModeOn(e.currentTarget.checked);
-                    if (e.currentTarget.checked) {
-                      setSelectedClientId(null);
+                <Select
+                  label="Asignar a cliente"
+                  placeholder="Buscar cliente..."
+                  data={clientOptions}
+                  searchable
+                  clearable
+                  radius="md"
+                  size="sm"
+                  leftSection={<IconUser size={14} />}
+                  value={selectedClientId}
+                  disabled={!!clientId}
+                  onChange={(value) => {
+                    setSelectedClientId(value);
+                    if (value) {
+                      loadClientData(value);
+                      setIsTemplateModeOn(false);
+                    } else {
                       setSelectedClient(null);
                       planForm.setFieldValue("client_id", null);
+                      setIsTemplateModeOn(true);
                     }
                   }}
-                  size="sm"
-                  color="teal"
-                  disabled={!!clientId}
+                  description={!selectedClientId && !clientId ? "Sin cliente = se guarda como plantilla" : undefined}
                 />
 
-                {!isTemplateModeOn && (
-                  <Select
-                    label="Asignar a cliente"
-                    placeholder="Buscar cliente..."
-                    data={clientOptions}
-                    searchable
-                    clearable
-                    radius="md"
+                {(selectedClientId || clientId) && (
+                  <Switch
+                    label="Guardar también como plantilla"
+                    description="Guarda una copia reutilizable además del plan del cliente"
+                    checked={isTemplateModeOn}
+                    onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
                     size="sm"
-                    leftSection={<IconUser size={14} />}
-                    value={selectedClientId}
-                    onChange={(value) => {
-                      setSelectedClientId(value);
-                      if (value) {
-                        loadClientData(value);
-                      } else {
-                        setSelectedClient(null);
-                        planForm.setFieldValue("client_id", null);
-                      }
-                    }}
+                    color="teal"
                   />
                 )}
 
@@ -2900,7 +2962,7 @@ export function NutritionPage() {
       {/* Recipe Modal */}
       <Modal
         opened={recipeModalOpened}
-        onClose={() => { closeRecipeModal(); setEditingRecipe(null); recipeForm.reset(); setRecipeFoodSearch(""); }}
+        onClose={() => { closeRecipeModal(); setEditingRecipe(null); recipeForm.reset(); setRecipeFoodSearch(""); setSelectedRecipeFoods([]); }}
         title={editingRecipe ? "Editar Receta" : "Nueva Receta"}
         size="xl"
         radius="lg"
@@ -2914,10 +2976,12 @@ export function NutritionPage() {
             {...recipeForm.getInputProps("name")}
           />
           <Textarea
-            label="Descripción"
-            placeholder="Descripción opcional..."
+            label="Instrucciones de preparación"
+            placeholder="Describe los pasos para preparar esta receta..."
             radius="md"
-            minRows={2}
+            minRows={4}
+            autosize
+            maxRows={8}
             {...recipeForm.getInputProps("description")}
           />
           <Divider label="Ingredientes de la receta" />
@@ -2973,7 +3037,7 @@ export function NutritionPage() {
                 leftSection={<IconSearch size={14} />}
                 placeholder="Buscar alimento..."
                 value={recipeFoodSearch}
-                onChange={(e) => setRecipeFoodSearch(e.target.value)}
+                onChange={(e) => { setRecipeFoodSearch(e.target.value); setSelectedRecipeFoods([]); }}
                 radius="md"
                 size="sm"
                 mb="sm"
@@ -2981,35 +3045,34 @@ export function NutritionPage() {
               <ScrollArea h={200}>
                 {recipeFoodSearchResults.length > 0 ? (
                   <Stack gap={4}>
-                    {recipeFoodSearchResults.map((food: any) => (
-                      <Group
-                        key={food.id}
-                        p="xs"
-                        style={{ cursor: "pointer", borderRadius: 8, border: "1px solid transparent" }}
-                        className="nv-card"
-                        onClick={() => {
-                          recipeForm.setFieldValue("items", [
-                            ...recipeForm.values.items,
-                            {
-                              food_id: food.id,
-                              name: food.name,
-                              type: "food",
-                              quantity_grams: 100,
-                              calories: food.calories || 0,
-                              protein: food.protein_g || 0,
-                              carbs: food.carbs_g || 0,
-                              fat: food.fat_g || 0,
-                            },
-                          ]);
-                          setRecipeFoodSearch("");
-                        }}
-                      >
-                        <Box style={{ flex: 1 }}>
-                          <Text size="sm" fw={500}>{food.name}</Text>
-                          <Text size="xs" c="dimmed">{food.calories} kcal/100g · P:{food.protein_g}g C:{food.carbs_g}g G:{food.fat_g}g</Text>
-                        </Box>
-                      </Group>
-                    ))}
+                    {recipeFoodSearchResults.map((food: any) => {
+                      const isSelected = selectedRecipeFoods.some((f: any) => f.id === food.id);
+                      return (
+                        <Group
+                          key={food.id}
+                          p="xs"
+                          style={{ cursor: "pointer", borderRadius: 8, border: isSelected ? "1px solid var(--mantine-color-teal-5)" : "1px solid transparent", backgroundColor: isSelected ? "var(--mantine-color-teal-0)" : undefined }}
+                          className="nv-card"
+                          onClick={() => {
+                            setSelectedRecipeFoods((prev: any[]) =>
+                              isSelected ? prev.filter((f: any) => f.id !== food.id) : [...prev, food]
+                            );
+                          }}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => {}}
+                            size="xs"
+                            color="teal"
+                            styles={{ input: { cursor: "pointer" } }}
+                          />
+                          <Box style={{ flex: 1 }}>
+                            <Text size="sm" fw={500}>{food.name}</Text>
+                            <Text size="xs" c="dimmed">{food.calories} kcal/100g · P:{food.protein_g}g C:{food.carbs_g}g G:{food.fat_g}g</Text>
+                          </Box>
+                        </Group>
+                      );
+                    })}
                   </Stack>
                 ) : recipeFoodSearch ? (
                   <Text c="dimmed" size="xs" ta="center" py="md">Sin resultados para "{recipeFoodSearch}"</Text>
@@ -3017,6 +3080,33 @@ export function NutritionPage() {
                   <Text c="dimmed" size="xs" ta="center" py="md">Escribe para buscar alimentos...</Text>
                 )}
               </ScrollArea>
+              {selectedRecipeFoods.length > 0 && (
+                <Button
+                  mt="sm"
+                  size="xs"
+                  fullWidth
+                  color="teal"
+                  variant="light"
+                  radius="md"
+                  onClick={() => {
+                    const newItems = selectedRecipeFoods.map((food: any) => ({
+                      food_id: food.id,
+                      name: food.name,
+                      type: "food" as const,
+                      quantity_grams: 100,
+                      calories: food.calories || 0,
+                      protein: food.protein_g || 0,
+                      carbs: food.carbs_g || 0,
+                      fat: food.fat_g || 0,
+                    }));
+                    recipeForm.setFieldValue("items", [...recipeForm.values.items, ...newItems]);
+                    setSelectedRecipeFoods([]);
+                    setRecipeFoodSearch("");
+                  }}
+                >
+                  Añadir {selectedRecipeFoods.length} seleccionado{selectedRecipeFoods.length > 1 ? "s" : ""}
+                </Button>
+              )}
             </Tabs.Panel>
             <Tabs.Panel value="supplements">
               <ScrollArea h={200}>

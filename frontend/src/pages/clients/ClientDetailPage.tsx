@@ -1264,6 +1264,13 @@ export function ClientDetailPage() {
                   <Menu.Item leftSection={<IconEdit size={16} />} onClick={handleOpenEditClientModal}>
                     Editar cliente
                   </Menu.Item>
+                  <Menu.Item leftSection={<IconBarbell size={16} />} onClick={() => navigate(`/workouts?action=new&clientId=${id}&returnTo=/clients/${id}`)}>
+                    Crear programa
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconSalad size={16} />} onClick={() => navigate(`/nutrition?edit=new&clientId=${id}&returnTo=/clients/${id}`)}>
+                    Crear plan nutricional
+                  </Menu.Item>
+                  <Menu.Divider />
                   <Menu.Item leftSection={<IconBarbell size={16} />} onClick={handleAssignProgram}>
                     Asignar programa
                   </Menu.Item>

@@ -150,6 +150,28 @@ export function useFormSubmissions(formId?: string, clientId?: string) {
   });
 }
 
+export function useUpdateFormSubmission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      submissionId,
+      status,
+    }: {
+      submissionId: string;
+      status: string;
+    }) => {
+      const response = await api.patch(`/forms/submissions/${submissionId}`, {
+        status,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["form-submissions"] });
+    },
+  });
+}
+
 export function useSendForm() {
   const queryClient = useQueryClient();
 

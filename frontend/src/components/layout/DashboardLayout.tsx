@@ -25,8 +25,8 @@ import {
   IconForms,
   IconFileText,
   IconMessage,
-  IconCreditCard,
   IconPackage,
+  IconReceipt,
   IconTrophy,
   IconUsersGroup,
   IconRobot,
@@ -35,6 +35,7 @@ import {
   IconVideo,
   IconChartLine,
   IconUser,
+  IconBulb,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -61,14 +62,15 @@ const getTrainerNavItems = (unreadCount: number): NavItemProps[] => [
   { icon: <IconForms size={20} />, label: "Formularios", to: "/forms" },
   { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents" },
   { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount },
-  { icon: <IconCreditCard size={20} />, label: "Pagos", to: "/payments" },
-  { icon: <IconPackage size={20} />, label: "Bonos", to: "/packages" },
+  { icon: <IconPackage size={20} />, label: "Catálogo", to: "/catalog" },
+  { icon: <IconReceipt size={20} />, label: "Facturación", to: "/billing" },
   { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community" },
   { icon: <IconUsersGroup size={20} />, label: "Equipo", to: "/team" },
   { icon: <IconRobot size={20} />, label: "Automatizaciones", to: "/automations" },
   { icon: <IconChartBar size={20} />, label: "Reportes", to: "/reports" },
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms" },
   { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes" },
+  { icon: <IconBulb size={20} />, label: "Sugerencias", to: "/suggestions" },
   { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
 ];
 

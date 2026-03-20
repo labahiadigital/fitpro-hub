@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.models.form import Form, FormSubmission
+from app.models.client import Client
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
 
 router = APIRouter()
@@ -214,6 +215,75 @@ async def delete_form(
 
 # ============ SUBMISSIONS ============
 
+
+class FormSubmissionWithDetails(BaseModel):
+    id: UUID
+    form_id: UUID
+    client_id: UUID
+    client_name: Optional[str] = None
+    form_name: Optional[str] = None
+    answers: dict
+    status: str
+    submitted_at: Optional[datetime] = None
+    signature_data: Optional[dict] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/submissions/", response_model=List[FormSubmissionWithDetails])
+async def list_all_submissions(
+    form_id: Optional[UUID] = None,
+    client_id: Optional[UUID] = None,
+    status_filter: Optional[str] = None,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Listar todas las respuestas del workspace con nombre de cliente y formulario.
+    """
+    query = (
+        select(
+            FormSubmission,
+            Client.first_name,
+            Client.last_name,
+            Form.name.label("form_name"),
+        )
+        .join(Form, FormSubmission.form_id == Form.id)
+        .outerjoin(Client, FormSubmission.client_id == Client.id)
+        .where(Form.workspace_id == current_user.workspace_id)
+    )
+
+    if form_id:
+        query = query.where(FormSubmission.form_id == form_id)
+    if client_id:
+        query = query.where(FormSubmission.client_id == client_id)
+    if status_filter:
+        query = query.where(FormSubmission.status == status_filter)
+
+    result = await db.execute(query.order_by(FormSubmission.created_at.desc()))
+    rows = result.all()
+
+    submissions = []
+    for sub, first_name, last_name, form_name in rows:
+        client_name = f"{first_name or ''} {last_name or ''}".strip() or None
+        submissions.append(FormSubmissionWithDetails(
+            id=sub.id,
+            form_id=sub.form_id,
+            client_id=sub.client_id,
+            client_name=client_name,
+            form_name=form_name,
+            answers=sub.answers or {},
+            status=sub.status,
+            submitted_at=sub.submitted_at,
+            signature_data=sub.signature_data,
+            created_at=sub.created_at,
+        ))
+
+    return submissions
+
+
 @router.get("/{form_id}/submissions", response_model=List[FormSubmissionResponse])
 async def list_submissions(
     form_id: UUID,
@@ -292,3 +362,40 @@ async def get_submission(
     
     return submission
 
+
+class FormSubmissionUpdate(BaseModel):
+    status: Optional[str] = None
+
+
+@router.patch("/submissions/{submission_id}", response_model=FormSubmissionResponse)
+async def update_submission(
+    submission_id: UUID,
+    data: FormSubmissionUpdate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Actualizar estado de una respuesta (read, completed, pending).
+    """
+    result = await db.execute(
+        select(FormSubmission)
+        .join(Form, FormSubmission.form_id == Form.id)
+        .where(
+            FormSubmission.id == submission_id,
+            Form.workspace_id == current_user.workspace_id,
+        )
+    )
+    sub = result.scalar_one_or_none()
+
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Respuesta no encontrada"
+        )
+
+    if data.status is not None:
+        sub.status = data.status
+
+    await db.commit()
+    await db.refresh(sub)
+    return sub

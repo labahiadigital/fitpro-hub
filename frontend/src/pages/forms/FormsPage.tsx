@@ -27,6 +27,7 @@ import {
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import {
+  IconAlertTriangle,
   IconCalendar,
   IconCheck,
   IconCheckbox,
@@ -41,20 +42,24 @@ import {
   IconForms,
   IconGripVertical,
   IconList,
+  IconLoader,
   IconMail,
   IconNumber,
   IconPhone,
+  IconRotateClockwise,
   IconSend,
   IconTextSize,
   IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/common/EmptyState";
 import { PageHeader } from "../../components/common/PageHeader";
 import { notifications } from "@mantine/notifications";
 import {
   useForms,
+  useFormSubmissions,
+  useUpdateFormSubmission,
   useCreateForm,
   useUpdateForm,
   useDeleteForm,
@@ -119,6 +124,8 @@ export function FormsPage() {
   
   // API hooks
   const { data: formsData = [] } = useForms();
+  const { data: submissionsData = [], isLoading: isLoadingSubmissions } = useFormSubmissions();
+  const updateSubmissionMutation = useUpdateFormSubmission();
   const createForm = useCreateForm();
   const updateForm = useUpdateForm();
   const deleteFormMutation = useDeleteForm();
@@ -135,6 +142,44 @@ export function FormsPage() {
     submissions_count: f.submissions_count ?? 0,
     created_at: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
   })) : [];
+  // Map submissions from API
+  const submissions = useMemo(() => {
+    if (!Array.isArray(submissionsData)) return [];
+    return (submissionsData as Array<{
+      id: string;
+      form_id: string;
+      client_id: string;
+      client_name?: string;
+      form_name?: string;
+      status: string;
+      submitted_at?: string;
+      created_at: string;
+    }>).map((s) => ({
+      id: s.id,
+      client: s.client_name || "Cliente desconocido",
+      form: s.form_name || "Formulario",
+      status: s.status,
+      date: (s.submitted_at || s.created_at || "").split("T")[0],
+    }));
+  }, [submissionsData]);
+
+  const handleUpdateSubmissionStatus = async (submissionId: string, newStatus: string) => {
+    try {
+      await updateSubmissionMutation.mutateAsync({ submissionId, status: newStatus });
+      notifications.show({
+        title: "Estado actualizado",
+        message: `La respuesta se ha marcado como ${newStatus === "completed" ? "completada" : newStatus === "read" ? "leída" : "pendiente"}`,
+        color: "green",
+      });
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo actualizar el estado",
+        color: "red",
+      });
+    }
+  };
+
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
     useDisclosure(false);
   const [
@@ -171,6 +216,58 @@ export function FormsPage() {
       form.reset();
       setFormFields([]);
     }
+    openBuilder();
+  };
+
+  const openCanalDenuncias = () => {
+    setEditingForm(null);
+    form.setValues({
+      name: "Canal de Denuncias",
+      description: "Formulario para reportar incidentes de forma confidencial",
+      type: "custom",
+      send_on_onboarding: false,
+    });
+    setFormFields([
+      {
+        id: `field-${Date.now()}-1`,
+        type: "select",
+        label: "Tipo de denuncia",
+        required: true,
+        options: ["Acoso", "Discriminación", "Seguridad", "Otro"],
+        order: 0,
+      },
+      {
+        id: `field-${Date.now()}-2`,
+        type: "textarea",
+        label: "Descripción del incidente",
+        placeholder: "Describe lo sucedido con el mayor detalle posible...",
+        required: true,
+        order: 1,
+      },
+      {
+        id: `field-${Date.now()}-3`,
+        type: "date",
+        label: "Fecha del incidente",
+        required: false,
+        order: 2,
+      },
+      {
+        id: `field-${Date.now()}-4`,
+        type: "text",
+        label: "Personas involucradas",
+        placeholder: "Nombres o descripciones de las personas involucradas",
+        required: false,
+        order: 3,
+      },
+      {
+        id: `field-${Date.now()}-5`,
+        type: "radio",
+        label: "¿Desea mantener el anonimato?",
+        required: true,
+        options: ["Sí", "No"],
+        order: 4,
+      },
+    ]);
     openBuilder();
   };
 
@@ -347,6 +444,19 @@ export function FormsPage() {
         title="Formularios y Documentos"
       />
 
+      {activeTab === "forms" && (
+        <Group mb="lg">
+          <Button
+            variant="light"
+            color="red"
+            leftSection={<IconAlertTriangle size={16} />}
+            onClick={openCanalDenuncias}
+          >
+            Canal de Denuncias
+          </Button>
+        </Group>
+      )}
+
       <Tabs onChange={setActiveTab} value={activeTab}>
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconForms size={14} />} value="forms">
@@ -519,88 +629,106 @@ export function FormsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="submissions">
-          <Paper p="lg" radius="lg" withBorder>
-            <Text fw={600} mb="md">
-              Respuestas Recientes
-            </Text>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Formulario</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th ta="right">Acciones</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {[
-                  {
-                    client: "María García",
-                    form: "PAR-Q",
-                    status: "completed",
-                    date: "2024-07-20",
-                  },
-                  {
-                    client: "Carlos López",
-                    form: "Consentimiento",
-                    status: "completed",
-                    date: "2024-07-19",
-                  },
-                  {
-                    client: "Ana Martínez",
-                    form: "Historial de Salud",
-                    status: "pending",
-                    date: "2024-07-18",
-                  },
-                  {
-                    client: "Pedro Sánchez",
-                    form: "PAR-Q",
-                    status: "completed",
-                    date: "2024-07-17",
-                  },
-                ].map((submission, idx) => (
-                  <Table.Tr key={idx}>
-                    <Table.Td>
-                      <Text fw={500} size="sm">
-                        {submission.client}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{submission.form}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge
-                        color={
-                          submission.status === "completed" ? "green" : "yellow"
-                        }
-                        variant="light"
-                      >
-                        {submission.status === "completed"
-                          ? "Completado"
-                          : "Pendiente"}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text c="dimmed" size="sm">
-                        {submission.date}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs" justify="flex-end">
-                        <ActionIcon color="blue" variant="subtle">
-                          <IconEye size={16} />
-                        </ActionIcon>
-                        <ActionIcon color="green" variant="subtle">
-                          <IconDownload size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
+          {isLoadingSubmissions ? (
+            <Paper p="xl" radius="lg" withBorder>
+              <Group justify="center" py="xl">
+                <IconLoader size={24} className="mantine-loader" />
+                <Text c="dimmed">Cargando respuestas...</Text>
+              </Group>
+            </Paper>
+          ) : submissions.length > 0 ? (
+            <Paper p="lg" radius="lg" withBorder>
+              <Text fw={600} mb="md">
+                Respuestas Recientes ({submissions.length})
+              </Text>
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Cliente</Table.Th>
+                    <Table.Th>Formulario</Table.Th>
+                    <Table.Th>Estado</Table.Th>
+                    <Table.Th>Fecha</Table.Th>
+                    <Table.Th ta="right">Acciones</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
+                </Table.Thead>
+                <Table.Tbody>
+                  {submissions.map((submission) => (
+                    <Table.Tr key={submission.id}>
+                      <Table.Td>
+                        <Text fw={500} size="sm">
+                          {submission.client}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{submission.form}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge
+                          color={
+                            submission.status === "completed" || submission.status === "reviewed"
+                              ? "green"
+                              : submission.status === "read" || submission.status === "submitted"
+                                ? "blue"
+                                : "yellow"
+                          }
+                          variant="light"
+                        >
+                          {submission.status === "completed" || submission.status === "reviewed"
+                            ? "Completado"
+                            : submission.status === "read" || submission.status === "submitted"
+                              ? "Leído"
+                              : "Pendiente"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text c="dimmed" size="sm">
+                          {submission.date}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs" justify="flex-end">
+                          <ActionIcon color="blue" variant="subtle" title="Ver respuesta">
+                            <IconEye size={16} />
+                          </ActionIcon>
+                          <ActionIcon color="green" variant="subtle" title="Descargar">
+                            <IconDownload size={16} />
+                          </ActionIcon>
+                          {submission.status !== "completed" && submission.status !== "reviewed" && (
+                            <ActionIcon
+                              color="green"
+                              variant="light"
+                              title="Marcar como Completado"
+                              loading={updateSubmissionMutation.isPending}
+                              onClick={() => handleUpdateSubmissionStatus(submission.id, "completed")}
+                            >
+                              <IconCheck size={16} />
+                            </ActionIcon>
+                          )}
+                          {submission.status !== "pending" && (
+                            <ActionIcon
+                              color="yellow"
+                              variant="light"
+                              title="Devolver a Pendiente"
+                              loading={updateSubmissionMutation.isPending}
+                              onClick={() => handleUpdateSubmissionStatus(submission.id, "pending")}
+                            >
+                              <IconRotateClockwise size={16} />
+                            </ActionIcon>
+                          )}
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Paper>
+          ) : (
+            <EmptyState
+              description="Cuando tus clientes respondan formularios, las respuestas aparecerán aquí."
+              icon={<IconCheck size={40} />}
+              title="No hay respuestas"
+            />
+          )}
         </Tabs.Panel>
       </Tabs>
 

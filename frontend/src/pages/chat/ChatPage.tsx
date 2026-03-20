@@ -1,16 +1,21 @@
 import {
   ActionIcon,
   Alert,
+  Anchor,
   Avatar,
   Badge,
   Box,
   Button,
   Container,
+  Divider,
+  FileButton,
   Grid,
   Group,
+  Image,
   Loader,
   Menu,
   Modal,
+  Popover,
   ScrollArea,
   SegmentedControl,
   Select,
@@ -21,6 +26,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
   IconBrandWhatsapp,
@@ -29,20 +35,23 @@ import {
   IconClock,
   IconDotsVertical,
   IconInfoCircle,
+  IconLink,
   IconMessage,
   IconMessages,
   IconMoodSmile,
   IconPaperclip,
   IconPhone,
+  IconPhoto,
   IconSearch,
   IconSend,
   IconSettings,
+  IconToolsKitchen2,
   IconVideo,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   type Conversation,
@@ -230,7 +239,25 @@ function MessageBubble({
           </Group>
         )}
 
-        <Text size="sm">{message.content}</Text>
+        {message.media_url && message.message_type === "image" && (
+          <Image
+            src={message.media_url}
+            alt={message.content || "Imagen"}
+            radius="sm"
+            maw={300}
+            mb={message.content ? 4 : 0}
+            style={{ cursor: "pointer" }}
+            onClick={() => window.open(message.media_url!, "_blank")}
+          />
+        )}
+
+        {message.media_url && message.message_type !== "image" && (
+          <Anchor href={message.media_url} target="_blank" size="sm" c={isOwn ? "white" : undefined} underline="always" mb={message.content ? 4 : 0}>
+            {message.media_url}
+          </Anchor>
+        )}
+
+        {message.content && <Text size="sm">{message.content}</Text>}
 
         <Group gap={4} justify="flex-end" mt={4}>
           {/* Source indicator for outgoing messages */}
@@ -252,6 +279,7 @@ function MessageBubble({
 }
 
 export function ChatPage() {
+  const navigate = useNavigate();
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
@@ -261,6 +289,9 @@ export function ChatPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [newChatOpened, { open: openNewChat, close: closeNewChat }] = useDisclosure(false);
   const [newChatClientId, setNewChatClientId] = useState<string | null>(null);
+  const [attachMenuOpened, setAttachMenuOpened] = useState(false);
+  const [urlInputOpened, setUrlInputOpened] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
 
   const isClientView = false;
 
@@ -322,6 +353,34 @@ export function ChatPage() {
     });
 
     setMessage("");
+  };
+
+  const handleImageSelected = (file: File | null) => {
+    if (!file || !selectedConversationId) return;
+    setAttachMenuOpened(false);
+    const reader = new FileReader();
+    reader.onload = () => {
+      sendMessageMutation.mutate({
+        conversation_id: selectedConversationId,
+        content: file.name,
+        message_type: "image",
+        media_url: reader.result as string,
+        send_via: sendVia,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSendUrl = () => {
+    if (!urlValue.trim() || !selectedConversationId) return;
+    sendMessageMutation.mutate({
+      conversation_id: selectedConversationId,
+      content: urlValue.trim(),
+      send_via: sendVia,
+    });
+    setUrlValue("");
+    setUrlInputOpened(false);
+    setAttachMenuOpened(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -504,17 +563,32 @@ export function ChatPage() {
                     </Group>
                     <Group gap="xs">
                       <Tooltip label="Llamar">
-                        <ActionIcon color="gray" size="lg" variant="subtle">
+                        <ActionIcon
+                          color="gray"
+                          size="lg"
+                          variant="subtle"
+                          onClick={() => notifications.show({ title: "Llamar", message: "Función en desarrollo", color: "blue" })}
+                        >
                           <IconPhone size={18} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Videollamada">
-                        <ActionIcon color="gray" size="lg" variant="subtle">
+                        <ActionIcon
+                          color="gray"
+                          size="lg"
+                          variant="subtle"
+                          onClick={() => notifications.show({ title: "Videollamada", message: "Función en desarrollo", color: "blue" })}
+                        >
                           <IconVideo size={18} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Información">
-                        <ActionIcon color="gray" size="lg" variant="subtle">
+                        <ActionIcon
+                          color="gray"
+                          size="lg"
+                          variant="subtle"
+                          onClick={() => notifications.show({ title: "Información", message: "Función en desarrollo", color: "blue" })}
+                        >
                           <IconInfoCircle size={18} />
                         </ActionIcon>
                       </Tooltip>
@@ -525,10 +599,25 @@ export function ChatPage() {
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          <Menu.Item>Ver perfil del cliente</Menu.Item>
-                          <Menu.Item>Archivar conversación</Menu.Item>
+                          <Menu.Item
+                            onClick={() => {
+                              if (selectedConversation.client_id) {
+                                navigate(`/clients/${selectedConversation.client_id}`);
+                              }
+                            }}
+                          >
+                            Ver perfil del cliente
+                          </Menu.Item>
+                          <Menu.Item
+                            onClick={() => notifications.show({ title: "Archivar", message: "Función en desarrollo", color: "blue" })}
+                          >
+                            Archivar conversación
+                          </Menu.Item>
                           <Menu.Divider />
-                          <Menu.Item color="red">
+                          <Menu.Item
+                            color="red"
+                            onClick={() => notifications.show({ title: "Eliminar", message: "Función en desarrollo", color: "red" })}
+                          >
                             Eliminar conversación
                           </Menu.Item>
                         </Menu.Dropdown>
@@ -638,9 +727,89 @@ export function ChatPage() {
                   )}
 
                   <Group gap="sm">
-                    <ActionIcon color="gray" size="lg" variant="subtle" radius="xl">
-                      <IconPaperclip size={20} />
-                    </ActionIcon>
+                    <Popover
+                      opened={attachMenuOpened}
+                      onChange={setAttachMenuOpened}
+                      position="top-start"
+                      shadow="md"
+                      radius="lg"
+                    >
+                      <Popover.Target>
+                        <ActionIcon
+                          color="gray"
+                          size="lg"
+                          variant="subtle"
+                          radius="xl"
+                          onClick={() => setAttachMenuOpened((o) => !o)}
+                        >
+                          <IconPaperclip size={20} />
+                        </ActionIcon>
+                      </Popover.Target>
+                      <Popover.Dropdown p="xs">
+                        <Stack gap={4}>
+                          <FileButton onChange={handleImageSelected} accept="image/*">
+                            {(props) => (
+                              <Button
+                                variant="subtle"
+                                color="gray"
+                                leftSection={<IconPhoto size={16} />}
+                                justify="flex-start"
+                                size="sm"
+                                {...props}
+                              >
+                                Imagen
+                              </Button>
+                            )}
+                          </FileButton>
+
+                          {urlInputOpened ? (
+                            <Group gap="xs" px="xs">
+                              <TextInput
+                                size="xs"
+                                placeholder="https://..."
+                                value={urlValue}
+                                onChange={(e) => setUrlValue(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") handleSendUrl(); }}
+                                style={{ flex: 1 }}
+                              />
+                              <ActionIcon size="sm" variant="filled" color="primary" onClick={handleSendUrl} disabled={!urlValue.trim()}>
+                                <IconSend size={12} />
+                              </ActionIcon>
+                            </Group>
+                          ) : (
+                            <Button
+                              variant="subtle"
+                              color="gray"
+                              leftSection={<IconLink size={16} />}
+                              justify="flex-start"
+                              size="sm"
+                              onClick={() => setUrlInputOpened(true)}
+                            >
+                              URL
+                            </Button>
+                          )}
+
+                          <Divider my={4} />
+
+                          {["Alimento", "Suplemento", "Ejercicio", "Receta"].map((item) => (
+                            <Button
+                              key={item}
+                              variant="subtle"
+                              color="gray"
+                              leftSection={<IconToolsKitchen2 size={16} />}
+                              justify="flex-start"
+                              size="sm"
+                              onClick={() => {
+                                notifications.show({ title: item, message: "Próximamente: compartir alimentos desde el chat", color: "yellow" });
+                                setAttachMenuOpened(false);
+                              }}
+                            >
+                              {item}
+                            </Button>
+                          ))}
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
                     <TextInput
                       flex={1}
                       onChange={(e) => setMessage(e.target.value)}
