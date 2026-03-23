@@ -64,7 +64,7 @@ export function useForms(params?: { form_type?: string; is_active?: boolean }) {
   return useQuery({
     queryKey: ["forms", currentWorkspace?.id, params],
     queryFn: async () => {
-      const response = await api.get("/forms/", {
+      const response = await api.get("/forms", {
         params: { workspace_id: currentWorkspace?.id, ...params },
       });
       return response.data;
@@ -90,7 +90,7 @@ export function useCreateForm() {
 
   return useMutation({
     mutationFn: async (data: Partial<Form>) => {
-      const response = await api.post("/forms/", {
+      const response = await api.post("/forms", {
         ...data,
         workspace_id: currentWorkspace?.id,
       });

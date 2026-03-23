@@ -148,7 +148,7 @@ export function ClientDashboardPage() {
               <Group gap="xs" mt="xs">
                 <IconClock size={16} />
                 <Text size="sm" fw={500}>{new Date(data.nextSession.date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</Text>
-                {data.nextSession.location && <Text size="sm">en {data.nextSession.location}</Text>}
+                {data.nextSession.location && <Text size="sm">en {typeof data.nextSession.location === 'object' ? (data.nextSession.location as Record<string, unknown>)?.address as string || '' : data.nextSession.location}</Text>}
               </Group>
             </Box>
             <Button 

@@ -308,12 +308,14 @@ async def get_client_dashboard(
     next_session = None
     if upcoming_bookings:
         booking = upcoming_bookings[0]
+        loc = booking.location
+        location_str = loc.get("address", "") if isinstance(loc, dict) else (loc or "")
         next_session = {
             "id": str(booking.id),
             "title": booking.title,
             "date": booking.start_time,
             "type": booking.session_type.value if booking.session_type else "session",
-            "location": booking.location,
+            "location": location_str or None,
         }
     
     # Format upcoming sessions

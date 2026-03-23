@@ -609,6 +609,15 @@ export function MyWorkoutsPage() {
     currentExerciseName: string;
     currentExerciseId?: string;
   } | null>(null);
+  const [customSchedule, setCustomSchedule] = useState<Array<{
+    day: string;
+    dayName: string;
+    type: string;
+    completed: boolean;
+    isRestDay: boolean;
+    blocks: ProgramDay['blocks'];
+    exercises_list: Array<{ name: string; sets: number; reps: string; weight: string; notes?: string }>;
+  }> | null>(null);
 
   if (isLoadingWorkouts) {
     return (
@@ -708,8 +717,6 @@ export function MyWorkoutsPage() {
     };
   });
 
-  // Mutable schedule for moving workouts between days
-  const [customSchedule, setCustomSchedule] = useState<typeof weekSchedule | null>(null);
   const displaySchedule = customSchedule ?? weekSchedule;
 
   const handleMoveDayTo = (fromIndex: number, toIndex: number) => {
