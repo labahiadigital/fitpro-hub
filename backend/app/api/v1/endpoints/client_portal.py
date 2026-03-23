@@ -1353,8 +1353,7 @@ async def get_my_bookings(
         query = query.where(Booking.status == status)
     
     if upcoming_only:
-        now = datetime.now().isoformat()
-        query = query.where(Booking.start_time >= now)
+        query = query.where(Booking.start_time >= datetime.utcnow())
     
     result = await db.execute(
         query.order_by(Booking.start_time).limit(limit)
