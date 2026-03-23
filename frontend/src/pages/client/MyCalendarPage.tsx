@@ -61,8 +61,8 @@ export function MyCalendarPage() {
     time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
     title: b.title,
     trainer: "Trackfiz",
-    type: b.booking_type || "presencial",
-    location: b.location || "Gimnasio",
+    type: b.session_type || "presencial",
+    location: (b.location as Record<string, unknown>)?.address as string || "Gimnasio",
     status: b.status,
   })) || [];
 

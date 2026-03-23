@@ -232,9 +232,8 @@ interface Booking {
   start_time: string;
   end_time: string;
   status: string;
-  booking_type?: string;
-  location?: string;
-  online_link?: string;
+  session_type?: string;
+  location?: Record<string, unknown> | null;
 }
 
 // ============ DASHBOARD ============

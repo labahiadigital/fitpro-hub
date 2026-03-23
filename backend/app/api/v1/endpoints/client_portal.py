@@ -219,12 +219,11 @@ class BookingClientResponse(BaseModel):
     id: UUID
     title: str
     description: Optional[str] = None
-    start_time: str
-    end_time: str
+    start_time: datetime
+    end_time: datetime
     status: str
-    booking_type: Optional[str] = None
-    location: Optional[str] = None
-    online_link: Optional[str] = None
+    session_type: Optional[str] = None
+    location: Optional[dict] = None
     
     class Config:
         from_attributes = True
@@ -313,7 +312,7 @@ async def get_client_dashboard(
             "id": str(booking.id),
             "title": booking.title,
             "date": booking.start_time,
-            "type": booking.booking_type or "session",
+            "type": booking.session_type.value if booking.session_type else "session",
             "location": booking.location,
         }
     

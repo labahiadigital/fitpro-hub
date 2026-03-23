@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.models.form import Form, FormSubmission
@@ -33,26 +33,27 @@ class FormSettingsSchema(BaseModel):
 
 
 class FormCreate(BaseModel):
+    model_config = {"populate_by_name": True}
+
     name: str
     description: Optional[str] = None
     form_type: str = "custom"
-    schema: dict = {"fields": []}
+    form_schema: dict = Field(default={"fields": []}, alias="schema")
     settings: Optional[FormSettingsSchema] = None
 
 
 class FormResponse(BaseModel):
+    model_config = {"from_attributes": True, "populate_by_name": True, "serialize_by_alias": True}
+
     id: UUID
     workspace_id: UUID
     name: str
     description: Optional[str]
     form_type: str
-    schema: dict
+    form_schema: dict = Field(alias="schema")
     settings: dict
     is_active: str
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class FormSubmissionCreate(BaseModel):
@@ -115,7 +116,7 @@ async def create_form(
         name=data.name,
         description=data.description,
         form_type=data.form_type,
-        schema=data.schema,
+        schema=data.form_schema,
         settings=data.settings.model_dump() if data.settings else {}
     )
     db.add(form)
@@ -177,7 +178,7 @@ async def update_form(
     form.name = data.name
     form.description = data.description
     form.form_type = data.form_type
-    form.schema = data.schema
+    form.schema = data.form_schema
     if data.settings:
         form.settings = data.settings.model_dump()
     
