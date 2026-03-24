@@ -8,6 +8,7 @@ import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { useAuthStore } from "./stores/auth";
+import { getApiErrorMessage } from "./utils/getApiErrorMessage";
 import { theme } from "./theme";
 
 import "@mantine/core/styles.css";
@@ -72,11 +73,9 @@ const queryClient = new QueryClient({
     },
     mutations: {
       onError: (error: unknown) => {
-        const message =
-          error instanceof Error ? error.message : "Ha ocurrido un error";
         notifications.show({
           title: "Error",
-          message,
+          message: getApiErrorMessage(error),
           color: "red",
         });
       },

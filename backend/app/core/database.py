@@ -31,14 +31,15 @@ def _create_engine():
     """Create the async database engine lazily."""
     database_url = get_async_database_url(settings.DATABASE_URL)
 
-    db_ssl_context = ssl.create_default_context()
-
-    connect_args = {
-        "ssl": db_ssl_context,
+    connect_args: dict = {
         "server_settings": {
             "application_name": "e13fitness_backend"
         },
     }
+
+    if settings.DATABASE_SSL:
+        db_ssl_context = ssl.create_default_context()
+        connect_args["ssl"] = db_ssl_context
 
     return create_async_engine(
         database_url,

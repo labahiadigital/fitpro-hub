@@ -54,7 +54,7 @@ async def list_reminders(
     user_id: Optional[UUID] = None,
     client_id: Optional[UUID] = None,
     is_active: Optional[bool] = None,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -116,7 +116,7 @@ async def create_reminder(
 @router.get("/{reminder_id}", response_model=ReminderResponse)
 async def get_reminder(
     reminder_id: UUID,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """

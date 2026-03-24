@@ -91,7 +91,7 @@ const getClientNavItems = (unreadCount: number): NavItemProps[] => [
 
 function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
   const location = useLocation();
-  const isActive = location.pathname === to;
+  const isActive = location.pathname === to || (to !== "/dashboard" && location.pathname.startsWith(to));
 
   return (
     <NavLink to={to} style={{ textDecoration: "none" }} onClick={onNavigate}>
@@ -285,8 +285,44 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   );
 }
 
+const ROUTE_LABELS: Record<string, string> = {
+  "/dashboard": "Panel Principal",
+  "/clients": "Clientes",
+  "/calendar": "Calendario",
+  "/workouts": "Entrenamientos",
+  "/nutrition": "Nutrición",
+  "/supplements": "Suplementos",
+  "/forms": "Formularios",
+  "/catalog": "Catálogo",
+  "/billing": "Facturación",
+  "/community": "Comunidad",
+  "/documents": "Documentos",
+  "/team": "Equipo",
+  "/automations": "Automatizaciones",
+  "/reports": "Informes",
+  "/settings": "Configuración",
+  "/live-classes": "Clases en Vivo",
+  "/chat": "Chat",
+  "/lms": "Academia",
+  "/suggestions": "Sugerencias",
+  "/my-workouts": "Mis Entrenamientos",
+  "/my-nutrition": "Mi Nutrición",
+  "/my-progress": "Mi Progreso",
+  "/my-calendar": "Mis Citas",
+  "/my-documents": "Mis Documentos",
+  "/my-profile": "Mi Perfil",
+  "/my-messages": "Mensajes",
+};
+
+function useBreadcrumb(): string {
+  const { pathname } = useLocation();
+  const base = "/" + pathname.split("/").filter(Boolean)[0];
+  return ROUTE_LABELS[base] || "App";
+}
+
 export function DashboardLayout() {
   const [opened, { toggle, close }] = useDisclosure();
+  const breadcrumbLabel = useBreadcrumb();
 
   return (
     <div className="layout-grid">
@@ -351,11 +387,10 @@ export function DashboardLayout() {
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Abrir menú de navegación" />
             
-            {/* Breadcrumb simulado / Contexto */}
             <Group gap="xs" visibleFrom="xs">
               <Text c="dimmed" size="sm" fw={500}>App</Text>
               <Text c="dimmed" size="sm">/</Text>
-              <Text size="sm" fw={600}>Panel Principal</Text>
+              <Text size="sm" fw={600}>{breadcrumbLabel}</Text>
             </Group>
           </Group>
 

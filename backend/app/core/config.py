@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Trackfiz"
     APP_ENV: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     SECRET_KEY: str = "change-me-in-production"
 
     @field_validator("SECRET_KEY")
@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = ""
+    DATABASE_SSL: bool = True
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

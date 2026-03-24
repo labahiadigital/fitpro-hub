@@ -191,7 +191,7 @@ export function ClientsPage() {
   const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false);
 
   const statusFilter = activeTab === "active" ? "active" : activeTab === "inactive" ? "inactive" : activeTab === "pending" ? "pending" : undefined;
-  const { data: clientsData, isLoading } = useClients({ page, search, status: statusFilter });
+  const { data: clientsData, isLoading, isError, refetch } = useClients({ page, search, status: statusFilter });
   useClientTags();
   const createClient = useCreateClient();
   const createTag = useCreateClientTag();
@@ -693,6 +693,14 @@ export function ClientsPage() {
             ))}
           </SimpleGrid>
         )
+      ) : isError ? (
+        <EmptyState
+          icon={<IconUsers size={48} />}
+          title="Error al cargar clientes"
+          description="No se pudieron obtener los clientes. Comprueba tu conexión e inténtalo de nuevo."
+          actionLabel="Reintentar"
+          onAction={() => refetch()}
+        />
       ) : isLoading ? null : (
         <EmptyState
           actionLabel={activeTab === "all" ? "Añadir Cliente" : undefined}

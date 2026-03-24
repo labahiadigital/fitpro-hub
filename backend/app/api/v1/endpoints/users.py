@@ -9,7 +9,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.security import get_password_hash, generate_verification_token
+from app.core.security import get_password_hash, generate_verification_token, validate_password_strength
 from app.models.user import User, UserRole, RoleType
 from app.models.workspace import Workspace
 from app.schemas.user import (
@@ -179,10 +179,11 @@ async def accept_staff_invite(
             detail="Esta cuenta ya fue activada. Inicia sesión normalmente."
         )
 
-    if len(data.password) < 8:
+    is_valid, error_msg = validate_password_strength(data.password)
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La contraseña debe tener al menos 8 caracteres"
+            detail=error_msg,
         )
 
     user.full_name = data.full_name

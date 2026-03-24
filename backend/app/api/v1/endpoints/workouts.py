@@ -370,12 +370,17 @@ async def remove_exercise_alternative(
 ):
     """Remove an exercise alternative."""
     result = await db.execute(
-        select(ExerciseAlternative).where(ExerciseAlternative.id == alternative_id)
+        select(ExerciseAlternative).where(
+            ExerciseAlternative.id == alternative_id,
+            ExerciseAlternative.exercise_id == exercise_id,
+            ExerciseAlternative.workspace_id == current_user.workspace_id,
+        )
     )
     alt = result.scalar_one_or_none()
-    if alt:
-        await db.delete(alt)
-        await db.commit()
+    if not alt:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alternativa no encontrada")
+    await db.delete(alt)
+    await db.commit()
 
 
 # ============ PROGRAMS ============
@@ -551,8 +556,19 @@ async def assign_program_to_client(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Programa no encontrado"
         )
-    
-    # Create a copy assigned to the client
+
+    client_result = await db.execute(
+        select(Client).where(
+            Client.id == data.client_id,
+            Client.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not client_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cliente no encontrado en este workspace"
+        )
+
     assigned_program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -590,7 +606,17 @@ async def create_workout_log(
         )
     )
     if not client_check.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado")
+
+    if data.program_id:
+        program_check = await db.execute(
+            select(WorkoutProgram.id).where(
+                WorkoutProgram.id == data.program_id,
+                WorkoutProgram.workspace_id == current_user.workspace_id,
+            )
+        )
+        if not program_check.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Programa no encontrado")
 
     log = WorkoutLog(
         program_id=data.program_id,

@@ -23,7 +23,7 @@ from app.models.message import (
     MessageSource, MessageDirection, MessageStatus
 )
 from app.models.client import Client
-from app.middleware.auth import require_workspace, CurrentUser
+from app.middleware.auth import require_workspace, require_staff, CurrentUser
 from app.services.kapso import kapso_service, KapsoError
 
 router = APIRouter()
@@ -122,7 +122,7 @@ async def get_whatsapp_status(
 
 @router.post("/setup", response_model=WhatsAppSetupResponse)
 async def setup_whatsapp(
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -213,7 +213,7 @@ async def setup_whatsapp(
 
 @router.post("/disconnect", response_model=WhatsAppDisconnectResponse)
 async def disconnect_whatsapp(
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """

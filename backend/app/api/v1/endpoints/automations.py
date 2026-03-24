@@ -74,7 +74,7 @@ class AutomationLogResponse(BaseModel):
 async def list_automations(
     trigger_type: Optional[TriggerType] = None,
     is_active: Optional[bool] = None,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -123,7 +123,7 @@ async def create_automation(
 @router.get("/{automation_id}", response_model=AutomationResponse)
 async def get_automation(
     automation_id: UUID,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, func
 from sqlalchemy.orm import selectinload
@@ -148,9 +148,12 @@ async def list_conversations(
         
         return response
     except Exception as e:
-        # Table might not exist yet - return empty list
-        print(f"[Messages] Error listing conversations: {e}")
-        return []
+        import logging
+        logging.getLogger(__name__).exception("Error listing conversations: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al obtener conversaciones"
+        )
 
 
 @router.post("/conversations", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
@@ -277,7 +280,7 @@ async def get_conversation(
 @router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
 async def list_messages(
     conversation_id: UUID,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=200),
     before: Optional[datetime] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)

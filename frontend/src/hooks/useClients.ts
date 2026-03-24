@@ -1,6 +1,7 @@
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientsApi, workoutsApi, nutritionApi } from "../services/api";
+import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 
 interface Client {
   id: string;
@@ -93,10 +94,10 @@ export function useCreateClient() {
         color: "green",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       notifications.show({
         title: "Error",
-        message: error.message || "Error al crear cliente",
+        message: getApiErrorMessage(error),
         color: "red",
       });
     },
@@ -118,10 +119,10 @@ export function useUpdateClient() {
         color: "green",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       notifications.show({
         title: "Error",
-        message: error.message || "Error al actualizar cliente",
+        message: getApiErrorMessage(error),
         color: "red",
       });
     },
@@ -135,12 +136,10 @@ export function useDeleteClient() {
     mutationFn: (id: string) => clientsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-    },
-    onError: (error: Error) => {
       notifications.show({
-        title: "Error",
-        message: error.message || "Error al eliminar cliente",
-        color: "red",
+        title: "Cliente eliminado",
+        message: "El cliente ha sido eliminado correctamente",
+        color: "green",
       });
     },
   });
@@ -153,12 +152,10 @@ export function usePermanentDeleteClient() {
     mutationFn: (id: string) => clientsApi.deletePermanent(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-    },
-    onError: (error: Error) => {
       notifications.show({
-        title: "Error",
-        message: error.message || "Error al eliminar cliente",
-        color: "red",
+        title: "Cliente eliminado",
+        message: "El cliente ha sido eliminado permanentemente",
+        color: "green",
       });
     },
   });
@@ -185,10 +182,10 @@ export function useCreateClientTag() {
         color: "green",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       notifications.show({
         title: "Error",
-        message: error.message || "Error al crear etiqueta",
+        message: getApiErrorMessage(error),
         color: "red",
       });
     },

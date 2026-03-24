@@ -56,7 +56,7 @@ class ClientPhotoResponse(BaseModel):
 
 @router.get("/tags", response_model=List[ClientTagResponse])
 async def list_tags(
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -125,7 +125,7 @@ async def list_clients(
     tag_id: Optional[UUID] = None,
     is_active: Optional[bool] = None,
     status_filter: Optional[str] = Query(None, alias="status"),
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -312,7 +312,7 @@ async def create_client(
 @router.get("/{client_id}", response_model=ClientResponse)
 async def get_client(
     client_id: UUID,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
