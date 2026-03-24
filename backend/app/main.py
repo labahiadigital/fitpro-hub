@@ -14,9 +14,20 @@ from app.api.v1.router import api_router
 logger = logging.getLogger(__name__)
 
 
+def _mask_url(url: str) -> str:
+    """Show host:port only, hide credentials."""
+    if "@" in url:
+        return url.split("@", 1)[-1]
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    return f"{parsed.hostname}:{parsed.port}/{parsed.path.lstrip('/')}"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting %s...", settings.APP_NAME)
+    logger.info("REDIS_URL target → %s", _mask_url(settings.REDIS_URL))
+    logger.info("DATABASE_URL target → %s", _mask_url(settings.DATABASE_URL) if settings.DATABASE_URL else "(empty)")
     yield
     logger.info("Shutting down %s...", settings.APP_NAME)
 
@@ -96,14 +107,17 @@ async def health_check():
         is_unhealthy = True
 
     # Redis check (informational — does not block deploy)
+    redis_target = _mask_url(settings.REDIS_URL)
     try:
         r = redis_lib.from_url(settings.REDIS_URL, socket_connect_timeout=3)
         r.ping()
         checks["redis"] = "connected"
+        checks["redis_host"] = redis_target
         r.close()
     except Exception as exc:
-        logger.warning("Health check - redis failed: %s", exc)
+        logger.warning("Health check - redis failed (target=%s): %s", redis_target, exc)
         checks["redis"] = "disconnected"
+        checks["redis_host"] = redis_target
 
     # Celery workers check (informational — does not block deploy)
     try:

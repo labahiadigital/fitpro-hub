@@ -1,0 +1,45 @@
+# Environment files - NEVER bundle local config into the image
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+.tox/
+
+# Docker
+.dockerignore
+Dockerfile*
+
+# Git
+.git/
+.gitignore
+
+# Misc
+*.log
+*.pid

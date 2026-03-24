@@ -9,7 +9,7 @@ from app.core.database import AsyncSessionLocal as async_session
 from app.models.notification import ReminderSetting, Notification
 from app.models.user import User
 from app.models.client import Client
-from app.services.email import send_email
+from app.services.email import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -150,8 +150,9 @@ async def _send_reminder(db: AsyncSession, reminder: ReminderSetting):
         </html>
         """
         
-        await send_email(
+        await email_service.send_email(
             to_email=recipient_email,
+            to_name=recipient_name,
             subject=subject,
             html_content=html_content
         )
