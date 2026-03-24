@@ -141,7 +141,7 @@ async def mark_notifications_read(
         .values(is_read=True, read_at=datetime.utcnow().isoformat())
     )
     await db.commit()
-    return {"message": "Notifications marked as read"}
+    return {"message": "Notificaciones marcadas como leídas"}
 
 
 @router.post("/mark-all-read", status_code=status.HTTP_200_OK)
@@ -165,7 +165,7 @@ async def mark_all_notifications_read(
     
     await db.execute(query)
     await db.commit()
-    return {"message": "All notifications marked as read"}
+    return {"message": "Todas las notificaciones marcadas como leídas"}
 
 
 @router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -184,7 +184,7 @@ async def delete_notification(
     notification = result.scalar_one_or_none()
     
     if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
+        raise HTTPException(status_code=404, detail="Notificación no encontrada")
     
     await db.delete(notification)
     await db.commit()
@@ -234,7 +234,7 @@ async def update_notification_preferences(
     result = await db.execute(select(User).where(User.id == current_user.id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     current_prefs = dict(user.preferences or {})
     notif_prefs = current_prefs.get("notifications", {})

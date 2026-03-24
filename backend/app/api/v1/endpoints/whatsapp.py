@@ -7,6 +7,7 @@ Endpoints para integración con WhatsApp Business via Kapso:
 
 Updated: 2026-02-02
 """
+import logging
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -25,6 +26,8 @@ from app.models.message import (
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 from app.services.kapso import kapso_service, KapsoError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -299,7 +302,7 @@ async def kapso_webhook(
     event_type = request.headers.get("X-Webhook-Event", data.get("event", ""))
     event_data = data.get("data", data)
     
-    print(f"[WhatsApp Webhook] Evento recibido: {event_type}")
+    logger.info("Evento recibido: %s", event_type)
     
     # Procesar según tipo de evento
     if event_type == "whatsapp.phone_number.created":
@@ -309,7 +312,7 @@ async def kapso_webhook(
     elif event_type == "whatsapp.message.status_updated":
         await handle_message_status_updated(event_data, db)
     else:
-        print(f"[WhatsApp Webhook] Evento no manejado: {event_type}")
+        logger.warning("Evento no manejado: %s", event_type)
     
     return {"status": "ok"}
 
@@ -323,7 +326,7 @@ async def handle_phone_number_created(data: dict, db: AsyncSession):
     customer_id = customer_info.get("id")
     
     if not customer_id:
-        print("[WhatsApp Webhook] phone_number.created sin customer_id")
+        logger.warning("phone_number.created sin customer_id")
         return
     
     # Buscar workspace por kapso_customer_id
@@ -336,7 +339,7 @@ async def handle_phone_number_created(data: dict, db: AsyncSession):
     workspace = result.scalar_one_or_none()
     
     if not workspace:
-        print(f"[WhatsApp Webhook] No se encontró workspace para customer_id: {customer_id}")
+        logger.warning("No se encontró workspace para customer_id: %s", customer_id)
         return
     
     # Actualizar configuración de WhatsApp
@@ -364,7 +367,7 @@ async def handle_phone_number_created(data: dict, db: AsyncSession):
     workspace.settings = new_settings
     await db.commit()
     
-    print(f"[WhatsApp Webhook] Workspace {workspace.id} conectado con número {display_phone_number}")
+    logger.info("Workspace %s conectado con número %s", workspace.id, display_phone_number)
     
     # TODO: Crear webhook para este phone_number para recibir mensajes
     # Esto requiere conocer la URL pública del backend
@@ -398,7 +401,7 @@ async def handle_message_received(data: dict, db: AsyncSession):
     workspace = result.scalar_one_or_none()
     
     if not workspace:
-        print(f"[WhatsApp Webhook] No se encontró workspace para phone_number_id: {phone_number_id}")
+        logger.warning("No se encontró workspace para phone_number_id: %s", phone_number_id)
         return
     
     # Buscar o crear conversación por número de WhatsApp
@@ -438,14 +441,14 @@ async def handle_message_received(data: dict, db: AsyncSession):
         db.add(conversation)
         await db.flush()
         
-        print(f"[WhatsApp Webhook] Nueva conversación creada: {conversation.id}")
+        logger.info("Nueva conversación creada: %s", conversation.id)
     
     # Verificar mensaje duplicado
     existing = await db.execute(
         select(Message).where(Message.external_id == message_id)
     )
     if existing.scalar_one_or_none():
-        print(f"[WhatsApp Webhook] Mensaje duplicado ignorado: {message_id}")
+        logger.debug("Mensaje duplicado ignorado: %s", message_id)
         return
     
     # Mapear tipo de mensaje
@@ -489,7 +492,7 @@ async def handle_message_received(data: dict, db: AsyncSession):
     
     await db.commit()
     
-    print(f"[WhatsApp Webhook] Mensaje guardado: {message.id} en conversación {conversation.id}")
+    logger.info("Mensaje guardado: %s en conversación %s", message.id, conversation.id)
 
 
 async def handle_message_status_updated(data: dict, db: AsyncSession):
@@ -509,7 +512,7 @@ async def handle_message_status_updated(data: dict, db: AsyncSession):
     message = result.scalar_one_or_none()
     
     if not message:
-        print(f"[WhatsApp Webhook] Mensaje no encontrado para status update: {message_id}")
+        logger.warning("Mensaje no encontrado para status update: %s", message_id)
         return
     
     # Mapear estado
@@ -528,4 +531,4 @@ async def handle_message_status_updated(data: dict, db: AsyncSession):
             message.external_error = data.get("error_message", data.get("error_code", "Error desconocido"))
         
         await db.commit()
-        print(f"[WhatsApp Webhook] Estado actualizado: {message_id} -> {status_str}")
+        logger.info("Estado actualizado: %s -> %s", message_id, status_str)

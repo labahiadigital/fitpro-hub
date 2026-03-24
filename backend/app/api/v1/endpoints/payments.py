@@ -577,9 +577,9 @@ async def stripe_webhook(
             payload, stripe_signature, settings.STRIPE_WEBHOOK_SECRET
         )
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid payload")
+        raise HTTPException(status_code=400, detail="Payload inválido")
     except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        raise HTTPException(status_code=400, detail="Firma inválida")
     
     # Handle the event
     if event.type == "payment_intent.succeeded":

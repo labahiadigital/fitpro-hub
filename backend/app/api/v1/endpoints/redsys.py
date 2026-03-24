@@ -537,7 +537,7 @@ async def redsys_notification(
             f"Redsys notification: merchant code mismatch! "
             f"Expected={redsys_service.config.merchant_code}, Got={merchant_code}, IP={client_ip}"
         )
-        return {"status": "ok", "message": "Merchant code mismatch"}
+        return {"status": "ok", "message": "Código de comercio no coincide"}
 
     # Find payment by Redsys order ID
     result = await db.execute(
@@ -549,12 +549,12 @@ async def redsys_notification(
 
     if not payment:
         logger.error(f"Redsys notification: payment not found for order {order_id}")
-        return {"status": "ok", "message": "Payment not found"}
+        return {"status": "ok", "message": "Pago no encontrado"}
 
     # Idempotency: skip if already processed
     if payment.status != PaymentStatus.pending:
         logger.info(f"Redsys notification: payment {payment.id} already processed (status={payment.status.value})")
-        return {"status": "ok", "message": "Already processed"}
+        return {"status": "ok", "message": "Ya procesado"}
 
     # Security: verify amount matches expected
     try:
@@ -565,7 +565,7 @@ async def redsys_notification(
                 f"Redsys notification: amount mismatch for payment {payment.id}! "
                 f"Expected={expected_amount_cents}, Got={notified_amount_cents}"
             )
-            return {"status": "ok", "message": "Amount mismatch"}
+            return {"status": "ok", "message": "El importe no coincide"}
     except (ValueError, TypeError):
         logger.error(f"Redsys notification: invalid amount '{amount_str}'")
 
@@ -676,7 +676,7 @@ async def confirm_return(
     # Security: verify merchant code
     if merchant_code and merchant_code != redsys_service.config.merchant_code:
         logger.error(f"confirm-return: merchant code mismatch! Expected={redsys_service.config.merchant_code}, Got={merchant_code}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Merchant code mismatch")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Código de comercio no coincide")
 
     # Find payment
     result = await db.execute(
@@ -688,7 +688,7 @@ async def confirm_return(
 
     if not payment:
         logger.error(f"confirm-return: payment not found for order {order_id}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pago no encontrado")
 
     # If already processed (e.g. webhook arrived first), just return current status
     if payment.status != PaymentStatus.pending:
@@ -704,7 +704,7 @@ async def confirm_return(
         expected_amount_cents = int(round(float(payment.amount) * 100))
         if notified_amount_cents != expected_amount_cents:
             logger.error(f"confirm-return: amount mismatch for payment {payment.id}!")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Amount mismatch")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El importe no coincide")
     except (ValueError, TypeError):
         pass
 

@@ -18,6 +18,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure, useLocalStorage } from "@mantine/hooks";
+import { useMemo } from "react";
 import {
   IconArrowRight,
   IconCalendarEvent,
@@ -682,8 +683,7 @@ export function DashboardPage() {
   const greeting =
     hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
 
-  // Transform sessions for the widget
-  const sessions = (todaySessions || []).map((session: {
+  const sessions = useMemo(() => (todaySessions || []).map((session: {
     id: string;
     title: string;
     client_name?: string;
@@ -703,10 +703,9 @@ export function DashboardPage() {
     modality: (session.modality || "in_person") as "in_person" | "online",
     status: (session.status || "pending") as "confirmed" | "pending" | "cancelled" | "completed",
     location: session.location?.address,
-  }));
+  })), [todaySessions]);
 
-  // Transform alerts
-  const transformedAlerts = (alerts || []).map((alert: {
+  const transformedAlerts = useMemo(() => (alerts || []).map((alert: {
     id: string;
     type?: string;
     title: string;
@@ -719,7 +718,7 @@ export function DashboardPage() {
     title: alert.title,
     description: alert.message || alert.description || "",
     severity: (alert.severity || "info") as "info" | "warning" | "error" | "success",
-  }));
+  })), [alerts]);
 
   return (
     <Box>

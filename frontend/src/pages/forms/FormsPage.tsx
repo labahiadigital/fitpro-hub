@@ -23,6 +23,7 @@ import {
   Textarea,
   TextInput,
   ThemeIcon,
+  Skeleton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -123,7 +124,7 @@ export function FormsPage() {
   const [documents] = useState<Document[]>([]);
   
   // API hooks
-  const { data: formsData = [] } = useForms();
+  const { data: formsData = [], isLoading: isLoadingForms } = useForms();
   const { data: submissionsData = [], isLoading: isLoadingSubmissions } = useFormSubmissions();
   const updateSubmissionMutation = useUpdateFormSubmission();
   const createForm = useCreateForm();
@@ -471,7 +472,13 @@ export function FormsPage() {
         </Tabs.List>
 
         <Tabs.Panel value="forms">
-          {forms.length > 0 ? (
+          {isLoadingForms ? (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} height={200} radius="lg" />
+              ))}
+            </SimpleGrid>
+          ) : forms.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
               {forms.map((formTemplate) => (
                 <Card key={formTemplate.id} padding="lg" radius="lg" withBorder>

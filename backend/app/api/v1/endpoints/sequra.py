@@ -315,7 +315,7 @@ async def sequra_ipn(
     allowed_ips = getattr(settings, "SEQURA_ALLOWED_IPS", None)
     if allowed_ips and client_ip not in allowed_ips:
         logger.warning(f"SeQura IPN: rejected from untrusted IP={client_ip}")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado")
 
     logger.info(
         f"SeQura IPN received: order_ref={order_ref}, sq_state={sq_state}, "
@@ -324,7 +324,7 @@ async def sequra_ipn(
 
     if not order_ref or not sq_state:
         logger.warning(f"SeQura IPN: missing params from IP={client_ip}")
-        return {"status": "ok", "message": "Missing parameters"}
+        return {"status": "ok", "message": "Parámetros ausentes"}
 
     # Find payment by SeQura order ref
     result = await db.execute(
@@ -336,12 +336,12 @@ async def sequra_ipn(
 
     if not payment:
         logger.error(f"SeQura IPN: payment not found for order_ref={order_ref}")
-        return {"status": "ok", "message": "Payment not found"}
+        return {"status": "ok", "message": "Pago no encontrado"}
 
     # Idempotency: skip if already confirmed
     if payment.status == PaymentStatus.succeeded:
         logger.info(f"SeQura IPN: payment {payment.id} already succeeded")
-        return {"status": "ok", "message": "Already processed"}
+        return {"status": "ok", "message": "Ya procesado"}
 
     extra = payment.extra_data or {}
     order_uri = extra.get("sequra_order_uri", "")
@@ -349,7 +349,7 @@ async def sequra_ipn(
 
     if not order_uri or not stored_order_data:
         logger.error(f"SeQura IPN: missing order data for payment {payment.id}")
-        return {"status": "ok", "message": "Missing order data"}
+        return {"status": "ok", "message": "Datos del pedido no encontrados"}
 
     # Generate a unique order reference for SeQura
     our_order_ref = f"TF-{str(payment.id)[:8].upper()}"

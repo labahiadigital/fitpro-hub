@@ -3,6 +3,7 @@ Google Calendar Integration Endpoints
 
 Endpoints para OAuth, estado de conexión y sincronización con Google Calendar.
 """
+import logging
 import secrets
 import json
 from typing import Optional, List
@@ -19,6 +20,8 @@ from app.models.booking import Booking
 from app.models.client import Client
 from app.middleware.auth import require_workspace, CurrentUser
 from app.services.google_calendar import google_calendar_service, GoogleCalendarError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -163,7 +166,7 @@ async def oauth_callback(
             await google_calendar_service.get_or_create_trackfiz_calendar(token, db)
             await db.refresh(token)
         except Exception as e:
-            print(f"[Google Calendar] Error creando calendario Trackfiz: {e}")
+            logger.error("Error creando calendario Trackfiz: %s", e)
             # No es crítico, se usará el calendario principal
         
         return GoogleCalendarStatusResponse(
@@ -244,7 +247,7 @@ async def disconnect(
     try:
         await google_calendar_service.stop_push_notifications(token)
     except Exception:
-        pass
+        logger.warning("Error al detener push notifications de Google Calendar", exc_info=True)
     
     # Eliminar mappings de sincronización del usuario
     await db.execute(
@@ -291,15 +294,15 @@ async def sync_calendar(
         )
     
     try:
-        print(f"[Google Calendar] Iniciando sincronización para usuario {current_user.id}...")
+        logger.info("Iniciando sincronización para usuario %s...", current_user.id)
         
         # Asegurar token válido
         token = await google_calendar_service.ensure_valid_token(token, db)
-        print(f"[Google Calendar] Token válido, calendar_id actual: {token.calendar_id}")
+        logger.debug("Token válido, calendar_id actual: %s", token.calendar_id)
         
         # Asegurar que existe el calendario Trackfiz
         calendar_id = await google_calendar_service.get_or_create_trackfiz_calendar(token, db)
-        print(f"[Google Calendar] Calendario Trackfiz: {calendar_id}")
+        logger.debug("Calendario Trackfiz: %s", calendar_id)
         
         # Refrescar el token para obtener el calendar_id actualizado
         await db.refresh(token)
@@ -319,7 +322,7 @@ async def sync_calendar(
         )
         bookings = result.scalars().all()
         
-        print(f"[Google Calendar] Encontrados {len(bookings)} bookings para sincronizar")
+        logger.info("Encontrados %s bookings para sincronizar", len(bookings))
         
         events_synced = 0
         errors = []
@@ -344,9 +347,9 @@ async def sync_calendar(
                 
                 if event_id:
                     events_synced += 1
-                    print(f"[Google Calendar] Booking {booking.id} sincronizado: {event_id}")
+                    logger.info("Booking %s sincronizado: %s", booking.id, event_id)
             except Exception as e:
-                print(f"[Google Calendar] Error sincronizando booking {booking.id}: {e}")
+                logger.error("Error sincronizando booking %s: %s", booking.id, e)
                 errors.append(str(e))
         
         # Actualizar última sincronización
@@ -364,15 +367,13 @@ async def sync_calendar(
         )
         
     except GoogleCalendarError as e:
-        print(f"[Google Calendar] GoogleCalendarError: {e.message}")
+        logger.error("GoogleCalendarError: %s", e.message)
         raise HTTPException(
             status_code=e.status_code or status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=e.message
         )
     except Exception as e:
-        print(f"[Google Calendar] Error inesperado: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error inesperado sincronizando: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al sincronizar con Google Calendar"
@@ -510,12 +511,10 @@ async def get_google_events(
         return result_events
         
     except GoogleCalendarError as e:
-        print(f"[Google Calendar] Error obteniendo eventos: {e.message}")
+        logger.error("Error obteniendo eventos: %s", e.message)
         return []
     except Exception as e:
-        print(f"[Google Calendar] Error inesperado: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error inesperado obteniendo eventos: %s", e)
         return []
 
 
@@ -560,7 +559,7 @@ async def google_webhook(
     
     # Para otras notificaciones, podríamos sincronizar cambios desde Google
     # Por ahora, solo registramos que recibimos la notificación
-    print(f"[Google Calendar Webhook] Channel: {channel_id}, State: {resource_state}")
+    logger.info("Webhook recibido - Channel: %s, State: %s", channel_id, resource_state)
     
     # TODO: Implementar sincronización de cambios desde Google a Trackfiz
     # Esto requeriría:

@@ -114,7 +114,7 @@ export function CalendarPage() {
   };
 
   // Fetch bookings de Trackfiz
-  const { data: bookingsData, isLoading: bookingsLoading } = useBookings(dateParams);
+  const { data: bookingsData, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } = useBookings(dateParams);
 
   // Verificar si Google Calendar está conectado
   const { data: gcalStatus } = useGoogleCalendarStatus();
@@ -510,6 +510,11 @@ export function CalendarPage() {
           <Text c="dimmed" mt="md">
             Cargando calendario...
           </Text>
+        </Paper>
+      ) : bookingsError ? (
+        <Paper radius="lg" p="xl" ta="center" withBorder>
+          <Text c="dimmed" mb="md">Error al cargar las reservas</Text>
+          <Button variant="light" onClick={() => refetchBookings()}>Reintentar</Button>
         </Paper>
       ) : view === "month" ? (
         <Paper radius="lg" style={{ overflow: "hidden" }} withBorder>

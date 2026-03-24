@@ -532,15 +532,15 @@ async def update_program_exercise(
         if "days" in template:
             days = template["days"]
             if data.day_index < 0 or data.day_index >= len(days):
-                raise HTTPException(status_code=400, detail="Invalid day_index")
+                raise HTTPException(status_code=400, detail="Índice de día inválido")
             day = days[data.day_index]
             blocks = day.get("blocks", [])
             if data.block_index < 0 or data.block_index >= len(blocks):
-                raise HTTPException(status_code=400, detail="Invalid block_index")
+                raise HTTPException(status_code=400, detail="Índice de bloque inválido")
             block = blocks[data.block_index]
             exercises = block.get("exercises", [])
             if data.exercise_index < 0 or data.exercise_index >= len(exercises):
-                raise HTTPException(status_code=400, detail="Invalid exercise_index")
+                raise HTTPException(status_code=400, detail="Índice de ejercicio inválido")
             exercise = exercises[data.exercise_index]
             exercise["exercise_id"] = str(data.new_exercise_id)
             exercise["change_reason"] = data.reason or ""
@@ -561,11 +561,11 @@ async def update_program_exercise(
                                 ex["changed_by"] = "client"
                                 break
         else:
-            raise HTTPException(status_code=400, detail="Invalid program template structure")
+            raise HTTPException(status_code=400, detail="Estructura de plantilla de programa inválida")
     except HTTPException:
         raise
     except (IndexError, KeyError, TypeError) as e:
-        raise HTTPException(status_code=400, detail=f"Invalid exercise position: {str(e)}")
+        raise HTTPException(status_code=400, detail="Posición de ejercicio inválida")
 
     from sqlalchemy.orm.attributes import flag_modified
     flag_modified(program, "template")
@@ -714,7 +714,7 @@ async def create_detailed_workout_log(
     db.add(log)
     await db.commit()
     await db.refresh(log)
-    return {"message": "Workout logged successfully", "id": str(log.id)}
+    return {"message": "Entrenamiento registrado correctamente", "id": str(log.id)}
 
 
 @router.get("/workouts/exercise-history/{exercise_id}")
@@ -1233,7 +1233,7 @@ async def upload_progress_photo(
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type {file.content_type} not allowed. Use JPEG, PNG, or WebP."
+            detail=f"Tipo de archivo {file.content_type} no permitido. Usa JPEG, PNG o WebP."
         )
     
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -1261,7 +1261,7 @@ async def upload_progress_photo(
         except Exception as upload_err:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Storage upload failed: {str(upload_err)}"
+                detail="Error al subir el archivo al almacenamiento"
             )
         
         public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"

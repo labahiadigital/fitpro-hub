@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -17,6 +18,8 @@ from app.models.client import Client
 from app.models.workspace import Workspace
 from app.middleware.auth import require_workspace, CurrentUser
 from app.services.kapso import kapso_service, KapsoError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -148,8 +151,7 @@ async def list_conversations(
         
         return response
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).exception("Error listing conversations: %s", e)
+        logger.exception("Error listing conversations: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al obtener conversaciones"
@@ -429,13 +431,13 @@ async def send_message(
             
         except KapsoError as e:
             # Log error but don't fail the request - message is saved locally
-            print(f"[Messages] Error enviando WhatsApp: {e.message}")
+            logger.error("Error enviando WhatsApp: %s", e.message)
             message.external_status = MessageStatus.FAILED
             message.external_error = e.message
             await db.commit()
             await db.refresh(message)
         except Exception as e:
-            print(f"[Messages] Error inesperado enviando WhatsApp: {str(e)}")
+            logger.exception("Error inesperado enviando WhatsApp: %s", e)
             message.external_status = MessageStatus.FAILED
             message.external_error = str(e)
             await db.commit()
@@ -523,13 +525,13 @@ async def whatsapp_webhook(
         import hashlib
         signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")
         if not signature:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing webhook signature")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Firma de webhook ausente")
         body_bytes = await request.body()
         expected = "sha256=" + hmac.new(
             webhook_secret.encode(), body_bytes, hashlib.sha256
         ).hexdigest()
         if not hmac.compare_digest(expected, signature):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook signature")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Firma de webhook inválida")
 
     # Find or create conversation by WhatsApp phone
     # First, try to find by phone number
@@ -621,13 +623,13 @@ async def whatsapp_status_webhook(
         import hashlib
         signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")
         if not signature:
-            return {"status": "error", "message": "Missing signature"}
+            return {"status": "error", "message": "Firma ausente"}
         body_bytes = await request.body()
         expected = "sha256=" + hmac.new(
             webhook_secret.encode(), body_bytes, hashlib.sha256
         ).hexdigest()
         if not hmac.compare_digest(expected, signature):
-            return {"status": "error", "message": "Invalid signature"}
+            return {"status": "error", "message": "Firma inválida"}
 
     result = await db.execute(
         select(Message).where(Message.external_id == message_id)

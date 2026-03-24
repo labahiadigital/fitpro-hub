@@ -21,6 +21,7 @@ import {
   Text,
   Textarea,
   TextInput,
+  Skeleton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -695,7 +696,13 @@ export function WorkoutsPage() {
                 </Box>
               ))}
             </SimpleGrid>
-          ) : loadingPrograms ? null : (
+          ) : loadingPrograms ? (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} height={160} radius="lg" />
+              ))}
+            </SimpleGrid>
+          ) : (
             <EmptyState
               actionLabel="Crear Programa"
               description="Crea tu primer programa de entrenamiento para asignarlo a tus clientes."

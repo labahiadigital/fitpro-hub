@@ -105,7 +105,7 @@ async def get_product(
     product = result.scalar_one_or_none()
     
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     return ProductResponse.model_validate(product)
 
@@ -127,7 +127,7 @@ async def update_product(
     product = result.scalar_one_or_none()
     
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -171,7 +171,7 @@ async def delete_product(
     product = result.scalar_one_or_none()
     
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     active_subs = await db.execute(
         select(func.count()).select_from(Subscription).where(
@@ -248,7 +248,7 @@ async def update_session_package(
     package = result.scalar_one_or_none()
     
     if not package:
-        raise HTTPException(status_code=404, detail="Session package not found")
+        raise HTTPException(status_code=404, detail="Paquete de sesiones no encontrado")
     
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -319,13 +319,13 @@ async def use_session(
     package = result.scalar_one_or_none()
     
     if not package:
-        raise HTTPException(status_code=404, detail="Client package not found")
+        raise HTTPException(status_code=404, detail="Paquete del cliente no encontrado")
     
     if package.status != 'active':
-        raise HTTPException(status_code=400, detail="Package is not active")
+        raise HTTPException(status_code=400, detail="El paquete no está activo")
     
     if package.used_sessions >= package.total_sessions:
-        raise HTTPException(status_code=400, detail="No sessions remaining")
+        raise HTTPException(status_code=400, detail="No quedan sesiones disponibles")
     
     package.used_sessions += 1
     

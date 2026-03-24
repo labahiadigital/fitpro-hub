@@ -35,7 +35,10 @@ async def sync_booking_to_calendars(
     client = None
     if booking.client_id:
         result = await db.execute(
-            select(Client).where(Client.id == booking.client_id)
+            select(Client).where(
+                Client.id == booking.client_id,
+                Client.workspace_id == booking.workspace_id,
+            )
         )
         client = result.scalar_one_or_none()
     

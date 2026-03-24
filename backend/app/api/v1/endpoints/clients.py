@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional, Dict
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
@@ -23,6 +24,8 @@ from app.schemas.client import (
 )
 from app.schemas.base import PaginatedResponse, BaseSchema
 from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -611,7 +614,7 @@ async def get_client_measurements(
     # Verify client exists and belongs to workspace
     client = await db.get(Client, client_id)
     if not client or client.workspace_id != current_user.workspace_id:
-        raise HTTPException(status_code=404, detail="Client not found")
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
     result = await db.execute(
         select(ClientMeasurement)
@@ -652,7 +655,7 @@ async def get_client_photos(
     # Verify client exists and belongs to workspace
     client = await db.get(Client, client_id)
     if not client or client.workspace_id != current_user.workspace_id:
-        raise HTTPException(status_code=404, detail="Client not found")
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
     result = await db.execute(
         select(ClientMeasurement)
@@ -692,7 +695,7 @@ async def get_client_progress_summary(
     # Verify client exists and belongs to workspace
     client = await db.get(Client, client_id)
     if not client or client.workspace_id != current_user.workspace_id:
-        raise HTTPException(status_code=404, detail="Client not found")
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
     # Get all measurements
     result = await db.execute(
@@ -770,7 +773,7 @@ async def send_invitation_email(
 ) -> bool:
     """Send invitation email using Brevo API."""
     if not settings.BREVO_API_KEY:
-        print("[WARNING] BREVO_API_KEY not configured, skipping email send")
+        logger.warning("BREVO_API_KEY not configured, skipping email send")
         return False
     
     greeting = f"Hola {first_name}" if first_name else "Hola"
@@ -848,11 +851,11 @@ async def send_invitation_email(
             )
             response.raise_for_status()
         
-        print(f"[OK] Invitation email sent to {email}")
+        logger.info("Invitation email sent to %s", email)
         return True
         
     except Exception as e:
-        print(f"[ERROR] Failed to send invitation email to {email}: {e}")
+        logger.exception("Failed to send invitation email to %s", email)
         return False
 
 
@@ -968,7 +971,7 @@ async def create_invitation(
     
     if not email_sent:
         # Log warning but don't fail - invitation is created
-        print(f"[WARNING] Invitation created but email not sent for {data.email}")
+        logger.warning("Invitation created but email not sent for %s", data.email)
     
     return InvitationResponse(
         id=invitation.id,

@@ -219,36 +219,3 @@ export const theme = createTheme({
   },
 });
 
-// CSS Variables for custom styling
-export const cssVariables = {
-  // Main Colors
-  "--tf-accent": "#E7E247",
-  "--tf-accent-hover": "#d4cf2e",
-  "--tf-dark": "#3D3B30",
-  "--tf-dark-light": "#4d4d42",
-  "--tf-slate": "#4D5061",
-  "--tf-primary": "#5C80BC",
-  "--tf-primary-light": "#7199ce",
-  "--tf-bg": "#E9EDDE",
-  "--tf-bg-light": "#F5F7F0",
-  "--tf-white": "#FFFFFF",
-  
-  // Semantic Colors
-  "--tf-success": "#10b981",
-  "--tf-warning": "#f59e0b",
-  "--tf-error": "#ef4444",
-  "--tf-info": "#5C80BC",
-  
-  // Shadows
-  "--tf-shadow-sm": "0 1px 2px 0 rgba(61, 59, 48, 0.05)",
-  "--tf-shadow": "0 1px 3px 0 rgba(61, 59, 48, 0.1), 0 1px 2px -1px rgba(61, 59, 48, 0.1)",
-  "--tf-shadow-md": "0 4px 6px -1px rgba(61, 59, 48, 0.1), 0 2px 4px -2px rgba(61, 59, 48, 0.1)",
-  "--tf-shadow-lg": "0 10px 15px -3px rgba(61, 59, 48, 0.1), 0 4px 6px -4px rgba(61, 59, 48, 0.1)",
-  
-  // Border Radius
-  "--tf-radius-sm": "6px",
-  "--tf-radius": "8px",
-  "--tf-radius-md": "10px",
-  "--tf-radius-lg": "12px",
-  "--tf-radius-xl": "16px",
-};

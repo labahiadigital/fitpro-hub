@@ -1,4 +1,5 @@
 """Celery tasks for sending reminders."""
+import logging
 from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,8 @@ from app.models.notification import ReminderSetting, Notification
 from app.models.user import User
 from app.models.client import Client
 from app.services.email import send_email
+
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name="process_due_reminders")
@@ -48,7 +51,7 @@ async def _process_due_reminders():
                 await db.commit()
                 
             except Exception as e:
-                print(f"Error enviando recordatorio {reminder.id}: {str(e)}")
+                logger.exception("Error enviando recordatorio %s", reminder.id)
                 await db.rollback()
 
 
@@ -153,7 +156,7 @@ async def _send_reminder(db: AsyncSession, reminder: ReminderSetting):
             html_content=html_content
         )
     except Exception as e:
-        print(f"Error enviando email de recordatorio: {str(e)}")
+        logger.exception("Error enviando email de recordatorio")
 
 
 @celery_app.task(name="create_default_reminders_for_client")

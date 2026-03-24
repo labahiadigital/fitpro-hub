@@ -141,6 +141,7 @@ export function DataTable<T extends { id: string }>({
                 variant="default" 
                 size="md" 
                 radius="md"
+                aria-label="Filtros avanzados"
                 style={{ 
                   borderColor: "var(--border-subtle)",
                   color: "var(--nv-slate)"
@@ -239,6 +240,14 @@ export function DataTable<T extends { id: string }>({
                 <Table.Tr
                   key={item.id}
                   onClick={() => onRowClick?.(item)}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                  onKeyDown={onRowClick ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRowClick(item);
+                    }
+                  } : undefined}
                   style={{ 
                     cursor: onRowClick ? "pointer" : "default",
                   }}
@@ -278,6 +287,7 @@ export function DataTable<T extends { id: string }>({
                             color="gray" 
                             variant="subtle"
                             radius="xl"
+                            aria-label="Acciones"
                           >
                             <IconDotsVertical size={18} />
                           </ActionIcon>
