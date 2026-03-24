@@ -1,11 +1,12 @@
 import { Suspense, lazy, useEffect } from "react";
 import { Center, Loader, MantineProvider } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
-import { Notifications } from "@mantine/notifications";
+import { Notifications, notifications } from "@mantine/notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { useAuthStore } from "./stores/auth";
 import { theme } from "./theme";
 
@@ -58,6 +59,7 @@ const MyCalendarPage = lazy(() => import("./pages/client/MyCalendarPage").then(m
 const MyDocumentsPage = lazy(() => import("./pages/client/MyDocumentsPage").then(m => ({ default: m.MyDocumentsPage })));
 const MyProfilePage = lazy(() => import("./pages/client/MyProfilePage").then(m => ({ default: m.MyProfilePage })));
 const MyMessagesPage = lazy(() => import("./pages/client/MyMessagesPage").then(m => ({ default: m.MyMessagesPage })));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +69,17 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000,
       gcTime: 30 * 60 * 1000,
       refetchOnReconnect: true,
+    },
+    mutations: {
+      onError: (error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : "Ha ocurrido un error";
+        notifications.show({
+          title: "Error",
+          message,
+          color: "red",
+        });
+      },
     },
   },
 });
@@ -83,7 +96,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
   if (!_hasHydrated) {
-    return null;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
@@ -97,7 +110,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
   if (!_hasHydrated) {
-    return null;
+    return <PageLoader />;
   }
 
   if (isAuthenticated) {
@@ -121,7 +134,7 @@ function TrainerRoute({ children }: { children: React.ReactNode }) {
   const { user, _hasHydrated } = useAuthStore();
 
   if (!_hasHydrated) {
-    return null;
+    return <PageLoader />;
   }
 
   if (user?.role === 'client') {
@@ -152,6 +165,7 @@ export default function App() {
       <MantineProvider defaultColorScheme="light" theme={theme}>
         <DatesProvider settings={{ locale: "es" }}>
           <Notifications position="top-right" />
+          <ErrorBoundary>
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>
@@ -243,10 +257,11 @@ export default function App() {
                   <Route element={<SuggestionsPage />} path="/suggestions" />
                 </Route>
 
-                <Route element={<Navigate replace to="/" />} path="*" />
+                <Route element={<NotFoundPage />} path="*" />
               </Routes>
             </Suspense>
           </BrowserRouter>
+          </ErrorBoundary>
         </DatesProvider>
       </MantineProvider>
     </QueryClientProvider>

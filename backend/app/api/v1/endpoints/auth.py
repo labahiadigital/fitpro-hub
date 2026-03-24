@@ -6,13 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone, timedelta
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 import traceback
 import logging
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
+
+from app.core.limiter import limiter
 
 from app.core.config import settings
 from app.core.database import get_db

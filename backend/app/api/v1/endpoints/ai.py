@@ -6,12 +6,13 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.middleware.auth import require_workspace
 from app.models.client import Client
 from app.services.ai_generator import AIGenerationRequest, AIGeneratorService
@@ -138,8 +139,10 @@ async def configure_ai(
 # =====================================================
 
 @router.post("/generate/workout", response_model=GenerationResponse)
+@limiter.limit("10/minute")
 async def generate_workout_plan(
-    request: GenerateWorkoutRequest,
+    request: Request,
+    body: GenerateWorkoutRequest,
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
@@ -147,10 +150,10 @@ async def generate_workout_plan(
     # Obtener datos del cliente si se proporciona ID
     client_data = {}
 
-    if request.client_id:
+    if body.client_id:
         result = await db.execute(
             select(Client).where(
-                Client.id == request.client_id,
+                Client.id == body.client_id,
                 Client.workspace_id == current_user.workspace_id,
             )
         )
@@ -159,27 +162,26 @@ async def generate_workout_plan(
         if client:
             client_data = {
                 "name": f"{client.first_name} {client.last_name}",
-                "age": _calculate_age(client.birth_date) if client.birth_date else request.age,
-                "gender": client.gender or request.gender,
-                "weight": client.weight_kg or request.weight,
-                "height": client.height_cm or request.height,
-                "injuries": client.health_data.get("injuries", []) if client.health_data else request.injuries,
+                "age": _calculate_age(client.birth_date) if client.birth_date else body.age,
+                "gender": client.gender or body.gender,
+                "weight": client.weight_kg or body.weight,
+                "height": client.height_cm or body.height,
+                "injuries": client.health_data.get("injuries", []) if client.health_data else body.injuries,
             }
 
-    # Combinar con datos de la solicitud
     client_data.update({
-        "name": client_data.get("name") or request.name or "Cliente",
-        "age": client_data.get("age") or request.age,
-        "gender": client_data.get("gender") or request.gender,
-        "weight": client_data.get("weight") or request.weight,
-        "height": client_data.get("height") or request.height,
-        "experience_level": request.experience_level,
-        "goal": request.goal,
-        "days_per_week": request.days_per_week,
-        "session_duration": request.session_duration,
-        "equipment": request.equipment,
-        "injuries": client_data.get("injuries") or request.injuries,
-        "preferences": request.preferences,
+        "name": client_data.get("name") or body.name or "Cliente",
+        "age": client_data.get("age") or body.age,
+        "gender": client_data.get("gender") or body.gender,
+        "weight": client_data.get("weight") or body.weight,
+        "height": client_data.get("height") or body.height,
+        "experience_level": body.experience_level,
+        "goal": body.goal,
+        "days_per_week": body.days_per_week,
+        "session_duration": body.session_duration,
+        "equipment": body.equipment,
+        "injuries": client_data.get("injuries") or body.injuries,
+        "preferences": body.preferences,
     })
 
     # Obtener API key (en producción, de la configuración del workspace)
@@ -209,19 +211,20 @@ async def generate_workout_plan(
 
 
 @router.post("/generate/meal-plan", response_model=GenerationResponse)
+@limiter.limit("10/minute")
 async def generate_meal_plan(
-    request: GenerateMealPlanRequest,
+    request: Request,
+    body: GenerateMealPlanRequest,
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
     """Generar plan nutricional con IA"""
-    # Obtener datos del cliente si se proporciona ID
     client_data = {}
 
-    if request.client_id:
+    if body.client_id:
         result = await db.execute(
             select(Client).where(
-                Client.id == request.client_id,
+                Client.id == body.client_id,
                 Client.workspace_id == current_user.workspace_id,
             )
         )
@@ -230,29 +233,28 @@ async def generate_meal_plan(
         if client:
             client_data = {
                 "name": f"{client.first_name} {client.last_name}",
-                "age": _calculate_age(client.birth_date) if client.birth_date else request.age,
-                "gender": client.gender or request.gender,
-                "weight": client.weight_kg or request.weight,
-                "height": client.height_cm or request.height,
-                "allergies": client.allergies or request.allergies,
-                "intolerances": client.intolerances or request.intolerances,
+                "age": _calculate_age(client.birth_date) if client.birth_date else body.age,
+                "gender": client.gender or body.gender,
+                "weight": client.weight_kg or body.weight,
+                "height": client.height_cm or body.height,
+                "allergies": client.allergies or body.allergies,
+                "intolerances": client.intolerances or body.intolerances,
             }
 
-    # Combinar con datos de la solicitud
     client_data.update({
-        "name": client_data.get("name") or request.name or "Cliente",
-        "age": client_data.get("age") or request.age,
-        "gender": client_data.get("gender") or request.gender,
-        "weight": client_data.get("weight") or request.weight,
-        "height": client_data.get("height") or request.height,
-        "target_weight": request.target_weight or client_data.get("weight"),
-        "goal": request.goal,
-        "activity_level": request.activity_level,
-        "target_calories": request.target_calories,
-        "allergies": client_data.get("allergies") or request.allergies,
-        "intolerances": client_data.get("intolerances") or request.intolerances,
-        "food_preferences": request.food_preferences,
-        "meals_per_day": request.meals_per_day,
+        "name": client_data.get("name") or body.name or "Cliente",
+        "age": client_data.get("age") or body.age,
+        "gender": client_data.get("gender") or body.gender,
+        "weight": client_data.get("weight") or body.weight,
+        "height": client_data.get("height") or body.height,
+        "target_weight": body.target_weight or client_data.get("weight"),
+        "goal": body.goal,
+        "activity_level": body.activity_level,
+        "target_calories": body.target_calories,
+        "allergies": client_data.get("allergies") or body.allergies,
+        "intolerances": client_data.get("intolerances") or body.intolerances,
+        "food_preferences": body.food_preferences,
+        "meals_per_day": body.meals_per_day,
     })
 
     # Obtener API key
@@ -281,16 +283,17 @@ async def generate_meal_plan(
 
 
 @router.post("/analyze/progress", response_model=GenerationResponse)
+@limiter.limit("10/minute")
 async def analyze_client_progress(
-    request: AnalyzeProgressRequest,
+    request: Request,
+    body: AnalyzeProgressRequest,
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
     """Analizar progreso del cliente con IA"""
-    # Obtener datos del cliente
     result = await db.execute(
         select(Client).where(
-            Client.id == request.client_id,
+            Client.id == body.client_id,
             Client.workspace_id == current_user.workspace_id,
         )
     )

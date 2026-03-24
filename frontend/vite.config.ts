@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   server: {
     port: 5173,
@@ -18,7 +18,7 @@ export default defineConfig({
     },
   },
   esbuild: {
-    drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],
+    drop: mode === "production" ? ["console", "debugger"] : [],
   },
   build: {
     reportCompressedSize: false,
@@ -43,4 +43,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

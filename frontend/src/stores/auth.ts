@@ -20,7 +20,7 @@ interface User {
   is_active: boolean;
   role?: UserRole;
   workspace_id?: string;
-  preferences?: Record<string, any>;
+  preferences?: Record<string, unknown>;
   phone?: string;
 }
 
@@ -30,7 +30,7 @@ interface Workspace {
   slug: string;
   logo_url?: string;
   description?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
   branding?: {
     primary_color: string;
     secondary_color: string;

@@ -213,7 +213,4 @@ def generate_password_reset_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def decode_supabase_token(token: str) -> Optional[dict]:
-    """Legacy stub — kept to avoid import errors. Always returns None."""
-    return None
 

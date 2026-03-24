@@ -1,7 +1,7 @@
 from typing import Optional, List
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -18,9 +18,6 @@ oauth2_scheme = OAuth2PasswordBearer(
     description="JWT Bearer token authentication",
     auto_error=True,
 )
-
-# Also keep HTTPBearer for backwards compatibility
-security = HTTPBearer(auto_error=True)
 
 
 class CurrentUser:
@@ -61,14 +58,7 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> CurrentUser:
-    """
-    Validate JWT token and return current user with workspace context.
-    Supports both new local tokens and legacy Supabase tokens.
-    
-    Uses OAuth2PasswordBearer for proper OpenAPI integration.
-    """
-    
-    # Try to decode as our local token first
+    """Validate JWT token and return current user with workspace context."""
     payload = decode_access_token(token)
     user = None
     
@@ -85,17 +75,18 @@ async def get_current_user(
             except (ValueError, TypeError):
                 pass
     
-    if not payload or not user:
+    if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario no encontrado",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     if not user.is_active:

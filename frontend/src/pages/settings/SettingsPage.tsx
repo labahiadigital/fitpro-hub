@@ -198,7 +198,8 @@ export function SettingsPage() {
   };
 
   // ==================== WORKSPACE ====================
-  const wsSettings = currentWorkspace?.settings || {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const wsSettings = (currentWorkspace?.settings || {}) as Record<string, any>;
   const wsContact = wsSettings.contact || {};
 
   const workspaceForm = useForm({

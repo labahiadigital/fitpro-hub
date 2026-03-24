@@ -4,7 +4,6 @@ from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.pool import NullPool
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +32,6 @@ def _create_engine():
     database_url = get_async_database_url(settings.DATABASE_URL)
 
     db_ssl_context = ssl.create_default_context()
-    db_ssl_context.check_hostname = False
-    db_ssl_context.verify_mode = ssl.CERT_NONE
 
     connect_args = {
         "ssl": db_ssl_context,
@@ -46,7 +43,10 @@ def _create_engine():
     return create_async_engine(
         database_url,
         echo=False,
-        poolclass=NullPool,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=300,
         connect_args=connect_args,
     )
 

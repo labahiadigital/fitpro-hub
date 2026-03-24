@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
 import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.api.v1.router import api_router
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,6 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down %s...", settings.APP_NAME)
 
 
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
 app = FastAPI(
     title=settings.APP_NAME,
     description="Plataforma SaaS multi-tenant para profesionales de fitness, wellness y salud",
@@ -32,10 +32,20 @@ app = FastAPI(
 )
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        raise exc
     logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
-
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},

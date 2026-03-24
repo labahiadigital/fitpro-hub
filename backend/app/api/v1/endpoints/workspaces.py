@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.security import create_tokens
 from app.models.workspace import Workspace, generate_slug, check_slug_available
 from app.models.user import UserRole, RoleType
 from app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate, WorkspaceResponse, WorkspaceListResponse
@@ -294,9 +295,19 @@ async def switch_workspace(
     )
     workspace = result.scalar_one_or_none()
     
+    access_token, refresh_token, expires_in = create_tokens(
+        user_id=str(current_user.id),
+        email=current_user.email,
+        workspace_id=str(workspace_id),
+        role=user_role.role.value,
+    )
+
     return {
         "workspace_id": str(workspace_id),
         "workspace_name": workspace.name,
         "role": user_role.role.value,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "expires_in": expires_in,
         "message": "Workspace cambiado correctamente"
     }

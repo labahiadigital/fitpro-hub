@@ -2,6 +2,7 @@
 from typing import List, Optional
 from uuid import UUID
 from decimal import Decimal
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, update
@@ -713,8 +714,8 @@ class RecipeResponse(BaseModel):
     total_fat: Optional[Decimal] = 0
     total_fiber: Optional[Decimal] = 0
     total_sugar: Optional[Decimal] = 0
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
