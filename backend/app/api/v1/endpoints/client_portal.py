@@ -29,13 +29,14 @@ router = APIRouter()
 
 # ============ HELPER FUNCTIONS ============
 
-async def get_client_for_user(user_id: UUID, db: AsyncSession) -> Client:
-    """Get the client record linked to a user account."""
-    result = await db.execute(
-        select(Client).where(Client.user_id == user_id)
-    )
+async def get_client_for_user(user_id: UUID, db: AsyncSession, workspace_id: UUID | None = None) -> Client:
+    """Get the client record linked to a user account, scoped to workspace."""
+    q = select(Client).where(Client.user_id == user_id)
+    if workspace_id:
+        q = q.where(Client.workspace_id == workspace_id)
+    result = await db.execute(q)
     client = result.scalar_one_or_none()
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -241,7 +242,7 @@ async def get_client_dashboard(
     """
     Get dashboard data for the authenticated client.
     """
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get upcoming bookings
     upcoming_bookings_result = await db.execute(
@@ -360,7 +361,7 @@ async def get_client_profile(
     db: AsyncSession = Depends(get_db)
 ):
     """Get client's own profile."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     return client
 
 
@@ -371,7 +372,7 @@ async def update_client_profile(
     db: AsyncSession = Depends(get_db)
 ):
     """Update client's own profile."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     for field, value in data.model_dump(exclude_unset=True).items():
         if value is not None:
@@ -406,7 +407,7 @@ async def get_my_exercises(
     db: AsyncSession = Depends(get_db),
 ):
     """List exercises available for the client's workspace (for swap modal)."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     query = select(Exercise).where(
         or_(
@@ -481,7 +482,7 @@ async def get_my_workouts(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all workout programs assigned to the client."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(WorkoutProgram)
@@ -511,7 +512,7 @@ async def update_program_exercise(
     db: AsyncSession = Depends(get_db),
 ):
     """Allow client to swap an exercise in their assigned program."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     result = await db.execute(
         select(WorkoutProgram).where(
@@ -580,7 +581,7 @@ async def get_my_workout(
     db: AsyncSession = Depends(get_db)
 ):
     """Get a specific workout program."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(WorkoutProgram)
@@ -606,7 +607,7 @@ async def log_workout(
     db: AsyncSession = Depends(get_db)
 ):
     """Log a completed workout."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Verify the program belongs to this client
     result = await db.execute(
@@ -663,7 +664,7 @@ async def create_detailed_workout_log(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a detailed workout log with per-set weight/reps data."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     # Verify the program belongs to this client
     result = await db.execute(
@@ -724,7 +725,7 @@ async def get_exercise_history(
     db: AsyncSession = Depends(get_db),
 ):
     """Get the last N workout logs containing a specific exercise."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     result = await db.execute(
         select(WorkoutLog)
@@ -758,7 +759,7 @@ async def get_today_workout_logs(
     db: AsyncSession = Depends(get_db)
 ):
     """Get workout logs for today to check completion status."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -797,7 +798,7 @@ async def get_workout_history(
     db: AsyncSession = Depends(get_db)
 ):
     """Get workout history for the client."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(WorkoutLog)
@@ -816,7 +817,7 @@ async def get_my_meal_plan(
     db: AsyncSession = Depends(get_db)
 ):
     """Get the active meal plan for the client."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # First try to find an explicitly active plan
     result = await db.execute(
@@ -845,7 +846,7 @@ async def get_all_meal_plans(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all meal plans for the client."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(MealPlan)
@@ -862,7 +863,7 @@ async def log_nutrition(
     db: AsyncSession = Depends(get_db)
 ):
     """Log food intake. Stores in the active meal plan's adherence field."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get active meal plan
     result = await db.execute(
@@ -951,7 +952,7 @@ async def get_nutrition_logs(
     db: AsyncSession = Depends(get_db)
 ):
     """Get nutrition logs from the meal plan adherence."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get active meal plan
     result = await db.execute(
@@ -996,7 +997,7 @@ async def get_nutrition_history(
     db: AsyncSession = Depends(get_db)
 ):
     """Get nutrition history for the last N days, grouped by date."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get active meal plan
     result = await db.execute(
@@ -1069,7 +1070,7 @@ async def delete_nutrition_log(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a nutrition log by index."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(MealPlan)
@@ -1108,7 +1109,7 @@ async def list_client_recipes(
     db: AsyncSession = Depends(get_db)
 ):
     """List recipes visible to the client (public workspace recipes + global system recipes)."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     query = select(Recipe).where(
         or_(
@@ -1162,7 +1163,7 @@ async def get_measurements(
     db: AsyncSession = Depends(get_db)
 ):
     """Get body measurements history."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(ClientMeasurement)
@@ -1180,7 +1181,7 @@ async def create_measurement(
     db: AsyncSession = Depends(get_db)
 ):
     """Record body measurement."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Parse measured_at to datetime
     measured_at_dt = None
@@ -1226,7 +1227,7 @@ async def upload_progress_photo(
     db: AsyncSession = Depends(get_db)
 ):
     """Upload a progress photo. Returns the photo URL."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     allowed_types = ["image/jpeg", "image/png", "image/webp"]
     if file.content_type not in allowed_types:
@@ -1329,7 +1330,7 @@ async def get_progress_photos(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all progress photos for the client."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(ClientMeasurement)
@@ -1357,7 +1358,7 @@ async def get_progress_summary(
     db: AsyncSession = Depends(get_db)
 ):
     """Get progress summary including stats and goals."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get latest and first measurements
     result = await db.execute(
@@ -1402,7 +1403,7 @@ async def get_my_bookings(
     db: AsyncSession = Depends(get_db)
 ):
     """Get bookings for the client."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     query = select(Booking).where(Booking.client_id == client.id)
     
@@ -1425,7 +1426,7 @@ async def get_booking_detail(
     db: AsyncSession = Depends(get_db)
 ):
     """Get details of a specific booking."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
         select(Booking)
@@ -1496,7 +1497,7 @@ async def get_or_create_client_conversation(
     Get or create the client's conversation with their trainer.
     Clients only have one conversation - with their assigned trainer/workspace.
     """
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Try to find existing conversation
     result = await db.execute(
@@ -1556,7 +1557,7 @@ async def get_client_messages(
     db: AsyncSession = Depends(get_db)
 ):
     """Get messages for the client's conversation."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get client's conversation
     result = await db.execute(
@@ -1613,7 +1614,7 @@ async def send_client_message(
     db: AsyncSession = Depends(get_db)
 ):
     """Send a message from client to trainer."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get or create conversation
     result = await db.execute(
@@ -1682,7 +1683,7 @@ async def mark_client_messages_read(
     db: AsyncSession = Depends(get_db)
 ):
     """Mark all messages in client's conversation as read."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get conversation
     result = await db.execute(
@@ -1715,7 +1716,7 @@ async def get_client_unread_count(
     db: AsyncSession = Depends(get_db)
 ):
     """Get unread message count for the client."""
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Get conversation
     result = await db.execute(
@@ -1844,7 +1845,7 @@ async def create_client_feedback(
     """Create feedback for a specific exercise, meal, workout or diet."""
     from app.models.feedback import ClientFeedback
     
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     feedback = ClientFeedback(
         workspace_id=client.workspace_id,
@@ -1874,7 +1875,7 @@ async def get_client_feedback(
     """Get client's feedback history."""
     from app.models.feedback import ClientFeedback
     
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     query = select(ClientFeedback).where(ClientFeedback.client_id == client.id)
     
@@ -1896,9 +1897,18 @@ async def create_workout_program_feedback(
 ):
     """Create overall feedback for a complete workout program."""
     from app.models.feedback import ClientWorkoutFeedback
-    
-    client = await get_client_for_user(current_user.id, db)
-    
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    program = (await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == data.program_id,
+            WorkoutProgram.client_id == client.id,
+        )
+    )).scalar_one_or_none()
+    if not program:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Programa no encontrado")
+
     feedback = ClientWorkoutFeedback(
         workspace_id=client.workspace_id,
         client_id=client.id,
@@ -1931,9 +1941,18 @@ async def create_diet_feedback(
 ):
     """Create overall feedback for a complete meal plan / diet."""
     from app.models.feedback import ClientDietFeedback
-    
-    client = await get_client_for_user(current_user.id, db)
-    
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    plan = (await db.execute(
+        select(MealPlan).where(
+            MealPlan.id == data.meal_plan_id,
+            MealPlan.client_id == client.id,
+        )
+    )).scalar_one_or_none()
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan nutricional no encontrado")
+
     feedback = ClientDietFeedback(
         workspace_id=client.workspace_id,
         client_id=client.id,
@@ -1971,7 +1990,7 @@ async def create_client_emotion(
     """Log client's daily mood/emotion."""
     from app.models.feedback import ClientEmotion
     
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     # Check if already logged for this date
     existing = await db.execute(
@@ -2029,7 +2048,7 @@ async def get_client_emotions(
     """Get client's emotion/mood history."""
     from app.models.feedback import ClientEmotion
     
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     query = select(ClientEmotion).where(ClientEmotion.client_id == client.id)
     
@@ -2054,7 +2073,7 @@ async def get_today_emotion(
     from app.models.feedback import ClientEmotion
     from datetime import date as date_type
     
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     today = date_type.today()
     
     result = await db.execute(
@@ -2127,7 +2146,7 @@ async def get_my_subscription(
     """Get the client's active subscription with recent payments."""
     from app.models.payment import Subscription, Payment
 
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     result = await db.execute(
         select(Subscription)
@@ -2190,7 +2209,7 @@ async def get_my_payments(
     """Get the client's payment history."""
     from app.models.payment import Payment
 
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     result = await db.execute(
         select(Payment)
@@ -2223,7 +2242,7 @@ async def cancel_my_subscription(
     """Cancel the client's active subscription. Access continues until period end."""
     from app.models.payment import Subscription, SubscriptionStatus
 
-    client = await get_client_for_user(current_user.id, db)
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
     result = await db.execute(
         select(Subscription).where(

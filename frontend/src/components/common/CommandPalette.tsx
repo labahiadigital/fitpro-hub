@@ -17,7 +17,7 @@ import {
   IconUser,
   IconUsers,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { normalizeText } from "../../utils/text";
 
@@ -74,19 +74,25 @@ export function CommandPalette({ opened, close }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Filtrar acciones basado en la búsqueda
-  const filteredActions = actions
-    .map((group) => ({
-      ...group,
-      items: group.items.filter(
-        (item) =>
-          normalizeText(item.label).includes(normalizeText(query)) ||
-          normalizeText(item.description).includes(normalizeText(query))
-      ),
-    }))
-    .filter((group) => group.items.length > 0);
+  const filteredActions = useMemo(
+    () =>
+      actions
+        .map((group) => ({
+          ...group,
+          items: group.items.filter(
+            (item) =>
+              normalizeText(item.label).includes(normalizeText(query)) ||
+              normalizeText(item.description).includes(normalizeText(query))
+          ),
+        }))
+        .filter((group) => group.items.length > 0),
+    [query]
+  );
 
-  const flatItems = filteredActions.flatMap((g) => g.items);
+  const flatItems = useMemo(
+    () => filteredActions.flatMap((g) => g.items),
+    [filteredActions]
+  );
 
   const handleNavigate = (to: string) => {
     navigate(to);

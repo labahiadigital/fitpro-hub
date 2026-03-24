@@ -183,7 +183,7 @@ async def get_stripe_status(
 
 @router.get("/kpis")
 async def get_payment_kpis(
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -280,7 +280,7 @@ async def get_payment_kpis(
 async def list_subscriptions(
     client_id: Optional[UUID] = None,
     status: Optional[SubscriptionStatus] = None,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -334,6 +334,16 @@ async def create_subscription(
     """
     Crear una nueva suscripción.
     """
+    if data.client_id:
+        client_check = await db.execute(
+            select(Client.id).where(
+                Client.id == data.client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+        if not client_check.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado")
+
     subscription = Subscription(
         workspace_id=current_user.workspace_id,
         client_id=data.client_id,
@@ -386,7 +396,7 @@ async def cancel_subscription(
 async def list_payments(
     client_id: Optional[UUID] = None,
     status: Optional[PaymentStatus] = None,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -446,6 +456,16 @@ async def create_manual_payment(
     db: AsyncSession = Depends(get_db)
 ):
     """Crear un pago/cobro manual."""
+    if data.client_id:
+        client_check = await db.execute(
+            select(Client.id).where(
+                Client.id == data.client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+        if not client_check.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado")
+
     payment = Payment(
         workspace_id=current_user.workspace_id,
         client_id=data.client_id,

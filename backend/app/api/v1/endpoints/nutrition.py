@@ -249,7 +249,10 @@ async def create_meal_plan(
     if should_activate:
         await db.execute(
             update(MealPlan)
-            .where(MealPlan.client_id == data.client_id)
+            .where(
+                MealPlan.client_id == data.client_id,
+                MealPlan.workspace_id == current_user.workspace_id,
+            )
             .values(is_active=False)
         )
     
@@ -380,10 +383,13 @@ async def activate_meal_plan(
         raise HTTPException(status_code=404, detail="Plan no encontrado")
     if not plan.client_id:
         raise HTTPException(status_code=400, detail="Solo se pueden activar planes asignados a un cliente")
-    
+
     await db.execute(
         update(MealPlan)
-        .where(MealPlan.client_id == plan.client_id)
+        .where(
+            MealPlan.client_id == plan.client_id,
+            MealPlan.workspace_id == current_user.workspace_id,
+        )
         .values(is_active=False)
     )
     plan.is_active = True
@@ -429,10 +435,13 @@ async def assign_meal_plan_to_client(
     # Deactivate all existing plans for this client
     await db.execute(
         update(MealPlan)
-        .where(MealPlan.client_id == data.client_id)
+        .where(
+            MealPlan.client_id == data.client_id,
+            MealPlan.workspace_id == current_user.workspace_id,
+        )
         .values(is_active=False)
     )
-    
+
     # Create a copy assigned to the client
     assigned_plan = MealPlan(
         workspace_id=current_user.workspace_id,

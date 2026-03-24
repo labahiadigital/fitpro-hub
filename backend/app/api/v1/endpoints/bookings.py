@@ -12,6 +12,9 @@ from app.models.client import Client
 from app.models.google_calendar import CalendarSyncMapping
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
 from app.services.google_calendar import google_calendar_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -46,7 +49,7 @@ async def sync_booking_to_calendars(
                 client=client
             )
         except Exception as e:
-            print(f"[Bookings] Error sincronizando a Google Calendar del organizador: {e}")
+            logger.warning("Error sincronizando a Google Calendar del organizador: %s", e)
     
     # Sincronizar al calendario del cliente (si tiene cuenta conectada)
     if client_id and client:
@@ -58,7 +61,7 @@ async def sync_booking_to_calendars(
                 client=None  # No incluir al cliente como asistente en su propio calendario
             )
         except Exception as e:
-            print(f"[Bookings] Error sincronizando a Google Calendar del cliente: {e}")
+            logger.warning("Error sincronizando a Google Calendar del cliente: %s", e)
 
 
 async def delete_booking_from_calendars(
@@ -78,9 +81,9 @@ async def delete_booking_from_calendars(
                 user_id=organizer_id,
                 db=db
             )
-            print(f"[Bookings] Booking {booking_id} eliminado de Google Calendar del organizador")
+            logger.info("Booking %s eliminado de Google Calendar del organizador", booking_id)
         except Exception as e:
-            print(f"[Bookings] Error eliminando de Google Calendar del organizador: {e}")
+            logger.warning("Error eliminando de Google Calendar del organizador: %s", e)
     
     # Eliminar del calendario del cliente
     if client_id:
@@ -90,9 +93,9 @@ async def delete_booking_from_calendars(
                 user_id=client_id,
                 db=db
             )
-            print(f"[Bookings] Booking {booking_id} eliminado de Google Calendar del cliente")
+            logger.info("Booking %s eliminado de Google Calendar del cliente", booking_id)
         except Exception as e:
-            print(f"[Bookings] Error eliminando de Google Calendar del cliente: {e}")
+            logger.warning("Error eliminando de Google Calendar del cliente: %s", e)
 
 
 # ============ SCHEMAS ============
@@ -169,21 +172,32 @@ async def list_bookings(
     Si sync_calendar=true, sincroniza los bookings visibles con Google Calendar.
     """
     query = select(Booking).where(Booking.workspace_id == current_user.workspace_id)
-    
-    # Default to current week if no dates provided
+
+    if current_user.is_client():
+        client_row = await db.execute(
+            select(Client.id).where(
+                Client.user_id == current_user.id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+        my_client_id = client_row.scalar_one_or_none()
+        if not my_client_id:
+            return []
+        query = query.where(Booking.client_id == my_client_id)
+
     if not start_date:
         start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     if not end_date:
         end_date = start_date + timedelta(days=7)
-    
+
     query = query.where(
         and_(
             Booking.start_time >= start_date,
             Booking.start_time <= end_date
         )
     )
-    
-    if client_id:
+
+    if client_id and not current_user.is_client():
         query = query.where(Booking.client_id == client_id)
     
     if status:
@@ -204,7 +218,7 @@ async def list_bookings(
                     organizer_id=booking.organizer_id
                 )
             except Exception as e:
-                print(f"[Bookings] Error sincronizando booking {booking.id}: {e}")
+                logger.warning("Error sincronizando booking %s: %s", booking.id, e)
     
     return bookings
 
@@ -318,13 +332,27 @@ async def get_booking(
         )
     )
     booking = result.scalar_one_or_none()
-    
+
     if not booking:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Reserva no encontrada"
         )
-    
+
+    if current_user.is_client():
+        client_row = await db.execute(
+            select(Client.id).where(
+                Client.user_id == current_user.id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+        my_client_id = client_row.scalar_one_or_none()
+        if booking.client_id != my_client_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Reserva no encontrada"
+            )
+
     return booking
 
 
@@ -422,7 +450,7 @@ async def delete_booking(
     await db.delete(booking)
     await db.commit()
     
-    print(f"[Bookings] Booking {booking_id} eliminado permanentemente")
+    logger.info("Booking %s eliminado permanentemente", booking_id)
 
 
 @router.post("/{booking_id}/cancel", response_model=BookingResponse)

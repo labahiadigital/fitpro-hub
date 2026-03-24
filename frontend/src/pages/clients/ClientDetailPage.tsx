@@ -85,6 +85,7 @@ import { useAuthStore } from "../../stores/auth";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
 import { paymentsApi } from "../../services/api";
 import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 // Lista de alérgenos comunes
 const COMMON_ALLERGENS = [
@@ -262,7 +263,7 @@ export function ClientDetailPage() {
   const { currentWorkspace, user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   
-  const { data: fetchedClient, isLoading } = useClient(id || "");
+  const { data: fetchedClient, isLoading, isError, error, refetch } = useClient(id || "");
   const { data: clientMealPlans } = useClientMealPlans(id || "");
   const { data: clientWorkoutPrograms = [] } = useClientWorkoutAssignments(id || "");
   const { data: clientMeasurements = [] } = useClientMeasurements(id || "");
@@ -526,7 +527,25 @@ export function ClientDetailPage() {
     );
   }
 
-  // If no client found, show error
+  if (isError) {
+    return (
+      <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
+        <Center h={400}>
+          <Stack align="center" gap="md">
+            <Text c="dimmed" ta="center">
+              {axios.isAxiosError(error) && error.response?.status === 404
+                ? "Cliente no encontrado"
+                : "Error al cargar el cliente"}
+            </Text>
+            <Button variant="light" onClick={() => refetch()}>
+              Reintentar
+            </Button>
+          </Stack>
+        </Center>
+      </Container>
+    );
+  }
+
   if (!fetchedClient) {
     return (
       <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>

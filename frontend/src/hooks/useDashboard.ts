@@ -64,9 +64,10 @@ export function useTodaySessions() {
   endOfDay.setHours(23, 59, 59, 999);
   const start = startOfDay.toISOString();
   const end = endOfDay.toISOString();
+  const dateKey = start.slice(0, 10);
 
   return useQuery({
-    queryKey: ["today-sessions"],
+    queryKey: ["today-sessions", dateKey],
     queryFn: async () =>
       api.get(`/bookings?start_date=${start}&end_date=${end}`),
     select: (response) => response.data || [],

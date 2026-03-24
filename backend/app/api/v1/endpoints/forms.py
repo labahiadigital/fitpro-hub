@@ -322,6 +322,25 @@ async def create_submission(
     """
     Enviar respuestas a un formulario.
     """
+    form_check = await db.execute(
+        select(Form.id).where(
+            Form.id == data.form_id,
+            Form.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not form_check.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formulario no encontrado")
+
+    if data.client_id:
+        client_check = await db.execute(
+            select(Client.id).where(
+                Client.id == data.client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+        if not client_check.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado")
+
     submission = FormSubmission(
         form_id=data.form_id,
         client_id=data.client_id,
@@ -339,7 +358,7 @@ async def create_submission(
 @router.get("/submissions/{submission_id}", response_model=FormSubmissionResponse)
 async def get_submission(
     submission_id: UUID,
-    current_user: CurrentUser = Depends(require_workspace),
+    current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """

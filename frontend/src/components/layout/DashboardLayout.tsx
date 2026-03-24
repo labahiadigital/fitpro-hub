@@ -9,7 +9,7 @@ import {
   Burger,
   Drawer,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useHotkeys } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
 import {
   IconLayoutDashboard,
@@ -41,6 +41,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore } from "../../stores/auth";
 import { clientPortalApi, messagesApi } from "../../services/api";
+import { CommandPalette } from "../common/CommandPalette";
 
 // --- TIPOS Y DATOS ---
 
@@ -322,7 +323,10 @@ function useBreadcrumb(): string {
 
 export function DashboardLayout() {
   const [opened, { toggle, close }] = useDisclosure();
+  const [paletteOpen, { open: openPalette, close: closePalette }] = useDisclosure(false);
   const breadcrumbLabel = useBreadcrumb();
+
+  useHotkeys([["mod+K", () => openPalette()]]);
 
   return (
     <div className="layout-grid">
@@ -395,9 +399,11 @@ export function DashboardLayout() {
           </Group>
 
           {/* Global Search */}
-          <Group
+          <UnstyledButton
             mx="auto"
             visibleFrom="sm"
+            onClick={openPalette}
+            aria-label="Abrir paleta de comandos (⌘K)"
             style={{
               background: "white",
               padding: "8px 16px",
@@ -406,7 +412,9 @@ export function DashboardLayout() {
               border: "1px solid rgba(0,0,0,0.04)",
               width: "380px",
               transition: "all 0.2s",
-              cursor: "text"
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
             <IconSearch size={16} color="var(--nv-text-tertiary)" />
@@ -417,7 +425,7 @@ export function DashboardLayout() {
                 <Text size="10px" fw={700} c="gray">K</Text>
               </Group>
             </Box>
-          </Group>
+          </UnstyledButton>
 
           {/* Actions */}
           <Group gap="md">
@@ -445,6 +453,7 @@ export function DashboardLayout() {
         </div>
       </Box>
 
+      <CommandPalette opened={paletteOpen} close={closePalette} />
     </div>
   );
 }
