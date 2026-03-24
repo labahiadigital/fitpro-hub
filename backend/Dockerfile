@@ -1,46 +1,36 @@
-# Single stage build for better compatibility with Coolify
-# Build version: 2026-01-16-v1 (force IPv4 for Supabase connectivity)
+# ---- Build stage: compile C extensions (psycopg2, asyncpg, etc.) ----
+FROM python:3.11-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
+    && pip install --no-cache-dir --prefix=/install gunicorn
+
+# ---- Runtime stage: slim image without compilers (~400 MB smaller) ----
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    libpq5 \
-    curl \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Force IPv4 DNS resolution (fix for Supabase connectivity issues with IPv6-only resolution)
-# This is needed because some hosting providers don't support IPv6
+# Force IPv4 DNS resolution (fix for Supabase connectivity issues with IPv6)
 RUN echo 'precedence ::ffff:0:0/96 100' >> /etc/gai.conf
-
-# Disable IPv6 completely in the container
 ENV ASYNCPG_NO_IPV6=1
-RUN echo "options single-request-reopen" >> /etc/resolv.conf || true
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir gunicorn
+# Copy pre-built Python packages from builder
+COPY --from=builder /install /usr/local
 
-# Copy application code
 COPY . .
 
-# Make sure scripts are usable
-ENV PATH=/root/.local/bin:$PATH
-
-# Expose port
 EXPOSE 8000
 
-# Health check with longer start period for app initialization
 HEALTHCHECK --interval=10s --timeout=10s --start-period=60s --retries=10 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application with gunicorn for production
-# - Using 1 worker to minimize memory usage on small servers
-# - Timeout of 120s to allow for slow startup with Supabase connections
-# - Graceful timeout for clean shutdowns
-# - Preload app to catch startup errors early
 CMD ["gunicorn", "app.main:app", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--timeout", "120", "--graceful-timeout", "30", "--preload"]
