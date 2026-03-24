@@ -55,6 +55,31 @@ class ClientPhotoResponse(BaseModel):
     measurement_date: Optional[str] = None
 
 
+# ============ INVITATION SCHEMAS (defined early for route ordering) ============
+
+class InvitationCreate(BaseModel):
+    """Schema for creating a client invitation."""
+    email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    message: Optional[str] = None
+    product_id: Optional[UUID] = None
+
+
+class InvitationResponse(BaseModel):
+    """Schema for invitation response."""
+    id: UUID
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    status: str
+    expires_at: datetime
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ============ TAGS ============
 
 @router.get("/tags", response_model=List[ClientTagResponse])
@@ -310,6 +335,40 @@ async def create_client(
         created_at=client.created_at,
         updated_at=client.updated_at
     )
+
+
+## ============ INVITATIONS (must be before /{client_id} to avoid path conflict) ============
+# Invitation routes are defined further below, after the helper schemas/functions.
+# We register route HANDLERS here by forward reference — see actual definitions below.
+# IMPORTANT: FastAPI route order matters. /invitations must be registered before /{client_id}
+
+@router.get("/invitations", response_model=List[InvitationResponse])
+async def list_invitations(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """List all invitations for the workspace."""
+    query = select(ClientInvitation).where(
+        ClientInvitation.workspace_id == current_user.workspace_id
+    )
+    if status_filter:
+        query = query.where(ClientInvitation.status == status_filter)
+    query = query.order_by(desc(ClientInvitation.created_at))
+    result = await db.execute(query)
+    invitations = result.scalars().all()
+    return [
+        InvitationResponse(
+            id=inv.id,
+            email=inv.email,
+            first_name=inv.first_name,
+            last_name=inv.last_name,
+            status=inv.status if not inv.is_expired else "expired",
+            expires_at=inv.expires_at,
+            created_at=inv.created_at
+        )
+        for inv in invitations
+    ]
 
 
 @router.get("/{client_id}", response_model=ClientResponse)
@@ -740,29 +799,6 @@ async def get_client_progress_summary(
 
 # ============ CLIENT INVITATIONS ============
 
-class InvitationCreate(BaseModel):
-    """Schema for creating a client invitation."""
-    email: EmailStr
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    message: Optional[str] = None
-    product_id: Optional[UUID] = None
-
-
-class InvitationResponse(BaseModel):
-    """Schema for invitation response."""
-    id: UUID
-    email: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    status: str
-    expires_at: datetime
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
 async def send_invitation_email(
     email: str,
     invite_link: str,
@@ -982,41 +1018,6 @@ async def create_invitation(
         expires_at=invitation.expires_at,
         created_at=invitation.created_at
     )
-
-
-@router.get("/invitations", response_model=List[InvitationResponse])
-async def list_invitations(
-    status_filter: Optional[str] = Query(None, alias="status"),
-    current_user: CurrentUser = Depends(require_staff),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    List all invitations for the workspace.
-    """
-    query = select(ClientInvitation).where(
-        ClientInvitation.workspace_id == current_user.workspace_id
-    )
-    
-    if status_filter:
-        query = query.where(ClientInvitation.status == status_filter)
-    
-    query = query.order_by(desc(ClientInvitation.created_at))
-    
-    result = await db.execute(query)
-    invitations = result.scalars().all()
-    
-    return [
-        InvitationResponse(
-            id=inv.id,
-            email=inv.email,
-            first_name=inv.first_name,
-            last_name=inv.last_name,
-            status=inv.status if not inv.is_expired else "expired",
-            expires_at=inv.expires_at,
-            created_at=inv.created_at
-        )
-        for inv in invitations
-    ]
 
 
 @router.post("/invitations/{invitation_id}/resend")

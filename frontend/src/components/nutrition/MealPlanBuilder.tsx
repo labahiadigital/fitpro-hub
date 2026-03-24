@@ -53,6 +53,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { nutritionApi } from "../../services/api";
 import { calculateMacroPercentages, gramsFromPercentages } from "../../utils/calories";
+import { RecipeFormModal } from "../recipes/RecipeFormModal";
+import { useCreateRecipe } from "../../hooks/useRecipes";
+import type { RecipeItem } from "../../types/recipe";
 
 const FOOD_CATEGORIES = [
   { value: "Carnes", label: "Carnes" },
@@ -195,6 +198,78 @@ export function MealPlanBuilder({
     { open: openShoppingList, close: closeShoppingList },
   ] = useDisclosure(false);
   const queryClient = useQueryClient();
+
+  // Recipe grouping state
+  const [groupingMealId, setGroupingMealId] = useState<string | null>(null);
+  const [selectedForGrouping, setSelectedForGrouping] = useState<Set<string>>(new Set());
+  const [recipeModalOpened, { open: openRecipeModal, close: closeRecipeModal }] = useDisclosure(false);
+  const [prefilledRecipeItems, setPrefilledRecipeItems] = useState<RecipeItem[]>([]);
+  const createRecipeMutation = useCreateRecipe();
+
+  const startGroupingMode = (mealId: string) => {
+    setGroupingMealId(mealId);
+    setSelectedForGrouping(new Set());
+  };
+
+  const cancelGroupingMode = () => {
+    setGroupingMealId(null);
+    setSelectedForGrouping(new Set());
+  };
+
+  const toggleItemForGrouping = (itemId: string) => {
+    setSelectedForGrouping((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const confirmGroupSelection = () => {
+    if (selectedForGrouping.size < 2 || !groupingMealId) return;
+    const currentDayData = days.find((d) => d.id === activeDay);
+    const meal = currentDayData?.meals.find((m) => m.id === groupingMealId);
+    if (!meal) return;
+
+    const items: RecipeItem[] = meal.items
+      .filter((i) => selectedForGrouping.has(i.id))
+      .map((i) => {
+        const data = i.type === "food" ? i.food : i.supplement;
+        const servingSizeGrams = parseFloat(data?.serving_size || "100") || 100;
+        const factor = i.quantity_grams / servingSizeGrams;
+        return {
+          food_id: i.food_id || i.supplement_id || "",
+          name: data?.name || "",
+          type: i.type,
+          quantity_grams: i.quantity_grams,
+          calories: (data?.calories || 0) * factor,
+          protein: (data?.protein || 0) * factor,
+          carbs: (data?.carbs || 0) * factor,
+          fat: (data?.fat || 0) * factor,
+        };
+      });
+
+    setPrefilledRecipeItems(items);
+    openRecipeModal();
+  };
+
+  const handleRecipeCreatedFromGrouping = async (data: object) => {
+    await createRecipeMutation.mutateAsync(data);
+    const recipeName = (data as { name?: string }).name || "Receta";
+    if (groupingMealId) {
+      onChange(days.map((d) =>
+        d.id === activeDay
+          ? { ...d, meals: d.meals.map((m) =>
+              m.id === groupingMealId
+                ? { ...m, items: m.items.map((i) => selectedForGrouping.has(i.id) ? { ...i, recipe_group: recipeName } : i) }
+                : m
+            ) }
+          : d
+      ));
+    }
+    cancelGroupingMode();
+    closeRecipeModal();
+  };
 
   // Macro target percentages (for percentage-driven mode)
   const totalCalsFromTargets = targetProtein * 4 + targetCarbs * 4 + targetFat * 9;
@@ -1164,6 +1239,20 @@ export function MealPlanBuilder({
                                   );
                                 })}
                               </Stack>
+                              {(() => {
+                                const totals = items.reduce((acc, it) => {
+                                  const m = calculateItemMacros(it);
+                                  return { calories: acc.calories + m.calories, protein: acc.protein + m.protein, carbs: acc.carbs + m.carbs, fat: acc.fat + m.fat };
+                                }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+                                return (
+                                  <Group gap={6} mt={4} px="xs" justify="flex-end">
+                                    <Badge size="xs" color="orange" variant="light">{Math.round(totals.calories)} kcal</Badge>
+                                    <Badge size="xs" color="blue" variant="light">P: {Math.round(totals.protein)}g</Badge>
+                                    <Badge size="xs" color="yellow" variant="light">C: {Math.round(totals.carbs)}g</Badge>
+                                    <Badge size="xs" color="red" variant="light">G: {Math.round(totals.fat)}g</Badge>
+                                  </Group>
+                                );
+                              })()}
                             </Paper>
                           );
                         });
@@ -1173,6 +1262,7 @@ export function MealPlanBuilder({
                         const itemMacros = calculateItemMacros(item);
                         const itemData =
                           item.type === "food" ? item.food : item.supplement;
+                        const isGroupingThisMeal = groupingMealId === meal.id;
 
                         return (
                           <Card
@@ -1180,10 +1270,25 @@ export function MealPlanBuilder({
                             padding="xs"
                             radius="md"
                             withBorder
-                            style={{ backgroundColor: "var(--nv-paper-bg)" }}
+                            style={{
+                              backgroundColor: isGroupingThisMeal && selectedForGrouping.has(item.id)
+                                ? "var(--mantine-color-teal-0)"
+                                : "var(--nv-paper-bg)",
+                              cursor: isGroupingThisMeal ? "pointer" : undefined,
+                            }}
+                            onClick={isGroupingThisMeal ? () => toggleItemForGrouping(item.id) : undefined}
                           >
                             <Group justify="space-between">
                               <Group gap="sm">
+                                {isGroupingThisMeal && (
+                                  <Checkbox
+                                    checked={selectedForGrouping.has(item.id)}
+                                    onChange={() => toggleItemForGrouping(item.id)}
+                                    size="xs"
+                                    color="teal"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                )}
                                 {item.type === "supplement" && (
                                   <ThemeIcon
                                     size="sm"
@@ -1344,30 +1449,39 @@ export function MealPlanBuilder({
                       >
                         Añadir Alimento o Suplemento
                       </Button>
-                      {meal.items.filter((i) => !i.recipe_group).length >= 2 && (
-                        <Button
-                          size="xs"
-                          variant="subtle"
-                          color="teal"
-                          radius="md"
-                          onClick={() => {
-                            const recipeName = prompt("Nombre de la receta:");
-                            if (recipeName?.trim()) {
-                              const ungroupedIds = meal.items.filter((i) => !i.recipe_group).map((i) => i.id);
-                              onChange(days.map((d) =>
-                                d.id === activeDay
-                                  ? { ...d, meals: d.meals.map((m) =>
-                                      m.id === meal.id
-                                        ? { ...m, items: m.items.map((i) => ungroupedIds.includes(i.id) ? { ...i, recipe_group: recipeName.trim() } : i) }
-                                        : m
-                                    ) }
-                                  : d
-                              ));
-                            }
-                          }}
-                        >
-                          Agrupar como Receta
-                        </Button>
+                      {groupingMealId === meal.id ? (
+                        <>
+                          <Button
+                            size="xs"
+                            color="teal"
+                            radius="md"
+                            disabled={selectedForGrouping.size < 2}
+                            onClick={confirmGroupSelection}
+                          >
+                            Crear Receta ({selectedForGrouping.size} seleccionados)
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            color="gray"
+                            radius="md"
+                            onClick={cancelGroupingMode}
+                          >
+                            Cancelar
+                          </Button>
+                        </>
+                      ) : (
+                        meal.items.filter((i) => !i.recipe_group).length >= 2 && (
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            color="teal"
+                            radius="md"
+                            onClick={() => startGroupingMode(meal.id)}
+                          >
+                            Agrupar como Receta
+                          </Button>
+                        )
                       )}
                     </Group>
                   </Paper>
@@ -1903,6 +2017,14 @@ export function MealPlanBuilder({
           Exportar Lista
         </Button>
       </Modal>
+
+      <RecipeFormModal
+        opened={recipeModalOpened}
+        onClose={() => { closeRecipeModal(); cancelGroupingMode(); }}
+        onSubmit={handleRecipeCreatedFromGrouping}
+        recipe={prefilledRecipeItems.length > 0 ? { id: "", workspace_id: null, name: "", items: prefilledRecipeItems, tags: [], servings: 1, is_public: false, is_global: false, total_calories: 0, total_protein: 0, total_carbs: 0, total_fat: 0, total_fiber: 0, total_sugar: 0 } : null}
+        loading={createRecipeMutation.isPending}
+      />
     </>
   );
 }

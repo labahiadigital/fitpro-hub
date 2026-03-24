@@ -92,7 +92,7 @@ export function TeamPage() {
 
   const { data: teamMembersData = [] } = useTeamMembers();
   const { user } = useAuthStore();
-  const { data: clientsData } = useClients({ page_size: 200 });
+  const { data: clientsData } = useClients({ page_size: 100 });
   const clientOptions = (clientsData?.items || []).map((c) => ({
     value: c.id,
     label: c.full_name || `${c.first_name} ${c.last_name}`,

@@ -58,7 +58,7 @@ export function useAutomations(params?: {
   return useQuery({
     queryKey: ["automations", currentWorkspace?.id, params],
     queryFn: async () => {
-      const response = await api.get("/automations/", {
+      const response = await api.get("/automations", {
         params: { workspace_id: currentWorkspace?.id, ...params },
       });
       return response.data;
