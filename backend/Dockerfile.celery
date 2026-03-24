@@ -21,6 +21,6 @@ COPY . .
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD celery -A app.celery_app inspect ping -d celery@$HOSTNAME || exit 1
 
-# Run Celery worker
-CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+# Run Celery worker listening on ALL queues (default + routed)
+CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2", "-Q", "celery,notifications,automations,reports,payments"]
 

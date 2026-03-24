@@ -120,16 +120,16 @@ async def _send_reminder(db: AsyncSession, reminder: ReminderSetting):
     subject = reminder_info['subject']
     message = reminder.custom_message or reminder_info['default_message']
     
-    # Crear notificación in-app
-    notification = Notification(
-        workspace_id=reminder.workspace_id,
-        user_id=reminder.user_id or reminder.client_id,
-        title=subject,
-        message=message,
-        notification_type='reminder',
-        category=reminder.reminder_type
-    )
-    db.add(notification)
+    # Crear notificación in-app (solo si es un user, no un client — FK constraint)
+    if reminder.user_id:
+        notification = Notification(
+            workspace_id=reminder.workspace_id,
+            user_id=reminder.user_id,
+            title=subject,
+            body=message,
+            type='reminder',
+        )
+        db.add(notification)
     
     # Enviar email
     try:

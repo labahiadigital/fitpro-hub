@@ -108,21 +108,29 @@ async def health_check():
 
     # Redis check (informational — does not block deploy)
     redis_target = _mask_url(settings.REDIS_URL)
+    r = None
     try:
         r = redis_lib.from_url(settings.REDIS_URL, socket_connect_timeout=3)
         r.ping()
         checks["redis"] = "connected"
         checks["redis_host"] = redis_target
-        r.close()
     except Exception as exc:
         logger.warning("Health check - redis failed (target=%s): %s", redis_target, exc)
         checks["redis"] = "disconnected"
         checks["redis_host"] = redis_target
+    finally:
+        if r:
+            try:
+                r.close()
+            except Exception:
+                pass
 
-    # Celery workers check (informational — does not block deploy)
+    # Celery workers check — use a lightweight Celery instance to avoid
+    # importing heavy task modules that can fail inside the API process.
     try:
-        from app.celery_app import celery_app as _celery
-        inspector = _celery.control.inspect(timeout=3)
+        from celery import Celery as _CeleryClass
+        _probe = _CeleryClass("probe", broker=settings.celery_broker)
+        inspector = _probe.control.inspect(timeout=5)
         ping_result = inspector.ping()
         if ping_result:
             worker_count = len(ping_result)

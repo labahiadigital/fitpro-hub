@@ -105,4 +105,8 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
         "options": {"queue": "notifications"},
     },
+    "process-due-reminders": {
+        "task": "process_due_reminders",
+        "schedule": crontab(minute=0),
+    },
 }

@@ -33,8 +33,8 @@ def send_email_task(
         
         payload = {
             "sender": {
-                "name": from_name or settings.EMAIL_FROM_NAME,
-                "email": settings.EMAIL_FROM_ADDRESS,
+                "name": from_name or settings.FROM_NAME,
+                "email": settings.FROM_EMAIL,
             },
             "to": [{"email": to_email}],
             "subject": subject,
