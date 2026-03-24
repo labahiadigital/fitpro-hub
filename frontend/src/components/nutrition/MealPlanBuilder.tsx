@@ -156,7 +156,7 @@ interface MealPlanBuilderProps {
   onToggleFoodFavorite?: (foodId: string, isFavorite: boolean) => void;
   onToggleSupplementFavorite?: (supplementId: string, isFavorite: boolean) => void;
   // Recetas
-  recipes?: any[];
+  recipes?: Array<{ id: string; name: string; items?: Array<{ food_id?: string; name: string; calories?: number; protein?: number; carbs?: number; fat?: number; quantity_grams?: number; type?: string }>; total_calories?: number; total_protein?: number; total_carbs?: number; total_fat?: number; category?: string; difficulty?: string; prep_time_minutes?: number; cook_time_minutes?: number; servings?: number }>;
 }
 
 export function MealPlanBuilder({
@@ -1739,65 +1739,81 @@ export function MealPlanBuilder({
             <ScrollArea h={400}>
               {recipes.length > 0 ? (
                 <Stack gap="xs">
-                  {recipes.map((recipe: any) => (
-                    <Card
-                      key={recipe.id}
-                      p="sm"
-                      radius="md"
-                      withBorder
-                      style={{ cursor: "pointer" }}
-                      onClick={() => {
-                        if (!selectedMealId) return;
-                        const items = (recipe.items || []).map((item: any) => ({
-                          id: crypto.randomUUID(),
-                          food_id: item.food_id || null,
-                          food: {
-                            id: item.food_id || recipe.id,
-                            name: item.name,
-                            calories: item.calories || 0,
-                            protein: item.protein || 0,
-                            carbs: item.carbs || 0,
-                            fat: item.fat || 0,
-                            serving_size: "100g",
-                          },
-                          quantity_grams: item.quantity_grams || 100,
-                          type: item.type || "food",
-                          recipe_group: recipe.name,
-                        }));
-                        onChange(
-                          days.map((d) =>
-                            d.id === activeDay
-                              ? {
-                                  ...d,
-                                  meals: d.meals.map((m) =>
-                                    m.id === selectedMealId
-                                      ? { ...m, items: [...m.items, ...items] }
-                                      : m
-                                  ),
-                                }
-                              : d
-                          )
-                        );
-                        closeFoodModal();
-                        notifications.show({ title: "Receta añadida", message: recipe.name, color: "teal" });
-                      }}
-                    >
-                      <Group justify="space-between">
-                        <Box>
-                          <Text fw={500} size="sm">{recipe.name}</Text>
-                          <Text size="xs" c="dimmed">{recipe.items?.length || 0} ingredientes</Text>
-                        </Box>
-                        <Group gap={4}>
-                          <Badge size="xs" variant="light" color="blue">{Math.round(recipe.total_calories || 0)} kcal</Badge>
-                          <Badge size="xs" variant="light" color="green">P:{Math.round(recipe.total_protein || 0)}g</Badge>
+                  {recipes.map((recipe: any) => {
+                    const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
+                    return (
+                      <Card
+                        key={recipe.id}
+                        p="sm"
+                        radius="md"
+                        withBorder
+                        style={{ cursor: "pointer" }}
+                        onClick={() => {
+                          if (!selectedMealId) return;
+                          const items = (recipe.items || []).map((item: any) => ({
+                            id: crypto.randomUUID(),
+                            food_id: item.food_id || null,
+                            food: {
+                              id: item.food_id || recipe.id,
+                              name: item.name,
+                              calories: item.calories || 0,
+                              protein: item.protein || 0,
+                              carbs: item.carbs || 0,
+                              fat: item.fat || 0,
+                              serving_size: "100g",
+                            },
+                            quantity_grams: item.quantity_grams || 100,
+                            type: item.type || "food",
+                            recipe_group: recipe.name,
+                          }));
+                          onChange(
+                            days.map((d) =>
+                              d.id === activeDay
+                                ? {
+                                    ...d,
+                                    meals: d.meals.map((m) =>
+                                      m.id === selectedMealId
+                                        ? { ...m, items: [...m.items, ...items] }
+                                        : m
+                                    ),
+                                  }
+                                : d
+                            )
+                          );
+                          closeFoodModal();
+                          notifications.show({ title: "Receta añadida", message: recipe.name, color: "teal" });
+                        }}
+                      >
+                        <Group justify="space-between" mb={4}>
+                          <Box style={{ flex: 1, minWidth: 0 }}>
+                            <Text fw={600} size="sm" lineClamp={1}>{recipe.name}</Text>
+                            <Group gap={4} mt={2}>
+                              {recipe.category && <Badge size="xs" variant="light" color="blue">{recipe.category}</Badge>}
+                              {recipe.difficulty && (
+                                <Badge size="xs" variant="light" color={recipe.difficulty === "easy" ? "green" : recipe.difficulty === "medium" ? "yellow" : "red"}>
+                                  {recipe.difficulty === "easy" ? "Fácil" : recipe.difficulty === "medium" ? "Media" : "Difícil"}
+                                </Badge>
+                              )}
+                              {totalTime > 0 && <Badge size="xs" variant="light" color="orange">{totalTime} min</Badge>}
+                              <Text size="xs" c="dimmed">{recipe.items?.length || 0} ingr.</Text>
+                            </Group>
+                          </Box>
+                          <Stack gap={2} align="flex-end">
+                            <Badge size="xs" variant="light" color="blue">{Math.round(recipe.total_calories || 0)} kcal</Badge>
+                            <Group gap={2}>
+                              <Badge size="xs" variant="light" color="green">P:{Math.round(recipe.total_protein || 0)}g</Badge>
+                              <Badge size="xs" variant="light" color="orange">C:{Math.round(recipe.total_carbs || 0)}g</Badge>
+                              <Badge size="xs" variant="light" color="grape">G:{Math.round(recipe.total_fat || 0)}g</Badge>
+                            </Group>
+                          </Stack>
                         </Group>
-                      </Group>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </Stack>
               ) : (
                 <Center py="xl">
-                  <Text c="dimmed" size="sm">No hay recetas. Crea recetas desde la pestaña "Recetas" en Nutrición.</Text>
+                  <Text c="dimmed" size="sm">No hay recetas. Crea recetas desde la pestaña &quot;Recetas&quot; en Nutrición.</Text>
                 </Center>
               )}
             </ScrollArea>

@@ -334,9 +334,12 @@ export const nutritionApi = {
     api.get(`/nutrition/clients/${clientId}/logs`, { params: { days } }),
 
   // Recipes
-  recipes: () => api.get("/nutrition/recipes"),
+  recipes: (params?: { search?: string; category?: string; difficulty?: string; tag?: string }) =>
+    api.get("/nutrition/recipes", { params }),
+  getRecipe: (id: string) => api.get(`/nutrition/recipes/${id}`),
   createRecipe: (data: object) => api.post("/nutrition/recipes", data),
   updateRecipe: (id: string, data: object) => api.put(`/nutrition/recipes/${id}`, data),
+  duplicateRecipe: (id: string) => api.post(`/nutrition/recipes/${id}/duplicate`),
   deleteRecipe: (id: string) => api.delete(`/nutrition/recipes/${id}`),
 };
 
@@ -578,6 +581,8 @@ export const clientPortalApi = {
     api.get("/my/nutrition/history", { params: { days } }),
   deleteNutritionLog: (logIndex: number) =>
     api.delete(`/my/nutrition/logs/${logIndex}`),
+  recipes: (params?: { search?: string; category?: string }) =>
+    api.get("/my/nutrition/recipes", { params }),
   
   // Progress
   measurements: (limit?: number) =>

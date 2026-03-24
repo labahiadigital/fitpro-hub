@@ -19,7 +19,7 @@ from app.core.config import settings
 from app.models.client import Client
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative, ClientMeasurement
-from app.models.nutrition import MealPlan
+from app.models.nutrition import MealPlan, Recipe
 from app.models.booking import Booking
 from app.middleware.auth import get_current_user, CurrentUser
 from app.models.user import RoleType
@@ -1096,6 +1096,61 @@ async def delete_nutrition_log(
     logs.pop(log_index)
     meal_plan.adherence = {"logs": logs}
     await db.commit()
+
+
+# ============ RECIPES (client view) ============
+
+@router.get("/nutrition/recipes")
+async def list_client_recipes(
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """List recipes visible to the client (public workspace recipes + global system recipes)."""
+    client = await get_client_for_user(current_user.id, db)
+
+    query = select(Recipe).where(
+        or_(
+            and_(Recipe.workspace_id == client.workspace_id, Recipe.is_public == True),
+            Recipe.is_global == True
+        )
+    )
+
+    if search:
+        query = query.where(
+            func.unaccent(Recipe.name).ilike(func.unaccent(f"%{search}%"))
+        )
+
+    if category:
+        query = query.where(Recipe.category == category)
+
+    result = await db.execute(query.order_by(Recipe.name))
+    recipes = result.scalars().all()
+
+    return [
+        {
+            "id": str(r.id),
+            "name": r.name,
+            "description": r.description,
+            "category": r.category,
+            "tags": r.tags or [],
+            "servings": r.servings or 1,
+            "prep_time_minutes": r.prep_time_minutes,
+            "cook_time_minutes": r.cook_time_minutes,
+            "difficulty": r.difficulty,
+            "image_url": r.image_url,
+            "is_global": r.is_global,
+            "items": r.items or [],
+            "total_calories": float(r.total_calories or 0),
+            "total_protein": float(r.total_protein or 0),
+            "total_carbs": float(r.total_carbs or 0),
+            "total_fat": float(r.total_fat or 0),
+            "total_fiber": float(r.total_fiber or 0),
+            "total_sugar": float(r.total_sugar or 0),
+        }
+        for r in recipes
+    ]
 
 
 # ============ PROGRESS / MEASUREMENTS ============

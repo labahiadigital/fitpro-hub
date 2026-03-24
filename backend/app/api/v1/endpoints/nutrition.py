@@ -652,33 +652,69 @@ async def get_client_nutrition_logs(
 class RecipeCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    category: Optional[str] = None
+    tags: List[str] = []
+    servings: int = 1
+    prep_time_minutes: Optional[int] = None
+    cook_time_minutes: Optional[int] = None
+    difficulty: Optional[str] = None
+    image_url: Optional[str] = None
+    notes: Optional[str] = None
+    is_public: bool = False
     items: list = []
     total_calories: float = 0
     total_protein: float = 0
     total_carbs: float = 0
     total_fat: float = 0
+    total_fiber: float = 0
+    total_sugar: float = 0
 
 
 class RecipeUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    servings: Optional[int] = None
+    prep_time_minutes: Optional[int] = None
+    cook_time_minutes: Optional[int] = None
+    difficulty: Optional[str] = None
+    image_url: Optional[str] = None
+    notes: Optional[str] = None
+    is_public: Optional[bool] = None
     items: Optional[list] = None
     total_calories: Optional[float] = None
     total_protein: Optional[float] = None
     total_carbs: Optional[float] = None
     total_fat: Optional[float] = None
+    total_fiber: Optional[float] = None
+    total_sugar: Optional[float] = None
 
 
 class RecipeResponse(BaseModel):
     id: UUID
-    workspace_id: UUID
+    workspace_id: Optional[UUID] = None
     name: str
     description: Optional[str] = None
+    category: Optional[str] = None
+    tags: List[str] = []
+    servings: int = 1
+    prep_time_minutes: Optional[int] = None
+    cook_time_minutes: Optional[int] = None
+    difficulty: Optional[str] = None
+    image_url: Optional[str] = None
+    notes: Optional[str] = None
+    is_public: bool = False
+    is_global: bool = False
     items: list = []
     total_calories: Optional[Decimal] = 0
     total_protein: Optional[Decimal] = 0
     total_carbs: Optional[Decimal] = 0
     total_fat: Optional[Decimal] = 0
+    total_fiber: Optional[Decimal] = 0
+    total_sugar: Optional[Decimal] = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -686,15 +722,58 @@ class RecipeResponse(BaseModel):
 
 @router.get("/recipes", response_model=List[RecipeResponse])
 async def list_recipes(
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    difficulty: Optional[str] = None,
+    tag: Optional[str] = None,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """List workspace recipes + global (system) recipes."""
+    query = select(Recipe).where(
+        or_(
+            Recipe.workspace_id == current_user.workspace_id,
+            Recipe.is_global == True
+        )
+    )
+
+    if search:
+        query = query.where(
+            func.unaccent(Recipe.name).ilike(func.unaccent(f"%{search}%"))
+        )
+
+    if category:
+        query = query.where(Recipe.category == category)
+
+    if difficulty:
+        query = query.where(Recipe.difficulty == difficulty)
+
+    if tag:
+        query = query.where(Recipe.tags.any(tag))
+
+    result = await db.execute(query.order_by(Recipe.name))
+    return result.scalars().all()
+
+
+@router.get("/recipes/{recipe_id}", response_model=RecipeResponse)
+async def get_recipe(
+    recipe_id: UUID,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        select(Recipe)
-        .where(Recipe.workspace_id == current_user.workspace_id)
-        .order_by(Recipe.name)
+        select(Recipe).where(
+            Recipe.id == recipe_id,
+            or_(
+                Recipe.workspace_id == current_user.workspace_id,
+                Recipe.is_global == True
+            )
+        )
     )
-    return result.scalars().all()
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Receta no encontrada")
+    return recipe
 
 
 @router.post("/recipes", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
@@ -708,11 +787,22 @@ async def create_recipe(
         created_by=current_user.id,
         name=data.name,
         description=data.description,
+        category=data.category,
+        tags=data.tags,
+        servings=data.servings,
+        prep_time_minutes=data.prep_time_minutes,
+        cook_time_minutes=data.cook_time_minutes,
+        difficulty=data.difficulty,
+        image_url=data.image_url,
+        notes=data.notes,
+        is_public=data.is_public,
         items=data.items,
         total_calories=data.total_calories,
         total_protein=data.total_protein,
         total_carbs=data.total_carbs,
         total_fat=data.total_fat,
+        total_fiber=data.total_fiber,
+        total_sugar=data.total_sugar,
     )
     db.add(recipe)
     await db.commit()
@@ -738,6 +828,55 @@ async def update_recipe(
     await db.commit()
     await db.refresh(recipe)
     return recipe
+
+
+@router.post("/recipes/{recipe_id}/duplicate", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
+async def duplicate_recipe(
+    recipe_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Duplicate a recipe (works for both workspace and global recipes)."""
+    result = await db.execute(
+        select(Recipe).where(
+            Recipe.id == recipe_id,
+            or_(
+                Recipe.workspace_id == current_user.workspace_id,
+                Recipe.is_global == True
+            )
+        )
+    )
+    original = result.scalar_one_or_none()
+    if not original:
+        raise HTTPException(status_code=404, detail="Receta no encontrada")
+
+    copy = Recipe(
+        workspace_id=current_user.workspace_id,
+        created_by=current_user.id,
+        name=f"{original.name} (copia)",
+        description=original.description,
+        category=original.category,
+        tags=original.tags or [],
+        servings=original.servings,
+        prep_time_minutes=original.prep_time_minutes,
+        cook_time_minutes=original.cook_time_minutes,
+        difficulty=original.difficulty,
+        image_url=original.image_url,
+        notes=original.notes,
+        is_public=False,
+        is_global=False,
+        items=original.items or [],
+        total_calories=original.total_calories,
+        total_protein=original.total_protein,
+        total_carbs=original.total_carbs,
+        total_fat=original.total_fat,
+        total_fiber=original.total_fiber,
+        total_sugar=original.total_sugar,
+    )
+    db.add(copy)
+    await db.commit()
+    await db.refresh(copy)
+    return copy
 
 
 @router.delete("/recipes/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)

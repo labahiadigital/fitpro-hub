@@ -1,0 +1,69 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { nutritionApi, clientPortalApi } from "../services/api";
+import type { Recipe, RecipeFilters } from "../types/recipe";
+
+const RECIPES_KEY = "recipes";
+
+export function useRecipes(filters?: RecipeFilters) {
+  return useQuery<Recipe[]>({
+    queryKey: [RECIPES_KEY, filters],
+    queryFn: async () => {
+      const res = await nutritionApi.recipes(filters);
+      return res.data;
+    },
+  });
+}
+
+export function useRecipe(id: string | null) {
+  return useQuery<Recipe>({
+    queryKey: [RECIPES_KEY, id],
+    queryFn: async () => {
+      const res = await nutritionApi.getRecipe(id!);
+      return res.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateRecipe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: object) => nutritionApi.createRecipe(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [RECIPES_KEY] }),
+  });
+}
+
+export function useUpdateRecipe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string;[key: string]: unknown }) =>
+      nutritionApi.updateRecipe(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [RECIPES_KEY] }),
+  });
+}
+
+export function useDeleteRecipe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => nutritionApi.deleteRecipe(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [RECIPES_KEY] }),
+  });
+}
+
+export function useDuplicateRecipe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => nutritionApi.duplicateRecipe(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [RECIPES_KEY] }),
+  });
+}
+
+export function useClientRecipes(filters?: { search?: string; category?: string }) {
+  return useQuery<Recipe[]>({
+    queryKey: ["client-recipes", filters],
+    queryFn: async () => {
+      const res = await clientPortalApi.recipes(filters);
+      return res.data;
+    },
+  });
+}

@@ -263,13 +263,26 @@ class Recipe(BaseModel):
     
     __tablename__ = "recipes"
     
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
+    category = Column(Text, nullable=True)
+    tags = Column(ARRAY(Text), default=[])
     
-    # Items in the recipe: [{"food_id": "...", "quantity_grams": 100, "name": "...", "type": "food"|"supplement"}]
+    servings = Column(Integer, default=1)
+    prep_time_minutes = Column(Integer, nullable=True)
+    cook_time_minutes = Column(Integer, nullable=True)
+    difficulty = Column(Text, nullable=True)
+    
+    image_url = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    
+    is_public = Column(Boolean, default=False)
+    is_global = Column(Boolean, default=False)
+    
+    # Items: [{"food_id": "...", "quantity_grams": 100, "name": "...", "type": "food"|"supplement", "calories": ..., "protein": ..., "carbs": ..., "fat": ...}]
     items = Column(JSONB, default=lambda: [])
     
     # Aggregated macros (cached, computed from items)
@@ -277,6 +290,8 @@ class Recipe(BaseModel):
     total_protein = Column(Numeric, default=0)
     total_carbs = Column(Numeric, default=0)
     total_fat = Column(Numeric, default=0)
+    total_fiber = Column(Numeric, default=0)
+    total_sugar = Column(Numeric, default=0)
     
     def __repr__(self):
         return f"<Recipe {self.name}>"

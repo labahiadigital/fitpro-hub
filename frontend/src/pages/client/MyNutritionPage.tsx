@@ -31,14 +31,18 @@ import {
   IconArrowsExchange,
   IconCalendarEvent,
   IconCheck,
+  IconClock,
   IconCoffee,
   IconDotsVertical,
   IconFlame,
   IconHistory,
   IconPlus,
   IconSalad,
+  IconSearch,
   IconSoup,
+  IconToolsKitchen2,
   IconTrash,
+  IconUsers,
   IconMoon,
 } from "@tabler/icons-react";
 import { useState, useMemo } from "react";
@@ -48,6 +52,9 @@ import {
   useLogNutrition,
   useNutritionHistory,
 } from "../../hooks/useClientPortal";
+import { useClientRecipes } from "../../hooks/useRecipes";
+import { RecipeDetailModal } from "../../components/recipes/RecipeDetailModal";
+import type { Recipe } from "../../types/recipe";
 
 // Tipos de comidas con sus iconos
 const MEAL_TYPES = [
@@ -493,6 +500,110 @@ function LogPlanMealModal({
   );
 }
 
+function ClientRecipesTab() {
+  const [recipeSearch, setRecipeSearch] = useState("");
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [detailOpened, setDetailOpened] = useState(false);
+  const { data: recipes = [], isLoading } = useClientRecipes(
+    recipeSearch ? { search: recipeSearch } : undefined
+  );
+
+  return (
+    <Stack gap="md">
+      <TextInput
+        leftSection={<IconSearch size={14} />}
+        placeholder="Buscar recetas..."
+        value={recipeSearch}
+        onChange={(e) => setRecipeSearch(e.target.value)}
+        size="sm"
+        radius="md"
+      />
+
+      {isLoading ? (
+        <Center py="xl"><Loader size="md" /></Center>
+      ) : recipes.length > 0 ? (
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+          {recipes.map((recipe: Recipe) => {
+            const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
+            const diffLabel = recipe.difficulty === "easy" ? "Fácil" : recipe.difficulty === "medium" ? "Media" : recipe.difficulty === "hard" ? "Difícil" : null;
+            const diffColor = recipe.difficulty === "easy" ? "green" : recipe.difficulty === "medium" ? "yellow" : recipe.difficulty === "hard" ? "red" : "gray";
+            const perServing = recipe.servings > 0 ? Math.round((recipe.total_calories || 0) / recipe.servings) : Math.round(recipe.total_calories || 0);
+
+            return (
+              <Card
+                key={recipe.id}
+                shadow="sm"
+                padding="md"
+                radius="lg"
+                withBorder
+                style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                onClick={() => { setSelectedRecipe(recipe); setDetailOpened(true); }}
+              >
+                <Group justify="space-between" mb="xs">
+                  <Text fw={700} size="sm" lineClamp={1} style={{ flex: 1 }}>
+                    {recipe.name}
+                  </Text>
+                  {recipe.is_global && (
+                    <Badge size="xs" variant="light" color="violet">Sistema</Badge>
+                  )}
+                </Group>
+
+                <Group gap={6} mb="xs" wrap="wrap">
+                  {recipe.category && (
+                    <Badge size="xs" variant="light" color="blue">{recipe.category}</Badge>
+                  )}
+                  {diffLabel && (
+                    <Badge size="xs" variant="light" color={diffColor}>{diffLabel}</Badge>
+                  )}
+                  {totalTime > 0 && (
+                    <Badge size="xs" variant="light" color="orange" leftSection={<IconClock size={8} />}>
+                      {totalTime} min
+                    </Badge>
+                  )}
+                  {recipe.servings > 1 && (
+                    <Badge size="xs" variant="light" color="gray" leftSection={<IconUsers size={8} />}>
+                      {recipe.servings} porc.
+                    </Badge>
+                  )}
+                </Group>
+
+                {recipe.description && (
+                  <Text c="dimmed" lineClamp={2} size="xs" mb="xs">{recipe.description}</Text>
+                )}
+
+                <Group gap={4}>
+                  <Badge color="blue" size="xs" variant="light">{Math.round(recipe.total_calories || 0)} kcal</Badge>
+                  <Badge color="green" size="xs" variant="light">P:{Math.round(recipe.total_protein || 0)}g</Badge>
+                  <Badge color="orange" size="xs" variant="light">C:{Math.round(recipe.total_carbs || 0)}g</Badge>
+                  <Badge color="grape" size="xs" variant="light">G:{Math.round(recipe.total_fat || 0)}g</Badge>
+                </Group>
+                {recipe.servings > 1 && (
+                  <Text size="xs" c="dimmed" mt={4}>{perServing} kcal/porción</Text>
+                )}
+              </Card>
+            );
+          })}
+        </SimpleGrid>
+      ) : (
+        <Paper p="xl" radius="lg" ta="center" withBorder>
+          <IconToolsKitchen2 size={36} style={{ color: "var(--mantine-color-dimmed)", marginBottom: 8 }} />
+          <Text fw={600} size="md" mb={4}>No hay recetas disponibles</Text>
+          <Text size="sm" c="dimmed">
+            {recipeSearch ? "No se encontraron recetas con esa búsqueda." : "Tu entrenador aún no ha compartido recetas contigo."}
+          </Text>
+        </Paper>
+      )}
+
+      <RecipeDetailModal
+        opened={detailOpened}
+        onClose={() => { setDetailOpened(false); setSelectedRecipe(null); }}
+        recipe={selectedRecipe}
+        readOnly
+      />
+    </Stack>
+  );
+}
+
 export function MyNutritionPage() {
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
@@ -728,6 +839,9 @@ export function MyNutritionPage() {
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>
             Historial
+          </Tabs.Tab>
+          <Tabs.Tab value="recipes" leftSection={<IconToolsKitchen2 size={16} />}>
+            Recetas
           </Tabs.Tab>
         </Tabs.List>
 
@@ -1266,6 +1380,10 @@ export function MyNutritionPage() {
               </Paper>
             )}
           </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="recipes">
+          <ClientRecipesTab />
         </Tabs.Panel>
       </Tabs>
 
