@@ -1,5 +1,5 @@
 # Build stage
-# Build version: 2026-01-16-v1 (fix esbuild + memory for vite build)
+# Build version: 2026-03-24-v2 (increase memory to 4GB for large chunk rendering)
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -27,8 +27,8 @@ ARG VITE_STRIPE_PUBLISHABLE_KEY
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
 
-# Increase Node memory for large builds
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+# Increase Node memory for large builds (8063 modules + heavy chunks need >2GB)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Build the application
 RUN pnpm run build
