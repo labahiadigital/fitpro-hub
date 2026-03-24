@@ -80,16 +80,51 @@ async def root():
 async def health_check():
     from sqlalchemy import text
     from app.core.database import AsyncSessionLocal
+    import redis as redis_lib
+
+    checks: dict = {"status": "healthy"}
+    is_unhealthy = False
+
+    # Database check
     try:
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
-        return {"status": "healthy", "database": "connected"}
+        checks["database"] = "connected"
     except Exception as exc:
-        logger.error("Health check failed: %s", exc)
-        return JSONResponse(
-            status_code=503,
-            content={"status": "unhealthy", "database": "disconnected"},
-        )
+        logger.error("Health check - database failed: %s", exc)
+        checks["database"] = "disconnected"
+        is_unhealthy = True
+
+    # Redis check
+    try:
+        r = redis_lib.from_url(settings.REDIS_URL, socket_connect_timeout=3)
+        r.ping()
+        checks["redis"] = "connected"
+        r.close()
+    except Exception as exc:
+        logger.error("Health check - redis failed: %s", exc)
+        checks["redis"] = "disconnected"
+        is_unhealthy = True
+
+    # Celery workers check (non-blocking best-effort)
+    try:
+        from app.celery_app import celery_app as _celery
+        inspector = _celery.control.inspect(timeout=3)
+        ping_result = inspector.ping()
+        if ping_result:
+            worker_count = len(ping_result)
+            checks["celery_workers"] = f"{worker_count} online"
+        else:
+            checks["celery_workers"] = "none responding"
+    except Exception as exc:
+        logger.warning("Health check - celery inspect failed: %s", exc)
+        checks["celery_workers"] = "unavailable"
+
+    if is_unhealthy:
+        checks["status"] = "unhealthy"
+        return JSONResponse(status_code=503, content=checks)
+
+    return checks
 
 
 if __name__ == "__main__":
