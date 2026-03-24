@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.tasks.celery_app import celery_app
-from app.core.database import async_session
+from app.core.database import AsyncSessionLocal as async_session
 from app.models.notification import ReminderSetting, Notification
 from app.models.user import User
 from app.models.client import Client
