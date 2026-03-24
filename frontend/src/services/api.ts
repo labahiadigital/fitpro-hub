@@ -513,6 +513,18 @@ export const reportsApi = {
     }),
 };
 
+// Notifications API
+export const notificationsApi = {
+  list: (params?: { category?: string; is_read?: boolean; page?: number; size?: number }) =>
+    api.get("/notifications", { params }),
+  unreadCount: () => api.get("/notifications/unread-count"),
+  markRead: (notificationIds: string[]) =>
+    api.post("/notifications/mark-read", { notification_ids: notificationIds }),
+  markAllRead: (type?: string) =>
+    api.post("/notifications/mark-all-read", { type }),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
+};
+
 // Settings API
 export const settingsApi = {
   get: () => api.get("/settings"),

@@ -54,7 +54,7 @@ import {
   usePermanentDeleteClient,
   useUpdateClient,
 } from "../../hooks/useClients";
-import { useCreateInvitation, useInvitations, useResendInvitation } from "../../hooks/useInvitations";
+import { useCreateInvitation, useInvitations, useResendInvitation, useCancelInvitation } from "../../hooks/useInvitations";
 import { productsApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 
@@ -201,7 +201,8 @@ export function ClientsPage() {
   const createInvitation = useCreateInvitation();
   const { data: invitations } = useInvitations();
   const resendInvitation = useResendInvitation();
-  
+  const cancelInvitation = useCancelInvitation();
+
   // Estado para el modal de edición
   const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
   const [editingClient, setEditingClient] = useState<any>(null);
@@ -777,17 +778,29 @@ export function ClientsPage() {
                         </Text>
                       </Table.Td>
                       <Table.Td>
-                        <Button
-                          size="xs"
-                          variant="light"
-                          radius="xl"
-                          leftSection={<IconSend size={14} />}
-                          onClick={() => resendInvitation.mutateAsync(inv.id)}
-                          loading={resendInvitation.isPending}
-                          styles={{ root: { fontSize: "11px" } }}
-                        >
-                          Reenviar
-                        </Button>
+                        <Group gap="xs">
+                          <Button
+                            size="xs"
+                            variant="light"
+                            radius="xl"
+                            leftSection={<IconSend size={14} />}
+                            onClick={() => resendInvitation.mutateAsync(inv.id)}
+                            loading={resendInvitation.isPending}
+                            styles={{ root: { fontSize: "11px" } }}
+                          >
+                            Reenviar
+                          </Button>
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="red"
+                            onClick={() => cancelInvitation.mutateAsync(inv.id)}
+                            loading={cancelInvitation.isPending}
+                            title="Eliminar invitación"
+                          >
+                            <IconTrash size={14} />
+                          </ActionIcon>
+                        </Group>
                       </Table.Td>
                     </Table.Tr>
                   ))}

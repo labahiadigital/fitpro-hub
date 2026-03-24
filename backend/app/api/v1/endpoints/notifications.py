@@ -12,7 +12,7 @@ from app.models.notification import Notification
 from app.models.user import User
 from app.models.client import Client
 from app.schemas.notification import (
-    NotificationCreate, NotificationUpdate, NotificationResponse, NotificationList,
+    NotificationResponse, NotificationList,
     NotificationMarkRead, NotificationMarkAllRead,
 )
 
@@ -78,7 +78,7 @@ async def list_notifications(
     query = select(Notification).where(Notification.user_id == current_user.id)
     
     if category:
-        query = query.where(Notification.category == category)
+        query = query.where(Notification.type == category)
     if is_read is not None:
         query = query.where(Notification.is_read == is_read)
     
@@ -160,8 +160,8 @@ async def mark_all_notifications_read(
         .values(is_read=True, read_at=datetime.utcnow().isoformat())
     )
     
-    if data.category:
-        query = query.where(Notification.category == data.category)
+    if data.type:
+        query = query.where(Notification.type == data.type)
     
     await db.execute(query)
     await db.commit()

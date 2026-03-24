@@ -7,20 +7,15 @@ from datetime import datetime
 from .base import BaseSchema
 
 
-# Notification schemas
-class NotificationBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)
-    message: str = Field(..., min_length=1)
-    notification_type: str = Field(default='info')
-    category: Optional[str] = None
-    action_url: Optional[str] = None
-    action_label: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class NotificationCreate(NotificationBase):
+# Notification schemas — aligned with the actual DB model
+# DB columns: id, workspace_id, user_id, title, body, type, link, is_read, read_at, created_at
+class NotificationCreate(BaseModel):
     workspace_id: UUID
     user_id: UUID
+    title: str = Field(..., min_length=1, max_length=255)
+    body: Optional[str] = None
+    type: str = Field(default="info")
+    link: Optional[str] = None
 
 
 class NotificationUpdate(BaseModel):
@@ -28,12 +23,17 @@ class NotificationUpdate(BaseModel):
     read_at: Optional[datetime] = None
 
 
-class NotificationResponse(NotificationBase, BaseSchema):
+class NotificationResponse(BaseSchema):
     id: UUID
     workspace_id: UUID
     user_id: UUID
+    title: str
+    body: Optional[str] = None
+    type: Optional[str] = None
+    link: Optional[str] = None
     is_read: bool = False
-    read_at: Optional[datetime] = None
+    read_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 class NotificationList(BaseModel):
@@ -49,7 +49,7 @@ class NotificationMarkRead(BaseModel):
 
 
 class NotificationMarkAllRead(BaseModel):
-    category: Optional[str] = None
+    type: Optional[str] = None
 
 
 # Notification Preference schemas

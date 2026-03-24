@@ -42,6 +42,14 @@ import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore } from "../../stores/auth";
 import { clientPortalApi, messagesApi } from "../../services/api";
 import { CommandPalette } from "../common/CommandPalette";
+import { NotificationCenter } from "../notifications/NotificationCenter";
+import {
+  useNotifications,
+  useUnreadCount,
+  useMarkNotificationRead,
+  useMarkAllRead,
+  useDeleteNotification,
+} from "../../hooks/useNotifications";
 
 // --- TIPOS Y DATOS ---
 
@@ -324,7 +332,27 @@ function useBreadcrumb(): string {
 export function DashboardLayout() {
   const [opened, { toggle, close }] = useDisclosure();
   const [paletteOpen, { open: openPalette, close: closePalette }] = useDisclosure(false);
+  const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false);
   const breadcrumbLabel = useBreadcrumb();
+
+  const { data: notifData } = useNotifications();
+  const { data: unreadData } = useUnreadCount();
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllRead();
+  const deleteNotif = useDeleteNotification();
+
+  const unreadNotifCount = unreadData?.unread_count || 0;
+
+  const mappedNotifications = (notifData?.items || []).map((n) => ({
+    id: n.id,
+    type: (n.type === "reminder" ? "alert" : n.type === "info" ? "system" : n.type || "system") as
+      "booking" | "payment" | "message" | "client" | "alert" | "system",
+    title: n.title,
+    message: n.body || "",
+    timestamp: n.created_at,
+    isRead: n.is_read,
+    actionUrl: n.link || undefined,
+  }));
 
   useHotkeys([["mod+K", () => openPalette()]]);
 
@@ -429,20 +457,22 @@ export function DashboardLayout() {
 
           {/* Actions */}
           <Group gap="md">
-            <UnstyledButton style={{ position: "relative" }} aria-label="Notificaciones">
+            <UnstyledButton style={{ position: "relative" }} aria-label="Notificaciones" onClick={openNotif}>
               <IconBell size={22} color="var(--nv-text-secondary)" stroke={1.5} />
-              <Box
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  right: 2,
-                  width: 8,
-                  height: 8,
-                  background: "#EF4444",
-                  borderRadius: "50%",
-                  border: "2px solid var(--nv-paper-bg)",
-                }}
-              />
+              {unreadNotifCount > 0 && (
+                <Box
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    right: 2,
+                    width: 8,
+                    height: 8,
+                    background: "#EF4444",
+                    borderRadius: "50%",
+                    border: "2px solid var(--nv-paper-bg)",
+                  }}
+                />
+              )}
             </UnstyledButton>
           </Group>
         </Box>
@@ -454,6 +484,15 @@ export function DashboardLayout() {
       </Box>
 
       <CommandPalette opened={paletteOpen} close={closePalette} />
+      <NotificationCenter
+        opened={notifOpen}
+        onClose={closeNotif}
+        notifications={mappedNotifications}
+        onMarkAsRead={(id) => markRead.mutate(id)}
+        onMarkAllAsRead={() => markAllRead.mutate()}
+        onDelete={(id) => deleteNotif.mutate(id)}
+        onClearAll={() => markAllRead.mutate()}
+      />
     </div>
   );
 }
