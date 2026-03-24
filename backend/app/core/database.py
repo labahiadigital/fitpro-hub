@@ -39,6 +39,8 @@ def _create_engine():
 
     if settings.DATABASE_SSL:
         db_ssl_context = ssl.create_default_context()
+        db_ssl_context.check_hostname = False
+        db_ssl_context.verify_mode = ssl.CERT_NONE
         connect_args["ssl"] = db_ssl_context
 
     return create_async_engine(
