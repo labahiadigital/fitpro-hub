@@ -1,26 +1,28 @@
-# Celery Worker Dockerfile
+# ---- Build stage: compile C extensions (psycopg2, asyncpg, etc.) ----
+FROM python:3.11-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ---- Runtime stage: slim image without compilers ----
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    curl \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=builder /install /usr/local
 
-# Copy application code
 COPY . .
 
-# Health check with generous start period (Redis may take time to be reachable)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD celery -A app.celery_app inspect ping -d celery@$HOSTNAME || exit 1
 
-# Run Celery worker listening on ALL queues (default + routed)
 CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2", "-Q", "celery,notifications,automations,reports,payments"]
-

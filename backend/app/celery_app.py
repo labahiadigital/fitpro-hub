@@ -52,6 +52,7 @@ celery_app.conf.task_routes = {
     "app.tasks.automations.*": {"queue": "automations"},
     "app.tasks.reports.*": {"queue": "reports"},
     "app.tasks.payments.*": {"queue": "payments"},
+    "app.tasks.reminders.*": {"queue": "notifications"},
 }
 
 celery_app.conf.beat_schedule = {
@@ -106,7 +107,8 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "notifications"},
     },
     "process-due-reminders": {
-        "task": "process_due_reminders",
+        "task": "app.tasks.reminders.process_due_reminders",
         "schedule": crontab(minute=0),
+        "options": {"queue": "notifications"},
     },
 }

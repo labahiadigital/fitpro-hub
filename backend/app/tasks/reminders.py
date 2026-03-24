@@ -14,7 +14,7 @@ from app.services.email import email_service
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="process_due_reminders")
+@celery_app.task(name="app.tasks.reminders.process_due_reminders")
 def process_due_reminders():
     """
     Procesar todos los recordatorios que están programados para ahora o antes.
@@ -160,7 +160,7 @@ async def _send_reminder(db: AsyncSession, reminder: ReminderSetting):
         logger.exception("Error enviando email de recordatorio")
 
 
-@celery_app.task(name="create_default_reminders_for_client")
+@celery_app.task(name="app.tasks.reminders.create_default_reminders_for_client")
 def create_default_reminders_for_client(workspace_id: str, client_id: str):
     """
     Crear recordatorios por defecto para un nuevo cliente.
