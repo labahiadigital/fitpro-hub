@@ -72,7 +72,7 @@ function NutrientProgress({
   color: string;
   unit?: string;
 }) {
-  const percentage = Math.min((current / target) * 100, 100);
+  const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   return (
     <Box>
       <Group justify="space-between" mb={4}>
@@ -203,11 +203,11 @@ export function ClientDashboardPage() {
                 thickness={8}
                 roundCaps
                 sections={[
-                  { value: (data.nutritionToday.calories.current / data.nutritionToday.calories.target) * 100, color: "yellow" }
+                  { value: data.nutritionToday.calories.target > 0 ? Math.min((data.nutritionToday.calories.current / data.nutritionToday.calories.target) * 100, 100) : 0, color: "yellow" }
                 ]}
                 label={
                   <Text ta="center" size="xs" fw={700}>
-                    {Math.round((data.nutritionToday.calories.current / data.nutritionToday.calories.target) * 100)}%
+                    {data.nutritionToday.calories.target > 0 ? Math.round((data.nutritionToday.calories.current / data.nutritionToday.calories.target) * 100) : 0}%
                   </Text>
                 }
               />

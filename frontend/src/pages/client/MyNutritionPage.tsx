@@ -1174,7 +1174,7 @@ export function MyNutritionPage() {
                     </Text>
                     <Text size="xs" c="dimmed">kcal consumidas</Text>
                     <Progress 
-                      value={Math.min((weekData[selectedWeekDayIndex].calories / targets.calories) * 100, 100)} 
+                      value={targets.calories > 0 ? Math.min((weekData[selectedWeekDayIndex].calories / targets.calories) * 100, 100) : 0} 
                       color="yellow" 
                       size="sm" 
                       mt="xs"
@@ -1337,7 +1337,7 @@ export function MyNutritionPage() {
             {nutritionHistory?.days && nutritionHistory.days.length > 0 ? (
               <Accordion variant="separated">
                 {nutritionHistory.days.map((day) => {
-                  const percentage = day.totals.calories > 0 
+                  const percentage = day.totals.calories > 0 && targets.calories > 0
                     ? (day.totals.calories / targets.calories) * 100 
                     : 0;
                   const dateFormatted = new Date(day.date).toLocaleDateString('es-ES', {

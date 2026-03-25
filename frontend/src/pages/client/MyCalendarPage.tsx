@@ -44,7 +44,10 @@ function getWeekDays() {
 }
 
 export function MyCalendarPage() {
-  const { data: bookings, isLoading } = useMyBookings({ upcoming_only: true, limit: 20 });
+  const { data: upcomingBookings, isLoading: isLoadingUpcoming } = useMyBookings({ upcoming_only: true, limit: 20 });
+  const { data: allBookings, isLoading: isLoadingAll } = useMyBookings({ limit: 50 });
+
+  const isLoading = isLoadingUpcoming || isLoadingAll;
 
   if (isLoading) {
     return (
@@ -54,8 +57,10 @@ export function MyCalendarPage() {
     );
   }
 
+  const now = new Date();
+
   // Transform API bookings to display format
-  const upcomingSessions = bookings?.map(b => ({
+  const upcomingSessions = (upcomingBookings || []).map(b => ({
     id: b.id,
     date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
     time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
@@ -64,12 +69,37 @@ export function MyCalendarPage() {
     type: b.session_type || "presencial",
     location: (b.location as Record<string, unknown>)?.address as string || "Gimnasio",
     status: b.status,
-  })) || [];
+  }));
+
+  const pastSessions = (allBookings || [])
+    .filter(b => new Date(b.end_time) < now && (b.status === "completed" || b.status === "no_show"))
+    .slice(0, 10)
+    .map(b => ({
+      id: b.id,
+      title: b.title,
+      date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
+      time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
+    }));
+
+  const weekDays = getWeekDays();
+  const bookingDates = new Set(
+    (upcomingBookings || []).map(b => new Date(b.start_time).toDateString())
+  );
+  weekDays.forEach(d => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1);
+    const dayDate = new Date(startOfWeek);
+    dayDate.setDate(startOfWeek.getDate() + ['L','M','X','J','V','S','D'].indexOf(d.day));
+    d.hasSession = bookingDates.has(dayDate.toDateString());
+  });
+
+  const currentMonth = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 
   const data = {
     upcomingSessions,
-    pastSessions: [] as { id: string; title: string; date: string; time: string }[],
-    weekDays: getWeekDays(),
+    pastSessions,
+    weekDays,
   };
 
   return (
@@ -86,7 +116,7 @@ export function MyCalendarPage() {
 
       {/* Week Overview */}
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
-        <Text fw={600} mb="md">Esta Semana - Enero 2026</Text>
+        <Text fw={600} mb="md" tt="capitalize">Esta Semana - {currentMonth}</Text>
         <Group justify="space-around">
           {data.weekDays.map((day, index) => (
             <Paper
@@ -126,6 +156,11 @@ export function MyCalendarPage() {
       {/* Upcoming Sessions */}
       <Title order={4} mb="md">Próximas Sesiones</Title>
       <Stack gap="md" mb="xl">
+        {data.upcomingSessions.length === 0 && (
+          <Card shadow="sm" padding="lg" radius="lg" withBorder>
+            <Text c="dimmed" ta="center">No tienes sesiones próximas programadas</Text>
+          </Card>
+        )}
         {data.upcomingSessions.map((session) => (
           <Card key={session.id} shadow="sm" padding="lg" radius="lg" withBorder>
             <Group justify="space-between" wrap="nowrap">
@@ -185,6 +220,11 @@ export function MyCalendarPage() {
       {/* Past Sessions */}
       <Title order={4} mb="md">Sesiones Anteriores</Title>
       <Stack gap="sm">
+        {data.pastSessions.length === 0 && (
+          <Card shadow="sm" padding="md" radius="md" withBorder style={{ opacity: 0.8 }}>
+            <Text c="dimmed" ta="center">No hay sesiones anteriores</Text>
+          </Card>
+        )}
         {data.pastSessions.map((session) => (
           <Card key={session.id} shadow="sm" padding="md" radius="md" withBorder style={{ opacity: 0.8 }}>
             <Group justify="space-between">

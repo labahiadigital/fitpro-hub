@@ -54,8 +54,8 @@ interface Conversation {
 
 // Message status indicator
 function MessageStatus({ message }: { message: Message }) {
-  // Only show status for outbound messages (from client)
-  if (message.direction === "outbound") return null;
+  // Only show status for inbound messages (sent by client to trainer)
+  if (message.direction !== "inbound") return null;
 
   const status = message.external_status;
 

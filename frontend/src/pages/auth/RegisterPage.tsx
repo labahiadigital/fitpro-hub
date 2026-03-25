@@ -155,11 +155,11 @@ export function RegisterPage() {
             label={
               <Text size="xs" c="gray.5">
                 Acepto los{" "}
-                <Anchor component={Link} size="xs" to="/terms" c="var(--nv-accent)">
+                <Anchor size="xs" href="https://trackfiz.com/terms" target="_blank" c="var(--nv-accent)">
                   términos y condiciones
                 </Anchor>{" "}
                 y la{" "}
-                <Anchor component={Link} size="xs" to="/privacy" c="var(--nv-accent)">
+                <Anchor size="xs" href="https://trackfiz.com/privacy" target="_blank" c="var(--nv-accent)">
                   política de privacidad
                 </Anchor>
               </Text>
