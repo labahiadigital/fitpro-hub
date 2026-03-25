@@ -66,7 +66,7 @@ class Subscription(BaseModel):
     # Pricing - use Numeric to match DB
     amount = Column(Numeric, nullable=False)
     currency = Column(Text, default="EUR")
-    interval = Column(Text, default="month")  # month, year, week
+    interval = Column(Text, default="month")  # week, biweekly, month, quarter, semester, year
     
     # Dates
     current_period_start = Column(DateTime(timezone=True), nullable=True)

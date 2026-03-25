@@ -1364,7 +1364,14 @@ export function PaymentsPage() {
                     </Table.Td>
                     <Table.Td ta="right">
                       <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                        €{Number(sub.amount).toFixed(2)}/{sub.interval === "month" ? "mes" : sub.interval === "year" ? "año" : sub.interval || "mes"}
+                        €{Number(sub.amount).toFixed(2)}/{
+                          sub.interval === "week" ? "semana" :
+                          sub.interval === "biweekly" ? "quincenal" :
+                          sub.interval === "month" ? "mes" :
+                          sub.interval === "quarter" ? "trimestre" :
+                          sub.interval === "semester" ? "semestre" :
+                          sub.interval === "year" ? "año" : sub.interval || "mes"
+                        }
                       </Text>
                     </Table.Td>
                     <Table.Td>

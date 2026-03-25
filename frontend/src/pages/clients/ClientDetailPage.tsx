@@ -230,7 +230,14 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
         </Text>
         {activeSub && (
           <Badge size="lg" variant="light" radius="xl" color={activeSub.status === "active" ? "green" : "gray"}>
-            {activeSub.name || activeSub.plan_name} - €{activeSub.amount}/{activeSub.interval === "month" ? "mes" : activeSub.interval === "year" ? "año" : activeSub.interval}
+            {activeSub.name || activeSub.plan_name} - €{activeSub.amount}/{
+              activeSub.interval === "week" ? "semana" :
+              activeSub.interval === "biweekly" ? "quincenal" :
+              activeSub.interval === "month" ? "mes" :
+              activeSub.interval === "quarter" ? "trimestre" :
+              activeSub.interval === "semester" ? "semestre" :
+              activeSub.interval === "year" ? "año" : activeSub.interval
+            }
           </Badge>
         )}
       </Group>

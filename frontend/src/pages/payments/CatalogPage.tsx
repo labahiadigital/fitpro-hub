@@ -472,7 +472,13 @@ export function CatalogPage() {
                       €{product.price}
                     </Text>
                     <Text c="dimmed" size="xs">
-                      {product.type === "subscription" ? `/${product.interval === "year" ? "año" : "mes"}` : ""}
+                      {product.type === "subscription" ? `/${
+                        product.interval === "week" ? "semana" :
+                        product.interval === "biweekly" ? "quincenal" :
+                        product.interval === "quarter" ? "trimestre" :
+                        product.interval === "semester" ? "semestre" :
+                        product.interval === "year" ? "año" : "mes"
+                      }` : ""}
                     </Text>
                   </Box>
                   <Group gap="xs">
@@ -545,7 +551,14 @@ export function CatalogPage() {
                     </Table.Td>
                     <Table.Td ta="right">
                       <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                        €{Number(sub.amount).toFixed(2)}/{sub.interval === "month" ? "mes" : sub.interval === "year" ? "año" : sub.interval || "mes"}
+                        €{Number(sub.amount).toFixed(2)}/{
+                          sub.interval === "week" ? "semana" :
+                          sub.interval === "biweekly" ? "quincenal" :
+                          sub.interval === "month" ? "mes" :
+                          sub.interval === "quarter" ? "trimestre" :
+                          sub.interval === "semester" ? "semestre" :
+                          sub.interval === "year" ? "año" : sub.interval || "mes"
+                        }
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -819,9 +832,12 @@ export function CatalogPage() {
             {productForm.values.type === "subscription" && (
               <Select
                 data={[
-                  { value: "month", label: "Mensual" },
-                  { value: "year", label: "Anual" },
                   { value: "week", label: "Semanal" },
+                  { value: "biweekly", label: "Quincenal" },
+                  { value: "month", label: "Mensual" },
+                  { value: "quarter", label: "Trimestral" },
+                  { value: "semester", label: "Semestral" },
+                  { value: "year", label: "Anual" },
                 ]}
                 label="Intervalo de cobro"
                 {...productForm.getInputProps("interval")}

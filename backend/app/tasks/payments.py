@@ -143,12 +143,14 @@ def _process_single_renewal_sync(subscription_id: str) -> Dict[str, Any]:
             payment.status = PaymentStatus.succeeded
             payment.paid_at = datetime.now(timezone.utc)
 
-            # Advance subscription period
             from dateutil.relativedelta import relativedelta
             interval_map = {
-                "month": relativedelta(months=1),
-                "year": relativedelta(years=1),
                 "week": timedelta(weeks=1),
+                "biweekly": timedelta(weeks=2),
+                "month": relativedelta(months=1),
+                "quarter": relativedelta(months=3),
+                "semester": relativedelta(months=6),
+                "year": relativedelta(years=1),
             }
             delta = interval_map.get(sub.interval or "month", relativedelta(months=1))
             now = datetime.now(timezone.utc)

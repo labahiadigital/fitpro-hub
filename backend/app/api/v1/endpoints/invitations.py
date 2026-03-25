@@ -706,10 +706,14 @@ async def complete_invitation(
                 from dateutil.relativedelta import relativedelta
                 
                 now = datetime.now(timezone.utc)
+                ic = product.interval_count or 1
                 interval_map = {
-                    "month": relativedelta(months=product.interval_count or 1),
-                    "year": relativedelta(years=product.interval_count or 1),
-                    "week": timedelta(weeks=product.interval_count or 1),
+                    "week": timedelta(weeks=ic),
+                    "biweekly": timedelta(weeks=2 * ic),
+                    "month": relativedelta(months=ic),
+                    "quarter": relativedelta(months=3 * ic),
+                    "semester": relativedelta(months=6 * ic),
+                    "year": relativedelta(years=ic),
                 }
                 delta = interval_map.get(product.interval or "month", relativedelta(months=1))
                 period_end = now + delta

@@ -799,7 +799,12 @@ export function InvitationOnboardingPage() {
   // Payment gate: show payment screen before the registration form
   if (paymentRequired && !paymentCompleted) {
     const product = invitationData.product!;
-    const intervalLabel = product.interval === "month" ? "/mes" : product.interval === "year" ? "/año" : product.interval === "week" ? "/semana" : "";
+    const intervalLabel = product.interval === "week" ? "/semana" :
+      product.interval === "biweekly" ? "/quincenal" :
+      product.interval === "month" ? "/mes" :
+      product.interval === "quarter" ? "/trimestre" :
+      product.interval === "semester" ? "/semestre" :
+      product.interval === "year" ? "/año" : "";
 
     // If SeQura form is being shown, render it full-screen
     if (showSequraForm) {

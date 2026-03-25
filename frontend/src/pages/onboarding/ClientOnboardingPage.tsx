@@ -511,7 +511,13 @@ export function ClientOnboardingPage() {
             {productInfo.description && <Text size="sm" c="dimmed" mb="xs">{productInfo.description}</Text>}
             <Text fw={700} size="xl" c="blue">
               €{Number(productInfo.price).toFixed(2)}
-              {productInfo.interval && <Text span size="sm" c="dimmed" fw={400}>/{productInfo.interval === "year" ? "año" : productInfo.interval === "week" ? "semana" : "mes"}</Text>}
+              {productInfo.interval && <Text span size="sm" c="dimmed" fw={400}>/{
+                productInfo.interval === "week" ? "semana" :
+                productInfo.interval === "biweekly" ? "quincenal" :
+                productInfo.interval === "quarter" ? "trimestre" :
+                productInfo.interval === "semester" ? "semestre" :
+                productInfo.interval === "year" ? "año" : "mes"
+              }</Text>}
             </Text>
           </Box>
 

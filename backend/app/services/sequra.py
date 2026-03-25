@@ -82,6 +82,12 @@ class SequraService:
                 return (now + relativedelta(years=interval_count)).strftime("%Y-%m-%d")
             elif interval_lower in ("week", "weekly"):
                 return (now + timedelta(weeks=interval_count)).strftime("%Y-%m-%d")
+            elif interval_lower in ("biweekly", "quincenal"):
+                return (now + timedelta(weeks=2 * interval_count)).strftime("%Y-%m-%d")
+            elif interval_lower in ("quarter", "quarterly", "trimestral"):
+                return (now + relativedelta(months=3 * interval_count)).strftime("%Y-%m-%d")
+            elif interval_lower in ("semester", "semestral"):
+                return (now + relativedelta(months=6 * interval_count)).strftime("%Y-%m-%d")
             elif interval_lower in ("day", "daily"):
                 return (now + timedelta(days=interval_count)).strftime("%Y-%m-%d")
 
