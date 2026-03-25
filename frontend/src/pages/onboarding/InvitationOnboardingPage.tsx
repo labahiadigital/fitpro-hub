@@ -395,27 +395,43 @@ export function InvitationOnboardingPage() {
     }
   };
 
-  // Render SeQura form HTML and initialize it (with XSS protection)
+  // Render SeQura form HTML and initialize it
   useEffect(() => {
     if (!showSequraForm || !sequraFormHtml || !sequraFormRef.current) return;
 
     const container = sequraFormRef.current;
 
-    // Parse HTML in a temporary container (scripts are NOT executed when using innerHTML)
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = sequraFormHtml;
 
-    // Extract only whitelisted external scripts (inline scripts are never executed - XSS vector)
-    const scriptsToExecute: { src: string }[] = [];
+    // Extract info from SeQura's inline scripts:
+    // 1) `window.SequraFormElement = '<id>'`
+    // 2) A dynamic script loader pointing to sequrapi.com
+    let formElementId = "";
+    let dynamicScriptSrc = "";
+
     const scriptElements = tempDiv.querySelectorAll("script");
     scriptElements.forEach((script) => {
-      if (script.src && isAllowedScriptSrc(script.src)) {
-        scriptsToExecute.push({ src: script.src });
+      const text = script.textContent || "";
+
+      const elementMatch = text.match(/window\.SequraFormElement\s*=\s*['"]([^'"]+)['"]/);
+      if (elementMatch) {
+        formElementId = elementMatch[1];
       }
+
+      const srcMatch = text.match(/e\.setAttribute\s*\(\s*['"]src['"]\s*,\s*['"]([^'"]+)['"]\s*\)/);
+      if (srcMatch && isAllowedScriptSrc(srcMatch[1])) {
+        dynamicScriptSrc = srcMatch[1];
+      }
+
+      if (script.src && isAllowedScriptSrc(script.src)) {
+        dynamicScriptSrc = dynamicScriptSrc || script.src;
+      }
+
       script.remove();
     });
 
-    // Remove event handler attributes from all elements (onclick, onerror, etc.)
+    // Remove event handler attributes from all elements
     tempDiv.querySelectorAll("*").forEach((el) => {
       Array.from(el.attributes).forEach((attr) => {
         if (attr.name.startsWith("on") && attr.name.length > 2) {
@@ -424,30 +440,38 @@ export function InvitationOnboardingPage() {
       });
     });
 
-    // Set sanitized HTML (no scripts, no event handlers)
     container.innerHTML = tempDiv.innerHTML;
 
-    // Execute only whitelisted scripts
-    scriptsToExecute.forEach(({ src }) => {
-      const newScript = document.createElement("script");
-      newScript.src = src;
-      container.appendChild(newScript);
-    });
+    // Set the global that SeQura's auth script expects
+    if (formElementId) {
+      (window as any).SequraFormElement = formElementId;
+    }
 
-    // Set up the SeQura form instance callback
-    const initSequraForm = () => {
+    // Load SeQura's auth script
+    if (dynamicScriptSrc) {
+      const newScript = document.createElement("script");
+      newScript.src = dynamicScriptSrc;
+      container.appendChild(newScript);
+    }
+
+    // Poll for SequraFormInstance (created by the external script)
+    let attempts = 0;
+    const maxAttempts = 30;
+    const pollInterval = setInterval(() => {
+      attempts++;
       if ((window as any).SequraFormInstance) {
+        clearInterval(pollInterval);
         (window as any).SequraFormInstance.setCloseCallback(() => {
           setShowSequraForm(false);
           setSequraFormHtml(null);
         });
         (window as any).SequraFormInstance.show();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(pollInterval);
       }
-    };
+    }, 500);
 
-    // Wait for SeQura scripts to load
-    const timer = setTimeout(initSequraForm, 1000);
-    return () => clearTimeout(timer);
+    return () => clearInterval(pollInterval);
   }, [showSequraForm, sequraFormHtml]);
 
   // Load SeQura promotional widget script when SeQura is selected

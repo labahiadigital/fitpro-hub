@@ -233,6 +233,43 @@ export function WorkoutsPage() {
     return exercises;
   }, [exercises, exerciseSourceFilter, exerciseFavorites]);
 
+  const exerciseCounts = useMemo(() => {
+    const all = exercises || [];
+    return {
+      fuerza: all.filter((e: any) => !e.category || e.category === "fuerza").length,
+      calentamiento: all.filter((e: any) => e.category?.toLowerCase() === "calentamiento").length,
+      estiramiento: all.filter((e: any) => e.category?.toLowerCase() === "estiramiento").length,
+      cardio: all.filter((e: any) => e.category?.toLowerCase() === "cardio").length,
+    };
+  }, [exercises]);
+
+  const sortFavoritesFirst = useCallback(
+    (list: any[]) => {
+      const favSet = new Set(exerciseFavorites);
+      return [...list].sort((a, b) => {
+        const aFav = favSet.has(a.id) ? 0 : 1;
+        const bFav = favSet.has(b.id) ? 0 : 1;
+        return aFav - bFav || a.name.localeCompare(b.name);
+      });
+    },
+    [exerciseFavorites],
+  );
+
+  const getFilteredByCategory = useCallback(
+    (category: string) => {
+      const base = (sourceFilteredExercises || []).filter(
+        (e: any) =>
+          e.category?.toLowerCase() === category &&
+          (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+            e.muscle_groups?.some((m: string) =>
+              m.toLowerCase().includes(searchExercise.toLowerCase())
+            ))
+      );
+      return sortFavoritesFirst(base);
+    },
+    [sourceFilteredExercises, searchExercise, sortFavoritesFirst],
+  );
+
   // When editing a client's program, we need to fetch all programs (not just templates)
   const { data: programs, isLoading: loadingPrograms } =
     useWorkoutPrograms(clientId ? undefined : true);
@@ -622,13 +659,16 @@ export function WorkoutsPage() {
     { value: "barra de dominadas", label: "Barra de dominadas" },
   ];
 
-  const filteredExercises = (sourceFilteredExercises || []).filter(
-    (e: any) =>
-      e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-      e.muscle_groups?.some((m: string) =>
-        m.toLowerCase().includes(searchExercise.toLowerCase())
-      )
-  );
+  const filteredExercises = useMemo(() => {
+    const base = (sourceFilteredExercises || []).filter(
+      (e: any) =>
+        e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+        e.muscle_groups?.some((m: string) =>
+          m.toLowerCase().includes(searchExercise.toLowerCase())
+        )
+    );
+    return sortFavoritesFirst(base);
+  }, [sourceFilteredExercises, searchExercise, sortFavoritesFirst]);
 
   return (
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
@@ -674,19 +714,34 @@ export function WorkoutsPage() {
         {!isMobile && (
           <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Programas
+              Programas{" "}
+              {(programs?.length ?? 0) > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">{programs?.length}</Badge>
+              )}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Ejercicios
+              Ejercicios{" "}
+              {exerciseCounts.fuerza > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.fuerza}</Badge>
+              )}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconFlame size={14} />} value="warmup" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Calentamiento
+              Calentamiento{" "}
+              {exerciseCounts.calentamiento > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.calentamiento}</Badge>
+              )}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconStretching size={14} />} value="stretching" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Estiramientos
+              Estiramientos{" "}
+              {exerciseCounts.estiramiento > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.estiramiento}</Badge>
+              )}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconHeartbeat size={14} />} value="cardio" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Cardio
+              Cardio{" "}
+              {exerciseCounts.cardio > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.cardio}</Badge>
+              )}
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -907,337 +962,101 @@ export function WorkoutsPage() {
           )}
         </Tabs.Panel>
 
-        <Tabs.Panel value="warmup">
-          <TextInput
-            leftSection={<IconSearch size={14} />}
-            mb="md"
-            onChange={(e) => setSearchExercise(e.target.value)}
-            placeholder="Buscar ejercicios de calentamiento..."
-            value={searchExercise}
-            radius="md"
-            size="sm"
-            styles={{
-              input: {
-                backgroundColor: "var(--nv-surface)",
-                border: "1px solid var(--border-subtle)",
-              }
-            }}
-          />
+        {(["warmup", "stretching", "cardio"] as const).map((tab) => {
+          const cfg = {
+            warmup: { category: "calentamiento", placeholder: "Buscar ejercicios de calentamiento...", gradient: "rgba(255, 107, 0, 0.2)", icon: <IconFlame color="var(--mantine-color-orange-6)" size={28} />, color: "orange", emptyTitle: "No hay ejercicios de calentamiento", emptyDesc: "Añade ejercicios de calentamiento a tu biblioteca.", emptyLabel: "Añadir Calentamiento", emptyIcon: <IconFlame size={36} /> },
+            stretching: { category: "estiramiento", placeholder: "Buscar estiramientos...", gradient: "rgba(34, 197, 94, 0.2)", icon: <IconStretching color="var(--mantine-color-green-6)" size={28} />, color: "green", emptyTitle: "No hay estiramientos", emptyDesc: "Añade ejercicios de estiramiento a tu biblioteca.", emptyLabel: "Añadir Estiramiento", emptyIcon: <IconStretching size={36} /> },
+            cardio: { category: "cardio", placeholder: "Buscar ejercicios de cardio...", gradient: "rgba(239, 68, 68, 0.2)", icon: <IconHeartbeat color="var(--mantine-color-red-6)" size={28} />, color: "red", emptyTitle: "No hay ejercicios de cardio", emptyDesc: "Añade ejercicios aeróbicos y de cardio a tu biblioteca.", emptyLabel: "Añadir Cardio", emptyIcon: <IconHeartbeat size={36} /> },
+          }[tab];
+          const items = getFilteredByCategory(cfg.category);
+          return (
+            <Tabs.Panel value={tab} key={tab}>
+              <Group gap="sm" mb="md">
+                <TextInput
+                  leftSection={<IconSearch size={14} />}
+                  onChange={(e) => setSearchExercise(e.target.value)}
+                  placeholder={cfg.placeholder}
+                  value={searchExercise}
+                  radius="md"
+                  size="sm"
+                  style={{ flex: 1 }}
+                  styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
+                />
+                <SegmentedControl
+                  value={exerciseSourceFilter}
+                  onChange={setExerciseSourceFilter}
+                  size="xs"
+                  radius="md"
+                  data={[
+                    { label: "Todos", value: "all" },
+                    { label: "⭐ Favoritos", value: "favorites" },
+                    { label: "Sistema", value: "system" },
+                    { label: "Propios", value: "custom" },
+                  ]}
+                />
+              </Group>
 
-          {(sourceFilteredExercises || []).filter(
-            (e: any) =>
-              e.category?.toLowerCase() === "calentamiento" &&
-              (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-                e.muscle_groups?.some((m: string) =>
-                  m.toLowerCase().includes(searchExercise.toLowerCase())
-                ))
-          ).length > 0 ? (
-            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
-              {(sourceFilteredExercises || [])
-                .filter(
-                  (e: any) =>
-                    e.category?.toLowerCase() === "calentamiento" &&
-                    (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-                      e.muscle_groups?.some((m: string) =>
-                        m.toLowerCase().includes(searchExercise.toLowerCase())
-                      ))
-                )
-                .map((exercise: any) => (
-                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
-                    {/* Estrella de favorito */}
-                    <ActionIcon
-                      size="xs"
-                      variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
-                      color="yellow"
-                      style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
-                      }}
-                    >
-                      {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
-                    </ActionIcon>
-                    
-                    {exercise.image_url ? (
-                      <HoverCard width={320} shadow="lg" openDelay={300} position="right">
-                        <HoverCard.Target>
-                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }} style={{cursor: 'pointer'}} />
-                        </HoverCard.Target>
-                        <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
-                          <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
-                          <Box p="xs"><Text fw={600} size="sm">{exercise.name}</Text></Box>
-                        </HoverCard.Dropdown>
-                      </HoverCard>
-                    ) : (
-                      <Box
-                        h={80}
-                        style={{
-                          background: "linear-gradient(135deg, rgba(255, 107, 0, 0.2) 0%, var(--nv-surface-subtle) 100%)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
+              {items.length > 0 ? (
+                <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
+                  {items.map((exercise: any) => (
+                    <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
+                      <ActionIcon
+                        size="xs"
+                        variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
+                        color="yellow"
+                        style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
+                        onClick={(e) => { e.stopPropagation(); toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) }); }}
                       >
-                        <IconFlame color="var(--mantine-color-orange-6)" size={28} />
-                      </Box>
-                    )}
-
-                    <Box p="xs">
-                      <Group gap={4} wrap="nowrap">
-                        <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                          {exercise.name}
-                        </Text>
-                        {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
-                      </Group>
-                      <Group gap={4} mt={4} justify="space-between">
-                        <Group gap={4}>
-                          {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
-                            <Badge key={muscle} size="xs" variant="light" color="orange" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
-                              {muscle}
-                            </Badge>
-                          ))}
+                        {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
+                      </ActionIcon>
+                      {exercise.image_url ? (
+                        <HoverCard width={320} shadow="lg" openDelay={300} position="right">
+                          <HoverCard.Target>
+                            <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({ url: exercise.image_url, name: exercise.name }); }} style={{ cursor: "pointer" }} />
+                          </HoverCard.Target>
+                          <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
+                            <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
+                            <Box p="xs"><Text fw={600} size="sm">{exercise.name}</Text></Box>
+                          </HoverCard.Dropdown>
+                        </HoverCard>
+                      ) : (
+                        <Box h={80} style={{ background: `linear-gradient(135deg, ${cfg.gradient} 0%, var(--nv-surface-subtle) 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {cfg.icon}
+                        </Box>
+                      )}
+                      <Box p="xs">
+                        <Group gap={4} wrap="nowrap">
+                          <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>{exercise.name}</Text>
+                          {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
                         </Group>
-                        {!exercise.is_global && (
-                          <ActionIcon size="xs" variant="subtle" color="orange" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
-                            <IconEdit size={12} />
-                          </ActionIcon>
-                        )}
-                      </Group>
-                    </Box>
-                  </Box>
-                ))}
-            </SimpleGrid>
-          ) : loadingExercises ? null : (
-            <EmptyState
-              actionLabel="Añadir Calentamiento"
-              description="Añade ejercicios de calentamiento a tu biblioteca."
-              icon={<IconFlame size={36} />}
-              onAction={() => openNewExercise("calentamiento")}
-              title="No hay ejercicios de calentamiento"
-            />
-          )}
-        </Tabs.Panel>
-
-        <Tabs.Panel value="stretching">
-          <TextInput
-            leftSection={<IconSearch size={14} />}
-            mb="md"
-            onChange={(e) => setSearchExercise(e.target.value)}
-            placeholder="Buscar estiramientos..."
-            value={searchExercise}
-            radius="md"
-            size="sm"
-            styles={{
-              input: {
-                backgroundColor: "var(--nv-surface)",
-                border: "1px solid var(--border-subtle)",
-              }
-            }}
-          />
-
-          {(sourceFilteredExercises || []).filter(
-            (e: any) =>
-              e.category?.toLowerCase() === "estiramiento" &&
-              (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-                e.muscle_groups?.some((m: string) =>
-                  m.toLowerCase().includes(searchExercise.toLowerCase())
-                ))
-          ).length > 0 ? (
-            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
-              {(sourceFilteredExercises || [])
-                .filter(
-                  (e: any) =>
-                    e.category?.toLowerCase() === "estiramiento" &&
-                    (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-                      e.muscle_groups?.some((m: string) =>
-                        m.toLowerCase().includes(searchExercise.toLowerCase())
-                      ))
-                )
-                .map((exercise: any) => (
-                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
-                    {/* Estrella de favorito */}
-                    <ActionIcon
-                      size="xs"
-                      variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
-                      color="yellow"
-                      style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
-                      }}
-                    >
-                      {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
-                    </ActionIcon>
-                    
-                    {exercise.image_url ? (
-                      <HoverCard width={320} shadow="lg" openDelay={300} position="right">
-                        <HoverCard.Target>
-                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }} style={{cursor: 'pointer'}} />
-                        </HoverCard.Target>
-                        <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
-                          <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
-                          <Box p="xs"><Text fw={600} size="sm">{exercise.name}</Text></Box>
-                        </HoverCard.Dropdown>
-                      </HoverCard>
-                    ) : (
-                      <Box
-                        h={80}
-                        style={{
-                          background: "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, var(--nv-surface-subtle) 100%)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <IconStretching color="var(--mantine-color-green-6)" size={28} />
-                      </Box>
-                    )}
-
-                    <Box p="xs">
-                      <Group gap={4} wrap="nowrap">
-                        <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                          {exercise.name}
-                        </Text>
-                        {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
-                      </Group>
-                      <Group gap={4} mt={4} justify="space-between">
-                        <Group gap={4}>
-                          {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
-                            <Badge key={muscle} size="xs" variant="light" color="green" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
-                              {muscle}
-                            </Badge>
-                          ))}
+                        <Group gap={4} mt={4} justify="space-between">
+                          <Group gap={4}>
+                            {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
+                              <Badge key={muscle} size="xs" variant="light" color={cfg.color} radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>{muscle}</Badge>
+                            ))}
+                          </Group>
+                          {!exercise.is_global && (
+                            <ActionIcon size="xs" variant="subtle" color={cfg.color} onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
+                              <IconEdit size={12} />
+                            </ActionIcon>
+                          )}
                         </Group>
-                        {!exercise.is_global && (
-                          <ActionIcon size="xs" variant="subtle" color="green" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
-                            <IconEdit size={12} />
-                          </ActionIcon>
-                        )}
-                      </Group>
-                    </Box>
-                  </Box>
-                ))}
-            </SimpleGrid>
-          ) : loadingExercises ? null : (
-            <EmptyState
-              actionLabel="Añadir Estiramiento"
-              description="Añade ejercicios de estiramiento a tu biblioteca."
-              icon={<IconStretching size={36} />}
-              onAction={() => openNewExercise("estiramiento")}
-              title="No hay estiramientos"
-            />
-          )}
-        </Tabs.Panel>
-
-        <Tabs.Panel value="cardio">
-          <TextInput
-            leftSection={<IconSearch size={14} />}
-            mb="md"
-            onChange={(e) => setSearchExercise(e.target.value)}
-            placeholder="Buscar ejercicios de cardio..."
-            value={searchExercise}
-            radius="md"
-            size="sm"
-            styles={{
-              input: {
-                backgroundColor: "var(--nv-surface)",
-                border: "1px solid var(--border-subtle)",
-              }
-            }}
-          />
-
-          {(sourceFilteredExercises || []).filter(
-            (e: any) =>
-              e.category?.toLowerCase() === "cardio" &&
-              (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-                e.muscle_groups?.some((m: string) =>
-                  m.toLowerCase().includes(searchExercise.toLowerCase())
-                ))
-          ).length > 0 ? (
-            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
-              {(sourceFilteredExercises || [])
-                .filter(
-                  (e: any) =>
-                    e.category?.toLowerCase() === "cardio" &&
-                    (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-                      e.muscle_groups?.some((m: string) =>
-                        m.toLowerCase().includes(searchExercise.toLowerCase())
-                      ))
-                )
-                .map((exercise: any) => (
-                  <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
-                    <ActionIcon
-                      size="xs"
-                      variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
-                      color="yellow"
-                      style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
-                      }}
-                    >
-                      {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
-                    </ActionIcon>
-                    
-                    {exercise.image_url ? (
-                      <HoverCard width={320} shadow="lg" openDelay={300} position="right">
-                        <HoverCard.Target>
-                          <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }} style={{cursor: 'pointer'}} />
-                        </HoverCard.Target>
-                        <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
-                          <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
-                          <Box p="xs"><Text fw={600} size="sm">{exercise.name}</Text></Box>
-                        </HoverCard.Dropdown>
-                      </HoverCard>
-                    ) : (
-                      <Box
-                        h={80}
-                        style={{
-                          background: "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, var(--nv-surface-subtle) 100%)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <IconHeartbeat color="var(--mantine-color-red-6)" size={28} />
                       </Box>
-                    )}
-
-                    <Box p="xs">
-                      <Group gap={4} wrap="nowrap">
-                        <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                          {exercise.name}
-                        </Text>
-                        {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
-                      </Group>
-                      <Group gap={4} mt={4} justify="space-between">
-                        <Group gap={4}>
-                          {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (
-                            <Badge key={muscle} size="xs" variant="light" color="red" radius="md" styles={{ root: { padding: "1px 4px", fontSize: "9px" } }}>
-                              {muscle}
-                            </Badge>
-                          ))}
-                        </Group>
-                        {!exercise.is_global && (
-                          <ActionIcon size="xs" variant="subtle" color="red" onClick={(e) => { e.stopPropagation(); openEditExercise(exercise); }}>
-                            <IconEdit size={12} />
-                          </ActionIcon>
-                        )}
-                      </Group>
                     </Box>
-                  </Box>
-                ))}
-            </SimpleGrid>
-          ) : loadingExercises ? null : (
-            <EmptyState
-              actionLabel="Añadir Cardio"
-              description="Añade ejercicios aeróbicos y de cardio a tu biblioteca."
-              icon={<IconHeartbeat size={36} />}
-              onAction={() => openNewExercise("cardio")}
-              title="No hay ejercicios de cardio"
-            />
-          )}
-        </Tabs.Panel>
+                  ))}
+                </SimpleGrid>
+              ) : loadingExercises ? null : (
+                <EmptyState
+                  actionLabel={cfg.emptyLabel}
+                  description={cfg.emptyDesc}
+                  icon={cfg.emptyIcon}
+                  onAction={() => openNewExercise(cfg.category)}
+                  title={cfg.emptyTitle}
+                />
+              )}
+            </Tabs.Panel>
+          );
+        })}
       </Tabs>
 
       {/* Modal para crear/editar ejercicio */}
