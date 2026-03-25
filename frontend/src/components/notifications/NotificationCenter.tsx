@@ -106,7 +106,8 @@ export function NotificationCenter({
       opened={opened}
       position="right"
       size="md"
-      styles={{ body: { padding: 0 } }}
+      zIndex={301}
+      styles={{ body: { padding: 0, height: "calc(100vh - 60px)" } }}
       title={
         <Group gap="sm">
           <IconBell size={20} />

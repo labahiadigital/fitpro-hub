@@ -25,7 +25,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
+import { useDebouncedValue, useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconApple,
@@ -214,6 +214,9 @@ export function NutritionPage() {
   }, [navigate, returnTo, clientId]);
   
   const [activeTab, setActiveTab] = useState<string | null>("templates");
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [editFoodTab, setEditFoodTab] = useState<string | null>("general");
+  const [foodDetailTab, setFoodDetailTab] = useState<string | null>("general");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
   const [builderOpened, { open: openBuilder, close: closeBuilder }] =
@@ -263,6 +266,14 @@ export function NutritionPage() {
   const [foodDetailModalOpened, { open: openFoodDetailModal, close: closeFoodDetailModal }] = useDisclosure(false);
   const [viewingSupplement, setViewingSupplement] = useState<any>(null);
   const [supplementDetailModalOpened, { open: openSupplementDetailModal, close: closeSupplementDetailModal }] = useDisclosure(false);
+
+  useEffect(() => {
+    setEditFoodTab("general");
+  }, [editingFood?.id]);
+
+  useEffect(() => {
+    setFoodDetailTab("general");
+  }, [viewingFood?.id]);
 
   // Cargar datos desde Supabase
   const { data: supabaseFoods } = useSupabaseFoods(builderOpened);
@@ -884,49 +895,68 @@ export function NutritionPage() {
         title="Nutrición"
       />
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "templates", label: "Plantillas" },
+            { value: "plans", label: "Planes de Clientes" },
+            { value: "recipes", label: "Recetas" },
+            { value: "foods", label: "Alimentos" },
+            { value: "supplements", label: "Suplementos" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
+
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="templates" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Plantillas{" "}
-            {templates.length > 0 && (
-              <Badge ml="xs" size="xs" radius="md" variant="light">
-                {templates.length}
-              </Badge>
-            )}
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconUsers size={14} />} value="plans" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Planes de Clientes{" "}
-            {clientPlans.length > 0 && (
-              <Badge ml="xs" size="xs" radius="md" variant="light">
-                {clientPlans.length}
-              </Badge>
-            )}
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconToolsKitchen2 size={14} />} value="recipes" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Recetas{" "}
-            {recipes.length > 0 && (
-              <Badge ml="xs" size="xs" radius="md" variant="light">
-                {recipes.length}
-              </Badge>
-            )}
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconApple size={14} />} value="foods" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Alimentos{" "}
-            {(totalFoodsCount ?? 0) > 0 && (
-              <Badge ml="xs" size="xs" radius="md" variant="light">
-                {totalFoodsCount?.toLocaleString()}
-              </Badge>
-            )}
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconPill size={14} />} value="supplements" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Suplementos{" "}
-            {supplements.length > 0 && (
-              <Badge ml="xs" size="xs" radius="md" variant="light">
-                {supplements.length}
-              </Badge>
-            )}
-          </Tabs.Tab>
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+            <Tabs.Tab leftSection={<IconTemplate size={14} />} value="templates" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Plantillas{" "}
+              {templates.length > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">
+                  {templates.length}
+                </Badge>
+              )}
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUsers size={14} />} value="plans" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Planes de Clientes{" "}
+              {clientPlans.length > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">
+                  {clientPlans.length}
+                </Badge>
+              )}
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconToolsKitchen2 size={14} />} value="recipes" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Recetas{" "}
+              {recipes.length > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">
+                  {recipes.length}
+                </Badge>
+              )}
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconApple size={14} />} value="foods" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Alimentos{" "}
+              {(totalFoodsCount ?? 0) > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">
+                  {totalFoodsCount?.toLocaleString()}
+                </Badge>
+              )}
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPill size={14} />} value="supplements" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Suplementos{" "}
+              {supplements.length > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">
+                  {supplements.length}
+                </Badge>
+              )}
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
 
         <Tabs.Panel value="templates">
           {isLoadingPlans ? (
@@ -1775,12 +1805,28 @@ export function NutritionPage() {
             }
           }}>
             <ScrollArea h={500}>
-              <Tabs defaultValue="general" radius="md">
-                <Tabs.List mb="md">
-                  <Tabs.Tab value="general">General</Tabs.Tab>
-                  <Tabs.Tab value="nutrition">Nutrición</Tabs.Tab>
-                  <Tabs.Tab value="details">Detalles</Tabs.Tab>
-                </Tabs.List>
+              <Tabs value={editFoodTab} onChange={setEditFoodTab} radius="md">
+                {isMobile && (
+                  <Select
+                    value={editFoodTab}
+                    onChange={setEditFoodTab}
+                    data={[
+                      { value: "general", label: "General" },
+                      { value: "nutrition", label: "Nutrición" },
+                      { value: "details", label: "Detalles" },
+                    ]}
+                    size="sm"
+                    radius="md"
+                    mb="md"
+                  />
+                )}
+                {!isMobile && (
+                  <Tabs.List mb="md">
+                    <Tabs.Tab value="general">General</Tabs.Tab>
+                    <Tabs.Tab value="nutrition">Nutrición</Tabs.Tab>
+                    <Tabs.Tab value="details">Detalles</Tabs.Tab>
+                  </Tabs.List>
+                )}
 
                 <Tabs.Panel value="general">
                   <Stack gap="sm">
@@ -2000,14 +2046,32 @@ export function NutritionPage() {
       >
         {viewingFood && (
           <ScrollArea h={500}>
-            <Tabs defaultValue="general" radius="md">
-              <Tabs.List mb="md">
-                <Tabs.Tab value="general">General</Tabs.Tab>
-                <Tabs.Tab value="macros">Macronutrientes</Tabs.Tab>
-                <Tabs.Tab value="vitamins">Vitaminas</Tabs.Tab>
-                <Tabs.Tab value="minerals">Minerales</Tabs.Tab>
-                <Tabs.Tab value="other">Otros</Tabs.Tab>
-              </Tabs.List>
+            <Tabs value={foodDetailTab} onChange={setFoodDetailTab} radius="md">
+              {isMobile && (
+                <Select
+                  value={foodDetailTab}
+                  onChange={setFoodDetailTab}
+                  data={[
+                    { value: "general", label: "General" },
+                    { value: "macros", label: "Macronutrientes" },
+                    { value: "vitamins", label: "Vitaminas" },
+                    { value: "minerals", label: "Minerales" },
+                    { value: "other", label: "Otros" },
+                  ]}
+                  size="sm"
+                  radius="md"
+                  mb="md"
+                />
+              )}
+              {!isMobile && (
+                <Tabs.List mb="md">
+                  <Tabs.Tab value="general">General</Tabs.Tab>
+                  <Tabs.Tab value="macros">Macronutrientes</Tabs.Tab>
+                  <Tabs.Tab value="vitamins">Vitaminas</Tabs.Tab>
+                  <Tabs.Tab value="minerals">Minerales</Tabs.Tab>
+                  <Tabs.Tab value="other">Otros</Tabs.Tab>
+                </Tabs.List>
+              )}
 
               <Tabs.Panel value="general">
                 <Stack gap="md">
@@ -2020,7 +2084,7 @@ export function NutritionPage() {
                       />
                     </Center>
                   )}
-                  <SimpleGrid cols={2}>
+                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
                     <Box>
                       <Text size="xs" c="dimmed" fw={500}>Nombre</Text>
                       <Text fw={600}>{viewingFood.name}</Text>
@@ -2084,7 +2148,7 @@ export function NutritionPage() {
                     </Box>
                   )}
 
-                  <SimpleGrid cols={3}>
+                  <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {viewingFood.nutriscore_grade && (
                       <Box>
                         <Text size="xs" c="dimmed" fw={500}>Nutri-Score</Text>
@@ -2130,7 +2194,7 @@ export function NutritionPage() {
               <Tabs.Panel value="macros">
                 <Stack gap="md">
                   <Text fw={600} size="lg">Información Nutricional (por {viewingFood.serving_size || 100}g)</Text>
-                  <SimpleGrid cols={2}>
+                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Energía</Text>
                       <Text fw={600} size="lg">{Number(viewingFood.calories || 0).toFixed(1)} kcal</Text>
@@ -2169,7 +2233,7 @@ export function NutritionPage() {
                   {(viewingFood.cholesterol_mg > 0 || viewingFood.omega3_g > 0 || viewingFood.alcohol_g > 0) && (
                     <>
                       <Divider my="sm" />
-                      <SimpleGrid cols={3}>
+                      <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                         {viewingFood.cholesterol_mg > 0 && (
                           <Box>
                             <Text size="xs" c="dimmed">Colesterol</Text>
@@ -2197,7 +2261,7 @@ export function NutritionPage() {
               <Tabs.Panel value="vitamins">
                 <Stack gap="md">
                   <Text fw={600} size="lg">Vitaminas (por {viewingFood.serving_size || 100}g)</Text>
-                  <SimpleGrid cols={3}>
+                  <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {viewingFood.vitamin_a_ug > 0 && (
                       <Box className="nv-card-compact" p="sm">
                         <Text size="xs" c="dimmed">Vitamina A</Text>
@@ -2280,7 +2344,7 @@ export function NutritionPage() {
               <Tabs.Panel value="minerals">
                 <Stack gap="md">
                   <Text fw={600} size="lg">Minerales (por {viewingFood.serving_size || 100}g)</Text>
-                  <SimpleGrid cols={3}>
+                  <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {viewingFood.calcium_mg > 0 && (
                       <Box className="nv-card-compact" p="sm">
                         <Text size="xs" c="dimmed">Calcio</Text>
@@ -2351,7 +2415,7 @@ export function NutritionPage() {
               <Tabs.Panel value="other">
                 <Stack gap="md">
                   <Text fw={600} size="lg">Información Adicional</Text>
-                  <SimpleGrid cols={2}>
+                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
                     {viewingFood.caffeine_mg > 0 && (
                       <Box>
                         <Text size="xs" c="dimmed">Cafeína</Text>
@@ -2374,7 +2438,7 @@ export function NutritionPage() {
 
                   <Divider my="sm" />
                   
-                  <SimpleGrid cols={2}>
+                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
                     {viewingFood.labels && (
                       <Box>
                         <Text size="xs" c="dimmed">Etiquetas</Text>
@@ -2434,7 +2498,7 @@ export function NutritionPage() {
         {viewingSupplement && (
           <ScrollArea h={400}>
             <Stack gap="md">
-              <SimpleGrid cols={2}>
+              <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <Box>
                   <Text size="xs" c="dimmed" fw={500}>Nombre</Text>
                   <Text fw={600}>{viewingSupplement.name}</Text>
@@ -2463,7 +2527,7 @@ export function NutritionPage() {
               <Divider />
 
               <Text fw={600}>Información Nutricional</Text>
-              <SimpleGrid cols={4}>
+              <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }}>
                 <Box className="nv-card-compact" p="sm">
                   <Text size="xs" c="dimmed">Calorías</Text>
                   <Text fw={600}>{viewingSupplement.calories || 0} kcal</Text>
@@ -2678,7 +2742,7 @@ export function NutritionPage() {
                   error={planForm.errors.target_calories}
                 />
 
-                <SimpleGrid cols={3} spacing="xs">
+                <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xs">
                   <NumberInput
                     label="Prot. (g)"
                     max={500}

@@ -523,6 +523,9 @@ export const notificationsApi = {
   markAllRead: (type?: string) =>
     api.post("/notifications/mark-all-read", { type }),
   delete: (id: string) => api.delete(`/notifications/${id}`),
+  getPreferences: () => api.get("/notifications/preferences"),
+  updatePreferences: (data: Record<string, boolean>) =>
+    api.patch("/notifications/preferences", data),
 };
 
 // Settings API

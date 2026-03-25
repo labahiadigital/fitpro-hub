@@ -23,7 +23,7 @@ import {
   Image,
   Select,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 // notifications is available via useCreateMeasurement/useUploadProgressPhoto hooks
 import {
@@ -192,7 +192,7 @@ function LogMeasurementModal({
         <Text fw={500} size="sm">
           Datos Corporales
         </Text>
-        <SimpleGrid cols={3}>
+        <SimpleGrid cols={{ base: 1, xs: 3 }}>
           <NumberInput
             label="Peso (kg)"
             placeholder="78.5"
@@ -223,7 +223,7 @@ function LogMeasurementModal({
         <Text fw={500} size="sm" mt="md">
           Medidas Corporales (cm)
         </Text>
-        <SimpleGrid cols={5}>
+        <SimpleGrid cols={{ base: 2, xs: 3, sm: 5 }}>
           <NumberInput
             label="Pecho"
             placeholder="102"
@@ -401,6 +401,8 @@ function UploadPhotoModal({
 }
 
 export function MyProgressPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [activeTab, setActiveTab] = useState<string | null>("overview");
   const { data: summary, isLoading: isLoadingSummary } = useProgressSummary();
   const { data: measurements } = useMeasurements(50);
   const { data: photos = [] } = useProgressPhotos(50);
@@ -549,7 +551,23 @@ export function MyProgressPage() {
         </Group>
       </Group>
 
-      <Tabs defaultValue="overview" variant="pills">
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "overview", label: "Resumen" },
+            { value: "measurements", label: "Medidas" },
+            { value: "history", label: "Historial" },
+            { value: "photos", label: "Fotos" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
+      <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
+        {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="overview" leftSection={<IconChartLine size={16} />}>
             Resumen
@@ -564,6 +582,7 @@ export function MyProgressPage() {
             Fotos
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         <Tabs.Panel value="overview">
           {/* Main Stats */}
@@ -775,7 +794,7 @@ export function MyProgressPage() {
                     })()}
                     
                     {/* Data summary below chart */}
-                    <SimpleGrid cols={3} mt="md">
+                    <SimpleGrid cols={{ base: 1, xs: 3 }} mt="md">
                       {data.weightHistory.length > 0 && data.weightHistory[data.weightHistory.length - 1].weight > 0 && (
                         <Box ta="center">
                           <Text size="xs" c="dimmed">Último peso</Text>

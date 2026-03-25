@@ -17,6 +17,7 @@ import {
   NumberInput,
   Paper,
   PasswordInput,
+  ScrollArea,
   Select,
   SimpleGrid,
   Stack,
@@ -29,7 +30,7 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconAlertCircle,
   IconBell,
@@ -92,9 +93,22 @@ import {
   workspacesApi,
 } from "../../services/api";
 
+const SETTINGS_TAB_SELECT_DATA = [
+  { value: "workspace", label: "Workspace" },
+  { value: "profile", label: "Mi Perfil" },
+  { value: "team", label: "Equipo" },
+  { value: "branding", label: "Marca" },
+  { value: "notifications", label: "Notificaciones" },
+  { value: "booking", label: "Reservas" },
+  { value: "integrations", label: "Integraciones" },
+  { value: "billing", label: "Facturación" },
+  { value: "security", label: "Seguridad" },
+];
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>(
     searchParams.get("tab") || "workspace"
   );
@@ -485,29 +499,45 @@ export function SettingsPage() {
         title="Configuración"
       />
 
-      <Tabs onChange={setActiveTab} orientation="vertical" value={activeTab}>
-        <Tabs.List mr="xl" w={220} style={{ borderRight: "1px solid var(--nv-border)" }}>
-          <Tabs.Tab leftSection={<IconBuilding size={16} />} value="workspace" style={{ fontWeight: 500 }}>Workspace</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconUser size={16} />} value="profile" style={{ fontWeight: 500 }}>Mi Perfil</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconUsers size={16} />} value="team" style={{ fontWeight: 500 }}>Equipo</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconPalette size={16} />} value="branding" style={{ fontWeight: 500 }}>Marca</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications" style={{ fontWeight: 500 }}>Notificaciones</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCalendar size={16} />} value="booking" style={{ fontWeight: 500 }}>Reservas</Tabs.Tab>
-          <Tabs.Tab
-            leftSection={<IconLink size={16} />}
-            value="integrations"
-            style={{ fontWeight: 500 }}
-            rightSection={
-              (whatsappStatus?.connected || googleCalendarStatus?.connected) ? (
-                <Badge color="green" size="xs" variant="dot" />
-              ) : null
-            }
-          >
-            Integraciones
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing" style={{ fontWeight: 500 }}>Facturación</Tabs.Tab>
-          <Tabs.Tab leftSection={<IconShield size={16} />} value="security" style={{ fontWeight: 500 }}>Seguridad</Tabs.Tab>
-        </Tabs.List>
+      {isMobile && (
+        <Select
+          data={SETTINGS_TAB_SELECT_DATA}
+          label="Sección"
+          mb="md"
+          onChange={(v) => setActiveTab(v)}
+          value={activeTab ?? undefined}
+        />
+      )}
+
+      <Tabs
+        onChange={setActiveTab}
+        orientation={isMobile ? "horizontal" : "vertical"}
+        value={activeTab}
+      >
+        {!isMobile && (
+          <Tabs.List mr="xl" w={220} style={{ borderRight: "1px solid var(--nv-border)" }}>
+            <Tabs.Tab leftSection={<IconBuilding size={16} />} value="workspace" style={{ fontWeight: 500 }}>Workspace</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUser size={16} />} value="profile" style={{ fontWeight: 500 }}>Mi Perfil</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUsers size={16} />} value="team" style={{ fontWeight: 500 }}>Equipo</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPalette size={16} />} value="branding" style={{ fontWeight: 500 }}>Marca</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications" style={{ fontWeight: 500 }}>Notificaciones</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCalendar size={16} />} value="booking" style={{ fontWeight: 500 }}>Reservas</Tabs.Tab>
+            <Tabs.Tab
+              leftSection={<IconLink size={16} />}
+              value="integrations"
+              style={{ fontWeight: 500 }}
+              rightSection={
+                (whatsappStatus?.connected || googleCalendarStatus?.connected) ? (
+                  <Badge color="green" size="xs" variant="dot" />
+                ) : null
+              }
+            >
+              Integraciones
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing" style={{ fontWeight: 500 }}>Facturación</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconShield size={16} />} value="security" style={{ fontWeight: 500 }}>Seguridad</Tabs.Tab>
+          </Tabs.List>
+        )}
 
         <Box style={{ flex: 1 }}>
           {/* ==================== WORKSPACE ==================== */}
@@ -619,56 +649,58 @@ export function SettingsPage() {
                 </Button>
               </Group>
 
-              <Table>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Miembro</Table.Th>
-                    <Table.Th>Rol</Table.Th>
-                    <Table.Th>Estado</Table.Th>
-                    <Table.Th style={{ width: 60 }} />
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {teamMembers.map((member) => (
-                    <Table.Tr key={member.id}>
-                      <Table.Td>
-                        <Group gap="sm">
-                          <Avatar color="primary" radius="xl" size="sm">{member.name.charAt(0)}</Avatar>
-                          <Box>
-                            <Text fw={500} size="sm">{member.name}</Text>
-                            <Text c="dimmed" size="xs">{member.email}</Text>
-                          </Box>
-                        </Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge color={member.role === "owner" ? "primary" : "blue"} variant="light">
-                          {member.role === "owner" ? "Propietario" : "Colaborador"}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge color={member.status === "active" ? "green" : "gray"} variant="light">
-                          {member.status === "active" ? "Activo" : "Inactivo"}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        {member.role !== "owner" && (
-                          <Menu position="bottom-end" withArrow>
-                            <Menu.Target>
-                              <ActionIcon color="gray" variant="subtle"><IconDotsVertical size={16} /></ActionIcon>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              <Menu.Item leftSection={<IconEdit size={14} />}>Editar permisos</Menu.Item>
-                              <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={() => setDeleteConfirmMember(member.id)}>
-                                Eliminar
-                              </Menu.Item>
-                            </Menu.Dropdown>
-                          </Menu>
-                        )}
-                      </Table.Td>
+              <ScrollArea type="auto">
+                <Table style={{ minWidth: 500 }}>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Miembro</Table.Th>
+                      <Table.Th>Rol</Table.Th>
+                      <Table.Th>Estado</Table.Th>
+                      <Table.Th style={{ width: 60 }} />
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {teamMembers.map((member) => (
+                      <Table.Tr key={member.id}>
+                        <Table.Td>
+                          <Group gap="sm">
+                            <Avatar color="primary" radius="xl" size="sm">{member.name.charAt(0)}</Avatar>
+                            <Box>
+                              <Text fw={500} size="sm">{member.name}</Text>
+                              <Text c="dimmed" size="xs">{member.email}</Text>
+                            </Box>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color={member.role === "owner" ? "primary" : "blue"} variant="light">
+                            {member.role === "owner" ? "Propietario" : "Colaborador"}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color={member.status === "active" ? "green" : "gray"} variant="light">
+                            {member.status === "active" ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          {member.role !== "owner" && (
+                            <Menu position="bottom-end" withArrow>
+                              <Menu.Target>
+                                <ActionIcon color="gray" variant="subtle"><IconDotsVertical size={16} /></ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item leftSection={<IconEdit size={14} />}>Editar permisos</Menu.Item>
+                                <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={() => setDeleteConfirmMember(member.id)}>
+                                  Eliminar
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </ScrollArea>
             </Box>
           </Tabs.Panel>
 
@@ -697,7 +729,7 @@ export function SettingsPage() {
 
                 <form onSubmit={brandingForm.onSubmit((v) => brandingUpdateMutation.mutate(v))}>
                   <Text fw={500} mb="md" size="sm">Colores</Text>
-                  <SimpleGrid cols={3} mb="lg" spacing="md">
+                  <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} mb="lg" spacing="md">
                     <ColorInput label="Color primario" {...brandingForm.getInputProps("primary_color")} />
                     <ColorInput label="Color secundario" {...brandingForm.getInputProps("secondary_color")} />
                     <ColorInput label="Color de acento" {...brandingForm.getInputProps("accent_color")} />
@@ -990,28 +1022,30 @@ export function SettingsPage() {
               <Box className="nv-card" p="lg">
                 <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Historial de Facturas</Text>
                 {billingData?.invoices?.length > 0 ? (
-                  <Table>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Fecha</Table.Th>
-                        <Table.Th>Concepto</Table.Th>
-                        <Table.Th>Importe</Table.Th>
-                        <Table.Th>Estado</Table.Th>
-                        <Table.Th />
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {billingData.invoices.map((inv: any) => (
-                        <Table.Tr key={inv.id}>
-                          <Table.Td>{new Date(inv.date).toLocaleDateString("es-ES")}</Table.Td>
-                          <Table.Td>{inv.description}</Table.Td>
-                          <Table.Td>{inv.amount}</Table.Td>
-                          <Table.Td><Badge color={inv.status === "paid" ? "green" : "orange"} variant="light">{inv.status === "paid" ? "Pagado" : "Pendiente"}</Badge></Table.Td>
-                          <Table.Td>{inv.pdf_url && <Button size="xs" variant="subtle" component="a" href={inv.pdf_url} target="_blank">Descargar</Button>}</Table.Td>
+                  <ScrollArea type="auto">
+                    <Table style={{ minWidth: 500 }}>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Fecha</Table.Th>
+                          <Table.Th>Concepto</Table.Th>
+                          <Table.Th>Importe</Table.Th>
+                          <Table.Th>Estado</Table.Th>
+                          <Table.Th />
                         </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {billingData.invoices.map((inv: any) => (
+                          <Table.Tr key={inv.id}>
+                            <Table.Td>{new Date(inv.date).toLocaleDateString("es-ES")}</Table.Td>
+                            <Table.Td>{inv.description}</Table.Td>
+                            <Table.Td>{inv.amount}</Table.Td>
+                            <Table.Td><Badge color={inv.status === "paid" ? "green" : "orange"} variant="light">{inv.status === "paid" ? "Pagado" : "Pendiente"}</Badge></Table.Td>
+                            <Table.Td>{inv.pdf_url && <Button size="xs" variant="subtle" component="a" href={inv.pdf_url} target="_blank">Descargar</Button>}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
                 ) : (
                   <Text c="dimmed" size="sm" ta="center" py="lg">No hay facturas disponibles</Text>
                 )}

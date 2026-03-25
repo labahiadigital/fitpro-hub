@@ -25,7 +25,7 @@ import {
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconChartBar,
   IconDotsVertical,
@@ -80,6 +80,7 @@ interface LeaderboardEntry {
 }
 
 export function CommunityPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("challenges");
   const [
     challengeModalOpened,
@@ -163,7 +164,22 @@ export function CommunityPage() {
         title="Comunidad"
       />
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "challenges", label: "Retos" },
+            { value: "groups", label: "Grupos" },
+            { value: "leaderboard", label: "Ranking" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
+        {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconTrophy size={16} />} value="challenges">
             Retos
@@ -175,6 +191,7 @@ export function CommunityPage() {
             Ranking
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         {/* Challenges Tab */}
         <Tabs.Panel value="challenges">

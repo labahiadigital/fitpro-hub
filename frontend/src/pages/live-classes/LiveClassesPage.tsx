@@ -405,7 +405,7 @@ function CreateClassModal({
             {...form.getInputProps("description")}
           />
 
-          <SimpleGrid cols={2}>
+          <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <Select
               label="Tipo de clase"
               data={[
@@ -431,7 +431,7 @@ function CreateClassModal({
             />
           </SimpleGrid>
 
-          <SimpleGrid cols={2}>
+          <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <DateTimePicker
               label="Fecha y hora"
               placeholder="Selecciona fecha y hora"
@@ -448,7 +448,7 @@ function CreateClassModal({
             />
           </SimpleGrid>
 
-          <SimpleGrid cols={2}>
+          <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <NumberInput
               label="Máximo de participantes"
               min={1}

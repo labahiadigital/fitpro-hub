@@ -42,6 +42,7 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useMediaQuery } from "@mantine/hooks";
 import { EmptyState } from "../../components/common/EmptyState";
 import { useClient, useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
@@ -202,6 +203,7 @@ export function WorkoutsPage() {
   }, [navigate, returnTo, clientId]);
   
   const [activeTab, setActiveTab] = useState<string | null>("programs");
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [
     exerciseModalOpened,
     { open: openExerciseModal, close: closeExerciseModal },
@@ -546,6 +548,23 @@ export function WorkoutsPage() {
     }
   };
 
+  const handleDuplicateProgram = async (program: any) => {
+    try {
+      const duplicateData = {
+        name: `Copia de ${program.name}`,
+        description: program.description || "",
+        duration_weeks: program.duration_weeks || 4,
+        difficulty: program.difficulty || "intermediate",
+        tags: program.tags || [],
+        template: program.template || {},
+        is_template: true,
+      };
+      await createProgram.mutateAsync(duplicateData);
+    } catch {
+      // Error handled by react-query
+    }
+  };
+
   const handleDeleteProgram = async (programId: string) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este programa?")) {
       try {
@@ -612,24 +631,42 @@ export function WorkoutsPage() {
         title="Entrenamientos"
       />
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "programs", label: "Programas" },
+            { value: "exercises", label: "Ejercicios" },
+            { value: "warmup", label: "Calentamiento" },
+            { value: "stretching", label: "Estiramientos" },
+            { value: "cardio", label: "Cardio" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Programas
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Ejercicios
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconFlame size={14} />} value="warmup" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Calentamiento
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconStretching size={14} />} value="stretching" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Estiramientos
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconHeartbeat size={14} />} value="cardio" style={{ fontWeight: 600, fontSize: "13px" }}>
-            Cardio
-          </Tabs.Tab>
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+            <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Programas
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Ejercicios
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFlame size={14} />} value="warmup" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Calentamiento
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconStretching size={14} />} value="stretching" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Estiramientos
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconHeartbeat size={14} />} value="cardio" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Cardio
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
 
         <Tabs.Panel value="programs">
           {programs && programs.length > 0 ? (
@@ -679,7 +716,15 @@ export function WorkoutsPage() {
                     <ActionIcon color="blue" variant="light" radius="md" size="sm">
                       <IconEye size={14} />
                     </ActionIcon>
-                    <ActionIcon color="gray" variant="light" radius="md" size="sm">
+                    <ActionIcon
+                      color="gray"
+                      variant="light"
+                      radius="md"
+                      size="sm"
+                      onClick={() => handleDuplicateProgram(program)}
+                      loading={createProgram.isPending}
+                      title="Duplicar programa"
+                    >
                       <IconCopy size={14} />
                     </ActionIcon>
                     <ActionIcon 

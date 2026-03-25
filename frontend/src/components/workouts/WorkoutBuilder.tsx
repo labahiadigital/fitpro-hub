@@ -32,7 +32,7 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import { useDebouncedCallback, useDisclosure } from "@mantine/hooks";
+import { useDebouncedCallback, useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconBarbell,
   IconCheck,
@@ -221,6 +221,7 @@ export function WorkoutBuilder({
   onCreateExercise,
   alternativesCounts,
 }: WorkoutBuilderProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>(
     blocks.map((b) => b.id)
@@ -697,13 +698,9 @@ export function WorkoutBuilder({
                                         }}
                                         withBorder
                                       >
-                                        <Group
-                                          justify="space-between"
-                                          wrap="nowrap"
-                                        >
+                                        <Stack gap="xs">
                                           <Group
                                             gap="sm"
-                                            style={{ flex: 1 }}
                                             wrap="nowrap"
                                           >
                                             <Group gap={2} wrap="nowrap">
@@ -790,7 +787,7 @@ export function WorkoutBuilder({
                                             </Box>
                                           </Group>
 
-                                          <Group gap="xs" wrap="wrap">
+                                          <SimpleGrid cols={isMobile ? 2 : 6} spacing="xs" verticalSpacing="xs">
                                             <NumberInput
                                               label="Series"
                                               leftSection={<IconRepeat size={12} />}
@@ -805,7 +802,6 @@ export function WorkoutBuilder({
                                               }
                                               size="xs"
                                               value={exercise.sets}
-                                              w={80}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
                                             <Select
@@ -820,7 +816,6 @@ export function WorkoutBuilder({
                                                 )
                                               }
                                               size="xs"
-                                              w={100}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
                                             <TextInput
@@ -841,7 +836,6 @@ export function WorkoutBuilder({
                                               placeholder="Ej: 8-12"
                                               size="xs"
                                               value={exercise.reps}
-                                              w={85}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
                                             <NumberInput
@@ -860,7 +854,6 @@ export function WorkoutBuilder({
                                               step={15}
                                               suffix="s"
                                               value={exercise.rest_seconds}
-                                              w={95}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
                                             <NumberInput
@@ -879,24 +872,25 @@ export function WorkoutBuilder({
                                                 )
                                               }
                                               suffix="kg"
-                                              w={90}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
-                                            <ActionIcon
-                                              color="red"
-                                              onClick={() =>
-                                                removeExercise(
-                                                  block.id,
-                                                  exercise.id
-                                                )
-                                              }
-                                              size="sm"
-                                              variant="subtle"
-                                            >
-                                              <IconTrash size={14} />
-                                            </ActionIcon>
-                                          </Group>
-                                          <Group gap="xs" wrap="wrap" mt={4}>
+                                            <Group gap="xs" align="end">
+                                              <ActionIcon
+                                                color="red"
+                                                onClick={() =>
+                                                  removeExercise(
+                                                    block.id,
+                                                    exercise.id
+                                                  )
+                                                }
+                                                size="sm"
+                                                variant="subtle"
+                                              >
+                                                <IconTrash size={14} />
+                                              </ActionIcon>
+                                            </Group>
+                                          </SimpleGrid>
+                                          <SimpleGrid cols={isMobile ? 1 : 2} spacing="xs" mt={4}>
                                             <TextInput
                                               label="URL Vídeo"
                                               placeholder="https://youtube.com/..."
@@ -910,7 +904,6 @@ export function WorkoutBuilder({
                                                   { video_url: e.target.value }
                                                 )
                                               }
-                                              style={{ flex: 1, minWidth: 180 }}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
                                             <TextInput
@@ -926,16 +919,15 @@ export function WorkoutBuilder({
                                                   { notes: e.target.value }
                                                 )
                                               }
-                                              style={{ flex: 1, minWidth: 180 }}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
-                                          </Group>
+                                          </SimpleGrid>
                                           {exercise.exercise.description && (
                                             <Text size="xs" c="dimmed" mt={4} lineClamp={2}>
                                               {exercise.exercise.description}
                                             </Text>
                                           )}
-                                        </Group>
+                                        </Stack>
                                       </Card>
                                     )}
                                   </Draggable>
@@ -1305,6 +1297,7 @@ export function WorkoutBuilderWithDays({
   const [copyDaysPopoverOpened, setCopyDaysPopoverOpened] = useState(false);
   const [copyToDayIds, setCopyToDayIds] = useState<string[]>([]);
   const { data: alternativesCounts } = useAlternativesCounts();
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const currentDay = days.find((d) => d.id === activeDay);
 
@@ -1422,51 +1415,79 @@ export function WorkoutBuilderWithDays({
             </Popover.Dropdown>
           </Popover>
         </Group>
-        <SimpleGrid cols={7}>
-          {days.map((day) => (
-            <Paper
-              key={day.id}
-              p="xs"
-              radius="md"
-              withBorder
-              style={{
-                borderColor: day.id === activeDay ? "var(--mantine-color-blue-5)" : undefined,
-                backgroundColor: day.isRestDay ? "var(--mantine-color-gray-0)" : undefined,
-                cursor: "pointer",
-              }}
-              onClick={() => setActiveDay(day.id)}
-            >
-              <Text ta="center" size="xs" fw={600}>
-                {day.dayName.slice(0, 3)}
-              </Text>
-              <Text ta="center" size="xs" c={day.isRestDay ? "dimmed" : "blue"}>
-                {day.isRestDay ? "Descanso" : `${getDayExerciseCount(day)} ej.`}
-              </Text>
-            </Paper>
-          ))}
-        </SimpleGrid>
+        {isMobile ? (
+          <Select
+            value={activeDay}
+            onChange={(v) => v && setActiveDay(v)}
+            data={days.map((day) => ({
+              value: day.id,
+              label: `${day.dayName} — ${day.isRestDay ? "Descanso" : `${getDayExerciseCount(day)} ejercicios`}`,
+            }))}
+            size="sm"
+            radius="md"
+          />
+        ) : (
+          <SimpleGrid cols={7}>
+            {days.map((day) => (
+              <Paper
+                key={day.id}
+                p="xs"
+                radius="md"
+                withBorder
+                style={{
+                  borderColor: day.id === activeDay ? "var(--mantine-color-blue-5)" : undefined,
+                  backgroundColor: day.isRestDay ? "var(--mantine-color-gray-0)" : undefined,
+                  cursor: "pointer",
+                }}
+                onClick={() => setActiveDay(day.id)}
+              >
+                <Text ta="center" size="xs" fw={600}>
+                  {day.dayName.slice(0, 3)}
+                </Text>
+                <Text ta="center" size="xs" c={day.isRestDay ? "dimmed" : "blue"}>
+                  {day.isRestDay ? "Descanso" : `${getDayExerciseCount(day)} ej.`}
+                </Text>
+              </Paper>
+            ))}
+          </SimpleGrid>
+        )}
       </Paper>
 
       {/* Tabs por día */}
+      {isMobile ? (
+        <Select
+          value={activeDay}
+          onChange={(v) => v && setActiveDay(v)}
+          data={days.map((day) => ({
+            value: day.id,
+            label: `${day.dayName}${day.isRestDay ? " (Descanso)" : ` (${getDayExerciseCount(day)} ej.)`}`,
+          }))}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      ) : null}
       <Tabs value={activeDay} onChange={(v) => setActiveDay(v || days[0]?.id)}>
-        <Tabs.List mb="md">
-          {days.map((day) => (
-            <Tabs.Tab
-              key={day.id}
-              value={day.id}
-              color={day.isRestDay ? "gray" : "blue"}
-              leftSection={
-                day.isRestDay ? undefined : (
-                  <Badge size="xs" variant="filled" color="blue">
-                    {getDayExerciseCount(day)}
-                  </Badge>
-                )
-              }
-            >
-              {day.dayName}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="md">
+            {days.map((day) => (
+              <Tabs.Tab
+                key={day.id}
+                value={day.id}
+                color={day.isRestDay ? "gray" : "blue"}
+                leftSection={
+                  day.isRestDay ? undefined : (
+                    <Badge size="xs" variant="filled" color="blue">
+                      {getDayExerciseCount(day)}
+                    </Badge>
+                  )
+                }
+              >
+                {day.dayName}
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        )}
 
         {currentDay && (
           <Tabs.Panel key={currentDay.id} value={currentDay.id}>

@@ -5,6 +5,7 @@ import {
   Container,
   Group,
   Modal,
+  ScrollArea,
   Select,
   SimpleGrid,
   Stack,
@@ -19,7 +20,7 @@ import {
   Table,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { 
   IconTag, 
@@ -189,6 +190,7 @@ export function ClientsPage() {
     { open: openClientModal, close: closeClientModal },
   ] = useDisclosure(false);
   const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const statusFilter = activeTab === "active" ? "active" : activeTab === "inactive" ? "inactive" : activeTab === "pending" ? "pending" : undefined;
   const { data: clientsData, isLoading, isError, refetch } = useClients({ page, search, status: statusFilter });
@@ -632,34 +634,54 @@ export function ClientsPage() {
 
       {/* Tabs y Filtros */}
       <Box mb="md">
-        <Tabs value={activeTab} onChange={(value) => { setActiveTab(value); setPage(1); }}>
-          <Tabs.List style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <Tabs.Tab 
-              leftSection={<IconUsers size={14} />} 
-              value="all"
-              style={{ fontWeight: 600, fontSize: "13px" }}
-            >
-              Todos ({stats.total})
-            </Tabs.Tab>
-            <Tabs.Tab value="active" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Activos ({stats.active})
-            </Tabs.Tab>
-            <Tabs.Tab value="pending" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Pendientes ({stats.pending})
-            </Tabs.Tab>
-            <Tabs.Tab value="inactive" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Inactivos ({stats.inactive})
-            </Tabs.Tab>
-            <Tabs.Tab 
-              leftSection={<IconTag size={14} />} 
-              value="tags"
-              onClick={openTagModal}
-              style={{ fontWeight: 600, fontSize: "13px" }}
-            >
-              Etiquetas
-            </Tabs.Tab>
-          </Tabs.List>
-        </Tabs>
+        {isMobile ? (
+          <Select
+            value={activeTab}
+            onChange={(value) => {
+              if (value === "tags") { openTagModal(); return; }
+              setActiveTab(value);
+              setPage(1);
+            }}
+            data={[
+              { value: "all", label: `Todos (${stats.total})` },
+              { value: "active", label: `Activos (${stats.active})` },
+              { value: "pending", label: `Pendientes (${stats.pending})` },
+              { value: "inactive", label: `Inactivos (${stats.inactive})` },
+              { value: "tags", label: "Etiquetas" },
+            ]}
+            size="sm"
+            radius="md"
+          />
+        ) : (
+          <Tabs value={activeTab} onChange={(value) => { setActiveTab(value); setPage(1); }}>
+            <Tabs.List style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <Tabs.Tab
+                leftSection={<IconUsers size={14} />}
+                value="all"
+                style={{ fontWeight: 600, fontSize: "13px" }}
+              >
+                Todos ({stats.total})
+              </Tabs.Tab>
+              <Tabs.Tab value="active" style={{ fontWeight: 600, fontSize: "13px" }}>
+                Activos ({stats.active})
+              </Tabs.Tab>
+              <Tabs.Tab value="pending" style={{ fontWeight: 600, fontSize: "13px" }}>
+                Pendientes ({stats.pending})
+              </Tabs.Tab>
+              <Tabs.Tab value="inactive" style={{ fontWeight: 600, fontSize: "13px" }}>
+                Inactivos ({stats.inactive})
+              </Tabs.Tab>
+              <Tabs.Tab
+                leftSection={<IconTag size={14} />}
+                value="tags"
+                onClick={openTagModal}
+                style={{ fontWeight: 600, fontSize: "13px" }}
+              >
+                Etiquetas
+              </Tabs.Tab>
+            </Tabs.List>
+          </Tabs>
+        )}
       </Box>
 
       {/* Contenido */}
@@ -739,11 +761,11 @@ export function ClientsPage() {
             <Box
               className="nv-card"
               style={{
-                overflow: "hidden",
                 border: "1px solid var(--border-subtle)",
               }}
             >
-              <Table verticalSpacing="sm" horizontalSpacing="md">
+              <ScrollArea type="auto">
+              <Table verticalSpacing="sm" horizontalSpacing="md" style={{ minWidth: 520 }}>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Email</Text></Table.Th>
@@ -806,6 +828,7 @@ export function ClientsPage() {
                   ))}
                 </Table.Tbody>
               </Table>
+              </ScrollArea>
             </Box>
           </Box>
         );

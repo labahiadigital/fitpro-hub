@@ -28,7 +28,7 @@ import {
 import { Dropzone } from "@mantine/dropzone";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconArrowUpRight,
   IconCash,
@@ -97,6 +97,7 @@ import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
 
 export function BillingPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [chargeModalOpened, { open: openChargeModal, close: closeChargeModal }] = useDisclosure(false);
   const [paymentDetailOpened, { open: openPaymentDetail, close: closePaymentDetail }] = useDisclosure(false);
@@ -641,18 +642,34 @@ export function BillingPage() {
         </Box>
       </SimpleGrid>
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "overview", label: "Resumen" },
+            { value: "payments", label: "Cobros" },
+            { value: "invoices", label: "Facturas" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
-          <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview" style={{ fontWeight: 500 }}>
-            Resumen
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
-            Cobros
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconFileInvoice size={14} />} value="invoices" style={{ fontWeight: 500 }}>
-            Facturas
-          </Tabs.Tab>
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
+            <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview" style={{ fontWeight: 500 }}>
+              Resumen
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
+              Cobros
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFileInvoice size={14} />} value="invoices" style={{ fontWeight: 500 }}>
+              Facturas
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
 
         {/* ═══════════════ OVERVIEW TAB ═══════════════ */}
         <Tabs.Panel value="overview">
@@ -689,7 +706,7 @@ export function BillingPage() {
                         thickness={20}
                       />
                     </Group>
-                    <SimpleGrid cols={2} spacing="sm">
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                       <Group gap="xs" justify="center">
                         <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-primary)" }} />
                         <Text size="xs">Suscripciones ({subPct}%)</Text>
@@ -810,8 +827,9 @@ export function BillingPage() {
 
         {/* ═══════════════ PAYMENTS TAB ═══════════════ */}
         <Tabs.Panel value="payments">
-          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
-            <Table>
+          <Box className="nv-card" p={0}>
+            <ScrollArea type="auto">
+              <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
@@ -884,6 +902,7 @@ export function BillingPage() {
                 })}
               </Table.Tbody>
             </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
 
@@ -977,8 +996,9 @@ export function BillingPage() {
             </Group>
           </Group>
 
-          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
-            <Table>
+          <Box className="nv-card" p={0}>
+            <ScrollArea type="auto">
+              <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>N.º</Table.Th>
@@ -1064,6 +1084,7 @@ export function BillingPage() {
                 ))}
               </Table.Tbody>
             </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
       </Tabs>
@@ -1315,7 +1336,7 @@ export function BillingPage() {
                 </Group>
               </Group>
 
-              <SimpleGrid cols={2}>
+              <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <Box>
                   <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Cliente</Text>
                   <Text fw={600}>{previewInvoice.client_name}</Text>
@@ -1517,7 +1538,7 @@ export function BillingPage() {
                                 {certStatus.is_expired ? "Expirado" : "Vigente"}
                               </Badge>
                             </Group>
-                            <SimpleGrid cols={2} spacing="xs">
+                            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
                               {certStatus.nif && (
                                 <Box><Text size="xs" c="dimmed">NIF</Text><Text size="sm" fw={500}>{certStatus.nif}</Text></Box>
                               )}

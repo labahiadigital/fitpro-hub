@@ -12,6 +12,7 @@ import {
   NumberInput,
   Paper,
   Progress,
+  Select,
   SimpleGrid,
   Stack,
   Switch,
@@ -22,7 +23,7 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconCalendarEvent,
   IconCheck,
@@ -82,6 +83,7 @@ const sessionTypeOptions = [
 ];
 
 export function PackagesPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("packages");
   
   // API hooks
@@ -325,7 +327,21 @@ export function PackagesPage() {
         </Card>
       </SimpleGrid>
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "packages", label: "Paquetes Disponibles" },
+            { value: "clients", label: "Bonos de Clientes" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
+        {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconPackage size={16} />} value="packages">
             Paquetes Disponibles
@@ -334,6 +350,7 @@ export function PackagesPage() {
             Bonos de Clientes
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         <Tabs.Panel value="packages">
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">

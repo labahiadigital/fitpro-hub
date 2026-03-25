@@ -14,6 +14,7 @@ import {
   NumberInput,
   Paper,
   Progress,
+  ScrollArea,
   Select,
   SimpleGrid,
   Stack,
@@ -27,7 +28,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconCalendarEvent,
@@ -101,7 +102,9 @@ const sessionTypeOptions = [
 ];
 
 export function CatalogPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("products");
+  const [bonosSubTab, setBonosSubTab] = useState<string | null>("packages");
   const { currentWorkspace } = useAuthStore();
 
   // Product state
@@ -366,18 +369,34 @@ export function CatalogPage() {
         title="Catálogo"
       />
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "products", label: "Productos" },
+            { value: "subscriptions", label: "Suscripciones" },
+            { value: "bonos", label: "Bonos" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
-          <Tabs.Tab leftSection={<IconPackage size={14} />} value="products" style={{ fontWeight: 500 }}>
-            Productos
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
-            Suscripciones
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCurrencyEuro size={14} />} value="bonos" style={{ fontWeight: 500 }}>
-            Bonos
-          </Tabs.Tab>
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
+            <Tabs.Tab leftSection={<IconPackage size={14} />} value="products" style={{ fontWeight: 500 }}>
+              Productos
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
+              Suscripciones
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCurrencyEuro size={14} />} value="bonos" style={{ fontWeight: 500 }}>
+              Bonos
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
 
         {/* ═══════════════ PRODUCTS TAB ═══════════════ */}
         <Tabs.Panel value="products">
@@ -482,8 +501,9 @@ export function CatalogPage() {
 
         {/* ═══════════════ SUBSCRIPTIONS TAB ═══════════════ */}
         <Tabs.Panel value="subscriptions">
-          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
-            <Table>
+          <Box className="nv-card" p={0}>
+            <ScrollArea type="auto">
+              <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
@@ -549,6 +569,7 @@ export function CatalogPage() {
                 ))}
               </Table.Tbody>
             </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
 
@@ -597,15 +618,30 @@ export function CatalogPage() {
             </Button>
           </Group>
 
-          <Tabs defaultValue="packages">
-            <Tabs.List mb="lg">
-              <Tabs.Tab leftSection={<IconPackage size={16} />} value="packages">
-                Paquetes Disponibles
-              </Tabs.Tab>
-              <Tabs.Tab leftSection={<IconUsers size={16} />} value="clients">
-                Bonos de Clientes
-              </Tabs.Tab>
-            </Tabs.List>
+          {isMobile && (
+            <Select
+              value={bonosSubTab}
+              onChange={setBonosSubTab}
+              data={[
+                { value: "packages", label: "Paquetes Disponibles" },
+                { value: "clients", label: "Bonos de Clientes" },
+              ]}
+              size="sm"
+              radius="md"
+              mb="md"
+            />
+          )}
+          <Tabs onChange={setBonosSubTab} value={bonosSubTab}>
+            {!isMobile && (
+              <Tabs.List mb="lg">
+                <Tabs.Tab leftSection={<IconPackage size={16} />} value="packages">
+                  Paquetes Disponibles
+                </Tabs.Tab>
+                <Tabs.Tab leftSection={<IconUsers size={16} />} value="clients">
+                  Bonos de Clientes
+                </Tabs.Tab>
+              </Tabs.List>
+            )}
 
             <Tabs.Panel value="packages">
               <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
@@ -688,7 +724,8 @@ export function CatalogPage() {
 
             <Tabs.Panel value="clients">
               <Paper radius="md" withBorder>
-                <Table highlightOnHover striped>
+                <ScrollArea type="auto">
+                  <Table highlightOnHover striped style={{ minWidth: 700 }}>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Cliente</Table.Th>
@@ -747,6 +784,7 @@ export function CatalogPage() {
                     })}
                   </Table.Tbody>
                 </Table>
+                </ScrollArea>
               </Paper>
             </Tabs.Panel>
           </Tabs>

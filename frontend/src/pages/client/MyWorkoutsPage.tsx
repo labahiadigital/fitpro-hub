@@ -23,10 +23,11 @@ import {
   Checkbox,
   TextInput,
   ScrollArea,
+  Select,
   Divider,
   Image,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { useState } from "react";
 import {
@@ -317,7 +318,7 @@ function LogWorkoutModal({
           </Stack>
         </ScrollArea>
 
-        <SimpleGrid cols={2}>
+        <SimpleGrid cols={{ base: 1, xs: 2 }}>
           <NumberInput
             label="Duración (minutos)"
             {...form.getInputProps("duration_minutes")}
@@ -591,6 +592,8 @@ interface ProgramDay {
 }
 
 export function MyWorkoutsPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [activeTab, setActiveTab] = useState<string | null>("today");
   const { data: workouts, isLoading: isLoadingWorkouts } = useMyWorkouts();
   const { data: history } = useWorkoutHistory(10);
   const { data: todayLogs } = useTodayWorkoutLogs();
@@ -853,7 +856,22 @@ export function MyWorkoutsPage() {
         </Paper>
       )}
 
-      <Tabs defaultValue="today" variant="pills">
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "today", label: "Hoy" },
+            { value: "week", label: "Esta Semana" },
+            { value: "history", label: "Historial" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
+      <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
+        {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconBarbell size={16} />}>
             Hoy
@@ -865,6 +883,7 @@ export function MyWorkoutsPage() {
             Historial
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         <Tabs.Panel value="today">
           {data.isTodayRestDay && (
@@ -1077,7 +1096,7 @@ export function MyWorkoutsPage() {
                         </Group>
                       </Accordion.Control>
                       <Accordion.Panel>
-                        <SimpleGrid cols={3} spacing="md">
+                        <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="md">
                           <Paper p="sm" radius="md" withBorder>
                             <Group gap={4}>
                               <IconRepeat size={14} />
@@ -1265,7 +1284,7 @@ export function MyWorkoutsPage() {
                               </Group>
                             </Accordion.Control>
                             <Accordion.Panel>
-                              <SimpleGrid cols={3} spacing="md">
+                              <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="md">
                                 <Paper p="sm" radius="md" withBorder>
                                   <Group gap={4}>
                                     <IconRepeat size={14} />

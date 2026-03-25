@@ -29,7 +29,7 @@ import {
 import { Dropzone } from "@mantine/dropzone";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconArrowUpRight,
   IconCash,
@@ -105,6 +105,7 @@ import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
 
 export function PaymentsPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [
     productModalOpened,
@@ -791,24 +792,42 @@ export function PaymentsPage() {
         </Box>
       </SimpleGrid>
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "overview", label: "Resumen" },
+            { value: "payments", label: "Historial" },
+            { value: "invoices", label: "Facturas" },
+            { value: "subscriptions", label: "Suscripciones" },
+            { value: "products", label: "Productos" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
-          <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview" style={{ fontWeight: 500 }}>
-            Resumen
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
-            Historial
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconFileInvoice size={14} />} value="invoices" style={{ fontWeight: 500 }}>
-            Facturas
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
-            Suscripciones
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconPackage size={14} />} value="products" style={{ fontWeight: 500 }}>
-            Productos
-          </Tabs.Tab>
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
+            <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview" style={{ fontWeight: 500 }}>
+              Resumen
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
+              Historial
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFileInvoice size={14} />} value="invoices" style={{ fontWeight: 500 }}>
+              Facturas
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
+              Suscripciones
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPackage size={14} />} value="products" style={{ fontWeight: 500 }}>
+              Productos
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
 
         <Tabs.Panel value="overview">
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg" className="stagger">
@@ -844,7 +863,7 @@ export function PaymentsPage() {
                         thickness={20}
                       />
                     </Group>
-                    <SimpleGrid cols={2} spacing="sm">
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                       <Group gap="xs" justify="center">
                         <Box h={12} w={12} style={{ borderRadius: "50%", backgroundColor: "var(--nv-primary)" }} />
                         <Text size="xs">Suscripciones ({subPct}%)</Text>
@@ -1010,8 +1029,9 @@ export function PaymentsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="payments">
-          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
-            <Table>
+          <Box className="nv-card" p={0}>
+            <ScrollArea type="auto">
+              <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
@@ -1110,6 +1130,7 @@ export function PaymentsPage() {
                 })}
               </Table.Tbody>
             </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
 
@@ -1206,8 +1227,9 @@ export function PaymentsPage() {
           </Group>
 
           {/* Invoice Table */}
-          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
-            <Table>
+          <Box className="nv-card" p={0}>
+            <ScrollArea type="auto">
+              <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>N.º</Table.Th>
@@ -1293,12 +1315,14 @@ export function PaymentsPage() {
                 ))}
               </Table.Tbody>
             </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
 
         <Tabs.Panel value="subscriptions">
-          <Box className="nv-card" p={0} style={{ overflow: "hidden" }}>
-            <Table>
+          <Box className="nv-card" p={0}>
+            <ScrollArea type="auto">
+              <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
@@ -1364,6 +1388,7 @@ export function PaymentsPage() {
                 ))}
               </Table.Tbody>
             </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
 
@@ -1913,7 +1938,7 @@ export function PaymentsPage() {
                 </Group>
               </Group>
 
-              <SimpleGrid cols={2}>
+              <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <Box>
                   <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Cliente</Text>
                   <Text fw={600}>{previewInvoice.client_name}</Text>
@@ -2136,7 +2161,7 @@ export function PaymentsPage() {
                                 {certStatus.is_expired ? "Expirado" : "Vigente"}
                               </Badge>
                             </Group>
-                            <SimpleGrid cols={2} spacing="xs">
+                            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
                               {certStatus.nif && (
                                 <Box>
                                   <Text size="xs" c="dimmed">NIF</Text>

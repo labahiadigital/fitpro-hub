@@ -10,12 +10,14 @@ import {
   Loader,
   Menu,
   Paper,
+  Select,
   SimpleGrid,
   Stack,
   Tabs,
   Text,
   TextInput,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   IconAward,
   IconBook,
@@ -310,6 +312,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
 }
 
 export function LMSPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("courses");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -454,7 +457,23 @@ export function LMSPage() {
       </Group>
 
       {/* Tabs */}
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "courses", label: `Cursos (${courses.length})` },
+            { value: "challenges", label: `Retos (${challenges.length})` },
+            { value: "enrollments", label: "Inscripciones" },
+            { value: "certificates", label: "Certificados" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs value={activeTab} onChange={setActiveTab}>
+        {!isMobile && (
         <Tabs.List mb="xl">
           <Tabs.Tab value="courses" leftSection={<IconBook size={16} />}>
             Cursos ({courses.length})
@@ -469,6 +488,7 @@ export function LMSPage() {
             Certificados
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         <Tabs.Panel value="courses">
           {isLoading ? (

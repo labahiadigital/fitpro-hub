@@ -28,9 +28,10 @@ import {
   FileButton,
   Center,
   Loader,
+  ScrollArea,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconAlertTriangle,
@@ -103,6 +104,18 @@ const COMMON_ALLERGENS = [
   { value: "sulfitos", label: "Sulfitos" },
   { value: "moluscos", label: "Moluscos" },
   { value: "altramuces", label: "Altramuces" },
+];
+
+const CLIENT_DETAIL_TABS_SELECT_DATA = [
+  { value: "overview", label: "Resumen" },
+  { value: "programs", label: "Programas" },
+  { value: "nutrition", label: "Nutrición" },
+  { value: "health", label: "Salud" },
+  { value: "progress", label: "Progreso" },
+  { value: "sessions", label: "Sesiones" },
+  { value: "photos", label: "Fotos" },
+  { value: "documents", label: "Documentos" },
+  { value: "payments", label: "Pagos" },
 ];
 
 // Lista de intolerancias comunes
@@ -227,31 +240,33 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
       ) : paymentsData.length === 0 ? (
         <Text c="dimmed" ta="center" py="xl">No hay pagos registrados para este cliente.</Text>
       ) : (
-        <Table verticalSpacing="md">
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Fecha</Table.Th>
-              <Table.Th>Concepto</Table.Th>
-              <Table.Th ta="right">Importe</Table.Th>
-              <Table.Th ta="center">Estado</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {paymentsData.map((p: any) => {
-              const st = statusMap[p.status] || { label: p.status, color: "gray" };
-              return (
-                <Table.Tr key={p.id}>
-                  <Table.Td><Text size="sm">{formatDate(p.paid_at || p.created_at)}</Text></Table.Td>
-                  <Table.Td><Text size="sm">{p.description || "Pago"}</Text></Table.Td>
-                  <Table.Td ta="right"><Text fw={600} size="sm">€{Number(p.amount).toFixed(2)}</Text></Table.Td>
-                  <Table.Td ta="center">
-                    <Badge color={st.color} size="sm" variant="light" radius="xl">{st.label}</Badge>
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
-          </Table.Tbody>
-        </Table>
+        <ScrollArea type="auto">
+          <Table verticalSpacing="md" style={{ minWidth: 600 }}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Fecha</Table.Th>
+                <Table.Th>Concepto</Table.Th>
+                <Table.Th ta="right">Importe</Table.Th>
+                <Table.Th ta="center">Estado</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {paymentsData.map((p: any) => {
+                const st = statusMap[p.status] || { label: p.status, color: "gray" };
+                return (
+                  <Table.Tr key={p.id}>
+                    <Table.Td><Text size="sm">{formatDate(p.paid_at || p.created_at)}</Text></Table.Td>
+                    <Table.Td><Text size="sm">{p.description || "Pago"}</Text></Table.Td>
+                    <Table.Td ta="right"><Text fw={600} size="sm">€{Number(p.amount).toFixed(2)}</Text></Table.Td>
+                    <Table.Td ta="center">
+                      <Badge color={st.color} size="sm" variant="light" radius="xl">{st.label}</Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
       )}
     </Box>
   );
@@ -262,7 +277,8 @@ export function ClientDetailPage() {
   const navigate = useNavigate();
   const { currentWorkspace, user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
-  
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   const { data: fetchedClient, isLoading, isError, error, refetch } = useClient(id || "");
   const { data: clientMealPlans } = useClientMealPlans(id || "");
   const { data: clientWorkoutPrograms = [] } = useClientWorkoutAssignments(id || "");
@@ -1232,7 +1248,7 @@ export function ClientDetailPage() {
             </Group>
 
             {/* Acciones - responsive */}
-            <Group gap="sm" wrap="nowrap">
+            <Group gap="sm" wrap="wrap">
               <Button 
                 leftSection={<IconMessage size={18} />} 
                 variant="default"
@@ -1367,10 +1383,20 @@ export function ClientDetailPage() {
         />
       </SimpleGrid>
 
-      {/* Tabs con información detallada - Responsive con scroll horizontal en mobile */}
+      {/* Tabs con información detallada */}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-          <Tabs.List mb="xl" style={{ flexWrap: "nowrap", minWidth: "max-content" }}>
+        {isMobile && (
+          <Select
+            value={activeTab ?? "overview"}
+            onChange={setActiveTab}
+            data={CLIENT_DETAIL_TABS_SELECT_DATA}
+            size="sm"
+            radius="md"
+            mb="md"
+          />
+        )}
+        {!isMobile && (
+          <Tabs.List mb="xl">
             <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">Resumen</Tabs.Tab>
             <Tabs.Tab leftSection={<IconBarbell size={16} />} value="programs">Programas</Tabs.Tab>
             <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
@@ -1381,7 +1407,7 @@ export function ClientDetailPage() {
             <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
           </Tabs.List>
-        </Box>
+        )}
 
         <Tabs.Panel value="overview">
           <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="lg">
@@ -1781,7 +1807,7 @@ export function ClientDetailPage() {
                 
                 return (
                   <Stack gap="md">
-                    <SimpleGrid cols={2} spacing="md">
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                       {healthData.activity_level && (
                         <Box>
                           <Text size="xs" c="dimmed">Nivel de actividad</Text>
@@ -2455,84 +2481,87 @@ export function ClientDetailPage() {
               </FileButton>
             </Group>
 
-            <Table
-              verticalSpacing="md"
-              styles={{
-                th: { 
-                  fontWeight: 700, 
-                  fontSize: 11, 
-                  letterSpacing: "0.08em", 
-                  textTransform: "uppercase",
-                  color: "var(--nv-slate)"
-                }
-              }}
-            >
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Documento</Table.Th>
-                  <Table.Th>Tipo</Table.Th>
-                  <Table.Th>Dirección</Table.Th>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                  <Table.Th></Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {documents.map((doc) => (
-                  <Table.Tr key={doc.id}>
-                    <Table.Td>
-                      <Group gap="sm">
-                        <ThemeIcon size="sm" variant="light" radius="xl" color="blue">
-                          <IconFile size={12} />
-                        </ThemeIcon>
-                        <Text size="sm" fw={500}>{doc.name}</Text>
-                      </Group>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge size="sm" variant="light" radius="xl">
-                        {doc.type === "diet_plan" ? "Plan Nutricional" :
-                         doc.type === "contract" ? "Contrato" : "Médico"}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge 
-                        size="sm" 
-                        variant="light"
-                        radius="xl"
-                        color={doc.direction === "outbound" ? "blue" : "green"}
-                      >
-                        {doc.direction === "outbound" ? "Enviado" : "Recibido"}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed">
-                        {new Date(doc.created_at).toLocaleDateString("es-ES")}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge 
-                        size="sm" 
-                        variant="light"
-                        radius="xl"
-                        color={doc.is_read ? "green" : "orange"}
-                      >
-                        {doc.is_read ? "Leído" : "No leído"}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ActionIcon variant="subtle" color="blue" radius="xl">
-                          <IconDownload size={16} />
-                        </ActionIcon>
-                        <ActionIcon variant="subtle" color="red" radius="xl">
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
+            <ScrollArea type="auto">
+              <Table
+                verticalSpacing="md"
+                style={{ minWidth: 600 }}
+                styles={{
+                  th: { 
+                    fontWeight: 700, 
+                    fontSize: 11, 
+                    letterSpacing: "0.08em", 
+                    textTransform: "uppercase",
+                    color: "var(--nv-slate)"
+                  }
+                }}
+              >
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Documento</Table.Th>
+                    <Table.Th>Tipo</Table.Th>
+                    <Table.Th>Dirección</Table.Th>
+                    <Table.Th>Fecha</Table.Th>
+                    <Table.Th>Estado</Table.Th>
+                    <Table.Th></Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {documents.map((doc) => (
+                    <Table.Tr key={doc.id}>
+                      <Table.Td>
+                        <Group gap="sm">
+                          <ThemeIcon size="sm" variant="light" radius="xl" color="blue">
+                            <IconFile size={12} />
+                          </ThemeIcon>
+                          <Text size="sm" fw={500}>{doc.name}</Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge size="sm" variant="light" radius="xl">
+                          {doc.type === "diet_plan" ? "Plan Nutricional" :
+                           doc.type === "contract" ? "Contrato" : "Médico"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge 
+                          size="sm" 
+                          variant="light"
+                          radius="xl"
+                          color={doc.direction === "outbound" ? "blue" : "green"}
+                        >
+                          {doc.direction === "outbound" ? "Enviado" : "Recibido"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">
+                          {new Date(doc.created_at).toLocaleDateString("es-ES")}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge 
+                          size="sm" 
+                          variant="light"
+                          radius="xl"
+                          color={doc.is_read ? "green" : "orange"}
+                        >
+                          {doc.is_read ? "Leído" : "No leído"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ActionIcon variant="subtle" color="blue" radius="xl">
+                            <IconDownload size={16} />
+                          </ActionIcon>
+                          <ActionIcon variant="subtle" color="red" radius="xl">
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
 
@@ -2597,48 +2626,50 @@ export function ClientDetailPage() {
 
         {/* Sesiones */}
         <Tabs.Panel value="sessions">
-          <Box className="nv-card" style={{ overflow: "hidden" }}>
-            <Table verticalSpacing="md" horizontalSpacing="lg">
-              <Table.Thead style={{ backgroundColor: "var(--nv-surface-subtle)" }}>
-                <Table.Tr>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Hora</Table.Th>
-                  <Table.Th>Tipo</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                  <Table.Th>Notas</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {sessions.map((session) => (
-                  <Table.Tr key={session.id}>
-                    <Table.Td>
-                      <Text fw={600} size="sm">
-                        {new Date(session.date).toLocaleDateString("es-ES", {
-                          weekday: "short",
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td><Text size="sm">{session.time}</Text></Table.Td>
-                    <Table.Td><Text size="sm">{session.type}</Text></Table.Td>
-                    <Table.Td>
-                      <Badge
-                        color={session.status === "completed" ? "green" : "blue"}
-                        size="sm"
-                        variant="light"
-                        radius="xl"
-                      >
-                        {session.status === "completed" ? "Completada" : "Confirmada"}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text c="dimmed" size="sm">{session.notes || "—"}</Text>
-                    </Table.Td>
+          <Box className="nv-card">
+            <ScrollArea type="auto">
+              <Table verticalSpacing="md" horizontalSpacing="lg" style={{ minWidth: 600 }}>
+                <Table.Thead style={{ backgroundColor: "var(--nv-surface-subtle)" }}>
+                  <Table.Tr>
+                    <Table.Th>Fecha</Table.Th>
+                    <Table.Th>Hora</Table.Th>
+                    <Table.Th>Tipo</Table.Th>
+                    <Table.Th>Estado</Table.Th>
+                    <Table.Th>Notas</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {sessions.map((session) => (
+                    <Table.Tr key={session.id}>
+                      <Table.Td>
+                        <Text fw={600} size="sm">
+                          {new Date(session.date).toLocaleDateString("es-ES", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td><Text size="sm">{session.time}</Text></Table.Td>
+                      <Table.Td><Text size="sm">{session.type}</Text></Table.Td>
+                      <Table.Td>
+                        <Badge
+                          color={session.status === "completed" ? "green" : "blue"}
+                          size="sm"
+                          variant="light"
+                          radius="xl"
+                        >
+                          {session.status === "completed" ? "Completada" : "Confirmada"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text c="dimmed" size="sm">{session.notes || "—"}</Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
           </Box>
         </Tabs.Panel>
 
@@ -2704,93 +2735,95 @@ export function ClientDetailPage() {
                   El cliente no ha registrado medidas aún
                 </Text>
               ) : (
-                <Table verticalSpacing="md">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Fecha</Table.Th>
-                      <Table.Th>Peso (kg)</Table.Th>
-                      <Table.Th>% Grasa</Table.Th>
-                      <Table.Th>Masa Muscular (kg)</Table.Th>
-                      <Table.Th>Medidas</Table.Th>
-                      <Table.Th>Variación</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {measurements.map((m, index) => {
-                      const prevMeasurement = measurements[index + 1];
-                      const weightChange = prevMeasurement ? m.weight - prevMeasurement.weight : 0;
-                      const bodyFatChange = prevMeasurement ? m.body_fat - prevMeasurement.body_fat : 0;
-                      const muscleChange = prevMeasurement ? m.muscle_mass - prevMeasurement.muscle_mass : 0;
-                      
-                      return (
-                        <Table.Tr key={m.id || index}>
-                          <Table.Td>
-                            <Text fw={600} size="sm">
-                              {new Date(m.date).toLocaleDateString("es-ES", { 
-                                day: "numeric",
-                                month: "short", 
-                                year: "numeric" 
-                              })}
-                            </Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm">{m.weight > 0 ? `${m.weight} kg` : "-"}</Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm">{m.body_fat > 0 ? `${m.body_fat}%` : "-"}</Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm">{m.muscle_mass > 0 ? `${m.muscle_mass} kg` : "-"}</Text>
-                          </Table.Td>
-                          <Table.Td>
-                            {m.measurements && Object.keys(m.measurements).length > 0 ? (
-                              <Group gap={4}>
-                                {m.measurements.chest && <Badge size="xs" variant="light">P: {m.measurements.chest}</Badge>}
-                                {m.measurements.waist && <Badge size="xs" variant="light">C: {m.measurements.waist}</Badge>}
-                                {m.measurements.hips && <Badge size="xs" variant="light">Ca: {m.measurements.hips}</Badge>}
-                              </Group>
-                            ) : (
-                              <Text size="sm" c="dimmed">-</Text>
-                            )}
-                          </Table.Td>
-                          <Table.Td>
-                            {prevMeasurement && (
-                              <Stack gap={2}>
-                                {weightChange !== 0 && (
-                                  <Badge
-                                    color={weightChange <= 0 ? "green" : "red"}
-                                    size="xs"
-                                    variant="light"
-                                  >
-                                    {weightChange > 0 ? "+" : ""}{weightChange.toFixed(1)} kg
-                                  </Badge>
-                                )}
-                                {bodyFatChange !== 0 && m.body_fat > 0 && (
-                                  <Badge
-                                    color={bodyFatChange <= 0 ? "green" : "orange"}
-                                    size="xs"
-                                    variant="light"
-                                  >
-                                    {bodyFatChange > 0 ? "+" : ""}{bodyFatChange.toFixed(1)}% grasa
-                                  </Badge>
-                                )}
-                                {muscleChange !== 0 && m.muscle_mass > 0 && (
-                                  <Badge
-                                    color={muscleChange >= 0 ? "blue" : "red"}
-                                    size="xs"
-                                    variant="light"
-                                  >
-                                    {muscleChange > 0 ? "+" : ""}{muscleChange.toFixed(1)} kg músculo
-                                  </Badge>
-                                )}
-                              </Stack>
-                            )}
-                          </Table.Td>
-                        </Table.Tr>
-                      );
-                    })}
-                  </Table.Tbody>
-                </Table>
+                <ScrollArea type="auto">
+                  <Table verticalSpacing="md" style={{ minWidth: 600 }}>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Fecha</Table.Th>
+                        <Table.Th>Peso (kg)</Table.Th>
+                        <Table.Th>% Grasa</Table.Th>
+                        <Table.Th>Masa Muscular (kg)</Table.Th>
+                        <Table.Th>Medidas</Table.Th>
+                        <Table.Th>Variación</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {measurements.map((m, index) => {
+                        const prevMeasurement = measurements[index + 1];
+                        const weightChange = prevMeasurement ? m.weight - prevMeasurement.weight : 0;
+                        const bodyFatChange = prevMeasurement ? m.body_fat - prevMeasurement.body_fat : 0;
+                        const muscleChange = prevMeasurement ? m.muscle_mass - prevMeasurement.muscle_mass : 0;
+                        
+                        return (
+                          <Table.Tr key={m.id || index}>
+                            <Table.Td>
+                              <Text fw={600} size="sm">
+                                {new Date(m.date).toLocaleDateString("es-ES", { 
+                                  day: "numeric",
+                                  month: "short", 
+                                  year: "numeric" 
+                                })}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{m.weight > 0 ? `${m.weight} kg` : "-"}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{m.body_fat > 0 ? `${m.body_fat}%` : "-"}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{m.muscle_mass > 0 ? `${m.muscle_mass} kg` : "-"}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              {m.measurements && Object.keys(m.measurements).length > 0 ? (
+                                <Group gap={4}>
+                                  {m.measurements.chest && <Badge size="xs" variant="light">P: {m.measurements.chest}</Badge>}
+                                  {m.measurements.waist && <Badge size="xs" variant="light">C: {m.measurements.waist}</Badge>}
+                                  {m.measurements.hips && <Badge size="xs" variant="light">Ca: {m.measurements.hips}</Badge>}
+                                </Group>
+                              ) : (
+                                <Text size="sm" c="dimmed">-</Text>
+                              )}
+                            </Table.Td>
+                            <Table.Td>
+                              {prevMeasurement && (
+                                <Stack gap={2}>
+                                  {weightChange !== 0 && (
+                                    <Badge
+                                      color={weightChange <= 0 ? "green" : "red"}
+                                      size="xs"
+                                      variant="light"
+                                    >
+                                      {weightChange > 0 ? "+" : ""}{weightChange.toFixed(1)} kg
+                                    </Badge>
+                                  )}
+                                  {bodyFatChange !== 0 && m.body_fat > 0 && (
+                                    <Badge
+                                      color={bodyFatChange <= 0 ? "green" : "orange"}
+                                      size="xs"
+                                      variant="light"
+                                    >
+                                      {bodyFatChange > 0 ? "+" : ""}{bodyFatChange.toFixed(1)}% grasa
+                                    </Badge>
+                                  )}
+                                  {muscleChange !== 0 && m.muscle_mass > 0 && (
+                                    <Badge
+                                      color={muscleChange >= 0 ? "blue" : "red"}
+                                      size="xs"
+                                      variant="light"
+                                    >
+                                      {muscleChange > 0 ? "+" : ""}{muscleChange.toFixed(1)} kg músculo
+                                    </Badge>
+                                  )}
+                                </Stack>
+                              )}
+                            </Table.Td>
+                          </Table.Tr>
+                        );
+                      })}
+                    </Table.Tbody>
+                  </Table>
+                </ScrollArea>
               )}
             </Box>
 

@@ -23,7 +23,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconCheck,
   IconClock,
@@ -65,6 +65,7 @@ interface DocumentFolder {
 }
 
 export function DocumentsPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("documents");
   const [
     documentModalOpened,
@@ -212,7 +213,22 @@ export function DocumentsPage() {
         </Card>
       </SimpleGrid>
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "documents", label: "Documentos" },
+            { value: "folders", label: "Carpetas" },
+            { value: "templates", label: "Plantillas" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
+        {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">
             Documentos
@@ -224,6 +240,7 @@ export function DocumentsPage() {
             Plantillas
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         {/* Documents Tab */}
         <Tabs.Panel value="documents">

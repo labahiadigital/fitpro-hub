@@ -16,6 +16,7 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   IconArrowDownRight,
   IconArrowUpRight,
@@ -36,6 +37,7 @@ import { StatsCard } from "../../components/common/StatsCard";
 import { useKPIs, useRevenueChart, useClientsChart } from "../../hooks/useReports";
 
 export function ReportsPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [period, setPeriod] = useState<string | null>("30");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
 
@@ -151,7 +153,23 @@ export function ReportsPage() {
         />
       </SimpleGrid>
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "overview", label: "Resumen" },
+            { value: "revenue", label: "Ingresos" },
+            { value: "clients", label: "Clientes" },
+            { value: "activity", label: "Actividad" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
+        {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconChartBar size={14} />} value="overview">
             Resumen
@@ -166,6 +184,7 @@ export function ReportsPage() {
             Actividad
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         <Tabs.Panel value="overview">
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
@@ -270,7 +289,7 @@ export function ReportsPage() {
                 />
               </Group>
 
-              <SimpleGrid cols={2} spacing="sm">
+              <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
                 {clientActivityData.map((item) => (
                   <Group gap="xs" key={item.name}>
                     <Box
@@ -713,7 +732,7 @@ export function ReportsPage() {
                   thickness={16}
                 />
               </Group>
-              <SimpleGrid cols={2} spacing="sm">
+              <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
                 <Group gap="xs" justify="center">
                   <Box
                     h={12}

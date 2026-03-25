@@ -24,7 +24,7 @@ import {
   Tabs,
   Accordion,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconApple,
@@ -605,6 +605,8 @@ function ClientRecipesTab() {
 }
 
 export function MyNutritionPage() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [activeTab, setActiveTab] = useState<string | null>("today");
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
   const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
@@ -829,7 +831,23 @@ export function MyNutritionPage() {
         </Paper>
       )}
 
-      <Tabs defaultValue="today" variant="pills">
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "today", label: "Hoy" },
+            { value: "week", label: "Esta Semana" },
+            { value: "history", label: "Historial" },
+            { value: "recipes", label: "Recetas" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
+      <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
+        {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
             Hoy
@@ -844,6 +862,7 @@ export function MyNutritionPage() {
             Recetas
           </Tabs.Tab>
         </Tabs.List>
+        )}
 
         <Tabs.Panel value="today">
           {/* Daily Summary */}
@@ -853,7 +872,7 @@ export function MyNutritionPage() {
             <Text size="lg" fw={600} mb="md">
               Resumen del Día
             </Text>
-            <SimpleGrid cols={2} spacing="md">
+            <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="md">
               <MacroCard
                 label="Proteínas"
                 current={Math.round(dailyTotals.protein)}
@@ -1288,7 +1307,7 @@ export function MyNutritionPage() {
             {/* Week Summary */}
             <Card shadow="sm" padding="lg" radius="lg" withBorder>
               <Title order={5} mb="md">Resumen de la Semana</Title>
-              <SimpleGrid cols={3}>
+              <SimpleGrid cols={{ base: 1, xs: 3 }}>
                 <Box ta="center">
                   <Text size="xl" fw={700} c="yellow">
                     {nutritionHistory?.summary?.avg_calories || 0}

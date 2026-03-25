@@ -26,7 +26,7 @@ import {
   Skeleton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconAlertTriangle,
   IconCalendar,
@@ -121,6 +121,7 @@ const fieldTypes = [
 
 export function FormsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("forms");
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [documents] = useState<Document[]>([]);
   
   // API hooks
@@ -458,18 +459,34 @@ export function FormsPage() {
         </Group>
       )}
 
+      {isMobile && (
+        <Select
+          data={[
+            { value: "forms", label: "Formularios" },
+            { value: "documents", label: "Documentos" },
+            { value: "submissions", label: "Respuestas" },
+          ]}
+          mb="md"
+          onChange={setActiveTab}
+          radius="md"
+          size="sm"
+          value={activeTab}
+        />
+      )}
       <Tabs onChange={setActiveTab} value={activeTab}>
-        <Tabs.List mb="lg">
-          <Tabs.Tab leftSection={<IconForms size={14} />} value="forms">
-            Formularios
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconFolder size={14} />} value="documents">
-            Documentos
-          </Tabs.Tab>
-          <Tabs.Tab leftSection={<IconCheck size={14} />} value="submissions">
-            Respuestas
-          </Tabs.Tab>
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="lg">
+            <Tabs.Tab leftSection={<IconForms size={14} />} value="forms">
+              Formularios
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFolder size={14} />} value="documents">
+              Documentos
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCheck size={14} />} value="submissions">
+              Respuestas
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
 
         <Tabs.Panel value="forms">
           {isLoadingForms ? (
@@ -562,7 +579,8 @@ export function FormsPage() {
         <Tabs.Panel value="documents">
           {documents.length > 0 ? (
             <Paper radius="lg" withBorder>
-              <Table>
+              <ScrollArea type="auto">
+                <Table style={{ minWidth: 600 }}>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Nombre</Table.Th>
@@ -623,6 +641,7 @@ export function FormsPage() {
                   })}
                 </Table.Tbody>
               </Table>
+              </ScrollArea>
             </Paper>
           ) : (
             <EmptyState
@@ -648,7 +667,8 @@ export function FormsPage() {
               <Text fw={600} mb="md">
                 Respuestas Recientes ({submissions.length})
               </Text>
-              <Table>
+              <ScrollArea type="auto">
+                <Table style={{ minWidth: 600 }}>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Cliente</Table.Th>
@@ -728,6 +748,7 @@ export function FormsPage() {
                   ))}
                 </Table.Tbody>
               </Table>
+              </ScrollArea>
             </Paper>
           ) : (
             <EmptyState
