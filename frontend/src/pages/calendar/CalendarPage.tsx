@@ -38,7 +38,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   useBookings,
@@ -129,9 +129,17 @@ export function CalendarPage() {
 
   const { data: clientsData } = useClients({ page: 1 });
 
+  const clientsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (clientsData?.items || []).forEach((c: { id: string; full_name?: string; first_name: string; last_name: string }) => {
+      map.set(c.id, c.full_name || `${c.first_name} ${c.last_name}`);
+    });
+    return map;
+  }, [clientsData]);
+
   const bookings: Booking[] = (bookingsData || []).map((b: Booking) => ({
     ...b,
-    client_name: b.client_name || "Cliente",
+    client_name: b.client_name || (b.client_id ? clientsMap.get(b.client_id) : undefined) || "Sin cliente",
   }));
   
   // Combinar bookings con eventos de Google Calendar

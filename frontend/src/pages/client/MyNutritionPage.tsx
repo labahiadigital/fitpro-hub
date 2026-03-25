@@ -747,15 +747,19 @@ export function MyNutritionPage() {
     foods: FoodItem[];
     notes?: string;
   }) => {
-    await logNutritionMutation.mutateAsync({
-      date: today,
-      meal_name: data.meal_name,
-      foods: data.foods,
-      notes: data.notes,
-    });
-    closeModal();
-    closePlanMealModal();
-    setSelectedPlanMeal(null);
+    try {
+      await logNutritionMutation.mutateAsync({
+        date: today,
+        meal_name: data.meal_name,
+        foods: data.foods,
+        notes: data.notes,
+      });
+      closeModal();
+      closePlanMealModal();
+      setSelectedPlanMeal(null);
+    } catch {
+      // Error notification handled by mutation onError
+    }
   };
 
   const handleOpenPlanMeal = (meal: PlanMeal) => {

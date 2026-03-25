@@ -612,11 +612,13 @@ export function ClientDetailPage() {
     }
     
     try {
-      // Convert string/null fields to number/undefined for API
       const data = {
         ...values,
+        birth_date: values.birth_date || undefined,
+        gender: values.gender || undefined,
         height_cm: values.height_cm ? Number(values.height_cm) : undefined,
         weight_kg: values.weight_kg ? Number(values.weight_kg) : undefined,
+        internal_notes: values.internal_notes || undefined,
       };
       await updateClient.mutateAsync({ id, data });
       notifications.show({
@@ -627,6 +629,11 @@ export function ClientDetailPage() {
       closeEditInfoModal();
     } catch (error) {
       console.error("Error updating info:", error);
+      notifications.show({
+        title: "Error",
+        message: "No se pudo actualizar la información personal",
+        color: "red",
+      });
     }
   };
   
@@ -1423,10 +1430,10 @@ export function ClientDetailPage() {
               </Group>
 
               <Stack gap={0}>
-                <InfoRow label="Fecha de nacimiento" value={new Date(client.birth_date).toLocaleDateString("es-ES")} />
-                <InfoRow label="Género" value={client.gender === "female" ? "Femenino" : "Masculino"} />
-                <InfoRow label="Altura" value={`${client.height_cm} cm`} icon={<IconScale size={14} />} />
-                <InfoRow label="Peso actual" value={`${client.weight_kg} kg`} icon={<IconScale size={14} />} />
+                <InfoRow label="Fecha de nacimiento" value={client.birth_date ? new Date(client.birth_date).toLocaleDateString("es-ES") : "—"} />
+                <InfoRow label="Género" value={client.gender === "female" ? "Femenino" : client.gender === "male" ? "Masculino" : client.gender === "other" ? "Otro" : "—"} />
+                <InfoRow label="Altura" value={client.height_cm ? `${client.height_cm} cm` : "—"} icon={<IconScale size={14} />} />
+                <InfoRow label="Peso actual" value={client.weight_kg ? `${client.weight_kg} kg` : "—"} icon={<IconScale size={14} />} />
               </Stack>
 
               <Divider my="lg" />
