@@ -136,6 +136,7 @@ class WorkoutLogCreateDetailed(BaseModel):
     exercises: List[ExerciseLog] = []
     duration_minutes: Optional[int] = None
     perceived_effort: Optional[int] = None  # 1-10
+    satisfaction_rating: Optional[int] = None  # 1=triste, 2=neutral, 3=contento
     notes: Optional[str] = None
 
 
@@ -175,6 +176,7 @@ class NutritionLogCreate(BaseModel):
     meal_name: str  # Name of the meal (from meal_times)
     foods: List[dict]  # [{name, calories, protein, carbs, fat, quantity, food_id}]
     notes: Optional[str] = None
+    satisfaction_rating: Optional[int] = None  # 1=triste, 2=neutral, 3=contento
 
 
 class NutritionLogResponse(BaseModel):
@@ -187,6 +189,7 @@ class NutritionLogResponse(BaseModel):
     total_carbs: float
     total_fat: float
     notes: Optional[str] = None
+    satisfaction_rating: Optional[int] = None
 
 
 class MeasurementCreate(BaseModel):
@@ -708,6 +711,7 @@ async def create_detailed_workout_log(
             "exercises": [ex.model_dump() for ex in data.exercises],
             "duration_minutes": data.duration_minutes,
             "perceived_effort": data.perceived_effort,
+            "satisfaction_rating": data.satisfaction_rating,
             "notes": data.notes,
         }
     )
@@ -914,6 +918,7 @@ async def log_nutrition(
         "total_carbs": round(total_carbs, 1),
         "total_fat": round(total_fat, 1),
         "notes": data.notes,
+        "satisfaction_rating": data.satisfaction_rating,
         "logged_at": datetime.now().isoformat()
     }
     
@@ -940,7 +945,8 @@ async def log_nutrition(
         total_protein=round(total_protein, 1),
         total_carbs=round(total_carbs, 1),
         total_fat=round(total_fat, 1),
-        notes=data.notes
+        notes=data.notes,
+        satisfaction_rating=data.satisfaction_rating
     )
 
 
@@ -984,7 +990,8 @@ async def get_nutrition_logs(
             total_protein=log.get("total_protein", 0),
             total_carbs=log.get("total_carbs", 0),
             total_fat=log.get("total_fat", 0),
-            notes=log.get("notes")
+            notes=log.get("notes"),
+            satisfaction_rating=log.get("satisfaction_rating")
         )
         for log in logs
     ]
@@ -1180,37 +1187,55 @@ async def create_measurement(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Record body measurement."""
+    """Record body measurement (upsert: update if same day exists)."""
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    
-    # Parse measured_at to datetime
+
     measured_at_dt = None
     if data.measured_at:
         try:
-            # Try ISO format first
             measured_at_dt = datetime.fromisoformat(data.measured_at.replace('Z', '+00:00'))
         except ValueError:
             try:
-                # Try YYYY-MM-DD format
                 measured_at_dt = datetime.strptime(data.measured_at, "%Y-%m-%d")
             except ValueError:
-                # Default to now if parsing fails
                 measured_at_dt = datetime.now()
-    
-    measurement = ClientMeasurement(
-        client_id=client.id,
-        measured_at=measured_at_dt,
-        weight_kg=data.weight_kg,
-        body_fat_percentage=data.body_fat_percentage,
-        muscle_mass_kg=data.muscle_mass_kg,
-        measurements=data.measurements or {},
-        notes=data.notes
+
+    day_start = measured_at_dt.replace(hour=0, minute=0, second=0, microsecond=0) if measured_at_dt else datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end = day_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    existing_result = await db.execute(
+        select(ClientMeasurement)
+        .where(
+            ClientMeasurement.client_id == client.id,
+            ClientMeasurement.measured_at >= day_start,
+            ClientMeasurement.measured_at <= day_end,
+        )
+        .limit(1)
     )
-    db.add(measurement)
+    existing = existing_result.scalar_one_or_none()
+
+    if existing:
+        existing.weight_kg = data.weight_kg
+        existing.body_fat_percentage = data.body_fat_percentage
+        existing.muscle_mass_kg = data.muscle_mass_kg
+        existing.measurements = data.measurements or {}
+        existing.notes = data.notes
+        existing.measured_at = measured_at_dt
+        measurement = existing
+    else:
+        measurement = ClientMeasurement(
+            client_id=client.id,
+            measured_at=measured_at_dt,
+            weight_kg=data.weight_kg,
+            body_fat_percentage=data.body_fat_percentage,
+            muscle_mass_kg=data.muscle_mass_kg,
+            measurements=data.measurements or {},
+            notes=data.notes
+        )
+        db.add(measurement)
+
     await db.commit()
     await db.refresh(measurement)
     
-    # Update client's current weight if provided
     if data.weight_kg:
         client.weight_kg = str(data.weight_kg)
         await db.commit()
@@ -1223,6 +1248,7 @@ async def upload_progress_photo(
     file: UploadFile = File(...),
     photo_type: str = Query("front", description="Type: front, back, side"),
     notes: Optional[str] = None,
+    measurement_date: Optional[str] = Query(None, description="Date for the photo YYYY-MM-DD"),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1267,22 +1293,29 @@ async def upload_progress_photo(
         public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
         
         # Create a photo entry (stored in a measurement or separate)
+        target_date = date.today()
+        if measurement_date:
+            try:
+                target_date = datetime.strptime(measurement_date, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
         photo_data = {
             "url": public_url,
             "type": photo_type,
             "notes": notes,
             "uploaded_at": datetime.now().isoformat(),
+            "measurement_date": str(target_date),
             "filename": storage_path
         }
         
-        # Get or create today's measurement to attach the photo
-        # Use first() instead of scalar_one_or_none() to handle multiple measurements per day
         db_result = await db.execute(
             select(ClientMeasurement)
             .where(
                 and_(
                     ClientMeasurement.client_id == client.id,
-                    ClientMeasurement.measured_at >= datetime.combine(date.today(), datetime.min.time())
+                    ClientMeasurement.measured_at >= datetime.combine(target_date, datetime.min.time()),
+                    ClientMeasurement.measured_at <= datetime.combine(target_date, datetime.max.time())
                 )
             )
             .order_by(ClientMeasurement.measured_at.desc())
@@ -1445,8 +1478,132 @@ async def get_booking_detail(
     return booking
 
 
-# NOTE: Documents endpoint removed - documents table does not exist yet
-# TODO: Implement when documents table is created
+class ClientBookingCreate(BaseModel):
+    start_time: str  # ISO datetime
+    notes: Optional[str] = None
+
+
+@router.get("/calendar/available-slots")
+async def get_available_slots(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get available booking slots for a given date based on trainer weekly schedule."""
+    from app.models.workspace import Workspace
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    ws_result = await db.execute(
+        select(Workspace).where(Workspace.id == current_user.workspace_id)
+    )
+    workspace = ws_result.scalar_one_or_none()
+    if not workspace:
+        return []
+
+    ws_settings = workspace.settings or {}
+    weekly_schedule = ws_settings.get("weekly_schedule", {})
+    booking_policies = ws_settings.get("booking_policies", {})
+    default_duration = booking_policies.get("default_duration", 60)
+
+    try:
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Usa YYYY-MM-DD")
+
+    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    day_name = day_names[target_date.weekday()]
+    day_slots = weekly_schedule.get(day_name, [])
+
+    if not day_slots:
+        return []
+
+    existing_result = await db.execute(
+        select(Booking).where(
+            Booking.workspace_id == current_user.workspace_id,
+            Booking.start_time >= datetime.combine(target_date, datetime.min.time()),
+            Booking.start_time <= datetime.combine(target_date, datetime.max.time()),
+            Booking.status.in_(["pending", "confirmed"])
+        )
+    )
+    existing_bookings = existing_result.scalars().all()
+    booked_times = set()
+    for b in existing_bookings:
+        booked_times.add(b.start_time.strftime("%H:%M"))
+
+    available = []
+    for slot_range in day_slots:
+        start_h, start_m = map(int, slot_range.get("start", "09:00").split(":"))
+        end_h, end_m = map(int, slot_range.get("end", "17:00").split(":"))
+        current_minutes = start_h * 60 + start_m
+        end_minutes = end_h * 60 + end_m
+
+        while current_minutes + default_duration <= end_minutes:
+            slot_start = datetime.combine(target_date, datetime.min.time()).replace(
+                hour=current_minutes // 60, minute=current_minutes % 60
+            )
+            time_str = f"{current_minutes // 60:02d}:{current_minutes % 60:02d}"
+            if time_str not in booked_times:
+                slot_end = slot_start + timedelta(minutes=default_duration)
+                available.append({
+                    "start": slot_start.isoformat(),
+                    "end": slot_end.isoformat(),
+                })
+            current_minutes += default_duration
+
+    return available
+
+
+@router.post("/calendar/bookings", status_code=status.HTTP_201_CREATED)
+async def create_client_booking(
+    data: ClientBookingCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a booking request from a client."""
+    from app.models.workspace import Workspace
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    ws_result = await db.execute(
+        select(Workspace).where(Workspace.id == current_user.workspace_id)
+    )
+    workspace = ws_result.scalar_one_or_none()
+    ws_settings = workspace.settings or {} if workspace else {}
+    booking_policies = ws_settings.get("booking_policies", {})
+    default_duration = booking_policies.get("default_duration", 60)
+
+    try:
+        start_time = datetime.fromisoformat(data.start_time)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de hora inválido")
+
+    end_time = start_time + timedelta(minutes=default_duration)
+
+    conflict_result = await db.execute(
+        select(Booking).where(
+            Booking.workspace_id == current_user.workspace_id,
+            Booking.start_time == start_time,
+            Booking.status.in_(["pending", "confirmed"])
+        )
+    )
+    if conflict_result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Este horario ya no está disponible")
+
+    booking = Booking(
+        workspace_id=current_user.workspace_id,
+        client_id=client.id,
+        title=f"Sesión con {client.full_name}",
+        start_time=start_time,
+        end_time=end_time,
+        status="pending",
+        notes=data.notes,
+    )
+    db.add(booking)
+    await db.commit()
+    await db.refresh(booking)
+
+    return {"id": str(booking.id), "status": "pending", "start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
 
 
 # ============ MESSAGES / CHAT ============

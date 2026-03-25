@@ -394,7 +394,7 @@ export function ClientDetailPage() {
   // Documents and other data should come from API
   const documents: { id: string; name: string; type: string; direction: string; created_at: string; is_read: boolean }[] = [];
   
-  // Transform clientPhotos from API to the format expected by the UI
+  const [trainerPhotoFilter, setTrainerPhotoFilter] = useState<string>("all");
   const progressPhotos = (clientPhotos || []).map((photo, index) => ({
     id: `photo-${index}`,
     photo_url: photo.url,
@@ -2580,9 +2580,9 @@ export function ClientDetailPage() {
                 Fotos de Evolución
               </Text>
               <FileButton onChange={() => {}} accept="image/*" multiple>
-                {(props) => (
-                  <Button 
-                    {...props} 
+                {(props: Record<string, unknown>) => (
+                  <Button
+                    {...props}
                     size="sm" 
                     leftSection={<IconCamera size={16} />}
                     radius="xl"
@@ -2601,33 +2601,66 @@ export function ClientDetailPage() {
               </FileButton>
             </Group>
 
-            <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 6 }} spacing="md">
-              {progressPhotos.map((photo) => (
-                <Card key={photo.id} padding="xs" radius="lg" withBorder>
-                  <Card.Section>
-                    <Image
-                      src={photo.photo_url}
-                      height={200}
-                      alt="Foto de progreso"
-                      fallbackSrc="https://placehold.co/300x200?text=Foto"
-                    />
-                  </Card.Section>
-                  <Group justify="space-between" mt="sm">
-                    <Box>
-                      <Badge size="xs" variant="light" radius="xl">
-                        {photo.photo_type === "front" ? "Frontal" : "Lateral"}
-                      </Badge>
-                      <Text size="xs" c="dimmed" mt={2}>
-                        {new Date(photo.photo_date).toLocaleDateString("es-ES")}
-                      </Text>
+            <SegmentedControl
+              value={trainerPhotoFilter}
+              onChange={setTrainerPhotoFilter}
+              data={[
+                { value: "all", label: "Todas" },
+                { value: "front", label: "Frontal" },
+                { value: "back", label: "Espalda" },
+                { value: "side", label: "Lateral" },
+              ]}
+              mb="md"
+              size="sm"
+            />
+            {(() => {
+              const filtered = trainerPhotoFilter === "all"
+                ? progressPhotos
+                : progressPhotos.filter((p) => p.photo_type === trainerPhotoFilter);
+              const groups: Record<string, typeof filtered> = {};
+              for (const photo of filtered) {
+                const dateKey = photo.photo_date.split("T")[0];
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(photo);
+              }
+              const sortedGroups = Object.entries(groups)
+                .sort(([a], [b]) => b.localeCompare(a))
+                .map(([dateKey, items]) => ({
+                  dateKey,
+                  label: new Date(dateKey + "T12:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+                  photos: items,
+                }));
+              return sortedGroups.length > 0 ? (
+                <Stack gap="xl">
+                  {sortedGroups.map((group) => (
+                    <Box key={group.dateKey}>
+                      <Text fw={600} size="sm" c="dimmed" mb="sm" tt="capitalize">{group.label}</Text>
+                      <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 6 }} spacing="md">
+                        {group.photos.map((photo) => (
+                          <Card key={photo.id} padding="xs" radius="lg" withBorder>
+                            <Card.Section>
+                              <Image
+                                src={photo.photo_url}
+                                height={200}
+                                alt="Foto de progreso"
+                                fallbackSrc="https://placehold.co/300x200?text=Foto"
+                              />
+                            </Card.Section>
+                            <Group justify="space-between" mt="sm">
+                              <Badge size="xs" variant="light" radius="xl">
+                                {photo.photo_type === "front" ? "Frontal" : photo.photo_type === "back" ? "Espalda" : "Lateral"}
+                              </Badge>
+                            </Group>
+                          </Card>
+                        ))}
+                      </SimpleGrid>
                     </Box>
-                    {photo.weight_kg && (
-                      <Text size="xs" fw={600}>{photo.weight_kg} kg</Text>
-                    )}
-                  </Group>
-                </Card>
-              ))}
-            </SimpleGrid>
+                  ))}
+                </Stack>
+              ) : (
+                <Text c="dimmed" ta="center" py="xl">No hay fotos{trainerPhotoFilter !== "all" ? ` de tipo ${trainerPhotoFilter === "front" ? "frontal" : trainerPhotoFilter === "back" ? "espalda" : "lateral"}` : ""}</Text>
+              );
+            })()}
           </Box>
         </Tabs.Panel>
 

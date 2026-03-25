@@ -21,8 +21,11 @@ import {
   Textarea,
   FileButton,
   Image,
+  ScrollArea,
+  SegmentedControl,
   Select,
 } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 // notifications is available via useCreateMeasurement/useUploadProgressPhoto hooks
@@ -128,6 +131,7 @@ function LogMeasurementModal({
   onClose,
   onSubmit,
   isLoading,
+  existingMeasurements,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -146,7 +150,16 @@ function LogMeasurementModal({
     notes?: string;
   }) => void;
   isLoading: boolean;
+  existingMeasurements?: Array<{
+    measured_at: string;
+    weight_kg?: number;
+    body_fat_percentage?: number;
+    muscle_mass_kg?: number;
+    measurements?: Record<string, number>;
+    notes?: string;
+  }>;
 }) {
+  const [measurementDate, setMeasurementDate] = useState<Date>(new Date());
   const form = useForm({
     initialValues: {
       weight_kg: undefined as number | undefined,
@@ -161,6 +174,33 @@ function LogMeasurementModal({
     },
   });
 
+  const dateStr = measurementDate.toISOString().split("T")[0];
+  const existingForDate = useMemo(() => {
+    return existingMeasurements?.find((m) => m.measured_at?.startsWith(dateStr));
+  }, [existingMeasurements, dateStr]);
+
+  const handleDateChange = (d: string | null) => {
+    if (!d) return;
+    const dateObj = new Date(d);
+    setMeasurementDate(dateObj);
+    const existing = existingMeasurements?.find((m) => m.measured_at?.startsWith(dateObj.toISOString().split("T")[0]));
+    if (existing) {
+      form.setValues({
+        weight_kg: existing.weight_kg ?? undefined,
+        body_fat_percentage: existing.body_fat_percentage ?? undefined,
+        muscle_mass_kg: existing.muscle_mass_kg ?? undefined,
+        chest: existing.measurements?.chest ?? undefined,
+        waist: existing.measurements?.waist ?? undefined,
+        hips: existing.measurements?.hips ?? undefined,
+        arms: existing.measurements?.arms ?? undefined,
+        thighs: existing.measurements?.thighs ?? undefined,
+        notes: existing.notes ?? "",
+      });
+    } else {
+      form.reset();
+    }
+  };
+
   const handleSubmit = () => {
     const measurements: Record<string, number> = {};
     if (form.values.chest) measurements.chest = form.values.chest;
@@ -170,7 +210,7 @@ function LogMeasurementModal({
     if (form.values.thighs) measurements.thighs = form.values.thighs;
 
     onSubmit({
-      measured_at: new Date().toISOString(),
+      measured_at: measurementDate.toISOString(),
       weight_kg: form.values.weight_kg,
       body_fat_percentage: form.values.body_fat_percentage,
       muscle_mass_kg: form.values.muscle_mass_kg,
@@ -185,10 +225,21 @@ function LogMeasurementModal({
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Registrar Medidas"
+      title={existingForDate ? "Editar Medidas" : "Registrar Medidas"}
       size="lg"
     >
       <Stack gap="md">
+        <DateInput
+          label="Fecha de la medición"
+          value={measurementDate}
+          onChange={handleDateChange}
+          maxDate={new Date()}
+          locale="es"
+          valueFormat="DD/MM/YYYY"
+        />
+        {existingForDate && (
+          <Badge color="blue" variant="light">Editando medidas existentes de este día</Badge>
+        )}
         <Text fw={500} size="sm">
           Datos Corporales
         </Text>
@@ -295,13 +346,14 @@ function UploadPhotoModal({
 }: {
   opened: boolean;
   onClose: () => void;
-  onUpload: (file: File, type: string, notes?: string) => void;
+  onUpload: (file: File, type: string, notes?: string, measurement_date?: string) => void;
   isLoading: boolean;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [photoType, setPhotoType] = useState<string>("front");
   const [notes, setNotes] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [photoDate, setPhotoDate] = useState<Date>(new Date());
 
   const handleFileSelect = (selectedFile: File | null) => {
     setFile(selectedFile);
@@ -318,11 +370,12 @@ function UploadPhotoModal({
 
   const handleSubmit = () => {
     if (!file) return;
-    onUpload(file, photoType, notes || undefined);
+    onUpload(file, photoType, notes || undefined, photoDate.toISOString().split("T")[0]);
     setFile(null);
     setPreview(null);
     setNotes("");
     setPhotoType("front");
+    setPhotoDate(new Date());
   };
 
   return (
@@ -333,6 +386,14 @@ function UploadPhotoModal({
       size="md"
     >
       <Stack gap="md">
+        <DateInput
+          label="Fecha de la foto"
+          value={photoDate}
+          onChange={(d) => d && setPhotoDate(new Date(d))}
+          maxDate={new Date()}
+          locale="es"
+          valueFormat="DD/MM/YYYY"
+        />
         <Select
           label="Tipo de foto"
           data={[
@@ -413,11 +474,18 @@ export function MyProgressPage() {
   const [enlargedPhoto, setEnlargedPhoto] = useState<{ url: string; type: string; date?: string } | null>(null);
   const [enlargeOpened, { open: openEnlarge, close: closeEnlarge }] = useDisclosure(false);
   const [selectedComparison, setSelectedComparison] = useState<number>(1);
+  const [photoTypeFilter, setPhotoTypeFilter] = useState<string>("all");
+
+  const filteredPhotos = useMemo(() => {
+    if (!photos) return [];
+    if (photoTypeFilter === "all") return photos;
+    return photos.filter((p) => p.type === photoTypeFilter);
+  }, [photos, photoTypeFilter]);
 
   const photosByDate = useMemo(() => {
-    if (!photos || photos.length === 0) return [];
-    const groups: Record<string, typeof photos> = {};
-    for (const photo of photos) {
+    if (!filteredPhotos || filteredPhotos.length === 0) return [];
+    const groups: Record<string, typeof filteredPhotos> = {};
+    for (const photo of filteredPhotos) {
       const rawDate = photo.measurement_date || photo.uploaded_at || "";
       const dateKey = rawDate.split("T")[0] || "sin-fecha";
       if (!groups[dateKey]) groups[dateKey] = [];
@@ -525,9 +593,9 @@ export function MyProgressPage() {
     closeModal();
   };
 
-  const handleUploadPhoto = async (file: File, type: string, notes?: string) => {
+  const handleUploadPhoto = async (file: File, type: string, notes?: string, measurement_date?: string) => {
     try {
-      await uploadPhotoMutation.mutateAsync({ file, type, notes });
+      await uploadPhotoMutation.mutateAsync({ file, type, notes, measurement_date });
       closePhotoModal();
     } catch (error) {
       // Error handled by mutation
@@ -877,6 +945,7 @@ export function MyProgressPage() {
                     ? new Date(measurements[0].measured_at).toLocaleDateString('es-ES')
                     : 'Sin fecha'}
                 </Text>
+                <ScrollArea type="auto">
                 <Table>
                   <Table.Thead>
                     <Table.Tr>
@@ -894,6 +963,7 @@ export function MyProgressPage() {
                     <MeasurementRow label="Muslos" {...data.measurements.thighs} />
                   </Table.Tbody>
                 </Table>
+                </ScrollArea>
               </>
             ) : (
               <Text c="dimmed" ta="center" py="xl">
@@ -907,6 +977,7 @@ export function MyProgressPage() {
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Text fw={600} mb="lg">Historial Completo de Medidas ({measurements?.length || 0} registros)</Text>
             {measurements && measurements.length > 0 ? (
+              <ScrollArea type="auto">
               <Table>
                 <Table.Thead>
                   <Table.Tr>
@@ -960,6 +1031,7 @@ export function MyProgressPage() {
                   })}
                 </Table.Tbody>
               </Table>
+              </ScrollArea>
             ) : (
               <Text c="dimmed" ta="center" py="xl">
                 No has registrado medidas aún. ¡Empieza ahora!
@@ -971,7 +1043,7 @@ export function MyProgressPage() {
         <Tabs.Panel value="photos">
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group justify="space-between" mb="lg">
-              <Text fw={600}>Fotos de Evolución ({photos.length} fotos)</Text>
+              <Text fw={600}>Fotos de Evolución ({filteredPhotos.length} fotos)</Text>
               <Button 
                 variant="light" 
                 leftSection={<IconCamera size={16} />}
@@ -981,6 +1053,19 @@ export function MyProgressPage() {
                 Subir foto
               </Button>
             </Group>
+
+            <SegmentedControl
+              value={photoTypeFilter}
+              onChange={setPhotoTypeFilter}
+              data={[
+                { value: "all", label: "Todas" },
+                { value: "front", label: "Frontal" },
+                { value: "back", label: "Espalda" },
+                { value: "side", label: "Lateral" },
+              ]}
+              mb="md"
+              size="sm"
+            />
 
             {photosByDate.length > 0 ? (
               <Stack gap="xl">
@@ -1052,6 +1137,7 @@ export function MyProgressPage() {
         onClose={closeModal}
         onSubmit={handleLogMeasurement}
         isLoading={createMeasurementMutation.isPending}
+        existingMeasurements={measurements}
       />
 
       {/* Modal para subir foto */}

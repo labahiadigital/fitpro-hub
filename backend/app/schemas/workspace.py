@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from uuid import UUID
 from datetime import datetime
 
@@ -32,12 +32,28 @@ class WorkspaceContactSchema(BaseSchema):
     website: Optional[str] = None
 
 
+class TimeSlotSchema(BaseSchema):
+    start: str  # HH:MM
+    end: str    # HH:MM
+
+
+class WeeklyScheduleSchema(BaseSchema):
+    monday: List[TimeSlotSchema] = []
+    tuesday: List[TimeSlotSchema] = []
+    wednesday: List[TimeSlotSchema] = []
+    thursday: List[TimeSlotSchema] = []
+    friday: List[TimeSlotSchema] = []
+    saturday: List[TimeSlotSchema] = []
+    sunday: List[TimeSlotSchema] = []
+
+
 class WorkspaceSettingsSchema(BaseSchema):
     timezone: str = "Europe/Madrid"
     currency: str = "EUR"
     language: str = "es"
     contact: WorkspaceContactSchema = WorkspaceContactSchema()
     booking_policies: BookingPoliciesSchema = BookingPoliciesSchema()
+    weekly_schedule: Optional[WeeklyScheduleSchema] = None
 
 
 class WorkspaceCreate(BaseSchema):

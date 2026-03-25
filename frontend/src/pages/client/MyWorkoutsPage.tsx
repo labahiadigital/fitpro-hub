@@ -43,6 +43,9 @@ import {
   IconRepeat,
   IconWeight,
   IconExchange,
+  IconMoodEmpty,
+  IconMoodSad,
+  IconMoodSmile,
   IconSearch,
 } from "@tabler/icons-react";
 import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory } from "../../hooks/useClientPortal";
@@ -196,6 +199,43 @@ function ExerciseLogRow({
   );
 }
 
+function WorkoutSatisfactionSelector({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (v: number | null) => void;
+}) {
+  const options = [
+    { rating: 1, icon: IconMoodSad, label: "Mal", color: "red" },
+    { rating: 2, icon: IconMoodEmpty, label: "Normal", color: "yellow" },
+    { rating: 3, icon: IconMoodSmile, label: "Bien", color: "green" },
+  ];
+  return (
+    <Box>
+      <Text size="sm" fw={500} mb={4}>¿Cómo te ha ido el entrenamiento?</Text>
+      <Group gap="xs">
+        {options.map((opt) => {
+          const Icon = opt.icon;
+          const selected = value === opt.rating;
+          return (
+            <Button
+              key={opt.rating}
+              variant={selected ? "filled" : "light"}
+              color={opt.color}
+              size="sm"
+              leftSection={<Icon size={18} />}
+              onClick={() => onChange(selected ? null : opt.rating)}
+            >
+              {opt.label}
+            </Button>
+          );
+        })}
+      </Group>
+    </Box>
+  );
+}
+
 // Modal para registrar entrenamiento completado (detailed)
 function LogWorkoutModal({
   opened,
@@ -228,6 +268,7 @@ function LogWorkoutModal({
     }>;
     duration_minutes?: number;
     perceived_effort?: number;
+    satisfaction_rating?: number;
     notes?: string;
   }) => void;
   isLoading: boolean;
@@ -236,6 +277,7 @@ function LogWorkoutModal({
   programId: string;
   dayIndex: number;
 }) {
+  const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
   const [exerciseSets, setExerciseSets] = useState<Record<string, SetLog[]>>(() => {
     const initial: Record<string, SetLog[]> = {};
     exercises.forEach((e) => {
@@ -274,9 +316,11 @@ function LogWorkoutModal({
       })),
       duration_minutes: form.values.duration_minutes,
       perceived_effort: form.values.perceived_effort,
+      satisfaction_rating: satisfactionRating ?? undefined,
       notes: form.values.notes,
     });
     form.reset();
+    setSatisfactionRating(null);
     setExerciseSets(() => {
       const initial: Record<string, SetLog[]> = {};
       exercises.forEach((e) => {
@@ -341,6 +385,8 @@ function LogWorkoutModal({
           {...form.getInputProps("notes")}
           minRows={2}
         />
+
+        <WorkoutSatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
 
         <Group justify="flex-end" mt="md">
           <Button variant="light" onClick={onClose}>
@@ -786,6 +832,7 @@ export function MyWorkoutsPage() {
     }>;
     duration_minutes?: number;
     perceived_effort?: number;
+    satisfaction_rating?: number;
     notes?: string;
   }) => {
     await logWorkoutMutation.mutateAsync(logData);

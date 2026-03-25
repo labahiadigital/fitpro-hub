@@ -11,41 +11,141 @@ import {
   ThemeIcon,
   Center,
   Loader,
+  Modal,
+  Textarea,
 } from "@mantine/core";
+import { DatePicker } from "@mantine/dates";
+import { useDisclosure } from "@mantine/hooks";
 import {
   IconCalendarEvent,
+  IconCalendarPlus,
   IconClock,
   IconMapPin,
   IconUser,
   IconVideo,
 } from "@tabler/icons-react";
-import { useMyBookings } from "../../hooks/useClientPortal";
+import { useState } from "react";
+import { useMyBookings, useAvailableSlots, useCreateClientBooking } from "../../hooks/useClientPortal";
 
-// No mock data - all data comes from backend
-
-// Generate week days dynamically
 function getWeekDays() {
   const today = new Date();
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+  startOfWeek.setDate(today.getDate() - today.getDay() + 1);
 
-  const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-  return days.map((day, index) => {
+  const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  return labels.map((day, index) => {
     const date = new Date(startOfWeek);
     date.setDate(startOfWeek.getDate() + index);
     return {
       day,
-      date: date.getDate(),
-      hasSession: false, // Will be updated based on bookings
+      dateNum: date.getDate(),
+      fullDate: new Date(date),
+      hasSession: false,
       isPast: date < today && date.toDateString() !== today.toDateString(),
       isToday: date.toDateString() === today.toDateString(),
     };
   });
 }
 
+function RequestBookingModal({
+  opened,
+  onClose,
+}: {
+  opened: boolean;
+  onClose: () => void;
+}) {
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const dateStr = selectedDate ? selectedDate.toISOString().split("T")[0] : "";
+  const { data: slots = [], isLoading: loadingSlots } = useAvailableSlots(dateStr);
+  const createBooking = useCreateClientBooking();
+
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + 1);
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 30);
+
+  const handleSubmit = async () => {
+    if (!selectedSlot) return;
+    await createBooking.mutateAsync({ start_time: selectedSlot, notes: notes || undefined });
+    setSelectedDate(null);
+    setSelectedSlot(null);
+    setNotes("");
+    onClose();
+  };
+
+  return (
+    <Modal opened={opened} onClose={onClose} title="Solicitar cita" size="md">
+      <Stack gap="md">
+        <Text size="sm" c="dimmed">Selecciona una fecha y un horario disponible</Text>
+        <Center>
+          <DatePicker
+            value={selectedDate}
+            onChange={(d) => { setSelectedDate(d ? new Date(d) : null); setSelectedSlot(null); }}
+            minDate={minDate}
+            maxDate={maxDate}
+            locale="es"
+          />
+        </Center>
+
+        {selectedDate && (
+          <Box>
+            <Text fw={500} size="sm" mb="xs">
+              Horarios disponibles - {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+            </Text>
+            {loadingSlots ? (
+              <Center py="md"><Loader size="sm" /></Center>
+            ) : slots.length > 0 ? (
+              <Group gap="xs">
+                {slots.map((slot: { start: string; end: string }) => (
+                  <Button
+                    key={slot.start}
+                    variant={selectedSlot === slot.start ? "filled" : "outline"}
+                    color="yellow"
+                    size="xs"
+                    onClick={() => setSelectedSlot(slot.start)}
+                  >
+                    {new Date(slot.start).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                  </Button>
+                ))}
+              </Group>
+            ) : (
+              <Text size="sm" c="dimmed" ta="center">No hay horarios disponibles para este día</Text>
+            )}
+          </Box>
+        )}
+
+        <Textarea
+          label="Notas (opcional)"
+          placeholder="Indica si tienes alguna preferencia..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          minRows={2}
+        />
+
+        <Group justify="flex-end">
+          <Button variant="light" onClick={onClose}>Cancelar</Button>
+          <Button
+            color="yellow"
+            onClick={handleSubmit}
+            loading={createBooking.isPending}
+            disabled={!selectedSlot}
+            leftSection={<IconCalendarPlus size={16} />}
+          >
+            Solicitar
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
 export function MyCalendarPage() {
   const { data: upcomingBookings, isLoading: isLoadingUpcoming } = useMyBookings({ upcoming_only: true, limit: 20 });
   const { data: allBookings, isLoading: isLoadingAll } = useMyBookings({ limit: 50 });
+  const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
+  const [bookingModalOpened, { open: openBookingModal, close: closeBookingModal }] = useDisclosure(false);
 
   const isLoading = isLoadingUpcoming || isLoadingAll;
 
@@ -59,9 +159,9 @@ export function MyCalendarPage() {
 
   const now = new Date();
 
-  // Transform API bookings to display format
   const upcomingSessions = (upcomingBookings || []).map(b => ({
     id: b.id,
+    startDate: new Date(b.start_time),
     date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
     time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
     title: b.title,
@@ -76,6 +176,7 @@ export function MyCalendarPage() {
     .slice(0, 10)
     .map(b => ({
       id: b.id,
+      startDate: new Date(b.start_time),
       title: b.title,
       date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
       time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
@@ -86,22 +187,18 @@ export function MyCalendarPage() {
     (upcomingBookings || []).map(b => new Date(b.start_time).toDateString())
   );
   weekDays.forEach(d => {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + 1);
-    const dayDate = new Date(startOfWeek);
-    dayDate.setDate(startOfWeek.getDate() + ['L','M','X','J','V','S','D'].indexOf(d.day));
-    d.hasSession = bookingDates.has(dayDate.toDateString());
+    d.hasSession = bookingDates.has(d.fullDate.toDateString());
   });
 
   const rawMonth = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
   const currentMonth = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
 
-  const data = {
-    upcomingSessions,
-    pastSessions,
-    weekDays,
-  };
+  const filteredUpcoming = selectedDayDate
+    ? upcomingSessions.filter(s => s.startDate.toDateString() === selectedDayDate)
+    : upcomingSessions;
+  const filteredPast = selectedDayDate
+    ? pastSessions.filter(s => s.startDate.toDateString() === selectedDayDate)
+    : pastSessions;
 
   return (
     <Box p="xl">
@@ -110,66 +207,83 @@ export function MyCalendarPage() {
           <Title order={2}>Mis Citas</Title>
           <Text c="dimmed">Tus sesiones programadas con tu entrenador</Text>
         </Box>
-        <Button leftSection={<IconCalendarEvent size={16} />} color="yellow">
+        <Button leftSection={<IconCalendarPlus size={16} />} color="yellow" onClick={openBookingModal}>
           Solicitar cita
         </Button>
       </Group>
 
       {/* Week Overview */}
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
-        <Text fw={600} mb="md">Esta Semana - {currentMonth}</Text>
+        <Group justify="space-between" mb="md">
+          <Text fw={600}>Esta Semana - {currentMonth}</Text>
+          {selectedDayDate && (
+            <Button variant="subtle" size="xs" color="gray" onClick={() => setSelectedDayDate(null)}>
+              Ver todas
+            </Button>
+          )}
+        </Group>
         <Group justify="space-around" wrap="nowrap" style={{ overflowX: "auto" }}>
-          {data.weekDays.map((day, index) => (
-            <Paper
-              key={index}
-              p="xs"
-              radius="md"
-              withBorder={day.isToday}
-              style={{
-                background: day.isToday 
-                  ? "var(--mantine-color-yellow-light)" 
-                  : day.isPast 
-                    ? "var(--mantine-color-gray-light)" 
-                    : undefined,
-                minWidth: 44,
-                textAlign: "center",
-                flex: "1 1 0",
-              }}
-            >
-              <Text size="xs" c="dimmed" fw={500}>{day.day}</Text>
-              <Text size="lg" fw={day.isToday ? 700 : 500}>{day.date}</Text>
-              {day.hasSession && (
-                <Box
-                  mt={4}
-                  mx="auto"
-                  w={8}
-                  h={8}
-                  style={{
-                    borderRadius: "50%",
-                    background: day.isPast ? "var(--mantine-color-green-filled)" : "var(--mantine-color-yellow-filled)",
-                  }}
-                />
-              )}
-            </Paper>
-          ))}
+          {weekDays.map((day, index) => {
+            const isSelected = selectedDayDate === day.fullDate.toDateString();
+            return (
+              <Paper
+                key={index}
+                p="xs"
+                radius="md"
+                withBorder={day.isToday || isSelected}
+                style={{
+                  background: isSelected
+                    ? "var(--mantine-color-blue-light)"
+                    : day.isToday
+                      ? "var(--mantine-color-yellow-light)"
+                      : day.isPast
+                        ? "var(--mantine-color-gray-light)"
+                        : undefined,
+                  minWidth: 44,
+                  textAlign: "center",
+                  flex: "1 1 0",
+                  cursor: "pointer",
+                  transition: "background 0.15s",
+                }}
+                onClick={() => setSelectedDayDate(isSelected ? null : day.fullDate.toDateString())}
+              >
+                <Text size="xs" c="dimmed" fw={500}>{day.day}</Text>
+                <Text size="lg" fw={day.isToday || isSelected ? 700 : 500}>{day.dateNum}</Text>
+                {day.hasSession && (
+                  <Box
+                    mt={4}
+                    mx="auto"
+                    w={8}
+                    h={8}
+                    style={{
+                      borderRadius: "50%",
+                      background: day.isPast ? "var(--mantine-color-green-filled)" : "var(--mantine-color-yellow-filled)",
+                    }}
+                  />
+                )}
+              </Paper>
+            );
+          })}
         </Group>
       </Card>
 
       {/* Upcoming Sessions */}
       <Title order={4} mb="md">Próximas Sesiones</Title>
       <Stack gap="md" mb="xl">
-        {data.upcomingSessions.length === 0 && (
+        {filteredUpcoming.length === 0 && (
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
-            <Text c="dimmed" ta="center">No tienes sesiones próximas programadas</Text>
+            <Text c="dimmed" ta="center">
+              {selectedDayDate ? "No hay sesiones para este día" : "No tienes sesiones próximas programadas"}
+            </Text>
           </Card>
         )}
-        {data.upcomingSessions.map((session) => (
+        {filteredUpcoming.map((session) => (
           <Card key={session.id} shadow="sm" padding="lg" radius="lg" withBorder>
             <Group justify="space-between" wrap="nowrap">
               <Group wrap="nowrap">
-                <ThemeIcon 
-                  size="xl" 
-                  radius="md" 
+                <ThemeIcon
+                  size="xl"
+                  radius="md"
                   variant="light"
                   color={session.type === "online" ? "blue" : "yellow"}
                 >
@@ -178,9 +292,9 @@ export function MyCalendarPage() {
                 <Box>
                   <Group gap="xs" mb={4}>
                     <Text fw={600}>{session.title}</Text>
-                    <Badge 
-                      color={session.status === "confirmed" ? "green" : "yellow"} 
-                      variant="light" 
+                    <Badge
+                      color={session.status === "confirmed" ? "green" : "yellow"}
+                      variant="light"
                       size="sm"
                     >
                       {session.status === "confirmed" ? "Confirmada" : "Pendiente"}
@@ -189,7 +303,7 @@ export function MyCalendarPage() {
                   <Group gap="md">
                     <Group gap={4}>
                       <IconClock size={14} />
-                      <Text size="sm" c="dimmed">{session.date} • {session.time}</Text>
+                      <Text size="sm" c="dimmed">{session.date} &bull; {session.time}</Text>
                     </Group>
                   </Group>
                   <Group gap="md" mt={4}>
@@ -206,13 +320,8 @@ export function MyCalendarPage() {
               </Group>
               <Stack gap="xs">
                 {session.type === "online" && (
-                  <Button size="sm" color="blue">
-                    Unirse
-                  </Button>
+                  <Button size="sm" color="blue">Unirse</Button>
                 )}
-                <Button size="sm" variant="light">
-                  Ver detalles
-                </Button>
               </Stack>
             </Group>
           </Card>
@@ -222,12 +331,14 @@ export function MyCalendarPage() {
       {/* Past Sessions */}
       <Title order={4} mb="md">Sesiones Anteriores</Title>
       <Stack gap="sm">
-        {data.pastSessions.length === 0 && (
+        {filteredPast.length === 0 && (
           <Card shadow="sm" padding="md" radius="md" withBorder style={{ opacity: 0.8 }}>
-            <Text c="dimmed" ta="center">No hay sesiones anteriores</Text>
+            <Text c="dimmed" ta="center">
+              {selectedDayDate ? "No hay sesiones anteriores este día" : "No hay sesiones anteriores"}
+            </Text>
           </Card>
         )}
-        {data.pastSessions.map((session) => (
+        {filteredPast.map((session) => (
           <Card key={session.id} shadow="sm" padding="md" radius="md" withBorder style={{ opacity: 0.8 }}>
             <Group justify="space-between">
               <Group>
@@ -236,7 +347,7 @@ export function MyCalendarPage() {
                 </ThemeIcon>
                 <Box>
                   <Text fw={500}>{session.title}</Text>
-                  <Text size="sm" c="dimmed">{session.date} • {session.time}</Text>
+                  <Text size="sm" c="dimmed">{session.date} &bull; {session.time}</Text>
                 </Box>
               </Group>
               <Badge color="green" variant="light">Completada</Badge>
@@ -244,6 +355,8 @@ export function MyCalendarPage() {
           </Card>
         ))}
       </Stack>
+
+      <RequestBookingModal opened={bookingModalOpened} onClose={closeBookingModal} />
     </Box>
   );
 }

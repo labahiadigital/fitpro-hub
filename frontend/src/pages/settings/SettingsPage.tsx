@@ -105,6 +105,138 @@ const SETTINGS_TAB_SELECT_DATA = [
   { value: "security", label: "Seguridad" },
 ];
 
+const DAY_LABELS: Record<string, string> = {
+  monday: "Lunes",
+  tuesday: "Martes",
+  wednesday: "Miércoles",
+  thursday: "Jueves",
+  friday: "Viernes",
+  saturday: "Sábado",
+  sunday: "Domingo",
+};
+
+const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+interface TimeSlot { start: string; end: string }
+type WeeklySchedule = Record<string, TimeSlot[]>;
+
+function WeeklyScheduleSection({
+  wsSettings,
+  workspaceId,
+  setWorkspace,
+}: {
+  wsSettings: Record<string, unknown>;
+  workspaceId?: string;
+  setWorkspace: (ws: any) => void;
+}) {
+  const initialSchedule = (wsSettings.weekly_schedule || {}) as WeeklySchedule;
+  const [schedule, setSchedule] = useState<WeeklySchedule>(() => {
+    const s: WeeklySchedule = {};
+    for (const day of DAY_KEYS) {
+      s[day] = (initialSchedule[day] as TimeSlot[] | undefined) || [];
+    }
+    return s;
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      if (!workspaceId) throw new Error("No workspace");
+      return workspacesApi.update(workspaceId, {
+        settings: { ...wsSettings, weekly_schedule: schedule },
+      });
+    },
+    onSuccess: (res) => {
+      setWorkspace(res.data);
+      notifications.show({ title: "Horario guardado", message: "Tu disponibilidad semanal ha sido actualizada", color: "green" });
+    },
+    onError: () => {
+      notifications.show({ title: "Error", message: "No se pudo guardar el horario", color: "red" });
+    },
+  });
+
+  const addSlot = (day: string) => {
+    setSchedule((prev) => ({
+      ...prev,
+      [day]: [...(prev[day] || []), { start: "09:00", end: "14:00" }],
+    }));
+  };
+
+  const removeSlot = (day: string, idx: number) => {
+    setSchedule((prev) => ({
+      ...prev,
+      [day]: (prev[day] || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const updateSlot = (day: string, idx: number, field: "start" | "end", value: string) => {
+    setSchedule((prev) => {
+      const slots = [...(prev[day] || [])];
+      slots[idx] = { ...slots[idx], [field]: value };
+      return { ...prev, [day]: slots };
+    });
+  };
+
+  return (
+    <Box className="nv-card" p="lg" mt="lg">
+      <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
+        Horario de Disponibilidad
+      </Text>
+      <Text c="dimmed" size="sm" mb="md">
+        Configura los horarios en los que tus clientes pueden solicitar citas.
+      </Text>
+      <Stack gap="sm">
+        {DAY_KEYS.map((day) => (
+          <Paper key={day} p="sm" withBorder radius="md">
+            <Group justify="space-between" mb={schedule[day]?.length ? "xs" : 0}>
+              <Text fw={500} size="sm" w={100}>{DAY_LABELS[day]}</Text>
+              {(schedule[day] || []).length === 0 ? (
+                <Group gap="xs">
+                  <Badge variant="light" color="gray" size="sm">No disponible</Badge>
+                  <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>Añadir</Button>
+                </Group>
+              ) : (
+                <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>+ Rango</Button>
+              )}
+            </Group>
+            {(schedule[day] || []).map((slot, idx) => (
+              <Group key={idx} gap="xs" mb={4}>
+                <TextInput
+                  size="xs"
+                  value={slot.start}
+                  onChange={(e) => updateSlot(day, idx, "start", e.target.value)}
+                  placeholder="09:00"
+                  w={80}
+                />
+                <Text size="xs">a</Text>
+                <TextInput
+                  size="xs"
+                  value={slot.end}
+                  onChange={(e) => updateSlot(day, idx, "end", e.target.value)}
+                  placeholder="14:00"
+                  w={80}
+                />
+                <ActionIcon size="sm" variant="subtle" color="red" onClick={() => removeSlot(day, idx)}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+            ))}
+          </Paper>
+        ))}
+      </Stack>
+      <Group justify="flex-end" mt="md">
+        <Button
+          onClick={() => updateMutation.mutate()}
+          loading={updateMutation.isPending}
+          style={{ backgroundColor: "var(--nv-primary)" }}
+          radius="xl"
+        >
+          Guardar Horario
+        </Button>
+      </Group>
+    </Box>
+  );
+}
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -832,6 +964,8 @@ export function SettingsPage() {
                 </Stack>
               </form>
             </Box>
+
+            <WeeklyScheduleSection wsSettings={wsSettings} workspaceId={currentWorkspace?.id} setWorkspace={setWorkspace} />
           </Tabs.Panel>
 
           {/* ==================== INTEGRATIONS ==================== */}

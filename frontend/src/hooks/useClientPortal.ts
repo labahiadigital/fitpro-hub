@@ -185,6 +185,7 @@ interface NutritionLog {
   total_carbs: number;
   total_fat: number;
   notes?: string;
+  satisfaction_rating?: number;
 }
 
 interface Measurement {
@@ -431,6 +432,7 @@ export function useLogWorkoutDetailed() {
       }>;
       duration_minutes?: number;
       perceived_effort?: number;
+      satisfaction_rating?: number;
       notes?: string;
     }) => {
       const response = await clientPortalApi.logWorkoutDetailed(data);
@@ -545,6 +547,7 @@ export function useLogNutrition() {
         food_id?: string;
       }>;
       notes?: string;
+      satisfaction_rating?: number;
     }) => {
       const response = await clientPortalApi.logNutrition(data);
       return response.data;
@@ -741,8 +744,8 @@ export function useUploadProgressPhoto() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ file, type, notes }: { file: File; type: string; notes?: string }) => {
-      const response = await clientPortalApi.uploadPhoto(file, type, notes);
+    mutationFn: async ({ file, type, notes, measurement_date }: { file: File; type: string; notes?: string; measurement_date?: string }) => {
+      const response = await clientPortalApi.uploadPhoto(file, type, notes, measurement_date);
       return response.data;
     },
     onSuccess: () => {
@@ -943,6 +946,45 @@ export function useClientEmotions(startDate?: string, endDate?: string) {
     queryFn: async () => {
       const response = await clientPortalApi.getEmotions(startDate, endDate);
       return response.data;
+    },
+  });
+}
+
+export function useAvailableSlots(date: string) {
+  return useQuery<Array<{ start: string; end: string }>>({
+    queryKey: ["available-slots", date],
+    queryFn: async () => {
+      const response = await clientPortalApi.availableSlots(date);
+      return response.data;
+    },
+    enabled: !!date,
+  });
+}
+
+export function useCreateClientBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { start_time: string; notes?: string }) => {
+      const response = await clientPortalApi.createBooking(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["available-slots"] });
+      queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
+      notifications.show({
+        title: "Cita solicitada",
+        message: "Tu solicitud de cita ha sido enviada al entrenador",
+        color: "green",
+      });
+    },
+    onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
+      notifications.show({
+        title: "Error",
+        message: error.response?.data?.detail || "No se pudo solicitar la cita",
+        color: "red",
+      });
     },
   });
 }

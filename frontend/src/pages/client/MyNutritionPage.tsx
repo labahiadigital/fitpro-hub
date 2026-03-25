@@ -44,7 +44,11 @@ import {
   IconTrash,
   IconUsers,
   IconMoon,
+  IconMoodSmile,
+  IconMoodSad,
+  IconMoodEmpty,
 } from "@tabler/icons-react";
+import { DateInput } from "@mantine/dates";
 import { useState, useMemo } from "react";
 import {
   useMyMealPlan,
@@ -111,6 +115,43 @@ function MacroCard({
 }
 
 // Modal para registrar comida
+function SatisfactionSelector({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (v: number | null) => void;
+}) {
+  const options = [
+    { rating: 1, icon: IconMoodSad, label: "Mal", color: "red" },
+    { rating: 2, icon: IconMoodEmpty, label: "Normal", color: "yellow" },
+    { rating: 3, icon: IconMoodSmile, label: "Bien", color: "green" },
+  ];
+  return (
+    <Box>
+      <Text size="sm" fw={500} mb={4}>¿Cómo te ha sentado?</Text>
+      <Group gap="xs">
+        {options.map((opt) => {
+          const Icon = opt.icon;
+          const selected = value === opt.rating;
+          return (
+            <Button
+              key={opt.rating}
+              variant={selected ? "filled" : "light"}
+              color={opt.color}
+              size="sm"
+              leftSection={<Icon size={18} />}
+              onClick={() => onChange(selected ? null : opt.rating)}
+            >
+              {opt.label}
+            </Button>
+          );
+        })}
+      </Group>
+    </Box>
+  );
+}
+
 function LogMealModal({
   opened,
   onClose,
@@ -123,12 +164,14 @@ function LogMealModal({
     meal_name: string;
     foods: FoodItem[];
     notes?: string;
+    satisfaction_rating?: number;
   }) => void;
   isLoading: boolean;
 }) {
   const [foods, setFoods] = useState<FoodItem[]>([
     { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 },
   ]);
+  const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
 
   const form = useForm({
     initialValues: {
@@ -164,11 +207,12 @@ function LogMealModal({
       meal_name: form.values.meal_name,
       foods: validFoods,
       notes: form.values.notes || undefined,
+      satisfaction_rating: satisfactionRating ?? undefined,
     });
 
-    // Reset form
     form.reset();
     setFoods([{ name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 }]);
+    setSatisfactionRating(null);
   };
 
   return (
@@ -264,6 +308,8 @@ function LogMealModal({
           {...form.getInputProps("notes")}
         />
 
+        <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
+
         <Group justify="flex-end" mt="md">
           <Button variant="light" onClick={onClose}>
             Cancelar
@@ -338,12 +384,14 @@ function LogPlanMealModal({
     meal_name: string;
     foods: FoodItem[];
     notes?: string;
+    satisfaction_rating?: number;
   }) => void;
   isLoading: boolean;
   meal: PlanMeal | null;
 }) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
+  const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
 
   // Initialize all items as checked when modal opens
   const handleOpen = () => {
@@ -384,11 +432,12 @@ function LogPlanMealModal({
       meal_name: meal.name,
       foods,
       notes: notes || undefined,
+      satisfaction_rating: satisfactionRating ?? undefined,
     });
 
-    // Reset
     setCheckedItems({});
     setNotes("");
+    setSatisfactionRating(null);
   };
 
   const toggleItem = (itemId: string) => {
@@ -480,6 +529,8 @@ function LogPlanMealModal({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
+
+        <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
 
         <Group justify="flex-end" mt="md">
           <Button variant="light" onClick={onClose}>
@@ -612,26 +663,24 @@ export function MyNutritionPage() {
   const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
   const [selectedWeekDayIndex, setSelectedWeekDayIndex] = useState<number | null>(null);
   const [mealDayOverrides, setMealDayOverrides] = useState<Record<string, number>>({});
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   // Hooks para datos reales del backend
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
-  const today = new Date().toISOString().split("T")[0];
-  const { data: nutritionLogs } = useNutritionLogs(today, 50);
+  const selectedDateStr = selectedDate.toISOString().split("T")[0];
+  const { data: nutritionLogs } = useNutritionLogs(selectedDateStr, 50);
   const { data: nutritionHistory } = useNutritionHistory(30);
   const logNutritionMutation = useLogNutrition();
 
-  // Obtener el día actual de la semana
-  const todayDayIndex = new Date().getDay(); // 0 = Domingo, 1 = Lunes, etc.
-  const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Mapear: Domingo=7, Lunes=1, etc.
-  const todayPlanDay = dayMapping[todayDayIndex];
+  const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
+  const selectedPlanDay = dayMapping[selectedDate.getDay()];
 
-  // Obtener las comidas del plan para hoy
-  const todayPlanMeals = useMemo(() => {
+  const selectedPlanMeals = useMemo(() => {
     if (!mealPlan?.plan?.days) return [];
     
-    const dayPlan = mealPlan.plan.days.find((d: PlanDay) => d.day === todayPlanDay);
+    const dayPlan = mealPlan.plan.days.find((d: PlanDay) => d.day === selectedPlanDay);
     return dayPlan?.meals || [];
-  }, [mealPlan, todayPlanDay]);
+  }, [mealPlan, selectedPlanDay]);
 
   // Calcular totales del día
   const dailyTotals = useMemo(() => {
@@ -677,13 +726,28 @@ export function MyNutritionPage() {
     return grouped;
   }, [nutritionLogs]);
 
-  // Verificar qué comidas del plan ya han sido registradas
   const registeredMeals = useMemo(() => {
     const registered: Record<string, boolean> = {};
     nutritionLogs?.forEach((log) => {
       registered[log.meal_name] = true;
     });
     return registered;
+  }, [nutritionLogs]);
+
+  const mealSatisfaction = useMemo(() => {
+    const map: Record<string, number> = {};
+    nutritionLogs?.forEach((log) => {
+      if (log.satisfaction_rating) {
+        map[log.meal_name] = log.satisfaction_rating;
+      }
+    });
+    return map;
+  }, [nutritionLogs]);
+
+  const dailySatisfaction = useMemo(() => {
+    const ratings = nutritionLogs?.filter((l) => l.satisfaction_rating).map((l) => l.satisfaction_rating!) || [];
+    if (ratings.length === 0) return null;
+    return Math.round((ratings.reduce((a, b) => a + b, 0) / (ratings.length * 3)) * 100);
   }, [nutritionLogs]);
 
   // Calcular datos de la semana desde el historial real
@@ -746,13 +810,15 @@ export function MyNutritionPage() {
     meal_name: string;
     foods: FoodItem[];
     notes?: string;
+    satisfaction_rating?: number;
   }) => {
     try {
       await logNutritionMutation.mutateAsync({
-        date: today,
+        date: selectedDateStr,
         meal_name: data.meal_name,
         foods: data.foods,
         notes: data.notes,
+        satisfaction_rating: data.satisfaction_rating,
       });
       closeModal();
       closePlanMealModal();
@@ -763,13 +829,12 @@ export function MyNutritionPage() {
   };
 
   const handleOpenPlanMeal = (meal: PlanMeal) => {
-    // Don't open modal if already registered
-    if (registeredMeals[meal.name]) {
-      return;
-    }
+    if (registeredMeals[meal.name]) return;
     setSelectedPlanMeal(meal);
     openPlanMealModal();
   };
+
+  const isToday = selectedDateStr === new Date().toISOString().split("T")[0];
 
   if (isLoadingPlan) {
     return (
@@ -785,7 +850,7 @@ export function MyNutritionPage() {
 
   // Obtener los nombres de días de la semana para el plan
   const weekDayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-  const todayDayName = weekDayNames[todayPlanDay - 1] || "Hoy";
+  const todayDayName = weekDayNames[selectedPlanDay - 1] || "Hoy";
 
   return (
     <Box p="xl">
@@ -854,7 +919,7 @@ export function MyNutritionPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
-            Hoy
+            Registrar comida
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
             Esta Semana
@@ -869,6 +934,28 @@ export function MyNutritionPage() {
         )}
 
         <Tabs.Panel value="today">
+          <Card shadow="sm" padding="md" radius="lg" withBorder mb="lg">
+            <Group gap="md" align="flex-end">
+              <DateInput
+                label="Fecha de registro"
+                value={selectedDate}
+                onChange={(d) => d && setSelectedDate(new Date(d))}
+                maxDate={new Date()}
+                locale="es"
+                valueFormat="DD/MM/YYYY"
+                style={{ flex: 1, maxWidth: 220 }}
+              />
+              {!isToday && (
+                <Button variant="subtle" size="sm" onClick={() => setSelectedDate(new Date())}>
+                  Volver a hoy
+                </Button>
+              )}
+              <Text size="sm" c="dimmed">
+                {isToday ? "Hoy" : selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+              </Text>
+            </Group>
+          </Card>
+
           {/* Daily Summary */}
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
         <Group justify="space-between" align="flex-start">
@@ -955,16 +1042,34 @@ export function MyNutritionPage() {
             </Box>
           );
         })()}
+
+        {dailySatisfaction !== null && (
+          <Box mt="md" p="md" style={{ borderRadius: 8, background: "var(--mantine-color-yellow-light)" }}>
+            <Group justify="space-between">
+              <Group gap="xs">
+                <Text size="lg">
+                  {dailySatisfaction >= 80 ? "😊" : dailySatisfaction >= 50 ? "😐" : "😞"}
+                </Text>
+                <Box>
+                  <Text size="sm" fw={600}>Satisfacción del día</Text>
+                  <Text size="xs" c="dimmed">Basado en las comidas registradas</Text>
+                </Box>
+              </Group>
+              <Text size="xl" fw={700}>{dailySatisfaction}%</Text>
+            </Group>
+            <Progress value={dailySatisfaction} color={dailySatisfaction >= 80 ? "green" : dailySatisfaction >= 50 ? "yellow" : "red"} mt="xs" size="sm" radius="xl" />
+          </Box>
+        )}
       </Card>
 
-      {/* Comidas del Plan para Hoy */}
+      {/* Comidas del Plan */}
       <Title order={4} mb="md">
         Comidas de Hoy ({todayDayName})
       </Title>
       
-      {todayPlanMeals.length > 0 ? (
+      {selectedPlanMeals.length > 0 ? (
         <Stack gap="md" mb="xl">
-          {todayPlanMeals.map((meal: PlanMeal) => {
+          {selectedPlanMeals.map((meal: PlanMeal) => {
             const isRegistered = registeredMeals[meal.name];
             const mealLogs = mealsByType[meal.name] || [];
             const mealCalories = isRegistered 
@@ -999,6 +1104,11 @@ export function MyNutritionPage() {
                     </Box>
                   </Group>
                   <Group>
+                    {isRegistered && mealSatisfaction[meal.name] && (
+                      <Text size="xl">
+                        {mealSatisfaction[meal.name] === 1 ? "😞" : mealSatisfaction[meal.name] === 2 ? "😐" : "😊"}
+                      </Text>
+                    )}
                     <Badge variant="light" color={isRegistered ? "green" : "orange"} size="lg">
                       <Group gap={4}>
                         <IconFlame size={14} />
@@ -1045,8 +1155,8 @@ export function MyNutritionPage() {
             const mealCalories = logs.reduce((sum, l) => sum + (l.total_calories || 0), 0);
 
             return (
-              <Card key={mealType.value} shadow="sm" padding="md" radius="lg" withBorder>
-                <Group justify="space-between">
+              <Card key={mealType.value} shadow="sm" padding="md" radius="lg" withBorder style={{ minHeight: 80 }}>
+                <Group justify="space-between" h="100%" align="center">
                   <Group>
                     <ThemeIcon
                       variant={hasLogs ? "filled" : "light"}
@@ -1075,6 +1185,11 @@ export function MyNutritionPage() {
                     </Box>
                   </Group>
                   <Group>
+                    {hasLogs && mealSatisfaction[mealType.value] && (
+                      <Text size="xl">
+                        {mealSatisfaction[mealType.value] === 1 ? "😞" : mealSatisfaction[mealType.value] === 2 ? "😐" : "😊"}
+                      </Text>
+                    )}
                     {hasLogs && (
                       <Badge variant="light" color="orange" size="lg">
                         <Group gap={4}>

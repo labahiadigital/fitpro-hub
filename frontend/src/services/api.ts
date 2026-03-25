@@ -1,7 +1,10 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore, waitForHydration } from "../stores/auth";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
+let API_URL = import.meta.env.VITE_API_URL || "/api/v1";
+if (typeof window !== "undefined" && window.location.protocol === "https:" && API_URL.startsWith("http://")) {
+  API_URL = API_URL.replace("http://", "https://");
+}
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -616,10 +619,13 @@ export const clientPortalApi = {
   // Photos
   getPhotos: (limit?: number) =>
     api.get("/my/progress/photos", { params: { limit } }),
-  uploadPhoto: (file: File, type: string, notes?: string) => {
+  uploadPhoto: (file: File, type: string, notes?: string, measurement_date?: string) => {
     const formData = new FormData();
     formData.append("file", file);
-    return api.post(`/my/progress/photos?photo_type=${type}${notes ? `&notes=${encodeURIComponent(notes)}` : ''}`, formData, {
+    const params = new URLSearchParams({ photo_type: type });
+    if (notes) params.append("notes", notes);
+    if (measurement_date) params.append("measurement_date", measurement_date);
+    return api.post(`/my/progress/photos?${params.toString()}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
@@ -628,6 +634,9 @@ export const clientPortalApi = {
   bookings: (params?: { status?: string; upcoming_only?: boolean; limit?: number }) =>
     api.get("/my/calendar/bookings", { params }),
   getBooking: (id: string) => api.get(`/my/calendar/bookings/${id}`),
+  availableSlots: (date: string) => api.get("/my/calendar/available-slots", { params: { date } }),
+  createBooking: (data: { start_time: string; notes?: string }) =>
+    api.post("/my/calendar/bookings", data),
   
   // Messages/Chat
   getConversation: () => api.get("/my/messages/conversation"),
