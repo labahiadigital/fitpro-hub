@@ -94,7 +94,8 @@ export function MyCalendarPage() {
     d.hasSession = bookingDates.has(dayDate.toDateString());
   });
 
-  const currentMonth = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const rawMonth = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const currentMonth = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
 
   const data = {
     upcomingSessions,
@@ -116,12 +117,12 @@ export function MyCalendarPage() {
 
       {/* Week Overview */}
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
-        <Text fw={600} mb="md" tt="capitalize">Esta Semana - {currentMonth}</Text>
-        <Group justify="space-around">
+        <Text fw={600} mb="md">Esta Semana - {currentMonth}</Text>
+        <Group justify="space-around" wrap="nowrap" style={{ overflowX: "auto" }}>
           {data.weekDays.map((day, index) => (
             <Paper
               key={index}
-              p="md"
+              p="xs"
               radius="md"
               withBorder={day.isToday}
               style={{
@@ -130,8 +131,9 @@ export function MyCalendarPage() {
                   : day.isPast 
                     ? "var(--mantine-color-gray-light)" 
                     : undefined,
-                minWidth: 60,
+                minWidth: 44,
                 textAlign: "center",
+                flex: "1 1 0",
               }}
             >
               <Text size="xs" c="dimmed" fw={500}>{day.day}</Text>

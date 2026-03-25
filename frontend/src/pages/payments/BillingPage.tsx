@@ -519,6 +519,17 @@ export function BillingPage() {
     revenueChange: kpisData?.revenue_change || 0,
   };
 
+  const clientsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (clientsData?.items || []).forEach((c: { id: string; full_name?: string; first_name: string; last_name: string }) => {
+      map.set(c.id, c.full_name || `${c.first_name} ${c.last_name}`);
+    });
+    return map;
+  }, [clientsData]);
+
+  const resolveClientName = (payment: { client_id?: string; client_name?: string }) =>
+    payment.client_name || (payment.client_id ? clientsMap.get(payment.client_id) : undefined) || "Cliente";
+
   const clientOptions = (clientsData?.items || []).map((c: { id: string; full_name?: string; first_name: string; last_name: string }) => ({
     value: c.id,
     label: c.full_name || `${c.first_name} ${c.last_name}`,
@@ -754,7 +765,7 @@ export function BillingPage() {
                           <PaymentIcon size={16} />
                         </ThemeIcon>
                         <Box>
-                          <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{payment.client_name || "Cliente"}</Text>
+                          <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{resolveClientName(payment)}</Text>
                           <Text c="dimmed" size="xs">{payment.description}</Text>
                         </Box>
                       </Group>
@@ -781,7 +792,7 @@ export function BillingPage() {
                   .map((sub) => (
                     <Group justify="space-between" key={sub.id} p="sm" style={{ borderRadius: "var(--radius-item)" }}>
                       <Box>
-                        <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{sub.client_name || "Cliente"}</Text>
+                        <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{resolveClientName(sub)}</Text>
                         <Text c="dimmed" size="xs">{sub.plan_name}</Text>
                       </Box>
                       <Box ta="right">
@@ -854,7 +865,7 @@ export function BillingPage() {
                   return (
                     <Table.Tr key={payment.id} style={{ transition: "background 0.2s" }}>
                       <Table.Td>
-                        <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{payment.client_name || "—"}</Text>
+                        <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{resolveClientName(payment)}</Text>
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm">{payment.description}</Text>
@@ -1141,7 +1152,7 @@ export function BillingPage() {
           <Stack>
             <Group justify="space-between">
               <Text c="dimmed" size="sm">Cliente</Text>
-              <Text fw={500} size="sm">{selectedPayment.client_name || "—"}</Text>
+              <Text fw={500} size="sm">{resolveClientName(selectedPayment)}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
