@@ -9,7 +9,6 @@ import {
   Container,
   Divider,
   FileButton,
-  Grid,
   Group,
   Image,
   Loader,
@@ -25,10 +24,11 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
+  IconArrowLeft,
   IconBrandWhatsapp,
   IconCheck,
   IconChecks,
@@ -209,7 +209,7 @@ function MessageBubble({
       }}
     >
       <Box
-        maw="70%"
+        maw={{ base: "85%", sm: "70%" }}
         p="sm"
         style={{
           backgroundColor: isOwn
@@ -294,6 +294,7 @@ export function ChatPage() {
   const [urlValue, setUrlValue] = useState("");
 
   const isClientView = false;
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   // WhatsApp status
   const { data: whatsappStatus } = useWhatsAppStatus();
@@ -422,29 +423,42 @@ export function ChatPage() {
       .includes(searchQuery.toLowerCase())
   );
 
+  const showConversationList = isMobile ? !selectedConversationId : true;
+  const showChatArea = isMobile ? !!selectedConversationId : true;
+
+  const handleBackToList = () => {
+    setSelectedConversationId(null);
+  };
+
   return (
-    <Container h="calc(100vh - 100px)" py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
-      <PageHeader
-        description={
-          isClientView
-            ? "Comunícate con tu entrenador"
-            : "Comunícate con tus clientes"
-        }
-        title="Chat"
-      />
+    <Container h="calc(100vh - 100px)" py={isMobile ? "sm" : "xl"} fluid px={{ base: isMobile ? 0 : "md", sm: "lg", lg: "xl", xl: 48 }}>
+      {!isMobile && (
+        <PageHeader
+          description={
+            isClientView
+              ? "Comunícate con tu entrenador"
+              : "Comunícate con tus clientes"
+          }
+          title="Chat"
+        />
+      )}
 
       <Box
-        h="calc(100% - 80px)"
-        className="nv-card"
+        h={isMobile ? "calc(100vh - 120px)" : "calc(100% - 80px)"}
+        className={isMobile ? undefined : "nv-card"}
         p={0}
-        style={{ overflow: "hidden" }}
+        style={{ overflow: "hidden", display: "flex" }}
       >
-        <Grid gutter={0} h="100%">
-          {/* Lista de conversaciones */}
-          <Grid.Col
+        {/* Lista de conversaciones */}
+        {showConversationList && (
+          <Box
             h="100%"
-            span={4}
-            style={{ borderRight: "1px solid var(--nv-border)" }}
+            style={{
+              borderRight: isMobile ? "none" : "1px solid var(--nv-border)",
+              width: isMobile ? "100%" : "33.33%",
+              minWidth: isMobile ? undefined : 300,
+              flexShrink: 0,
+            }}
           >
             <Box
               p="md"
@@ -503,10 +517,12 @@ export function ChatPage() {
                 ))
               )}
             </ScrollArea>
-          </Grid.Col>
+          </Box>
+        )}
 
-          {/* Área de chat */}
-          <Grid.Col h="100%" span={8}>
+        {/* Área de chat */}
+        {showChatArea && (
+          <Box h="100%" style={{ flex: 1, minWidth: 0 }}>
             {selectedConversation ? (
               <Box
                 h="100%"
@@ -522,6 +538,11 @@ export function ChatPage() {
                 >
                   <Group justify="space-between">
                     <Group>
+                      {isMobile && (
+                        <ActionIcon variant="subtle" color="gray" size="lg" onClick={handleBackToList}>
+                          <IconArrowLeft size={20} />
+                        </ActionIcon>
+                      )}
                       <Box pos="relative">
                         <Avatar color="primary" radius="xl">
                           {selectedConversation.client_name?.charAt(0) || "?"}
@@ -562,36 +583,40 @@ export function ChatPage() {
                       </Box>
                     </Group>
                     <Group gap="xs">
-                      <Tooltip label="Llamar">
-                        <ActionIcon
-                          color="gray"
-                          size="lg"
-                          variant="subtle"
-                          onClick={() => notifications.show({ title: "Llamar", message: "Función en desarrollo", color: "blue" })}
-                        >
-                          <IconPhone size={18} />
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="Videollamada">
-                        <ActionIcon
-                          color="gray"
-                          size="lg"
-                          variant="subtle"
-                          onClick={() => notifications.show({ title: "Videollamada", message: "Función en desarrollo", color: "blue" })}
-                        >
-                          <IconVideo size={18} />
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="Información">
-                        <ActionIcon
-                          color="gray"
-                          size="lg"
-                          variant="subtle"
-                          onClick={() => notifications.show({ title: "Información", message: "Función en desarrollo", color: "blue" })}
-                        >
-                          <IconInfoCircle size={18} />
-                        </ActionIcon>
-                      </Tooltip>
+                      {!isMobile && (
+                        <>
+                          <Tooltip label="Llamar">
+                            <ActionIcon
+                              color="gray"
+                              size="lg"
+                              variant="subtle"
+                              onClick={() => notifications.show({ title: "Llamar", message: "Función en desarrollo", color: "blue" })}
+                            >
+                              <IconPhone size={18} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Videollamada">
+                            <ActionIcon
+                              color="gray"
+                              size="lg"
+                              variant="subtle"
+                              onClick={() => notifications.show({ title: "Videollamada", message: "Función en desarrollo", color: "blue" })}
+                            >
+                              <IconVideo size={18} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Información">
+                            <ActionIcon
+                              color="gray"
+                              size="lg"
+                              variant="subtle"
+                              onClick={() => notifications.show({ title: "Información", message: "Función en desarrollo", color: "blue" })}
+                            >
+                              <IconInfoCircle size={18} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </>
+                      )}
                       <Menu position="bottom-end">
                         <Menu.Target>
                           <ActionIcon color="gray" size="lg" variant="subtle">
@@ -726,7 +751,7 @@ export function ChatPage() {
                     </Group>
                   )}
 
-                  <Group gap="sm">
+                  <Group gap={isMobile ? "xs" : "sm"}>
                     <Popover
                       opened={attachMenuOpened}
                       onChange={setAttachMenuOpened}
@@ -882,8 +907,8 @@ export function ChatPage() {
                 )}
               </Box>
             )}
-          </Grid.Col>
-        </Grid>
+          </Box>
+        )}
       </Box>
 
       <Modal opened={newChatOpened} onClose={closeNewChat} title="Nueva conversación" radius="lg">

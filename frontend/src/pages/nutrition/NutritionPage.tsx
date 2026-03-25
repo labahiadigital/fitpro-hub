@@ -648,7 +648,7 @@ export function NutritionPage() {
       planForm.reset();
       if (clientId) {
         setSelectedClientId(clientId);
-        setIsTemplateModeOn(false);
+        setIsTemplateModeOn(true);
         loadClientData(clientId);
       } else {
         setSelectedClientId(null);
@@ -700,15 +700,21 @@ export function NutritionPage() {
         });
       }
 
-      if (hasClient && savingAsTemplate && !editingPlan) {
-        const templateData = { ...planData, client_id: undefined, is_template: true, name: `${values.name} (Plantilla)` };
-        await createMealPlan.mutateAsync(templateData);
-        notifications.show({
-          title: "Plantilla creada",
-          message: `Se guardó también como plantilla reutilizable`,
-          color: "teal",
-          icon: <IconTemplate size={16} />,
-        });
+      if (hasClient && savingAsTemplate) {
+        const existingTemplates = mealPlans.filter((p: any) => p.is_template);
+        const templateAlreadyExists = existingTemplates.some(
+          (t: any) => t.name === values.name || t.name === `${values.name} (Plantilla)`
+        );
+        if (!templateAlreadyExists) {
+          const templateData = { ...planData, client_id: undefined, is_template: true, name: `${values.name} (Plantilla)` };
+          await createMealPlan.mutateAsync(templateData);
+          notifications.show({
+            title: "Plantilla creada",
+            message: `Se guardó también como plantilla reutilizable`,
+            color: "teal",
+            icon: <IconTemplate size={16} />,
+          });
+        }
       }
 
       handleCloseBuilder();
@@ -2658,7 +2664,7 @@ export function NutritionPage() {
                     setSelectedClientId(value);
                     if (value) {
                       loadClientData(value);
-                      setIsTemplateModeOn(false);
+                      setIsTemplateModeOn(true);
                     } else {
                       setSelectedClient(null);
                       planForm.setFieldValue("client_id", null);

@@ -17,6 +17,7 @@ import {
   Select,
   SimpleGrid,
   Stack,
+  Switch,
   Tabs,
   Text,
   Textarea,
@@ -216,6 +217,7 @@ export function WorkoutsPage() {
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [isTemplateModeOn, setIsTemplateModeOn] = useState(true);
 
   const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
@@ -302,6 +304,7 @@ export function WorkoutsPage() {
     closeBuilder();
     setSelectedClientId(null);
     setSelectedClient(null);
+    setIsTemplateModeOn(true);
     // Clear URL params when closing
     if (editProgramId || clientId) {
       setSearchParams({});
@@ -522,7 +525,6 @@ export function WorkoutsPage() {
 
     try {
       if (editingProgram) {
-        // Update existing program - keep original is_template status if editing client's plan
         const updateData = (clientId || planClientId)
           ? { ...programData, is_template: editingProgram.is_template ?? false }
           : programData;
@@ -531,15 +533,36 @@ export function WorkoutsPage() {
           data: updateData,
         });
       } else {
-        // Create new program
         await createProgram.mutateAsync(programData);
       }
+
+      if (planClientId && isTemplateModeOn) {
+        const existingPrograms = programs || [];
+        const templateName = `${values.name} (Plantilla)`;
+        const templateAlreadyExists = existingPrograms.some(
+          (p: any) => p.is_template && (p.name === values.name || p.name === templateName)
+        );
+        if (!templateAlreadyExists) {
+          await createProgram.mutateAsync({
+            ...programData,
+            client_id: undefined,
+            is_template: true,
+            name: templateName,
+          });
+          notifications.show({
+            title: "Plantilla creada",
+            message: "Se guardó también como plantilla reutilizable",
+            color: "teal",
+            icon: <IconTemplate size={16} />,
+          });
+        }
+      }
+
       handleCloseBuilder();
       programForm.reset();
       setWorkoutDays(initialWorkoutDays);
       setEditingProgram(null);
       
-      // If editing for a specific client, redirect back
       if (clientId || returnTo) {
         goBack();
       }
@@ -1452,12 +1475,25 @@ export function WorkoutsPage() {
                     setSelectedClientId(value);
                     if (value) {
                       loadClientData(value);
+                      setIsTemplateModeOn(true);
                     } else {
                       setSelectedClient(null);
                       programForm.setFieldValue("client_id", null);
+                      setIsTemplateModeOn(true);
                     }
                   }}
                 />
+
+                {(selectedClientId || clientId) && (
+                  <Switch
+                    label="Guardar también como plantilla"
+                    description="Guarda una copia reutilizable además del programa del cliente"
+                    checked={isTemplateModeOn}
+                    onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
+                    size="sm"
+                    color="teal"
+                  />
+                )}
 
                 <TextInput
                   label="Nombre del programa"

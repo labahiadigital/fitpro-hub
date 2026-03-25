@@ -36,6 +36,7 @@ import {
   IconPrinter,
   IconSalad,
 } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
 import { useMemo, useState } from "react";
 import { GlossaryTooltip } from "../common/GlossaryTooltip";
 import {
@@ -221,6 +222,7 @@ export function MealPlanDetailView({
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [editingClient, setEditingClient] = useState(false);
   const [selectedFormula, setSelectedFormula] = useState<FormulaType>("mifflin");
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   // Form for client data (for calculations)
   const clientForm = useForm({
@@ -563,21 +565,38 @@ export function MealPlanDetailView({
         </Paper>
       )}
 
+      {isMobile && (
+        <Select
+          value={activeTab}
+          onChange={setActiveTab}
+          data={[
+            { value: "overview", label: "Resumen Nutricional" },
+            { value: "meals", label: "Plan de Comidas" },
+            { value: "calculator", label: "Calculadora Energética" },
+            { value: "supplements", label: "Suplementación" },
+          ]}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      )}
       <Tabs value={activeTab} onChange={setActiveTab}>
-        <Tabs.List mb="lg">
-          <Tabs.Tab value="overview" leftSection={<IconChartPie size={14} />}>
-            Resumen Nutricional
-          </Tabs.Tab>
-          <Tabs.Tab value="meals" leftSection={<IconSalad size={14} />}>
-            Plan de Comidas
-          </Tabs.Tab>
-          <Tabs.Tab value="calculator" leftSection={<IconCalculator size={14} />}>
-            Calculadora Energética
-          </Tabs.Tab>
-          <Tabs.Tab value="supplements" leftSection={<IconPill size={14} />}>
-            Suplementación
-          </Tabs.Tab>
-        </Tabs.List>
+        {!isMobile && (
+          <Tabs.List mb="lg">
+            <Tabs.Tab value="overview" leftSection={<IconChartPie size={14} />}>
+              Resumen Nutricional
+            </Tabs.Tab>
+            <Tabs.Tab value="meals" leftSection={<IconSalad size={14} />}>
+              Plan de Comidas
+            </Tabs.Tab>
+            <Tabs.Tab value="calculator" leftSection={<IconCalculator size={14} />}>
+              Calculadora Energética
+            </Tabs.Tab>
+            <Tabs.Tab value="supplements" leftSection={<IconPill size={14} />}>
+              Suplementación
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
 
         {/* Overview Tab */}
         <Tabs.Panel value="overview">
@@ -722,97 +741,99 @@ export function MealPlanDetailView({
             </Paper>
 
             {/* Detailed macros table */}
-            <Paper p="lg" radius="md" withBorder style={{ gridColumn: "1 / -1" }}>
+            <Paper p={isMobile ? "sm" : "lg"} radius="md" withBorder style={{ gridColumn: "1 / -1" }}>
               <Text fw={600} mb="md">
                 Desglose Nutricional Detallado
               </Text>
-              <Table>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Nutriente</Table.Th>
-                    <Table.Th ta="right">Cantidad</Table.Th>
-                    <Table.Th ta="right">% Kcal</Table.Th>
-                    <Table.Th ta="right">Kcal</Table.Th>
-                    <Table.Th ta="right">Objetivo</Table.Th>
-                    <Table.Th ta="right">Diferencia</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  <Table.Tr>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ThemeIcon color="green" variant="light" size="sm">
-                          <IconMeat size={14} />
-                        </ThemeIcon>
-                        <GlossaryTooltip term="Proteína">Proteína</GlossaryTooltip>
-                      </Group>
-                    </Table.Td>
-                    <Table.Td ta="right">{actualMacros.protein}g</Table.Td>
-                    <Table.Td ta="right">{macroPercentages.protein}%</Table.Td>
-                    <Table.Td ta="right">{Math.round(actualMacros.protein * 4)}</Table.Td>
-                    <Table.Td ta="right">{clientTargets.protein}g</Table.Td>
-                    <Table.Td ta="right">
-                      <Badge color={actualMacros.protein >= clientTargets.protein ? "green" : "red"} variant="light">
-                        {actualMacros.protein - clientTargets.protein > 0 ? "+" : ""}
-                        {Math.round(actualMacros.protein - clientTargets.protein)}g
-                      </Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                  <Table.Tr>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ThemeIcon color="orange" variant="light" size="sm">
-                          <IconFlame size={14} />
-                        </ThemeIcon>
-                        Carbohidratos
-                      </Group>
-                    </Table.Td>
-                    <Table.Td ta="right">{actualMacros.carbs}g</Table.Td>
-                    <Table.Td ta="right">{macroPercentages.carbs}%</Table.Td>
-                    <Table.Td ta="right">{Math.round(actualMacros.carbs * 4)}</Table.Td>
-                    <Table.Td ta="right">{clientTargets.carbs}g</Table.Td>
-                    <Table.Td ta="right">
-                      <Badge color={Math.abs(actualMacros.carbs - clientTargets.carbs) < 20 ? "green" : "orange"} variant="light">
-                        {actualMacros.carbs - clientTargets.carbs > 0 ? "+" : ""}
-                        {Math.round(actualMacros.carbs - clientTargets.carbs)}g
-                      </Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                  <Table.Tr>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ThemeIcon color="grape" variant="light" size="sm">
-                          <IconActivity size={14} />
-                        </ThemeIcon>
-                        Grasas
-                      </Group>
-                    </Table.Td>
-                    <Table.Td ta="right">{actualMacros.fat}g</Table.Td>
-                    <Table.Td ta="right">{macroPercentages.fat}%</Table.Td>
-                    <Table.Td ta="right">{Math.round(actualMacros.fat * 9)}</Table.Td>
-                    <Table.Td ta="right">{clientTargets.fat}g</Table.Td>
-                    <Table.Td ta="right">
-                      <Badge color={Math.abs(actualMacros.fat - clientTargets.fat) < 10 ? "green" : "orange"} variant="light">
-                        {actualMacros.fat - clientTargets.fat > 0 ? "+" : ""}
-                        {Math.round(actualMacros.fat - clientTargets.fat)}g
-                      </Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                  <Table.Tr style={{ fontWeight: 600 }}>
-                    <Table.Td>Total</Table.Td>
-                    <Table.Td ta="right">-</Table.Td>
-                    <Table.Td ta="right">100%</Table.Td>
-                    <Table.Td ta="right">{actualMacros.calories}</Table.Td>
-                    <Table.Td ta="right">{clientTargets.calories}</Table.Td>
-                    <Table.Td ta="right">
-                      <Badge color={Math.abs(actualMacros.calories - clientTargets.calories) < 100 ? "green" : "orange"} variant="light">
-                        {actualMacros.calories - clientTargets.calories > 0 ? "+" : ""}
-                        {actualMacros.calories - clientTargets.calories}
-                      </Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                </Table.Tbody>
-              </Table>
+              <ScrollArea type="auto">
+                <Table style={{ minWidth: isMobile ? 520 : undefined }}>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Nutriente</Table.Th>
+                      <Table.Th ta="right">Cantidad</Table.Th>
+                      <Table.Th ta="right">% Kcal</Table.Th>
+                      <Table.Th ta="right">Kcal</Table.Th>
+                      <Table.Th ta="right">Objetivo</Table.Th>
+                      <Table.Th ta="right">Diferencia</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    <Table.Tr>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ThemeIcon color="green" variant="light" size="sm">
+                            <IconMeat size={14} />
+                          </ThemeIcon>
+                          <GlossaryTooltip term="Proteína">Proteína</GlossaryTooltip>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td ta="right">{actualMacros.protein}g</Table.Td>
+                      <Table.Td ta="right">{macroPercentages.protein}%</Table.Td>
+                      <Table.Td ta="right">{Math.round(actualMacros.protein * 4)}</Table.Td>
+                      <Table.Td ta="right">{clientTargets.protein}g</Table.Td>
+                      <Table.Td ta="right">
+                        <Badge color={actualMacros.protein >= clientTargets.protein ? "green" : "red"} variant="light">
+                          {actualMacros.protein - clientTargets.protein > 0 ? "+" : ""}
+                          {Math.round(actualMacros.protein - clientTargets.protein)}g
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                    <Table.Tr>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ThemeIcon color="orange" variant="light" size="sm">
+                            <IconFlame size={14} />
+                          </ThemeIcon>
+                          Carbohidratos
+                        </Group>
+                      </Table.Td>
+                      <Table.Td ta="right">{actualMacros.carbs}g</Table.Td>
+                      <Table.Td ta="right">{macroPercentages.carbs}%</Table.Td>
+                      <Table.Td ta="right">{Math.round(actualMacros.carbs * 4)}</Table.Td>
+                      <Table.Td ta="right">{clientTargets.carbs}g</Table.Td>
+                      <Table.Td ta="right">
+                        <Badge color={Math.abs(actualMacros.carbs - clientTargets.carbs) < 20 ? "green" : "orange"} variant="light">
+                          {actualMacros.carbs - clientTargets.carbs > 0 ? "+" : ""}
+                          {Math.round(actualMacros.carbs - clientTargets.carbs)}g
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                    <Table.Tr>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ThemeIcon color="grape" variant="light" size="sm">
+                            <IconActivity size={14} />
+                          </ThemeIcon>
+                          Grasas
+                        </Group>
+                      </Table.Td>
+                      <Table.Td ta="right">{actualMacros.fat}g</Table.Td>
+                      <Table.Td ta="right">{macroPercentages.fat}%</Table.Td>
+                      <Table.Td ta="right">{Math.round(actualMacros.fat * 9)}</Table.Td>
+                      <Table.Td ta="right">{clientTargets.fat}g</Table.Td>
+                      <Table.Td ta="right">
+                        <Badge color={Math.abs(actualMacros.fat - clientTargets.fat) < 10 ? "green" : "orange"} variant="light">
+                          {actualMacros.fat - clientTargets.fat > 0 ? "+" : ""}
+                          {Math.round(actualMacros.fat - clientTargets.fat)}g
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                    <Table.Tr style={{ fontWeight: 600 }}>
+                      <Table.Td>Total</Table.Td>
+                      <Table.Td ta="right">-</Table.Td>
+                      <Table.Td ta="right">100%</Table.Td>
+                      <Table.Td ta="right">{actualMacros.calories}</Table.Td>
+                      <Table.Td ta="right">{clientTargets.calories}</Table.Td>
+                      <Table.Td ta="right">
+                        <Badge color={Math.abs(actualMacros.calories - clientTargets.calories) < 100 ? "green" : "orange"} variant="light">
+                          {actualMacros.calories - clientTargets.calories > 0 ? "+" : ""}
+                          {actualMacros.calories - clientTargets.calories}
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                  </Table.Tbody>
+                </Table>
+              </ScrollArea>
             </Paper>
           </SimpleGrid>
         </Tabs.Panel>
