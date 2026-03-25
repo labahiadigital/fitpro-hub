@@ -16,7 +16,6 @@ import {
   Divider,
   Group,
   Image,
-  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -56,6 +55,7 @@ import {
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
 import { useCallback, useMemo, useState } from "react";
+import { BottomSheet } from "../common/BottomSheet";
 import { useAlternativesCounts } from "../../hooks/useExercises";
 
 // Standardized muscle groups and equipment - exported for reuse
@@ -1004,7 +1004,7 @@ export function WorkoutBuilder({
       </SimpleGrid>
 
       {/* Exercise Selection Modal */}
-      <Modal
+      <BottomSheet
         onClose={() => {
           closeExerciseModal();
           setExerciseSearch("");
@@ -1202,15 +1202,15 @@ export function WorkoutBuilder({
             Crear ejercicio nuevo
           </Button>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* Image Enlargement Modal */}
-      <Modal opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} size="lg" title={enlargedImage?.name} centered>
+      <BottomSheet opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} size="lg" title={enlargedImage?.name} centered>
         {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
-      </Modal>
+      </BottomSheet>
 
       {/* Create Exercise Sub-Modal */}
-      <Modal
+      <BottomSheet
         opened={createExerciseModalOpened}
         onClose={() => { closeCreateExerciseModal(); createExerciseForm.reset(); }}
         title="Crear ejercicio"
@@ -1267,7 +1267,7 @@ export function WorkoutBuilder({
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
     </>
   );
 }

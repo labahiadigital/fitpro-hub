@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import logging
+import time
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,13 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.api.v1.router import api_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +82,23 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Workspace-ID"],
     expose_headers=["X-Total-Count"],
 )
+
+access_logger = logging.getLogger("api.access")
+
+@app.middleware("http")
+async def access_log_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    if request.url.path not in ("/health", "/"):
+        access_logger.info(
+            "%s %s %s %.0fms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+    return response
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 

@@ -221,7 +221,12 @@ class GoogleCalendarService:
                 token.token_expiry = new_tokens["expiry"]
                 await db.commit()
             except GoogleCalendarError as e:
-                # Si falla el refresh, el token puede estar revocado
+                logger.warning(
+                    "Google Calendar token refresh failed for user %s — disabling sync: %s",
+                    token.user_id, e.message,
+                )
+                token.sync_enabled = False
+                await db.commit()
                 raise GoogleCalendarError(f"Token expirado y no se pudo refrescar: {e.message}")
         
         return token

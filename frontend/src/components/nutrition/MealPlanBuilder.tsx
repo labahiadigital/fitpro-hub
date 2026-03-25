@@ -10,7 +10,6 @@ import {
   Divider,
   Group,
   Loader,
-  Modal,
   NumberInput,
   Pagination,
   Paper,
@@ -53,6 +52,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { nutritionApi } from "../../services/api";
 import { calculateMacroPercentages, gramsFromPercentages } from "../../utils/calories";
+import { BottomSheet } from "../common/BottomSheet";
 import { RecipeFormModal } from "../recipes/RecipeFormModal";
 import { useCreateRecipe } from "../../hooks/useRecipes";
 import type { RecipeItem } from "../../types/recipe";
@@ -1563,7 +1563,7 @@ export function MealPlanBuilder({
       </Tabs>
 
       {/* Food/Supplement Selection Modal */}
-      <Modal
+      <BottomSheet
         onClose={closeFoodModal}
         opened={foodModalOpened}
         size="lg"
@@ -1933,10 +1933,10 @@ export function MealPlanBuilder({
             </ScrollArea>
           </Tabs.Panel>
         </Tabs>
-      </Modal>
+      </BottomSheet>
 
       {/* Create Food Sub-Modal */}
-      <Modal
+      <BottomSheet
         opened={createFoodModalOpened}
         onClose={() => { closeCreateFoodModal(); createFoodForm.reset(); }}
         title="Crear alimento"
@@ -1986,10 +1986,10 @@ export function MealPlanBuilder({
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Shopping List Modal */}
-      <Modal
+      <BottomSheet
         onClose={closeShoppingList}
         opened={shoppingListOpened}
         size="md"
@@ -2016,7 +2016,7 @@ export function MealPlanBuilder({
         >
           Exportar Lista
         </Button>
-      </Modal>
+      </BottomSheet>
 
       <RecipeFormModal
         opened={recipeModalOpened}

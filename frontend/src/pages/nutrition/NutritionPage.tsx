@@ -6,10 +6,8 @@ import {
   Center,
   Container,
   Divider,
-  Drawer,
   Group,
   Loader,
-  Modal,
   NumberInput,
   Pagination,
   ScrollArea,
@@ -47,7 +45,6 @@ import {
   IconTrash,
   IconUser,
   IconUsers,
-  IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -62,6 +59,8 @@ import {
   type Meal,
   MealPlanBuilder,
 } from "../../components/nutrition/MealPlanBuilder";
+import { BottomSheet } from "../../components/common/BottomSheet";
+import { PlanEditorLayout } from "../../components/common/PlanEditorLayout";
 import {
   useCreateFood,
   useCreateMealPlan,
@@ -1674,7 +1673,7 @@ export function NutritionPage() {
       </Tabs>
 
       {/* Modal para crear alimento */}
-      <Modal
+      <BottomSheet
         onClose={closeFoodModal}
         opened={foodModalOpened}
         size="md"
@@ -1754,10 +1753,10 @@ export function NutritionPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar alimento - COMPLETO */}
-      <Modal
+      <BottomSheet
         onClose={() => {
           closeEditFoodModal();
           setEditingFood(null);
@@ -2036,10 +2035,10 @@ export function NutritionPage() {
             </Group>
           </form>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* Modal de detalle de alimento */}
-      <Modal
+      <BottomSheet
         onClose={() => {
           closeFoodDetailModal();
           setViewingFood(null);
@@ -2487,10 +2486,10 @@ export function NutritionPage() {
             </Tabs>
           </ScrollArea>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* Modal de detalle de suplemento */}
-      <Modal
+      <BottomSheet
         onClose={() => {
           closeSupplementDetailModal();
           setViewingSupplement(null);
@@ -2571,242 +2570,174 @@ export function NutritionPage() {
             </Stack>
           </ScrollArea>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* Fullscreen drawer para el constructor de planes */}
-      <Drawer
-        onClose={handleCloseBuilder}
+      <PlanEditorLayout
         opened={builderOpened}
-        position="right"
-        size="100%"
-        withCloseButton={false}
-        styles={{
-          content: { backgroundColor: "var(--nv-bg)", padding: 0 },
-          header: { display: "none" },
-          body: { padding: 0, height: "100vh", display: "flex", flexDirection: "column" },
-        }}
-      >
-        {/* Custom header */}
-        <Box
-          px="lg"
-          py="sm"
-          style={{
-            borderBottom: "1px solid var(--nv-border)",
-            backgroundColor: "var(--nv-paper-bg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexShrink: 0,
-          }}
-        >
-          <Group gap="md">
-            <ActionIcon variant="subtle" color="gray" radius="xl" size="lg" onClick={handleCloseBuilder}>
-              <IconX size={20} />
-            </ActionIcon>
-            <Box>
-              <Text fw={700} size="lg" style={{ lineHeight: 1.2 }}>
-                {editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"}
-              </Text>
-              {clientId && clientData && (
-                <Badge color="green" size="sm" variant="light" mt={2}>
-                  {clientData.first_name} {clientData.last_name}
-                </Badge>
-              )}
-            </Box>
-          </Group>
-          <Group gap="sm">
-            <Button onClick={closeBuilder} variant="default" radius="xl" size="sm">
-              Cancelar
-            </Button>
-            <Button
-              loading={createMealPlan.isPending || updateMealPlan.isPending}
-              onClick={handleSavePlan}
-              radius="xl"
+        onClose={handleCloseBuilder}
+        title={editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"}
+        clientBadge={clientId && clientData ? `${clientData.first_name} ${clientData.last_name}` : undefined}
+        badgeColor="green"
+        isSaving={createMealPlan.isPending || updateMealPlan.isPending}
+        onSave={handleSavePlan}
+        saveLabel={editingPlan ? "Guardar Cambios" : "Crear Plan"}
+        sidebarContent={
+          <Stack gap="md">
+            <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
+              Configuración
+            </Text>
+
+            <Select
+              label="Asignar a cliente"
+              placeholder="Buscar cliente..."
+              data={clientOptions}
+              searchable
+              clearable
+              radius="md"
               size="sm"
-              style={{ backgroundColor: "var(--nv-success)" }}
-            >
-              {editingPlan ? "Guardar Cambios" : "Crear Plan"}
-            </Button>
-          </Group>
-        </Box>
+              leftSection={<IconUser size={14} />}
+              value={selectedClientId}
+              disabled={!!clientId}
+              onChange={(value) => {
+                setSelectedClientId(value);
+                if (value) {
+                  loadClientData(value);
+                  setIsTemplateModeOn(true);
+                } else {
+                  setSelectedClient(null);
+                  planForm.setFieldValue("client_id", null);
+                  setIsTemplateModeOn(true);
+                }
+              }}
+              description={!selectedClientId && !clientId ? "Sin cliente = se guarda como plantilla" : undefined}
+            />
 
-        {/* Two-column layout */}
-        <Box style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* Left sidebar - Config & Macros */}
-          <Box
-            style={{
-              width: 340,
-              flexShrink: 0,
-              borderRight: "1px solid var(--nv-border)",
-              backgroundColor: "var(--nv-paper-bg)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="md">
-              <Stack gap="md">
-                <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
-                  Configuración
-                </Text>
+            {(selectedClientId || clientId) && (
+              <Switch
+                label="Guardar también como plantilla"
+                description="Guarda una copia reutilizable además del plan del cliente"
+                checked={isTemplateModeOn}
+                onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
+                size="sm"
+                color="teal"
+              />
+            )}
 
-                <Select
-                  label="Asignar a cliente"
-                  placeholder="Buscar cliente..."
-                  data={clientOptions}
-                  searchable
-                  clearable
-                  radius="md"
-                  size="sm"
-                  leftSection={<IconUser size={14} />}
-                  value={selectedClientId}
-                  disabled={!!clientId}
-                  onChange={(value) => {
-                    setSelectedClientId(value);
-                    if (value) {
-                      loadClientData(value);
-                      setIsTemplateModeOn(true);
-                    } else {
-                      setSelectedClient(null);
-                      planForm.setFieldValue("client_id", null);
-                      setIsTemplateModeOn(true);
-                    }
-                  }}
-                  description={!selectedClientId && !clientId ? "Sin cliente = se guarda como plantilla" : undefined}
-                />
+            <TextInput
+              label="Nombre del plan"
+              placeholder="Plan de Pérdida de Peso"
+              required
+              radius="md"
+              size="sm"
+              {...planForm.getInputProps("name")}
+            />
 
-                {(selectedClientId || clientId) && (
-                  <Switch
-                    label="Guardar también como plantilla"
-                    description="Guarda una copia reutilizable además del plan del cliente"
-                    checked={isTemplateModeOn}
-                    onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
-                    size="sm"
-                    color="teal"
-                  />
-                )}
+            <Textarea
+              label="Descripción"
+              minRows={2}
+              placeholder="Describe el plan..."
+              radius="md"
+              size="sm"
+              {...planForm.getInputProps("description")}
+            />
 
-                <TextInput
-                  label="Nombre del plan"
-                  placeholder="Plan de Pérdida de Peso"
-                  required
-                  radius="md"
-                  size="sm"
-                  {...planForm.getInputProps("name")}
-                />
+            <Group grow>
+              <NumberInput
+                label="Duración (días)"
+                max={30}
+                min={1}
+                radius="md"
+                size="sm"
+                {...planForm.getInputProps("duration_days")}
+              />
+            </Group>
 
-                <Textarea
-                  label="Descripción"
-                  minRows={2}
-                  placeholder="Describe el plan..."
-                  radius="md"
-                  size="sm"
-                  {...planForm.getInputProps("description")}
-                />
+            <Divider
+              label="Objetivos nutricionales"
+              labelPosition="center"
+              styles={{ label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } }}
+            />
 
-                <Group grow>
-                  <NumberInput
-                    label="Duración (días)"
-                    max={30}
-                    min={1}
-                    radius="md"
-                    size="sm"
-                    {...planForm.getInputProps("duration_days")}
-                  />
-                </Group>
+            <NumberInput
+              label="Calorías objetivo"
+              max={5000}
+              min={1000}
+              step={50}
+              radius="md"
+              size="sm"
+              value={planForm.values.target_calories}
+              onChange={(v) => {
+                const cal = Number(v) || 1000;
+                planForm.setFieldValue("target_calories", cal);
+                const curP = planForm.values.target_protein;
+                const curC = planForm.values.target_carbs;
+                const curF = planForm.values.target_fat;
+                const curCal = (curP * 4) + (curC * 4) + (curF * 9);
+                if (curCal > 0) {
+                  const pPct = (curP * 4 / curCal) * 100;
+                  const cPct = (curC * 4 / curCal) * 100;
+                  const fPct = (curF * 9 / curCal) * 100;
+                  const g = gramsFromPercentages(cal, pPct, cPct, fPct);
+                  planForm.setFieldValue("target_protein", g.protein_g);
+                  planForm.setFieldValue("target_carbs", g.carbs_g);
+                  planForm.setFieldValue("target_fat", g.fat_g);
+                }
+              }}
+              error={planForm.errors.target_calories}
+            />
 
-                <Divider
-                  label="Objetivos nutricionales"
-                  labelPosition="center"
-                  styles={{ label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } }}
-                />
-
-                <NumberInput
-                  label="Calorías objetivo"
-                  max={5000}
-                  min={1000}
-                  step={50}
-                  radius="md"
-                  size="sm"
-                  value={planForm.values.target_calories}
-                  onChange={(v) => {
-                    const cal = Number(v) || 1000;
-                    planForm.setFieldValue("target_calories", cal);
-                    const curP = planForm.values.target_protein;
-                    const curC = planForm.values.target_carbs;
-                    const curF = planForm.values.target_fat;
-                    const curCal = (curP * 4) + (curC * 4) + (curF * 9);
-                    if (curCal > 0) {
-                      const pPct = (curP * 4 / curCal) * 100;
-                      const cPct = (curC * 4 / curCal) * 100;
-                      const fPct = (curF * 9 / curCal) * 100;
-                      const g = gramsFromPercentages(cal, pPct, cPct, fPct);
-                      planForm.setFieldValue("target_protein", g.protein_g);
-                      planForm.setFieldValue("target_carbs", g.carbs_g);
-                      planForm.setFieldValue("target_fat", g.fat_g);
-                    }
-                  }}
-                  error={planForm.errors.target_calories}
-                />
-
-                <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xs">
-                  <NumberInput
-                    label="Prot. (g)"
-                    max={500}
-                    min={0}
-                    radius="md"
-                    size="sm"
-                    {...planForm.getInputProps("target_protein")}
-                  />
-                  <NumberInput
-                    label="Carbs (g)"
-                    max={500}
-                    min={0}
-                    radius="md"
-                    size="sm"
-                    {...planForm.getInputProps("target_carbs")}
-                  />
-                  <NumberInput
-                    label="Grasas (g)"
-                    max={300}
-                    min={0}
-                    radius="md"
-                    size="sm"
-                    {...planForm.getInputProps("target_fat")}
-                  />
-                </SimpleGrid>
-              </Stack>
-            </ScrollArea>
-          </Box>
-
-          {/* Right main area - Builder */}
-          <Box style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="lg">
-              <Box style={{ maxWidth: 960, margin: "0 auto" }}>
-                <MealPlanBuilder
-                  selectedClient={selectedClient}
-                  availableFoods={foods}
-                  availableSupplements={supplements}
-                  days={mealPlanDays}
-                  onChange={setMealPlanDays}
-                  targetCalories={planForm.values.target_calories}
-                  targetCarbs={planForm.values.target_carbs}
-                  targetFat={planForm.values.target_fat}
-                  targetProtein={planForm.values.target_protein}
-                  onTargetMacrosChange={handleTargetMacrosChange}
-                  foodFavorites={foodFavorites}
-                  supplementFavorites={supplementFavorites}
-                  onToggleFoodFavorite={handleToggleFoodFavoriteForBuilder}
-                  onToggleSupplementFavorite={handleToggleSupplementFavoriteForBuilder}
-                  recipes={recipes}
-                />
-              </Box>
-            </ScrollArea>
-          </Box>
-        </Box>
-      </Drawer>
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xs">
+              <NumberInput
+                label="Prot. (g)"
+                max={500}
+                min={0}
+                radius="md"
+                size="sm"
+                {...planForm.getInputProps("target_protein")}
+              />
+              <NumberInput
+                label="Carbs (g)"
+                max={500}
+                min={0}
+                radius="md"
+                size="sm"
+                {...planForm.getInputProps("target_carbs")}
+              />
+              <NumberInput
+                label="Grasas (g)"
+                max={300}
+                min={0}
+                radius="md"
+                size="sm"
+                {...planForm.getInputProps("target_fat")}
+              />
+            </SimpleGrid>
+          </Stack>
+        }
+        mainContent={
+          <MealPlanBuilder
+            selectedClient={selectedClient}
+            availableFoods={foods}
+            availableSupplements={supplements}
+            days={mealPlanDays}
+            onChange={setMealPlanDays}
+            targetCalories={planForm.values.target_calories}
+            targetCarbs={planForm.values.target_carbs}
+            targetFat={planForm.values.target_fat}
+            targetProtein={planForm.values.target_protein}
+            onTargetMacrosChange={handleTargetMacrosChange}
+            foodFavorites={foodFavorites}
+            supplementFavorites={supplementFavorites}
+            onToggleFoodFavorite={handleToggleFoodFavoriteForBuilder}
+            onToggleSupplementFavorite={handleToggleSupplementFavoriteForBuilder}
+            recipes={recipes}
+          />
+        }
+      />
 
       {/* Modal para crear suplemento */}
-      <Modal
+      <BottomSheet
         onClose={closeSupplementModal}
         opened={supplementModalOpened}
         size="md"
@@ -2945,10 +2876,10 @@ export function NutritionPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar suplemento */}
-      <Modal
+      <BottomSheet
         onClose={() => {
           closeEditSupplementModal();
           setEditingSupplement(null);
@@ -3102,7 +3033,7 @@ export function NutritionPage() {
             </Stack>
           </form>
         )}
-      </Modal>
+      </BottomSheet>
       {/* Recipe Form Modal */}
       <RecipeFormModal
         opened={recipeModalOpened}

@@ -5,11 +5,9 @@ import {
   Button,
   Container,
   Divider,
-  Drawer,
   Group,
   HoverCard,
   Image,
-  Modal,
   MultiSelect,
   NumberInput,
   ScrollArea,
@@ -48,6 +46,8 @@ import { EmptyState } from "../../components/common/EmptyState";
 import { useClient, useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
 import { clientsApi } from "../../services/api";
+import { BottomSheet } from "../../components/common/BottomSheet";
+import { PlanEditorLayout } from "../../components/common/PlanEditorLayout";
 import { WorkoutBuilderWithDays, initialWorkoutDays, type WorkoutDay } from "../../components/workouts/WorkoutBuilder";
 import {
   useCreateExercise,
@@ -1241,10 +1241,10 @@ export function WorkoutsPage() {
       </Tabs>
 
       {/* Modal para crear/editar ejercicio */}
-      <Modal
+      <BottomSheet
         onClose={() => { closeExerciseModal(); setEditingExercise(null); exerciseForm.reset(); }}
         opened={exerciseModalOpened}
-        size="lg"
+        desktopSize="lg"
         title={editingExercise?.is_global ? "Detalle del Ejercicio (Sistema)" : editingExercise ? "Editar Ejercicio" : "Nuevo Ejercicio"}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
@@ -1375,208 +1375,132 @@ export function WorkoutsPage() {
             allExercises={exercises || []}
           />
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* Fullscreen drawer para el constructor de programas */}
-      <Drawer
-        onClose={handleCloseBuilder}
+      <PlanEditorLayout
         opened={builderOpened}
-        position="right"
-        size="100%"
-        withCloseButton={false}
-        styles={{
-          content: { backgroundColor: "var(--nv-bg)", padding: 0 },
-          header: { display: "none" },
-          body: { padding: 0, height: "100dvh", display: "flex", flexDirection: "column", overflow: "hidden" },
-        }}
-      >
-        {/* Custom header */}
-        <Box
-          px="lg"
-          py="sm"
-          style={{
-            borderBottom: "1px solid var(--nv-border)",
-            backgroundColor: "var(--nv-paper-bg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexShrink: 0,
-          }}
-        >
-          <Group gap="md">
-            <ActionIcon variant="subtle" color="gray" radius="xl" size="lg" onClick={handleCloseBuilder}>
-              <IconX size={20} />
-            </ActionIcon>
-            <Box>
-              <Text fw={700} size="lg" style={{ lineHeight: 1.2 }}>
-                {editingProgram ? "Editar Programa" : "Nuevo Programa"}
-              </Text>
-              {clientId && clientData && (
-                <Badge color="blue" size="sm" variant="light" mt={2}>
-                  {clientData.first_name} {clientData.last_name}
-                </Badge>
-              )}
-            </Box>
-          </Group>
-          <Group gap="sm">
-            <Button onClick={closeBuilder} variant="default" radius="xl" size="sm">
-              Cancelar
-            </Button>
-            <Button
-              loading={createProgram.isPending || updateProgram.isPending}
-              onClick={handleSaveProgram}
-              radius="xl"
+        onClose={handleCloseBuilder}
+        title={editingProgram ? "Editar Programa" : "Nuevo Programa"}
+        clientBadge={clientId && clientData ? `${clientData.first_name} ${clientData.last_name}` : undefined}
+        badgeColor="blue"
+        isSaving={createProgram.isPending || updateProgram.isPending}
+        onSave={handleSaveProgram}
+        saveLabel={editingProgram ? "Guardar Cambios" : "Crear Programa"}
+        sidebarContent={
+          <Stack gap="md">
+            <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
+              Configuración
+            </Text>
+
+            <Select
+              label="Asignar a cliente"
+              placeholder="Buscar cliente..."
+              data={clientOptions}
+              searchable
+              clearable
+              radius="md"
               size="sm"
-              style={{ backgroundColor: "var(--nv-primary)" }}
-            >
-              {editingProgram ? "Guardar Cambios" : "Crear Programa"}
-            </Button>
-          </Group>
-        </Box>
+              leftSection={<IconUser size={14} />}
+              value={selectedClientId}
+              onChange={(value) => {
+                setSelectedClientId(value);
+                if (value) {
+                  loadClientData(value);
+                  setIsTemplateModeOn(true);
+                } else {
+                  setSelectedClient(null);
+                  programForm.setFieldValue("client_id", null);
+                  setIsTemplateModeOn(true);
+                }
+              }}
+            />
 
-        {/* Two-column layout - responsive: stack on mobile */}
-        <Box style={{ flex: 1, display: "flex", flexDirection: "row", overflow: "hidden" }} className="workout-builder-layout">
-          <style>{`
-            @media (max-width: 768px) {
-              .workout-builder-layout { flex-direction: column !important; }
-              .workout-builder-sidebar { width: 100% !important; max-height: 45vh !important; border-right: none !important; border-bottom: 1px solid var(--nv-border) !important; }
-              .workout-builder-main { min-height: 0 !important; }
-            }
-          `}</style>
-          {/* Left sidebar - Config */}
-          <Box
-            className="workout-builder-sidebar"
-            style={{
-              width: 340,
-              flexShrink: 0,
-              borderRight: "1px solid var(--nv-border)",
-              backgroundColor: "var(--nv-paper-bg)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="md">
-              <Stack gap="md">
-                <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
-                  Configuración
-                </Text>
+            {(selectedClientId || clientId) && (
+              <Switch
+                label="Guardar también como plantilla"
+                description="Guarda una copia reutilizable además del programa del cliente"
+                checked={isTemplateModeOn}
+                onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
+                size="sm"
+                color="teal"
+              />
+            )}
 
-                <Select
-                  label="Asignar a cliente"
-                  placeholder="Buscar cliente..."
-                  data={clientOptions}
-                  searchable
-                  clearable
-                  radius="md"
-                  size="sm"
-                  leftSection={<IconUser size={14} />}
-                  value={selectedClientId}
-                  onChange={(value) => {
-                    setSelectedClientId(value);
-                    if (value) {
-                      loadClientData(value);
-                      setIsTemplateModeOn(true);
-                    } else {
-                      setSelectedClient(null);
-                      programForm.setFieldValue("client_id", null);
-                      setIsTemplateModeOn(true);
-                    }
-                  }}
-                />
+            <TextInput
+              label="Nombre del programa"
+              placeholder="Programa de Hipertrofia"
+              required
+              radius="md"
+              size="sm"
+              {...programForm.getInputProps("name")}
+            />
 
-                {(selectedClientId || clientId) && (
-                  <Switch
-                    label="Guardar también como plantilla"
-                    description="Guarda una copia reutilizable además del programa del cliente"
-                    checked={isTemplateModeOn}
-                    onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
-                    size="sm"
-                    color="teal"
-                  />
-                )}
+            <Textarea
+              label="Descripción"
+              minRows={2}
+              placeholder="Describe el programa..."
+              radius="md"
+              size="sm"
+              {...programForm.getInputProps("description")}
+            />
 
-                <TextInput
-                  label="Nombre del programa"
-                  placeholder="Programa de Hipertrofia"
-                  required
-                  radius="md"
-                  size="sm"
-                  {...programForm.getInputProps("name")}
-                />
+            <Group grow>
+              <NumberInput
+                label="Duración (sem.)"
+                max={52}
+                min={1}
+                radius="md"
+                size="sm"
+                {...programForm.getInputProps("duration_weeks")}
+              />
+              <Select
+                data={[
+                  { value: "beginner", label: "Principiante" },
+                  { value: "intermediate", label: "Intermedio" },
+                  { value: "advanced", label: "Avanzado" },
+                ]}
+                label="Dificultad"
+                radius="md"
+                size="sm"
+                {...programForm.getInputProps("difficulty")}
+              />
+            </Group>
 
-                <Textarea
-                  label="Descripción"
-                  minRows={2}
-                  placeholder="Describe el programa..."
-                  radius="md"
-                  size="sm"
-                  {...programForm.getInputProps("description")}
-                />
-
-                <Group grow>
-                  <NumberInput
-                    label="Duración (sem.)"
-                    max={52}
-                    min={1}
-                    radius="md"
-                    size="sm"
-                    {...programForm.getInputProps("duration_weeks")}
-                  />
-                  <Select
-                    data={[
-                      { value: "beginner", label: "Principiante" },
-                      { value: "intermediate", label: "Intermedio" },
-                      { value: "advanced", label: "Avanzado" },
-                    ]}
-                    label="Dificultad"
-                    radius="md"
-                    size="sm"
-                    {...programForm.getInputProps("difficulty")}
-                  />
-                </Group>
-
-                <MultiSelect
-                  data={[
-                    { value: "hipertrofia", label: "Hipertrofia" },
-                    { value: "fuerza", label: "Fuerza" },
-                    { value: "pérdida de peso", label: "Pérdida de peso" },
-                    { value: "tonificación", label: "Tonificación" },
-                    { value: "resistencia", label: "Resistencia" },
-                  ]}
-                  label="Etiquetas"
-                  placeholder="Añade etiquetas"
-                  searchable
-                  radius="md"
-                  size="sm"
-                  {...programForm.getInputProps("tags")}
-                />
-              </Stack>
-            </ScrollArea>
-          </Box>
-
-          {/* Right main area - Builder */}
-          <Box className="workout-builder-main" style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            <ScrollArea style={{ flex: 1 }} offsetScrollbars p="lg">
-              <Box style={{ maxWidth: 960, margin: "0 auto" }}>
-                <WorkoutBuilderWithDays
-                  selectedClient={selectedClient}
-                  days={workoutDays}
-                  onChangeDays={setWorkoutDays}
-                  availableExercises={exercises || []}
-                  exerciseFavorites={exerciseFavorites}
-                  onToggleExerciseFavorite={handleToggleExerciseFavorite}
-                  onCreateExercise={handleCreateExerciseFromBuilder}
-                />
-              </Box>
-            </ScrollArea>
-          </Box>
-        </Box>
-      </Drawer>
+            <MultiSelect
+              data={[
+                { value: "hipertrofia", label: "Hipertrofia" },
+                { value: "fuerza", label: "Fuerza" },
+                { value: "pérdida de peso", label: "Pérdida de peso" },
+                { value: "tonificación", label: "Tonificación" },
+                { value: "resistencia", label: "Resistencia" },
+              ]}
+              label="Etiquetas"
+              placeholder="Añade etiquetas"
+              searchable
+              radius="md"
+              size="sm"
+              {...programForm.getInputProps("tags")}
+            />
+          </Stack>
+        }
+        mainContent={
+          <WorkoutBuilderWithDays
+            selectedClient={selectedClient}
+            days={workoutDays}
+            onChangeDays={setWorkoutDays}
+            availableExercises={exercises || []}
+            exerciseFavorites={exerciseFavorites}
+            onToggleExerciseFavorite={handleToggleExerciseFavorite}
+            onCreateExercise={handleCreateExerciseFromBuilder}
+          />
+        }
+      />
 
       {/* Image Enlargement Modal */}
-      <Modal opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} size="lg" title={enlargedImage?.name} centered>
+      <BottomSheet opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} desktopSize="lg" title={enlargedImage?.name} centered>
         {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }
