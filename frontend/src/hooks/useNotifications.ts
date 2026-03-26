@@ -85,12 +85,19 @@ export function useDeleteNotification() {
   });
 }
 
+export interface ChannelPref {
+  email: boolean;
+  in_app: boolean;
+}
+
+export type NotificationPrefsMap = Record<string, ChannelPref>;
+
 export function useNotificationPreferences() {
   return useQuery({
     queryKey: ["notification-preferences"],
     queryFn: async () => {
       const response = await notificationsApi.getPreferences();
-      return response.data as Record<string, boolean>;
+      return response.data as NotificationPrefsMap;
     },
     staleTime: 60000,
   });
@@ -99,7 +106,7 @@ export function useNotificationPreferences() {
 export function useUpdateNotificationPreferences() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Record<string, boolean>) => {
+    mutationFn: async (data: Record<string, Partial<ChannelPref>>) => {
       const response = await notificationsApi.updatePreferences(data);
       return response.data;
     },

@@ -25,6 +25,7 @@ from app.schemas.client import (
 )
 from app.schemas.base import PaginatedResponse, BaseSchema
 from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
+from app.services.notification_service import notify
 
 logger = logging.getLogger(__name__)
 
@@ -314,6 +315,19 @@ async def create_client(
     )
     client = result.scalar_one()
     
+    await notify(
+        db=db,
+        event="new_client",
+        user_id=current_user.id,
+        workspace_id=current_user.workspace_id,
+        title="Nuevo cliente registrado",
+        body=f"{client.first_name} {client.last_name}",
+        link="/clients",
+        notification_type="client",
+        email_subject=f"Nuevo cliente: {client.first_name} {client.last_name}",
+        email_html=f"<p>Se ha registrado un nuevo cliente: <strong>{client.first_name} {client.last_name}</strong> ({client.email}).</p>",
+    )
+
     return ClientResponse(
         id=client.id,
         workspace_id=client.workspace_id,

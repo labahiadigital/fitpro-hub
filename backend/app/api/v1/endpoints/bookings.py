@@ -12,6 +12,7 @@ from app.models.client import Client
 from app.models.google_calendar import CalendarSyncMapping
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
 from app.services.google_calendar import google_calendar_service
+from app.services.notification_service import notify
 import logging
 
 logger = logging.getLogger(__name__)
@@ -315,7 +316,21 @@ async def create_booking(
         organizer_id=current_user.id,
         client_id=data.client_id
     )
-    
+
+    start_str = booking.start_time.strftime("%d/%m/%Y %H:%M") if booking.start_time else ""
+    await notify(
+        db=db,
+        event="booking_created",
+        user_id=current_user.id,
+        workspace_id=current_user.workspace_id,
+        title="Nueva reserva creada",
+        body=f"{booking.title} — {start_str}",
+        link="/calendar",
+        notification_type="booking",
+        email_subject=f"Nueva reserva: {booking.title}",
+        email_html=f"<p>Se ha creado la reserva <strong>{booking.title}</strong> para el {start_str}.</p>",
+    )
+
     return booking
 
 
@@ -509,7 +524,20 @@ async def cancel_booking(
         organizer_id=booking.organizer_id,
         client_id=booking.client_id
     )
-    
+
+    await notify(
+        db=db,
+        event="booking_cancelled",
+        user_id=booking.organizer_id,
+        workspace_id=current_user.workspace_id,
+        title="Reserva cancelada",
+        body=f"{booking.title} ha sido cancelada",
+        link="/calendar",
+        notification_type="booking",
+        email_subject=f"Reserva cancelada: {booking.title}",
+        email_html=f"<p>La reserva <strong>{booking.title}</strong> ha sido cancelada.</p>",
+    )
+
     return booking
 
 

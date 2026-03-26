@@ -190,22 +190,47 @@ async def delete_notification(
     await db.commit()
 
 
+# ---------------------------------------------------------------------------
 # Notification preferences stored in users.preferences JSONB
+# ---------------------------------------------------------------------------
+# Each event has two independent channels: email and in_app (bell icon).
+# Structure: { "notifications": { "booking_created": { "email": true, "in_app": true }, ... } }
+# ---------------------------------------------------------------------------
 
 from pydantic import BaseModel as _BaseModel
 
+NOTIFICATION_EVENTS = [
+    "booking_created",
+    "booking_cancelled",
+    "payment_received",
+    "payment_failed",
+    "new_message",
+    "new_client",
+    "form_submitted",
+    "progress_milestone",
+]
+
+_DEFAULT_CHANNELS = {"email": True, "in_app": True}
+
+
+def _full_defaults() -> dict:
+    return {event: dict(_DEFAULT_CHANNELS) for event in NOTIFICATION_EVENTS}
+
+
+class ChannelPreference(_BaseModel):
+    email: Optional[bool] = None
+    in_app: Optional[bool] = None
+
+
 class NotificationPreferencesUpdate(_BaseModel):
-    email_booking_created: Optional[bool] = None
-    email_booking_cancelled: Optional[bool] = None
-    email_booking_reminder: Optional[bool] = None
-    email_payment_received: Optional[bool] = None
-    email_payment_failed: Optional[bool] = None
-    email_new_message: Optional[bool] = None
-    email_new_client: Optional[bool] = None
-    email_form_submitted: Optional[bool] = None
-    email_plan_updated: Optional[bool] = None
-    email_progress_milestone: Optional[bool] = None
-    push_enabled: Optional[bool] = None
+    booking_created: Optional[ChannelPreference] = None
+    booking_cancelled: Optional[ChannelPreference] = None
+    payment_received: Optional[ChannelPreference] = None
+    payment_failed: Optional[ChannelPreference] = None
+    new_message: Optional[ChannelPreference] = None
+    new_client: Optional[ChannelPreference] = None
+    form_submitted: Optional[ChannelPreference] = None
+    progress_milestone: Optional[ChannelPreference] = None
 
 
 @router.get("/preferences")
@@ -213,21 +238,19 @@ async def get_notification_preferences(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    prefs = (current_user.user.preferences or {}).get("notifications", {})
-    defaults = {
-        "email_booking_created": True,
-        "email_booking_cancelled": True,
-        "email_booking_reminder": True,
-        "email_payment_received": True,
-        "email_payment_failed": True,
-        "email_new_message": True,
-        "email_new_client": True,
-        "email_form_submitted": True,
-        "email_plan_updated": True,
-        "email_progress_milestone": True,
-        "push_enabled": True,
-    }
-    return {**defaults, **prefs}
+    stored = (current_user.user.preferences or {}).get("notifications", {})
+    defaults = _full_defaults()
+
+    if isinstance(stored, dict):
+        for event, channels in stored.items():
+            if event in defaults and isinstance(channels, dict):
+                defaults[event].update(channels)
+            elif event.startswith("email_") and isinstance(channels, bool):
+                short = event.replace("email_", "", 1)
+                if short in defaults:
+                    defaults[short]["email"] = channels
+
+    return defaults
 
 
 @router.patch("/preferences")
@@ -243,10 +266,21 @@ async def update_notification_preferences(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     current_prefs = dict(user.preferences or {})
-    notif_prefs = current_prefs.get("notifications", {})
-    for key, value in data.model_dump(exclude_unset=True).items():
-        if value is not None:
-            notif_prefs[key] = value
+    notif_prefs: dict = current_prefs.get("notifications", {})
+
+    if not isinstance(notif_prefs, dict) or any(
+        not isinstance(v, dict) for v in notif_prefs.values() if isinstance(v, dict)
+    ):
+        notif_prefs = _full_defaults()
+
+    for event_name in NOTIFICATION_EVENTS:
+        channel_update = getattr(data, event_name, None)
+        if channel_update is None:
+            continue
+        existing = notif_prefs.get(event_name, dict(_DEFAULT_CHANNELS))
+        patch = channel_update.model_dump(exclude_unset=True)
+        existing.update(patch)
+        notif_prefs[event_name] = existing
 
     current_prefs["notifications"] = notif_prefs
     user.preferences = current_prefs

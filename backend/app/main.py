@@ -97,6 +97,9 @@ class ProxySchemeMiddleware(BaseHTTPMiddleware):
 if settings.APP_ENV == "production":
     app.add_middleware(ProxySchemeMiddleware)
 
+from app.middleware.permissions import PermissionsMiddleware
+app.add_middleware(PermissionsMiddleware)
+
 access_logger = logging.getLogger("api.access")
 
 @app.middleware("http")

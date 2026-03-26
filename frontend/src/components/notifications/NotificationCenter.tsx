@@ -27,6 +27,7 @@ import {
   IconUser,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -76,6 +77,7 @@ export function NotificationCenter({
   onClearAll,
 }: NotificationCenterProps) {
   const [activeTab, setActiveTab] = useState<string | null>("all");
+  const navigate = useNavigate();
 
   const filteredNotifications = notifications.filter((n) => {
     if (activeTab === "all") return true;
@@ -275,6 +277,10 @@ export function NotificationCenter({
             leftSection={<IconSettings size={14} />}
             size="sm"
             variant="subtle"
+            onClick={() => {
+              onClose();
+              navigate("/settings?tab=notifications");
+            }}
           >
             Configurar notificaciones
           </Button>

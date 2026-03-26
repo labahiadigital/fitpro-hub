@@ -13,6 +13,7 @@ from app.models.payment import StripeAccount, Subscription, Payment, Subscriptio
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
 from app.services.auto_invoice import create_invoice_for_payment
+from app.services.notification_service import notify
 
 router = APIRouter()
 
@@ -527,6 +528,19 @@ async def mark_payment_paid(
         db, payment,
         user_id=getattr(current_user, "user_id", None) or getattr(getattr(current_user, "user", None), "id", None),
         user_name=getattr(getattr(current_user, "user", current_user), "full_name", None),
+    )
+
+    await notify(
+        db=db,
+        event="payment_received",
+        user_id=current_user.id,
+        workspace_id=current_user.workspace_id,
+        title="Pago recibido",
+        body=f"{float(payment.amount):.2f} EUR — {payment.description}",
+        link="/billing",
+        notification_type="payment",
+        email_subject=f"Pago recibido: {float(payment.amount):.2f} EUR",
+        email_html=f"<p>Se ha registrado un pago de <strong>{float(payment.amount):.2f} EUR</strong> — {payment.description}.</p>",
     )
 
     await db.commit()
