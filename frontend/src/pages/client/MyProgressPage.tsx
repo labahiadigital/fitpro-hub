@@ -21,6 +21,7 @@ import {
   Textarea,
   FileButton,
   Image,
+  ActionIcon,
   ScrollArea,
   SegmentedControl,
   Select,
@@ -37,10 +38,11 @@ import {
   IconScale,
   IconTrendingUp,
   IconTrendingDown,
+  IconTrash,
   IconUpload,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
-import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos } from "../../hooks/useClientPortal";
+import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos, useDeleteProgressPhoto } from "../../hooks/useClientPortal";
 import { formatDecimal } from "../../utils/format";
 
 function StatProgress({ 
@@ -470,6 +472,7 @@ export function MyProgressPage() {
   const { data: photos = [] } = useProgressPhotos(50);
   const createMeasurementMutation = useCreateMeasurement();
   const uploadPhotoMutation = useUploadProgressPhoto();
+  const deletePhotoMutation = useDeleteProgressPhoto();
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [photoModalOpened, { open: openPhotoModal, close: closePhotoModal }] = useDisclosure(false);
   const [enlargedPhoto, setEnlargedPhoto] = useState<{ url: string; type: string; date?: string } | null>(null);
@@ -506,7 +509,7 @@ export function MyProgressPage() {
               }),
         photos: items,
       }));
-  }, [photos]);
+  }, [filteredPhotos]);
 
   const handlePhotoClick = (photo: { url: string; type: string; measurement_date?: string; uploaded_at?: string }) => {
     setEnlargedPhoto({
@@ -1082,9 +1085,24 @@ export function MyProgressPage() {
                           padding="xs"
                           radius="md"
                           withBorder
-                          style={{ cursor: "pointer" }}
+                          style={{ cursor: "pointer", position: "relative" }}
                           onClick={() => handlePhotoClick(photo)}
                         >
+                          <ActionIcon
+                            variant="filled"
+                            color="red"
+                            size="sm"
+                            radius="xl"
+                            style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm("¿Eliminar esta foto?")) {
+                                deletePhotoMutation.mutate(photo.ref_url || photo.url);
+                              }
+                            }}
+                          >
+                            <IconTrash size={14} />
+                          </ActionIcon>
                           <Card.Section>
                             <Image
                               src={photo.url}

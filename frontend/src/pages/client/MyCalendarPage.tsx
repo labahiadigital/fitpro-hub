@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Box,
   Card,
   Group,
@@ -19,18 +20,20 @@ import { useDisclosure } from "@mantine/hooks";
 import {
   IconCalendarEvent,
   IconCalendarPlus,
+  IconChevronLeft,
+  IconChevronRight,
   IconClock,
   IconMapPin,
   IconUser,
   IconVideo,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMyBookings, useAvailableSlots, useCreateClientBooking } from "../../hooks/useClientPortal";
 
-function getWeekDays() {
+function getWeekDays(weekOffset: number) {
   const today = new Date();
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay() + 1);
+  startOfWeek.setDate(today.getDate() - today.getDay() + 1 + weekOffset * 7);
 
   const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
   return labels.map((day, index) => {
@@ -145,6 +148,7 @@ export function MyCalendarPage() {
   const { data: upcomingBookings, isLoading: isLoadingUpcoming } = useMyBookings({ upcoming_only: true, limit: 20 });
   const { data: allBookings, isLoading: isLoadingAll } = useMyBookings({ limit: 50 });
   const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
   const [bookingModalOpened, { open: openBookingModal, close: closeBookingModal }] = useDisclosure(false);
 
   const isLoading = isLoadingUpcoming || isLoadingAll;
@@ -182,23 +186,37 @@ export function MyCalendarPage() {
       time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
     }));
 
-  const weekDays = getWeekDays();
-  const bookingDates = new Set(
-    (upcomingBookings || []).map(b => new Date(b.start_time).toDateString())
+  const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
+  const allBookingDates = new Set(
+    [...(upcomingBookings || []), ...(allBookings || [])].map(b => new Date(b.start_time).toDateString())
   );
   weekDays.forEach(d => {
-    d.hasSession = bookingDates.has(d.fullDate.toDateString());
+    d.hasSession = allBookingDates.has(d.fullDate.toDateString());
   });
 
-  const rawMonth = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  const currentMonth = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+  const weekStart = weekDays[0].fullDate;
+  const weekEnd = weekDays[6].fullDate;
+  const weekMonthLabel = (() => {
+    const startMonth = weekStart.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    const endMonth = weekEnd.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    if (startMonth === endMonth) return capitalize(startMonth);
+    return `${capitalize(weekStart.toLocaleDateString('es-ES', { month: 'short' }))} - ${capitalize(endMonth)}`;
+  })();
+
+  const weekStartStr = weekDays[0].fullDate.toDateString();
+  const weekEndStr = weekDays[6].fullDate.toDateString();
+  const isInSelectedWeek = (d: Date) => {
+    const ds = d.toDateString();
+    return ds >= weekStartStr && ds <= weekEndStr;
+  };
 
   const filteredUpcoming = selectedDayDate
     ? upcomingSessions.filter(s => s.startDate.toDateString() === selectedDayDate)
-    : upcomingSessions;
+    : upcomingSessions.filter(s => weekOffset === 0 || isInSelectedWeek(s.startDate));
   const filteredPast = selectedDayDate
     ? pastSessions.filter(s => s.startDate.toDateString() === selectedDayDate)
-    : pastSessions;
+    : pastSessions.filter(s => weekOffset === 0 || isInSelectedWeek(s.startDate));
 
   return (
     <Box p="xl">
@@ -215,7 +233,20 @@ export function MyCalendarPage() {
       {/* Week Overview */}
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
         <Group justify="space-between" mb="md">
-          <Text fw={600}>Esta Semana - {currentMonth}</Text>
+          <Group gap="xs">
+            <ActionIcon variant="subtle" color="gray" onClick={() => setWeekOffset(o => o - 1)}>
+              <IconChevronLeft size={18} />
+            </ActionIcon>
+            <Text fw={600}>{weekOffset === 0 ? "Esta Semana" : `Semana del ${weekDays[0].fullDate.getDate()}`} - {weekMonthLabel}</Text>
+            <ActionIcon variant="subtle" color="gray" onClick={() => setWeekOffset(o => o + 1)}>
+              <IconChevronRight size={18} />
+            </ActionIcon>
+            {weekOffset !== 0 && (
+              <Button variant="subtle" size="xs" color="yellow" onClick={() => setWeekOffset(0)}>
+                Hoy
+              </Button>
+            )}
+          </Group>
           {selectedDayDate && (
             <Button variant="subtle" size="xs" color="gray" onClick={() => setSelectedDayDate(null)}>
               Ver todas

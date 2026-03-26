@@ -157,7 +157,7 @@ export function ClientDashboardPage() {
               color="dark"
               leftSection={<IconPlayerPlay size={16} />}
               radius="md"
-              onClick={() => navigate("/my-workouts")}
+              onClick={() => navigate("/my-calendar")}
             >
               Ver detalles
             </Button>

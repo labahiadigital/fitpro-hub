@@ -722,8 +722,9 @@ export function useProgressSummary() {
 }
 
 // Photos hooks
-interface ProgressPhoto {
+export interface ProgressPhoto {
   url: string;
+  ref_url?: string;
   type: string;
   notes?: string;
   uploaded_at: string;
@@ -762,6 +763,34 @@ export function useUploadProgressPhoto() {
       notifications.show({
         title: "Error",
         message: error.message || "No se pudo subir la foto",
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useDeleteProgressPhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (photoUrl: string) => {
+      const response = await clientPortalApi.deletePhoto(photoUrl);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["progress-photos"] });
+      queryClient.invalidateQueries({ queryKey: ["my-measurements"] });
+      queryClient.invalidateQueries({ queryKey: ["progress-summary"] });
+      notifications.show({
+        title: "Foto eliminada",
+        message: "La foto de progreso ha sido eliminada",
+        color: "green",
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        title: "Error",
+        message: error.message || "No se pudo eliminar la foto",
         color: "red",
       });
     },

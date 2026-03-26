@@ -1413,10 +1413,60 @@ async def get_progress_photos(
                 p = dict(photo)
                 p["measurement_date"] = m.measured_at.isoformat() if m.measured_at else None
                 if p.get("url"):
+                    p["ref_url"] = p["url"]
                     p["url"] = await resolve_url(p["url"])
                 all_photos.append(p)
 
     return all_photos
+
+
+@router.delete("/progress/photos")
+async def delete_progress_photo(
+    photo_url: str = Query(..., description="Reference URL of the photo to delete"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a specific progress photo by its stored reference URL."""
+    from sqlalchemy.orm.attributes import flag_modified
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    result = await db.execute(
+        select(ClientMeasurement)
+        .where(ClientMeasurement.client_id == client.id)
+        .where(ClientMeasurement.photos != None)
+    )
+    measurements = result.scalars().all()
+
+    found = False
+    for m in measurements:
+        if not m.photos:
+            continue
+        original_len = len(m.photos)
+        m.photos = [p for p in m.photos if p.get("url") != photo_url]
+        if len(m.photos) < original_len:
+            found = True
+            flag_modified(m, "photos")
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail="Foto no encontrada")
+
+    await db.commit()
+
+    from app.core.storage import workspace_key_from_url, delete_workspace_file
+    key = workspace_key_from_url(photo_url)
+    if key and key.startswith("w/"):
+        parts = key.split("/")
+        if len(parts) >= 2:
+            ws_id = parts[1]
+            remaining = parts[2:]
+            try:
+                await delete_workspace_file(ws_id, *remaining)
+            except Exception:
+                pass
+
+    return {"success": True}
 
 
 @router.get("/progress/summary")

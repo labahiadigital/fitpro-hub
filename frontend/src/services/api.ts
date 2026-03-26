@@ -633,6 +633,8 @@ export const clientPortalApi = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+  deletePhoto: (photoUrl: string) =>
+    api.delete("/my/progress/photos", { params: { photo_url: photoUrl } }),
   
   // Calendar/Bookings
   bookings: (params?: { status?: string; upcoming_only?: boolean; limit?: number }) =>

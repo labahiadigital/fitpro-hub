@@ -340,6 +340,17 @@ interface PlanMealFoodItem {
   unit: string;
 }
 
+interface SupplementData {
+  id: string;
+  name: string;
+  brand?: string;
+  calories: string | number;
+  protein: string | number;
+  carbs: string | number;
+  fat: string | number;
+  serving_size: string;
+}
+
 interface PlanMeal {
   id: string;
   name: string;
@@ -347,19 +358,20 @@ interface PlanMeal {
   items: Array<{
     id: string;
     food_id?: string;
+    supplement_id?: string;
     food?: {
       id: string;
       name: string;
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
+      calories: string | number;
+      protein: string | number;
+      carbs: string | number;
+      fat: string | number;
       serving_size: string;
     };
+    supplement?: SupplementData;
     quantity_grams: number;
     type: "food" | "supplement";
   }>;
-  // Also support alternate structure with foods array
   foods?: PlanMealFoodItem[];
 }
 
@@ -417,14 +429,15 @@ function LogPlanMealModal({
     if (selectedItems.length === 0) return;
 
     const foods: FoodItem[] = selectedItems.map((item) => {
-      const servingSize = parseFloat(item.food?.serving_size || "100") || 100;
+      const food = item.food || item.supplement;
+      const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
       const factor = item.quantity_grams / servingSize;
       return {
-        name: item.food?.name || "Alimento",
-        calories: Math.round((item.food?.calories || 0) * factor),
-        protein: Math.round((item.food?.protein || 0) * factor),
-        carbs: Math.round((item.food?.carbs || 0) * factor),
-        fat: Math.round((item.food?.fat || 0) * factor),
+        name: food?.name || "Alimento",
+        calories: Math.round(Number(food?.calories || 0) * factor),
+        protein: Math.round(Number(food?.protein || 0) * factor),
+        carbs: Math.round(Number(food?.carbs || 0) * factor),
+        fat: Math.round(Number(food?.fat || 0) * factor),
         quantity: item.quantity_grams,
       };
     });
@@ -455,13 +468,14 @@ function LogPlanMealModal({
       .filter((item) => checkedItems[item.id])
       .reduce(
         (acc, item) => {
-          const servingSize = parseFloat(item.food?.serving_size || "100") || 100;
+          const food = item.food || item.supplement;
+          const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
           const factor = item.quantity_grams / servingSize;
           return {
-            calories: acc.calories + Math.round((item.food?.calories || 0) * factor),
-            protein: acc.protein + Math.round((item.food?.protein || 0) * factor),
-            carbs: acc.carbs + Math.round((item.food?.carbs || 0) * factor),
-            fat: acc.fat + Math.round((item.food?.fat || 0) * factor),
+            calories: acc.calories + Math.round(Number(food?.calories || 0) * factor),
+            protein: acc.protein + Math.round(Number(food?.protein || 0) * factor),
+            carbs: acc.carbs + Math.round(Number(food?.carbs || 0) * factor),
+            fat: acc.fat + Math.round(Number(food?.fat || 0) * factor),
           };
         },
         { calories: 0, protein: 0, carbs: 0, fat: 0 }
@@ -515,7 +529,7 @@ function LogPlanMealModal({
                       <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
                     </Box>
                     <Badge variant="light" size="sm">
-                      {Math.round((item.food?.calories || 0) * (item.quantity_grams / (parseFloat(item.food?.serving_size || "100") || 100)))} kcal
+                      {Math.round(Number(item.food?.calories || item.supplement?.calories || 0) * (item.quantity_grams / (parseFloat(String(item.food?.serving_size || item.supplement?.serving_size || "100")) || 100)))} kcal
                     </Badge>
                   </Group>
                 }
@@ -1077,8 +1091,9 @@ export function MyNutritionPage() {
             const mealCalories = isRegistered 
               ? mealLogs.reduce((sum, l) => sum + (l.total_calories || 0), 0)
               : meal.items.reduce((sum, item) => {
-                  const ss = parseFloat(item.food?.serving_size || "100") || 100;
-                  return sum + Math.round((item.food?.calories || 0) * (item.quantity_grams / ss));
+                  const food = item.food || item.supplement;
+                  const ss = parseFloat(String(food?.serving_size || "100")) || 100;
+                  return sum + Math.round(Number(food?.calories || 0) * (item.quantity_grams / ss));
                 }, 0);
 
             return (
@@ -1292,20 +1307,26 @@ export function MyNutritionPage() {
                       {weekData[selectedWeekDayIndex].planMeals.map((meal: PlanMeal, mealIndex: number) => {
                         const mealType = MEAL_TYPES.find(m => m.value === meal.name);
                         // Support both foods array and items array
-                        const mealFoods = meal.foods || meal.items?.map(item => ({
-                          name: item.food?.name || "Alimento",
-                          calories: item.food?.calories || 0,
-                          protein_g: item.food?.protein || 0,
-                          carbs_g: item.food?.carbs || 0,
-                          fat_g: item.food?.fat || 0,
-                          quantity: item.quantity_grams || 0,
-                          unit: "g",
-                        })) || [];
+                        const mealFoods = meal.foods || meal.items?.map(item => {
+                          const food = item.food || item.supplement;
+                          const ss = parseFloat(String(food?.serving_size || "100")) || 100;
+                          const qty = item.quantity_grams || 0;
+                          const factor = qty / ss;
+                          return {
+                            name: food?.name || "Alimento",
+                            calories: Math.round(Number(food?.calories || 0) * factor),
+                            protein_g: Math.round(Number(food?.protein || 0) * factor * 10) / 10,
+                            carbs_g: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
+                            fat_g: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
+                            quantity: qty,
+                            unit: "g",
+                          };
+                        }) || [];
                         
-                        const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.calories || 0), 0);
-                        const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.protein_g || 0), 0);
-                        const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.carbs_g || 0), 0);
-                        const totalFat = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (f.fat_g || 0), 0);
+                        const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
+                        const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.protein_g) || 0), 0);
+                        const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.carbs_g) || 0), 0);
+                        const totalFat = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.fat_g) || 0), 0);
                         
                         const MealIcon = mealType?.icon || IconSalad;
                         
