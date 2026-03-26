@@ -58,6 +58,7 @@ import {
 import { useCreateInvitation, useInvitations, useResendInvitation, useCancelInvitation } from "../../hooks/useInvitations";
 import { productsApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+import { formatDecimal } from "../../utils/format";
 
 function getClientStatus(client: { is_active: boolean; has_user_account?: boolean }): string {
   if (!client.is_active) return "inactive";
@@ -227,7 +228,7 @@ export function ClientsPage() {
           .filter((p: any) => p.is_active)
           .map((p: any) => ({
             value: p.id,
-            label: `${p.name} - ${Number(p.price).toFixed(2)}€/${p.interval || "mes"}`,
+            label: `${p.name} - ${formatDecimal(Number(p.price), 2)}€/${p.interval || "mes"}`,
           }));
         setProductOptions(opts);
       }).catch(() => {});

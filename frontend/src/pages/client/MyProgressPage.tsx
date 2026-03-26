@@ -41,6 +41,7 @@ import {
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos } from "../../hooks/useClientPortal";
+import { formatDecimal } from "../../utils/format";
 
 function StatProgress({ 
   label, 
@@ -75,7 +76,7 @@ function StatProgress({
             variant="light"
             leftSection={isPositive ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
           >
-            {change > 0 ? "+" : ""}{change.toFixed(1)}{unit}
+            {change > 0 ? "+" : ""}{formatDecimal(change, 1)}{unit}
           </Badge>
         )}
       </Group>
@@ -851,10 +852,10 @@ export function MyProgressPage() {
                             
                             {/* Y-axis labels (weight scale on left) */}
                             <text x={padding.left - 10} y={padding.top} textAnchor="end" fontSize="10" fill="#fab005">
-                              {maxWeight.toFixed(0)}
+                              {formatDecimal(maxWeight, 0)}
                             </text>
                             <text x={padding.left - 10} y={height - padding.bottom} textAnchor="end" fontSize="10" fill="#fab005">
-                              {minWeight.toFixed(0)}
+                              {formatDecimal(minWeight, 0)}
                             </text>
                           </svg>
                         </Box>
@@ -908,7 +909,7 @@ export function MyProgressPage() {
                         color={(data.weightHistory[data.weightHistory.length - 1]?.weight - data.weightHistory[0]?.weight) <= 0 ? "green" : "red"}
                         variant="light"
                       >
-                        {((data.weightHistory[data.weightHistory.length - 1]?.weight || 0) - (data.weightHistory[0]?.weight || 0)).toFixed(1)} kg
+                        {formatDecimal((data.weightHistory[data.weightHistory.length - 1]?.weight || 0) - (data.weightHistory[0]?.weight || 0), 1)} kg
                       </Badge>
                     </Box>
                   )}
@@ -1017,7 +1018,7 @@ export function MyProgressPage() {
                               size="sm"
                               variant="light"
                             >
-                              {weightChange > 0 ? "+" : ""}{weightChange.toFixed(1)} kg
+                              {weightChange > 0 ? "+" : ""}{formatDecimal(weightChange, 1)} kg
                             </Badge>
                           )}
                         </Table.Td>

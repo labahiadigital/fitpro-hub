@@ -17,7 +17,6 @@ import {
   Center,
   Loader,
   Modal,
-  Menu,
   NumberInput,
   Textarea,
   Checkbox,
@@ -31,13 +30,11 @@ import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { useState } from "react";
 import {
-  IconArrowsExchange,
   IconBarbell,
   IconCalendarEvent,
   IconCheck,
   IconChevronRight,
   IconClock,
-  IconDotsVertical,
   IconFlame,
   IconPlayerPlay,
   IconRepeat,
@@ -49,6 +46,8 @@ import {
   IconSearch,
 } from "@tabler/icons-react";
 import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory } from "../../hooks/useClientPortal";
+import { FullPageDetail } from "../../components/common/FullPageDetail";
+import { DayCardMenu } from "../../components/common/DayCardMenu";
 
 // No mock data - all data comes from backend
 
@@ -66,6 +65,9 @@ interface SetLog {
   weight_kg?: number;
   reps_completed?: number;
   duration_seconds?: number;
+  distance_km?: number;
+  speed_kmh?: number;
+  duration_minutes?: number;
   completed: boolean;
   notes?: string;
 }
@@ -127,7 +129,13 @@ function checkAchievements(
   return achievements;
 }
 
-// Row component for each exercise - fetches and shows last session + per-set inputs
+const CARDIO_KEYWORDS = ["caminar", "correr", "trotar", "bicicleta", "elíptica", "nadar", "remo", "saltar", "cardio", "cinta", "andar"];
+
+function isCardioExercise(name: string): boolean {
+  const lower = name.toLowerCase();
+  return CARDIO_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 function ExerciseLogRow({
   exercise,
   setData,
@@ -139,6 +147,7 @@ function ExerciseLogRow({
 }) {
   const { data: history } = useExerciseHistory(exercise.exercise_id, 1);
   const lastSession = history?.[0];
+  const cardio = isCardioExercise(exercise.name);
 
   const updateSet = (index: number, updates: Partial<SetLog>) => {
     const newSets = [...setData];
@@ -154,46 +163,94 @@ function ExerciseLogRow({
           <Text size="xs" c="dimmed" fw={600}>
             Última vez ({lastSession.date ? new Date(lastSession.date).toLocaleDateString("es-ES") : "—"}):
           </Text>
-          {((lastSession.exercise?.sets ?? []) as Array<{ set_number?: number; weight_kg?: number; reps_completed?: number; duration_seconds?: number }>).map((set, i) => (
+          {((lastSession.exercise?.sets ?? []) as Array<{ set_number?: number; weight_kg?: number; reps_completed?: number; duration_seconds?: number; distance_km?: number; speed_kmh?: number; duration_minutes?: number }>).map((set, i) => (
             <Text key={i} size="xs" c="dimmed">
-              Serie {set.set_number ?? i + 1}: {set.weight_kg != null ? `${set.weight_kg}kg` : "—"} x {set.reps_completed != null ? `${set.reps_completed} reps` : set.duration_seconds != null ? `${set.duration_seconds}s` : "—"}
+              {cardio
+                ? `${set.duration_minutes ?? "—"} min • ${set.distance_km ?? "—"} km • ${set.speed_kmh ?? "—"} km/h`
+                : `Serie ${set.set_number ?? i + 1}: ${set.weight_kg != null ? `${set.weight_kg}kg` : "—"} x ${set.reps_completed != null ? `${set.reps_completed} reps` : set.duration_seconds != null ? `${set.duration_seconds}s` : "—"}`
+              }
             </Text>
           ))}
         </Box>
       )}
       <Stack gap="xs">
-        {setData.map((set, idx) => (
-          <Group key={idx} gap="sm" wrap="nowrap">
-            <Text size="xs" w={60}>Serie {idx + 1}:</Text>
-            {(exercise.target_weight != null || exercise.target_reps != null) && (
-              <Text size="xs" c="dimmed">Objetivo: {exercise.target_weight ?? "—"}kg x {exercise.target_reps ?? exercise.reps ?? "—"}</Text>
-            )}
-            <NumberInput
-              placeholder="kg"
-              size="xs"
-              value={set.weight_kg ?? ""}
-              onChange={(v) => updateSet(idx, { weight_kg: v ? Number(v) : undefined })}
-              min={0}
-              max={500}
-              w={70}
-            />
-            <NumberInput
-              placeholder="reps."
-              size="xs"
-              value={set.reps_completed ?? ""}
-              onChange={(v) => updateSet(idx, { reps_completed: v ? Number(v) : undefined })}
-              min={0}
-              max={200}
-              w={70}
-            />
-            <Checkbox
-              label="Hecho"
-              checked={set.completed}
-              onChange={(e) => updateSet(idx, { completed: e.currentTarget.checked })}
-              size="xs"
-            />
-          </Group>
-        ))}
+        {setData.map((set, idx) =>
+          cardio ? (
+            <Group key={idx} gap="sm" wrap="wrap">
+              <Text size="xs" w={60}>Sesión {idx + 1}:</Text>
+              <NumberInput
+                placeholder="min"
+                label={idx === 0 ? "Tiempo (min)" : undefined}
+                size="xs"
+                value={set.duration_minutes ?? ""}
+                onChange={(v) => updateSet(idx, { duration_minutes: v ? Number(v) : undefined })}
+                min={0}
+                max={600}
+                w={90}
+                decimalScale={0}
+              />
+              <NumberInput
+                placeholder="km"
+                label={idx === 0 ? "Distancia (km)" : undefined}
+                size="xs"
+                value={set.distance_km ?? ""}
+                onChange={(v) => updateSet(idx, { distance_km: v ? Number(v) : undefined })}
+                min={0}
+                max={100}
+                w={90}
+                decimalScale={2}
+              />
+              <NumberInput
+                placeholder="km/h"
+                label={idx === 0 ? "Velocidad" : undefined}
+                size="xs"
+                value={set.speed_kmh ?? ""}
+                onChange={(v) => updateSet(idx, { speed_kmh: v ? Number(v) : undefined })}
+                min={0}
+                max={50}
+                w={90}
+                decimalScale={1}
+              />
+              <Checkbox
+                label="Hecho"
+                checked={set.completed}
+                onChange={(e) => updateSet(idx, { completed: e.currentTarget.checked })}
+                size="xs"
+              />
+            </Group>
+          ) : (
+            <Group key={idx} gap="sm" wrap="nowrap">
+              <Text size="xs" w={60}>Serie {idx + 1}:</Text>
+              {(exercise.target_weight != null || exercise.target_reps != null) && (
+                <Text size="xs" c="dimmed">Objetivo: {exercise.target_weight ?? "—"}kg x {exercise.target_reps ?? exercise.reps ?? "—"}</Text>
+              )}
+              <NumberInput
+                placeholder="kg"
+                size="xs"
+                value={set.weight_kg ?? ""}
+                onChange={(v) => updateSet(idx, { weight_kg: v ? Number(v) : undefined })}
+                min={0}
+                max={500}
+                w={70}
+              />
+              <NumberInput
+                placeholder="reps."
+                size="xs"
+                value={set.reps_completed ?? ""}
+                onChange={(v) => updateSet(idx, { reps_completed: v ? Number(v) : undefined })}
+                min={0}
+                max={200}
+                w={70}
+              />
+              <Checkbox
+                label="Hecho"
+                checked={set.completed}
+                onChange={(e) => updateSet(idx, { completed: e.currentTarget.checked })}
+                size="xs"
+              />
+            </Group>
+          )
+        )}
       </Stack>
     </Paper>
   );
@@ -260,6 +317,9 @@ function LogWorkoutModal({
         weight_kg?: number;
         reps_completed?: number;
         duration_seconds?: number;
+        distance_km?: number;
+        speed_kmh?: number;
+        duration_minutes?: number;
         completed?: boolean;
         notes?: string;
       }>;
@@ -309,6 +369,9 @@ function LogWorkoutModal({
           weight_kg: s.weight_kg,
           reps_completed: s.reps_completed,
           duration_seconds: s.duration_seconds,
+          distance_km: s.distance_km,
+          speed_kmh: s.speed_kmh,
+          duration_minutes: s.duration_minutes,
           completed: s.completed,
           notes: s.notes,
         })),
@@ -658,7 +721,7 @@ export function MyWorkoutsPage() {
     currentExerciseName: string;
     currentExerciseId?: string;
   } | null>(null);
-  const [customSchedule, setCustomSchedule] = useState<Array<{
+  const [customSchedule, _setCustomSchedule] = useState<Array<{
     day: string;
     dayName: string;
     type: string;
@@ -767,18 +830,6 @@ export function MyWorkoutsPage() {
   });
 
   const displaySchedule = customSchedule ?? weekSchedule;
-
-  const handleMoveDayTo = (fromIndex: number, toIndex: number) => {
-    setCustomSchedule((prev) => {
-      const base = prev ?? [...weekSchedule];
-      const updated = [...base];
-      const fromContent = { ...updated[fromIndex] };
-      const toContent = { ...updated[toIndex] };
-      updated[fromIndex] = { ...toContent, day: weekDays[fromIndex] };
-      updated[toIndex] = { ...fromContent, day: weekDays[toIndex] };
-      return updated;
-    });
-  };
 
   // Check if today's workout has already been completed
   const isTodayCompleted = activeProgram && todayLogs?.completed_program_ids?.includes(activeProgram.id);
@@ -1182,212 +1233,110 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <Stack gap="lg">
-            {/* Week day cards */}
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-              {displaySchedule.map((day, index) => {
-                const isToday = index + 1 === todayDayNum;
-                const isSelected = selectedDayIndex === index;
-                return (
-                  <Card 
-                    key={index} 
-                    shadow="sm" 
-                    padding="md" 
-                    radius="md" 
-                    withBorder
-                    style={{
-                      borderColor: isSelected ? "var(--mantine-color-blue-5)" : isToday ? "var(--mantine-color-yellow-5)" : undefined,
-                      backgroundColor: isSelected ? "var(--mantine-color-blue-0)" : isToday ? "var(--mantine-color-yellow-0)" : undefined,
-                      cursor: day.isRestDay ? "default" : "pointer",
-                    }}
-                    onClick={() => !day.isRestDay && setSelectedDayIndex(isSelected ? null : index)}
-                  >
-                    <Group justify="space-between" mb="xs">
-                      <Group gap="xs">
-                        <Text fw={600}>{weekDays[index]}</Text>
-                        {isToday && <Badge size="xs" color="yellow">Hoy</Badge>}
-                        {isSelected && <Badge size="xs" color="blue">Seleccionado</Badge>}
-                      </Group>
-                      <Group gap={4}>
-                        {day.completed && (
-                          <ThemeIcon color="green" size="sm" radius="xl">
-                            <IconCheck size={12} />
-                          </ThemeIcon>
-                        )}
-                        {!day.isRestDay && (
-                          <Menu shadow="md" width={180} position="bottom-end" withinPortal>
-                            <Menu.Target>
-                              <ActionIcon
-                                variant="subtle"
-                                color="gray"
-                                size="sm"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <IconDotsVertical size={14} />
-                              </ActionIcon>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              <Menu.Label>Mover a</Menu.Label>
-                              {weekDays.map((targetDay, targetIndex) => {
-                                if (targetIndex === index) return null;
-                                return (
-                                  <Menu.Item
-                                    key={targetIndex}
-                                    leftSection={<IconArrowsExchange size={14} />}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleMoveDayTo(index, targetIndex);
-                                    }}
-                                  >
-                                    {targetDay}
-                                  </Menu.Item>
-                                );
-                              })}
-                            </Menu.Dropdown>
-                          </Menu>
-                        )}
-                      </Group>
-                    </Group>
-                    <Text size="sm" c={day.isRestDay ? "dimmed" : undefined} fw={day.isRestDay ? 400 : 500}>
-                      {day.isRestDay ? "🛌 Descanso" : `💪 ${day.type}`}
+          <Stack gap="sm">
+            {displaySchedule.map((day, index) => {
+              const isToday = index + 1 === todayDayNum;
+              const exCount = day.exercises_list?.length || 0;
+              return (
+                <DayCardMenu
+                  key={index}
+                  dayName={weekDays[index]}
+                  isToday={isToday}
+                  isSelected={selectedDayIndex === index}
+                  isRestDay={day.isRestDay}
+                  onClick={() => setSelectedDayIndex(index)}
+                  badge={
+                    day.completed ? (
+                      <Badge color="green" variant="light" size="xs" leftSection={<IconCheck size={10} />}>
+                        Completado
+                      </Badge>
+                    ) : undefined
+                  }
+                  summary={
+                    <Text size="xs" c="dimmed">
+                      {day.isRestDay ? "Descanso" : `${day.type} - ${exCount} ejercicios`}
                     </Text>
-                    {day.dayName && day.dayName !== weekDays[index] && !day.isRestDay && (
-                      <Text size="xs" c="blue" mt={2}>{day.dayName}</Text>
-                    )}
-                    {!day.isRestDay && (
-                      <Text size="xs" c="dimmed" mt="xs">
-                        Haz clic para ver detalles
-                      </Text>
-                    )}
-                  </Card>
-                );
-              })}
-            </SimpleGrid>
+                  }
+                />
+              );
+            })}
 
-            {/* Selected day detail */}
             {selectedDayIndex !== null && displaySchedule[selectedDayIndex] && !displaySchedule[selectedDayIndex].isRestDay && (
-              <Card shadow="sm" padding="lg" radius="lg" withBorder>
-                <Group justify="space-between" mb="lg">
-                  <Box>
-                    <Title order={4}>{displaySchedule[selectedDayIndex].dayName || displaySchedule[selectedDayIndex].day}</Title>
-                    <Group gap="md" mt="xs">
-                      <Group gap={4}>
-                        <IconClock size={14} />
-                        <Text size="sm" c="dimmed">60 min</Text>
-                      </Group>
-                      <Group gap={4}>
-                        <IconBarbell size={14} />
-                        <Text size="sm" c="dimmed">{displaySchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios</Text>
-                      </Group>
-                    </Group>
-                  </Box>
-                  <Button 
-                    variant="light" 
-                    color="gray"
-                    size="sm"
-                    onClick={() => setSelectedDayIndex(null)}
-                  >
-                    Cerrar
-                  </Button>
+              <FullPageDetail
+                opened={true}
+                onClose={() => setSelectedDayIndex(null)}
+                title={displaySchedule[selectedDayIndex].dayName || weekDays[selectedDayIndex]}
+                subtitle={`${displaySchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios`}
+              >
+                <Group gap="md" mb="lg">
+                  <Group gap={4}>
+                    <IconClock size={14} />
+                    <Text size="sm" c="dimmed">~60 min</Text>
+                  </Group>
+                  <Group gap={4}>
+                    <IconBarbell size={14} />
+                    <Text size="sm" c="dimmed">{displaySchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios</Text>
+                  </Group>
                 </Group>
 
-                {/* Show blocks with exercises */}
                 {displaySchedule[selectedDayIndex].blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
                   <Box key={block.id || blockIndex} mb="lg">
                     <Group gap="xs" mb="sm">
-                      <Badge 
-                        color={block.type === 'warmup' ? 'orange' : block.type === 'cooldown' ? 'blue' : 'yellow'} 
+                      <Badge
+                        color={block.type === "warmup" ? "orange" : block.type === "cooldown" ? "blue" : "yellow"}
                         variant="light"
                       >
-                        {block.type === 'warmup' ? 'Calentamiento' : block.type === 'cooldown' ? 'Enfriamiento' : 'Principal'}
+                        {block.type === "warmup" ? "Calentamiento" : block.type === "cooldown" ? "Enfriamiento" : "Principal"}
                       </Badge>
                       <Text fw={600}>{block.name}</Text>
-                      <Text size="sm" c="dimmed">{block.exercises?.length || 0} ejercicios</Text>
                     </Group>
-                    <Accordion variant="separated">
+                    <Stack gap="sm">
                       {block.exercises?.map((exercise, exIndex) => {
                         const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
                         const exImage2 = exercise.exercise?.image_url;
                         return (
-                          <Accordion.Item key={exIndex} value={`${blockIndex}-${exIndex}`}>
-                            <Accordion.Control>
-                              <Group justify="space-between" pr="md">
-                                <Group>
-                                  {exImage2 ? (
-                                    <Image src={exImage2} alt={exName} w={36} h={36} fit="cover" radius="md" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exImage2, name: exName}); }} style={{cursor: 'pointer'}} />
-                                  ) : (
-                                    <ThemeIcon variant="light" color="gray" size="md">
-                                      <IconBarbell size={16} />
-                                    </ThemeIcon>
-                                  )}
-                                  <Text fw={500}>{exName}</Text>
+                          <Paper key={exIndex} p="md" radius="md" withBorder>
+                            <Group gap="sm" mb="sm">
+                              {exImage2 ? (
+                                <Image src={exImage2} alt={exName} w={40} h={40} fit="cover" radius="md" onClick={() => setEnlargedImage({ url: exImage2, name: exName })} style={{ cursor: "pointer" }} />
+                              ) : (
+                                <ThemeIcon variant="light" color="gray" size="md">
+                                  <IconBarbell size={16} />
+                                </ThemeIcon>
+                              )}
+                              <Box style={{ flex: 1 }}>
+                                <Text fw={600} size="sm">{exName}</Text>
+                                <Group gap={4} mt={2}>
+                                  <Badge variant="light" color="blue" size="xs">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
+                                  <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds || 60}s</Badge>
                                 </Group>
-                                <Group gap="xs">
-                                  <Badge variant="light" color="blue">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
-                                  {exercise.rest_seconds && (
-                                    <Badge variant="light" color="gray">{exercise.rest_seconds}s</Badge>
-                                  )}
-                                </Group>
-                              </Group>
-                            </Accordion.Control>
-                            <Accordion.Panel>
-                              <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="md">
-                                <Paper p="sm" radius="md" withBorder>
-                                  <Group gap={4}>
-                                    <IconRepeat size={14} />
-                                    <Text size="sm" fw={500}>Series</Text>
-                                  </Group>
-                                  <Text size="lg" fw={700}>{exercise.sets || 3}</Text>
-                                </Paper>
-                                <Paper p="sm" radius="md" withBorder>
-                                  <Group gap={4}>
-                                    <IconBarbell size={14} />
-                                    <Text size="sm" fw={500}>Repeticiones</Text>
-                                  </Group>
-                                  <Text size="lg" fw={700}>{exercise.reps || "10-12"}</Text>
-                                </Paper>
-                                <Paper p="sm" radius="md" withBorder>
-                                  <Group gap={4}>
-                                    <IconClock size={14} />
-                                    <Text size="sm" fw={500}>Descanso</Text>
-                                  </Group>
-                                  <Text size="lg" fw={700}>{exercise.rest_seconds || 60}s</Text>
-                                </Paper>
-                              </SimpleGrid>
-                              {exercise.notes && (
-                                <Text size="sm" c="dimmed" mt="sm">
-                                  <strong>Notas:</strong> {exercise.notes}
-                                </Text>
-                              )}
-                              {exercise.exercise?.description && (
-                                <Text size="sm" c="dimmed" mt="xs">
-                                  {exercise.exercise.description}
-                                </Text>
-                              )}
-                              {(exercise.video_url || exercise.exercise?.video_url) && (
-                                <Button
-                                  component="a"
-                                  href={exercise.video_url || exercise.exercise?.video_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  leftSection={<IconPlayerPlay size={16} />}
-                                  variant="light"
-                                  color="red"
-                                  size="xs"
-                                  mt="sm"
-                                  radius="md"
-                                >
-                                  Ver vídeo del ejercicio
-                                </Button>
-                              )}
-                            </Accordion.Panel>
-                          </Accordion.Item>
+                              </Box>
+                            </Group>
+                            {exercise.notes && <Text size="xs" c="dimmed"><strong>Notas:</strong> {exercise.notes}</Text>}
+                            {exercise.exercise?.description && <Text size="xs" c="dimmed" mt={2}>{exercise.exercise.description}</Text>}
+                            {(exercise.video_url || exercise.exercise?.video_url) && (
+                              <Button
+                                component="a"
+                                href={exercise.video_url || exercise.exercise?.video_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                leftSection={<IconPlayerPlay size={14} />}
+                                variant="light"
+                                color="red"
+                                size="xs"
+                                mt="xs"
+                                radius="md"
+                              >
+                                Ver vídeo
+                              </Button>
+                            )}
+                          </Paper>
                         );
                       })}
-                    </Accordion>
+                    </Stack>
                   </Box>
                 ))}
-              </Card>
+              </FullPageDetail>
             )}
           </Stack>
         </Tabs.Panel>

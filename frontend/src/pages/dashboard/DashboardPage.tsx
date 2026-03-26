@@ -46,6 +46,7 @@ import {
   useTodaySessions,
 } from "../../hooks/useDashboard";
 import { useAuthStore } from "../../stores/auth";
+import { formatDecimal } from "../../utils/format";
 
 // --- Dashboard configuration ---
 interface DashboardConfig {
@@ -401,13 +402,13 @@ function TrainingStats({
     },
     {
       label: "MRR",
-      value: `€${(kpis?.mrr || 0).toFixed(0)}`,
+      value: `€${formatDecimal(kpis?.mrr || 0, 0)}`,
       icon: IconFlame,
       color: "orange",
     },
     {
       label: "Ingresos mes",
-      value: `€${(kpis?.revenue_this_month || 0).toFixed(0)}`,
+      value: `€${formatDecimal(kpis?.revenue_this_month || 0, 0)}`,
       icon: IconTarget,
       color: "green",
     },
@@ -546,7 +547,7 @@ function WeeklyActivityWidget() {
             Promedio diario
           </Text>
           <Text fw={700} style={{ color: "var(--nv-dark)" }}>
-            {avgPerDay.toFixed(1)}
+            {formatDecimal(avgPerDay, 1)}
           </Text>
         </Box>
       </Group>
@@ -577,19 +578,19 @@ function ClientMetricsWidget({
   const metrics = [
     {
       label: "Ingresos recurrentes (MRR)",
-      value: `€${(kpis?.mrr || 0).toFixed(2)}`,
+      value: `€${formatDecimal(kpis?.mrr || 0, 2)}`,
       icon: IconWeight,
       trend: `${Number(revenueChange) >= 0 ? "+" : ""}${revenueChange}%`,
     },
     {
       label: "Ingreso por cliente (ARPA)",
-      value: `€${(kpis?.arpa || 0).toFixed(2)}`,
+      value: `€${formatDecimal(kpis?.arpa || 0, 2)}`,
       icon: IconRun,
       trend: "N/A",
     },
     {
       label: "Tasa de abandono",
-      value: `${(kpis?.churn_rate || 0).toFixed(1)}%`,
+      value: `${formatDecimal(kpis?.churn_rate || 0, 1)}%`,
       icon: IconHeartbeat,
       trend: `${(kpis?.churn_rate || 0) <= 5 ? "Excelente" : "Mejorar"}`,
     },
@@ -835,7 +836,7 @@ export function DashboardPage() {
         />
         <ClientKPI
           title="Tasa Abandono"
-          value={`${(kpis?.churn_rate || 0).toFixed(1)}%`}
+          value={`${formatDecimal(kpis?.churn_rate || 0, 1)}%`}
           subtitle={kpis?.churn_rate && kpis.churn_rate <= 5 ? "Excelente" : "Revisar"}
           icon={IconTrendingUp}
           color="orange"

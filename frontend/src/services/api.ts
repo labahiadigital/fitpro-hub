@@ -548,6 +548,10 @@ export const clientPortalApi = {
   // Profile
   profile: () => api.get("/my/profile"),
   updateProfile: (data: object) => api.put("/my/profile", data),
+  uploadAvatar: (formData: FormData) =>
+    api.post("/my/profile/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
   
   // Workouts
   workouts: () => api.get("/my/workouts"),
@@ -700,6 +704,16 @@ export const clientPortalApi = {
   subscription: () => api.get("/my/subscription"),
   payments: (limit?: number) => api.get("/my/payments", { params: { limit } }),
   cancelSubscription: () => api.post("/my/subscription/cancel"),
+
+  // Documents
+  documents: (category?: string) =>
+    api.get("/my/documents", { params: category ? { category } : {} }),
+  uploadDocument: (formData: FormData, category?: string, name?: string) =>
+    api.post("/my/documents", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      params: { category: category || "general", ...(name ? { name } : {}) },
+    }),
+  deleteDocument: (id: string) => api.delete(`/my/documents/${id}`),
 };
 
 // Messages API (Staff/Trainer)

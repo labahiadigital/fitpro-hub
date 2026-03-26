@@ -22,7 +22,6 @@ import {
   Checkbox,
   Menu,
   Tabs,
-  Accordion,
 } from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
@@ -59,6 +58,8 @@ import {
 import { useClientRecipes } from "../../hooks/useRecipes";
 import { RecipeDetailModal } from "../../components/recipes/RecipeDetailModal";
 import type { Recipe } from "../../types/recipe";
+import { FullPageDetail } from "../../components/common/FullPageDetail";
+import { DayCardMenu } from "../../components/common/DayCardMenu";
 
 // Tipos de comidas con sus iconos
 const MEAL_TYPES = [
@@ -664,6 +665,7 @@ export function MyNutritionPage() {
   const [selectedWeekDayIndex, setSelectedWeekDayIndex] = useState<number | null>(null);
   const [mealDayOverrides, setMealDayOverrides] = useState<Record<string, number>>({});
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [historyDetailDay, setHistoryDetailDay] = useState<string | null>(null);
   
   // Hooks para datos reales del backend
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
@@ -850,7 +852,7 @@ export function MyNutritionPage() {
 
   // Obtener los nombres de días de la semana para el plan
   const weekDayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-  const todayDayName = weekDayNames[selectedPlanDay - 1] || "Hoy";
+  const todayDayName = weekDayNames[selectedPlanDay - 1] || "Día";
 
   return (
     <Box p="xl">
@@ -905,7 +907,7 @@ export function MyNutritionPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "today", label: "Hoy" },
+            { value: "today", label: "Registrar comida" },
             { value: "week", label: "Esta Semana" },
             { value: "history", label: "Historial" },
             { value: "recipes", label: "Recetas" },
@@ -951,7 +953,7 @@ export function MyNutritionPage() {
                 </Button>
               )}
               <Text size="sm" c="dimmed">
-                {isToday ? "Hoy" : selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+                Registrar {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
               </Text>
             </Group>
           </Card>
@@ -1064,7 +1066,7 @@ export function MyNutritionPage() {
 
       {/* Comidas del Plan */}
       <Title order={4} mb="md">
-        Comidas de Hoy ({todayDayName})
+        Registrar ({todayDayName})
       </Title>
       
       {selectedPlanMeals.length > 0 ? (
@@ -1217,85 +1219,48 @@ export function MyNutritionPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          {/* Week View */}
-          <Stack gap="md">
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-              {weekData.map((day, index) => {
-                const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
-                const isSelected = selectedWeekDayIndex === index;
-                return (
-                  <Card 
-                    key={index} 
-                    shadow="sm" 
-                    padding="md" 
-                    radius="md" 
-                    withBorder
-                    style={{
-                      borderColor: isSelected ? "var(--mantine-color-blue-5)" : day.isToday ? "var(--mantine-color-yellow-5)" : undefined,
-                      backgroundColor: isSelected ? "var(--mantine-color-blue-0)" : day.isToday ? "var(--mantine-color-yellow-0)" : undefined,
-                      cursor: "pointer",
-                    }}
-                    onClick={() => setSelectedWeekDayIndex(isSelected ? null : index)}
-                  >
-                    <Group justify="space-between" mb="xs">
-                      <Group gap="xs">
-                        <Text fw={600}>{day.day}</Text>
-                        {day.isToday && <Badge size="xs" color="yellow">Hoy</Badge>}
-                        {isSelected && <Badge size="xs" color="blue">Seleccionado</Badge>}
-                      </Group>
-                      <RingProgress
-                        size={40}
-                        thickness={4}
-                        roundCaps
-                        sections={[{
-                          value: Math.min(percentage, 100),
-                          color: percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray",
-                        }]}
-                      />
-                    </Group>
-                    <Text size="lg" fw={700}>{day.calories}</Text>
-                    <Text size="xs" c="dimmed">de {day.target} kcal</Text>
-                    <Text size="xs" c="dimmed" mt="xs">{day.mealsLogged} comidas registradas</Text>
-                    <Text size="xs" c="dimmed">Haz clic para ver detalles</Text>
-                  </Card>
-                );
-              })}
-            </SimpleGrid>
+          <Stack gap="sm">
+            {weekData.map((day, index) => {
+              const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
+              return (
+                <DayCardMenu
+                  key={index}
+                  dayName={`${day.day} - ${day.dayName}`}
+                  isToday={day.isToday}
+                  isSelected={selectedWeekDayIndex === index}
+                  onClick={() => setSelectedWeekDayIndex(index)}
+                  badge={
+                    <Badge variant="light" color={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"} size="sm">
+                      {day.calories} / {day.target} kcal
+                    </Badge>
+                  }
+                  summary={
+                    <Text size="xs" c="dimmed">{day.mealsLogged} comidas registradas</Text>
+                  }
+                  progressValue={percentage}
+                  progressColor={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"}
+                />
+              );
+            })}
 
-            {/* Selected day detail */}
+            {/* FullPageDetail for selected week day */}
             {selectedWeekDayIndex !== null && weekData[selectedWeekDayIndex] && (
-              <Card shadow="sm" padding="lg" radius="lg" withBorder>
-                <Group justify="space-between" mb="lg">
-                  <Box>
-                    <Title order={4}>{weekData[selectedWeekDayIndex].dayName}</Title>
-                    <Text size="sm" c="dimmed">
-                      {new Date(weekData[selectedWeekDayIndex].date).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                      })}
-                    </Text>
-                  </Box>
-                  <Button 
-                    variant="light" 
-                    color="gray"
-                    size="sm"
-                    onClick={() => setSelectedWeekDayIndex(null)}
-                  >
-                    Cerrar
-                  </Button>
-                </Group>
-
-                {/* Macros summary for selected day */}
-                <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg">
+              <FullPageDetail
+                opened={true}
+                onClose={() => setSelectedWeekDayIndex(null)}
+                title={weekData[selectedWeekDayIndex].dayName}
+                subtitle={new Date(weekData[selectedWeekDayIndex].date).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+              >
+                <SimpleGrid cols={2} spacing="sm" mb="lg">
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
                       {weekData[selectedWeekDayIndex].calories}
                     </Text>
                     <Text size="xs" c="dimmed">kcal consumidas</Text>
-                    <Progress 
-                      value={targets.calories > 0 ? Math.min((weekData[selectedWeekDayIndex].calories / targets.calories) * 100, 100) : 0} 
-                      color="yellow" 
-                      size="sm" 
+                    <Progress
+                      value={targets.calories > 0 ? Math.min((weekData[selectedWeekDayIndex].calories / targets.calories) * 100, 100) : 0}
+                      color="yellow"
+                      size="sm"
                       mt="xs"
                     />
                   </Box>
@@ -1420,7 +1385,7 @@ export function MyNutritionPage() {
                 ) : (
                   <Text c="dimmed" ta="center">No hay comidas asignadas en el plan para este día</Text>
                 )}
-              </Card>
+              </FullPageDetail>
             )}
 
             {/* Week Summary */}
@@ -1451,65 +1416,42 @@ export function MyNutritionPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="history">
-          {/* History View */}
-          <Stack gap="md">
+          <Stack gap="sm">
             {nutritionHistory?.days && nutritionHistory.days.length > 0 ? (
-              <Accordion variant="separated">
-                {nutritionHistory.days.map((day) => {
-                  const percentage = day.totals.calories > 0 && targets.calories > 0
-                    ? (day.totals.calories / targets.calories) * 100 
-                    : 0;
-                  const dateFormatted = new Date(day.date).toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  });
-                  
-                  return (
-                    <Accordion.Item key={day.date} value={day.date}>
-                      <Accordion.Control>
-                        <Group justify="space-between" pr="md">
-                          <Group>
-                            <Box>
-                              <Text fw={500} tt="capitalize">{dateFormatted}</Text>
-                              <Text size="sm" c="dimmed">{day.meals.length} comidas</Text>
-                            </Box>
-                          </Group>
-                          <Group gap="md">
-                            <Badge 
-                              variant="light" 
-                              color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"}
-                              size="lg"
-                            >
-                              {day.totals.calories} kcal
-                            </Badge>
-                            <Badge variant="outline" color="red" size="sm">P: {Math.round(day.totals.protein)}g</Badge>
-                            <Badge variant="outline" color="blue" size="sm">C: {Math.round(day.totals.carbs)}g</Badge>
-                            <Badge variant="outline" color="grape" size="sm">G: {Math.round(day.totals.fat)}g</Badge>
-                          </Group>
-                        </Group>
-                      </Accordion.Control>
-                      <Accordion.Panel>
-                        <Stack gap="sm">
-                          {day.meals.map((meal, mealIndex) => (
-                            <Paper key={mealIndex} p="sm" radius="md" withBorder>
-                              <Group justify="space-between" mb="xs">
-                                <Text fw={500}>{meal.meal_name}</Text>
-                                <Badge variant="light" color="orange" size="sm">
-                                  {meal.total_calories} kcal
-                                </Badge>
-                              </Group>
-                              <Text size="sm" c="dimmed">
-                                {meal.foods.map(f => f.name).join(", ")}
-                              </Text>
-                            </Paper>
-                          ))}
-                        </Stack>
-                      </Accordion.Panel>
-                    </Accordion.Item>
-                  );
-                })}
-              </Accordion>
+              nutritionHistory.days.map((day) => {
+                const percentage = day.totals.calories > 0 && targets.calories > 0
+                  ? (day.totals.calories / targets.calories) * 100
+                  : 0;
+                const dateFormatted = new Date(day.date).toLocaleDateString("es-ES", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                });
+
+                return (
+                  <DayCardMenu
+                    key={day.date}
+                    dayName={dateFormatted}
+                    isToday={day.date === new Date().toISOString().split("T")[0]}
+                    onClick={() => setHistoryDetailDay(day.date)}
+                    badge={
+                      <Badge variant="light" color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"} size="sm">
+                        {day.totals.calories} kcal
+                      </Badge>
+                    }
+                    summary={
+                      <Group gap={4} mt={2}>
+                        <Text size="xs" c="dimmed">{day.meals.length} comidas</Text>
+                        <Badge variant="outline" color="red" size="xs">P:{Math.round(day.totals.protein)}g</Badge>
+                        <Badge variant="outline" color="blue" size="xs">C:{Math.round(day.totals.carbs)}g</Badge>
+                        <Badge variant="outline" color="grape" size="xs">G:{Math.round(day.totals.fat)}g</Badge>
+                      </Group>
+                    }
+                    progressValue={percentage}
+                    progressColor={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"}
+                  />
+                );
+              })
             ) : (
               <Paper p="xl" ta="center" radius="lg" withBorder>
                 <IconHistory size={48} color="gray" style={{ opacity: 0.5 }} />
@@ -1518,6 +1460,63 @@ export function MyNutritionPage() {
               </Paper>
             )}
           </Stack>
+
+          {/* Full-page detail for selected history day */}
+          {(() => {
+            const selectedDay = nutritionHistory?.days?.find((d) => d.date === historyDetailDay);
+            if (!selectedDay) return null;
+            const dateFmt = new Date(selectedDay.date).toLocaleDateString("es-ES", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            });
+            return (
+              <FullPageDetail
+                opened={!!historyDetailDay}
+                onClose={() => setHistoryDetailDay(null)}
+                title={dateFmt}
+                subtitle={`${selectedDay.meals.length} comidas registradas`}
+              >
+                <SimpleGrid cols={2} spacing="sm" mb="md">
+                  <Paper p="sm" radius="md" withBorder ta="center">
+                    <Text size="xs" c="dimmed">Kcal</Text>
+                    <Text fw={700} size="lg">{selectedDay.totals.calories}</Text>
+                  </Paper>
+                  <Paper p="sm" radius="md" withBorder ta="center">
+                    <Text size="xs" c="dimmed">Proteína</Text>
+                    <Text fw={700} size="lg">{Math.round(selectedDay.totals.protein)}g</Text>
+                  </Paper>
+                  <Paper p="sm" radius="md" withBorder ta="center">
+                    <Text size="xs" c="dimmed">Carbohidratos</Text>
+                    <Text fw={700} size="lg">{Math.round(selectedDay.totals.carbs)}g</Text>
+                  </Paper>
+                  <Paper p="sm" radius="md" withBorder ta="center">
+                    <Text size="xs" c="dimmed">Grasas</Text>
+                    <Text fw={700} size="lg">{Math.round(selectedDay.totals.fat)}g</Text>
+                  </Paper>
+                </SimpleGrid>
+
+                <Stack gap="sm">
+                  {selectedDay.meals.map((meal, mealIndex) => (
+                    <Paper key={mealIndex} p="md" radius="md" withBorder>
+                      <Group justify="space-between" mb="xs">
+                        <Text fw={600}>{meal.meal_name}</Text>
+                        <Badge variant="light" color="orange">{meal.total_calories} kcal</Badge>
+                      </Group>
+                      <Text size="sm" c="dimmed">
+                        {meal.foods.map((f) => f.name).join(", ")}
+                      </Text>
+                      <Group gap={4} mt="xs">
+                        <Badge size="xs" variant="outline" color="red">P:{Math.round(meal.total_protein || 0)}g</Badge>
+                        <Badge size="xs" variant="outline" color="blue">C:{Math.round(meal.total_carbs || 0)}g</Badge>
+                        <Badge size="xs" variant="outline" color="grape">G:{Math.round(meal.total_fat || 0)}g</Badge>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              </FullPageDetail>
+            );
+          })()}
         </Tabs.Panel>
 
         <Tabs.Panel value="recipes">

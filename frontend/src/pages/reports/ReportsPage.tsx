@@ -35,6 +35,7 @@ import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { StatsCard } from "../../components/common/StatsCard";
 import { useKPIs, useRevenueChart, useClientsChart } from "../../hooks/useReports";
+import { formatDecimal } from "../../utils/format";
 
 export function ReportsPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -456,7 +457,7 @@ export function ReportsPage() {
                 ARPU
               </Text>
               <Text fw={700} mt="xs" size="xl">
-                €{kpis.avgRevenue.toFixed(2)}
+                €{formatDecimal(kpis.avgRevenue, 2)}
               </Text>
               <Text c="dimmed" mt="xs" size="xs">
                 Ingreso promedio por usuario
@@ -702,7 +703,7 @@ export function ReportsPage() {
                 </Group>
                 <Group justify="space-between">
                   <Text size="sm">Ingreso Promedio por Cliente</Text>
-                  <Text fw={500} size="sm">€{kpis.avgRevenue.toFixed(2)}</Text>
+                  <Text fw={500} size="sm">€{formatDecimal(kpis.avgRevenue, 2)}</Text>
                 </Group>
               </Stack>
             </Paper>

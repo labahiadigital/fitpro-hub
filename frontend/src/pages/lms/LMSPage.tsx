@@ -44,6 +44,7 @@ import {
   useSupabaseCourses,
   useSupabaseInstructors,
 } from "../../hooks/useSupabaseData";
+import { formatDecimal } from "../../utils/format";
 
 interface Course {
   id: string;
@@ -190,7 +191,7 @@ function CourseCard({ course }: { course: Course }) {
       <Group gap={4}>
         <IconStar size={14} color="#fab005" fill="#fab005" />
         <Text size="sm" fw={500}>
-          {course.average_rating.toFixed(1)}
+          {formatDecimal(course.average_rating, 1)}
         </Text>
         <Text size="xs" c="dimmed">
           ({course.reviews_count} reseñas)

@@ -103,6 +103,7 @@ import {
 import { erpApi } from "../../services/api";
 import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
+import { formatDecimal } from "../../utils/format";
 
 export function PaymentsPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -381,7 +382,7 @@ export function PaymentsPage() {
   }, [finalizeInvoice]);
 
   const handleMarkInvoicePaid = useCallback(async (inv: Invoice) => {
-    if (!window.confirm(`¿Marcar como pagada la factura ${inv.invoice_number} (${Number(inv.total).toFixed(2)} €)?`)) return;
+    if (!window.confirm(`¿Marcar como pagada la factura ${inv.invoice_number} (${formatDecimal(Number(inv.total), 2)} €)?`)) return;
     try { await markInvoicePaid.mutateAsync({ id: inv.id }); } catch { /* handled */ }
   }, [markInvoicePaid]);
 
@@ -574,7 +575,7 @@ export function PaymentsPage() {
   }, [openPaymentDetail]);
 
   const handleMarkPaid = useCallback(async (payment: Payment) => {
-    if (!window.confirm(`¿Marcar el cobro de €${Number(payment.amount).toFixed(2)} como pagado?`)) return;
+    if (!window.confirm(`¿Marcar el cobro de €${formatDecimal(Number(payment.amount), 2)} como pagado?`)) return;
     try {
       await markPaymentPaid.mutateAsync(payment.id);
     } catch {
@@ -583,7 +584,7 @@ export function PaymentsPage() {
   }, [markPaymentPaid]);
 
   const handleDeletePaymentAction = useCallback(async (payment: Payment) => {
-    if (!window.confirm(`¿Eliminar este cobro de €${Number(payment.amount).toFixed(2)}?`)) return;
+    if (!window.confirm(`¿Eliminar este cobro de €${formatDecimal(Number(payment.amount), 2)}?`)) return;
     try {
       await deletePayment.mutateAsync(payment.id);
     } catch {
@@ -930,7 +931,7 @@ export function PaymentsPage() {
                       </Group>
                       <Box ta="right">
                         <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          €{Number(payment.amount).toFixed(2)}
+                          €{formatDecimal(Number(payment.amount), 2)}
                         </Text>
                         <Badge
                           color={getStatusColor(payment.status)}
@@ -976,7 +977,7 @@ export function PaymentsPage() {
                       </Box>
                       <Box ta="right">
                         <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          €{Number(sub.amount).toFixed(2)}
+                          €{formatDecimal(Number(sub.amount), 2)}
                         </Text>
                         <Text c="dimmed" size="xs">
                           {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("es-ES") : "—"}
@@ -1013,7 +1014,7 @@ export function PaymentsPage() {
               <Stack gap="sm">
                 <Group justify="space-between">
                   <Text c="dimmed" size="sm">Ingresos este mes</Text>
-                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{kpis.thisMonthRevenue.toFixed(2)}</Text>
+                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{formatDecimal(kpis.thisMonthRevenue, 2)}</Text>
                 </Group>
                 <Group justify="space-between">
                   <Text c="dimmed" size="sm">Suscripciones activas</Text>
@@ -1021,7 +1022,7 @@ export function PaymentsPage() {
                 </Group>
                 <Group justify="space-between">
                   <Text c="dimmed" size="sm">Cobros pendientes</Text>
-                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{kpis.pendingAmount.toFixed(2)}</Text>
+                  <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{formatDecimal(kpis.pendingAmount, 2)}</Text>
                 </Group>
               </Stack>
             </Box>
@@ -1087,7 +1088,7 @@ export function PaymentsPage() {
                       </Table.Td>
                       <Table.Td ta="right">
                         <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                          €{Number(payment.amount).toFixed(2)}
+                          €{formatDecimal(Number(payment.amount), 2)}
                         </Text>
                       </Table.Td>
                       <Table.Td>
@@ -1364,7 +1365,7 @@ export function PaymentsPage() {
                     </Table.Td>
                     <Table.Td ta="right">
                       <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                        €{Number(sub.amount).toFixed(2)}/{
+                        €{formatDecimal(Number(sub.amount), 2)}/{
                           sub.interval === "week" ? "semana" :
                           sub.interval === "biweekly" ? "quincenal" :
                           sub.interval === "month" ? "mes" :
@@ -1669,7 +1670,7 @@ export function PaymentsPage() {
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
               <Text c="dimmed" size="sm">Importe</Text>
-              <Text fw={700} size="lg" style={{ color: "var(--nv-primary)" }}>€{Number(selectedPayment.amount).toFixed(2)}</Text>
+              <Text fw={700} size="lg" style={{ color: "var(--nv-primary)" }}>€{formatDecimal(Number(selectedPayment.amount), 2)}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
@@ -2250,7 +2251,7 @@ export function PaymentsPage() {
                                     {certFile ? certFile.name : "Arrastra tu certificado .p12 / .pfx aquí"}
                                   </Text>
                                   <Text size="xs" c="dimmed">
-                                    {certFile ? `${(certFile.size / 1024).toFixed(1)} KB` : "Máximo 50 KB. El archivo solo se usa para extracción server-side."}
+                                    {certFile ? `${formatDecimal(certFile.size / 1024, 1)} KB` : "Máximo 50 KB. El archivo solo se usa para extracción server-side."}
                                   </Text>
                                 </Box>
                               </Group>

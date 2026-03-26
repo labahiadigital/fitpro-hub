@@ -87,6 +87,7 @@ import { IconArrowLeft, IconEye } from "@tabler/icons-react";
 import { paymentsApi } from "../../services/api";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { formatDecimal } from "../../utils/format";
 
 // Lista de alérgenos comunes
 const COMMON_ALLERGENS = [
@@ -264,7 +265,7 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
                   <Table.Tr key={p.id}>
                     <Table.Td><Text size="sm">{formatDate(p.paid_at || p.created_at)}</Text></Table.Td>
                     <Table.Td><Text size="sm">{p.description || "Pago"}</Text></Table.Td>
-                    <Table.Td ta="right"><Text fw={600} size="sm">€{Number(p.amount).toFixed(2)}</Text></Table.Td>
+                    <Table.Td ta="right"><Text fw={600} size="sm">€{formatDecimal(Number(p.amount), 2)}</Text></Table.Td>
                     <Table.Td ta="center">
                       <Badge color={st.color} size="sm" variant="light" radius="xl">{st.label}</Badge>
                     </Table.Td>
@@ -2841,7 +2842,7 @@ export function ClientDetailPage() {
                                       size="xs"
                                       variant="light"
                                     >
-                                      {weightChange > 0 ? "+" : ""}{weightChange.toFixed(1)} kg
+                                      {weightChange > 0 ? "+" : ""}{formatDecimal(weightChange, 1)} kg
                                     </Badge>
                                   )}
                                   {bodyFatChange !== 0 && m.body_fat > 0 && (
@@ -2850,7 +2851,7 @@ export function ClientDetailPage() {
                                       size="xs"
                                       variant="light"
                                     >
-                                      {bodyFatChange > 0 ? "+" : ""}{bodyFatChange.toFixed(1)}% grasa
+                                      {bodyFatChange > 0 ? "+" : ""}{formatDecimal(bodyFatChange, 1)}% grasa
                                     </Badge>
                                   )}
                                   {muscleChange !== 0 && m.muscle_mass > 0 && (
@@ -2859,7 +2860,7 @@ export function ClientDetailPage() {
                                       size="xs"
                                       variant="light"
                                     >
-                                      {muscleChange > 0 ? "+" : ""}{muscleChange.toFixed(1)} kg músculo
+                                      {muscleChange > 0 ? "+" : ""}{formatDecimal(muscleChange, 1)} kg músculo
                                     </Badge>
                                   )}
                                 </Stack>

@@ -44,6 +44,7 @@ import {
   calculateBMR,
   calculateTDEE,
 } from "../../utils/calories";
+import { formatDecimal } from "../../utils/format";
 
 // Types
 interface ClientData {
@@ -1241,7 +1242,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
               PROT
             </Text>
             <Text fw={700} size="xl" c="green">
-              {dayTotals.protein.toFixed(1)}g
+              {formatDecimal(dayTotals.protein, 1)}g
             </Text>
           </Box>
           <Divider orientation="vertical" />
@@ -1250,7 +1251,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
               HC
             </Text>
             <Text fw={700} size="xl" c="orange">
-              {dayTotals.carbs.toFixed(1)}g
+              {formatDecimal(dayTotals.carbs, 1)}g
             </Text>
           </Box>
           <Divider orientation="vertical" />
@@ -1259,7 +1260,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
               GRASA
             </Text>
             <Text fw={700} size="xl" c="grape">
-              {dayTotals.fat.toFixed(1)}g
+              {formatDecimal(dayTotals.fat, 1)}g
             </Text>
           </Box>
         </Group>
@@ -1324,9 +1325,9 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
                     {foods.length === 0 && <Text size="sm" c="dimmed">(sin alimentos)</Text>}
                   </Table.Td>
                   <Table.Td ta="right">{Math.round(mealTotals.calories)}</Table.Td>
-                  <Table.Td ta="right">{mealTotals.protein.toFixed(1)}</Table.Td>
-                  <Table.Td ta="right">{mealTotals.carbs.toFixed(1)}</Table.Td>
-                  <Table.Td ta="right">{mealTotals.fat.toFixed(1)}</Table.Td>
+                  <Table.Td ta="right">{formatDecimal(mealTotals.protein, 1)}</Table.Td>
+                  <Table.Td ta="right">{formatDecimal(mealTotals.carbs, 1)}</Table.Td>
+                  <Table.Td ta="right">{formatDecimal(mealTotals.fat, 1)}</Table.Td>
                 </Table.Tr>
               );
             })}

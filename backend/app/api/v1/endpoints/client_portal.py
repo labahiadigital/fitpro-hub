@@ -386,6 +386,54 @@ async def update_client_profile(
     return client
 
 
+@router.post("/profile/avatar")
+async def upload_client_avatar(
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Upload avatar photo for the client. Updates both Client and User models."""
+    from app.models.user import User
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tipo de archivo no permitido. Usa JPEG, PNG o WebP."
+        )
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Máximo 5 MB")
+
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    unique_id = str(uuid_module.uuid4())
+    storage_path = f"avatars/{client.id}/{unique_id}.{ext}"
+
+    try:
+        supabase = await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        await supabase.storage.from_("avatars").upload(
+            path=storage_path,
+            file=content,
+            file_options={"content-type": file.content_type, "upsert": "true"}
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al subir la imagen")
+
+    public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/avatars/{storage_path}"
+
+    client.avatar_url = public_url
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    user = result.scalar_one_or_none()
+    if user:
+        user.avatar_url = public_url
+
+    await db.commit()
+    return {"avatar_url": public_url}
+
+
 # ============ WORKOUTS ============
 
 class ExerciseListClientResponse(BaseModel):
@@ -902,11 +950,11 @@ async def log_nutrition(
             detail=f"Ya has registrado {data.meal_name} para el día {data.date}"
         )
     
-    # Calculate totals from foods
-    total_calories = sum(f.get("calories", 0) * f.get("quantity", 1) for f in data.foods)
-    total_protein = sum(f.get("protein", 0) * f.get("quantity", 1) for f in data.foods)
-    total_carbs = sum(f.get("carbs", 0) * f.get("quantity", 1) for f in data.foods)
-    total_fat = sum(f.get("fat", 0) * f.get("quantity", 1) for f in data.foods)
+    # Totals: frontend sends pre-calculated per-food values (already adjusted for quantity)
+    total_calories = sum(f.get("calories", 0) for f in data.foods)
+    total_protein = sum(f.get("protein", 0) for f in data.foods)
+    total_carbs = sum(f.get("carbs", 0) for f in data.foods)
+    total_fat = sum(f.get("fat", 0) for f in data.foods)
     
     # Create log entry
     log_entry = {
@@ -924,8 +972,10 @@ async def log_nutrition(
     
     current_adherence["logs"].append(log_entry)
     
-    # Reassign to trigger SQLAlchemy change detection
+    # Reassign + flag_modified to trigger SQLAlchemy JSONB change detection
     meal_plan.adherence = current_adherence
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(meal_plan, "adherence")
     
     # Debug: print to verify
     import logging
@@ -2426,3 +2476,141 @@ async def cancel_my_subscription(
         "message": "Suscripción cancelada. Tu acceso continuará hasta el fin del periodo actual.",
         "current_period_end": subscription.current_period_end.isoformat() if subscription.current_period_end else None,
     }
+
+
+# ============ DOCUMENTS ============
+
+class DocumentResponse(BaseModel):
+    id: UUID
+    workspace_id: UUID
+    client_id: Optional[UUID] = None
+    uploaded_by: Optional[UUID] = None
+    name: str
+    original_filename: str
+    file_url: str
+    file_size: Optional[int] = None
+    content_type: Optional[str] = None
+    category: str
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/documents", status_code=status.HTTP_201_CREATED)
+async def client_upload_document(
+    file: UploadFile = File(...),
+    name: Optional[str] = Query(None),
+    category: str = Query("general"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Client uploads a document."""
+    from app.models.document import Document
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    content = await file.read()
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="El archivo supera el límite de 20 MB")
+
+    ext = file.filename.split(".")[-1] if file.filename else "bin"
+    unique_id = str(uuid_module.uuid4())
+    storage_path = f"{current_user.workspace_id}/{client.id}/{unique_id}.{ext}"
+
+    try:
+        supabase = await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        await supabase.storage.from_("documents").upload(
+            path=storage_path,
+            file=content,
+            file_options={"content-type": file.content_type or "application/octet-stream", "upsert": "true"},
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al subir el archivo")
+
+    public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/documents/{storage_path}"
+
+    doc = Document(
+        workspace_id=current_user.workspace_id,
+        client_id=client.id,
+        uploaded_by=current_user.id,
+        name=name or file.filename or "Documento",
+        original_filename=file.filename or "file",
+        file_url=public_url,
+        file_size=len(content),
+        content_type=file.content_type,
+        category=category,
+    )
+    db.add(doc)
+    await db.commit()
+    await db.refresh(doc)
+
+    return {
+        "id": str(doc.id),
+        "name": doc.name,
+        "original_filename": doc.original_filename,
+        "file_url": doc.file_url,
+        "file_size": doc.file_size,
+        "content_type": doc.content_type,
+        "category": doc.category,
+        "created_at": doc.created_at.isoformat(),
+    }
+
+
+@router.get("/documents")
+async def client_list_documents(
+    category: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Client lists their own documents."""
+    from app.models.document import Document
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    query = (
+        select(Document)
+        .where(Document.client_id == client.id, Document.workspace_id == current_user.workspace_id)
+        .order_by(desc(Document.created_at))
+    )
+    if category and category.lower() != "todos":
+        query = query.where(Document.category == category)
+
+    result = await db.execute(query)
+    docs = result.scalars().all()
+
+    return [
+        {
+            "id": str(d.id),
+            "name": d.name,
+            "original_filename": d.original_filename,
+            "file_url": d.file_url,
+            "file_size": d.file_size,
+            "content_type": d.content_type,
+            "category": d.category or "general",
+            "created_at": d.created_at.isoformat(),
+        }
+        for d in docs
+    ]
+
+
+@router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def client_delete_document(
+    document_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Client deletes their own document."""
+    from app.models.document import Document
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    result = await db.execute(
+        select(Document).where(Document.id == document_id, Document.client_id == client.id)
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    await db.delete(doc)
+    await db.commit()

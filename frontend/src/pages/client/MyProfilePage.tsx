@@ -19,6 +19,7 @@ import {
   Modal,
   Alert,
   ThemeIcon,
+  FileButton,
 } from "@mantine/core";
 import {
   IconCamera,
@@ -33,12 +34,14 @@ import {
   IconReceipt,
   IconAlertCircle,
   IconX,
+  IconCheck,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
+import { useDisclosure } from "@mantine/hooks";
 import { useAuthStore } from "../../stores/auth";
-import { authApi, clientPortalApi } from "../../services/api";
+import { authApi, clientPortalApi, notificationsApi } from "../../services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { notifications } from "@mantine/notifications";
 
 interface SubscriptionPayment {
@@ -78,7 +81,7 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
-function formatCurrency(amount: number, currency: string): string {
+function formatCurrencyLocal(amount: number, currency: string): string {
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency: currency || "EUR",
@@ -86,9 +89,12 @@ function formatCurrency(amount: number, currency: string): string {
 }
 
 const intervalLabels: Record<string, string> = {
-  month: "mes",
-  year: "año",
   week: "semana",
+  biweekly: "quincenal",
+  month: "mes",
+  quarter: "trimestre",
+  semester: "semestre",
+  year: "año",
 };
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -177,7 +183,6 @@ function SubscriptionSection() {
           </Badge>
         </Group>
 
-        {/* Plan info */}
         <Paper p="md" radius="md" withBorder mb="md">
           <Group justify="space-between" align="flex-start">
             <Box>
@@ -188,7 +193,7 @@ function SubscriptionSection() {
             </Box>
             <Box ta="right">
               <Text fw={700} size="xl" style={{ lineHeight: 1 }}>
-                {formatCurrency(sub.amount, sub.currency)}
+                {formatCurrencyLocal(sub.amount, sub.currency)}
               </Text>
               <Text size="sm" c="dimmed">
                 /{intervalLabels[sub.interval] || sub.interval}
@@ -197,7 +202,6 @@ function SubscriptionSection() {
           </Group>
         </Paper>
 
-        {/* Dates and card info */}
         <SimpleGrid cols={2} spacing="md" mb="md">
           <Paper p="sm" radius="md" withBorder>
             <Group gap="xs" mb={4}>
@@ -215,7 +219,6 @@ function SubscriptionSection() {
           </Paper>
         </SimpleGrid>
 
-        {/* Payment method */}
         {sub.card_last4 && (
           <Paper p="sm" radius="md" withBorder mb="md">
             <Group>
@@ -232,7 +235,6 @@ function SubscriptionSection() {
           </Paper>
         )}
 
-        {/* Cancelled notice */}
         {sub.status === "cancelled" && sub.cancelled_at && (
           <Alert color="orange" variant="light" mb="md" icon={<IconAlertCircle size={16} />}>
             Suscripción cancelada el {formatDate(sub.cancelled_at)}.
@@ -242,7 +244,6 @@ function SubscriptionSection() {
           </Alert>
         )}
 
-        {/* Payment history */}
         {sub.payments && sub.payments.length > 0 && (
           <>
             <Divider mb="md" />
@@ -266,7 +267,7 @@ function SubscriptionSection() {
                     <Table.Tr key={p.id}>
                       <Table.Td>{formatDate(p.paid_at || p.created_at)}</Table.Td>
                       <Table.Td>{p.description || "Pago de suscripción"}</Table.Td>
-                      <Table.Td ta="right" fw={500}>{formatCurrency(p.amount, p.currency)}</Table.Td>
+                      <Table.Td ta="right" fw={500}>{formatCurrencyLocal(p.amount, p.currency)}</Table.Td>
                       <Table.Td ta="center">
                         <Badge size="sm" color={pConfig.color} variant="light">{pConfig.label}</Badge>
                       </Table.Td>
@@ -278,7 +279,6 @@ function SubscriptionSection() {
           </>
         )}
 
-        {/* Cancel button */}
         {sub.status === "active" && (
           <>
             <Divider mt="md" mb="md" />
@@ -294,7 +294,6 @@ function SubscriptionSection() {
         )}
       </Card>
 
-      {/* Cancel confirmation modal */}
       <Modal
         opened={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
@@ -330,14 +329,230 @@ function SubscriptionSection() {
   );
 }
 
+interface NotificationPrefs {
+  email_booking_created: boolean;
+  email_booking_cancelled: boolean;
+  email_payment_received: boolean;
+  email_payment_failed: boolean;
+  email_new_message: boolean;
+  email_new_client: boolean;
+  email_form_submitted: boolean;
+  push_enabled: boolean;
+}
+
+function NotificationsSection() {
+  const { data: prefs, isLoading } = useQuery<NotificationPrefs>({
+    queryKey: ["notification-preferences"],
+    queryFn: async () => {
+      const res = await notificationsApi.getPreferences();
+      return res.data;
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: Record<string, boolean>) =>
+      notificationsApi.updatePreferences(data),
+    onSuccess: () => {
+      notifications.show({
+        title: "Guardado",
+        message: "Preferencias de notificaciones actualizadas",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudieron guardar las preferencias",
+        color: "red",
+      });
+    },
+  });
+
+  const handleToggle = (key: string, value: boolean) => {
+    updateMutation.mutate({ [key]: value });
+  };
+
+  if (isLoading) {
+    return (
+      <Card shadow="sm" padding="lg" radius="lg" withBorder>
+        <Group justify="center" p="md"><Loader size="sm" /></Group>
+      </Card>
+    );
+  }
+
+  const notifSettings = [
+    { key: "email_booking_created", label: "Recordatorios de sesión", desc: "Recibe alertas antes de tus citas" },
+    { key: "email_new_message", label: "Mensajes", desc: "Notificaciones de chat" },
+    { key: "email_payment_received", label: "Pagos recibidos", desc: "Confirmación cuando se procese un pago" },
+    { key: "push_enabled", label: "Notificaciones push", desc: "Notificaciones en el navegador" },
+  ];
+
+  return (
+    <Card shadow="sm" padding="lg" radius="lg" withBorder>
+      <Group mb="md">
+        <IconBell size={20} />
+        <Text fw={600}>Notificaciones</Text>
+      </Group>
+      <Stack gap="md">
+        {notifSettings.map((item, idx) => (
+          <Box key={item.key}>
+            {idx > 0 && <Divider mb="md" />}
+            <Group justify="space-between">
+              <Box>
+                <Text size="sm" fw={500}>{item.label}</Text>
+                <Text size="xs" c="dimmed">{item.desc}</Text>
+              </Box>
+              <Switch
+                checked={prefs?.[item.key as keyof NotificationPrefs] ?? true}
+                onChange={(e) => handleToggle(item.key, e.currentTarget.checked)}
+                color="yellow"
+              />
+            </Group>
+          </Box>
+        ))}
+      </Stack>
+    </Card>
+  );
+}
+
 export function MyProfilePage() {
   const { user, currentWorkspace } = useAuthStore();
+  const [passwordModalOpened, { open: openPasswordModal, close: closePasswordModal }] = useDisclosure(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const profileForm = useForm({
+    initialValues: {
+      full_name: user?.full_name || "",
+      phone: "",
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      profileForm.setFieldValue("full_name", user.full_name || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.full_name]);
+
+  const { data: profileData } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: async () => {
+      const res = await clientPortalApi.profile();
+      return res.data;
+    },
+  });
+
+  useEffect(() => {
+    if (profileData?.phone) {
+      profileForm.setFieldValue("phone", profileData.phone || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileData?.phone]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: { first_name?: string; last_name?: string; phone?: string }) =>
+      clientPortalApi.updateProfile(data),
+    onSuccess: (_res, variables) => {
+      const parts = [variables.first_name, variables.last_name].filter(Boolean);
+      if (parts.length > 0) {
+        useAuthStore.getState().setUser({
+          ...useAuthStore.getState().user!,
+          full_name: parts.join(" "),
+        });
+      }
+      notifications.show({
+        title: "Perfil actualizado",
+        message: "Tus datos han sido guardados correctamente.",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudieron guardar los cambios.",
+        color: "red",
+      });
+    },
+  });
+
+  const handleSaveProfile = () => {
+    const fullName = profileForm.values.full_name.trim();
+    const parts = fullName.split(" ");
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+    updateProfileMutation.mutate({
+      first_name: firstName,
+      last_name: lastName,
+      phone: profileForm.values.phone || undefined,
+    });
+  };
+
+  const handleAvatarUpload = async (file: File | null) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await clientPortalApi.uploadAvatar(formData);
+      const avatarUrl = (res.data as { avatar_url: string }).avatar_url;
+      useAuthStore.getState().setUser({
+        ...useAuthStore.getState().user!,
+        avatar_url: avatarUrl,
+      });
+      notifications.show({
+        title: "Foto actualizada",
+        message: "Tu foto de perfil se ha cambiado correctamente.",
+        color: "green",
+      });
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo subir la foto. Inténtalo de nuevo.",
+        color: "red",
+      });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const changePasswordForm = useForm({
+    initialValues: {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    },
+    validate: {
+      current_password: (v) => (!v ? "Introduce tu contraseña actual" : null),
+      new_password: (v) =>
+        !v ? "Introduce la nueva contraseña" : v.length < 6 ? "Mínimo 6 caracteres" : null,
+      confirm_password: (v, values) =>
+        v !== values.new_password ? "Las contraseñas no coinciden" : null,
+    },
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: (data: { current_password: string; new_password: string }) =>
+      authApi.changePassword(data.current_password, data.new_password),
+    onSuccess: () => {
+      changePasswordForm.reset();
+      closePasswordModal();
+      notifications.show({
+        title: "Contraseña actualizada",
+        message: "Tu contraseña ha sido cambiada correctamente.",
+        color: "green",
+      });
+    },
+    onError: (error: { response?: { data?: { detail?: string } } }) => {
+      const detail =
+        typeof error.response?.data?.detail === "string"
+          ? error.response.data.detail
+          : "No se pudo cambiar la contraseña.";
+      notifications.show({ title: "Error", message: detail, color: "red" });
+    },
+  });
 
   const changeEmailForm = useForm({
-    initialValues: {
-      new_email: "",
-      password: "",
-    },
+    initialValues: { new_email: "", password: "" },
     validate: {
       new_email: (value) =>
         !value
@@ -372,11 +587,7 @@ export function MyProfilePage() {
         typeof error.response?.data?.detail === "string"
           ? error.response.data.detail
           : "No se pudo cambiar el email. Inténtalo de nuevo.";
-      notifications.show({
-        title: "Error",
-        message: detail,
-        color: "red",
-      });
+      notifications.show({ title: "Error", message: detail, color: "red" });
     },
   });
 
@@ -385,30 +596,38 @@ export function MyProfilePage() {
       <Title order={2} mb="xl">Mi Perfil</Title>
 
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
-        {/* Profile Info */}
         <Card shadow="sm" padding="xl" radius="lg" withBorder>
           <Group mb="xl">
             <Box pos="relative">
-              <Avatar 
-                size={100} 
-                radius="xl" 
+              <Avatar
+                size={100}
+                radius="xl"
                 color="yellow"
                 src={user?.avatar_url}
               >
                 {user?.full_name?.[0] || "U"}
               </Avatar>
-              <Button
-                size="xs"
-                variant="filled"
-                color="dark"
-                radius="xl"
-                pos="absolute"
-                bottom={0}
-                right={0}
-                p={4}
+              <FileButton
+                onChange={handleAvatarUpload}
+                accept="image/png,image/jpeg,image/webp"
               >
-                <IconCamera size={14} />
-              </Button>
+                {(props) => (
+                  <Button
+                    {...props}
+                    size="xs"
+                    variant="filled"
+                    color="dark"
+                    radius="xl"
+                    pos="absolute"
+                    bottom={0}
+                    right={0}
+                    p={4}
+                    loading={avatarUploading}
+                  >
+                    <IconCamera size={14} />
+                  </Button>
+                )}
+              </FileButton>
             </Box>
             <Box>
               <Title order={3}>{user?.full_name || "Usuario"}</Title>
@@ -421,13 +640,13 @@ export function MyProfilePage() {
             <TextInput
               label="Nombre completo"
               placeholder="Tu nombre"
-              defaultValue={user?.full_name || ""}
               leftSection={<IconUser size={16} />}
+              {...profileForm.getInputProps("full_name")}
             />
             <TextInput
               label="Email"
               placeholder="tu@email.com"
-              defaultValue={user?.email || ""}
+              value={user?.email || ""}
               leftSection={<IconMail size={16} />}
               disabled
             />
@@ -435,28 +654,33 @@ export function MyProfilePage() {
               label="Teléfono"
               placeholder="+34 600 000 000"
               leftSection={<IconPhone size={16} />}
+              {...profileForm.getInputProps("phone")}
             />
-            <Button color="yellow" mt="md">Guardar cambios</Button>
+            <Button
+              color="yellow"
+              mt="md"
+              onClick={handleSaveProfile}
+              loading={updateProfileMutation.isPending}
+              leftSection={<IconCheck size={16} />}
+            >
+              Guardar cambios
+            </Button>
           </Stack>
         </Card>
 
-        {/* Right column */}
         <Stack gap="lg">
-          {/* Subscription */}
           <SubscriptionSection />
 
-          {/* Security */}
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconLock size={20} />
               <Text fw={600}>Seguridad</Text>
             </Group>
-            <Button variant="light" fullWidth>
+            <Button variant="light" fullWidth onClick={openPasswordModal}>
               Cambiar contraseña
             </Button>
           </Card>
 
-          {/* Change Email */}
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconMail size={20} />
@@ -500,48 +724,8 @@ export function MyProfilePage() {
             </form>
           </Card>
 
-          {/* Notifications */}
-          <Card shadow="sm" padding="lg" radius="lg" withBorder>
-            <Group mb="md">
-              <IconBell size={20} />
-              <Text fw={600}>Notificaciones</Text>
-            </Group>
-            <Stack gap="md">
-              <Group justify="space-between">
-                <Box>
-                  <Text size="sm" fw={500}>Recordatorios de sesión</Text>
-                  <Text size="xs" c="dimmed">Recibe alertas antes de tus citas</Text>
-                </Box>
-                <Switch defaultChecked color="yellow" />
-              </Group>
-              <Divider />
-              <Group justify="space-between">
-                <Box>
-                  <Text size="sm" fw={500}>Actualizaciones de plan</Text>
-                  <Text size="xs" c="dimmed">Cuando tu entrenador actualice tu plan</Text>
-                </Box>
-                <Switch defaultChecked color="yellow" />
-              </Group>
-              <Divider />
-              <Group justify="space-between">
-                <Box>
-                  <Text size="sm" fw={500}>Mensajes</Text>
-                  <Text size="xs" c="dimmed">Notificaciones de chat</Text>
-                </Box>
-                <Switch defaultChecked color="yellow" />
-              </Group>
-              <Divider />
-              <Group justify="space-between">
-                <Box>
-                  <Text size="sm" fw={500}>Email marketing</Text>
-                  <Text size="xs" c="dimmed">Ofertas y novedades</Text>
-                </Box>
-                <Switch color="yellow" />
-              </Group>
-            </Stack>
-          </Card>
+          <NotificationsSection />
 
-          {/* Workspace Info */}
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconPalette size={20} />
@@ -554,13 +738,56 @@ export function MyProfilePage() {
                 </Avatar>
                 <Box>
                   <Text fw={600}>{currentWorkspace?.name || "Trackfiz"}</Text>
-                  <Text size="sm" c="dimmed">Cliente desde Enero 2026</Text>
+                  <Text size="sm" c="dimmed">Tu centro de entrenamiento</Text>
                 </Box>
               </Group>
             </Paper>
           </Card>
         </Stack>
       </SimpleGrid>
+
+      <Modal
+        opened={passwordModalOpened}
+        onClose={closePasswordModal}
+        title="Cambiar contraseña"
+        centered
+        radius="lg"
+      >
+        <form
+          onSubmit={changePasswordForm.onSubmit((values) =>
+            changePasswordMutation.mutate({
+              current_password: values.current_password,
+              new_password: values.new_password,
+            })
+          )}
+        >
+          <Stack gap="md">
+            <PasswordInput
+              label="Contraseña actual"
+              placeholder="Tu contraseña actual"
+              {...changePasswordForm.getInputProps("current_password")}
+            />
+            <PasswordInput
+              label="Nueva contraseña"
+              placeholder="Mínimo 6 caracteres"
+              {...changePasswordForm.getInputProps("new_password")}
+            />
+            <PasswordInput
+              label="Confirmar contraseña"
+              placeholder="Repite la nueva contraseña"
+              {...changePasswordForm.getInputProps("confirm_password")}
+            />
+            <Button
+              type="submit"
+              color="yellow"
+              fullWidth
+              loading={changePasswordMutation.isPending}
+            >
+              Cambiar contraseña
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
     </Box>
   );
 }

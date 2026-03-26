@@ -66,6 +66,7 @@ import {
   useDeleteForm,
   type Form,
 } from "../../hooks/useForms";
+import { formatDecimal } from "../../utils/format";
 
 interface FormField {
   id: string;
@@ -425,8 +426,8 @@ export function FormsPage() {
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes < 1024 * 1024) return `${formatDecimal(bytes / 1024, 1)} KB`;
+    return `${formatDecimal(bytes / (1024 * 1024), 1)} MB`;
   };
 
   const getFieldIcon = (type: FormField["type"]) => {

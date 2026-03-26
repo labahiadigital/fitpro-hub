@@ -40,6 +40,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+import { formatDecimal } from "../../utils/format";
 
 interface OnboardingFormData {
   // Personal Info
@@ -510,7 +511,7 @@ export function ClientOnboardingPage() {
             <Text fw={700} size="lg" mb={4}>{productInfo.name}</Text>
             {productInfo.description && <Text size="sm" c="dimmed" mb="xs">{productInfo.description}</Text>}
             <Text fw={700} size="xl" c="blue">
-              €{Number(productInfo.price).toFixed(2)}
+              €{formatDecimal(Number(productInfo.price), 2)}
               {productInfo.interval && <Text span size="sm" c="dimmed" fw={400}>/{
                 productInfo.interval === "week" ? "semana" :
                 productInfo.interval === "biweekly" ? "quincenal" :

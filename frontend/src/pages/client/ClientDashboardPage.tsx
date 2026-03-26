@@ -31,6 +31,7 @@ import {
 } from "@tabler/icons-react";
 import { useClientDashboard } from "../../hooks/useClientPortal";
 import { useNavigate } from "react-router-dom";
+import { formatDecimal } from "../../utils/format";
 
 function StatCard({ 
   icon: Icon, 
@@ -253,7 +254,7 @@ export function ClientDashboardPage() {
               <Badge color="green" variant="light" size="lg">
                 <Group gap={4}>
                   <IconTrendingUp size={14} />
-                  {data.goals.current_weight - data.goals.start_weight > 0 ? "+" : ""}{(data.goals.current_weight - data.goals.start_weight).toFixed(1)}kg
+                  {data.goals.current_weight - data.goals.start_weight > 0 ? "+" : ""}{formatDecimal(data.goals.current_weight - data.goals.start_weight, 1)}kg
                 </Group>
               </Badge>
             </Group>

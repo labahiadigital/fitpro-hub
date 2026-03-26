@@ -67,6 +67,7 @@ import {
   type ClientPackage as ClientPackageType,
 } from "../../hooks/usePackages";
 import { useAuthStore } from "../../stores/auth";
+import { formatDecimal } from "../../utils/format";
 
 interface SessionPackage {
   id: string;
@@ -551,7 +552,7 @@ export function CatalogPage() {
                     </Table.Td>
                     <Table.Td ta="right">
                       <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>
-                        €{Number(sub.amount).toFixed(2)}/{
+                        €{formatDecimal(Number(sub.amount), 2)}/{
                           sub.interval === "week" ? "semana" :
                           sub.interval === "biweekly" ? "quincenal" :
                           sub.interval === "month" ? "mes" :
@@ -728,7 +729,7 @@ export function CatalogPage() {
 
                     <Group justify="space-between">
                       <Text c="teal" fw={700} size="lg">€{pkg.price}</Text>
-                      <Text c="dimmed" size="xs">€{(pkg.price / pkg.totalSessions).toFixed(2)}/sesión</Text>
+                      <Text c="dimmed" size="xs">€{formatDecimal(pkg.price / pkg.totalSessions, 2)}/sesión</Text>
                     </Group>
                   </Card>
                 ))}

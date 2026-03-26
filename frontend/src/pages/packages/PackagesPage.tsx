@@ -48,6 +48,7 @@ import {
   type SessionPackage as SessionPackageType,
   type ClientPackage as ClientPackageType,
 } from "../../hooks/usePackages";
+import { formatDecimal } from "../../utils/format";
 
 interface SessionPackage {
   id: string;
@@ -460,7 +461,7 @@ export function PackagesPage() {
                     €{pkg.price}
                   </Text>
                   <Text c="dimmed" size="xs">
-                    €{(pkg.price / pkg.totalSessions).toFixed(2)}/sesión
+                    €{formatDecimal(pkg.price / pkg.totalSessions, 2)}/sesión
                   </Text>
                 </Group>
               </Card>

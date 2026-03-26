@@ -15,7 +15,7 @@ from app.models.product import Product, SessionPackage, ClientPackage, Coupon
 from app.models.notification import Notification, EmailTemplate, ReminderSetting
 from app.models.supplement import Supplement, SupplementFavorite
 from app.models.feedback import ClientFeedback, ClientWorkoutFeedback, ClientDietFeedback, ClientEmotion
-# NOTE: Document, ProgressPhoto, SupplementRecommendation tables don't exist in DB
+from app.models.document import Document
 from app.models.live_classes import (
     VideoIntegration,
     LiveClass,
@@ -86,4 +86,5 @@ __all__ = [
     "InvitationStatus",
     "GoogleCalendarToken",
     "CalendarSyncMapping",
+    "Document",
 ]

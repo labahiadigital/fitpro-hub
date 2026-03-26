@@ -95,6 +95,7 @@ import { RecipeFormModal } from "../../components/recipes/RecipeFormModal";
 import { RecipeDetailModal } from "../../components/recipes/RecipeDetailModal";
 import type { Recipe } from "../../types/recipe";
 import { RECIPE_CATEGORIES, RECIPE_DIFFICULTIES } from "../../types/recipe";
+import { formatDecimal } from "../../utils/format";
 
 // Función para mapear categoría de la BD a categoría del frontend
 function mapCategory(dbCategory: string | null): string {
@@ -1355,7 +1356,7 @@ export function NutritionPage() {
                       {/* Calorías destacadas */}
                       <Group justify="space-between" align="center">
                         <Box className="food-card-calories">
-                          🔥 {Number(food.calories || 0).toFixed(0)} kcal
+                          🔥 {formatDecimal(Number(food.calories || 0), 0)} kcal
                         </Box>
                         <Group gap={4}>
                           <Tooltip label="Ver detalle">
@@ -1409,15 +1410,15 @@ export function NutritionPage() {
                       {/* Macros en grid elegante */}
                       <Box className="food-card-macros">
                         <Box className="food-card-macro protein">
-                          <Text className="food-card-macro-value">{Number(food.protein || 0).toFixed(0)}g</Text>
+                          <Text className="food-card-macro-value">{formatDecimal(Number(food.protein || 0), 0)}g</Text>
                           <Text className="food-card-macro-label">Proteína</Text>
                         </Box>
                         <Box className="food-card-macro carbs">
-                          <Text className="food-card-macro-value">{Number(food.carbs || 0).toFixed(0)}g</Text>
+                          <Text className="food-card-macro-value">{formatDecimal(Number(food.carbs || 0), 0)}g</Text>
                           <Text className="food-card-macro-label">Carbos</Text>
                         </Box>
                         <Box className="food-card-macro fat">
-                          <Text className="food-card-macro-value">{Number(food.fat || 0).toFixed(0)}g</Text>
+                          <Text className="food-card-macro-value">{formatDecimal(Number(food.fat || 0), 0)}g</Text>
                           <Text className="food-card-macro-label">Grasas</Text>
                         </Box>
                       </Box>
@@ -2202,23 +2203,23 @@ export function NutritionPage() {
                   <SimpleGrid cols={{ base: 1, sm: 2 }}>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Energía</Text>
-                      <Text fw={600} size="lg">{Number(viewingFood.calories || 0).toFixed(1)} kcal</Text>
+                      <Text fw={600} size="lg">{formatDecimal(Number(viewingFood.calories || 0), 1)} kcal</Text>
                       {viewingFood.energy_kj && <Text size="xs" c="dimmed">{viewingFood.energy_kj} kJ</Text>}
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Proteínas</Text>
-                      <Text fw={600} size="lg" c="green">{Number(viewingFood.protein_g || 0).toFixed(1)} g</Text>
+                      <Text fw={600} size="lg" c="green">{formatDecimal(Number(viewingFood.protein_g || 0), 1)} g</Text>
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Carbohidratos</Text>
-                      <Text fw={600} size="lg" c="orange">{Number(viewingFood.carbs_g || 0).toFixed(1)} g</Text>
+                      <Text fw={600} size="lg" c="orange">{formatDecimal(Number(viewingFood.carbs_g || 0), 1)} g</Text>
                       {viewingFood.sugars_g > 0 && <Text size="xs" c="dimmed">de los cuales azúcares: {viewingFood.sugars_g}g</Text>}
                       {viewingFood.added_sugars_g > 0 && <Text size="xs" c="dimmed">azúcares añadidos: {viewingFood.added_sugars_g}g</Text>}
                       {viewingFood.starch_g > 0 && <Text size="xs" c="dimmed">almidón: {viewingFood.starch_g}g</Text>}
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Grasas</Text>
-                      <Text fw={600} size="lg" c="grape">{Number(viewingFood.fat_g || 0).toFixed(1)} g</Text>
+                      <Text fw={600} size="lg" c="grape">{formatDecimal(Number(viewingFood.fat_g || 0), 1)} g</Text>
                       {viewingFood.saturated_fat_g > 0 && <Text size="xs" c="dimmed">saturadas: {viewingFood.saturated_fat_g}g</Text>}
                       {viewingFood.monounsaturated_fat_g > 0 && <Text size="xs" c="dimmed">monoinsaturadas: {viewingFood.monounsaturated_fat_g}g</Text>}
                       {viewingFood.polyunsaturated_fat_g > 0 && <Text size="xs" c="dimmed">poliinsaturadas: {viewingFood.polyunsaturated_fat_g}g</Text>}
@@ -2226,11 +2227,11 @@ export function NutritionPage() {
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Fibra</Text>
-                      <Text fw={600} size="lg">{Number(viewingFood.fiber_g || 0).toFixed(1)} g</Text>
+                      <Text fw={600} size="lg">{formatDecimal(Number(viewingFood.fiber_g || 0), 1)} g</Text>
                     </Box>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Sal</Text>
-                      <Text fw={600} size="lg">{Number(viewingFood.salt_g || 0).toFixed(2)} g</Text>
+                      <Text fw={600} size="lg">{formatDecimal(Number(viewingFood.salt_g || 0), 2)} g</Text>
                       {viewingFood.sodium_mg > 0 && <Text size="xs" c="dimmed">sodio: {viewingFood.sodium_mg}mg</Text>}
                     </Box>
                   </SimpleGrid>

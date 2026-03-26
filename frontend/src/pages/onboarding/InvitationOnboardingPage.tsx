@@ -44,6 +44,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api, redsysApi, sequraApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+import { formatDecimal } from "../../utils/format";
 
 interface ProductInfo {
   id: string;
@@ -869,7 +870,7 @@ export function InvitationOnboardingPage() {
                 <Paper p="lg" radius="md" withBorder w="100%" style={{ background: "rgba(45, 106, 79, 0.03)" }}>
                   <Group justify="center" gap="xs">
                     <Title order={1} style={{ fontSize: "2.5rem" }}>
-                      {product.price.toFixed(2)}€
+                      {formatDecimal(product.price, 2)}€
                     </Title>
                     {intervalLabel && (
                       <Text c="dimmed" size="lg">{intervalLabel}</Text>
@@ -915,7 +916,7 @@ export function InvitationOnboardingPage() {
                         <Badge variant="light" size="xs">Google Pay</Badge>
                       </Group>
                     </div>
-                    <Text fw={700} size="lg">{product.price.toFixed(2)}€</Text>
+                    <Text fw={700} size="lg">{formatDecimal(product.price, 2)}€</Text>
                   </Group>
                 </Paper>
 
