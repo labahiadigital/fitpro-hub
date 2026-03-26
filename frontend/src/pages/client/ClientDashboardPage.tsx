@@ -116,7 +116,7 @@ export function ClientDashboardPage() {
   };
 
   return (
-    <Box p="xl">
+    <Box p="xl" maw={1280} mx="auto">
       {/* Welcome Section */}
       <Box mb="xl">
         <Title order={2} mb={4}>
@@ -157,7 +157,7 @@ export function ClientDashboardPage() {
               color="dark"
               leftSection={<IconPlayerPlay size={16} />}
               radius="md"
-              onClick={() => navigate("/my-calendar")}
+              onClick={() => navigate(`/my-calendar?session=${data.nextSession?.id}`)}
             >
               Ver detalles
             </Button>

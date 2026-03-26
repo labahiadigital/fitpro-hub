@@ -44,6 +44,10 @@ WORKSPACE_PRESIGN_TTL = 900      # 15 min for user-generated content
 def _get_s3():
     global _s3_client
     if _s3_client is None:
+        if not settings.R2_ACCOUNT_ID:
+            raise RuntimeError(
+                "R2_ACCOUNT_ID is not configured. Set it in environment variables."
+            )
         _s3_client = boto3.client(
             "s3",
             endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",

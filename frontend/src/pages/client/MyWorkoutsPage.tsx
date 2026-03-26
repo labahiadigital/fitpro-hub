@@ -48,6 +48,8 @@ import {
 import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory } from "../../hooks/useClientPortal";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
+import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
+import { SlideOver } from "../../components/common/SlideOver";
 
 // No mock data - all data comes from backend
 
@@ -397,33 +399,28 @@ function LogWorkoutModal({
   };
 
   return (
-    <Modal
+    <SlideOver
       opened={opened}
       onClose={onClose}
       title="Registrar Entrenamiento"
-      size="lg"
+      subtitle={`${exercises.length} ejercicios • Registra peso y repeticiones por serie`}
     >
       <Stack gap="md">
         <Paper p="md" radius="md" style={{ background: "var(--mantine-color-yellow-light)" }}>
           <Text fw={600}>{workoutName}</Text>
-          <Text size="sm" c="dimmed">
-            {exercises.length} ejercicios • Registra peso y repeticiones por serie
-          </Text>
         </Paper>
 
         <Text fw={500} size="sm">Ejercicios</Text>
-        <ScrollArea h={320}>
-          <Stack gap="sm">
-            {exercises.map((exercise) => (
-              <ExerciseLogRow
-                key={exercise.exercise_id}
-                exercise={exercise}
-                setData={exerciseSets[exercise.exercise_id] || []}
-                onSetChange={(sets) => setExerciseSets((prev) => ({ ...prev, [exercise.exercise_id]: sets }))}
-              />
-            ))}
-          </Stack>
-        </ScrollArea>
+        <Stack gap="sm">
+          {exercises.map((exercise) => (
+            <ExerciseLogRow
+              key={exercise.exercise_id}
+              exercise={exercise}
+              setData={exerciseSets[exercise.exercise_id] || []}
+              onSetChange={(sets) => setExerciseSets((prev) => ({ ...prev, [exercise.exercise_id]: sets }))}
+            />
+          ))}
+        </Stack>
 
         <SimpleGrid cols={{ base: 1, xs: 2 }}>
           <NumberInput
@@ -465,7 +462,7 @@ function LogWorkoutModal({
           </Button>
         </Group>
       </Stack>
-    </Modal>
+    </SlideOver>
   );
 }
 
@@ -700,8 +697,93 @@ interface ProgramDay {
   notes?: string;
 }
 
+function WeekDayDetail({
+  schedule,
+  weekDayName,
+  onImageClick,
+}: {
+  schedule: { dayName?: string; exercises_list?: Array<{ name: string; sets: number; reps: string }>; blocks?: Array<{ id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }> };
+  weekDayName: string;
+  onImageClick: (url: string, name: string) => void;
+}) {
+  return (
+    <>
+      <Title order={4} mb="sm">{schedule.dayName || weekDayName}</Title>
+      <Group gap="md" mb="lg">
+        <Group gap={4}>
+          <IconClock size={14} />
+          <Text size="sm" c="dimmed">~60 min</Text>
+        </Group>
+        <Group gap={4}>
+          <IconBarbell size={14} />
+          <Text size="sm" c="dimmed">{schedule.exercises_list?.length || 0} ejercicios</Text>
+        </Group>
+      </Group>
+
+      {schedule.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
+        <Box key={block.id || blockIndex} mb="lg">
+          <Group gap="xs" mb="sm">
+            <Badge
+              color={block.type === "warmup" ? "orange" : block.type === "cooldown" ? "blue" : "yellow"}
+              variant="light"
+            >
+              {block.type === "warmup" ? "Calentamiento" : block.type === "cooldown" ? "Enfriamiento" : "Principal"}
+            </Badge>
+            <Text fw={600}>{block.name}</Text>
+          </Group>
+          <Stack gap="sm">
+            {block.exercises?.map((exercise, exIndex) => {
+              const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+              const exImage2 = exercise.exercise?.image_url;
+              return (
+                <Paper key={exIndex} p="md" radius="md" withBorder>
+                  <Group gap="sm" mb="sm">
+                    {exImage2 ? (
+                      <Image src={exImage2} alt={exName} w={40} h={40} fit="cover" radius="md" onClick={() => onImageClick(exImage2, exName)} style={{ cursor: "pointer" }} />
+                    ) : (
+                      <ThemeIcon variant="light" color="gray" size="md">
+                        <IconBarbell size={16} />
+                      </ThemeIcon>
+                    )}
+                    <Box style={{ flex: 1 }}>
+                      <Text fw={600} size="sm">{exName}</Text>
+                      <Group gap={4} mt={2}>
+                        <Badge variant="light" color="blue" size="xs">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
+                        <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds || 60}s</Badge>
+                      </Group>
+                    </Box>
+                  </Group>
+                  {exercise.notes && <Text size="xs" c="dimmed"><strong>Notas:</strong> {exercise.notes}</Text>}
+                  {exercise.exercise?.description && <Text size="xs" c="dimmed" mt={2}>{exercise.exercise.description}</Text>}
+                  {(exercise.video_url || exercise.exercise?.video_url) && (
+                    <Button
+                      component="a"
+                      href={exercise.video_url || exercise.exercise?.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      leftSection={<IconPlayerPlay size={14} />}
+                      variant="light"
+                      color="red"
+                      size="xs"
+                      mt="xs"
+                      radius="md"
+                    >
+                      Ver vídeo
+                    </Button>
+                  )}
+                </Paper>
+              );
+            })}
+          </Stack>
+        </Box>
+      ))}
+    </>
+  );
+}
+
 export function MyWorkoutsPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMdUp = useMediaQuery("(min-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("today");
   const { data: workouts, isLoading: isLoadingWorkouts } = useMyWorkouts();
   const { data: history } = useWorkoutHistory(10);
@@ -908,7 +990,7 @@ export function MyWorkoutsPage() {
   const todayDayIndex = templateDays.findIndex((d: ProgramDay) => d.day === todayDayNum);
 
   return (
-    <Box p="xl">
+    <Box p="xl" maw={1280} mx="auto">
       <Group justify="space-between" mb="xl">
         <Box>
           <Title order={2}>Mis Entrenamientos</Title>
@@ -1224,112 +1306,65 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <Stack gap="sm">
-            {displaySchedule.map((day, index) => {
-              const isToday = index + 1 === todayDayNum;
-              const exCount = day.exercises_list?.length || 0;
-              return (
-                <DayCardMenu
-                  key={index}
-                  dayName={weekDays[index]}
-                  isToday={isToday}
-                  isSelected={selectedDayIndex === index}
-                  isRestDay={day.isRestDay}
-                  onClick={() => setSelectedDayIndex(index)}
-                  badge={
-                    day.completed ? (
-                      <Badge color="green" variant="light" size="xs" leftSection={<IconCheck size={10} />}>
-                        Completado
-                      </Badge>
-                    ) : undefined
-                  }
-                  summary={
-                    <Text size="xs" c="dimmed">
-                      {day.isRestDay ? "Descanso" : `${day.type} - ${exCount} ejercicios`}
-                    </Text>
-                  }
+          <MasterDetailLayout
+            hasSelection={selectedDayIndex !== null && !displaySchedule[selectedDayIndex]?.isRestDay}
+            emptyMessage="Selecciona un día de entrenamiento para ver los ejercicios"
+            master={
+              <>
+                {displaySchedule.map((day, index) => {
+                  const isToday = index + 1 === todayDayNum;
+                  const exCount = day.exercises_list?.length || 0;
+                  return (
+                    <DayCardMenu
+                      key={index}
+                      dayName={weekDays[index]}
+                      isToday={isToday}
+                      isSelected={selectedDayIndex === index}
+                      isRestDay={day.isRestDay}
+                      onClick={() => setSelectedDayIndex(index)}
+                      badge={
+                        day.completed ? (
+                          <Badge color="green" variant="light" size="xs" leftSection={<IconCheck size={10} />}>
+                            Completado
+                          </Badge>
+                        ) : undefined
+                      }
+                      summary={
+                        <Text size="xs" c="dimmed">
+                          {day.isRestDay ? "Descanso" : `${day.type} - ${exCount} ejercicios`}
+                        </Text>
+                      }
+                    />
+                  );
+                })}
+
+                {/* FullPageDetail for mobile only */}
+                {!isMdUp && selectedDayIndex !== null && displaySchedule[selectedDayIndex] && !displaySchedule[selectedDayIndex].isRestDay && (
+                  <FullPageDetail
+                    opened={true}
+                    onClose={() => setSelectedDayIndex(null)}
+                    title={displaySchedule[selectedDayIndex].dayName || weekDays[selectedDayIndex]}
+                    subtitle={`${displaySchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios`}
+                  >
+                    <WeekDayDetail
+                      schedule={displaySchedule[selectedDayIndex]}
+                      weekDayName={weekDays[selectedDayIndex]}
+                      onImageClick={(url, name) => setEnlargedImage({ url, name })}
+                    />
+                  </FullPageDetail>
+                )}
+              </>
+            }
+            detail={
+              selectedDayIndex !== null && displaySchedule[selectedDayIndex] && !displaySchedule[selectedDayIndex].isRestDay ? (
+                <WeekDayDetail
+                  schedule={displaySchedule[selectedDayIndex]}
+                  weekDayName={displaySchedule[selectedDayIndex].dayName || weekDays[selectedDayIndex]}
+                  onImageClick={(url, name) => setEnlargedImage({ url, name })}
                 />
-              );
-            })}
-
-            {selectedDayIndex !== null && displaySchedule[selectedDayIndex] && !displaySchedule[selectedDayIndex].isRestDay && (
-              <FullPageDetail
-                opened={true}
-                onClose={() => setSelectedDayIndex(null)}
-                title={displaySchedule[selectedDayIndex].dayName || weekDays[selectedDayIndex]}
-                subtitle={`${displaySchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios`}
-              >
-                <Group gap="md" mb="lg">
-                  <Group gap={4}>
-                    <IconClock size={14} />
-                    <Text size="sm" c="dimmed">~60 min</Text>
-                  </Group>
-                  <Group gap={4}>
-                    <IconBarbell size={14} />
-                    <Text size="sm" c="dimmed">{displaySchedule[selectedDayIndex].exercises_list?.length || 0} ejercicios</Text>
-                  </Group>
-                </Group>
-
-                {displaySchedule[selectedDayIndex].blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
-                  <Box key={block.id || blockIndex} mb="lg">
-                    <Group gap="xs" mb="sm">
-                      <Badge
-                        color={block.type === "warmup" ? "orange" : block.type === "cooldown" ? "blue" : "yellow"}
-                        variant="light"
-                      >
-                        {block.type === "warmup" ? "Calentamiento" : block.type === "cooldown" ? "Enfriamiento" : "Principal"}
-                      </Badge>
-                      <Text fw={600}>{block.name}</Text>
-                    </Group>
-                    <Stack gap="sm">
-                      {block.exercises?.map((exercise, exIndex) => {
-                        const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
-                        const exImage2 = exercise.exercise?.image_url;
-                        return (
-                          <Paper key={exIndex} p="md" radius="md" withBorder>
-                            <Group gap="sm" mb="sm">
-                              {exImage2 ? (
-                                <Image src={exImage2} alt={exName} w={40} h={40} fit="cover" radius="md" onClick={() => setEnlargedImage({ url: exImage2, name: exName })} style={{ cursor: "pointer" }} />
-                              ) : (
-                                <ThemeIcon variant="light" color="gray" size="md">
-                                  <IconBarbell size={16} />
-                                </ThemeIcon>
-                              )}
-                              <Box style={{ flex: 1 }}>
-                                <Text fw={600} size="sm">{exName}</Text>
-                                <Group gap={4} mt={2}>
-                                  <Badge variant="light" color="blue" size="xs">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
-                                  <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds || 60}s</Badge>
-                                </Group>
-                              </Box>
-                            </Group>
-                            {exercise.notes && <Text size="xs" c="dimmed"><strong>Notas:</strong> {exercise.notes}</Text>}
-                            {exercise.exercise?.description && <Text size="xs" c="dimmed" mt={2}>{exercise.exercise.description}</Text>}
-                            {(exercise.video_url || exercise.exercise?.video_url) && (
-                              <Button
-                                component="a"
-                                href={exercise.video_url || exercise.exercise?.video_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                leftSection={<IconPlayerPlay size={14} />}
-                                variant="light"
-                                color="red"
-                                size="xs"
-                                mt="xs"
-                                radius="md"
-                              >
-                                Ver vídeo
-                              </Button>
-                            )}
-                          </Paper>
-                        );
-                      })}
-                    </Stack>
-                  </Box>
-                ))}
-              </FullPageDetail>
-            )}
-          </Stack>
+              ) : null
+            }
+          />
         </Tabs.Panel>
 
         <Tabs.Panel value="history">

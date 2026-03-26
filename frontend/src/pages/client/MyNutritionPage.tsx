@@ -14,7 +14,6 @@ import {
   RingProgress,
   Center,
   Loader,
-  Modal,
   TextInput,
   NumberInput,
   Select,
@@ -60,6 +59,8 @@ import { RecipeDetailModal } from "../../components/recipes/RecipeDetailModal";
 import type { Recipe } from "../../types/recipe";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
+import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
+import { SlideOver } from "../../components/common/SlideOver";
 
 // Tipos de comidas con sus iconos
 const MEAL_TYPES = [
@@ -217,11 +218,11 @@ function LogMealModal({
   };
 
   return (
-    <Modal
+    <SlideOver
       opened={opened}
       onClose={onClose}
       title="Registrar Comida"
-      size="lg"
+      subtitle="Añade los alimentos que has consumido"
     >
       <Stack gap="md">
         <Select
@@ -235,63 +236,68 @@ function LogMealModal({
         </Text>
         {foods.map((food, index) => (
           <Paper key={index} p="sm" withBorder radius="md">
-            <Group align="flex-end" gap="xs">
-              <TextInput
-                label="Nombre"
-                placeholder="Ej: Pechuga de pollo"
-                value={food.name}
-                onChange={(e) => updateFood(index, "name", e.target.value)}
-                style={{ flex: 2 }}
-              />
-              <NumberInput
-                label="Cantidad"
-                value={food.quantity}
-                onChange={(val) => updateFood(index, "quantity", val || 1)}
-                min={0.1}
-                step={0.5}
-                decimalScale={1}
-                style={{ width: 80 }}
-              />
-              <NumberInput
-                label="Calorías"
-                value={food.calories}
-                onChange={(val) => updateFood(index, "calories", val || 0)}
-                min={0}
-                style={{ width: 90 }}
-              />
-              <NumberInput
-                label="Proteína"
-                value={food.protein}
-                onChange={(val) => updateFood(index, "protein", val || 0)}
-                min={0}
-                decimalScale={1}
-                style={{ width: 80 }}
-              />
-              <NumberInput
-                label="Carbs"
-                value={food.carbs}
-                onChange={(val) => updateFood(index, "carbs", val || 0)}
-                min={0}
-                decimalScale={1}
-                style={{ width: 80 }}
-              />
-              <NumberInput
-                label="Grasas"
-                value={food.fat}
-                onChange={(val) => updateFood(index, "fat", val || 0)}
-                min={0}
-                decimalScale={1}
-                style={{ width: 80 }}
-              />
-              <ActionIcon
-                color="red"
-                variant="light"
-                onClick={() => removeFood(index)}
-                disabled={foods.length === 1}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Group>
+            <Stack gap="xs">
+              <Group align="flex-end" gap="xs">
+                <TextInput
+                  label="Nombre"
+                  placeholder="Ej: Pechuga de pollo"
+                  value={food.name}
+                  onChange={(e) => updateFood(index, "name", e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <NumberInput
+                  label="Cantidad"
+                  value={food.quantity}
+                  onChange={(val) => updateFood(index, "quantity", val || 1)}
+                  min={0.1}
+                  step={0.5}
+                  decimalScale={1}
+                  style={{ width: 80 }}
+                />
+                <ActionIcon
+                  color="red"
+                  variant="light"
+                  onClick={() => removeFood(index)}
+                  disabled={foods.length === 1}
+                  mt={24}
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Group>
+              <SimpleGrid cols={4}>
+                <NumberInput
+                  label="Kcal"
+                  value={food.calories}
+                  onChange={(val) => updateFood(index, "calories", val || 0)}
+                  min={0}
+                  size="xs"
+                />
+                <NumberInput
+                  label="Proteína"
+                  value={food.protein}
+                  onChange={(val) => updateFood(index, "protein", val || 0)}
+                  min={0}
+                  decimalScale={1}
+                  size="xs"
+                />
+                <NumberInput
+                  label="Carbs"
+                  value={food.carbs}
+                  onChange={(val) => updateFood(index, "carbs", val || 0)}
+                  min={0}
+                  decimalScale={1}
+                  size="xs"
+                />
+                <NumberInput
+                  label="Grasas"
+                  value={food.fat}
+                  onChange={(val) => updateFood(index, "fat", val || 0)}
+                  min={0}
+                  decimalScale={1}
+                  size="xs"
+                />
+              </SimpleGrid>
+            </Stack>
           </Paper>
         ))}
 
@@ -325,7 +331,7 @@ function LogMealModal({
           </Button>
         </Group>
       </Stack>
-    </Modal>
+    </SlideOver>
   );
 }
 
@@ -485,7 +491,7 @@ function LogPlanMealModal({
   if (!meal) return null;
 
   return (
-    <Modal
+    <SlideOver
       opened={opened}
       onClose={() => {
         setCheckedItems({});
@@ -493,7 +499,7 @@ function LogPlanMealModal({
         onClose();
       }}
       title={`Registrar ${meal.name}`}
-      size="lg"
+      subtitle="Marca los alimentos consumidos"
     >
       <Stack gap="md">
         <Paper p="md" radius="md" style={{ background: "var(--mantine-color-yellow-light)" }}>
@@ -562,7 +568,7 @@ function LogPlanMealModal({
           </Button>
         </Group>
       </Stack>
-    </Modal>
+    </SlideOver>
   );
 }
 
@@ -670,8 +676,153 @@ function ClientRecipesTab() {
   );
 }
 
+function NutritionDayDetail({
+  dayData,
+  targets,
+  planMeals,
+  mealDayOverrides,
+  setMealDayOverrides,
+  selectedWeekDayIndex,
+}: {
+  dayData: { dayName: string; calories: number; totals: { protein?: number; carbs?: number; fat?: number } };
+  targets: { calories: number };
+  planMeals: PlanMeal[];
+  mealDayOverrides: Record<string, number>;
+  setMealDayOverrides: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  selectedWeekDayIndex: number;
+}) {
+  const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  return (
+    <>
+      <Title order={4} mb="md">{dayData.dayName}</Title>
+      <SimpleGrid cols={2} spacing="sm" mb="lg">
+        <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
+          <Text size="xl" fw={700}>{dayData.calories}</Text>
+          <Text size="xs" c="dimmed">kcal consumidas</Text>
+          <Progress
+            value={targets.calories > 0 ? Math.min((dayData.calories / targets.calories) * 100, 100) : 0}
+            color="yellow"
+            size="sm"
+            mt="xs"
+          />
+        </Box>
+        <Box ta="center" p="md" style={{ background: "var(--mantine-color-red-light)", borderRadius: "var(--mantine-radius-md)" }}>
+          <Text size="xl" fw={700}>{Math.round(dayData.totals?.protein || 0)}g</Text>
+          <Text size="xs" c="dimmed">Proteína</Text>
+        </Box>
+        <Box ta="center" p="md" style={{ background: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
+          <Text size="xl" fw={700}>{Math.round(dayData.totals?.carbs || 0)}g</Text>
+          <Text size="xs" c="dimmed">Carbohidratos</Text>
+        </Box>
+        <Box ta="center" p="md" style={{ background: "var(--mantine-color-grape-light)", borderRadius: "var(--mantine-radius-md)" }}>
+          <Text size="xl" fw={700}>{Math.round(dayData.totals?.fat || 0)}g</Text>
+          <Text size="xs" c="dimmed">Grasas</Text>
+        </Box>
+      </SimpleGrid>
+
+      {planMeals && planMeals.length > 0 ? (
+        <Box>
+          <Text fw={600} mb="sm">Comidas del plan para {dayData.dayName}</Text>
+          <Stack gap="sm">
+            {planMeals.map((meal: PlanMeal, mealIndex: number) => {
+              const mealType = MEAL_TYPES.find(m => m.value === meal.name);
+              const mealFoods = meal.foods || meal.items?.map(item => {
+                const food = item.food || item.supplement;
+                const ss = parseFloat(String(food?.serving_size || "100")) || 100;
+                const qty = item.quantity_grams || 0;
+                const factor = qty / ss;
+                return {
+                  name: food?.name || "Alimento",
+                  calories: Math.round(Number(food?.calories || 0) * factor),
+                  protein_g: Math.round(Number(food?.protein || 0) * factor * 10) / 10,
+                  carbs_g: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
+                  fat_g: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
+                  quantity: qty,
+                  unit: "g",
+                };
+              }) || [];
+              const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
+              const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.protein_g) || 0), 0);
+              const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.carbs_g) || 0), 0);
+              const totalFat = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.fat_g) || 0), 0);
+              const MealIcon = mealType?.icon || IconSalad;
+              const mealKey = `${selectedWeekDayIndex}-${mealIndex}`;
+
+              return (
+                <Card key={mealIndex} padding="md" radius="md" withBorder>
+                  <Group justify="space-between" wrap="wrap">
+                    <Group>
+                      <ThemeIcon variant="light" color={mealType?.color || "gray"} size="lg" radius="xl">
+                        <MealIcon size={18} />
+                      </ThemeIcon>
+                      <Box>
+                        <Text fw={600} size="sm">{mealType?.label || meal.name}</Text>
+                        <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
+                      </Box>
+                    </Group>
+                    <Group gap="xs" wrap="wrap">
+                      <Badge variant="light" color="yellow" size="sm">{totalCalories} kcal</Badge>
+                      <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
+                      <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
+                      <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                      <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" color="gray" size="sm">
+                            <IconDotsVertical size={14} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Label>Mover a</Menu.Label>
+                          {dayLabels.map((targetDay, targetIndex) => {
+                            if (targetIndex === selectedWeekDayIndex) return null;
+                            return (
+                              <Menu.Item
+                                key={targetIndex}
+                                leftSection={<IconArrowsExchange size={14} />}
+                                onClick={() => {
+                                  setMealDayOverrides((prev) => ({ ...prev, [mealKey]: targetIndex }));
+                                }}
+                              >
+                                {targetDay}
+                              </Menu.Item>
+                            );
+                          })}
+                        </Menu.Dropdown>
+                      </Menu>
+                    </Group>
+                  </Group>
+                  {mealDayOverrides[mealKey] !== undefined && (
+                    <Badge variant="light" color="blue" size="xs" mt="xs">
+                      Movida a {dayLabels[mealDayOverrides[mealKey]]}
+                    </Badge>
+                  )}
+                  {mealFoods.length > 0 && (
+                    <Stack gap="xs" mt="sm" ml={54}>
+                      {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
+                        <Group key={foodIndex} justify="space-between">
+                          <Text size="sm">{food.name}</Text>
+                          <Text size="xs" c="dimmed">
+                            {food.quantity}{food.unit} - {food.calories} kcal
+                          </Text>
+                        </Group>
+                      ))}
+                    </Stack>
+                  )}
+                </Card>
+              );
+            })}
+          </Stack>
+        </Box>
+      ) : (
+        <Text c="dimmed" ta="center">No hay comidas asignadas en el plan para este día</Text>
+      )}
+    </>
+  );
+}
+
 export function MyNutritionPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMdUp = useMediaQuery("(min-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("today");
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
@@ -869,7 +1020,7 @@ export function MyNutritionPage() {
   const todayDayName = weekDayNames[selectedPlanDay - 1] || "Día";
 
   return (
-    <Box p="xl">
+    <Box p="xl" maw={1280} mx="auto">
       <Group justify="space-between" mb="xl">
         <Box>
           <Title order={2}>Mi Nutrición</Title>
@@ -1234,38 +1385,42 @@ export function MyNutritionPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <Stack gap="sm">
-            {weekData.map((day, index) => {
-              const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
-              return (
-                <DayCardMenu
-                  key={index}
-                  dayName={`${day.day} - ${day.dayName}`}
-                  isToday={day.isToday}
-                  isSelected={selectedWeekDayIndex === index}
-                  onClick={() => setSelectedWeekDayIndex(index)}
-                  badge={
-                    <Badge variant="light" color={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"} size="sm">
-                      {day.calories} / {day.target} kcal
-                    </Badge>
-                  }
-                  summary={
-                    <Text size="xs" c="dimmed">{day.mealsLogged} comidas registradas</Text>
-                  }
-                  progressValue={percentage}
-                  progressColor={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"}
-                />
-              );
-            })}
+          <MasterDetailLayout
+            hasSelection={selectedWeekDayIndex !== null}
+            emptyMessage="Selecciona un día para ver el detalle nutricional"
+            master={
+              <>
+                {weekData.map((day, index) => {
+                  const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
+                  return (
+                    <DayCardMenu
+                      key={index}
+                      dayName={`${day.day} - ${day.dayName}`}
+                      isToday={day.isToday}
+                      isSelected={selectedWeekDayIndex === index}
+                      onClick={() => setSelectedWeekDayIndex(index)}
+                      badge={
+                        <Badge variant="light" color={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"} size="sm">
+                          {day.calories} / {day.target} kcal
+                        </Badge>
+                      }
+                      summary={
+                        <Text size="xs" c="dimmed">{day.mealsLogged} comidas registradas</Text>
+                      }
+                      progressValue={percentage}
+                      progressColor={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"}
+                    />
+                  );
+                })}
 
-            {/* FullPageDetail for selected week day */}
-            {selectedWeekDayIndex !== null && weekData[selectedWeekDayIndex] && (
-              <FullPageDetail
-                opened={true}
-                onClose={() => setSelectedWeekDayIndex(null)}
-                title={weekData[selectedWeekDayIndex].dayName}
-                subtitle={new Date(weekData[selectedWeekDayIndex].date).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
-              >
+                {/* FullPageDetail for mobile */}
+                {!isMdUp && selectedWeekDayIndex !== null && weekData[selectedWeekDayIndex] && (
+                  <FullPageDetail
+                    opened={true}
+                    onClose={() => setSelectedWeekDayIndex(null)}
+                    title={weekData[selectedWeekDayIndex].dayName}
+                    subtitle={new Date(weekData[selectedWeekDayIndex].date).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+                  >
                 <SimpleGrid cols={2} spacing="sm" mb="lg">
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
@@ -1409,31 +1564,44 @@ export function MyNutritionPage() {
               </FullPageDetail>
             )}
 
-            {/* Week Summary */}
-            <Card shadow="sm" padding="lg" radius="lg" withBorder>
-              <Title order={5} mb="md">Resumen de la Semana</Title>
-              <SimpleGrid cols={{ base: 1, xs: 3 }}>
-                <Box ta="center">
-                  <Text size="xl" fw={700} c="yellow">
-                    {nutritionHistory?.summary?.avg_calories || 0}
-                  </Text>
-                  <Text size="sm" c="dimmed">Promedio kcal/día</Text>
-                </Box>
-                <Box ta="center">
-                  <Text size="xl" fw={700} c="green">
-                    {nutritionHistory?.summary?.total_days || 0}
-                  </Text>
-                  <Text size="sm" c="dimmed">Días registrados</Text>
-                </Box>
-                <Box ta="center">
-                  <Text size="xl" fw={700} c="blue">
-                    {targets.calories}
-                  </Text>
-                  <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
-                </Box>
-              </SimpleGrid>
-            </Card>
-          </Stack>
+                <Card shadow="sm" padding="lg" radius="lg" withBorder>
+                  <Title order={5} mb="md">Resumen de la Semana</Title>
+                  <SimpleGrid cols={{ base: 1, xs: 3 }}>
+                    <Box ta="center">
+                      <Text size="xl" fw={700} c="yellow">
+                        {nutritionHistory?.summary?.avg_calories || 0}
+                      </Text>
+                      <Text size="sm" c="dimmed">Promedio kcal/día</Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={700} c="green">
+                        {nutritionHistory?.summary?.total_days || 0}
+                      </Text>
+                      <Text size="sm" c="dimmed">Días registrados</Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={700} c="blue">
+                        {targets.calories}
+                      </Text>
+                      <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
+                    </Box>
+                  </SimpleGrid>
+                </Card>
+              </>
+            }
+            detail={
+              selectedWeekDayIndex !== null && weekData[selectedWeekDayIndex] ? (
+                <NutritionDayDetail
+                  dayData={weekData[selectedWeekDayIndex]}
+                  targets={targets}
+                  planMeals={weekData[selectedWeekDayIndex].planMeals}
+                  mealDayOverrides={mealDayOverrides}
+                  setMealDayOverrides={setMealDayOverrides}
+                  selectedWeekDayIndex={selectedWeekDayIndex}
+                />
+              ) : null
+            }
+          />
         </Tabs.Panel>
 
         <Tabs.Panel value="history">

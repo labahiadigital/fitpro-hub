@@ -910,6 +910,7 @@ export function SettingsPage() {
                     <Switch checked={notifPrefs?.email_new_message ?? true} description="Recibe un email cuando un cliente te envía un mensaje" label="Nuevos mensajes" onChange={(e) => handleNotifPrefChange("email_new_message", e.currentTarget.checked)} />
                     <Switch checked={notifPrefs?.email_new_client ?? true} description="Recibe un email cuando se registra un nuevo cliente" label="Nuevos clientes" onChange={(e) => handleNotifPrefChange("email_new_client", e.currentTarget.checked)} />
                     <Switch checked={notifPrefs?.email_form_submitted ?? true} description="Recibe un email cuando un cliente completa un formulario" label="Formularios completados" onChange={(e) => handleNotifPrefChange("email_form_submitted", e.currentTarget.checked)} />
+                    <Switch checked={notifPrefs?.email_progress_milestone ?? true} description="Recibe un email cuando un cliente alcanza un hito de progreso" label="Hitos de progreso" onChange={(e) => handleNotifPrefChange("email_progress_milestone", e.currentTarget.checked)} />
                   </Stack>
                 </Box>
 

@@ -197,11 +197,14 @@ from pydantic import BaseModel as _BaseModel
 class NotificationPreferencesUpdate(_BaseModel):
     email_booking_created: Optional[bool] = None
     email_booking_cancelled: Optional[bool] = None
+    email_booking_reminder: Optional[bool] = None
     email_payment_received: Optional[bool] = None
     email_payment_failed: Optional[bool] = None
     email_new_message: Optional[bool] = None
     email_new_client: Optional[bool] = None
     email_form_submitted: Optional[bool] = None
+    email_plan_updated: Optional[bool] = None
+    email_progress_milestone: Optional[bool] = None
     push_enabled: Optional[bool] = None
 
 
@@ -214,11 +217,14 @@ async def get_notification_preferences(
     defaults = {
         "email_booking_created": True,
         "email_booking_cancelled": True,
+        "email_booking_reminder": True,
         "email_payment_received": True,
         "email_payment_failed": True,
         "email_new_message": True,
         "email_new_client": True,
         "email_form_submitted": True,
+        "email_plan_updated": True,
+        "email_progress_milestone": True,
         "push_enabled": True,
     }
     return {**defaults, **prefs}

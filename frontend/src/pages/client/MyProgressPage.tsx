@@ -44,6 +44,7 @@ import {
 import { useMemo, useState } from "react";
 import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos, useDeleteProgressPhoto } from "../../hooks/useClientPortal";
 import { formatDecimal } from "../../utils/format";
+import { SlideOver } from "../../components/common/SlideOver";
 
 function StatProgress({ 
   label, 
@@ -225,11 +226,11 @@ function LogMeasurementModal({
   };
 
   return (
-    <Modal
+    <SlideOver
       opened={opened}
       onClose={onClose}
       title={existingForDate ? "Editar Medidas" : "Registrar Medidas"}
-      size="lg"
+      subtitle="Registra peso, grasa y medidas corporales"
     >
       <Stack gap="md">
         <DateInput
@@ -336,7 +337,7 @@ function LogMeasurementModal({
           </Button>
         </Group>
       </Stack>
-    </Modal>
+    </SlideOver>
   );
 }
 
@@ -382,11 +383,11 @@ function UploadPhotoModal({
   };
 
   return (
-    <Modal
+    <SlideOver
       opened={opened}
       onClose={onClose}
       title="Subir Foto de Progreso"
-      size="md"
+      subtitle="Añade una foto para comparar tu evolución"
     >
       <Stack gap="md">
         <DateInput
@@ -460,7 +461,7 @@ function UploadPhotoModal({
           </Button>
         </Group>
       </Stack>
-    </Modal>
+    </SlideOver>
   );
 }
 
@@ -607,7 +608,7 @@ export function MyProgressPage() {
   };
 
   return (
-    <Box p="xl">
+    <Box p="xl" maw={1280} mx="auto">
       <Group justify="space-between" mb="xl">
         <Box>
           <Title order={2}>Mi Progreso</Title>

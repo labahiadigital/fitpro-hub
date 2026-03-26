@@ -381,9 +381,13 @@ function NotificationsSection() {
   }
 
   const notifSettings = [
-    { key: "email_booking_created", label: "Recordatorios de sesión", desc: "Recibe alertas antes de tus citas" },
-    { key: "email_new_message", label: "Mensajes", desc: "Notificaciones de chat" },
+    { key: "email_booking_created", label: "Nuevas citas", desc: "Cuando se te agenda una nueva sesión" },
+    { key: "email_booking_cancelled", label: "Cancelaciones", desc: "Cuando se cancela una de tus citas" },
+    { key: "email_booking_reminder", label: "Recordatorios de sesión", desc: "Recibe un recordatorio antes de tus citas" },
+    { key: "email_new_message", label: "Mensajes", desc: "Cuando tu entrenador te envía un mensaje" },
     { key: "email_payment_received", label: "Pagos recibidos", desc: "Confirmación cuando se procese un pago" },
+    { key: "email_plan_updated", label: "Cambios en tu plan", desc: "Cuando se actualiza tu rutina o plan nutricional" },
+    { key: "email_progress_milestone", label: "Hitos de progreso", desc: "Cuando alcances un objetivo importante" },
     { key: "push_enabled", label: "Notificaciones push", desc: "Notificaciones en el navegador" },
   ];
 

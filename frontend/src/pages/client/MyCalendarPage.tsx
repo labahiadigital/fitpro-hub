@@ -27,7 +27,8 @@ import {
   IconUser,
   IconVideo,
 } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMyBookings, useAvailableSlots, useCreateClientBooking } from "../../hooks/useClientPortal";
 
 function getWeekDays(weekOffset: number) {
@@ -145,11 +146,31 @@ function RequestBookingModal({
 }
 
 export function MyCalendarPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: upcomingBookings, isLoading: isLoadingUpcoming } = useMyBookings({ upcoming_only: true, limit: 20 });
-  const { data: allBookings, isLoading: isLoadingAll } = useMyBookings({ limit: 50 });
+  const { data: allBookings, isLoading: isLoadingAll } = useMyBookings({ upcoming_only: false, limit: 100 });
   const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [highlightedSessionId, setHighlightedSessionId] = useState<string | null>(null);
   const [bookingModalOpened, { open: openBookingModal, close: closeBookingModal }] = useDisclosure(false);
+
+  useEffect(() => {
+    const sessionId = searchParams.get("session");
+    if (!sessionId || isLoadingUpcoming || isLoadingAll) return;
+    const allB = [...(upcomingBookings || []), ...(allBookings || [])];
+    const target = allB.find(b => b.id === sessionId);
+    if (target) {
+      const targetDate = new Date(target.start_time);
+      const today = new Date();
+      const diffDays = Math.floor((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const todayDow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+      const offset = Math.floor((diffDays + todayDow) / 7);
+      setWeekOffset(offset);
+      setSelectedDayDate(targetDate.toDateString());
+      setHighlightedSessionId(sessionId);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, upcomingBookings, allBookings, isLoadingUpcoming, isLoadingAll, setSearchParams]);
 
   const isLoading = isLoadingUpcoming || isLoadingAll;
 
@@ -219,7 +240,7 @@ export function MyCalendarPage() {
     : pastSessions.filter(s => weekOffset === 0 || isInSelectedWeek(s.startDate));
 
   return (
-    <Box p="xl">
+    <Box p="xl" maw={1280} mx="auto">
       <Group justify="space-between" mb="xl">
         <Box>
           <Title order={2}>Mis Citas</Title>
@@ -309,7 +330,14 @@ export function MyCalendarPage() {
           </Card>
         )}
         {filteredUpcoming.map((session) => (
-          <Card key={session.id} shadow="sm" padding="lg" radius="lg" withBorder>
+          <Card
+            key={session.id}
+            shadow="sm"
+            padding="lg"
+            radius="lg"
+            withBorder
+            style={highlightedSessionId === session.id ? { borderColor: "var(--mantine-color-yellow-filled)", borderWidth: 2 } : undefined}
+          >
             <Group justify="space-between" wrap="nowrap">
               <Group wrap="nowrap">
                 <ThemeIcon
