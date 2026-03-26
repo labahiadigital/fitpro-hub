@@ -7,6 +7,8 @@ from app.models.base import BaseModel
 class AuditLog(BaseModel):
     __tablename__ = "audit_logs"
     
+    updated_at = None  # table lacks this column inherited from BaseModel
+    
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     
