@@ -283,6 +283,13 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
   );
 }
 
+function safeString(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return `${val.length}`;
+  return "";
+}
+
 function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
   const [opened, setOpened] = useState(false);
   const exercises: any[] = Array.isArray(log?.log?.exercises) ? log.log.exercises : [];
@@ -295,17 +302,17 @@ function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
           </ThemeIcon>
           <Box>
             <Text fw={600} size="sm">
-              {log?.log?.workout_name || "Entrenamiento"}
+              {safeString(log?.log?.workout_name) || "Entrenamiento"}
             </Text>
             <Text size="xs" c="dimmed">{dateStr}</Text>
           </Box>
         </Group>
         <Group gap="md">
           {log?.log?.duration_minutes ? (
-            <Badge variant="light" color="blue" size="sm">{log.log.duration_minutes} min</Badge>
+            <Badge variant="light" color="blue" size="sm">{safeString(log.log.duration_minutes)} min</Badge>
           ) : null}
           {log?.log?.calories_burned ? (
-            <Badge variant="light" color="orange" size="sm">{log.log.calories_burned} kcal</Badge>
+            <Badge variant="light" color="orange" size="sm">{safeString(log.log.calories_burned)} kcal</Badge>
           ) : null}
           {exercises.length > 0 && (
             <Badge variant="light" color="green" size="sm">
@@ -319,46 +326,61 @@ function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
           )}
         </Group>
       </Group>
-      {log?.log?.notes ? (
+      {log?.log?.notes && typeof log.log.notes === "string" ? (
         <Text size="xs" c="dimmed" mt="xs" fs="italic">"{log.log.notes}"</Text>
       ) : null}
       {exercises.length > 0 && (
         <Collapse in={opened}>
           <Divider my="sm" />
-          <Table striped highlightOnHover styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Ejercicio</Table.Th>
-                <Table.Th style={{ textAlign: "center" }}>Series</Table.Th>
-                <Table.Th style={{ textAlign: "center" }}>Reps/Tiempo</Table.Th>
-                <Table.Th style={{ textAlign: "center" }}>Peso</Table.Th>
-                <Table.Th style={{ textAlign: "center" }}>Estado</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {exercises.map((ex: any, i: number) => (
-                <Table.Tr key={i}>
-                  <Table.Td>
-                    <Text size="xs" fw={500}>{ex?.exercise_name || ex?.name || `Ejercicio ${i + 1}`}</Text>
-                  </Table.Td>
-                  <Table.Td style={{ textAlign: "center" }}>
-                    <Text size="xs">{ex?.sets_completed || ex?.sets || "—"}</Text>
-                  </Table.Td>
-                  <Table.Td style={{ textAlign: "center" }}>
-                    <Text size="xs">{ex?.reps_completed || ex?.reps || ex?.duration || "—"}</Text>
-                  </Table.Td>
-                  <Table.Td style={{ textAlign: "center" }}>
-                    <Text size="xs">{ex?.weight_kg ? `${ex.weight_kg} kg` : ex?.weight ? `${ex.weight} kg` : "—"}</Text>
-                  </Table.Td>
-                  <Table.Td style={{ textAlign: "center" }}>
-                    <Badge size="xs" variant="light" color={ex?.completed ? "green" : "gray"}>
-                      {ex?.completed ? "Hecho" : "Pendiente"}
-                    </Badge>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+          <Stack gap={4}>
+            {exercises.map((ex: any, i: number) => {
+              const sets: any[] = Array.isArray(ex?.sets) ? ex.sets : [];
+              const totalSets = sets.length || (typeof ex?.sets_completed === "number" ? ex.sets_completed : 0);
+              const completedSets = sets.filter((s: any) => s?.completed).length;
+              return (
+                <Box key={i} p="xs" style={{ background: i % 2 === 0 ? "var(--mantine-color-gray-0)" : "transparent", borderRadius: 6 }}>
+                  <Group justify="space-between" mb={sets.length > 0 ? 4 : 0}>
+                    <Group gap="xs">
+                      <Badge size="xs" variant="light" color={ex?.completed ? "green" : "gray"}>
+                        {ex?.completed ? "Hecho" : "Pend."}
+                      </Badge>
+                      <Text size="xs" fw={600}>{safeString(ex?.exercise_name || ex?.name) || `Ejercicio ${i + 1}`}</Text>
+                    </Group>
+                    {totalSets > 0 && (
+                      <Text size="xs" c="dimmed">{sets.length > 0 ? `${completedSets}/${totalSets} series` : `${totalSets} series`}</Text>
+                    )}
+                  </Group>
+                  {sets.length > 0 && (
+                    <Table withColumnBorders={false} styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
+                      <Table.Tbody>
+                        {sets.map((s: any, si: number) => (
+                          <Table.Tr key={si}>
+                            <Table.Td style={{ width: 50, paddingLeft: 24 }}>
+                              <Text size="xs" c="dimmed">S{typeof s?.set_number === "number" ? s.set_number : si + 1}</Text>
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "center", width: 70 }}>
+                              <Text size="xs">{typeof s?.reps_completed === "number" ? `${s.reps_completed} reps` : typeof s?.duration_seconds === "number" ? `${s.duration_seconds}s` : "—"}</Text>
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "center", width: 70 }}>
+                              <Text size="xs">{typeof s?.weight_kg === "number" ? `${s.weight_kg} kg` : "—"}</Text>
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "center", width: 50 }}>
+                              <Badge size="xs" variant="dot" color={s?.completed ? "green" : "gray"}>
+                                {s?.completed ? "OK" : "—"}
+                              </Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  )}
+                  {safeString(ex?.notes) && (
+                    <Text size="xs" c="dimmed" fs="italic" mt={2} pl={24}>{safeString(ex.notes)}</Text>
+                  )}
+                </Box>
+              );
+            })}
+          </Stack>
         </Collapse>
       )}
     </Card>
@@ -405,7 +427,7 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
             {meals.map((meal: any, mi: number) => (
               <Box key={mi}>
                 <Group gap="xs" mb={4}>
-                  <Text size="xs" fw={700} c="teal">{meal?.meal_name || meal?.name || `Comida ${mi + 1}`}</Text>
+                  <Text size="xs" fw={700} c="teal">{safeString(meal?.meal_name || meal?.name) || `Comida ${mi + 1}`}</Text>
                   {meal?.time && <Text size="xs" c="dimmed">({meal.time})</Text>}
                   {meal?.calories != null && (
                     <Badge size="xs" variant="light" color="yellow">{Math.round(meal.calories)} kcal</Badge>
@@ -417,10 +439,10 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                       {meal.foods.map((food: any, fi: number) => (
                         <Table.Tr key={fi}>
                           <Table.Td style={{ paddingLeft: 16 }}>
-                            <Text size="xs">{food?.name || food?.food_name || "Alimento"}</Text>
+                            <Text size="xs">{safeString(food?.name || food?.food_name) || "Alimento"}</Text>
                           </Table.Td>
                           <Table.Td style={{ textAlign: "right", width: 60 }}>
-                            <Text size="xs" c="dimmed">{food?.quantity || food?.amount ? `${food.quantity || food.amount}g` : ""}</Text>
+                            <Text size="xs" c="dimmed">{typeof food?.quantity === "number" || typeof food?.amount === "number" ? `${food.quantity ?? food.amount}g` : safeString(food?.quantity || food?.amount) ? `${food.quantity || food.amount}g` : ""}</Text>
                           </Table.Td>
                           <Table.Td style={{ textAlign: "right", width: 60 }}>
                             <Text size="xs" c="dimmed">{food?.calories != null ? `${Math.round(food.calories)} kcal` : ""}</Text>
@@ -436,7 +458,7 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                       {meal.items.map((item: any, ii: number) => (
                         <Table.Tr key={ii}>
                           <Table.Td style={{ paddingLeft: 16 }}>
-                            <Text size="xs">{item?.food_name || item?.name || "Alimento"}</Text>
+                            <Text size="xs">{safeString(item?.food_name || item?.name) || "Alimento"}</Text>
                           </Table.Td>
                           <Table.Td style={{ textAlign: "right", width: 60 }}>
                             <Text size="xs" c="dimmed">{item?.quantity_grams ? `${item.quantity_grams}g` : item?.quantity ? `${item.quantity}g` : ""}</Text>
