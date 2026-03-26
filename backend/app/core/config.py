@@ -77,12 +77,14 @@ class Settings(BaseSettings):
     # CORS (comma-separated list of allowed origins)
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.trackfiz.com"
     
-    # Cloudflare R2 (S3-compatible storage)
+    # Cloudflare R2 (S3-compatible object storage)
     R2_ACCOUNT_ID: str = ""
     R2_ACCESS_KEY_ID: str = ""
     R2_SECRET_ACCESS_KEY: str = ""
-    R2_BUCKET_NAME: str = "exercise-images"
-    R2_PUBLIC_URL: str = "https://pub-9b395e0f2f6542b3ab0bd253607e8231.r2.dev"
+    R2_PLATFORM_BUCKET: str = "trackfiz-platform"
+    R2_PLATFORM_PUBLIC_URL: str = "https://pub-242c7b3240bb4ef19469afbf242adcdd.r2.dev"
+    R2_WORKSPACES_BUCKET: str = "trackfiz-workspaces"
+    R2_WORKSPACES_PUBLIC_URL: str = "https://pub-ca3308254a744147af2224d5e32de7ce.r2.dev"
 
     # Certificate encryption (AES-256-GCM for FNMT private keys at rest)
     # Generate with: python -c "import os; print(os.urandom(32).hex())"

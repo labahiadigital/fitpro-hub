@@ -3,5 +3,15 @@
   "compatibility_date": "2026-01-20",
   "assets": {
     "directory": "./dist"
-  }
+  },
+  "r2_buckets": [
+    {
+      "binding": "PLATFORM_BUCKET",
+      "bucket_name": "trackfiz-platform"
+    },
+    {
+      "binding": "WORKSPACES_BUCKET",
+      "bucket_name": "trackfiz-workspaces"
+    }
+  ]
 }

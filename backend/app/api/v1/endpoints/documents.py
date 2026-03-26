@@ -7,7 +7,7 @@ from sqlalchemy import select, desc
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.storage import upload_file, generate_filename
+from app.core.storage import upload_workspace_file, generate_filename
 from app.middleware.auth import get_current_user, CurrentUser
 from app.models.document import Document
 
@@ -49,10 +49,13 @@ async def trainer_upload_document(
         raise HTTPException(status_code=400, detail="El archivo supera el límite de 20 MB")
 
     filename = generate_filename(file.filename)
-    prefix = f"documents/{workspace_id}/{client_id}"
 
     try:
-        public_url = await upload_file(content, prefix, filename, file.content_type or "application/octet-stream")
+        public_url = await upload_workspace_file(
+            content, workspace_id,
+            "clients", str(client_id), "documents", filename,
+            content_type=file.content_type or "application/octet-stream",
+        )
     except Exception:
         raise HTTPException(status_code=500, detail="Error al subir el archivo")
 

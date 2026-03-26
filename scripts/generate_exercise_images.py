@@ -14,8 +14,8 @@ import requests
 
 API_KEY = os.environ.get("NANOBANANA_API_KEY", "")
 API_URL = "https://api.laozhang.ai/v1beta/models/gemini-3-pro-image-preview:generateContent"
-BUCKET_NAME = "exercise-images"
-R2_PUBLIC_BASE = "https://pub-9b395e0f2f6542b3ab0bd253607e8231.r2.dev"
+BUCKET_NAME = "trackfiz-platform"
+R2_PUBLIC_BASE = "https://pub-242c7b3240bb4ef19469afbf242adcdd.r2.dev"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(SCRIPT_DIR, "..", "web")
 EXERCISES_FILE = os.path.join(SCRIPT_DIR, "exercises_data.json")

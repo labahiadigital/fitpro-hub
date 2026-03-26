@@ -403,13 +403,16 @@ async def upload_client_avatar(
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Máximo 5 MB")
 
-    from app.core.storage import upload_file, generate_filename
+    from app.core.storage import upload_workspace_file, generate_filename
 
     filename = generate_filename(file.filename)
-    prefix = f"avatars/{client.id}"
 
     try:
-        public_url = await upload_file(content, prefix, filename, file.content_type or "image/jpeg")
+        public_url = await upload_workspace_file(
+            content, current_user.workspace_id,
+            "clients", str(client.id), "avatar", filename,
+            content_type=file.content_type or "image/jpeg",
+        )
     except Exception:
         raise HTTPException(status_code=500, detail="Error al subir la imagen")
 
@@ -1301,7 +1304,7 @@ async def upload_progress_photo(
             detail=f"Tipo de archivo {file.content_type} no permitido. Usa JPEG, PNG o WebP."
         )
     
-    from app.core.storage import upload_file, generate_filename
+    from app.core.storage import upload_workspace_file, generate_filename
 
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
@@ -1309,8 +1312,11 @@ async def upload_progress_photo(
 
     try:
         filename = generate_filename(file.filename)
-        prefix = f"progress-photos/{client.id}"
-        public_url = await upload_file(content, prefix, filename, file.content_type or "image/jpeg")
+        public_url = await upload_workspace_file(
+            content, current_user.workspace_id,
+            "clients", str(client.id), "progress-photos", filename,
+            content_type=file.content_type or "image/jpeg",
+        )
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error al subir el archivo al almacenamiento")
         
@@ -2486,13 +2492,16 @@ async def client_upload_document(
     if len(content) > 20 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="El archivo supera el límite de 20 MB")
 
-    from app.core.storage import upload_file, generate_filename
+    from app.core.storage import upload_workspace_file, generate_filename
 
     filename = generate_filename(file.filename)
-    prefix = f"documents/{current_user.workspace_id}/{client.id}"
 
     try:
-        public_url = await upload_file(content, prefix, filename, file.content_type or "application/octet-stream")
+        public_url = await upload_workspace_file(
+            content, current_user.workspace_id,
+            "clients", str(client.id), "documents", filename,
+            content_type=file.content_type or "application/octet-stream",
+        )
     except Exception:
         raise HTTPException(status_code=500, detail="Error al subir el archivo")
 
