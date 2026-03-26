@@ -285,7 +285,7 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
 
 function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
   const [opened, setOpened] = useState(false);
-  const exercises = log.log?.exercises || [];
+  const exercises: any[] = Array.isArray(log?.log?.exercises) ? log.log.exercises : [];
   return (
     <Card padding="md" radius="md" withBorder>
       <Group justify="space-between" style={{ cursor: exercises.length > 0 ? "pointer" : undefined }} onClick={() => exercises.length > 0 && setOpened(o => !o)}>
@@ -295,21 +295,21 @@ function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
           </ThemeIcon>
           <Box>
             <Text fw={600} size="sm">
-              {log.log?.workout_name || "Entrenamiento"}
+              {log?.log?.workout_name || "Entrenamiento"}
             </Text>
             <Text size="xs" c="dimmed">{dateStr}</Text>
           </Box>
         </Group>
         <Group gap="md">
-          {log.log?.duration_minutes && (
+          {log?.log?.duration_minutes ? (
             <Badge variant="light" color="blue" size="sm">{log.log.duration_minutes} min</Badge>
-          )}
-          {log.log?.calories_burned && (
+          ) : null}
+          {log?.log?.calories_burned ? (
             <Badge variant="light" color="orange" size="sm">{log.log.calories_burned} kcal</Badge>
-          )}
+          ) : null}
           {exercises.length > 0 && (
             <Badge variant="light" color="green" size="sm">
-              {exercises.filter((e: any) => e.completed).length}/{exercises.length} ejercicios
+              {exercises.filter((e: any) => e?.completed).length}/{exercises.length} ejercicios
             </Badge>
           )}
           {exercises.length > 0 && (
@@ -319,66 +319,59 @@ function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
           )}
         </Group>
       </Group>
-      {log.log?.notes && (
+      {log?.log?.notes ? (
         <Text size="xs" c="dimmed" mt="xs" fs="italic">"{log.log.notes}"</Text>
-      )}
-      <Collapse in={opened}>
-        <Divider my="sm" />
-        <Table striped highlightOnHover styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Ejercicio</Table.Th>
-              <Table.Th style={{ textAlign: "center" }}>Series</Table.Th>
-              <Table.Th style={{ textAlign: "center" }}>Reps/Tiempo</Table.Th>
-              <Table.Th style={{ textAlign: "center" }}>Peso</Table.Th>
-              <Table.Th style={{ textAlign: "center" }}>Estado</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {exercises.map((ex: any, i: number) => (
-              <Table.Tr key={i}>
-                <Table.Td>
-                  <Text size="xs" fw={500}>{ex.exercise_name || ex.name || `Ejercicio ${i + 1}`}</Text>
-                </Table.Td>
-                <Table.Td style={{ textAlign: "center" }}>
-                  <Text size="xs">{ex.sets_completed || ex.sets || "—"}</Text>
-                </Table.Td>
-                <Table.Td style={{ textAlign: "center" }}>
-                  <Text size="xs">{ex.reps_completed || ex.reps || ex.duration || "—"}</Text>
-                </Table.Td>
-                <Table.Td style={{ textAlign: "center" }}>
-                  <Text size="xs">{ex.weight_kg ? `${ex.weight_kg} kg` : ex.weight ? `${ex.weight} kg` : "—"}</Text>
-                </Table.Td>
-                <Table.Td style={{ textAlign: "center" }}>
-                  <Badge size="xs" variant="light" color={ex.completed ? "green" : "gray"}>
-                    {ex.completed ? "Hecho" : "Pendiente"}
-                  </Badge>
-                </Table.Td>
+      ) : null}
+      {exercises.length > 0 && (
+        <Collapse in={opened}>
+          <Divider my="sm" />
+          <Table striped highlightOnHover styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Ejercicio</Table.Th>
+                <Table.Th style={{ textAlign: "center" }}>Series</Table.Th>
+                <Table.Th style={{ textAlign: "center" }}>Reps/Tiempo</Table.Th>
+                <Table.Th style={{ textAlign: "center" }}>Peso</Table.Th>
+                <Table.Th style={{ textAlign: "center" }}>Estado</Table.Th>
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-        {log.log?.sets_detail && log.log.sets_detail.length > 0 && (
-          <Box mt="xs">
-            <Text size="xs" fw={600} mb={4}>Detalle de series:</Text>
-            {log.log.sets_detail.map((set: any, si: number) => (
-              <Text key={si} size="xs" c="dimmed">
-                Serie {set.set_number || si + 1}: {set.reps || "—"} reps × {set.weight_kg ? `${set.weight_kg} kg` : "—"}
-                {set.rpe ? ` (RPE ${set.rpe})` : ""}
-              </Text>
-            ))}
-          </Box>
-        )}
-      </Collapse>
+            </Table.Thead>
+            <Table.Tbody>
+              {exercises.map((ex: any, i: number) => (
+                <Table.Tr key={i}>
+                  <Table.Td>
+                    <Text size="xs" fw={500}>{ex?.exercise_name || ex?.name || `Ejercicio ${i + 1}`}</Text>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "center" }}>
+                    <Text size="xs">{ex?.sets_completed || ex?.sets || "—"}</Text>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "center" }}>
+                    <Text size="xs">{ex?.reps_completed || ex?.reps || ex?.duration || "—"}</Text>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "center" }}>
+                    <Text size="xs">{ex?.weight_kg ? `${ex.weight_kg} kg` : ex?.weight ? `${ex.weight} kg` : "—"}</Text>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: "center" }}>
+                    <Badge size="xs" variant="light" color={ex?.completed ? "green" : "gray"}>
+                      {ex?.completed ? "Hecho" : "Pendiente"}
+                    </Badge>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Collapse>
+      )}
     </Card>
   );
 }
 
 function NutritionDayCard({ day, percentage }: { day: any; percentage: number }) {
   const [opened, setOpened] = useState(false);
-  const dateStr = day.date && !isNaN(new Date(day.date).getTime())
+  const dateStr = day?.date && !isNaN(new Date(day.date).getTime())
     ? new Date(day.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })
     : "Sin fecha";
+  const meals: any[] = Array.isArray(day?.meals) ? day.meals : [];
+  const safePct = isNaN(percentage) ? 0 : percentage;
   return (
     <Card padding="md" radius="md" withBorder>
       <Group justify="space-between" style={{ cursor: "pointer" }} onClick={() => setOpened(o => !o)}>
@@ -388,68 +381,68 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
           </ThemeIcon>
           <Box>
             <Text fw={600} size="sm" tt="capitalize">{dateStr}</Text>
-            <Text size="xs" c="dimmed">{day.meals?.length || 0} comidas registradas</Text>
+            <Text size="xs" c="dimmed">{meals.length} comidas registradas</Text>
           </Box>
         </Group>
         <Group gap="md">
-          <Badge variant="light" color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"} size="lg">
-            {day.totals?.calories || 0} kcal ({percentage}%)
+          <Badge variant="light" color={safePct >= 90 ? "green" : safePct >= 70 ? "yellow" : "orange"} size="lg">
+            {Math.round(day?.totals?.calories || 0)} kcal ({safePct}%)
           </Badge>
           <Group gap={4}>
-            <Badge variant="outline" color="red" size="xs">P: {Math.round(day.totals?.protein || 0)}g</Badge>
-            <Badge variant="outline" color="blue" size="xs">C: {Math.round(day.totals?.carbs || 0)}g</Badge>
-            <Badge variant="outline" color="grape" size="xs">G: {Math.round(day.totals?.fat || 0)}g</Badge>
+            <Badge variant="outline" color="red" size="xs">P: {Math.round(day?.totals?.protein || 0)}g</Badge>
+            <Badge variant="outline" color="blue" size="xs">C: {Math.round(day?.totals?.carbs || 0)}g</Badge>
+            <Badge variant="outline" color="grape" size="xs">G: {Math.round(day?.totals?.fat || 0)}g</Badge>
           </Group>
           <ActionIcon variant="subtle" color="gray" size="sm">
             {opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
           </ActionIcon>
         </Group>
       </Group>
-      <Collapse in={opened}>
-        <Divider my="sm" />
-        {day.meals && day.meals.length > 0 ? (
+      {meals.length > 0 && (
+        <Collapse in={opened}>
+          <Divider my="sm" />
           <Stack gap="xs">
-            {day.meals.map((meal: any, mi: number) => (
+            {meals.map((meal: any, mi: number) => (
               <Box key={mi}>
                 <Group gap="xs" mb={4}>
-                  <Text size="xs" fw={700} c="teal">{meal.meal_name || meal.name || `Comida ${mi + 1}`}</Text>
-                  {meal.time && <Text size="xs" c="dimmed">({meal.time})</Text>}
-                  {meal.calories != null && (
+                  <Text size="xs" fw={700} c="teal">{meal?.meal_name || meal?.name || `Comida ${mi + 1}`}</Text>
+                  {meal?.time && <Text size="xs" c="dimmed">({meal.time})</Text>}
+                  {meal?.calories != null && (
                     <Badge size="xs" variant="light" color="yellow">{Math.round(meal.calories)} kcal</Badge>
                   )}
                 </Group>
-                {meal.foods && meal.foods.length > 0 && (
+                {Array.isArray(meal?.foods) && meal.foods.length > 0 && (
                   <Table withColumnBorders={false} styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
                     <Table.Tbody>
                       {meal.foods.map((food: any, fi: number) => (
                         <Table.Tr key={fi}>
                           <Table.Td style={{ paddingLeft: 16 }}>
-                            <Text size="xs">{food.name || food.food_name || "Alimento"}</Text>
+                            <Text size="xs">{food?.name || food?.food_name || "Alimento"}</Text>
                           </Table.Td>
                           <Table.Td style={{ textAlign: "right", width: 60 }}>
-                            <Text size="xs" c="dimmed">{food.quantity || food.amount ? `${food.quantity || food.amount}g` : ""}</Text>
+                            <Text size="xs" c="dimmed">{food?.quantity || food?.amount ? `${food.quantity || food.amount}g` : ""}</Text>
                           </Table.Td>
                           <Table.Td style={{ textAlign: "right", width: 60 }}>
-                            <Text size="xs" c="dimmed">{food.calories != null ? `${Math.round(food.calories)} kcal` : ""}</Text>
+                            <Text size="xs" c="dimmed">{food?.calories != null ? `${Math.round(food.calories)} kcal` : ""}</Text>
                           </Table.Td>
                         </Table.Tr>
                       ))}
                     </Table.Tbody>
                   </Table>
                 )}
-                {meal.items && meal.items.length > 0 && (
+                {Array.isArray(meal?.items) && meal.items.length > 0 && (
                   <Table withColumnBorders={false} styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
                     <Table.Tbody>
                       {meal.items.map((item: any, ii: number) => (
                         <Table.Tr key={ii}>
                           <Table.Td style={{ paddingLeft: 16 }}>
-                            <Text size="xs">{item.food_name || item.name || "Alimento"}</Text>
+                            <Text size="xs">{item?.food_name || item?.name || "Alimento"}</Text>
                           </Table.Td>
                           <Table.Td style={{ textAlign: "right", width: 60 }}>
-                            <Text size="xs" c="dimmed">{item.quantity_grams ? `${item.quantity_grams}g` : item.quantity ? `${item.quantity}g` : ""}</Text>
+                            <Text size="xs" c="dimmed">{item?.quantity_grams ? `${item.quantity_grams}g` : item?.quantity ? `${item.quantity}g` : ""}</Text>
                           </Table.Td>
                           <Table.Td style={{ textAlign: "right", width: 60 }}>
-                            <Text size="xs" c="dimmed">{item.calories != null ? `${Math.round(item.calories)} kcal` : ""}</Text>
+                            <Text size="xs" c="dimmed">{item?.calories != null ? `${Math.round(item.calories)} kcal` : ""}</Text>
                           </Table.Td>
                         </Table.Tr>
                       ))}
@@ -459,10 +452,8 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
               </Box>
             ))}
           </Stack>
-        ) : (
-          <Text size="xs" c="dimmed">Sin detalle de comidas disponible</Text>
-        )}
-      </Collapse>
+        </Collapse>
+      )}
     </Card>
   );
 }

@@ -1,0 +1,748 @@
+{
+  "completed": [
+    "f9f75531-eaab-42b5-9b05-ba4fddf394af",
+    "0c817d3f-0657-4f51-bfc9-448b2ea81d0d",
+    "ad8edce6-9c32-412c-8cc5-d03aecd74e53",
+    "423ff18a-8e8b-402c-b95d-765018bf02d7",
+    "c82a7420-77fb-4df4-b561-0ac75ee8ab2e",
+    "94293276-b5e9-4ee0-bf3f-9ad974498b55",
+    "26bfd5fb-b3a5-496d-94f4-b1a7351a9032",
+    "90692947-8d0e-4e4f-bb37-424f613c761e",
+    "ef0d31da-1911-4a79-be7e-e0e76dc7385e",
+    "3107d62d-3755-4985-9609-bcecdb044e03"
+  ],
+  "failed": [
+    {
+      "id": "227ff024-5b63-4b55-8462-5ba17429c268",
+      "name": "Rotación de Caderas"
+    },
+    {
+      "id": "9242ce94-4263-4e88-848d-5142321cd763",
+      "name": "Rotación de Hombros con Banda Elástica"
+    },
+    {
+      "id": "0a39ed90-df3b-4beb-a4e5-ed00775e4d54",
+      "name": "Rotación Torácica en Cuadrupedia"
+    },
+    {
+      "id": "c0d7c61a-09cc-4b36-834f-d586e9115c68",
+      "name": "Sentadilla sin Peso"
+    },
+    {
+      "id": "11c427c9-92c4-497a-913a-dce9abab07a4",
+      "name": "Trote Suave en el Sitio"
+    },
+    {
+      "id": "d52de40a-c70b-44c5-bf61-a59633d2927c",
+      "name": "Assault Bike"
+    },
+    {
+      "id": "b1332921-e64a-41d6-86b1-92b17749f0e8",
+      "name": "Battle Ropes"
+    },
+    {
+      "id": "3b27e599-ec15-4315-969d-b03241bd3486",
+      "name": "Bicicleta Estática"
+    },
+    {
+      "id": "e7d05879-9748-456d-b220-00551f3e81b3",
+      "name": "Box Jumps"
+    },
+    {
+      "id": "125d3b74-f97b-45af-a87f-f7ffa841e59a",
+      "name": "Burpees"
+    },
+    {
+      "id": "cc417b35-b60d-49ba-bdf8-f7920151faa0",
+      "name": "Carrera Continua"
+    },
+    {
+      "id": "f0989995-a026-4ea4-8426-35d75789b11d",
+      "name": "Cinta de Correr"
+    },
+    {
+      "id": "0894660b-fffa-4767-bc4d-6158526a9799",
+      "name": "Elíptica"
+    },
+    {
+      "id": "836b2ff4-d564-4eae-bf9e-c66706dbd2ce",
+      "name": "Escaladora (StairMaster)"
+    },
+    {
+      "id": "6a114c5d-8890-4460-9626-f7a7be2e9f54",
+      "name": "High Knees (Rodillas Altas)"
+    },
+    {
+      "id": "5bee00f4-d7fa-4a85-83d9-ee5c1641a339",
+      "name": "HIIT en Cinta"
+    },
+    {
+      "id": "5f0af6b8-7bc8-4f1d-b69c-1f3962b057e9",
+      "name": "Mountain Climbers"
+    },
+    {
+      "id": "e6bf112b-8225-485c-8eb3-ee98db0c9c68",
+      "name": "No Push Up Burpees"
+    },
+    {
+      "id": "592014d4-1005-47c0-8348-338da9b5f0a9",
+      "name": "Remo Ergómetro"
+    },
+    {
+      "id": "e88e5b1f-0fb1-4dc0-a974-9eb2f947b0c5",
+      "name": "Saltar a la Comba"
+    },
+    {
+      "id": "9e3015a0-7f72-4102-8592-a54cc16ffd1c",
+      "name": "Skipping con Rodillas Alternas al Pecho"
+    },
+    {
+      "id": "e765650e-fe39-44b4-81b2-081fd5cf7fda",
+      "name": "Sprints"
+    },
+    {
+      "id": "780aada9-e38c-44b3-8853-337a8cd4c82e",
+      "name": "Abdominales con Elevación de Piernas Tumbado"
+    },
+    {
+      "id": "c490a10e-7e5b-47cd-8730-331286e94602",
+      "name": "Abdominales Inclinaciones Laterales Alternas"
+    },
+    {
+      "id": "27ccde28-53ab-49ec-99de-726e06684567",
+      "name": "Abdominales Tijera"
+    },
+    {
+      "id": "c43f9166-b4e1-480f-929e-3a9f0ae3d770",
+      "name": "Butterfly Sit Up"
+    },
+    {
+      "id": "62f5f6b3-0298-49e8-a22c-a59ea4634d62",
+      "name": "Crunch Abdominal"
+    },
+    {
+      "id": "9cbf17bd-1a4b-4fd7-99ec-97360c7937d0",
+      "name": "Crunch Abdominal en Polea Alta"
+    },
+    {
+      "id": "5bd16d5a-20fe-4fa8-b97d-f233f8d9b946",
+      "name": "Crunch Acordeón con Mancuerna"
+    },
+    {
+      "id": "369307ad-f5e9-40bc-a9ec-6c2872e3d04c",
+      "name": "Crunch Acordeón en Banco"
+    },
+    {
+      "id": "82c963d6-d59e-4535-b817-3523f2f161af",
+      "name": "Crunch Bicicleta"
+    },
+    {
+      "id": "67e2e2f0-f828-4a9b-8f37-61090a29e166",
+      "name": "Crunch Vertical"
+    },
+    {
+      "id": "4632c0da-e75d-494a-9519-3ec75ced06dd",
+      "name": "Elevación de Piernas en Barra"
+    },
+    {
+      "id": "09c99a07-dd5f-466c-a08c-9d46435b286d",
+      "name": "Encogimiento Abdominal Tumbado"
+    },
+    {
+      "id": "1825315d-fb2d-45ec-b430-8d5374a2f0bb",
+      "name": "Escaladores Cruzado"
+    },
+    {
+      "id": "57305853-63b4-41f5-a6a4-3b2260824a00",
+      "name": "Plancha Sobre Antebrazos"
+    },
+    {
+      "id": "e9ac4851-0efc-443f-b506-0276ff0dfe27",
+      "name": "Plancha Sobre Manos Superman Alternanda"
+    },
+    {
+      "id": "96ccde2f-5b5a-461d-861a-5511cf784f20",
+      "name": "Press Pallof con Giros con Banda Elástica - Unilateral"
+    },
+    {
+      "id": "f059cf58-908f-4448-a3de-8bf83678c5dc",
+      "name": "Press Pallof con Giros con Banda Elástica Derecho - Unilateral"
+    },
+    {
+      "id": "5b35bc54-bd51-4313-ba68-8248871ed929",
+      "name": "ShoulTaps"
+    },
+    {
+      "id": "9cfc344c-4667-4c8c-85df-f41f66d11a10",
+      "name": "Sit Up"
+    },
+    {
+      "id": "fdf82a12-39a9-4718-9b5a-eeefffc5163a",
+      "name": "Superman"
+    },
+    {
+      "id": "ec2f7730-2687-4130-bb8f-ca0e966cff95",
+      "name": "Estiramiento 90/90 de Cadera"
+    },
+    {
+      "id": "2875e59d-bc77-4f95-87c0-131f3bfaa168",
+      "name": "Estiramiento de Aductores Sentado (Mariposa)"
+    },
+    {
+      "id": "30675846-d4c9-4568-94e9-5fc3fb554458",
+      "name": "Estiramiento de Bíceps en Pared"
+    },
+    {
+      "id": "103316b6-7dc0-495e-b07b-73045fd1fff1",
+      "name": "Estiramiento de Cuádriceps de Pie"
+    },
+    {
+      "id": "7192870a-a28f-47be-89df-179e16341564",
+      "name": "Estiramiento de Dorsal en Barra"
+    },
+    {
+      "id": "bd0c7e2a-16d6-4404-aac1-a77c7ea599c5",
+      "name": "Estiramiento de Espalda Baja Tumbado"
+    },
+    {
+      "id": "bd5700db-a143-4669-84cf-818bb528880b",
+      "name": "Estiramiento de Gemelos en Pared"
+    },
+    {
+      "id": "7b016826-6bd7-4ff2-99fe-61820f0575ac",
+      "name": "Estiramiento de Glúteo Tumbado"
+    },
+    {
+      "id": "72294a5c-f520-4696-8120-b8a1b9917c4d",
+      "name": "Estiramiento de Hombro Cruzado"
+    },
+    {
+      "id": "d64484b8-bc80-4a13-b9b4-8c2a53e2e12b",
+      "name": "Estiramiento de Isquiotibiales de Pie"
+    },
+    {
+      "id": "f51385fc-fb84-45b1-90d5-274f11216a37",
+      "name": "Estiramiento de Pectoral en Marco de Puerta"
+    },
+    {
+      "id": "037111c4-5e75-4430-b910-b95f3959ae96",
+      "name": "Estiramiento de Trapecio Lateral"
+    },
+    {
+      "id": "6f560d1c-a48d-409b-99aa-a32b3711d40f",
+      "name": "Estiramiento de Tríceps por Detrás de la Cabeza"
+    },
+    {
+      "id": "ef8e4f9c-7b5e-4d03-a278-c49b2521672f",
+      "name": "Estiramiento del Flexor de Cadera"
+    },
+    {
+      "id": "ee96f734-7d4d-40b4-83a7-80f6d8535132",
+      "name": "Postura del Niño (Child Pose)"
+    },
+    {
+      "id": "e29b647c-7192-4aac-a257-ea482f429156",
+      "name": "6 ways"
+    },
+    {
+      "id": "74c3f901-10bf-400f-8afa-25974b245b18",
+      "name": "Abducciones de Glúteo en Máquina"
+    },
+    {
+      "id": "23a12543-841f-43fb-aa5b-5aca5622d1fb",
+      "name": "Aducciones de Piernas en Máquina"
+    },
+    {
+      "id": "8bc8ceae-12fb-4744-8378-1a5617f88f8f",
+      "name": "Apertura de Pecho con Mancuernas en Banco Plano"
+    },
+    {
+      "id": "327c7fb1-4cea-4c53-afe1-ec2b28414928",
+      "name": "Apertura de Pecho en Banco Inclinado con Mancuernas"
+    },
+    {
+      "id": "7c7532e9-90e6-46d0-b381-d3407219a85b",
+      "name": "Aperturas desde Abajo con Mancuernas"
+    },
+    {
+      "id": "8e309047-2d2c-4188-9730-e57ce9a40532",
+      "name": "Aperturas en Banco Declinado con Mancuernas"
+    },
+    {
+      "id": "d608b34c-35d9-41aa-ae49-2838d9688875",
+      "name": "Cruces de Pecho en Polea Alta"
+    },
+    {
+      "id": "3b8635aa-1dc6-4f50-b7da-058866b3a4b3",
+      "name": "Curl de biceps + press de hombro con mancuernas"
+    },
+    {
+      "id": "d20773e9-3dcc-4220-b409-bc41832317f7",
+      "name": "Curl de Biceps Alterno de Pie con Mancuernas"
+    },
+    {
+      "id": "3c894574-f2c0-47c8-8334-f10a41d1a776",
+      "name": "Curl de Bíceps con Barra Z en Banco Scott"
+    },
+    {
+      "id": "4ba88a88-ec41-46a3-a892-e46e59095067",
+      "name": "Curl de Biceps Concentrado con Mancuerna - Unilateral"
+    },
+    {
+      "id": "458b1c17-b2f3-4f3e-9448-f0fe5fcdca55",
+      "name": "Curl de Bíceps de Pie con Agarre Prono con Barra"
+    },
+    {
+      "id": "29fafc5c-43e2-4ff9-b95d-d3b6312340b3",
+      "name": "Curl de Biceps de Pie con Barra"
+    },
+    {
+      "id": "0d49e199-a713-430b-8db7-da65fdc25ebe",
+      "name": "Curl de Biceps de Pie con Barra Z Agarre Estrecho"
+    },
+    {
+      "id": "4398f617-21fe-4949-a15b-9afa43f32130",
+      "name": "Curl de Biceps de Pie con Mancuernas"
+    },
+    {
+      "id": "e2d3e342-9236-495e-9397-8e165be8c4ae",
+      "name": "Curl de Bíceps Derecho + Isométrico Izquierdo con Mancuerna"
+    },
+    {
+      "id": "ba5b19fa-af63-43ef-b456-f23c81497576",
+      "name": "Curl de Biceps en Polea Baja"
+    },
+    {
+      "id": "72f1d88f-e15a-4f06-b4fe-b8e4726691ac",
+      "name": "Curl de Bíceps Izquierdo + Isométrico Derecho con Mancuerna"
+    },
+    {
+      "id": "c5042294-8030-4928-81fd-1fad2ff7ddcb",
+      "name": "Curl de Biceps Martillo alterno"
+    },
+    {
+      "id": "55ad4bba-9153-4d1a-be93-baf1b406151d",
+      "name": "Curl de Biceps Martillo de Pie con Mancuernas"
+    },
+    {
+      "id": "61eb4b31-87ac-4b7d-af20-9106c8bde1a6",
+      "name": "Curl de biceps Scott con barra Z agarre inverso"
+    },
+    {
+      "id": "c3a69389-0e6f-48ba-b580-6159ee665dee",
+      "name": "Curl Femoral Sentado en Máquina"
+    },
+    {
+      "id": "a041a8e3-b452-425f-86ae-0fcb37a2023e",
+      "name": "Curl Femoral Tumbado con Mancuerna"
+    },
+    {
+      "id": "327b21a5-b7d2-4be4-a5a2-91e78a4c42b0",
+      "name": "Curl Femoral Tumbado en Máquina"
+    },
+    {
+      "id": "3a50e192-c57a-43cb-9b8a-661517d33000",
+      "name": "Dominadas Agarre Prono Cerrado"
+    },
+    {
+      "id": "ebef04c8-a1fd-44c5-a2a2-62622488aaff",
+      "name": "Elevación Frontal con Barra Z"
+    },
+    {
+      "id": "641c2a76-f223-4f71-bd63-545296dec07a",
+      "name": "Elevación Frontal con Mancuernas"
+    },
+    {
+      "id": "cd402210-a343-49d9-ba3d-3b0f67d5772c",
+      "name": "Elevación Frontal en Polea Baja"
+    },
+    {
+      "id": "4531fd89-6e73-4349-b7eb-e6744eccb3a9",
+      "name": "Elevación Frontal y Lateral con Mancuernas"
+    },
+    {
+      "id": "62151947-bae5-4233-9c79-35ce59e6fe0c",
+      "name": "Elevación Lateral en Máquina"
+    },
+    {
+      "id": "0fbc631f-2d3c-4c7a-b4f2-2b598ce23f45",
+      "name": "Elevación Lateral en Polea - Unilateral"
+    },
+    {
+      "id": "bc190e64-cd2d-4890-ba6d-87ef473c4377",
+      "name": "Elevación Lateral Sentado con Mancuernas"
+    },
+    {
+      "id": "742ecafd-529d-468c-b225-7b716b47de26",
+      "name": "Elevaciones de Gemelo de Pie - Unilateral"
+    },
+    {
+      "id": "0844378b-08b2-4b71-9466-e9cbea25b6e3",
+      "name": "Elevaciones de Gemelo de Pie con Barra"
+    },
+    {
+      "id": "72fb18ca-412a-44fa-b49c-06e94bc1b840",
+      "name": "Elevaciones de Gemelo de Pie en Máquina"
+    },
+    {
+      "id": "490c2b8c-1909-418c-a576-8ededb9088f8",
+      "name": "Elevaciones Laterales con Mancuernas"
+    },
+    {
+      "id": "7050337b-b6fd-42c9-8704-662ec0af995f",
+      "name": "Encogimientos de Hombros con Mancuernas"
+    },
+    {
+      "id": "68d12acf-b14d-47e2-bb7b-b3d083a8b90d",
+      "name": "Encogimientos de Trapecio con Barra"
+    },
+    {
+      "id": "0722a034-201b-47dd-a00e-3cdcb496fca1",
+      "name": "Extensión de Cuádriceps en Máquina"
+    },
+    {
+      "id": "97de29d3-0400-4795-8e03-b34019bbf520",
+      "name": "Extensión de Cuádriceps Sujetando Mancuerna"
+    },
+    {
+      "id": "34ada511-bf06-4f13-bca2-790df00b9aca",
+      "name": "Extensión de Gemelo Sentado"
+    },
+    {
+      "id": "996cae0a-bfef-438d-b2ae-9c72656230d2",
+      "name": "Extensión de Tríceps con Agarre Prono en Polea Alta"
+    },
+    {
+      "id": "f777c410-75f3-493f-8729-67b09dfe7845",
+      "name": "Extensión de Tríceps con Agarre Supino en Polea Alta"
+    },
+    {
+      "id": "b177d845-eda5-45d8-bf74-0038d77a54a4",
+      "name": "Extensión de Tríceps con Cuerda en Polea Alta"
+    },
+    {
+      "id": "de14cfc3-a87d-4a40-8dac-104dce77fb6d",
+      "name": "Extensión de Triceps de Pie en Polea Alta - Unilateral"
+    },
+    {
+      "id": "a359d0f5-8438-46f5-a404-e7f0a82b34fb",
+      "name": "Extensión de Triceps Tras Nuca de Pie Bilateral con Mancuernas"
+    },
+    {
+      "id": "c2f924f3-06a2-4090-820c-e469025f0272",
+      "name": "Extensión de Triceps Tras Nuca Sentado con Mancuerna"
+    },
+    {
+      "id": "829ac4cc-111a-45bb-a512-405d31755413",
+      "name": "Face Pull con Cuerda en Polea"
+    },
+    {
+      "id": "18a50202-5b82-414a-9ed4-82ac72892d11",
+      "name": "Flexiones con Banda Elástica"
+    },
+    {
+      "id": "12b1b644-6804-4675-9136-39cd85b807a1",
+      "name": "Flexiones con Peso Corporal"
+    },
+    {
+      "id": "8b2bd3a4-906f-4004-9be1-c71955f1adca",
+      "name": "Flexiones Declinadas sobre Banco"
+    },
+    {
+      "id": "1e5eea71-129d-4bb2-b2d7-65b819287c1c",
+      "name": "Flexiones Diamante"
+    },
+    {
+      "id": "8a8029e8-6ee7-40d6-95b3-9a72518c607b",
+      "name": "Flexiones Sobre Mancuernas"
+    },
+    {
+      "id": "faa92a4c-1b56-4282-ab21-e00ce29c2c18",
+      "name": "Fondos en Banco"
+    },
+    {
+      "id": "c986a511-20d6-4bc2-bb97-c922f6ac8488",
+      "name": "Fondos en Bancos con Pies Elevados con Disco"
+    },
+    {
+      "id": "5c341fe0-1572-4350-9126-830bc24be471",
+      "name": "Hip Thrust con Barra"
+    },
+    {
+      "id": "2be8915b-41b5-408b-80ea-6858cc80882b",
+      "name": "Hip Thrust con Mancuerna"
+    },
+    {
+      "id": "a80558cc-3e98-4b52-b716-63948571af1e",
+      "name": "Hiperextensión Lumbar en Banco"
+    },
+    {
+      "id": "da1c149a-67d5-416a-a09e-77332c5e25b3",
+      "name": "Jalón Agarre Cerrado en Polea Alta"
+    },
+    {
+      "id": "1df89b59-a15b-4595-9c68-72041285d9d0",
+      "name": "Jalón Agarre Neutro en Polea Alta"
+    },
+    {
+      "id": "c078081b-1486-46e6-b4c0-5764c3be8634",
+      "name": "Jalón al Pecho en Polea Alta"
+    },
+    {
+      "id": "343d47f5-4b8b-472b-9921-f0295cf63e61",
+      "name": "Jalón en Polea Alta - Unilateral"
+    },
+    {
+      "id": "87d1cd71-30b3-4ba9-9001-671b9b2b8640",
+      "name": "Pájaros con Mancuerna Sentado"
+    },
+    {
+      "id": "459b1cb4-676b-4056-9f71-a3d0ac14f08d",
+      "name": "Pájaros con Mancuernas en Banco Inclinado"
+    },
+    {
+      "id": "57925f80-b710-4840-bfad-b023370eda52",
+      "name": "Pájaros en cruce de poleas"
+    },
+    {
+      "id": "8e589dad-764e-4dc0-bc76-b938db83dd96",
+      "name": "Pájaros en Máquina"
+    },
+    {
+      "id": "92045626-07e5-45d6-8f64-32434c82cffb",
+      "name": "Patada de Glúteo en Máquina - Unilateral"
+    },
+    {
+      "id": "23b5506c-0f1f-4ad1-a2b3-2bd1aa3ba397",
+      "name": "Patada de Tríceps con Mancuerna - Unilateral"
+    },
+    {
+      "id": "29ea716a-dac3-4ced-81d4-eb64b13c4377",
+      "name": "Patada de Triceps con Mancuernas"
+    },
+    {
+      "id": "67e3fd83-e805-4f61-bd18-4fae156c4f59",
+      "name": "Peso Muerto con Barra"
+    },
+    {
+      "id": "97dd9cc8-cb6c-4bac-8ed0-a454aa003267",
+      "name": "Peso Muerto con Mancuernas"
+    },
+    {
+      "id": "68bf6694-1896-46c4-af1a-ff7a84e27308",
+      "name": "Peso Muerto Rumano con Barra"
+    },
+    {
+      "id": "9d3e48f6-a915-4011-a5a6-9ae210dc22f7",
+      "name": "Peso Muerto Rumano con Mancuernas"
+    },
+    {
+      "id": "71fe577c-fcee-4590-9bf1-3fcf4d849810",
+      "name": "Peso Muerto Unipodal con Mancuerna - Unilateral"
+    },
+    {
+      "id": "af4b4e26-3f0b-44d0-a1ce-89b59e390747",
+      "name": "Prensa de Piernas Inclinada en Máquina"
+    },
+    {
+      "id": "e3f6239d-36a4-4a63-9bfb-7ba79a12d846",
+      "name": "Press Arnold Simultáneo Sentado"
+    },
+    {
+      "id": "0a1d17e1-d9c9-4a37-ae3b-c9af75b7f517",
+      "name": "Press Banca con Barra"
+    },
+    {
+      "id": "bfade217-89c2-48bb-839f-16c068ca7799",
+      "name": "Press Banca con Mancuernas"
+    },
+    {
+      "id": "f1a19882-80c3-4dae-9d87-eb64748e9710",
+      "name": "Press Banca con Mancuernas Juntas"
+    },
+    {
+      "id": "d9accea7-1c00-4b96-b067-a3ec95f92d5a",
+      "name": "Press Banca en Multipower"
+    },
+    {
+      "id": "33ff6e5d-a493-427c-af31-a157a8fd8908",
+      "name": "Press Banca Inclinado con Barra"
+    },
+    {
+      "id": "f7578fc4-c980-4042-9220-b6ee83243454",
+      "name": "Press banca inclinado en máquina"
+    },
+    {
+      "id": "a4c124aa-8b9b-4d02-876b-a8fab6ae8498",
+      "name": "Press Banca Inclinado en Multipower"
+    },
+    {
+      "id": "75afe3d7-7fd8-4769-b8a7-7e9a3447d770",
+      "name": "Press Cerrado con Barra Z"
+    },
+    {
+      "id": "cbb8a16c-b8bb-43b3-98fe-bb507d7e90f2",
+      "name": "Press Cerrado de Tríceps con Barra"
+    },
+    {
+      "id": "67668eac-8162-4c90-97c8-01f3291f3021",
+      "name": "Press de Pecho en Máquina"
+    },
+    {
+      "id": "87831e7a-e762-419b-bcb1-1c83a09a6700",
+      "name": "Press Declinado con Mancuernas"
+    },
+    {
+      "id": "eadc6cd3-33ac-4090-b3ab-023b0bd49135",
+      "name": "Press Francés con Barra Z"
+    },
+    {
+      "id": "5ea93780-f72d-4fbd-828c-24284ad2d182",
+      "name": "Press Frances con Mancuernas"
+    },
+    {
+      "id": "36041d2b-fe0b-4207-80bd-9a5dd4435f2e",
+      "name": "Press Hex inclinado con Mancuernas"
+    },
+    {
+      "id": "0a1fbe50-3655-4e8b-9475-339a8eb9f6f2",
+      "name": "Press Inclinado con Mancuernas"
+    },
+    {
+      "id": "7115d511-eec7-4c21-b978-882589c24660",
+      "name": "Press Militar en Máquina"
+    },
+    {
+      "id": "01eab838-639e-4470-a1ed-059ad72d681a",
+      "name": "Press Militar en Multipower"
+    },
+    {
+      "id": "1814bc1c-b73a-48d3-9500-f726b0f08c61",
+      "name": "Press Militar Sentado con Barra"
+    },
+    {
+      "id": "df253f50-1b2f-43b4-8be4-f7e46758060f",
+      "name": "Press Militar Sentado con Mancuernas"
+    },
+    {
+      "id": "db71df4a-e50b-4988-b8c2-0e5ca4a40799",
+      "name": "Puente de Glúteos - Unilateral"
+    },
+    {
+      "id": "c98f812d-cf79-480e-9583-dfebf4d80d91",
+      "name": "Pull Over con Mancuerna"
+    },
+    {
+      "id": "ac1bf9c4-d7da-4654-8f3f-b8bed58a2bbc",
+      "name": "Pull Over de Pie en Polea Alta"
+    },
+    {
+      "id": "728a4939-1fc6-4025-b80d-f062c0f34550",
+      "name": "Push Up Walk"
+    },
+    {
+      "id": "33802931-c587-4506-9dc4-3029b517f15b",
+      "name": "Remo al Mentón con Mancuernas"
+    },
+    {
+      "id": "5da2e80f-35b1-4141-855f-90262b15d952",
+      "name": "Remo Cerrado de Pie con Banda Elástica - Unilateral"
+    },
+    {
+      "id": "95c208f7-0d3a-48e3-a6b1-67613b171550",
+      "name": "Remo Cerrado Sentado con Banda Elástica"
+    },
+    {
+      "id": "148ce967-4a63-415e-93cd-ab453e1c5689",
+      "name": "Remo en Landmine - Unilateral"
+    },
+    {
+      "id": "37e1f416-ac46-4909-b5c5-870309ea12af",
+      "name": "Remo Gironda en Polea Baja"
+    },
+    {
+      "id": "aa9a5165-3058-4900-8d01-c3356614deac",
+      "name": "Remo Inclinado de Pie Agarre Prono con Barra"
+    },
+    {
+      "id": "670f61f9-89f2-4694-8aec-119503aa1c77",
+      "name": "Remo Inclinado de Pie Agarre Prono con Barra en Multipower"
+    },
+    {
+      "id": "f1cf5e34-f43e-4a8e-b6b9-968a32441015",
+      "name": "Remo Inclinado de Pie con Mancuerna - Unilateral"
+    },
+    {
+      "id": "63c82076-932f-4ab9-94ed-1b8cfd1b2497",
+      "name": "Remo Inclinado de Pie con Mancuernas"
+    },
+    {
+      "id": "7bac7a36-89b4-4111-86e4-4e2ba9ac1b35",
+      "name": "Remo Inclinado en Banco con Mancuerna - Unilateral"
+    },
+    {
+      "id": "1ffa568b-5cac-4138-9e74-a8675801013c",
+      "name": "Remo Seal en Banco con Mancuernas"
+    },
+    {
+      "id": "d0257099-960a-4c05-993e-c8e2891000dc",
+      "name": "Remo T en LandMine"
+    },
+    {
+      "id": "05c8088b-aae0-4e53-8a35-db6fc9c07bd9",
+      "name": "Sentadilla Búlgara - Unilateral"
+    },
+    {
+      "id": "f32a99a6-f57c-477e-a0b6-ebc9310c3999",
+      "name": "Sentadilla Búlgara con Mancuernas - Unilateral"
+    },
+    {
+      "id": "1c03bf55-b535-4371-8bd5-270c061d80bd",
+      "name": "Sentadilla Cerrada en Multipower"
+    },
+    {
+      "id": "94300e7b-c525-4b38-bbf1-09c3b03b9d6e",
+      "name": "Sentadilla con Mancuernas"
+    },
+    {
+      "id": "10a1fcdd-7c79-46c5-bc03-f7ad8ae6f364",
+      "name": "Sentadilla con Salto"
+    },
+    {
+      "id": "35050419-3bc2-4fe6-8658-a793c7c6907b",
+      "name": "Sentadilla en Máquina Jaca"
+    },
+    {
+      "id": "e2cf9700-b3df-4a45-920a-1fbc7ad979ad",
+      "name": "Sentadilla en Multipower"
+    },
+    {
+      "id": "2c7a1e49-e17f-42bf-a7c6-974b6506fb3f",
+      "name": "Sentadilla Frontal con Mancuernas"
+    },
+    {
+      "id": "0d9b2dab-873f-46e8-b4b9-bfdd5c318999",
+      "name": "Sentadilla Goblet con Talones Elevados"
+    },
+    {
+      "id": "b3d88387-025b-4324-9b0a-053f5ccd9cc4",
+      "name": "Sentadilla Sumo con Mancuerna"
+    },
+    {
+      "id": "9c6f81ae-e90f-4d5c-8eea-cddd24042f82",
+      "name": "Sentadilla Sumo con Rebotes"
+    },
+    {
+      "id": "9602cb23-5586-4b68-96e4-6cc1335a4371",
+      "name": "Wall Sit con Mancuerna"
+    },
+    {
+      "id": "87f6135d-3c73-4b9c-9fcf-0350102541fe",
+      "name": "Zancada Alterna con Mancuernas"
+    },
+    {
+      "id": "75e4ad97-5294-4a12-ac44-f85ea52fc2d5",
+      "name": "Zancada Cruzada Alterna"
+    }
+  ]
+}
