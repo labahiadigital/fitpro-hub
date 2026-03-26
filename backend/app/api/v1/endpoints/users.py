@@ -82,10 +82,17 @@ async def invite_user(
                 UserRole.workspace_id == current_user.workspace_id
             )
         )
-        if result.scalar_one_or_none():
+        existing_role = result.scalar_one_or_none()
+        if existing_role:
+            existing_role_label = {
+                RoleType.owner: "propietario",
+                RoleType.collaborator: "colaborador",
+                RoleType.client: "cliente",
+            }.get(existing_role.role, existing_role.role.value)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El usuario ya pertenece a este workspace"
+                detail=f"Este email ya pertenece al workspace como {existing_role_label}. "
+                       f"Un usuario solo puede tener un rol por workspace."
             )
     else:
         invite_token = secrets.token_urlsafe(32)
@@ -121,7 +128,7 @@ async def invite_user(
         if is_new_user and invite_token:
             invitation_url = f"{settings.FRONTEND_URL}/auth/accept-invite?token={invite_token}"
         else:
-            invitation_url = f"{settings.FRONTEND_URL}/auth/login"
+            invitation_url = f"{settings.FRONTEND_URL}/login?invited=1&workspace={workspace_name}"
 
         html_content = EmailTemplates.invitation_email(
             inviter_name=inviter_name,

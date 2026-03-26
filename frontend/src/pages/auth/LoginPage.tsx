@@ -19,12 +19,15 @@ import {
   IconLock,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 export function LoginPage() {
   const { login, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const isInvited = searchParams.get("invited") === "1";
+  const invitedWorkspace = searchParams.get("workspace");
 
   const form = useForm({
     initialValues: {
@@ -93,6 +96,23 @@ export function LoginPage() {
           Accede a tu cuenta de Trackfiz
         </Text>
       </Box>
+
+      {isInvited && (
+        <Alert
+          color="teal"
+          variant="light"
+          radius="lg"
+          style={{
+            background: "rgba(56, 178, 172, 0.1)",
+            border: "1px solid rgba(56, 178, 172, 0.2)",
+          }}
+        >
+          <Text size="sm" c="teal.4">
+            Has sido invitado a <Text span fw={700}>{invitedWorkspace || "un equipo"}</Text>.
+            Inicia sesión para acceder.
+          </Text>
+        </Alert>
+      )}
 
       {error && (
         <Alert
