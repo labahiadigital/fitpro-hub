@@ -1,23 +1,91 @@
 from typing import Optional, List
 from uuid import UUID
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import logging
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User, UserRole, RoleType
 
+logger = logging.getLogger(__name__)
 
-# OAuth2 scheme for OpenAPI documentation
-# This provides proper OpenAPI integration with the authorize button in /docs
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/v1/auth/login",
     scheme_name="JWT",
     description="JWT Bearer token authentication",
     auto_error=True,
 )
+
+# ---------------------------------------------------------------------------
+# URL prefix  →  permission resource mapping
+# ---------------------------------------------------------------------------
+# Maps the first segment of the API path (after /api/v1/) to the permission
+# resource key used in DEFAULT_ROLE_PERMISSIONS.  Endpoints whose prefix is
+# NOT listed here are exempt from granular checks (e.g. auth, account).
+# ---------------------------------------------------------------------------
+_PATH_TO_RESOURCE: dict[str, str] = {
+    "clients": "clients",
+    "workouts": "workouts",
+    "exercises": "workouts",
+    "nutrition": "nutrition",
+    "foods": "nutrition",
+    "supplements": "nutrition",
+    "bookings": "calendar",
+    "calendar": "calendar",
+    "payments": "payments",
+    "redsys": "payments",
+    "sequra": "payments",
+    "users": "team",
+    "team": "team",
+    "roles": "team",
+    "settings": "settings",
+    "reports": "reports",
+    "messages": "chat",
+    "chat": "chat",
+    "automations": "automations",
+    "reminders": "automations",
+    "forms": "forms",
+    "documents": "documents",
+    "products": "catalog",
+    "catalog": "catalog",
+    "erp": "billing",
+    "billing": "billing",
+    "community": "community",
+    "lms": "lms",
+    "live-classes": "live_classes",
+}
+
+# HTTP method  →  permission action
+_METHOD_TO_ACTION: dict[str, str] = {
+    "GET": "read",
+    "HEAD": "read",
+    "OPTIONS": "read",
+    "POST": "create",
+    "PUT": "update",
+    "PATCH": "update",
+    "DELETE": "delete",
+}
+
+
+def _resolve_resource_and_action(request: Request) -> tuple[Optional[str], str]:
+    """Extract the permission resource and action from the current request."""
+    path = request.url.path
+    method = request.method.upper()
+
+    parts = path.strip("/").split("/")
+    # Expected shape: api / v1 / <prefix> / ...
+    prefix = None
+    for i, part in enumerate(parts):
+        if part == "v1" and i + 1 < len(parts):
+            prefix = parts[i + 1]
+            break
+
+    resource = _PATH_TO_RESOURCE.get(prefix) if prefix else None
+    action = _METHOD_TO_ACTION.get(method, "read")
+    return resource, action
 
 
 class CurrentUser:
@@ -80,7 +148,6 @@ async def get_current_user(
     user = None
     
     if payload:
-        # New local token format - user_id is in 'sub' as UUID string
         user_id_str = payload.sub
         if user_id_str:
             try:
@@ -217,8 +284,48 @@ def require_roles(allowed_roles: List[RoleType]):
 
 
 require_owner = require_roles([RoleType.owner])
-require_staff = require_roles([RoleType.owner, RoleType.collaborator])
 require_any_role = require_roles([RoleType.owner, RoleType.collaborator, RoleType.client])
+
+
+# ---------------------------------------------------------------------------
+# require_staff – role check + automatic granular permission enforcement
+# ---------------------------------------------------------------------------
+# Owners pass unconditionally.  Collaborators are checked against their
+# effective permissions (defaults merged with custom overrides) using the
+# request URL prefix → resource and HTTP method → action mappings.
+# ---------------------------------------------------------------------------
+
+async def require_staff(
+    request: Request,
+    current_user: CurrentUser = Depends(require_workspace),
+) -> CurrentUser:
+    """Verify the user is owner or collaborator AND has the granular
+    permission implied by the request path and HTTP method."""
+    if not current_user.role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes rol asignado en este workspace",
+        )
+
+    if current_user.role not in (RoleType.owner, RoleType.collaborator):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para realizar esta acción",
+        )
+
+    # Owners bypass granular checks
+    if current_user.is_owner():
+        return current_user
+
+    resource, action = _resolve_resource_and_action(request)
+
+    if resource and not current_user.has_permission(resource, action):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"No tienes permiso de '{action}' en '{resource}'",
+        )
+
+    return current_user
 
 
 def require_permission(resource: str, action: str):
@@ -236,4 +343,3 @@ def require_permission(resource: str, action: str):
             )
         return current_user
     return permission_checker
-

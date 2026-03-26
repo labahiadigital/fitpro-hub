@@ -3,7 +3,7 @@ import { Center, Loader, MantineProvider } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
 import { Notifications, notifications } from "@mantine/notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
@@ -129,8 +129,29 @@ function SmartDashboard() {
   return <DashboardPage />;
 }
 
+const ROUTE_RESOURCE_MAP: Record<string, string> = {
+  "/clients": "clients",
+  "/calendar": "calendar",
+  "/workouts": "workouts",
+  "/nutrition": "nutrition",
+  "/supplements": "nutrition",
+  "/forms": "forms",
+  "/catalog": "catalog",
+  "/billing": "billing",
+  "/community": "community",
+  "/documents": "documents",
+  "/team": "team",
+  "/automations": "automations",
+  "/reports": "reports",
+  "/settings": "settings",
+  "/live-classes": "live_classes",
+  "/chat": "chat",
+  "/lms": "lms",
+};
+
 function TrainerRoute({ children }: { children: React.ReactNode }) {
   const { user, _hasHydrated } = useAuthStore();
+  const { pathname } = useLocation();
 
   if (!_hasHydrated) {
     return <PageLoader />;
@@ -138,6 +159,20 @@ function TrainerRoute({ children }: { children: React.ReactNode }) {
 
   if (user?.role === 'client') {
     return <Navigate replace to="/dashboard" />;
+  }
+
+  if (user?.role === 'owner') {
+    return <>{children}</>;
+  }
+
+  const base = "/" + pathname.split("/").filter(Boolean)[0];
+  const resource = ROUTE_RESOURCE_MAP[base];
+
+  if (resource && user?.permissions) {
+    const perms = user.permissions[resource];
+    if (!perms || perms.length === 0) {
+      return <Navigate replace to="/dashboard" />;
+    }
   }
 
   return <>{children}</>;
