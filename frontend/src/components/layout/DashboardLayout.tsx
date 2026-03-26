@@ -8,6 +8,10 @@ import {
   ScrollArea,
   Burger,
   Drawer,
+  Popover,
+  Divider,
+  Badge,
+  Loader,
 } from "@mantine/core";
 import { useDisclosure, useHotkeys } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -36,10 +40,13 @@ import {
   IconChartLine,
   IconUser,
   IconBulb,
+  IconChevronUp,
+  IconCheck,
+  IconBuildingStore,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { useAuthStore } from "../../stores/auth";
+import { useAuthStore, type WorkspaceWithRole } from "../../stores/auth";
 import { clientPortalApi, messagesApi } from "../../services/api";
 import { CommandPalette } from "../common/CommandPalette";
 import { NotificationCenter } from "../notifications/NotificationCenter";
@@ -98,7 +105,6 @@ function getTrainerNavItems(unreadCount: number, permissions?: Record<string, st
   });
 }
 
-// Lista de navegación para Clientes (sin badge, se añade dinámicamente)
 const getClientNavItems = (unreadCount: number): NavItemProps[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
   { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/my-workouts" },
@@ -110,6 +116,18 @@ const getClientNavItems = (unreadCount: number): NavItemProps[] => [
   { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
   { icon: <IconUser size={20} />, label: "Mi Perfil", to: "/my-profile" },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: "Propietario",
+  collaborator: "Colaborador",
+  client: "Cliente",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  owner: "yellow",
+  collaborator: "teal",
+  client: "blue",
+};
 
 // --- COMPONENTES ---
 
@@ -167,7 +185,6 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
           )}
         </Group>
         
-        {/* Glow effect on active */}
         {isActive && (
           <Box
             style={{
@@ -188,15 +205,226 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
   );
 }
 
-// Sidebar Component (Reutilizable para Desktop y Mobile)
+function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
+  const { user, currentWorkspace } = useAuthStore();
+  const { logout, switchWorkspace, loading } = useAuth();
+  const [opened, { toggle, close }] = useDisclosure(false);
+
+  const workspaces: WorkspaceWithRole[] = user?.workspaces || [];
+  const currentWsId = currentWorkspace?.id || user?.workspace_id;
+
+  const handleSwitch = async (wsId: string) => {
+    if (wsId === currentWsId) {
+      close();
+      return;
+    }
+    close();
+    onNavigate?.();
+    await switchWorkspace(wsId);
+  };
+
+  return (
+    <Popover
+      opened={opened}
+      onChange={(o) => { if (!o) close(); }}
+      position="top-start"
+      width={280}
+      shadow="xl"
+      radius="lg"
+      offset={8}
+    >
+      <Popover.Target>
+        <UnstyledButton
+          w="100%"
+          onClick={toggle}
+          style={{
+            padding: "10px",
+            borderRadius: "12px",
+            transition: "background 0.2s",
+            background: opened ? "rgba(255, 255, 255, 0.06)" : "transparent",
+          }}
+          className="profile-btn"
+        >
+          <Group wrap="nowrap">
+            <Avatar
+              src={user?.avatar_url || null}
+              radius="xl"
+              color="yellow"
+              size="sm"
+              style={{ border: "2px solid rgba(255,255,255,0.1)" }}
+            >
+              {user?.full_name?.[0]}
+            </Avatar>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text c="white" size="sm" fw={600} lh={1.2} lineClamp={1}>
+                {user?.full_name || "Usuario"}
+              </Text>
+              <Text c="dimmed" size="xs" lh={1.2} lineClamp={1}>
+                {user?.email}
+              </Text>
+            </Box>
+            <IconChevronUp
+              size={14}
+              color="gray"
+              style={{
+                opacity: 0.5,
+                transform: opened ? "rotate(0deg)" : "rotate(180deg)",
+                transition: "transform 0.2s",
+              }}
+            />
+          </Group>
+        </UnstyledButton>
+      </Popover.Target>
+
+      <Popover.Dropdown
+        p={0}
+        style={{
+          background: "#1a1a2e",
+          border: "1px solid rgba(255,255,255,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Current user info */}
+        <Box px="md" pt="md" pb="sm">
+          <Group wrap="nowrap" gap="sm">
+            <Avatar
+              src={user?.avatar_url || null}
+              radius="xl"
+              color="yellow"
+              size="md"
+              style={{ border: "2px solid rgba(255,255,255,0.1)" }}
+            >
+              {user?.full_name?.[0]}
+            </Avatar>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text c="white" size="sm" fw={700} lineClamp={1}>
+                {user?.full_name || "Usuario"}
+              </Text>
+              <Text c="dimmed" size="xs" lineClamp={1}>
+                {user?.email}
+              </Text>
+            </Box>
+          </Group>
+        </Box>
+
+        <Divider color="rgba(255,255,255,0.06)" />
+
+        {/* Workspace section */}
+        <Box px="xs" py="xs">
+          <Text c="dimmed" size="10px" fw={700} tt="uppercase" px="xs" pb={4} style={{ letterSpacing: "0.1em" }}>
+            {workspaces.length > 1 ? "Tus espacios" : "Espacio actual"}
+          </Text>
+
+          <Stack gap={2}>
+            {workspaces.map((ws) => {
+              const isActive = ws.id === currentWsId;
+              return (
+                <UnstyledButton
+                  key={ws.id}
+                  w="100%"
+                  px="xs"
+                  py={8}
+                  onClick={() => handleSwitch(ws.id)}
+                  disabled={loading}
+                  style={{
+                    borderRadius: "8px",
+                    background: isActive ? "rgba(255,255,255,0.06)" : "transparent",
+                    transition: "background 0.15s",
+                    opacity: loading ? 0.5 : 1,
+                    cursor: loading ? "wait" : "pointer",
+                  }}
+                  className="profile-btn"
+                >
+                  <Group wrap="nowrap" gap="sm">
+                    <Box
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "8px",
+                        background: isActive
+                          ? "var(--nv-accent)"
+                          : "rgba(255,255,255,0.06)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {ws.logo_url ? (
+                        <Avatar src={ws.logo_url} size={32} radius={8} />
+                      ) : (
+                        <IconBuildingStore
+                          size={16}
+                          color={isActive ? "#2A2822" : "rgba(255,255,255,0.4)"}
+                        />
+                      )}
+                    </Box>
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text
+                        c={isActive ? "white" : "rgba(255,255,255,0.7)"}
+                        size="sm"
+                        fw={isActive ? 600 : 500}
+                        lineClamp={1}
+                      >
+                        {ws.name}
+                      </Text>
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color={ROLE_COLORS[ws.role] || "gray"}
+                        radius="sm"
+                        style={{ textTransform: "capitalize" }}
+                      >
+                        {ROLE_LABELS[ws.role] || ws.role}
+                      </Badge>
+                    </Box>
+                    {isActive && !loading && (
+                      <IconCheck size={16} color="var(--nv-accent)" />
+                    )}
+                    {isActive && loading && (
+                      <Loader size={14} color="var(--nv-accent)" />
+                    )}
+                  </Group>
+                </UnstyledButton>
+              );
+            })}
+          </Stack>
+        </Box>
+
+        <Divider color="rgba(255,255,255,0.06)" />
+
+        {/* Logout */}
+        <Box px="xs" py="xs">
+          <UnstyledButton
+            w="100%"
+            px="xs"
+            py={8}
+            onClick={() => { close(); logout(); }}
+            style={{
+              borderRadius: "8px",
+              transition: "background 0.15s",
+            }}
+            className="profile-btn"
+          >
+            <Group gap="sm">
+              <IconLogout size={16} color="rgba(255,255,255,0.4)" />
+              <Text c="rgba(255,255,255,0.5)" size="sm" fw={500}>
+                Cerrar sesión
+              </Text>
+            </Group>
+          </UnstyledButton>
+        </Box>
+      </Popover.Dropdown>
+    </Popover>
+  );
+}
+
+// Sidebar Component
 function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { user, currentWorkspace } = useAuthStore();
-  const { logout } = useAuth();
   
-  // Determinar qué items de navegación mostrar según el rol
   const isClient = user?.role === 'client';
   
-  // Fetch unread message count based on role
   const { data: unreadData } = useQuery({
     queryKey: ["unread-messages-count", isClient ? "client" : "trainer"],
     queryFn: async () => {
@@ -208,7 +436,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
         return response.data;
       }
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
     staleTime: 10000,
   });
   
@@ -277,33 +505,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
         </Stack>
       </ScrollArea>
 
-      {/* User Profile Footer */}
+      {/* Workspace Switcher Footer */}
       <Box pt="md" mt="sm" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <UnstyledButton
-          w="100%"
-          onClick={logout}
-          style={{
-            padding: "8px",
-            borderRadius: "12px",
-            transition: "background 0.2s",
-          }}
-          className="profile-btn"
-        >
-          <Group>
-            <Avatar src={null} radius="xl" color="yellow" size="sm" style={{ border: "2px solid #2A2822" }}>
-              {user?.full_name?.[0]}
-            </Avatar>
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <Text c="white" size="sm" fw={600} lh={1.2} lineClamp={1}>
-                {user?.full_name || "Usuario"}
-              </Text>
-              <Text c="dimmed" size="xs" lh={1.2} lineClamp={1}>
-                {user?.email}
-              </Text>
-            </Box>
-            <IconLogout size={16} color="gray" style={{ opacity: 0.5 }} />
-          </Group>
-        </UnstyledButton>
+        <WorkspaceSwitcher onNavigate={onNavigate} />
       </Box>
     </Box>
   );
@@ -382,7 +586,7 @@ export function DashboardLayout() {
           position: "sticky",
           top: 0,
           height: "100vh",
-          display: "none", // Oculto por defecto, visible en media query
+          display: "none",
           flexDirection: "column",
           width: 280,
         }}
@@ -391,7 +595,7 @@ export function DashboardLayout() {
           h="100%"
           style={{
             borderRadius: "24px",
-            overflow: "hidden", // Para recortar el contenido en las esquinas redondeadas
+            overflow: "hidden",
             boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
             border: "1px solid rgba(255,255,255,0.05)",
           }}

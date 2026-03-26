@@ -94,9 +94,13 @@ api.interceptors.response.use(
         }, 15000);
         
         try {
+          const currentWs = useAuthStore.getState().currentWorkspace;
           const response = await axios.post<{ access_token: string; refresh_token: string }>(
             `${API_URL}/auth/refresh`,
-            { refresh_token: refreshToken },
+            {
+              refresh_token: refreshToken,
+              workspace_id: currentWs?.id || undefined,
+            },
           );
 
           const { access_token, refresh_token } = response.data;
@@ -169,7 +173,10 @@ export const authApi = {
     api.post("/auth/change-password", { current_password: currentPassword, new_password: newPassword }),
   changeEmail: (data: { new_email: string; password: string }) =>
     api.post("/auth/change-email", data),
-  
+
+  switchWorkspace: (workspaceId: string) =>
+    api.post("/auth/switch-workspace", { workspace_id: workspaceId }),
+
   // Client registration
   registerClient: (data: {
     workspace_id: string;

@@ -284,12 +284,29 @@ async def logout(
 
 @router.get("/me")
 async def get_me(
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
-    Get current user information with role.
+    Get current user information with role and all available workspaces.
     """
     user = current_user.user
+
+    result = await db.execute(
+        select(UserRole, Workspace)
+        .join(Workspace, UserRole.workspace_id == Workspace.id)
+        .where(UserRole.user_id == user.id)
+    )
+    workspaces = []
+    for ur, ws in result.all():
+        workspaces.append({
+            "id": str(ws.id),
+            "name": ws.name,
+            "slug": ws.slug,
+            "logo_url": ws.logo_url,
+            "role": ur.role.value,
+        })
+
     return {
         "id": str(user.id),
         "email": user.email,
@@ -303,15 +320,67 @@ async def get_me(
         "workspace_id": str(current_user.workspace_id) if current_user.workspace_id else None,
         "permissions": current_user.get_permissions(),
         "assigned_clients": current_user.get_assigned_clients(),
+        "workspaces": workspaces,
         "created_at": user.created_at.isoformat(),
         "updated_at": user.updated_at.isoformat(),
     }
+
+
+# ===== SWITCH WORKSPACE =====
+
+class SwitchWorkspaceRequest(BaseModel):
+    workspace_id: str
+
+@router.post("/switch-workspace", response_model=Token)
+async def switch_workspace(
+    data: SwitchWorkspaceRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Switch to a different workspace. Issues new tokens scoped to the target workspace.
+    The user must have a role in the target workspace.
+    """
+    try:
+        target_ws_id = UUID(data.workspace_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="workspace_id inválido")
+
+    result = await db.execute(
+        select(UserRole).where(
+            UserRole.user_id == current_user.id,
+            UserRole.workspace_id == target_ws_id,
+        )
+    )
+    user_role = result.scalar_one_or_none()
+
+    if not user_role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este workspace",
+        )
+
+    access_token, refresh_token, expires_in = create_tokens(
+        user_id=str(current_user.id),
+        email=current_user.email,
+        workspace_id=str(target_ws_id),
+        role=user_role.role.value,
+    )
+
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=expires_in,
+        refresh_token=refresh_token,
+        requires_email_verification=False,
+    )
 
 
 # ===== REFRESH TOKEN =====
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+    workspace_id: Optional[str] = None
 
 
 @router.post("/refresh", response_model=Token)
@@ -321,11 +390,8 @@ async def refresh_token(
 ):
     """
     Refresh access token using refresh token.
-    
-    The refresh token has a longer expiration and is used to obtain
-    new access tokens without requiring the user to re-authenticate.
+    Optionally accepts workspace_id to preserve workspace context across refreshes.
     """
-    # Define exception for consistent error handling
     token_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Token de refresco inválido o expirado",
@@ -333,13 +399,11 @@ async def refresh_token(
     )
     
     try:
-        # Decode refresh token
         payload = decode_refresh_token(data.refresh_token)
         
         if not payload:
             raise token_exception
         
-        # Get user
         user_id = payload.sub
         result = await db.execute(
             select(User).where(User.id == UUID(user_id))
@@ -353,31 +417,48 @@ async def refresh_token(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # Get user's default workspace and role
-        result = await db.execute(
-            select(UserRole).where(
-                UserRole.user_id == user.id,
-                UserRole.is_default == True
-            )
-        )
-        default_role = result.scalar_one_or_none()
-        
         workspace_id = None
         role = None
-        
-        if default_role:
-            workspace_id = str(default_role.workspace_id)
-            role = default_role.role.value
-        else:
+
+        # Try to preserve the workspace from the request
+        if data.workspace_id:
+            try:
+                requested_ws = UUID(data.workspace_id)
+                result = await db.execute(
+                    select(UserRole).where(
+                        UserRole.user_id == user.id,
+                        UserRole.workspace_id == requested_ws,
+                    )
+                )
+                requested_role = result.scalar_one_or_none()
+                if requested_role:
+                    workspace_id = str(requested_ws)
+                    role = requested_role.role.value
+            except (ValueError, TypeError):
+                pass
+
+        # Fallback: default workspace
+        if not workspace_id:
             result = await db.execute(
-                select(UserRole).where(UserRole.user_id == user.id).limit(1)
+                select(UserRole).where(
+                    UserRole.user_id == user.id,
+                    UserRole.is_default == True
+                )
             )
-            first_role = result.scalar_one_or_none()
-            if first_role:
-                workspace_id = str(first_role.workspace_id)
-                role = first_role.role.value
+            default_role = result.scalar_one_or_none()
+            
+            if default_role:
+                workspace_id = str(default_role.workspace_id)
+                role = default_role.role.value
+            else:
+                result = await db.execute(
+                    select(UserRole).where(UserRole.user_id == user.id).limit(1)
+                )
+                first_role = result.scalar_one_or_none()
+                if first_role:
+                    workspace_id = str(first_role.workspace_id)
+                    role = first_role.role.value
         
-        # Create new tokens
         access_token, new_refresh_token, expires_in = create_tokens(
             user_id=str(user.id),
             email=user.email,

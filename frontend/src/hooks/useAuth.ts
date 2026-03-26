@@ -19,25 +19,30 @@ export function useAuth() {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Login through backend API
       const loginResponse = await authApi.login(email, password);
       const { access_token, refresh_token } = loginResponse.data;
 
-      // Save tokens
       setTokens(access_token, refresh_token);
 
-      // Get user profile from backend
       const userResponse = await authApi.me();
-      setUser(userResponse.data);
+      const userData = userResponse.data;
+      setUser(userData);
 
-      // Get workspaces and set current workspace
-      try {
-        const workspacesResponse = await workspacesApi.list();
-        if (workspacesResponse.data.length > 0) {
-          setWorkspace(workspacesResponse.data[0]);
+      const activeWorkspaceId = userData.workspace_id;
+      if (activeWorkspaceId) {
+        try {
+          const workspacesResponse = await workspacesApi.list();
+          const match = workspacesResponse.data.find(
+            (ws: { id: string }) => ws.id === activeWorkspaceId
+          );
+          if (match) {
+            setWorkspace(match);
+          } else if (workspacesResponse.data.length > 0) {
+            setWorkspace(workspacesResponse.data[0]);
+          }
+        } catch {
+          // fallback: no workspaces
         }
-      } catch {
-        console.log("No workspaces found");
       }
 
       notifications.show({
@@ -55,7 +60,6 @@ export function useAuth() {
       const message =
         err.response?.data?.detail || err.message || "Error al iniciar sesión";
       
-      // Check if it's an email verification error
       if (err.response?.status === 403 && message.includes("verificar")) {
         notifications.show({
           title: "Email no verificado",
@@ -84,7 +88,6 @@ export function useAuth() {
   ) => {
     setLoading(true);
     try {
-      // Register through backend API
       const registerResponse = await authApi.register({
         email,
         password,
@@ -94,7 +97,6 @@ export function useAuth() {
 
       const { access_token, refresh_token, requires_email_verification } = registerResponse.data;
 
-      // Check if email confirmation is required
       if (access_token === "pending_email_confirmation" || requires_email_verification) {
         notifications.show({
           title: "¡Cuenta creada!",
@@ -106,21 +108,18 @@ export function useAuth() {
         return;
       }
 
-      // Save tokens
       setTokens(access_token, refresh_token);
 
-      // Get user profile from backend
       const userResponse = await authApi.me();
       setUser(userResponse.data);
 
-      // Get workspaces and set current workspace
       try {
         const workspacesResponse = await workspacesApi.list();
         if (workspacesResponse.data.length > 0) {
           setWorkspace(workspacesResponse.data[0]);
         }
       } catch {
-        console.log("No workspaces found");
+        // fallback
       }
 
       notifications.show({
@@ -148,14 +147,60 @@ export function useAuth() {
     }
   };
 
+  const switchWorkspace = async (workspaceId: string) => {
+    setLoading(true);
+    try {
+      const res = await authApi.switchWorkspace(workspaceId);
+      const { access_token, refresh_token } = res.data;
+
+      setTokens(access_token, refresh_token);
+
+      const userResponse = await authApi.me();
+      const userData = userResponse.data;
+      setUser(userData);
+
+      try {
+        const workspacesResponse = await workspacesApi.list();
+        const match = workspacesResponse.data.find(
+          (ws: { id: string }) => ws.id === workspaceId
+        );
+        if (match) {
+          setWorkspace(match);
+        }
+      } catch {
+        // fallback
+      }
+
+      queryClient.clear();
+      navigate("/dashboard");
+
+      notifications.show({
+        title: "Workspace cambiado",
+        message: `Ahora estás en ${userData.workspaces?.find((w: { id: string }) => w.id === workspaceId)?.name || "otro workspace"}`,
+        color: "teal",
+      });
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      notifications.show({
+        title: "Error",
+        message: err.response?.data?.detail || "No se pudo cambiar de workspace",
+        color: "red",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
-      // Call backend logout to invalidate session
       try {
         await authApi.logout();
       } catch {
-        // Ignore errors - we'll clear local state anyway
+        // Ignore - clear local state anyway
       }
 
       clearStore();
@@ -284,6 +329,7 @@ export function useAuth() {
     login,
     register,
     logout,
+    switchWorkspace,
     forgotPassword,
     resetPassword,
     changePassword,

@@ -14,6 +14,14 @@ type UserRole = 'owner' | 'collaborator' | 'client';
 
 export type PermissionsMap = Record<string, string[]>;
 
+export interface WorkspaceWithRole {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string;
+  role: UserRole;
+}
+
 interface User {
   id: string;
   email: string;
@@ -26,6 +34,7 @@ interface User {
   phone?: string;
   permissions?: PermissionsMap;
   assigned_clients?: string[];
+  workspaces?: WorkspaceWithRole[];
 }
 
 interface Workspace {
@@ -111,7 +120,6 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Helper to wait for hydration
 export const waitForHydration = (): Promise<void> => {
   return new Promise((resolve) => {
     if (useAuthStore.getState()._hasHydrated) {
