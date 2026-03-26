@@ -10,7 +10,6 @@ import {
   Drawer,
   FileButton,
   Group,
-  Modal,
   Paper,
   ScrollArea,
   Select,
@@ -56,6 +55,7 @@ import {
 import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/common/EmptyState";
 import { PageHeader } from "../../components/common/PageHeader";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import { notifications } from "@mantine/notifications";
 import {
   useForms,
@@ -936,7 +936,7 @@ export function FormsPage() {
       </Drawer>
 
       {/* Upload Document Modal */}
-      <Modal
+      <BottomSheet
         onClose={closeUploadModal}
         opened={uploadModalOpened}
         size="md"
@@ -999,7 +999,7 @@ export function FormsPage() {
             <Button>Subir</Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

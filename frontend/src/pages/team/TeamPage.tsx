@@ -8,7 +8,6 @@ import {
   Divider,
   Group,
   Menu,
-  Modal,
   MultiSelect,
   Select,
   SimpleGrid,
@@ -35,6 +34,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import {
   useTeamMembers,
   useInviteTeamMember,
@@ -402,7 +402,7 @@ export function TeamPage() {
       </Stack>
 
       {/* Invite Modal */}
-      <Modal
+      <BottomSheet
         centered
         onClose={closeInviteModal}
         opened={inviteModalOpened}
@@ -499,10 +499,10 @@ export function TeamPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Edit Modal */}
-      <Modal
+      <BottomSheet
         centered
         onClose={closeEditModal}
         opened={editModalOpened}
@@ -589,7 +589,7 @@ export function TeamPage() {
             </Group>
           </Stack>
         )}
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

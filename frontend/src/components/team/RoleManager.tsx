@@ -7,7 +7,6 @@ import {
   Checkbox,
   ColorInput,
   Group,
-  Modal,
   Paper,
   Select,
   SimpleGrid,
@@ -30,6 +29,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { BottomSheet } from "../common/BottomSheet";
 
 // Types
 interface Permission {
@@ -368,7 +368,7 @@ export function RoleManager() {
       </SimpleGrid>
 
       {/* Modal for creating/editing roles */}
-      <Modal
+      <BottomSheet
         opened={modalOpened}
         onClose={closeModal}
         title={editingRole ? "Editar Rol" : "Nuevo Rol"}
@@ -464,7 +464,7 @@ export function RoleManager() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
     </Box>
   );
 }

@@ -9,7 +9,6 @@ import {
   Group,
   Image,
   Menu,
-  Modal,
   MultiSelect,
   SegmentedControl,
   SimpleGrid,
@@ -88,6 +87,7 @@ import { paymentsApi } from "../../services/api";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { formatDecimal } from "../../utils/format";
+import { BottomSheet } from "../../components/common/BottomSheet";
 
 // Lista de alérgenos comunes
 const COMMON_ALLERGENS = [
@@ -3204,7 +3204,7 @@ export function ClientDetailPage() {
       `}</style>
 
       {/* Modal para editar alergias e intolerancias */}
-      <Modal
+      <BottomSheet
         opened={allergyModalOpened}
         onClose={closeAllergyModal}
         title="Editar Alergias e Intolerancias"
@@ -3260,10 +3260,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar cliente */}
-      <Modal
+      <BottomSheet
         opened={editClientModalOpened}
         onClose={closeEditClientModal}
         title="Editar Cliente"
@@ -3361,10 +3361,10 @@ export function ClientDetailPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar información personal */}
-      <Modal
+      <BottomSheet
         opened={editInfoModalOpened}
         onClose={closeEditInfoModal}
         title="Editar Información Personal"
@@ -3439,10 +3439,10 @@ export function ClientDetailPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal de confirmación para eliminar cliente */}
-      <Modal
+      <BottomSheet
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
         title="Eliminar Cliente"
@@ -3469,10 +3469,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para asignar programa de entrenamiento */}
-      <Modal
+      <BottomSheet
         opened={assignProgramModalOpened}
         onClose={closeAssignProgramModal}
         title="Asignar Programa de Entrenamiento"
@@ -3539,10 +3539,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para asignar plan nutricional */}
-      <Modal
+      <BottomSheet
         opened={assignMealPlanModalOpened}
         onClose={closeAssignMealPlanModal}
         title="Asignar Plan Nutricional"
@@ -3609,10 +3609,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal de confirmación para eliminar programa/plan */}
-      <Modal
+      <BottomSheet
         opened={deleteConfirmModalOpened}
         onClose={closeDeleteConfirmModal}
         title={deletingProgramId ? "Eliminar Programa" : "Eliminar Plan Nutricional"}
@@ -3646,10 +3646,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para ver detalles del programa de entrenamiento */}
-      <Modal
+      <BottomSheet
         opened={viewProgramModalOpened}
         onClose={closeViewProgramModal}
         title={selectedProgramForView?.name || "Programa de Entrenamiento"}
@@ -3848,10 +3848,10 @@ export function ClientDetailPage() {
             </Group>
           </Stack>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar lesiones */}
-      <Modal
+      <BottomSheet
         opened={injuriesModalOpened}
         onClose={closeInjuriesModal}
         title="Editar Lesiones"
@@ -3925,10 +3925,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar nivel de actividad y objetivos */}
-      <Modal
+      <BottomSheet
         opened={activityModalOpened}
         onClose={closeActivityModal}
         title="Editar Nivel de Actividad y Objetivos"
@@ -4017,10 +4017,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar información médica */}
-      <Modal
+      <BottomSheet
         opened={medicalModalOpened}
         onClose={closeMedicalModal}
         title="Editar Información Médica"
@@ -4053,10 +4053,10 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar cuestionario PAR-Q */}
-      <Modal
+      <BottomSheet
         opened={parqModalOpened}
         onClose={closeParqModal}
         title="Editar Cuestionario PAR-Q"
@@ -4185,7 +4185,7 @@ export function ClientDetailPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

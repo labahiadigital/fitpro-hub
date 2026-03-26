@@ -5,7 +5,6 @@ import {
   Card,
   Group,
   Image,
-  Modal,
   MultiSelect,
   ScrollArea,
   Select,
@@ -26,6 +25,7 @@ import {
   IconSearch,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { BottomSheet } from "../common/BottomSheet";
 
 interface Exercise {
   id: string;
@@ -132,7 +132,7 @@ export function ExerciseLibrary({
 
   return (
     <>
-      <Modal
+      <BottomSheet
         onClose={onClose}
         opened={opened}
         size="xl"
@@ -332,10 +332,10 @@ export function ExerciseLibrary({
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Video Modal */}
-      <Modal
+      <BottomSheet
         onClose={() => setVideoModalExercise(null)}
         opened={!!videoModalExercise}
         size="lg"
@@ -367,7 +367,7 @@ export function ExerciseLibrary({
             )}
           </Stack>
         )}
-      </Modal>
+      </BottomSheet>
     </>
   );
 }

@@ -12,7 +12,6 @@ import {
   ThemeIcon,
   Center,
   Loader,
-  Modal,
   Textarea,
 } from "@mantine/core";
 import { DatePicker } from "@mantine/dates";
@@ -30,6 +29,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMyBookings, useAvailableSlots, useCreateClientBooking } from "../../hooks/useClientPortal";
+import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 
 function getWeekDays(weekOffset: number) {
   const today = new Date();
@@ -80,68 +80,76 @@ function RequestBookingModal({
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Solicitar cita" size="md">
-      <Stack gap="md">
-        <Text size="sm" c="dimmed">Selecciona una fecha y un horario disponible</Text>
-        <Center>
-          <DatePicker
-            value={selectedDate}
-            onChange={(d) => { setSelectedDate(d ? new Date(d) : null); setSelectedSlot(null); }}
-            minDate={minDate}
-            maxDate={maxDate}
-            locale="es"
-          />
-        </Center>
-
-        {selectedDate && (
-          <Box>
-            <Text fw={500} size="sm" mb="xs">
-              Horarios disponibles - {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
-            </Text>
-            {loadingSlots ? (
-              <Center py="md"><Loader size="sm" /></Center>
-            ) : slots.length > 0 ? (
-              <Group gap="xs">
-                {slots.map((slot: { start: string; end: string }) => (
-                  <Button
-                    key={slot.start}
-                    variant={selectedSlot === slot.start ? "filled" : "outline"}
-                    color="yellow"
-                    size="xs"
-                    onClick={() => setSelectedSlot(slot.start)}
-                  >
-                    {new Date(slot.start).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
-                  </Button>
-                ))}
-              </Group>
-            ) : (
-              <Text size="sm" c="dimmed" ta="center">No hay horarios disponibles para este día</Text>
-            )}
-          </Box>
-        )}
-
-        <Textarea
-          label="Notas (opcional)"
-          placeholder="Indica si tienes alguna preferencia..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          minRows={2}
+    <NativeBottomSheet
+      opened={opened}
+      onClose={onClose}
+      title="Solicitar cita"
+      subtitle="Selecciona fecha y horario"
+      footer={
+        <Button
+          color="yellow"
+          onClick={handleSubmit}
+          loading={createBooking.isPending}
+          disabled={!selectedSlot}
+          leftSection={<IconCalendarPlus size={18} />}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Solicitar Cita
+        </Button>
+      }
+    >
+      <Center>
+        <DatePicker
+          value={selectedDate}
+          onChange={(d) => { setSelectedDate(d ? new Date(d) : null); setSelectedSlot(null); }}
+          minDate={minDate}
+          maxDate={maxDate}
+          locale="es"
         />
+      </Center>
 
-        <Group justify="flex-end">
-          <Button variant="light" onClick={onClose}>Cancelar</Button>
-          <Button
-            color="yellow"
-            onClick={handleSubmit}
-            loading={createBooking.isPending}
-            disabled={!selectedSlot}
-            leftSection={<IconCalendarPlus size={16} />}
-          >
-            Solicitar
-          </Button>
-        </Group>
-      </Stack>
-    </Modal>
+      {selectedDate && (
+        <Box mt="md">
+          <Text fw={500} size="sm" mb="xs">
+            Horarios disponibles - {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+          </Text>
+          {loadingSlots ? (
+            <Center py="md"><Loader size="sm" /></Center>
+          ) : slots.length > 0 ? (
+            <Group gap="xs">
+              {slots.map((slot: { start: string; end: string }) => (
+                <Button
+                  key={slot.start}
+                  variant={selectedSlot === slot.start ? "filled" : "outline"}
+                  color="yellow"
+                  size="sm"
+                  radius="xl"
+                  onClick={() => setSelectedSlot(slot.start)}
+                  styles={{ root: { height: 40 } }}
+                >
+                  {new Date(slot.start).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                </Button>
+              ))}
+            </Group>
+          ) : (
+            <Text size="sm" c="dimmed" ta="center">No hay horarios disponibles</Text>
+          )}
+        </Box>
+      )}
+
+      <Textarea
+        placeholder="Notas (opcional)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        minRows={2}
+        mt="md"
+        size="sm"
+        styles={{ input: { borderRadius: 10 } }}
+      />
+    </NativeBottomSheet>
   );
 }
 

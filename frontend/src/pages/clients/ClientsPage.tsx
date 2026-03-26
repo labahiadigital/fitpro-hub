@@ -4,7 +4,6 @@ import {
   ColorInput,
   Container,
   Group,
-  Modal,
   ScrollArea,
   Select,
   SimpleGrid,
@@ -58,6 +57,7 @@ import {
 import { useCreateInvitation, useInvitations, useResendInvitation, useCancelInvitation } from "../../hooks/useInvitations";
 import { productsApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
 
 function getClientStatus(client: { is_active: boolean; has_user_account?: boolean }): string {
@@ -836,13 +836,12 @@ export function ClientsPage() {
       })()}
 
       {/* Modal para crear cliente */}
-      <Modal
+      <BottomSheet
         onClose={closeClientModal}
         opened={clientModalOpened}
         size="lg"
         title="Nuevo Cliente"
         radius="lg"
-        centered
       >
         <form onSubmit={clientForm.onSubmit(handleCreateClient)}>
           <Stack gap="md">
@@ -910,16 +909,15 @@ export function ClientsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para crear etiqueta */}
-      <Modal
+      <BottomSheet
         onClose={closeTagModal}
         opened={tagModalOpened}
         size="sm"
         title="Nueva Etiqueta"
         radius="lg"
-        centered
       >
         <form onSubmit={tagForm.onSubmit(handleCreateTag)}>
           <Stack gap="md">
@@ -974,16 +972,15 @@ export function ClientsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para editar cliente */}
-      <Modal
+      <BottomSheet
         onClose={closeEditModal}
         opened={editModalOpened}
         size="lg"
         title={`Editar Cliente: ${editingClient?.first_name || ''} ${editingClient?.last_name || ''}`}
         radius="lg"
-        centered
       >
         <form onSubmit={editForm.onSubmit(handleUpdateClient)}>
           <Stack gap="md">
@@ -1051,16 +1048,15 @@ export function ClientsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para invitar cliente */}
-      <Modal
+      <BottomSheet
         onClose={handleCloseInviteModal}
         opened={inviteModalOpened}
         size="md"
         title="Invitar Cliente"
         radius="lg"
-        centered
       >
         {lastInvitationUrl ? (
           <Stack gap="md">
@@ -1187,15 +1183,14 @@ export function ClientsPage() {
             </Stack>
           </form>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* Modal de confirmación de eliminación permanente */}
-      <Modal
+      <BottomSheet
         opened={deleteConfirmOpened}
         onClose={() => { closeDeleteConfirm(); setClientToDelete(null); }}
         title="Confirmar eliminación permanente"
         radius="lg"
-        centered
         size="sm"
       >
         <Stack gap="md">
@@ -1220,7 +1215,7 @@ export function ClientsPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

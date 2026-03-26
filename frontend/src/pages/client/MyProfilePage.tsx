@@ -16,7 +16,6 @@ import {
   Switch,
   Table,
   Loader,
-  Modal,
   Alert,
   ThemeIcon,
   FileButton,
@@ -43,6 +42,7 @@ import { authApi, clientPortalApi, notificationsApi } from "../../services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { notifications } from "@mantine/notifications";
+import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 
 interface SubscriptionPayment {
   id: string;
@@ -294,12 +294,10 @@ function SubscriptionSection() {
         )}
       </Card>
 
-      <Modal
+      <NativeBottomSheet
         opened={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
         title="Cancelar suscripción"
-        centered
-        radius="lg"
       >
         <Stack gap="md">
           <Alert color="orange" variant="light" icon={<IconAlertCircle size={16} />}>
@@ -324,7 +322,7 @@ function SubscriptionSection() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </NativeBottomSheet>
     </>
   );
 }
@@ -750,12 +748,10 @@ export function MyProfilePage() {
         </Stack>
       </SimpleGrid>
 
-      <Modal
+      <NativeBottomSheet
         opened={passwordModalOpened}
         onClose={closePasswordModal}
         title="Cambiar contraseña"
-        centered
-        radius="lg"
       >
         <form
           onSubmit={changePasswordForm.onSubmit((values) =>
@@ -791,7 +787,7 @@ export function MyProfilePage() {
             </Button>
           </Stack>
         </form>
-      </Modal>
+      </NativeBottomSheet>
     </Box>
   );
 }

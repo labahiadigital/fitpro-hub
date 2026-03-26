@@ -43,6 +43,7 @@ import {
 } from "@tabler/icons-react";
 import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory } from "../../hooks/useClientPortal";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
+import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
 import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
 
@@ -613,17 +614,28 @@ function SwapExerciseModal({
   };
 
   return (
-    <Modal
+    <NativeBottomSheet
       opened={opened}
       onClose={() => { onClose(); setShowAllExercises(false); setSelectedExerciseId(null); }}
       title="Sustituir ejercicio"
-      size="lg"
+      subtitle={currentExerciseName}
+      footer={
+        <Button
+          color="yellow"
+          onClick={handleSwap}
+          loading={updateMutation.isPending}
+          disabled={!selectedExerciseId}
+          leftSection={<IconExchange size={18} />}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Sustituir
+        </Button>
+      }
     >
       <Stack gap="md">
-        <Paper p="sm" radius="md" withBorder>
-          <Text size="sm" c="dimmed">Sustituyendo:</Text>
-          <Text fw={600}>{currentExerciseName}</Text>
-        </Paper>
 
         {/* Alternativas predefinidas por el entrenador */}
         {isLoadingAlternatives ? (
@@ -742,22 +754,8 @@ function SwapExerciseModal({
           minRows={2}
         />
 
-        <Group justify="flex-end" mt="md">
-          <Button variant="light" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            color="yellow"
-            onClick={handleSwap}
-            loading={updateMutation.isPending}
-            disabled={!selectedExerciseId}
-            leftSection={<IconExchange size={16} />}
-          >
-            Sustituir
-          </Button>
-        </Group>
       </Stack>
-    </Modal>
+    </NativeBottomSheet>
   );
 }
 

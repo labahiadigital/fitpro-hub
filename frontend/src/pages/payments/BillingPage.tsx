@@ -8,7 +8,6 @@ import {
   Divider,
   Group,
   Menu,
-  Modal,
   NumberInput,
   PasswordInput,
   RingProgress,
@@ -95,6 +94,7 @@ import {
 import { erpApi } from "../../services/api";
 import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
 
 export function BillingPage() {
@@ -1102,7 +1102,7 @@ export function BillingPage() {
       </Tabs>
 
       {/* ═══════════════ NEW CHARGE MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={closeChargeModal}
         opened={chargeModalOpened}
         size="md"
@@ -1138,10 +1138,10 @@ export function BillingPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* ═══════════════ PAYMENT DETAIL MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={closePaymentDetail}
         opened={paymentDetailOpened}
         size="md"
@@ -1204,10 +1204,10 @@ export function BillingPage() {
             </Group>
           </Stack>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* ═══════════════ INVOICE CREATE/EDIT MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={() => { closeInvoiceModal(); setEditingInvoice(null); invoiceForm.reset(); }}
         opened={invoiceModalOpened}
         size="xl"
@@ -1324,10 +1324,10 @@ export function BillingPage() {
             </Button>
           </Group>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* ═══════════════ INVOICE PREVIEW MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={() => { closeInvoicePreview(); setPreviewInvoice(null); }}
         opened={invoicePreviewOpened}
         size="lg"
@@ -1450,10 +1450,10 @@ export function BillingPage() {
             </Stack>
           </ScrollArea.Autosize>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* ═══════════════ INVOICE SETTINGS MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={closeSettingsModal}
         opened={settingsModalOpened}
         size="lg"
@@ -1727,7 +1727,7 @@ export function BillingPage() {
             <Button type="submit" loading={updateInvoiceSettings.isPending}>Guardar Configuración</Button>
           </Group>
         </form>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

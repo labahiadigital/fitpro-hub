@@ -13,7 +13,6 @@ import {
   List,
   Loader,
   Menu,
-  Modal,
   NumberInput,
   Paper,
   PasswordInput,
@@ -85,6 +84,7 @@ import { useAuthStore } from "../../stores/auth";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import {
   accountApi,
   authApi,
@@ -1262,7 +1262,7 @@ export function SettingsPage() {
       {/* ==================== MODALS ==================== */}
 
       {/* Invite team member */}
-      <Modal opened={inviteModalOpen} onClose={closeInviteModal} title="Invitar Miembro" radius="lg">
+      <BottomSheet opened={inviteModalOpen} onClose={closeInviteModal} title="Invitar Miembro" radius="lg">
         <form onSubmit={inviteForm.onSubmit((v) => inviteMutation.mutate(v))}>
           <Stack gap="md">
             <TextInput label="Email" placeholder="email@ejemplo.com" {...inviteForm.getInputProps("email")} />
@@ -1280,10 +1280,10 @@ export function SettingsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Remove team member confirmation */}
-      <Modal opened={!!deleteConfirmMember} onClose={() => setDeleteConfirmMember(null)} title="Eliminar Miembro" size="sm" radius="lg" centered>
+      <BottomSheet opened={!!deleteConfirmMember} onClose={() => setDeleteConfirmMember(null)} title="Eliminar Miembro" size="sm" radius="lg" centered>
         <Stack gap="md">
           <Text size="sm">¿Estás seguro de que quieres eliminar este miembro del equipo?</Text>
           <Group justify="flex-end">
@@ -1293,10 +1293,10 @@ export function SettingsPage() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
 
       {/* Delete account confirmation */}
-      <Modal opened={deleteAccountModal} onClose={closeDeleteAccount} title="Eliminar Cuenta" size="md" radius="lg" centered>
+      <BottomSheet opened={deleteAccountModal} onClose={closeDeleteAccount} title="Eliminar Cuenta" size="md" radius="lg" centered>
         <form onSubmit={deleteAccountForm.onSubmit((v) => deleteAccountMutation.mutate(v))}>
           <Stack gap="md">
             <Alert color="red" icon={<IconAlertCircle size={16} />} variant="light" radius="lg">
@@ -1310,7 +1310,7 @@ export function SettingsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

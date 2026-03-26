@@ -4,7 +4,6 @@ import {
   Button,
   Divider,
   Group,
-  Modal,
   Progress,
   ScrollArea,
   SimpleGrid,
@@ -20,6 +19,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import type { Recipe } from "../../types/recipe";
+import { BottomSheet } from "../common/BottomSheet";
 
 interface RecipeDetailModalProps {
   opened: boolean;
@@ -60,7 +60,7 @@ export function RecipeDetailModal({
   const diff = recipe.difficulty ? DIFFICULTY_MAP[recipe.difficulty] : null;
 
   return (
-    <Modal
+    <BottomSheet
       opened={opened}
       onClose={onClose}
       title={
@@ -341,6 +341,6 @@ export function RecipeDetailModal({
           )}
         </Stack>
       </ScrollArea.Autosize>
-    </Modal>
+    </BottomSheet>
   );
 }

@@ -7,7 +7,6 @@ import {
   Divider,
   Group,
   Menu,
-  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -40,6 +39,7 @@ import {
 import { useState } from "react";
 import { notifications } from "@mantine/notifications";
 import { PageHeader } from "../../components/common/PageHeader";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import {
   useSessionPackages,
   useClientPackages,
@@ -569,7 +569,7 @@ export function PackagesPage() {
       </Tabs>
 
       {/* Modal de Paquete */}
-      <Modal
+      <BottomSheet
         onClose={closePackageModal}
         opened={packageModalOpened}
         size="md"
@@ -630,7 +630,7 @@ export function PackagesPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

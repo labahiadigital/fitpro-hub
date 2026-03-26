@@ -13,7 +13,6 @@ import {
   Image,
   Loader,
   Menu,
-  Modal,
   Popover,
   ScrollArea,
   SegmentedControl,
@@ -66,6 +65,7 @@ import {
 import { useClients } from "../../hooks/useClients";
 import { useWhatsAppStatus } from "../../hooks/useWhatsApp";
 import "dayjs/locale/es";
+import { BottomSheet } from "../../components/common/BottomSheet";
 
 dayjs.extend(relativeTime);
 dayjs.locale("es");
@@ -911,7 +911,7 @@ export function ChatPage() {
         )}
       </Box>
 
-      <Modal opened={newChatOpened} onClose={closeNewChat} title="Nueva conversación" radius="lg">
+      <BottomSheet opened={newChatOpened} onClose={closeNewChat} title="Nueva conversación" radius="lg">
         <Stack>
           <Select
             data={clientOptions}
@@ -930,7 +930,7 @@ export function ChatPage() {
             Iniciar conversación
           </Button>
         </Stack>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

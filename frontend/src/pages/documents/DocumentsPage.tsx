@@ -9,7 +9,6 @@ import {
   FileInput,
   Group,
   Menu,
-  Modal,
   Paper,
   Progress,
   Select,
@@ -42,6 +41,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import { EmptyState } from "../../components/common/EmptyState";
 
 interface Document {
@@ -441,7 +441,7 @@ export function DocumentsPage() {
       </Tabs>
 
       {/* Document Modal */}
-      <Modal
+      <BottomSheet
         centered
         onClose={closeDocumentModal}
         opened={documentModalOpened}
@@ -498,10 +498,10 @@ export function DocumentsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Folder Modal */}
-      <Modal
+      <BottomSheet
         centered
         onClose={closeFolderModal}
         opened={folderModalOpened}
@@ -537,7 +537,7 @@ export function DocumentsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

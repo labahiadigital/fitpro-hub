@@ -6,7 +6,6 @@ import {
   Collapse,
   Divider,
   Group,
-  Modal,
   NumberInput,
   ScrollArea,
   Select,
@@ -41,6 +40,7 @@ import type {
   RecipeItem,
 } from "../../types/recipe";
 import { RECIPE_CATEGORIES, RECIPE_DIFFICULTIES } from "../../types/recipe";
+import { BottomSheet } from "../common/BottomSheet";
 
 interface RecipeFormModalProps {
   opened: boolean;
@@ -202,7 +202,7 @@ export function RecipeFormModal({
     (typeof form.values.cook_time_minutes === "number" ? form.values.cook_time_minutes : 0);
 
   return (
-    <Modal
+    <BottomSheet
       opened={opened}
       onClose={onClose}
       title={
@@ -595,6 +595,6 @@ export function RecipeFormModal({
           </Group>
         </Stack>
       </ScrollArea.Autosize>
-    </Modal>
+    </BottomSheet>
   );
 }

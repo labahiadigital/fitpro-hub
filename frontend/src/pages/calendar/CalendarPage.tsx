@@ -7,7 +7,6 @@ import {
   Divider,
   Group,
   Loader,
-  Modal,
   NumberInput,
   Paper,
   SegmentedControl,
@@ -49,6 +48,7 @@ import {
   useUpdateBooking,
 } from "../../hooks/useBookings";
 import { useClients } from "../../hooks/useClients";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import {
   useGoogleCalendarStatus,
   useGoogleCalendarEvents,
@@ -799,7 +799,7 @@ export function CalendarPage() {
       )}
 
       {/* Create Session Modal */}
-      <Modal
+      <BottomSheet
         onClose={closeModal}
         opened={modalOpened}
         size="lg"
@@ -943,10 +943,10 @@ export function CalendarPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Booking Detail Modal */}
-      <Modal
+      <BottomSheet
         onClose={() => setSelectedBooking(null)}
         opened={!!selectedBooking}
         size="md"
@@ -1119,7 +1119,7 @@ export function CalendarPage() {
             </Group>
           </Stack>
         )}
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

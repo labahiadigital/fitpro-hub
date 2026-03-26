@@ -6,7 +6,6 @@ import {
   Card,
   Group,
   Loader,
-  Modal,
   NumberInput,
   SegmentedControl,
   Select,
@@ -33,6 +32,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { supplementsApi } from "../../services/api";
+import { BottomSheet } from "../common/BottomSheet";
 
 interface Supplement {
   id: string;
@@ -338,7 +338,7 @@ export function SupplementLibrary() {
       )}
 
       {/* Modal crear/editar */}
-      <Modal
+      <BottomSheet
         opened={modalOpened}
         onClose={() => { closeModal(); setEditingSupplement(null); form.reset(); }}
         title={editingSupplement ? "Editar Suplemento" : "Nuevo Suplemento"}
@@ -421,10 +421,10 @@ export function SupplementLibrary() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Confirmación de borrado */}
-      <Modal
+      <BottomSheet
         opened={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
         title="Confirmar eliminación"
@@ -446,7 +446,7 @@ export function SupplementLibrary() {
             </Button>
           </Group>
         </Stack>
-      </Modal>
+      </BottomSheet>
     </Box>
   );
 }

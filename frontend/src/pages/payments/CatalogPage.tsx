@@ -9,7 +9,6 @@ import {
   Divider,
   Group,
   Menu,
-  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -67,6 +66,7 @@ import {
   type ClientPackage as ClientPackageType,
 } from "../../hooks/usePackages";
 import { useAuthStore } from "../../stores/auth";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
 
 interface SessionPackage {
@@ -806,7 +806,7 @@ export function CatalogPage() {
       </Tabs>
 
       {/* Product Modal */}
-      <Modal
+      <BottomSheet
         onClose={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }}
         opened={productModalOpened}
         size="md"
@@ -855,10 +855,10 @@ export function CatalogPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Package Modal */}
-      <Modal
+      <BottomSheet
         onClose={closePackageModal}
         opened={packageModalOpened}
         size="md"
@@ -881,7 +881,7 @@ export function CatalogPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

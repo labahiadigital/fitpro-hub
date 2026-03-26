@@ -9,7 +9,6 @@ import {
   Divider,
   Group,
   Menu,
-  Modal,
   NumberInput,
   Paper,
   Progress,
@@ -42,6 +41,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
+import { BottomSheet } from "../../components/common/BottomSheet";
 
 interface Challenge {
   id: string;
@@ -389,7 +389,7 @@ export function CommunityPage() {
       </Tabs>
 
       {/* Challenge Modal */}
-      <Modal
+      <BottomSheet
         centered
         onClose={closeChallengeModal}
         opened={challengeModalOpened}
@@ -446,10 +446,10 @@ export function CommunityPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Group Modal */}
-      <Modal
+      <BottomSheet
         centered
         onClose={closeGroupModal}
         opened={groupModalOpened}
@@ -479,7 +479,7 @@ export function CommunityPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }

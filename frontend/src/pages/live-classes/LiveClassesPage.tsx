@@ -10,7 +10,6 @@ import {
   Group,
   Loader,
   Menu,
-  Modal,
   NumberInput,
   Progress,
   SegmentedControl,
@@ -47,6 +46,7 @@ import {
 import dayjs from "dayjs";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
+import { BottomSheet } from "../../components/common/BottomSheet";
 import { useLiveClasses, useLiveClassStats } from "../../hooks/useLiveClasses";
 
 // Tipos
@@ -379,7 +379,7 @@ function CreateClassModal({
   };
 
   return (
-    <Modal
+    <BottomSheet
       opened={opened}
       onClose={onClose}
       title="Nueva Clase en Vivo"
@@ -505,7 +505,7 @@ function CreateClassModal({
           </Group>
         </Stack>
       </form>
-    </Modal>
+    </BottomSheet>
   );
 }
 

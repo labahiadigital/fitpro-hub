@@ -9,7 +9,6 @@ import {
   Divider,
   Group,
   Menu,
-  Modal,
   NumberInput,
   PasswordInput,
   RingProgress,
@@ -104,6 +103,7 @@ import { erpApi } from "../../services/api";
 import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
+import { BottomSheet } from "../../components/common/BottomSheet";
 
 export function PaymentsPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -1502,7 +1502,7 @@ export function PaymentsPage() {
       </Tabs>
 
       {/* Product Modal (Create/Edit) */}
-      <Modal
+      <BottomSheet
         onClose={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }}
         opened={productModalOpened}
         size="md"
@@ -1577,10 +1577,10 @@ export function PaymentsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* New Charge Modal */}
-      <Modal
+      <BottomSheet
         onClose={closeChargeModal}
         opened={chargeModalOpened}
         size="md"
@@ -1645,10 +1645,10 @@ export function PaymentsPage() {
             </Group>
           </Stack>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* Payment Detail Modal */}
-      <Modal
+      <BottomSheet
         onClose={closePaymentDetail}
         opened={paymentDetailOpened}
         size="md"
@@ -1725,10 +1725,10 @@ export function PaymentsPage() {
             </Group>
           </Stack>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* ═══════════════ INVOICE CREATE/EDIT MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={() => { closeInvoiceModal(); setEditingInvoice(null); invoiceForm.reset(); }}
         opened={invoiceModalOpened}
         size="xl"
@@ -1917,10 +1917,10 @@ export function PaymentsPage() {
             </Button>
           </Group>
         </form>
-      </Modal>
+      </BottomSheet>
 
       {/* ═══════════════ INVOICE PREVIEW MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={() => { closeInvoicePreview(); setPreviewInvoice(null); }}
         opened={invoicePreviewOpened}
         size="lg"
@@ -2061,10 +2061,10 @@ export function PaymentsPage() {
             </Stack>
           </ScrollArea.Autosize>
         )}
-      </Modal>
+      </BottomSheet>
 
       {/* ═══════════════ INVOICE SETTINGS MODAL ═══════════════ */}
-      <Modal
+      <BottomSheet
         onClose={closeSettingsModal}
         opened={settingsModalOpened}
         size="lg"
@@ -2396,7 +2396,7 @@ export function PaymentsPage() {
             <Button type="submit" loading={updateInvoiceSettings.isPending}>Guardar Configuración</Button>
           </Group>
         </form>
-      </Modal>
+      </BottomSheet>
     </Container>
   );
 }
