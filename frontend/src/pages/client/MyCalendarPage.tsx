@@ -162,6 +162,8 @@ export function MyCalendarPage() {
   const [highlightedSessionId, setHighlightedSessionId] = useState<string | null>(null);
   const [bookingModalOpened, { open: openBookingModal, close: closeBookingModal }] = useDisclosure(false);
 
+  const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
+
   useEffect(() => {
     const sessionId = searchParams.get("session");
     if (!sessionId || isLoadingUpcoming || isLoadingAll) return;
@@ -182,17 +184,9 @@ export function MyCalendarPage() {
 
   const isLoading = isLoadingUpcoming || isLoadingAll;
 
-  if (isLoading) {
-    return (
-      <Center h={400}>
-        <Loader size="lg" color="yellow" />
-      </Center>
-    );
-  }
-
   const now = new Date();
 
-  const upcomingSessions = (upcomingBookings || []).map(b => ({
+  const upcomingSessions = useMemo(() => (upcomingBookings || []).map(b => ({
     id: b.id,
     startDate: new Date(b.start_time),
     date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
@@ -202,9 +196,9 @@ export function MyCalendarPage() {
     type: b.session_type || "presencial",
     location: (b.location as Record<string, unknown>)?.address as string || "Gimnasio",
     status: b.status,
-  }));
+  })), [upcomingBookings]);
 
-  const pastSessions = (allBookings || [])
+  const pastSessions = useMemo(() => (allBookings || [])
     .filter(b => new Date(b.end_time) < now && (b.status === "completed" || b.status === "no_show"))
     .slice(0, 10)
     .map(b => ({
@@ -213,9 +207,9 @@ export function MyCalendarPage() {
       title: b.title,
       date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
       time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
-    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    })), [allBookings]);
 
-  const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
   const allBookingDates = new Set(
     [...(upcomingBookings || []), ...(allBookings || [])].map(b => new Date(b.start_time).toDateString())
   );
@@ -225,13 +219,13 @@ export function MyCalendarPage() {
 
   const weekStart = weekDays[0].fullDate;
   const weekEnd = weekDays[6].fullDate;
-  const weekMonthLabel = (() => {
+  const weekMonthLabel = useMemo(() => {
     const startMonth = weekStart.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
     const endMonth = weekEnd.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
     const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     if (startMonth === endMonth) return capitalize(startMonth);
     return `${capitalize(weekStart.toLocaleDateString('es-ES', { month: 'short' }))} - ${capitalize(endMonth)}`;
-  })();
+  }, [weekStart, weekEnd]);
 
   const weekStartStr = weekDays[0].fullDate.toDateString();
   const weekEndStr = weekDays[6].fullDate.toDateString();
@@ -246,6 +240,14 @@ export function MyCalendarPage() {
   const filteredPast = selectedDayDate
     ? pastSessions.filter(s => s.startDate.toDateString() === selectedDayDate)
     : pastSessions.filter(s => weekOffset === 0 || isInSelectedWeek(s.startDate));
+
+  if (isLoading) {
+    return (
+      <Center h={400}>
+        <Loader size="lg" color="yellow" />
+      </Center>
+    );
+  }
 
   return (
     <Box p="xl" maw={1280} mx="auto">

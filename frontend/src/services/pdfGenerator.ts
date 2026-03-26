@@ -150,6 +150,7 @@ interface ClientData {
   intolerances?: string[];
   goals?: string;
   health_data?: Record<string, any>;
+  avatar_url?: string;
 }
 
 interface PDFOptions {
@@ -159,7 +160,18 @@ interface PDFOptions {
   progressData?: {
     currentWeight?: number;
     startWeight?: number;
-    measurements?: Array<{ date: string; weight_kg?: number; body_fat_percentage?: number }>;
+    measurements?: Array<{
+      date: string;
+      weight_kg?: number;
+      body_fat_percentage?: number;
+      muscle_mass_kg?: number;
+      waist_cm?: number;
+      hip_cm?: number;
+      chest_cm?: number;
+      arm_cm?: number;
+      thigh_cm?: number;
+      notes?: string;
+    }>;
     workoutCompletionRate?: number;
     totalWorkouts?: number;
     completedWorkouts?: number;
@@ -189,7 +201,6 @@ const C = {
 };
 
 const MARGIN_P = 14;
-const M = 10;
 const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 // ============ HELPERS ============
 
@@ -279,11 +290,27 @@ function drawBottomBar(doc: jsPDF) {
 
 // ============ MAIN PDF GENERATOR ============
 
-export function generateClientPlanPDF(
+async function loadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const resp = await fetch(url, { mode: "cors" });
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function generateClientPlanPDF(
   mealPlan: MealPlanData | null,
   workoutProgram: WorkoutProgramData | null,
   options: PDFOptions = {}
-): void {
+): Promise<void> {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const { workspaceName = "Trackfiz", trainerName = "Entrenador", client, progressData } = options;
   const clientName = client
@@ -291,6 +318,28 @@ export function generateClientPlanPDF(
     : "Cliente";
 
   const planTitle = workoutProgram?.name || mealPlan?.name || "Plan Personalizado";
+
+  let avatarDataUrl: string | null = null;
+  if (client?.avatar_url) {
+    avatarDataUrl = await loadImageAsDataUrl(client.avatar_url);
+  }
+
+  const exerciseImages = new Map<string, string>();
+  if (workoutProgram?.days) {
+    const urls = new Set<string>();
+    for (const day of workoutProgram.days) {
+      for (const block of day.blocks || []) {
+        for (const ex of block.exercises || []) {
+          if (ex.exercise?.image_url) urls.add(ex.exercise.image_url);
+        }
+      }
+    }
+    const loadPromises = [...urls].map(async (url) => {
+      const data = await loadImageAsDataUrl(url);
+      if (data) exerciseImages.set(url, data);
+    });
+    await Promise.allSettled(loadPromises);
+  }
 
   // ================================================================
   //  PAGE 1 — COVER (PORTRAIT)
@@ -302,7 +351,7 @@ export function generateClientPlanPDF(
   // ================================================================
   doc.addPage("a4", "portrait");
   drawTopBar(doc);
-  renderSummaryPage(doc, client, mealPlan, workoutProgram, trainerName);
+  renderSummaryPage(doc, client, mealPlan, workoutProgram, trainerName, avatarDataUrl);
 
   // ================================================================
   //  PAGE 3 — STATS & PROGRESS (PORTRAIT)
@@ -312,10 +361,10 @@ export function generateClientPlanPDF(
   renderProgressPage(doc, client, progressData);
 
   // ================================================================
-  //  WORKOUT PLAN — LANDSCAPE PAGES (1 day per page)
+  //  WORKOUT PLAN — PORTRAIT PAGES (1 day per page)
   // ================================================================
   if (workoutProgram?.days && workoutProgram.days.length > 0) {
-    renderWorkoutSection(doc, workoutProgram);
+    renderWorkoutSection(doc, workoutProgram, exerciseImages);
   }
 
   // ================================================================
@@ -432,6 +481,7 @@ function renderSummaryPage(
   mealPlan: MealPlanData | null,
   workoutProgram: WorkoutProgramData | null,
   trainerName: string,
+  avatarDataUrl?: string | null,
 ) {
   const pw = doc.internal.pageSize.getWidth();
   const contentW = pw - MARGIN_P * 2;
@@ -446,6 +496,20 @@ function renderSummaryPage(
   doc.setLineWidth(0.4);
   doc.line(MARGIN_P, y, MARGIN_P + 55, y);
   y += 5;
+
+  if (avatarDataUrl) {
+    const avatarSize = 22;
+    const avatarX = pw - MARGIN_P - avatarSize;
+    const avatarY = 8;
+    try {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(avatarX - 1, avatarY - 1, avatarSize + 2, avatarSize + 2, 3, 3, "F");
+      doc.setDrawColor(...C.primary);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(avatarX - 1, avatarY - 1, avatarSize + 2, avatarSize + 2, 3, 3, "S");
+      doc.addImage(avatarDataUrl, "JPEG", avatarX, avatarY, avatarSize, avatarSize);
+    } catch { /* ignore image errors */ }
+  }
 
   const age = calcAge(client?.birth_date || client?.health_data?.birth_date);
   const actLevel = client?.activity_level || client?.health_data?.activity_level;
@@ -669,104 +733,166 @@ function renderProgressPage(doc: jsPDF, client: ClientData | undefined, progress
   doc.setDrawColor(...C.primary); doc.setLineWidth(0.4); doc.line(MARGIN_P, y, MARGIN_P + 55, y);
   y += 6;
 
-  const halfW = (contentW - 4) / 2;
-  const boxH = 50;
-
-  const drawStatBox = (x: number, yPos: number, w: number, h: number, title: string, content: string) => {
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(x, yPos, w, h, 3, 3, "F");
-    doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
-    doc.roundedRect(x, yPos, w, h, 3, 3, "S");
-
-    doc.setFillColor(...C.primary);
-    doc.roundedRect(x, yPos, w, 7, 3, 3, "F");
-    doc.rect(x, yPos + 4, w, 3, "F");
-    doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
-    doc.text(title, x + 4, yPos + 5);
-
-    doc.setFontSize(7); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "normal");
-    const lines = doc.splitTextToSize(content, w - 8);
-    doc.text(lines, x + 4, yPos + 13);
-  };
+  // --- SITUACIÓN ACTUAL ---
+  doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+  doc.text("Situación Actual", MARGIN_P, y);
+  y += 4;
 
   const currentWeight = progressData?.currentWeight || client?.weight_kg;
   const startWeight = progressData?.startWeight;
-  const weightStr = currentWeight ? `Peso actual: ${currentWeight} kg` : "Sin datos de peso registrados";
-  const weightDelta = (currentWeight && startWeight) ? `\nCambio: ${(currentWeight - startWeight).toFixed(1)} kg` : "";
-  const bfStr = client?.body_fat_pct ? `\n% Grasa corporal: ${client.body_fat_pct}%` : "";
+  const statusRows: string[][] = [];
+  if (currentWeight) statusRows.push(["Peso actual", `${currentWeight} kg`]);
+  if (startWeight) statusRows.push(["Peso inicial", `${startWeight} kg`]);
+  if (currentWeight && startWeight) statusRows.push(["Variación", `${(currentWeight - startWeight).toFixed(1)} kg`]);
+  if (client?.body_fat_pct) statusRows.push(["% Grasa corporal", `${client.body_fat_pct}%`]);
+  if (client?.height_cm) statusRows.push(["Altura", `${client.height_cm} cm`]);
+  if (currentWeight && client?.height_cm) {
+    const imc = currentWeight / ((client.height_cm / 100) ** 2);
+    statusRows.push(["IMC", `${imc.toFixed(1)}`]);
+  }
+  if (statusRows.length === 0) statusRows.push(["Estado", "Sin datos registrados aún"]);
 
-  drawStatBox(MARGIN_P, y, halfW, boxH, "SITUACIÓN ACTUAL", weightStr + weightDelta + bfStr + "\n\nDatos registrados hasta la fecha.");
-  drawStatBox(MARGIN_P + halfW + 4, y, halfW, boxH, "EVOLUCIÓN DE MEDIDAS", "Gráfica de evolución disponible en la app.\n\nConsulta tu perfil para ver la evolución de peso, medidas corporales y % grasa.");
-  y += boxH + 6;
+  autoTable(doc, {
+    startY: y, body: statusRows, theme: "plain",
+    styles: { fontSize: 7.5, cellPadding: { top: 1.5, bottom: 1.5, left: 3, right: 3 }, textColor: C.text },
+    columnStyles: { 0: { fontStyle: "bold", textColor: C.textMuted, cellWidth: 38 }, 1: {} },
+    alternateRowStyles: { fillColor: C.headerBg },
+  });
+  y = (doc as any).lastAutoTable.finalY + 5;
+
+  // --- EVOLUCIÓN DE MEDIDAS ---
+  const measurements = progressData?.measurements || [];
+  doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+  doc.text("Evolución de Medidas", MARGIN_P, y);
+  y += 4;
+
+  if (measurements.length > 0) {
+    const measHead = ["Fecha", "Peso (kg)", "% Grasa", "M. Muscular", "Cintura", "Cadera", "Pecho", "Brazo", "Muslo"];
+    const measBody = measurements.map(m => [
+      new Date(m.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" }),
+      m.weight_kg != null ? `${m.weight_kg}` : "—",
+      m.body_fat_percentage != null ? `${m.body_fat_percentage}%` : "—",
+      m.muscle_mass_kg != null ? `${m.muscle_mass_kg}` : "—",
+      m.waist_cm != null ? `${m.waist_cm}` : "—",
+      m.hip_cm != null ? `${m.hip_cm}` : "—",
+      m.chest_cm != null ? `${m.chest_cm}` : "—",
+      m.arm_cm != null ? `${m.arm_cm}` : "—",
+      m.thigh_cm != null ? `${m.thigh_cm}` : "—",
+    ]);
+
+    autoTable(doc, {
+      startY: y, head: [measHead], body: measBody, theme: "grid",
+      tableWidth: contentW, margin: { left: MARGIN_P },
+      headStyles: { fillColor: C.primary, textColor: C.white, fontSize: 6, fontStyle: "bold" },
+      styles: { fontSize: 6, cellPadding: 1.5, textColor: C.text, lineColor: C.border, lineWidth: 0.15, halign: "center" },
+      columnStyles: { 0: { halign: "left", cellWidth: 22 } },
+      alternateRowStyles: { fillColor: C.headerBg },
+    });
+    y = (doc as any).lastAutoTable.finalY + 5;
+  } else {
+    doc.setFontSize(7); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "italic");
+    doc.text("No hay mediciones registradas todavía. Consulta tu perfil en la app para añadir medidas.", MARGIN_P, y);
+    y += 8;
+  }
+
+  // --- CUMPLIMIENTO ---
+  const halfW = (contentW - 4) / 2;
+
+  doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+  doc.text("Cumplimiento", MARGIN_P, y);
+  y += 5;
+
+  const drawMiniBox = (x: number, yPos: number, w: number, title: string, value: string, subtitle: string, color: [number, number, number]) => {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(x, yPos, w, 24, 2, 2, "F");
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+    doc.roundedRect(x, yPos, w, 24, 2, 2, "S");
+    doc.setFillColor(...color);
+    doc.roundedRect(x, yPos, w, 6, 2, 2, "F");
+    doc.rect(x, yPos + 3, w, 3, "F");
+    doc.setFontSize(7); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
+    doc.text(title, x + 3, yPos + 4.2);
+    doc.setFontSize(14); doc.setTextColor(...color); doc.setFont("helvetica", "bold");
+    doc.text(value, x + w / 2, yPos + 15, { align: "center" });
+    doc.setFontSize(6); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "normal");
+    doc.text(subtitle, x + w / 2, yPos + 20, { align: "center" });
+  };
 
   const completionRate = progressData?.workoutCompletionRate;
   const totalWk = progressData?.totalWorkouts;
   const completedWk = progressData?.completedWorkouts;
-  let wkContent = "Consulta la app para ver tus estadísticas de entrenamiento.";
-  if (completionRate !== undefined) {
-    wkContent = `Tasa de cumplimiento: ${completionRate}%`;
-    if (totalWk !== undefined && completedWk !== undefined) wkContent += `\nSesiones: ${completedWk}/${totalWk}`;
-  }
+  const wkValue = completionRate != null ? `${completionRate}%` : "—";
+  const wkSub = totalWk != null && completedWk != null ? `${completedWk}/${totalWk} sesiones` : "Sin datos";
 
   const nutritionRate = progressData?.nutritionComplianceRate;
-  let nutContent = "Consulta la app para ver tu cumplimiento nutricional diario.";
-  if (nutritionRate !== undefined) nutContent = `Tasa de cumplimiento: ${nutritionRate}%`;
+  const nutValue = nutritionRate != null ? `${nutritionRate}%` : "—";
+  const nutSub = nutritionRate != null ? "objetivos diarios" : "Sin datos";
 
-  drawStatBox(MARGIN_P, y, halfW, boxH, "CUMPLIMIENTO DE ENTRENAMIENTOS", wkContent);
-  drawStatBox(MARGIN_P + halfW + 4, y, halfW, boxH, "CUMPLIMIENTO NUTRICIONAL", nutContent);
-  y += boxH + 8;
+  drawMiniBox(MARGIN_P, y, halfW, "ENTRENAMIENTOS", wkValue, wkSub, C.primary);
+  drawMiniBox(MARGIN_P + halfW + 4, y, halfW, "NUTRICIÓN", nutValue, nutSub, C.secondary);
+  y += 30;
 
   doc.setFillColor(...C.accentBg);
-  doc.roundedRect(MARGIN_P, y, contentW, 12, 2, 2, "F");
+  doc.roundedRect(MARGIN_P, y, contentW, 10, 2, 2, "F");
   doc.setFontSize(7); doc.setTextColor(...C.accent); doc.setFont("helvetica", "bold");
-  doc.text("NOTA", MARGIN_P + 4, y + 5);
+  doc.text("NOTA", MARGIN_P + 4, y + 4);
   doc.setFont("helvetica", "normal"); doc.setTextColor(...C.text); doc.setFontSize(6.5);
-  doc.text("Los datos detallados de progreso y gráficas de evolución están disponibles en tu perfil de la aplicación.", MARGIN_P + 4, y + 9.5);
+  doc.text("Los datos detallados de progreso y gráficas de evolución están disponibles en tu perfil de la aplicación.", MARGIN_P + 4, y + 8);
 }
 
 // ================================================================
 //  WORKOUT SECTION — LANDSCAPE, 1 DAY PER PAGE
 // ================================================================
 
-function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData) {
+function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, exerciseImages: Map<string, string>) {
   const activeDays = (workoutProgram.days || []).filter(d => {
     if (d.isRestDay) return false;
     return (d.blocks || []).some(b => b.exercises && b.exercises.length > 0);
   });
   const restDays = (workoutProgram.days || []).filter(d => d.isRestDay);
 
+  const IMG_COL_W = 14;
+  const IMG_SIZE = 10;
+
   for (let i = 0; i < activeDays.length; i++) {
     const day = activeDays[i];
-    doc.addPage("a4", "landscape");
+    doc.addPage("a4", "portrait");
     drawTopBar(doc);
     const pw = doc.internal.pageSize.getWidth();
-    const contentW = pw - M * 2;
-    let y = 10;
+    const contentW = pw - MARGIN_P * 2;
+    let y = 12;
 
     if (i === 0) {
       doc.setFontSize(13); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
-      doc.text("PLAN DE ENTRENAMIENTO", M, y + 4);
+      doc.text("PLAN DE ENTRENAMIENTO", MARGIN_P, y);
       let sub = workoutProgram.name;
       if (workoutProgram.duration_weeks) sub += ` — ${workoutProgram.duration_weeks} sem.`;
       if (workoutProgram.difficulty) sub += ` — ${difficultyLabel(workoutProgram.difficulty)}`;
       doc.setFontSize(8); doc.setTextColor(...C.secondary); doc.setFont("helvetica", "normal");
-      doc.text(sub, M + 62, y + 4);
-      y += 10;
+      doc.text(sub, MARGIN_P + 62, y);
+      y += 8;
     }
 
     const dayName = day.dayName || DAY_NAMES[(day.day - 1) % 7] || `Día ${day.day}`;
     doc.setFillColor(...C.primary);
-    doc.roundedRect(M, y, contentW, 7, 1.5, 1.5, "F");
+    doc.roundedRect(MARGIN_P, y, contentW, 7, 1.5, 1.5, "F");
     doc.setFontSize(10); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
-    doc.text(dayName, M + 4, y + 5);
+    doc.text(dayName, MARGIN_P + 4, y + 5);
     y += 9;
 
-    const rows: (string | { content: string; styles?: any })[][] = [];
+    const exerciseImageMap: { row: number; dataUrl: string }[] = [];
+    const rows: (string | { content: string; styles?: Record<string, unknown> })[][] = [];
     for (const block of day.blocks || []) {
       const bName = block.name || blockTypeLabel(block.type);
       for (let j = 0; j < (block.exercises || []).length; j++) {
         const ex = block.exercises[j];
         const isCardio = /cinta|andar|caminar|bici|cycling|running|cardio|elíptica/i.test(ex.exercise?.name || "");
+
+        const imgUrl = ex.exercise?.image_url;
+        if (imgUrl && exerciseImages.has(imgUrl)) {
+          exerciseImageMap.push({ row: rows.length, dataUrl: exerciseImages.get(imgUrl)! });
+        }
+
         rows.push([
           j === 0 ? bName : "",
           ex.exercise?.name || "Ejercicio",
@@ -782,34 +908,51 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData) {
       }
     }
 
+    const remainingW = contentW - 24 - IMG_COL_W - 10 - 13 - 12 - 12 - 12 - 12 - 14;
+
     autoTable(doc, {
       startY: y,
-      head: [["Bloque", "Ejercicio", "Img", "Ser.", "Reps", "Desc.", "Km", "Tiempo", "Vel.", "URL"]],
+      head: [["Bloque", "Ejercicio", "Img", "Ser.", "Reps", "Desc.", "Km", "Tpo.", "Vel.", "URL"]],
       body: rows,
       theme: "grid",
       tableWidth: contentW,
-      margin: { left: M },
-      headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6.5, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
-      styles: { fontSize: 6, cellPadding: 1.5, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize" },
+      margin: { left: MARGIN_P },
+      headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
+      styles: { fontSize: 6, cellPadding: 1.5, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize", minCellHeight: IMG_SIZE + 2 },
       columnStyles: {
-        0: { cellWidth: 26, fontStyle: "bold" },
-        1: { cellWidth: contentW - 26 - 16 - 11 - 16 - 14 - 14 - 14 - 14 - 16 },
-        2: { cellWidth: 16, halign: "center" },
-        3: { cellWidth: 11, halign: "center" },
-        4: { cellWidth: 16, halign: "center" },
-        5: { cellWidth: 14, halign: "center" },
-        6: { cellWidth: 14, halign: "center" },
-        7: { cellWidth: 14, halign: "center" },
-        8: { cellWidth: 14, halign: "center" },
-        9: { cellWidth: 16, halign: "center" },
+        0: { cellWidth: 24, fontStyle: "bold" },
+        1: { cellWidth: remainingW },
+        2: { cellWidth: IMG_COL_W, halign: "center" },
+        3: { cellWidth: 10, halign: "center" },
+        4: { cellWidth: 13, halign: "center" },
+        5: { cellWidth: 12, halign: "center" },
+        6: { cellWidth: 12, halign: "center" },
+        7: { cellWidth: 12, halign: "center" },
+        8: { cellWidth: 12, halign: "center" },
+        9: { cellWidth: 14, halign: "center" },
       },
       alternateRowStyles: { fillColor: C.headerBg },
       showHead: "firstPage",
       rowPageBreak: "avoid",
-      didParseCell: (data: any) => {
+      didDrawCell: (data: any) => {
         if (data.section === "body" && data.column.index === 2) {
-          data.cell.styles.fontStyle = "italic";
-          data.cell.styles.textColor = C.textMuted;
+          const match = exerciseImageMap.find(e => e.row === data.row.index);
+          if (match) {
+            const cellX = data.cell.x + (data.cell.width - IMG_SIZE) / 2;
+            const cellY = data.cell.y + (data.cell.height - IMG_SIZE) / 2;
+            try {
+              doc.addImage(match.dataUrl, "JPEG", cellX, cellY, IMG_SIZE, IMG_SIZE);
+            } catch { /* ignore */ }
+          }
+        }
+        if (data.section === "body" && data.column.index === 9) {
+          const cellContent = rows[data.row.index]?.[9];
+          if (cellContent && typeof cellContent === "object" && "content" in cellContent) {
+            const ex = activeDays[i].blocks.flatMap(b => b.exercises)[data.row.index];
+            if (ex?.exercise?.video_url) {
+              doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: ex.exercise.video_url });
+            }
+          }
         }
       },
     });
@@ -817,20 +960,19 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData) {
     if (day.notes) {
       const tblEnd = (doc as any).lastAutoTable.finalY + 3;
       doc.setFontSize(6.5); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "italic");
-      doc.text(`Notas: ${day.notes}`, M, tblEnd);
+      doc.text(`Notas: ${day.notes}`, MARGIN_P, tblEnd);
     }
   }
 
   if (restDays.length > 0) {
-    const lastPw = doc.internal.pageSize.getWidth();
-    const lastContentW = lastPw - M * 2;
+    const lastContentW = doc.internal.pageSize.getWidth() - MARGIN_P * 2;
     const lastY = (doc as any).lastAutoTable?.finalY || 20;
     const restY = lastY + 8;
     doc.setFillColor(...C.headerBg);
-    doc.roundedRect(M, restY, lastContentW, 7, 1, 1, "F");
+    doc.roundedRect(MARGIN_P, restY, lastContentW, 7, 1, 1, "F");
     doc.setFontSize(7); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "italic");
     const restNames = restDays.map(d => d.dayName || DAY_NAMES[(d.day - 1) % 7]).join(", ");
-    doc.text(`Días de descanso: ${restNames}`, M + 3, restY + 4.5);
+    doc.text(`Días de descanso: ${restNames}`, MARGIN_P + 3, restY + 4.5);
   }
 }
 
@@ -1086,16 +1228,16 @@ function renderDisclaimerPage(doc: jsPDF, workspaceName: string) {
 
 // ============ LEGACY EXPORTS ============
 
-export function generateMealPlanPDF(
+export async function generateMealPlanPDF(
   mealPlan: MealPlanData,
   options: PDFOptions = {}
-): void {
-  generateClientPlanPDF(mealPlan, null, options);
+): Promise<void> {
+  await generateClientPlanPDF(mealPlan, null, options);
 }
 
-export function generateWorkoutProgramPDF(
+export async function generateWorkoutProgramPDF(
   program: WorkoutProgramData,
   options: PDFOptions = {}
-): void {
-  generateClientPlanPDF(null, program, options);
+): Promise<void> {
+  await generateClientPlanPDF(null, program, options);
 }

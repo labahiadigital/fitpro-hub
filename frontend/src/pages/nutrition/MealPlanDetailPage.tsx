@@ -60,7 +60,7 @@ export function MealPlanDetailPage() {
           }
         : undefined;
 
-      generateMealPlanPDF(pdfData, {
+      await generateMealPlanPDF(pdfData, {
         workspaceName: currentWorkspace?.name || "Trackfiz",
         trainerName: user?.full_name || "Entrenador",
         client: clientData,

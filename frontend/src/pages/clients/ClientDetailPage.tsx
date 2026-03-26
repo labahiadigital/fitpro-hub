@@ -2036,7 +2036,7 @@ export function ClientDetailPage() {
                   intolerances: (client as any).health_data?.intolerances || [],
                 }}
                 onEdit={() => navigate(`/nutrition?edit=${viewingMealPlanId}&clientId=${id}&returnTo=/clients/${id}`)}
-                onExportPDF={() => {
+                onExportPDF={async () => {
                   if (viewingMealPlan) {
                     notifications.show({
                       id: "pdf-export",
@@ -2058,7 +2058,7 @@ export function ClientDetailPage() {
                               id: `block-${i}`, name: b.name,
                               type: (b.type || "main") as any,
                               exercises: (b.exercises || []).map((ex: any, j: number) => ({
-                                id: `ex-${j}`, exercise_id: "", exercise: { id: "", name: ex.exercise?.name || ex.name || "Ejercicio" },
+                                id: `ex-${j}`, exercise_id: "", exercise: { id: "", name: ex.exercise?.name || ex.name || "Ejercicio", image_url: ex.exercise?.image_url, video_url: ex.exercise?.video_url },
                                 sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
                               })),
                             })),
@@ -2073,14 +2073,14 @@ export function ClientDetailPage() {
                             type: (b.type || "main") as any,
                             exercises: (b.exercises || []).map((ex: any, j: number) => ({
                               id: ex.id || `ex-${j}`, exercise_id: ex.exercise_id || "",
-                              exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups },
+                              exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups, image_url: ex.exercise?.image_url, video_url: ex.exercise?.video_url },
                               sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
                             })),
                           })),
                         }));
                       };
 
-                      generateClientPlanPDF(
+                      await generateClientPlanPDF(
                         {
                           id: viewingMealPlan.id,
                           name: viewingMealPlan.name,
@@ -2119,6 +2119,7 @@ export function ClientDetailPage() {
                             intolerances: (client as any).health_data?.intolerances || [],
                             goals: client.goals,
                             health_data: (client as any).health_data,
+                            avatar_url: (client as any).avatar_url,
                           },
                         }
                       );
@@ -3729,7 +3730,7 @@ export function ClientDetailPage() {
                 variant="light"
                 color="blue"
                 leftSection={<IconDownload size={16} />}
-                onClick={() => {
+                onClick={async () => {
                   try {
                     notifications.show({
                       id: "pdf-workout-export",
@@ -3748,7 +3749,7 @@ export function ClientDetailPage() {
                           blocks: template.blocks.map((b: any, i: number) => ({
                             id: `block-${i}`, name: b.name, type: (b.type || "main") as any,
                             exercises: (b.exercises || []).map((ex: any, j: number) => ({
-                              id: `ex-${j}`, exercise_id: "", exercise: { id: "", name: ex.exercise?.name || ex.name || "Ejercicio" },
+                              id: `ex-${j}`, exercise_id: "", exercise: { id: "", name: ex.exercise?.name || ex.name || "Ejercicio", image_url: ex.exercise?.image_url, video_url: ex.exercise?.video_url },
                               sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
                             })),
                           })),
@@ -3761,7 +3762,7 @@ export function ClientDetailPage() {
                           id: b.id || `block-${i}`, name: b.name, type: (b.type || "main") as any,
                           exercises: (b.exercises || []).map((ex: any, j: number) => ({
                             id: ex.id || `ex-${j}`, exercise_id: ex.exercise_id || "",
-                            exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups },
+                            exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups, image_url: ex.exercise?.image_url, video_url: ex.exercise?.video_url },
                             sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes,
                           })),
                         })),
@@ -3770,7 +3771,7 @@ export function ClientDetailPage() {
 
                     const mealPlan = clientMealPlans && clientMealPlans.length > 0 ? clientMealPlans[0] : null;
 
-                    generateClientPlanPDF(
+                    await generateClientPlanPDF(
                       mealPlan ? {
                         id: mealPlan.id,
                         name: mealPlan.name,
@@ -3809,6 +3810,7 @@ export function ClientDetailPage() {
                           intolerances: (client as any).health_data?.intolerances || [],
                           goals: client.goals,
                           health_data: (client as any).health_data,
+                          avatar_url: (client as any).avatar_url,
                         },
                       }
                     );
