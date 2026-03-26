@@ -462,9 +462,9 @@ export const erpApi = {
 
 // SeQura API (pago fraccionado)
 export const sequraApi = {
-  startOnboarding: (token: string, productCode: string = "pp3") =>
+  startOnboarding: (token: string, productCode: string = "pp6") =>
     api.post("/sequra/start-onboarding", { token, product_code: productCode }),
-  getIdentificationForm: (orderUri: string, product: string = "pp3") =>
+  getIdentificationForm: (orderUri: string, product: string = "pp6") =>
     api.get("/sequra/identification-form", {
       params: { order_uri: orderUri, product },
     }),

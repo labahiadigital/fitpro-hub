@@ -5,11 +5,13 @@ Provides:
   - POST /start-onboarding        → Start solicitation for onboarding, returns order info
   - GET  /identification-form      → Proxy to fetch SeQura's identification form HTML
   - POST /ipn                      → IPN webhook from SeQura (confirm/hold orders)
-  - GET  /return                   → Return URL handler, redirects to frontend
+  - POST /events-webhook           → Events webhook from SeQura (cancellations, etc.)
   - GET  /onboarding-payment-status/:token → Check payment status
   - GET  /available-methods        → Get available SeQura payment products for a given amount
   - GET  /config-status            → Check if SeQura is configured
 """
+import hashlib
+import hmac
 import logging
 import time
 from typing import Optional
@@ -26,6 +28,7 @@ from app.core.config import settings
 from app.models.payment import Payment, PaymentStatus
 from app.models.invitation import ClientInvitation
 from app.models.product import Product
+from app.models.client import Client
 from app.services.sequra import sequra_service
 from app.services.auto_invoice import create_invoice_for_payment
 from app.middleware.auth import require_staff
@@ -39,7 +42,7 @@ router = APIRouter()
 
 class StartOnboardingRequest(BaseModel):
     token: str = Field(..., min_length=10, max_length=100)
-    product_code: str = Field("pp3", description="SeQura product code (pp3, i1, etc.)")
+    product_code: str = Field("pp6", description="SeQura product code (pp6, pp3, i1, etc.)")
 
 
 class StartOnboardingResponse(BaseModel):
@@ -94,6 +97,17 @@ def _check_rate_limit(key: str) -> bool:
 
 
 # ============ HELPERS ============
+
+def _get_real_ip(request: Request) -> str:
+    """Extract the real client IP considering reverse proxy headers."""
+    x_forwarded = request.headers.get("X-Forwarded-For", "")
+    if x_forwarded:
+        return x_forwarded.split(",")[0].strip()
+    x_real_ip = request.headers.get("X-Real-IP", "")
+    if x_real_ip:
+        return x_real_ip.strip()
+    return request.client.host if request.client else "127.0.0.1"
+
 
 async def _get_invitation_with_product(token: str, db: AsyncSession):
     """Validate invitation token and load product. Returns (invitation, product) or raises."""
@@ -174,8 +188,15 @@ async def start_onboarding(
     notify_url = f"{base_url}{api_prefix}/sequra/ipn"
     return_url = f"{frontend_url}/onboarding/invite/{data.token}?payment=success&gateway=sequra"
     abort_url = f"{frontend_url}/onboarding/invite/{data.token}?payment=error&gateway=sequra"
+    approved_url = return_url
+    events_webhook_url = f"{base_url}{api_prefix}/sequra/events-webhook"
 
-    client_ip = request.client.host if request.client else "127.0.0.1"
+    cart_ref = f"cart_{product.id}_{int(time.time())}"
+    webhook_signature = hmac.new(
+        settings.SECRET_KEY.encode(), cart_ref.encode(), hashlib.sha256
+    ).hexdigest()
+
+    client_ip = _get_real_ip(request)
     user_agent = request.headers.get("User-Agent", "Mozilla/5.0")
 
     service_end_date = sequra_service.compute_service_end_date(
@@ -183,6 +204,51 @@ async def start_onboarding(
         interval_count=product.interval_count or 1,
         product_type=product.product_type or "subscription",
     )
+
+    # Load client data for billing address and previous orders
+    client_obj = None
+    if invitation.client_id:
+        client_result = await db.execute(
+            select(Client).where(Client.id == invitation.client_id)
+        )
+        client_obj = client_result.scalar_one_or_none()
+
+    billing_address = "N/A"
+    billing_city = "Madrid"
+    billing_postal_code = "28001"
+    billing_country_code = "ES"
+
+    if client_obj:
+        if client_obj.billing_address:
+            billing_address = client_obj.billing_address
+        if client_obj.billing_city:
+            billing_city = client_obj.billing_city
+        if client_obj.billing_postal_code:
+            billing_postal_code = client_obj.billing_postal_code
+
+    # Build previous_orders from succeeded SeQura payments for this client
+    previous_orders = []
+    if invitation.client_id:
+        prev_result = await db.execute(
+            select(Payment).where(
+                Payment.client_id == invitation.client_id,
+                Payment.status == PaymentStatus.succeeded,
+                Payment.extra_data["gateway"].astext == "sequra",
+            ).order_by(Payment.paid_at.desc())
+        )
+        prev_payments = prev_result.scalars().all()
+        for prev_pay in prev_payments:
+            previous_orders.append({
+                "created_at": prev_pay.paid_at.isoformat() if prev_pay.paid_at else prev_pay.created_at.isoformat(),
+                "amount": int(round(float(prev_pay.amount) * 100)),
+                "currency": prev_pay.currency or "EUR",
+                "raw_status": "Pago completado",
+                "status": "delivered",
+                "payment_method_raw": "SeQura",
+                "payment_method": "SQ",
+                "postal_code": billing_postal_code,
+                "country_code": "ES",
+            })
 
     order_data = sequra_service.build_order_payload(
         amount_cents=amount_cents,
@@ -194,9 +260,20 @@ async def start_onboarding(
         notify_url=notify_url,
         return_url=return_url,
         abort_url=abort_url,
+        approved_url=approved_url,
+        events_webhook_url=events_webhook_url,
+        events_webhook_params={
+            "cart": cart_ref,
+            "signature": webhook_signature,
+        },
         ip_address=client_ip,
         user_agent=user_agent,
         service_end_date=service_end_date,
+        billing_address=billing_address,
+        billing_city=billing_city,
+        billing_postal_code=billing_postal_code,
+        billing_country_code=billing_country_code,
+        previous_orders=previous_orders,
     )
 
     # Start solicitation with SeQura
@@ -309,7 +386,7 @@ async def sequra_ipn(
     approved_since = form.get("approved_since", "")
     needs_review_since = form.get("needs_review_since", "")
 
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_real_ip(request)
 
     # Validate IPN source IP if configured
     allowed_ips = getattr(settings, "SEQURA_ALLOWED_IPS", None)
@@ -518,10 +595,83 @@ async def get_available_methods(
     # The widget will show the actual installment info via its own JS.
     return AvailableMethodsResponse(
         available=True,
-        methods=methods if methods else [{"code": "pp3", "name": "Pago en 3 cuotas"}],
+        methods=methods if methods else [{"code": "pp6", "name": "Pago en 6 cuotas"}],
         credit_agreements=flat_agreements,
         **base_response,
     )
+
+
+@router.post("/events-webhook")
+async def sequra_events_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Events webhook from SeQura (cancellations, state changes, etc.).
+
+    SeQura sends JSON with event data including order reference and event type.
+    This endpoint handles events like order cancellation that don't go through IPN.
+    """
+    client_ip = _get_real_ip(request)
+
+    try:
+        body = await request.json()
+    except Exception:
+        logger.warning(f"SeQura events-webhook: invalid JSON from IP={client_ip}")
+        return {"status": "ok", "message": "Invalid payload"}
+
+    event_type = body.get("event", body.get("type", ""))
+    order_ref = body.get("order_ref", body.get("order", {}).get("reference", ""))
+    sq_state = body.get("sq_state", body.get("state", ""))
+    params = body.get("parameters", {})
+    cart = params.get("cart", "")
+    signature = params.get("signature", "")
+
+    logger.info(
+        f"SeQura events-webhook: event={event_type}, order_ref={order_ref}, "
+        f"state={sq_state}, cart={cart}, IP={client_ip}"
+    )
+
+    if not order_ref:
+        return {"status": "ok", "message": "No order reference"}
+
+    # Verify HMAC signature if present
+    if cart and signature:
+        expected = hmac.new(
+            settings.SECRET_KEY.encode(), cart.encode(), hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            logger.warning(f"SeQura events-webhook: invalid signature for cart={cart}")
+            return {"status": "ok", "message": "Invalid signature"}
+
+    result = await db.execute(
+        select(Payment).where(
+            Payment.extra_data["sequra_order_ref"].astext == order_ref
+        )
+    )
+    payment = result.scalar_one_or_none()
+
+    if not payment:
+        logger.warning(f"SeQura events-webhook: payment not found for order_ref={order_ref}")
+        return {"status": "ok", "message": "Payment not found"}
+
+    extra = payment.extra_data or {}
+
+    if sq_state in ("cancelled", "canceled") or event_type in ("cancellation", "cancelled"):
+        if payment.status != PaymentStatus.failed:
+            payment.status = PaymentStatus.failed
+            logger.info(f"SeQura events-webhook: payment {payment.id} CANCELLED via webhook")
+
+    payment.extra_data = {
+        **extra,
+        "sequra_webhook_event": event_type,
+        "sequra_webhook_state": sq_state,
+        "sequra_webhook_received_at": datetime.utcnow().isoformat(),
+        "sequra_webhook_ip": client_ip,
+    }
+
+    await db.commit()
+    return {"status": "ok"}
 
 
 @router.get("/config-status", response_model=SequraConfigStatusResponse)

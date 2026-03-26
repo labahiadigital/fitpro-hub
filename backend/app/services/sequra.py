@@ -135,7 +135,7 @@ class SequraService:
         return None
 
     async def get_identification_form(
-        self, order_uri: str, product: str = "pp3", ajax: bool = False
+        self, order_uri: str, product: str = "pp6", ajax: bool = False
     ) -> Optional[str]:
         """
         Fetch the identification form HTML for a given order and product.
@@ -265,11 +265,20 @@ class SequraService:
         notify_url: str,
         return_url: str,
         abort_url: str = "",
+        approved_url: str = "",
+        events_webhook_url: str = "",
+        events_webhook_params: Optional[Dict[str, str]] = None,
         state: Optional[str] = None,
         order_ref_1: Optional[str] = None,
         ip_address: str = "127.0.0.1",
         user_agent: str = "Mozilla/5.0",
         service_end_date: Optional[str] = None,
+        billing_address: str = "N/A",
+        billing_city: str = "Madrid",
+        billing_postal_code: str = "28001",
+        billing_country_code: str = "ES",
+        previous_orders: Optional[List[Dict[str, Any]]] = None,
+        discount_items: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Build the order payload following SeQura's API structure.
@@ -283,35 +292,59 @@ class SequraService:
         }
         if abort_url:
             merchant["abort_url"] = abort_url
+        if approved_url:
+            merchant["approved_url"] = approved_url
+        if events_webhook_url:
+            merchant["events_webhook"] = {
+                "url": events_webhook_url,
+                "parameters": events_webhook_params or {},
+            }
+
+        items: List[Dict[str, Any]] = [
+            {
+                "type": "service",
+                "reference": product_reference,
+                "name": product_name,
+                "price_with_tax": amount_cents,
+                "price_without_tax": amount_cents,
+                "quantity": 1,
+                "total_with_tax": amount_cents,
+                "total_without_tax": amount_cents,
+                "downloadable": False,
+                "perishable": False,
+                "personalized": False,
+                "category": "Fitness",
+                "product_id": product_reference,
+                "ends_on": service_end_date or self.compute_service_end_date(),
+            }
+        ]
+
+        total_with_tax = amount_cents
+        total_without_tax = amount_cents
+
+        if discount_items:
+            for disc in discount_items:
+                items.append({
+                    "type": "discount",
+                    "reference": disc.get("reference", "DISCOUNT"),
+                    "name": disc.get("name", "Descuento"),
+                    "total_with_tax": disc.get("total_with_tax", 0),
+                    "total_without_tax": disc.get("total_without_tax", disc.get("total_with_tax", 0)),
+                })
+                total_with_tax += disc.get("total_with_tax", 0)
+                total_without_tax += disc.get("total_without_tax", disc.get("total_with_tax", 0))
 
         cart = {
             "cart_ref": f"cart_{product_reference}_{int(_time.time())}",
             "currency": "EUR",
             "delivery_method": {"name": "Digital", "days": "Inmediato"},
             "gift": False,
-            "order_total_with_tax": amount_cents,
-            "order_total_without_tax": amount_cents,
-            "items": [
-                {
-                    "type": "service",
-                    "reference": product_reference,
-                    "name": product_name,
-                    "price_with_tax": amount_cents,
-                    "price_without_tax": amount_cents,
-                    "quantity": 1,
-                    "total_with_tax": amount_cents,
-                    "total_without_tax": amount_cents,
-                    "downloadable": False,
-                    "perishable": False,
-                    "personalized": False,
-                    "category": "Fitness",
-                    "product_id": product_reference,
-                    "ends_on": service_end_date or self.compute_service_end_date(),
-                }
-            ],
+            "order_total_with_tax": total_with_tax,
+            "order_total_without_tax": total_without_tax,
+            "items": items,
         }
 
-        customer = {
+        customer: Dict[str, Any] = {
             "given_names": customer_first_name,
             "surnames": customer_last_name,
             "email": customer_email,
@@ -325,16 +358,18 @@ class SequraService:
         if customer_nin:
             customer["nin"] = customer_nin
             customer["vat_number"] = customer_nin
+        if previous_orders is not None:
+            customer["previous_orders"] = previous_orders
 
         address = {
             "given_names": customer_first_name,
             "surnames": customer_last_name,
             "company": "",
-            "address_line_1": "N/A",
+            "address_line_1": billing_address,
             "address_line_2": "",
-            "postal_code": "28001",
-            "city": "Madrid",
-            "country_code": "ES",
+            "postal_code": billing_postal_code,
+            "city": billing_city,
+            "country_code": billing_country_code,
         }
         if customer_phone:
             address["mobile_phone"] = customer_phone
