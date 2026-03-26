@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.storage import resolve_url
 from app.models.client import Client, ClientTag
 from app.models.exercise import ClientMeasurement
 from app.models.user import UserRole, User
@@ -220,22 +221,21 @@ async def list_clients(
     result = await db.execute(query)
     clients = result.scalars().all()
     
-    items = [
-        ClientListResponse(
+    items = []
+    for c in clients:
+        items.append(ClientListResponse(
             id=c.id,
             first_name=c.first_name,
             last_name=c.last_name,
             full_name=c.full_name,
             email=c.email,
             phone=c.phone,
-            avatar_url=c.avatar_url,
+            avatar_url=await resolve_url(c.avatar_url),
             is_active=c.is_active,
             has_user_account=c.user_id is not None,
             tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in c.tags],
             created_at=c.created_at
-        )
-        for c in clients
-    ]
+        ))
     
     paginated = PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
     
@@ -322,7 +322,7 @@ async def create_client(
         full_name=client.full_name,
         email=client.email,
         phone=client.phone,
-        avatar_url=client.avatar_url,
+        avatar_url=await resolve_url(client.avatar_url),
         birth_date=client.birth_date,
         gender=client.gender,
         height_cm=client.height_cm,
@@ -404,7 +404,7 @@ async def get_client(
         full_name=client.full_name,
         email=client.email,
         phone=client.phone,
-        avatar_url=client.avatar_url,
+        avatar_url=await resolve_url(client.avatar_url),
         birth_date=client.birth_date,
         gender=client.gender,
         height_cm=client.height_cm,
@@ -478,7 +478,7 @@ async def update_client(
         full_name=client.full_name,
         email=client.email,
         phone=client.phone,
-        avatar_url=client.avatar_url,
+        avatar_url=await resolve_url(client.avatar_url),
         birth_date=client.birth_date,
         gender=client.gender,
         height_cm=client.height_cm,
@@ -642,7 +642,7 @@ async def complete_onboarding(
         full_name=client.full_name,
         email=client.email,
         phone=client.phone,
-        avatar_url=client.avatar_url,
+        avatar_url=await resolve_url(client.avatar_url),
         birth_date=client.birth_date,
         gender=client.gender,
         height_cm=client.height_cm,
@@ -724,20 +724,19 @@ async def get_client_photos(
     )
     measurements = result.scalars().all()
     
-    # Flatten all photos with their dates (filter out empty arrays)
     all_photos = []
     for m in measurements:
         if m.photos and len(m.photos) > 0:
             for photo in m.photos:
-                if photo.get("url"):  # Only include photos with valid URLs
+                if photo.get("url"):
                     all_photos.append(ClientPhotoResponse(
-                        url=photo.get("url", ""),
+                        url=await resolve_url(photo["url"]),
                         type=photo.get("type", "unknown"),
                         notes=photo.get("notes"),
                         uploaded_at=photo.get("uploaded_at", ""),
                         measurement_date=m.measured_at.isoformat() if m.measured_at else None
                     ))
-    
+
     return all_photos
 
 

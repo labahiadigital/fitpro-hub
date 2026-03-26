@@ -7,7 +7,7 @@ from sqlalchemy import select, desc
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.storage import upload_workspace_file, generate_filename
+from app.core.storage import upload_workspace_file, generate_filename, resolve_url
 from app.middleware.auth import get_current_user, CurrentUser
 from app.models.document import Document
 
@@ -81,7 +81,7 @@ async def trainer_upload_document(
         uploaded_by=doc.uploaded_by,
         name=doc.name,
         original_filename=doc.original_filename,
-        file_url=doc.file_url,
+        file_url=await resolve_url(doc.file_url),
         file_size=doc.file_size,
         content_type=doc.content_type,
         category=doc.category or "general",
@@ -109,19 +109,19 @@ async def trainer_list_client_documents(
     result = await db.execute(query)
     docs = result.scalars().all()
 
-    return [
-        DocumentResponse(
+    items = []
+    for d in docs:
+        items.append(DocumentResponse(
             id=d.id,
             workspace_id=d.workspace_id,
             client_id=d.client_id,
             uploaded_by=d.uploaded_by,
             name=d.name,
             original_filename=d.original_filename,
-            file_url=d.file_url,
+            file_url=await resolve_url(d.file_url),
             file_size=d.file_size,
             content_type=d.content_type,
             category=d.category or "general",
             created_at=d.created_at.isoformat(),
-        )
-        for d in docs
-    ]
+        ))
+    return items

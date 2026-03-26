@@ -5,7 +5,7 @@ from app.api.v1.endpoints import (
     forms, messages, payments, automations, reports, products, exercises,
     foods, notifications, supplements, documents, pdf, roles, redsys, sequra, lms, erp, referrals,
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
-    whatsapp, google_calendar
+    whatsapp, google_calendar, storage
 )
 
 api_router = APIRouter()
@@ -114,3 +114,6 @@ api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["WhatsApp B
 
 # Google Calendar Integration
 api_router.include_router(google_calendar.router, prefix="/google-calendar", tags=["Google Calendar"])
+
+# Storage (presigned URLs)
+api_router.include_router(storage.router, prefix="/storage", tags=["Storage"])

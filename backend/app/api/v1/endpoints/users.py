@@ -8,6 +8,7 @@ import secrets
 import logging
 
 from app.core.database import get_db
+from app.core.storage import resolve_url
 from app.core.config import settings
 from app.core.security import get_password_hash, generate_verification_token, validate_password_strength
 from app.models.user import User, UserRole, RoleType
@@ -45,7 +46,7 @@ async def list_workspace_users(
             id=user.id,
             email=user.email,
             full_name=user.full_name,
-            avatar_url=user.avatar_url,
+            avatar_url=await resolve_url(user.avatar_url),
             role=user_role.role,
             is_active=user.is_active
         ))

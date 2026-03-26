@@ -82,9 +82,9 @@ class Settings(BaseSettings):
     R2_ACCESS_KEY_ID: str = ""
     R2_SECRET_ACCESS_KEY: str = ""
     R2_PLATFORM_BUCKET: str = "trackfiz-platform"
-    R2_PLATFORM_PUBLIC_URL: str = "https://pub-242c7b3240bb4ef19469afbf242adcdd.r2.dev"
+    R2_PLATFORM_PUBLIC_URL: str = "https://trackfiz-platform.trackfiz.com"
     R2_WORKSPACES_BUCKET: str = "trackfiz-workspaces"
-    R2_WORKSPACES_PUBLIC_URL: str = "https://pub-ca3308254a744147af2224d5e32de7ce.r2.dev"
+    R2_WORKSPACES_PUBLIC_URL: str = "https://trackfiz-workspaces.trackfiz.com"
 
     # Certificate encryption (AES-256-GCM for FNMT private keys at rest)
     # Generate with: python -c "import os; print(os.urandom(32).hex())"

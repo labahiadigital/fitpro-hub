@@ -7,6 +7,7 @@ from sqlalchemy import select, func, or_, String
 from pydantic import BaseModel
 
 from app.core.database import get_db
+from app.core.storage import resolve_url
 from app.middleware.auth import get_current_user, require_workspace, require_staff, CurrentUser
 from app.models.exercise import Exercise, ExerciseAlternative, ExerciseFavorite
 from app.models.user import User
@@ -114,9 +115,16 @@ async def list_exercises(
     
     result = await db.execute(query)
     exercises = result.scalars().all()
-    
+
+    items = []
+    for e in exercises:
+        resp = ExerciseResponse.model_validate(e)
+        resp.image_url = await resolve_url(resp.image_url)
+        resp.thumbnail_url = await resolve_url(resp.thumbnail_url)
+        items.append(resp)
+
     return ExerciseListResponse(
-        items=[ExerciseResponse.model_validate(e) for e in exercises],
+        items=items,
         total=total,
         page=page,
         page_size=page_size
@@ -213,8 +221,11 @@ async def get_exercise(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Exercise not found"
         )
-    
-    return exercise
+
+    resp = ExerciseResponse.model_validate(exercise)
+    resp.image_url = await resolve_url(resp.image_url)
+    resp.thumbnail_url = await resolve_url(resp.thumbnail_url)
+    return resp
 
 
 @router.put("/{exercise_id}", response_model=ExerciseResponse)

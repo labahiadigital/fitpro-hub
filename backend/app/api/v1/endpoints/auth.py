@@ -15,6 +15,7 @@ from app.core.limiter import limiter
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.storage import resolve_url
 from app.core.security import (
     get_password_hash,
     verify_password,
@@ -293,7 +294,7 @@ async def get_me(
         "id": str(user.id),
         "email": user.email,
         "full_name": user.full_name,
-        "avatar_url": user.avatar_url,
+        "avatar_url": await resolve_url(user.avatar_url),
         "phone": user.phone,
         "is_active": user.is_active,
         "email_verified": user.email_verified,

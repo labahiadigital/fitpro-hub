@@ -12,6 +12,7 @@ from sqlalchemy import select, and_, desc, func, or_
 from pydantic import BaseModel
 
 from app.core.database import get_db
+from app.core.storage import resolve_url
 from app.models.client import Client
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative, ClientMeasurement
@@ -360,7 +361,9 @@ async def get_client_profile(
 ):
     """Get client's own profile."""
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    return client
+    resp = ClientProfileResponse.model_validate(client)
+    resp.avatar_url = await resolve_url(resp.avatar_url)
+    return resp
 
 
 @router.put("/profile", response_model=ClientProfileResponse)
@@ -423,7 +426,8 @@ async def upload_client_avatar(
         user.avatar_url = public_url
 
     await db.commit()
-    return {"avatar_url": public_url}
+    presigned = await resolve_url(public_url)
+    return {"avatar_url": presigned}
 
 
 # ============ WORKOUTS ============
@@ -1189,7 +1193,7 @@ async def list_client_recipes(
             "prep_time_minutes": r.prep_time_minutes,
             "cook_time_minutes": r.cook_time_minutes,
             "difficulty": r.difficulty,
-            "image_url": r.image_url,
+            "image_url": await resolve_url(r.image_url),
             "is_global": r.is_global,
             "items": r.items or [],
             "total_calories": float(r.total_calories or 0),
@@ -1402,14 +1406,16 @@ async def get_progress_photos(
     )
     measurements = result.scalars().all()
     
-    # Flatten all photos with their dates
     all_photos = []
     for m in measurements:
         if m.photos:
             for photo in m.photos:
-                photo["measurement_date"] = m.measured_at.isoformat() if m.measured_at else None
-                all_photos.append(photo)
-    
+                p = dict(photo)
+                p["measurement_date"] = m.measured_at.isoformat() if m.measured_at else None
+                if p.get("url"):
+                    p["url"] = await resolve_url(p["url"])
+                all_photos.append(p)
+
     return all_photos
 
 
@@ -1722,11 +1728,11 @@ async def get_or_create_client_conversation(
         if trainer:
             trainer_name = trainer.full_name
             trainer_avatar = trainer.avatar_url
-    
+
     return ClientConversationResponse(
         id=conversation.id,
         trainer_name=trainer_name or "Tu Entrenador",
-        trainer_avatar_url=trainer_avatar,
+        trainer_avatar_url=await resolve_url(trainer_avatar),
         last_message_at=conversation.last_message_at,
         last_message_preview=conversation.last_message_preview,
         unread_count=conversation.unread_count or 0,
@@ -2524,7 +2530,7 @@ async def client_upload_document(
         "id": str(doc.id),
         "name": doc.name,
         "original_filename": doc.original_filename,
-        "file_url": doc.file_url,
+        "file_url": await resolve_url(doc.file_url),
         "file_size": doc.file_size,
         "content_type": doc.content_type,
         "category": doc.category,
@@ -2554,19 +2560,19 @@ async def client_list_documents(
     result = await db.execute(query)
     docs = result.scalars().all()
 
-    return [
-        {
+    items = []
+    for d in docs:
+        items.append({
             "id": str(d.id),
             "name": d.name,
             "original_filename": d.original_filename,
-            "file_url": d.file_url,
+            "file_url": await resolve_url(d.file_url),
             "file_size": d.file_size,
             "content_type": d.content_type,
             "category": d.category or "general",
             "created_at": d.created_at.isoformat(),
-        }
-        for d in docs
-    ]
+        })
+    return items
 
 
 @router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

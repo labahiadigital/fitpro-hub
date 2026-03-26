@@ -6,6 +6,7 @@ from sqlalchemy import select, or_, func, String
 from pydantic import BaseModel
 
 from app.core.database import get_db
+from app.core.storage import resolve_url
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative
 from app.models.client import Client
@@ -148,7 +149,15 @@ async def list_exercises(
         query = query.where(Exercise.category == category)
     
     result = await db.execute(query.order_by(Exercise.name))
-    return result.scalars().all()
+    exercises = result.scalars().all()
+
+    items = []
+    for e in exercises:
+        resp = ExerciseResponse.model_validate(e)
+        resp.image_url = await resolve_url(resp.image_url)
+        resp.thumbnail_url = await resolve_url(resp.thumbnail_url)
+        items.append(resp)
+    return items
 
 
 @router.post("/exercises", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)

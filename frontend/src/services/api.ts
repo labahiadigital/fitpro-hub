@@ -739,4 +739,10 @@ export const whatsappApi = {
   disconnect: () => api.post("/whatsapp/disconnect"),
 };
 
+// Storage presigning API
+export const storageApi = {
+  presign: (urls: string[]) =>
+    api.post<{ urls: Record<string, string> }>("/storage/presign", { urls }),
+};
+
 export default api;
