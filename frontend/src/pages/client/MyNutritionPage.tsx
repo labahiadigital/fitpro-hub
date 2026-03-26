@@ -18,7 +18,6 @@ import {
   NumberInput,
   Select,
   ActionIcon,
-  Checkbox,
   Menu,
   Tabs,
 } from "@mantine/core";
@@ -32,7 +31,6 @@ import {
   IconClock,
   IconCoffee,
   IconDotsVertical,
-  IconFlame,
   IconHistory,
   IconPlus,
   IconSalad,
@@ -60,7 +58,7 @@ import type { Recipe } from "../../types/recipe";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
 import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
-import { SlideOver } from "../../components/common/SlideOver";
+import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 
 // Tipos de comidas con sus iconos
 const MEAL_TYPES = [
@@ -217,121 +215,192 @@ function LogMealModal({
     setSatisfactionRating(null);
   };
 
-  return (
-    <SlideOver
-      opened={opened}
-      onClose={onClose}
-      title="Registrar Comida"
-      subtitle="Añade los alimentos que has consumido"
-    >
-      <Stack gap="md">
-        <Select
-          label="Tipo de comida"
-          data={MEAL_TYPES.map((m) => ({ value: m.value, label: m.label }))}
-          {...form.getInputProps("meal_name")}
-        />
+  if (!opened) return null;
 
-        <Text fw={500} size="sm">
-          Alimentos
-        </Text>
+  return (
+    <Box
+      pos="fixed"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      style={{ zIndex: 300, background: "var(--mantine-color-gray-0)", display: "flex", flexDirection: "column" }}
+    >
+      {/* Glassmorphism header */}
+      <Box
+        style={{
+          flexShrink: 0,
+          background: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid var(--mantine-color-gray-2)",
+          height: 56,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 16px",
+        }}
+      >
+        <Group justify="space-between" style={{ width: "100%" }}>
+          <Group gap="xs">
+            <ActionIcon variant="subtle" size="lg" onClick={onClose} radius="xl">
+              <IconArrowsExchange size={20} style={{ transform: "rotate(180deg)" }} />
+            </ActionIcon>
+            <Box>
+              <Text fw={700} size="sm">Registrar Comida</Text>
+              <Text size="xs" c="dimmed">{foods.filter(f => f.name.trim()).length} alimentos</Text>
+            </Box>
+          </Group>
+          <Select
+            data={MEAL_TYPES.map((m) => ({ value: m.value, label: m.label }))}
+            {...form.getInputProps("meal_name")}
+            size="xs"
+            w={130}
+            styles={{ input: { borderRadius: 10, height: 36 } }}
+          />
+        </Group>
+      </Box>
+
+      {/* Scrollable content */}
+      <Box style={{ flex: 1, overflowY: "auto" }} py="sm">
         {foods.map((food, index) => (
-          <Paper key={index} p="sm" withBorder radius="md">
-            <Stack gap="xs">
-              <Group align="flex-end" gap="xs">
-                <TextInput
-                  label="Nombre"
-                  placeholder="Ej: Pechuga de pollo"
-                  value={food.name}
-                  onChange={(e) => updateFood(index, "name", e.target.value)}
-                  style={{ flex: 1 }}
-                />
-                <NumberInput
-                  label="Cantidad"
-                  value={food.quantity}
-                  onChange={(val) => updateFood(index, "quantity", val || 1)}
-                  min={0.1}
-                  step={0.5}
-                  decimalScale={1}
-                  style={{ width: 80 }}
-                />
-                <ActionIcon
-                  color="red"
-                  variant="light"
-                  onClick={() => removeFood(index)}
-                  disabled={foods.length === 1}
-                  mt={24}
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Group>
-              <SimpleGrid cols={4}>
-                <NumberInput
-                  label="Kcal"
-                  value={food.calories}
-                  onChange={(val) => updateFood(index, "calories", val || 0)}
-                  min={0}
-                  size="xs"
-                />
-                <NumberInput
-                  label="Proteína"
-                  value={food.protein}
-                  onChange={(val) => updateFood(index, "protein", val || 0)}
-                  min={0}
-                  decimalScale={1}
-                  size="xs"
-                />
-                <NumberInput
-                  label="Carbs"
-                  value={food.carbs}
-                  onChange={(val) => updateFood(index, "carbs", val || 0)}
-                  min={0}
-                  decimalScale={1}
-                  size="xs"
-                />
-                <NumberInput
-                  label="Grasas"
-                  value={food.fat}
-                  onChange={(val) => updateFood(index, "fat", val || 0)}
-                  min={0}
-                  decimalScale={1}
-                  size="xs"
-                />
-              </SimpleGrid>
-            </Stack>
-          </Paper>
+          <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+            <Group gap="xs" mb="xs" wrap="nowrap">
+              <TextInput
+                placeholder="Nombre del alimento"
+                value={food.name}
+                onChange={(e) => updateFood(index, "name", e.target.value)}
+                size="sm"
+                style={{ flex: 1 }}
+                styles={{ input: { height: 44, borderRadius: 10 } }}
+              />
+              <NumberInput
+                placeholder="Cant."
+                value={food.quantity}
+                onChange={(val) => updateFood(index, "quantity", val || 1)}
+                min={0.1}
+                step={0.5}
+                decimalScale={1}
+                size="sm"
+                w={70}
+                hideControls
+                styles={{ input: { height: 44, borderRadius: 10, textAlign: "center" } }}
+              />
+              <ActionIcon
+                color="red"
+                variant="light"
+                onClick={() => removeFood(index)}
+                disabled={foods.length === 1}
+                size="lg"
+                radius="xl"
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Group>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+              <NumberInput
+                placeholder="Kcal"
+                value={food.calories || ""}
+                onChange={(val) => updateFood(index, "calories", val || 0)}
+                min={0}
+                size="sm"
+                hideControls
+                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }}
+              />
+              <NumberInput
+                placeholder="Prot"
+                value={food.protein || ""}
+                onChange={(val) => updateFood(index, "protein", val || 0)}
+                min={0}
+                decimalScale={1}
+                size="sm"
+                hideControls
+                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }}
+              />
+              <NumberInput
+                placeholder="Carbs"
+                value={food.carbs || ""}
+                onChange={(val) => updateFood(index, "carbs", val || 0)}
+                min={0}
+                decimalScale={1}
+                size="sm"
+                hideControls
+                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }}
+              />
+              <NumberInput
+                placeholder="Grasas"
+                value={food.fat || ""}
+                onChange={(val) => updateFood(index, "fat", val || 0)}
+                min={0}
+                decimalScale={1}
+                size="sm"
+                hideControls
+                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }}
+              />
+            </div>
+            {index === 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
+                <Text size="xs" c="dimmed" ta="center">Kcal</Text>
+                <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
+                <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
+                <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
+              </div>
+            )}
+          </Box>
         ))}
 
-        <Button
-          variant="light"
-          leftSection={<IconPlus size={16} />}
-          onClick={addFood}
-        >
-          Añadir alimento
-        </Button>
-
-        <TextInput
-          label="Notas (opcional)"
-          placeholder="Añade notas sobre esta comida..."
-          {...form.getInputProps("notes")}
-        />
-
-        <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
-
-        <Group justify="flex-end" mt="md">
-          <Button variant="light" onClick={onClose}>
-            Cancelar
-          </Button>
+        <Box px="md" mt="sm">
           <Button
-            color="yellow"
-            onClick={handleSubmit}
-            loading={isLoading}
-            disabled={foods.every((f) => f.name.trim() === "")}
+            variant="light"
+            leftSection={<IconPlus size={16} />}
+            onClick={addFood}
+            fullWidth
+            size="md"
+            radius="xl"
+            styles={{ root: { height: 44 } }}
           >
-            Registrar
+            Añadir alimento
           </Button>
-        </Group>
-      </Stack>
-    </SlideOver>
+        </Box>
+
+        <Box px="md" mt="md">
+          <TextInput
+            placeholder="Notas (opcional)"
+            {...form.getInputProps("notes")}
+            size="sm"
+            styles={{ input: { height: 44, borderRadius: 10 } }}
+          />
+          <Box mt="sm">
+            <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Sticky footer */}
+      <Box
+        style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--mantine-color-gray-2)",
+          background: "#fff",
+          boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+          paddingBottom: "env(safe-area-inset-bottom, 8px)",
+        }}
+        px="md"
+        py="sm"
+      >
+        <Button
+          color="yellow"
+          onClick={handleSubmit}
+          loading={isLoading}
+          disabled={foods.every((f) => f.name.trim() === "")}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Registrar Comida
+        </Button>
+      </Box>
+    </Box>
   );
 }
 
@@ -491,7 +560,7 @@ function LogPlanMealModal({
   if (!meal) return null;
 
   return (
-    <SlideOver
+    <NativeBottomSheet
       opened={opened}
       onClose={() => {
         setCheckedItems({});
@@ -499,76 +568,86 @@ function LogPlanMealModal({
         onClose();
       }}
       title={`Registrar ${meal.name}`}
-      subtitle="Marca los alimentos consumidos"
+      subtitle={`${Object.values(checkedItems).filter(Boolean).length}/${meal.items.length} seleccionados • ${totalMacros.calories} kcal`}
+      footer={
+        <Button
+          color="yellow"
+          onClick={handleSubmit}
+          loading={isLoading}
+          leftSection={<IconCheck size={18} />}
+          disabled={Object.values(checkedItems).filter(Boolean).length === 0}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Registrar Comida
+        </Button>
+      }
     >
-      <Stack gap="md">
-        <Paper p="md" radius="md" style={{ background: "var(--mantine-color-yellow-light)" }}>
-          <Group justify="space-between">
-            <Text fw={600}>{meal.name}</Text>
-            <Badge variant="light" color="orange">
-              <IconFlame size={12} style={{ marginRight: 4 }} />
-              {totalMacros.calories} kcal
-            </Badge>
-          </Group>
-          <Group gap="xs" mt="xs">
-            <Badge size="sm" variant="outline" color="green">P: {totalMacros.protein}g</Badge>
-            <Badge size="sm" variant="outline" color="blue">C: {totalMacros.carbs}g</Badge>
-            <Badge size="sm" variant="outline" color="grape">G: {totalMacros.fat}g</Badge>
-          </Group>
-        </Paper>
+      {/* Edge-to-edge food items */}
+      {meal.items.map((item) => {
+        const isChecked = checkedItems[item.id] || false;
+        const itemCals = Math.round(Number(item.food?.calories || item.supplement?.calories || 0) * (item.quantity_grams / (parseFloat(String(item.food?.serving_size || item.supplement?.serving_size || "100")) || 100)));
+        return (
+          <Box
+            key={item.id}
+            onClick={() => toggleItem(item.id)}
+            px={0}
+            py="sm"
+            style={{
+              borderBottom: "1px solid var(--mantine-color-gray-2)",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+              background: isChecked ? "var(--mantine-color-green-0)" : "transparent",
+              transition: "background 0.15s ease",
+            }}
+          >
+            <Group gap="sm" wrap="nowrap">
+              <button
+                type="button"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  background: isChecked ? "var(--mantine-color-green-6)" : "var(--mantine-color-gray-1)",
+                  color: isChecked ? "#fff" : "var(--mantine-color-gray-5)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <IconCheck size={18} />
+              </button>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                <Text fw={600} size="sm" lineClamp={1}>{item.food?.name || item.supplement?.name || "Alimento"}</Text>
+                <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
+              </Box>
+              <Badge variant="light" size="sm" style={{ flexShrink: 0 }}>
+                {itemCals} kcal
+              </Badge>
+            </Group>
+          </Box>
+        );
+      })}
 
-        <Text fw={500} size="sm">
-          Alimentos del plan ({Object.values(checkedItems).filter(Boolean).length}/{meal.items.length} seleccionados)
-        </Text>
-        
-        <Stack gap="xs">
-          {meal.items.map((item) => (
-            <Paper key={item.id} p="sm" withBorder radius="md">
-              <Checkbox
-                checked={checkedItems[item.id] || false}
-                onChange={() => toggleItem(item.id)}
-                color="green"
-                label={
-                  <Group gap="sm" justify="space-between" style={{ flex: 1 }}>
-                    <Box>
-                      <Text fw={500} size="sm">{item.food?.name || "Alimento"}</Text>
-                      <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
-                    </Box>
-                    <Badge variant="light" size="sm">
-                      {Math.round(Number(item.food?.calories || item.supplement?.calories || 0) * (item.quantity_grams / (parseFloat(String(item.food?.serving_size || item.supplement?.serving_size || "100")) || 100)))} kcal
-                    </Badge>
-                  </Group>
-                }
-              />
-            </Paper>
-          ))}
-        </Stack>
-
+      <Box mt="md">
         <TextInput
-          label="Notas (opcional)"
-          placeholder="¿Cómo te sentiste? ¿Hiciste algún cambio?"
+          placeholder="Notas (opcional)"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
+          size="sm"
+          styles={{ input: { height: 44, borderRadius: 10 } }}
         />
-
-        <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
-
-        <Group justify="flex-end" mt="md">
-          <Button variant="light" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            color="yellow"
-            onClick={handleSubmit}
-            loading={isLoading}
-            leftSection={<IconCheck size={16} />}
-            disabled={Object.values(checkedItems).filter(Boolean).length === 0}
-          >
-            Registrar Comida
-          </Button>
-        </Group>
-      </Stack>
-    </SlideOver>
+        <Box mt="sm">
+          <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
+        </Box>
+      </Box>
+    </NativeBottomSheet>
   );
 }
 
@@ -1235,7 +1314,7 @@ export function MyNutritionPage() {
       </Title>
       
       {selectedPlanMeals.length > 0 ? (
-        <Stack gap="md" mb="xl">
+        <Box mb="xl">
           {selectedPlanMeals.map((meal: PlanMeal) => {
             const isRegistered = registeredMeals[meal.name];
             const mealLogs = mealsByType[meal.name] || [];
@@ -1246,76 +1325,56 @@ export function MyNutritionPage() {
                   const ss = parseFloat(String(food?.serving_size || "100")) || 100;
                   return sum + Math.round(Number(food?.calories || 0) * (item.quantity_grams / ss));
                 }, 0);
+            const mealType = MEAL_TYPES.find(m => m.value === meal.name);
+            const MealIcon = mealType?.icon || IconApple;
 
             return (
-              <Card key={meal.id} shadow="sm" padding="md" radius="lg" withBorder>
-                <Group justify="space-between">
-                  <Group>
-                    <ThemeIcon
-                      variant={isRegistered ? "filled" : "light"}
-                      color={isRegistered ? "green" : "yellow"}
-                      size="lg"
-                      radius="md"
-                    >
-                      {isRegistered ? <IconCheck size={20} /> : <IconApple size={20} />}
-                    </ThemeIcon>
-                    <Box>
-                      <Group gap="xs">
-                        <Text fw={600}>{meal.name}</Text>
-                        <Text size="sm" c="dimmed">
-                          {meal.time}
-                        </Text>
-                      </Group>
-                      <Text size="sm" c="dimmed">
-                        {meal.items.map((item) => `${item.food?.name || "Alimento"} (${item.quantity_grams}g)`).join(" • ")}
-                      </Text>
-                    </Box>
-                  </Group>
-                  <Group>
-                    {isRegistered && mealSatisfaction[meal.name] && (
-                      <Text size="xl">
-                        {mealSatisfaction[meal.name] === 1 ? "😞" : mealSatisfaction[meal.name] === 2 ? "😐" : "😊"}
-                      </Text>
-                    )}
-                    <Badge variant="light" color={isRegistered ? "green" : "orange"} size="lg">
-                      <Group gap={4}>
-                        <IconFlame size={14} />
-                        {mealCalories} kcal
-                      </Group>
-                    </Badge>
-                    <Button
-                      variant={isRegistered ? "light" : "filled"}
-                      size="sm"
-                      color={isRegistered ? "green" : "yellow"}
-                      onClick={() => handleOpenPlanMeal(meal)}
-                      leftSection={isRegistered ? <IconCheck size={14} /> : undefined}
-                      disabled={isRegistered}
-                    >
-                      {isRegistered ? "Completado" : "Registrar"}
-                    </Button>
-                  </Group>
-                </Group>
-                
-                {/* Mostrar alimentos expandidos si no está registrado */}
-                {!isRegistered && meal.items.length > 0 && (
-                  <Box mt="md" pt="md" style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}>
-                    <Text size="xs" c="dimmed" mb="xs">Alimentos planificados:</Text>
+              <Box
+                key={meal.id}
+                px="md"
+                py="sm"
+                onClick={() => !isRegistered && handleOpenPlanMeal(meal)}
+                style={{
+                  borderBottom: "1px solid var(--mantine-color-gray-2)",
+                  cursor: isRegistered ? "default" : "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  background: isRegistered ? "var(--mantine-color-green-0)" : "transparent",
+                }}
+              >
+                <Group gap="sm" wrap="nowrap" align="center">
+                  <ThemeIcon
+                    variant={isRegistered ? "filled" : "light"}
+                    color={isRegistered ? "green" : mealType?.color || "yellow"}
+                    size={44}
+                    radius="lg"
+                    style={{ flexShrink: 0 }}
+                  >
+                    {isRegistered ? <IconCheck size={22} /> : <MealIcon size={22} />}
+                  </ThemeIcon>
+                  <Box style={{ flex: 1, minWidth: 0 }}>
                     <Group gap="xs">
-                      {meal.items.map((item) => (
-                        <Badge key={item.id} variant="outline" color="gray" size="sm">
-                          {item.food?.name} - {item.quantity_grams}g
-                        </Badge>
-                      ))}
+                      <Text fw={600} size="sm">{meal.name}</Text>
+                      <Text size="xs" c="dimmed">{meal.time}</Text>
+                      {isRegistered && mealSatisfaction[meal.name] && (
+                        <Text size="sm">
+                          {mealSatisfaction[meal.name] === 1 ? "😞" : mealSatisfaction[meal.name] === 2 ? "😐" : "😊"}
+                        </Text>
+                      )}
                     </Group>
+                    <Text size="xs" c="dimmed" lineClamp={1} mt={2}>
+                      {meal.items.map((item) => item.food?.name || "Alimento").join(" • ")}
+                    </Text>
                   </Box>
-                )}
-              </Card>
+                  <Badge variant="light" color={isRegistered ? "green" : "orange"} size="sm" style={{ flexShrink: 0 }}>
+                    {mealCalories} kcal
+                  </Badge>
+                </Group>
+              </Box>
             );
           })}
-        </Stack>
+        </Box>
       ) : (
-        /* Fallback: mostrar tipos de comida genéricos si no hay plan con días */
-        <Stack gap="md" mb="xl">
+        <Box mb="xl">
           {MEAL_TYPES.map((mealType) => {
             const MealIcon = mealType.icon;
             const logs = mealsByType[mealType.value] || [];
@@ -1323,63 +1382,55 @@ export function MyNutritionPage() {
             const mealCalories = logs.reduce((sum, l) => sum + (l.total_calories || 0), 0);
 
             return (
-              <Card key={mealType.value} shadow="sm" padding="md" radius="lg" withBorder style={{ minHeight: 80 }}>
-                <Group justify="space-between" h="100%" align="center">
-                  <Group>
-                    <ThemeIcon
-                      variant={hasLogs ? "filled" : "light"}
-                      color={hasLogs ? "yellow" : "gray"}
-                      size="lg"
-                      radius="md"
-                    >
-                      <MealIcon size={20} />
-                    </ThemeIcon>
-                    <Box>
-                      <Group gap="xs">
-                        <Text fw={600}>{mealType.label}</Text>
-                        <Text size="sm" c="dimmed">
-                          {mealType.time}
-                        </Text>
-                      </Group>
-                      {hasLogs ? (
-                        <Text size="sm" c="dimmed">
-                          {logs.flatMap((l) => l.foods?.map((f) => f.name) || []).join(" • ")}
-                        </Text>
-                      ) : (
-                        <Text size="sm" c="dimmed" fs="italic">
-                          Sin registrar
+              <Box
+                key={mealType.value}
+                px="md"
+                py="sm"
+                onClick={openModal}
+                style={{
+                  borderBottom: "1px solid var(--mantine-color-gray-2)",
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  background: hasLogs ? "var(--mantine-color-yellow-0)" : "transparent",
+                }}
+              >
+                <Group gap="sm" wrap="nowrap" align="center">
+                  <ThemeIcon
+                    variant={hasLogs ? "filled" : "light"}
+                    color={hasLogs ? "yellow" : "gray"}
+                    size={44}
+                    radius="lg"
+                    style={{ flexShrink: 0 }}
+                  >
+                    <MealIcon size={22} />
+                  </ThemeIcon>
+                  <Box style={{ flex: 1, minWidth: 0 }}>
+                    <Group gap="xs">
+                      <Text fw={600} size="sm">{mealType.label}</Text>
+                      <Text size="xs" c="dimmed">{mealType.time}</Text>
+                      {hasLogs && mealSatisfaction[mealType.value] && (
+                        <Text size="sm">
+                          {mealSatisfaction[mealType.value] === 1 ? "😞" : mealSatisfaction[mealType.value] === 2 ? "😐" : "😊"}
                         </Text>
                       )}
-                    </Box>
-                  </Group>
-                  <Group>
-                    {hasLogs && mealSatisfaction[mealType.value] && (
-                      <Text size="xl">
-                        {mealSatisfaction[mealType.value] === 1 ? "😞" : mealSatisfaction[mealType.value] === 2 ? "😐" : "😊"}
-                      </Text>
-                    )}
-                    {hasLogs && (
-                      <Badge variant="light" color="orange" size="lg">
-                        <Group gap={4}>
-                          <IconFlame size={14} />
-                          {mealCalories} kcal
-                        </Group>
-                      </Badge>
-                    )}
-                    <Button
-                      variant={hasLogs ? "light" : "filled"}
-                      size="sm"
-                      color={hasLogs ? "gray" : "yellow"}
-                      onClick={openModal}
-                    >
-                      {hasLogs ? "Editar" : "Registrar"}
-                    </Button>
-                  </Group>
+                    </Group>
+                    <Text size="xs" c="dimmed" lineClamp={1} mt={2}>
+                      {hasLogs
+                        ? logs.flatMap((l) => l.foods?.map((f) => f.name) || []).join(" • ")
+                        : "Sin registrar"
+                      }
+                    </Text>
+                  </Box>
+                  {hasLogs && (
+                    <Badge variant="light" color="orange" size="sm" style={{ flexShrink: 0 }}>
+                      {mealCalories} kcal
+                    </Badge>
+                  )}
                 </Group>
-              </Card>
+              </Box>
             );
           })}
-        </Stack>
+        </Box>
       )}
 
         </Tabs.Panel>

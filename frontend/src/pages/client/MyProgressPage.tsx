@@ -35,7 +35,6 @@ import {
   IconChartLine,
   IconPlus,
   IconRuler,
-  IconScale,
   IconTrendingUp,
   IconTrendingDown,
   IconTrash,
@@ -44,7 +43,8 @@ import {
 import { useMemo, useState } from "react";
 import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos, useDeleteProgressPhoto } from "../../hooks/useClientPortal";
 import { formatDecimal } from "../../utils/format";
-import { SlideOver } from "../../components/common/SlideOver";
+import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
+import { IconArrowLeft } from "@tabler/icons-react";
 
 function StatProgress({ 
   label, 
@@ -225,29 +225,60 @@ function LogMeasurementModal({
     form.reset();
   };
 
+  if (!opened) return null;
+
   return (
-    <SlideOver
-      opened={opened}
-      onClose={onClose}
-      title={existingForDate ? "Editar Medidas" : "Registrar Medidas"}
-      subtitle="Registra peso, grasa y medidas corporales"
+    <Box
+      pos="fixed"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      style={{ zIndex: 300, background: "var(--mantine-color-gray-0)", display: "flex", flexDirection: "column" }}
     >
-      <Stack gap="md">
+      {/* Glassmorphism header */}
+      <Box
+        style={{
+          flexShrink: 0,
+          background: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid var(--mantine-color-gray-2)",
+          height: 56,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 16px",
+        }}
+      >
+        <Group gap="sm" style={{ width: "100%" }}>
+          <ActionIcon variant="subtle" size="lg" onClick={onClose} radius="xl">
+            <IconArrowLeft size={22} />
+          </ActionIcon>
+          <Box style={{ flex: 1 }}>
+            <Text fw={700} size="sm">{existingForDate ? "Editar Medidas" : "Registrar Medidas"}</Text>
+            <Text size="xs" c="dimmed">Peso, grasa y medidas corporales</Text>
+          </Box>
+        </Group>
+      </Box>
+
+      {/* Scrollable content */}
+      <Box style={{ flex: 1, overflowY: "auto" }} px="md" py="md">
         <DateInput
-          label="Fecha de la medición"
+          label="Fecha"
           value={measurementDate}
           onChange={handleDateChange}
           maxDate={new Date()}
           locale="es"
           valueFormat="DD/MM/YYYY"
+          size="sm"
+          styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         {existingForDate && (
-          <Badge color="blue" variant="light">Editando medidas existentes de este día</Badge>
+          <Badge color="blue" variant="light" mt="xs">Editando medidas existentes</Badge>
         )}
-        <Text fw={500} size="sm">
-          Datos Corporales
-        </Text>
-        <SimpleGrid cols={{ base: 1, xs: 3 }}>
+
+        <Text fw={600} size="sm" mt="lg" mb="xs">Datos Corporales</Text>
+        <SimpleGrid cols={3} spacing="sm">
           <NumberInput
             label="Peso (kg)"
             placeholder="78.5"
@@ -255,89 +286,80 @@ function LogMeasurementModal({
             min={30}
             max={300}
             decimalScale={1}
-            leftSection={<IconScale size={16} />}
+            size="sm"
+            hideControls
+            styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }}
           />
           <NumberInput
-            label="% Grasa Corporal"
+            label="% Grasa"
             placeholder="18.5"
             {...form.getInputProps("body_fat_percentage")}
             min={3}
             max={50}
             decimalScale={1}
+            size="sm"
+            hideControls
+            styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }}
           />
           <NumberInput
-            label="Masa Muscular (kg)"
+            label="Músculo (kg)"
             placeholder="35.2"
             {...form.getInputProps("muscle_mass_kg")}
             min={10}
             max={100}
             decimalScale={1}
+            size="sm"
+            hideControls
+            styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }}
           />
         </SimpleGrid>
 
-        <Text fw={500} size="sm" mt="md">
-          Medidas Corporales (cm)
-        </Text>
-        <SimpleGrid cols={{ base: 2, xs: 3, sm: 5 }}>
-          <NumberInput
-            label="Pecho"
-            placeholder="102"
-            {...form.getInputProps("chest")}
-            min={50}
-            max={200}
-          />
-          <NumberInput
-            label="Cintura"
-            placeholder="82"
-            {...form.getInputProps("waist")}
-            min={40}
-            max={200}
-          />
-          <NumberInput
-            label="Cadera"
-            placeholder="98"
-            {...form.getInputProps("hips")}
-            min={50}
-            max={200}
-          />
-          <NumberInput
-            label="Brazos"
-            placeholder="36"
-            {...form.getInputProps("arms")}
-            min={15}
-            max={60}
-          />
-          <NumberInput
-            label="Muslos"
-            placeholder="58"
-            {...form.getInputProps("thighs")}
-            min={30}
-            max={100}
-          />
+        <Text fw={600} size="sm" mt="lg" mb="xs">Medidas Corporales (cm)</Text>
+        <SimpleGrid cols={3} spacing="sm">
+          <NumberInput label="Pecho" placeholder="102" {...form.getInputProps("chest")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label="Cintura" placeholder="82" {...form.getInputProps("waist")} min={40} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label="Cadera" placeholder="98" {...form.getInputProps("hips")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label="Brazos" placeholder="36" {...form.getInputProps("arms")} min={15} max={60} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label="Muslos" placeholder="58" {...form.getInputProps("thighs")} min={30} max={100} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
         </SimpleGrid>
 
         <Textarea
           label="Notas (opcional)"
-          placeholder="¿Cómo te sientes? ¿Algún comentario sobre tu progreso?"
+          placeholder="¿Cómo te sientes?"
           {...form.getInputProps("notes")}
           minRows={2}
+          mt="md"
+          size="sm"
+          styles={{ input: { borderRadius: 10 } }}
         />
+      </Box>
 
-        <Group justify="flex-end" mt="md">
-          <Button variant="light" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            color="yellow"
-            onClick={handleSubmit}
-            loading={isLoading}
-            disabled={!form.values.weight_kg && !form.values.body_fat_percentage && !form.values.muscle_mass_kg}
-          >
-            Guardar Medidas
-          </Button>
-        </Group>
-      </Stack>
-    </SlideOver>
+      {/* Sticky footer */}
+      <Box
+        style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--mantine-color-gray-2)",
+          background: "#fff",
+          boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+          paddingBottom: "env(safe-area-inset-bottom, 8px)",
+        }}
+        px="md"
+        py="sm"
+      >
+        <Button
+          color="yellow"
+          onClick={handleSubmit}
+          loading={isLoading}
+          disabled={!form.values.weight_kg && !form.values.body_fat_percentage && !form.values.muscle_mass_kg}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Guardar Medidas
+        </Button>
+      </Box>
+    </Box>
   );
 }
 
@@ -383,11 +405,26 @@ function UploadPhotoModal({
   };
 
   return (
-    <SlideOver
+    <NativeBottomSheet
       opened={opened}
       onClose={onClose}
       title="Subir Foto de Progreso"
       subtitle="Añade una foto para comparar tu evolución"
+      footer={
+        <Button
+          color="yellow"
+          onClick={handleSubmit}
+          loading={isLoading}
+          disabled={!file}
+          leftSection={<IconCamera size={18} />}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Subir Foto
+        </Button>
+      }
     >
       <Stack gap="md">
         <DateInput
@@ -397,6 +434,8 @@ function UploadPhotoModal({
           maxDate={new Date()}
           locale="es"
           valueFormat="DD/MM/YYYY"
+          size="sm"
+          styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         <Select
           label="Tipo de foto"
@@ -407,61 +446,46 @@ function UploadPhotoModal({
           ]}
           value={photoType}
           onChange={(v) => setPhotoType(v || "front")}
+          size="sm"
+          styles={{ input: { height: 44, borderRadius: 10 } }}
         />
 
-        <Box>
-          <Text size="sm" fw={500} mb="xs">Seleccionar imagen</Text>
-          <FileButton onChange={handleFileSelect} accept="image/png,image/jpeg,image/webp">
-            {(props) => (
-              <Button 
-                {...props} 
-                variant="light" 
-                leftSection={<IconUpload size={16} />}
-                fullWidth
-              >
-                {file ? file.name : "Seleccionar archivo"}
-              </Button>
-            )}
-          </FileButton>
-        </Box>
+        <FileButton onChange={handleFileSelect} accept="image/png,image/jpeg,image/webp">
+          {(props) => (
+            <Button 
+              {...props} 
+              variant="light" 
+              leftSection={<IconUpload size={16} />}
+              fullWidth
+              size="md"
+              radius="xl"
+              styles={{ root: { height: 48 } }}
+            >
+              {file ? file.name : "Seleccionar imagen"}
+            </Button>
+          )}
+        </FileButton>
 
         {preview && (
-          <Box>
-            <Text size="sm" c="dimmed" mb="xs">Vista previa:</Text>
-            <Image
-              src={preview}
-              alt="Vista previa"
-              radius="md"
-              h={200}
-              fit="contain"
-            />
-          </Box>
+          <Image
+            src={preview}
+            alt="Vista previa"
+            radius="md"
+            h={180}
+            fit="contain"
+          />
         )}
 
         <Textarea
-          label="Notas (opcional)"
-          placeholder="Añade notas sobre esta foto..."
+          placeholder="Notas (opcional)"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           minRows={2}
+          size="sm"
+          styles={{ input: { borderRadius: 10 } }}
         />
-
-        <Group justify="flex-end" mt="md">
-          <Button variant="light" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            color="yellow"
-            onClick={handleSubmit}
-            loading={isLoading}
-            disabled={!file}
-            leftSection={<IconCamera size={16} />}
-          >
-            Subir Foto
-          </Button>
-        </Group>
       </Stack>
-    </SlideOver>
+    </NativeBottomSheet>
   );
 }
 
