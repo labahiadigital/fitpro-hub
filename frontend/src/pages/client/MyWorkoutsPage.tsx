@@ -721,15 +721,6 @@ export function MyWorkoutsPage() {
     currentExerciseName: string;
     currentExerciseId?: string;
   } | null>(null);
-  const [customSchedule, _setCustomSchedule] = useState<Array<{
-    day: string;
-    dayName: string;
-    type: string;
-    completed: boolean;
-    isRestDay: boolean;
-    blocks: ProgramDay['blocks'];
-    exercises_list: Array<{ name: string; sets: number; reps: string; weight: string; notes?: string }>;
-  }> | null>(null);
 
   if (isLoadingWorkouts) {
     return (
@@ -829,7 +820,7 @@ export function MyWorkoutsPage() {
     };
   });
 
-  const displaySchedule = customSchedule ?? weekSchedule;
+  const displaySchedule = weekSchedule;
 
   // Check if today's workout has already been completed
   const isTodayCompleted = activeProgram && todayLogs?.completed_program_ids?.includes(activeProgram.id);

@@ -31,12 +31,6 @@ class Settings(BaseSettings):
         return v
     API_V1_PREFIX: str = "/api/v1"
     
-    # Supabase
-    SUPABASE_URL: str = ""
-    SUPABASE_KEY: str = ""
-    SUPABASE_SERVICE_KEY: str = ""
-    SUPABASE_JWT_SECRET: str = ""
-    
     # Database
     DATABASE_URL: str = ""
     DATABASE_SSL: bool = True
@@ -83,6 +77,13 @@ class Settings(BaseSettings):
     # CORS (comma-separated list of allowed origins)
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.trackfiz.com"
     
+    # Cloudflare R2 (S3-compatible storage)
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = "exercise-images"
+    R2_PUBLIC_URL: str = "https://pub-9b395e0f2f6542b3ab0bd253607e8231.r2.dev"
+
     # Certificate encryption (AES-256-GCM for FNMT private keys at rest)
     # Generate with: python -c "import os; print(os.urandom(32).hex())"
     CERTIFICATE_ENCRYPTION_KEY: str = ""

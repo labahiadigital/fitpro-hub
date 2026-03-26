@@ -6,23 +6,18 @@ All data is filtered to only show what belongs to the authenticated client.
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, date, timedelta
-import uuid as uuid_module
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func, or_
-from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
-from supabase import acreate_client
 
 from app.core.database import get_db
-from app.core.config import settings
 from app.models.client import Client
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative, ClientMeasurement
 from app.models.nutrition import MealPlan, Recipe
 from app.models.booking import Booking
 from app.middleware.auth import get_current_user, CurrentUser
-from app.models.user import RoleType
 
 router = APIRouter()
 
@@ -408,21 +403,15 @@ async def upload_client_avatar(
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Máximo 5 MB")
 
-    ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    unique_id = str(uuid_module.uuid4())
-    storage_path = f"avatars/{client.id}/{unique_id}.{ext}"
+    from app.core.storage import upload_file, generate_filename
+
+    filename = generate_filename(file.filename)
+    prefix = f"avatars/{client.id}"
 
     try:
-        supabase = await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
-        await supabase.storage.from_("avatars").upload(
-            path=storage_path,
-            file=content,
-            file_options={"content-type": file.content_type, "upsert": "true"}
-        )
+        public_url = await upload_file(content, prefix, filename, file.content_type or "image/jpeg")
     except Exception:
         raise HTTPException(status_code=500, detail="Error al subir la imagen")
-
-    public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/avatars/{storage_path}"
 
     client.avatar_url = public_url
     result = await db.execute(select(User).where(User.id == current_user.id))
@@ -1312,35 +1301,18 @@ async def upload_progress_photo(
             detail=f"Tipo de archivo {file.content_type} no permitido. Usa JPEG, PNG o WebP."
         )
     
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
-    ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    unique_id = str(uuid_module.uuid4())
-    storage_path = f"{client.id}/{unique_id}.{ext}"
-    
+    from app.core.storage import upload_file, generate_filename
+
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El archivo supera el límite de 10 MB")
+
     try:
-        supabase = await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
-        
-        content = await file.read()
-        if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El archivo supera el límite de 10 MB"
-            )
-        
-        bucket_name = "progress-photos"
-        try:
-            upload_result = await supabase.storage.from_(bucket_name).upload(
-                path=storage_path,
-                file=content,
-                file_options={"content-type": file.content_type, "upsert": "true"}
-            )
-        except Exception as upload_err:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Error al subir el archivo al almacenamiento"
-            )
-        
-        public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{storage_path}"
+        filename = generate_filename(file.filename)
+        prefix = f"progress-photos/{client.id}"
+        public_url = await upload_file(content, prefix, filename, file.content_type or "image/jpeg")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error al subir el archivo al almacenamiento")
         
         # Create a photo entry (stored in a measurement or separate)
         target_date = date.today()
@@ -2514,21 +2486,15 @@ async def client_upload_document(
     if len(content) > 20 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="El archivo supera el límite de 20 MB")
 
-    ext = file.filename.split(".")[-1] if file.filename else "bin"
-    unique_id = str(uuid_module.uuid4())
-    storage_path = f"{current_user.workspace_id}/{client.id}/{unique_id}.{ext}"
+    from app.core.storage import upload_file, generate_filename
+
+    filename = generate_filename(file.filename)
+    prefix = f"documents/{current_user.workspace_id}/{client.id}"
 
     try:
-        supabase = await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
-        await supabase.storage.from_("documents").upload(
-            path=storage_path,
-            file=content,
-            file_options={"content-type": file.content_type or "application/octet-stream", "upsert": "true"},
-        )
+        public_url = await upload_file(content, prefix, filename, file.content_type or "application/octet-stream")
     except Exception:
         raise HTTPException(status_code=500, detail="Error al subir el archivo")
-
-    public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/documents/{storage_path}"
 
     doc = Document(
         workspace_id=current_user.workspace_id,
