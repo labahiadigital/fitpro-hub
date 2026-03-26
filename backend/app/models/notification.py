@@ -12,7 +12,8 @@ class Notification(BaseModel):
     
     __tablename__ = "notifications"
     
-    # DB columns: id, user_id, workspace_id, title, body, type, link, is_read, read_at, created_at
+    updated_at = None  # table lacks this column inherited from BaseModel
+    
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     title = Column(Text, nullable=False)
