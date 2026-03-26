@@ -28,6 +28,7 @@ import {
   Center,
   Loader,
   ScrollArea,
+  Collapse,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
@@ -61,6 +62,8 @@ import {
   IconActivity,
   IconHeart,
   IconScale,
+  IconChevronDown,
+  IconChevronUp,
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -277,6 +280,190 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
         </ScrollArea>
       )}
     </Box>
+  );
+}
+
+function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
+  const [opened, setOpened] = useState(false);
+  const exercises = log.log?.exercises || [];
+  return (
+    <Card padding="md" radius="md" withBorder>
+      <Group justify="space-between" style={{ cursor: exercises.length > 0 ? "pointer" : undefined }} onClick={() => exercises.length > 0 && setOpened(o => !o)}>
+        <Group>
+          <ThemeIcon size="lg" radius="xl" variant="light" color="blue">
+            <IconBarbell size={18} />
+          </ThemeIcon>
+          <Box>
+            <Text fw={600} size="sm">
+              {log.log?.workout_name || "Entrenamiento"}
+            </Text>
+            <Text size="xs" c="dimmed">{dateStr}</Text>
+          </Box>
+        </Group>
+        <Group gap="md">
+          {log.log?.duration_minutes && (
+            <Badge variant="light" color="blue" size="sm">{log.log.duration_minutes} min</Badge>
+          )}
+          {log.log?.calories_burned && (
+            <Badge variant="light" color="orange" size="sm">{log.log.calories_burned} kcal</Badge>
+          )}
+          {exercises.length > 0 && (
+            <Badge variant="light" color="green" size="sm">
+              {exercises.filter((e: any) => e.completed).length}/{exercises.length} ejercicios
+            </Badge>
+          )}
+          {exercises.length > 0 && (
+            <ActionIcon variant="subtle" color="gray" size="sm">
+              {opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+            </ActionIcon>
+          )}
+        </Group>
+      </Group>
+      {log.log?.notes && (
+        <Text size="xs" c="dimmed" mt="xs" fs="italic">"{log.log.notes}"</Text>
+      )}
+      <Collapse in={opened}>
+        <Divider my="sm" />
+        <Table striped highlightOnHover styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Ejercicio</Table.Th>
+              <Table.Th style={{ textAlign: "center" }}>Series</Table.Th>
+              <Table.Th style={{ textAlign: "center" }}>Reps/Tiempo</Table.Th>
+              <Table.Th style={{ textAlign: "center" }}>Peso</Table.Th>
+              <Table.Th style={{ textAlign: "center" }}>Estado</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {exercises.map((ex: any, i: number) => (
+              <Table.Tr key={i}>
+                <Table.Td>
+                  <Text size="xs" fw={500}>{ex.exercise_name || ex.name || `Ejercicio ${i + 1}`}</Text>
+                </Table.Td>
+                <Table.Td style={{ textAlign: "center" }}>
+                  <Text size="xs">{ex.sets_completed || ex.sets || "—"}</Text>
+                </Table.Td>
+                <Table.Td style={{ textAlign: "center" }}>
+                  <Text size="xs">{ex.reps_completed || ex.reps || ex.duration || "—"}</Text>
+                </Table.Td>
+                <Table.Td style={{ textAlign: "center" }}>
+                  <Text size="xs">{ex.weight_kg ? `${ex.weight_kg} kg` : ex.weight ? `${ex.weight} kg` : "—"}</Text>
+                </Table.Td>
+                <Table.Td style={{ textAlign: "center" }}>
+                  <Badge size="xs" variant="light" color={ex.completed ? "green" : "gray"}>
+                    {ex.completed ? "Hecho" : "Pendiente"}
+                  </Badge>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+        {log.log?.sets_detail && log.log.sets_detail.length > 0 && (
+          <Box mt="xs">
+            <Text size="xs" fw={600} mb={4}>Detalle de series:</Text>
+            {log.log.sets_detail.map((set: any, si: number) => (
+              <Text key={si} size="xs" c="dimmed">
+                Serie {set.set_number || si + 1}: {set.reps || "—"} reps × {set.weight_kg ? `${set.weight_kg} kg` : "—"}
+                {set.rpe ? ` (RPE ${set.rpe})` : ""}
+              </Text>
+            ))}
+          </Box>
+        )}
+      </Collapse>
+    </Card>
+  );
+}
+
+function NutritionDayCard({ day, percentage }: { day: any; percentage: number }) {
+  const [opened, setOpened] = useState(false);
+  const dateStr = day.date && !isNaN(new Date(day.date).getTime())
+    ? new Date(day.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })
+    : "Sin fecha";
+  return (
+    <Card padding="md" radius="md" withBorder>
+      <Group justify="space-between" style={{ cursor: "pointer" }} onClick={() => setOpened(o => !o)}>
+        <Group>
+          <ThemeIcon size="lg" radius="xl" variant="light" color="yellow">
+            <IconSalad size={18} />
+          </ThemeIcon>
+          <Box>
+            <Text fw={600} size="sm" tt="capitalize">{dateStr}</Text>
+            <Text size="xs" c="dimmed">{day.meals?.length || 0} comidas registradas</Text>
+          </Box>
+        </Group>
+        <Group gap="md">
+          <Badge variant="light" color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"} size="lg">
+            {day.totals?.calories || 0} kcal ({percentage}%)
+          </Badge>
+          <Group gap={4}>
+            <Badge variant="outline" color="red" size="xs">P: {Math.round(day.totals?.protein || 0)}g</Badge>
+            <Badge variant="outline" color="blue" size="xs">C: {Math.round(day.totals?.carbs || 0)}g</Badge>
+            <Badge variant="outline" color="grape" size="xs">G: {Math.round(day.totals?.fat || 0)}g</Badge>
+          </Group>
+          <ActionIcon variant="subtle" color="gray" size="sm">
+            {opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+          </ActionIcon>
+        </Group>
+      </Group>
+      <Collapse in={opened}>
+        <Divider my="sm" />
+        {day.meals && day.meals.length > 0 ? (
+          <Stack gap="xs">
+            {day.meals.map((meal: any, mi: number) => (
+              <Box key={mi}>
+                <Group gap="xs" mb={4}>
+                  <Text size="xs" fw={700} c="teal">{meal.meal_name || meal.name || `Comida ${mi + 1}`}</Text>
+                  {meal.time && <Text size="xs" c="dimmed">({meal.time})</Text>}
+                  {meal.calories != null && (
+                    <Badge size="xs" variant="light" color="yellow">{Math.round(meal.calories)} kcal</Badge>
+                  )}
+                </Group>
+                {meal.foods && meal.foods.length > 0 && (
+                  <Table withColumnBorders={false} styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
+                    <Table.Tbody>
+                      {meal.foods.map((food: any, fi: number) => (
+                        <Table.Tr key={fi}>
+                          <Table.Td style={{ paddingLeft: 16 }}>
+                            <Text size="xs">{food.name || food.food_name || "Alimento"}</Text>
+                          </Table.Td>
+                          <Table.Td style={{ textAlign: "right", width: 60 }}>
+                            <Text size="xs" c="dimmed">{food.quantity || food.amount ? `${food.quantity || food.amount}g` : ""}</Text>
+                          </Table.Td>
+                          <Table.Td style={{ textAlign: "right", width: 60 }}>
+                            <Text size="xs" c="dimmed">{food.calories != null ? `${Math.round(food.calories)} kcal` : ""}</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+                {meal.items && meal.items.length > 0 && (
+                  <Table withColumnBorders={false} styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
+                    <Table.Tbody>
+                      {meal.items.map((item: any, ii: number) => (
+                        <Table.Tr key={ii}>
+                          <Table.Td style={{ paddingLeft: 16 }}>
+                            <Text size="xs">{item.food_name || item.name || "Alimento"}</Text>
+                          </Table.Td>
+                          <Table.Td style={{ textAlign: "right", width: 60 }}>
+                            <Text size="xs" c="dimmed">{item.quantity_grams ? `${item.quantity_grams}g` : item.quantity ? `${item.quantity}g` : ""}</Text>
+                          </Table.Td>
+                          <Table.Td style={{ textAlign: "right", width: 60 }}>
+                            <Text size="xs" c="dimmed">{item.calories != null ? `${Math.round(item.calories)} kcal` : ""}</Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+              </Box>
+            ))}
+          </Stack>
+        ) : (
+          <Text size="xs" c="dimmed">Sin detalle de comidas disponible</Text>
+        )}
+      </Collapse>
+    </Card>
   );
 }
 
@@ -1351,7 +1538,7 @@ export function ClientDetailPage() {
             <Group gap="xs">
               <IconCalendarEvent size={16} color="var(--nv-slate)" />
               <Text size="sm" c="dimmed">
-                Cliente desde {new Date(client.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
+                Cliente desde {client.created_at && !isNaN(new Date(client.created_at).getTime()) ? new Date(client.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" }) : "—"}
               </Text>
             </Group>
           </Group>
@@ -1489,12 +1676,9 @@ export function ClientDetailPage() {
                   >
                     <Text c="dimmed" size="xs">{activity.description}</Text>
                     <Text c="dimmed" mt={4} size="xs">
-                      {new Date(activity.date).toLocaleDateString("es-ES", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {activity.date && !isNaN(new Date(activity.date).getTime())
+                        ? new Date(activity.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                        : "—"}
                     </Text>
                   </Timeline.Item>
                 ))}
@@ -2121,6 +2305,25 @@ export function ClientDetailPage() {
                             health_data: (client as any).health_data,
                             avatar_url: (client as any).avatar_url,
                           },
+                          progressData: {
+                            currentWeight: clientMeasurements?.[0]?.weight_kg ?? clientProgressSummary?.current_stats?.weight ?? client.weight_kg ?? undefined,
+                            startWeight: clientMeasurements?.length > 1 ? (clientMeasurements[clientMeasurements.length - 1]?.weight_kg ?? undefined) : (clientProgressSummary?.start_stats?.weight ?? undefined),
+                            measurements: clientMeasurements?.map((m: any) => ({
+                              date: m.measured_at || m.created_at,
+                              weight_kg: m.weight_kg,
+                              body_fat_percentage: m.body_fat_percentage,
+                              muscle_mass_kg: m.muscle_mass_kg,
+                              waist_cm: m.measurements?.waist,
+                              hip_cm: m.measurements?.hips,
+                              chest_cm: m.measurements?.chest,
+                              arm_cm: m.measurements?.arms || m.measurements?.arm,
+                              thigh_cm: m.measurements?.thighs || m.measurements?.thigh,
+                              notes: m.notes,
+                            })) || [],
+                            totalWorkouts: clientWorkoutLogs?.length || undefined,
+                            completedWorkouts: clientWorkoutLogs?.filter(l => l.log?.exercises?.some((e: any) => e.completed))?.length || undefined,
+                            workoutCompletionRate: clientWorkoutLogs?.length ? Math.round((clientWorkoutLogs.filter(l => l.log?.exercises?.every((e: any) => e.completed)).length / clientWorkoutLogs.length) * 100) : undefined,
+                          },
                         }
                       );
                       notifications.update({
@@ -2347,17 +2550,17 @@ export function ClientDetailPage() {
                   </Group>
 
                   <Stack gap="sm">
-                    {mealPlans.map((plan: { id: string; name: string; target_calories: number; status: string; created_at: string }) => (
+                    {mealPlans.map((plan: { id: string; name: string; target_calories: number; status: string; created_at?: string; assigned_at?: string; start_date?: string }) => (
                       <Card key={plan.id} padding="lg" radius="md" withBorder>
-                        <Group justify="space-between" align="flex-start">
-                          <Box>
+                        <Group justify="space-between" align="flex-start" wrap="nowrap">
+                          <Box style={{ flex: 1, minWidth: 0 }}>
                             <Group gap="sm" mb="xs">
                               <ThemeIcon size="lg" radius="xl" variant="light" color="green">
                                 <IconSalad size={18} />
                               </ThemeIcon>
                               <Text fw={600} size="md">{plan.name}</Text>
                             </Group>
-                            <Group gap="md">
+                            <Group gap="md" wrap="wrap">
                               <Badge variant="light" color="green" size="sm">
                                 {plan.target_calories} kcal/día
                               </Badge>
@@ -2368,9 +2571,11 @@ export function ClientDetailPage() {
                               >
                                 {plan.status === "active" ? "Activo" : "Inactivo"}
                               </Badge>
-                              <Text size="xs" c="dimmed">
-                                Asignado: {new Date(plan.created_at).toLocaleDateString('es-ES')}
-                              </Text>
+                              {(plan.assigned_at || plan.start_date || plan.created_at) && !isNaN(new Date(plan.assigned_at || plan.start_date || plan.created_at || "").getTime()) && (
+                                <Text size="xs" c="dimmed">
+                                  Asignado: {new Date(plan.assigned_at || plan.start_date || plan.created_at || "").toLocaleDateString('es-ES')}
+                                </Text>
+                              )}
                             </Group>
                           </Box>
                           <Menu position="bottom-end" withArrow shadow="md">
@@ -2550,7 +2755,7 @@ export function ClientDetailPage() {
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" c="dimmed">
-                          {new Date(doc.created_at).toLocaleDateString("es-ES")}
+                          {doc.created_at && !isNaN(new Date(doc.created_at).getTime()) ? new Date(doc.created_at).toLocaleDateString("es-ES") : "—"}
                         </Text>
                       </Table.Td>
                       <Table.Td>
@@ -2692,11 +2897,9 @@ export function ClientDetailPage() {
                     <Table.Tr key={session.id}>
                       <Table.Td>
                         <Text fw={600} size="sm">
-                          {new Date(session.date).toLocaleDateString("es-ES", {
-                            weekday: "short",
-                            day: "numeric",
-                            month: "short",
-                          })}
+                          {session.date && !isNaN(new Date(session.date).getTime())
+                            ? new Date(session.date).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })
+                            : "Sin fecha"}
                         </Text>
                       </Table.Td>
                       <Table.Td><Text size="sm">{session.time}</Text></Table.Td>
@@ -2807,11 +3010,9 @@ export function ClientDetailPage() {
                           <Table.Tr key={m.id || index}>
                             <Table.Td>
                               <Text fw={600} size="sm">
-                                {new Date(m.date).toLocaleDateString("es-ES", { 
-                                  day: "numeric",
-                                  month: "short", 
-                                  year: "numeric" 
-                                })}
+                                {m.date && !isNaN(new Date(m.date).getTime())
+                                  ? new Date(m.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
+                                  : "Sin fecha"}
                               </Text>
                             </Table.Td>
                             <Table.Td>
@@ -2887,51 +3088,15 @@ export function ClientDetailPage() {
                 </Text>
               ) : (
                 <Stack gap="sm">
-                  {clientWorkoutLogs.slice(0, 10).map((log, index) => (
-                    <Card key={log.id || index} padding="md" radius="md" withBorder>
-                      <Group justify="space-between">
-                        <Group>
-                          <ThemeIcon size="lg" radius="xl" variant="light" color="blue">
-                            <IconBarbell size={18} />
-                          </ThemeIcon>
-                          <Box>
-                            <Text fw={600} size="sm">
-                              {log.log?.workout_name || "Entrenamiento"}
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                              {new Date(log.created_at).toLocaleDateString("es-ES", {
-                                weekday: "long",
-                                day: "numeric",
-                                month: "short",
-                              })}
-                            </Text>
-                          </Box>
-                        </Group>
-                        <Group gap="md">
-                          {log.log?.duration_minutes && (
-                            <Badge variant="light" color="blue" size="sm">
-                              {log.log.duration_minutes} min
-                            </Badge>
-                          )}
-                          {log.log?.calories_burned && (
-                            <Badge variant="light" color="orange" size="sm">
-                              {log.log.calories_burned} kcal
-                            </Badge>
-                          )}
-                          {log.log?.exercises && (
-                            <Badge variant="light" color="green" size="sm">
-                              {log.log.exercises.filter((e: { completed?: boolean }) => e.completed).length}/{log.log.exercises.length} ejercicios
-                            </Badge>
-                          )}
-                        </Group>
-                      </Group>
-                      {log.log?.notes && (
-                        <Text size="xs" c="dimmed" mt="xs" fs="italic">
-                          "{log.log.notes}"
-                        </Text>
-                      )}
-                    </Card>
-                  ))}
+                  {clientWorkoutLogs.slice(0, 10).map((log, index) => {
+                    const logDate = log.log?.completed_at || log.created_at;
+                    const dateStr = logDate && !isNaN(new Date(logDate).getTime())
+                      ? new Date(logDate).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })
+                      : "Sin fecha";
+                    return (
+                      <WorkoutLogCard key={log.id || index} log={log} dateStr={dateStr} />
+                    );
+                  })}
                   {clientWorkoutLogs.length > 10 && (
                     <Text size="sm" c="dimmed" ta="center">
                       Mostrando 10 de {clientWorkoutLogs.length} registros
@@ -2979,41 +3144,7 @@ export function ClientDetailPage() {
                         ? Math.round((day.totals.calories / clientNutritionLogs.targets.calories) * 100)
                         : 0;
                       return (
-                        <Card key={day.date || index} padding="md" radius="md" withBorder>
-                          <Group justify="space-between">
-                            <Group>
-                              <ThemeIcon size="lg" radius="xl" variant="light" color="yellow">
-                                <IconSalad size={18} />
-                              </ThemeIcon>
-                              <Box>
-                                <Text fw={600} size="sm" tt="capitalize">
-                                  {new Date(day.date).toLocaleDateString("es-ES", {
-                                    weekday: "long",
-                                    day: "numeric",
-                                    month: "short",
-                                  })}
-                                </Text>
-                                <Text size="xs" c="dimmed">
-                                  {day.meals.length} comidas registradas
-                                </Text>
-                              </Box>
-                            </Group>
-                            <Group gap="md">
-                              <Badge 
-                                variant="light" 
-                                color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"} 
-                                size="lg"
-                              >
-                                {day.totals.calories} kcal ({percentage}%)
-                              </Badge>
-                              <Group gap={4}>
-                                <Badge variant="outline" color="red" size="xs">P: {Math.round(day.totals.protein)}g</Badge>
-                                <Badge variant="outline" color="blue" size="xs">C: {Math.round(day.totals.carbs)}g</Badge>
-                                <Badge variant="outline" color="grape" size="xs">G: {Math.round(day.totals.fat)}g</Badge>
-                              </Group>
-                            </Group>
-                          </Group>
-                        </Card>
+                        <NutritionDayCard key={day.date || index} day={day} percentage={percentage} />
                       );
                     })}
                     {clientNutritionLogs.logs.length > 7 && (
@@ -3094,10 +3225,10 @@ export function ClientDetailPage() {
                 </Button>
               </Group>
               <Stack gap="md">
-                {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at: string; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } }) => (
+                {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at?: string; assigned_at?: string; start_date?: string; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } }) => (
                   <Card key={program.id} padding="lg" radius="md" withBorder>
-                    <Group justify="space-between" align="flex-start">
-                      <Box>
+                    <Group justify="space-between" align="flex-start" wrap="nowrap">
+                      <Box style={{ flex: 1, minWidth: 0 }}>
                         <Group gap="sm" mb="xs">
                           <ThemeIcon size="lg" radius="xl" variant="light" color="blue">
                             <IconBarbell size={18} />
@@ -3107,7 +3238,7 @@ export function ClientDetailPage() {
                         {program.description && (
                           <Text size="sm" c="dimmed" mb="sm">{program.description}</Text>
                         )}
-                        <Group gap="md">
+                        <Group gap="md" wrap="wrap">
                           {program.duration_weeks && (
                             <Badge variant="light" color="blue" size="sm">
                               {program.duration_weeks} semanas
@@ -3118,9 +3249,11 @@ export function ClientDetailPage() {
                               {program.difficulty}
                             </Badge>
                           )}
-                          <Text size="xs" c="dimmed">
-                            Asignado: {new Date(program.created_at).toLocaleDateString('es-ES')}
-                          </Text>
+                          {(program.assigned_at || program.start_date || program.created_at) && !isNaN(new Date(program.assigned_at || program.start_date || program.created_at || "").getTime()) && (
+                            <Text size="xs" c="dimmed">
+                              Asignado: {new Date(program.assigned_at || program.start_date || program.created_at || "").toLocaleDateString('es-ES')}
+                            </Text>
+                          )}
                         </Group>
                       </Box>
                       <Menu position="bottom-end" withArrow shadow="md">
@@ -3793,26 +3926,45 @@ export function ClientDetailPage() {
                         difficulty: selectedProgramForView.difficulty,
                         days: transformDays2(selectedProgramForView.template),
                       },
-                      {
-                        workspaceName: currentWorkspace?.name || "Trackfiz",
-                        trainerName: user?.full_name || "Entrenador",
-                        client: {
-                          first_name: client.first_name,
-                          last_name: client.last_name,
-                          email: client.email,
-                          phone: client.phone,
-                          birth_date: (client as any).birth_date,
-                          gender: client.gender,
-                          weight_kg: client.weight_kg,
-                          height_cm: client.height_cm,
-                          activity_level: (client as any).activity_level,
-                          allergies: (client as any).health_data?.allergens || [],
-                          intolerances: (client as any).health_data?.intolerances || [],
-                          goals: client.goals,
-                          health_data: (client as any).health_data,
-                          avatar_url: (client as any).avatar_url,
-                        },
-                      }
+                        {
+                          workspaceName: currentWorkspace?.name || "Trackfiz",
+                          trainerName: user?.full_name || "Entrenador",
+                          client: {
+                            first_name: client.first_name,
+                            last_name: client.last_name,
+                            email: client.email,
+                            phone: client.phone,
+                            birth_date: (client as any).birth_date,
+                            gender: client.gender,
+                            weight_kg: client.weight_kg,
+                            height_cm: client.height_cm,
+                            activity_level: (client as any).activity_level,
+                            allergies: (client as any).health_data?.allergens || [],
+                            intolerances: (client as any).health_data?.intolerances || [],
+                            goals: client.goals,
+                            health_data: (client as any).health_data,
+                            avatar_url: (client as any).avatar_url,
+                          },
+                          progressData: {
+                            currentWeight: clientMeasurements?.[0]?.weight_kg ?? clientProgressSummary?.current_stats?.weight ?? client.weight_kg ?? undefined,
+                            startWeight: clientMeasurements?.length > 1 ? (clientMeasurements[clientMeasurements.length - 1]?.weight_kg ?? undefined) : (clientProgressSummary?.start_stats?.weight ?? undefined),
+                            measurements: clientMeasurements?.map((m: any) => ({
+                              date: m.measured_at || m.created_at,
+                              weight_kg: m.weight_kg,
+                              body_fat_percentage: m.body_fat_percentage,
+                              muscle_mass_kg: m.muscle_mass_kg,
+                              waist_cm: m.measurements?.waist,
+                              hip_cm: m.measurements?.hips,
+                              chest_cm: m.measurements?.chest,
+                              arm_cm: m.measurements?.arms || m.measurements?.arm,
+                              thigh_cm: m.measurements?.thighs || m.measurements?.thigh,
+                              notes: m.notes,
+                            })) || [],
+                            totalWorkouts: clientWorkoutLogs?.length || undefined,
+                            completedWorkouts: clientWorkoutLogs?.filter(l => l.log?.exercises?.some((e: any) => e.completed))?.length || undefined,
+                            workoutCompletionRate: clientWorkoutLogs?.length ? Math.round((clientWorkoutLogs.filter(l => l.log?.exercises?.every((e: any) => e.completed)).length / clientWorkoutLogs.length) * 100) : undefined,
+                          },
+                        }
                     );
                     
                     notifications.update({

@@ -1020,12 +1020,15 @@ export function MyWorkoutsPage() {
     isTodayRestDay,
     isTodayCompleted: isTodayCompleted || false,
     weekSchedule,
-    history: history?.map(h => ({
-      date: new Date(h.created_at).toLocaleDateString('es-ES'),
-      name: (h.log as Record<string, unknown>)?.workout_name as string || "Entrenamiento",
-      duration: `${(h.log as Record<string, unknown>)?.duration_minutes || 60} min`,
-      calories: (h.log as Record<string, unknown>)?.calories_burned as number || 0,
-    })) || [],
+    history: history?.map(h => {
+      const d = new Date(h.created_at);
+      return {
+        date: !isNaN(d.getTime()) ? d.toLocaleDateString('es-ES') : "Sin fecha",
+        name: (h.log as Record<string, unknown>)?.workout_name as string || "Entrenamiento",
+        duration: `${(h.log as Record<string, unknown>)?.duration_minutes || 60} min`,
+        calories: (h.log as Record<string, unknown>)?.calories_burned as number || 0,
+      };
+    }) || [],
   };
 
   const handleLogWorkout = async (logData: {
