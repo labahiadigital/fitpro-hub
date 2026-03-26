@@ -13,13 +13,11 @@ import {
   ThemeIcon,
   Tabs,
   ActionIcon,
-  Accordion,
   Center,
   Loader,
   Modal,
   NumberInput,
   Textarea,
-  Checkbox,
   TextInput,
   ScrollArea,
   Select,
@@ -37,8 +35,6 @@ import {
   IconClock,
   IconFlame,
   IconPlayerPlay,
-  IconRepeat,
-  IconWeight,
   IconExchange,
   IconMoodEmpty,
   IconMoodSad,
@@ -49,7 +45,6 @@ import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercis
 import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
 import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
-import { SlideOver } from "../../components/common/SlideOver";
 
 // No mock data - all data comes from backend
 
@@ -138,6 +133,31 @@ function isCardioExercise(name: string): boolean {
   return CARDIO_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function CompletionDot({ completed, onToggle }: { completed: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: "50%",
+        border: "none",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        background: completed ? "var(--mantine-color-green-6)" : "var(--mantine-color-gray-1)",
+        color: completed ? "#fff" : "var(--mantine-color-gray-5)",
+        transition: "all 0.15s ease",
+      }}
+    >
+      <IconCheck size={18} />
+    </button>
+  );
+}
+
 function ExerciseLogRow({
   exercise,
   setData,
@@ -158,103 +178,113 @@ function ExerciseLogRow({
   };
 
   return (
-    <Paper key={exercise.exercise_id} p="sm" withBorder radius="md">
-      <Text fw={600} size="sm" mb="xs">{exercise.name}</Text>
+    <Box style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }} pb="sm">
+      <Group justify="space-between" mb={4} px={4}>
+        <Text fw={700} size="sm">{exercise.name}</Text>
+        {(exercise.target_weight != null || exercise.target_reps != null) && (
+          <Badge variant="light" color="yellow" size="xs">
+            Obj: {exercise.target_weight ?? "—"}kg x {exercise.target_reps ?? exercise.reps ?? "—"}
+          </Badge>
+        )}
+      </Group>
       {lastSession && (
-        <Box p="xs" mb="sm" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
-          <Text size="xs" c="dimmed" fw={600}>
-            Última vez ({lastSession.date ? new Date(lastSession.date).toLocaleDateString("es-ES") : "—"}):
+        <Box px={4} mb="xs">
+          <Text size="xs" c="dimmed">
+            Última: {((lastSession.exercise?.sets ?? []) as Array<{ weight_kg?: number; reps_completed?: number; duration_minutes?: number; distance_km?: number }>).map((s) =>
+              cardio
+                ? `${s.duration_minutes ?? "—"}min`
+                : `${s.weight_kg ?? "—"}kg×${s.reps_completed ?? "—"}`
+            ).join(" / ")}
           </Text>
-          {((lastSession.exercise?.sets ?? []) as Array<{ set_number?: number; weight_kg?: number; reps_completed?: number; duration_seconds?: number; distance_km?: number; speed_kmh?: number; duration_minutes?: number }>).map((set, i) => (
-            <Text key={i} size="xs" c="dimmed">
-              {cardio
-                ? `${set.duration_minutes ?? "—"} min • ${set.distance_km ?? "—"} km • ${set.speed_kmh ?? "—"} km/h`
-                : `Serie ${set.set_number ?? i + 1}: ${set.weight_kg != null ? `${set.weight_kg}kg` : "—"} x ${set.reps_completed != null ? `${set.reps_completed} reps` : set.duration_seconds != null ? `${set.duration_seconds}s` : "—"}`
-              }
-            </Text>
-          ))}
         </Box>
       )}
-      <Stack gap="xs">
-        {setData.map((set, idx) =>
-          cardio ? (
-            <Group key={idx} gap="sm" wrap="wrap">
-              <Text size="xs" w={60}>Sesión {idx + 1}:</Text>
-              <NumberInput
-                placeholder="min"
-                label={idx === 0 ? "Tiempo (min)" : undefined}
-                size="xs"
-                value={set.duration_minutes ?? ""}
-                onChange={(v) => updateSet(idx, { duration_minutes: v ? Number(v) : undefined })}
-                min={0}
-                max={600}
-                w={90}
-                decimalScale={0}
-              />
-              <NumberInput
-                placeholder="km"
-                label={idx === 0 ? "Distancia (km)" : undefined}
-                size="xs"
-                value={set.distance_km ?? ""}
-                onChange={(v) => updateSet(idx, { distance_km: v ? Number(v) : undefined })}
-                min={0}
-                max={100}
-                w={90}
-                decimalScale={2}
-              />
-              <NumberInput
-                placeholder="km/h"
-                label={idx === 0 ? "Velocidad" : undefined}
-                size="xs"
-                value={set.speed_kmh ?? ""}
-                onChange={(v) => updateSet(idx, { speed_kmh: v ? Number(v) : undefined })}
-                min={0}
-                max={50}
-                w={90}
-                decimalScale={1}
-              />
-              <Checkbox
-                label="Hecho"
-                checked={set.completed}
-                onChange={(e) => updateSet(idx, { completed: e.currentTarget.checked })}
-                size="xs"
-              />
-            </Group>
-          ) : (
-            <Group key={idx} gap="sm" wrap="nowrap">
-              <Text size="xs" w={60}>Serie {idx + 1}:</Text>
-              {(exercise.target_weight != null || exercise.target_reps != null) && (
-                <Text size="xs" c="dimmed">Objetivo: {exercise.target_weight ?? "—"}kg x {exercise.target_reps ?? exercise.reps ?? "—"}</Text>
-              )}
-              <NumberInput
-                placeholder="kg"
-                size="xs"
-                value={set.weight_kg ?? ""}
-                onChange={(v) => updateSet(idx, { weight_kg: v ? Number(v) : undefined })}
-                min={0}
-                max={500}
-                w={70}
-              />
-              <NumberInput
-                placeholder="reps."
-                size="xs"
-                value={set.reps_completed ?? ""}
-                onChange={(v) => updateSet(idx, { reps_completed: v ? Number(v) : undefined })}
-                min={0}
-                max={200}
-                w={70}
-              />
-              <Checkbox
-                label="Hecho"
-                checked={set.completed}
-                onChange={(e) => updateSet(idx, { completed: e.currentTarget.checked })}
-                size="xs"
-              />
-            </Group>
-          )
-        )}
-      </Stack>
-    </Paper>
+
+      {/* Header row */}
+      {!cardio && setData.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 36px", gap: 8, padding: "0 4px", marginBottom: 4 }}>
+          <Text size="xs" c="dimmed" ta="center">Serie</Text>
+          <Text size="xs" c="dimmed" ta="center">Peso (kg)</Text>
+          <Text size="xs" c="dimmed" ta="center">Reps</Text>
+          <span />
+        </div>
+      )}
+      {cardio && setData.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 1fr 36px", gap: 6, padding: "0 4px", marginBottom: 4 }}>
+          <Text size="xs" c="dimmed" ta="center">#</Text>
+          <Text size="xs" c="dimmed" ta="center">Min</Text>
+          <Text size="xs" c="dimmed" ta="center">Km</Text>
+          <Text size="xs" c="dimmed" ta="center">Km/h</Text>
+          <span />
+        </div>
+      )}
+
+      {setData.map((set, idx) =>
+        cardio ? (
+          <div key={idx} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 1fr 36px", gap: 6, alignItems: "center", padding: "6px 4px", borderBottom: idx < setData.length - 1 ? "1px solid var(--mantine-color-gray-1)" : "none" }}>
+            <Text size="sm" fw={600} ta="center" c="dimmed">{idx + 1}</Text>
+            <NumberInput
+              placeholder="—"
+              size="sm"
+              value={set.duration_minutes ?? ""}
+              onChange={(v) => updateSet(idx, { duration_minutes: v ? Number(v) : undefined })}
+              min={0}
+              max={600}
+              hideControls
+              decimalScale={0}
+              styles={{ input: { textAlign: "center", fontWeight: 700, height: 44, borderRadius: 10, background: "var(--mantine-color-gray-0)", border: "none" } }}
+            />
+            <NumberInput
+              placeholder="—"
+              size="sm"
+              value={set.distance_km ?? ""}
+              onChange={(v) => updateSet(idx, { distance_km: v ? Number(v) : undefined })}
+              min={0}
+              max={100}
+              hideControls
+              decimalScale={2}
+              styles={{ input: { textAlign: "center", fontWeight: 700, height: 44, borderRadius: 10, background: "var(--mantine-color-gray-0)", border: "none" } }}
+            />
+            <NumberInput
+              placeholder="—"
+              size="sm"
+              value={set.speed_kmh ?? ""}
+              onChange={(v) => updateSet(idx, { speed_kmh: v ? Number(v) : undefined })}
+              min={0}
+              max={50}
+              hideControls
+              decimalScale={1}
+              styles={{ input: { textAlign: "center", fontWeight: 700, height: 44, borderRadius: 10, background: "var(--mantine-color-gray-0)", border: "none" } }}
+            />
+            <CompletionDot completed={set.completed} onToggle={() => updateSet(idx, { completed: !set.completed })} />
+          </div>
+        ) : (
+          <div key={idx} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 36px", gap: 8, alignItems: "center", padding: "6px 4px", borderBottom: idx < setData.length - 1 ? "1px solid var(--mantine-color-gray-1)" : "none" }}>
+            <Text size="sm" fw={600} ta="center" c="dimmed">{idx + 1}</Text>
+            <NumberInput
+              placeholder="—"
+              size="sm"
+              value={set.weight_kg ?? ""}
+              onChange={(v) => updateSet(idx, { weight_kg: v ? Number(v) : undefined })}
+              min={0}
+              max={500}
+              hideControls
+              styles={{ input: { textAlign: "center", fontWeight: 700, height: 44, borderRadius: 10, background: "var(--mantine-color-gray-0)", border: "none" } }}
+            />
+            <NumberInput
+              placeholder="—"
+              size="sm"
+              value={set.reps_completed ?? ""}
+              onChange={(v) => updateSet(idx, { reps_completed: v ? Number(v) : undefined })}
+              min={0}
+              max={200}
+              hideControls
+              styles={{ input: { textAlign: "center", fontWeight: 700, height: 44, borderRadius: 10, background: "var(--mantine-color-gray-0)", border: "none" } }}
+            />
+            <CompletionDot completed={set.completed} onToggle={() => updateSet(idx, { completed: !set.completed })} />
+          </div>
+        )
+      )}
+    </Box>
   );
 }
 
@@ -398,20 +428,53 @@ function LogWorkoutModal({
     });
   };
 
-  return (
-    <SlideOver
-      opened={opened}
-      onClose={onClose}
-      title="Registrar Entrenamiento"
-      subtitle={`${exercises.length} ejercicios • Registra peso y repeticiones por serie`}
-    >
-      <Stack gap="md">
-        <Paper p="md" radius="md" style={{ background: "var(--mantine-color-yellow-light)" }}>
-          <Text fw={600}>{workoutName}</Text>
-        </Paper>
+  if (!opened) return null;
 
-        <Text fw={500} size="sm">Ejercicios</Text>
-        <Stack gap="sm">
+  return (
+    <Box
+      pos="fixed"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      style={{ zIndex: 300, background: "var(--mantine-color-gray-0)", display: "flex", flexDirection: "column" }}
+    >
+      {/* Glassmorphism sticky header */}
+      <Box
+        pos="sticky"
+        top={0}
+        style={{
+          zIndex: 10,
+          background: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid var(--mantine-color-gray-2)",
+          flexShrink: 0,
+        }}
+        px="md"
+        py="sm"
+      >
+        <Group justify="space-between" align="center">
+          <Group gap="xs">
+            <ActionIcon variant="subtle" size="lg" onClick={onClose} radius="xl">
+              <IconChevronRight size={22} style={{ transform: "rotate(180deg)" }} />
+            </ActionIcon>
+            <Box>
+              <Text fw={700} size="sm" lineClamp={1}>{workoutName}</Text>
+              <Text size="xs" c="dimmed">{exercises.length} ejercicios</Text>
+            </Box>
+          </Group>
+          <Badge color="yellow" variant="light" size="sm">
+            <IconFlame size={12} style={{ marginRight: 4 }} />
+            {form.values.duration_minutes} min
+          </Badge>
+        </Group>
+      </Box>
+
+      {/* Scrollable content area */}
+      <Box style={{ flex: 1, overflowY: "auto" }} px={0} py="sm">
+        {/* Exercise log rows - edge-to-edge */}
+        <Stack gap="md" px="sm">
           {exercises.map((exercise) => (
             <ExerciseLogRow
               key={exercise.exercise_id}
@@ -422,47 +485,71 @@ function LogWorkoutModal({
           ))}
         </Stack>
 
-        <SimpleGrid cols={{ base: 1, xs: 2 }}>
-          <NumberInput
-            label="Duración (minutos)"
-            {...form.getInputProps("duration_minutes")}
-            min={1}
-            max={300}
-            leftSection={<IconClock size={16} />}
+        {/* Duration, Effort, Notes */}
+        <Box px="md" mt="lg">
+          <SimpleGrid cols={2} spacing="sm">
+            <NumberInput
+              label="Duración (min)"
+              {...form.getInputProps("duration_minutes")}
+              min={1}
+              max={300}
+              leftSection={<IconClock size={16} />}
+              size="sm"
+              styles={{ input: { height: 44, borderRadius: 10 } }}
+            />
+            <NumberInput
+              label="Esfuerzo (1-10)"
+              {...form.getInputProps("perceived_effort")}
+              min={1}
+              max={10}
+              leftSection={<IconFlame size={16} />}
+              size="sm"
+              styles={{ input: { height: 44, borderRadius: 10 } }}
+            />
+          </SimpleGrid>
+
+          <Textarea
+            label="Notas (opcional)"
+            placeholder="¿Cómo te sentiste?"
+            {...form.getInputProps("notes")}
+            minRows={2}
+            mt="sm"
+            size="sm"
+            styles={{ input: { borderRadius: 10 } }}
           />
-          <NumberInput
-            label="Esfuerzo percibido (1-10)"
-            {...form.getInputProps("perceived_effort")}
-            min={1}
-            max={10}
-            leftSection={<IconFlame size={16} />}
-          />
-        </SimpleGrid>
 
-        <Textarea
-          label="Notas (opcional)"
-          placeholder="¿Cómo te sentiste? ¿Aumentaste peso? ¿Algo que destacar?"
-          {...form.getInputProps("notes")}
-          minRows={2}
-        />
+          <Box mt="md">
+            <WorkoutSatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
+          </Box>
+        </Box>
+      </Box>
 
-        <WorkoutSatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
-
-        <Group justify="flex-end" mt="md">
-          <Button variant="light" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            color="yellow"
-            onClick={handleSubmit}
-            loading={isLoading}
-            leftSection={<IconCheck size={16} />}
-          >
-            Completar Entrenamiento
-          </Button>
-        </Group>
-      </Stack>
-    </SlideOver>
+      {/* Sticky footer with safe area */}
+      <Box
+        style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--mantine-color-gray-2)",
+          background: "#fff",
+          boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+          paddingBottom: "env(safe-area-inset-bottom, 8px)",
+        }}
+        px="md"
+        py="sm"
+      >
+        <Button
+          color="yellow"
+          onClick={handleSubmit}
+          loading={isLoading}
+          leftSection={<IconCheck size={18} />}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Completar Entrenamiento
+        </Button>
+      </Box>
+    </Box>
   );
 }
 
@@ -708,73 +795,79 @@ function WeekDayDetail({
 }) {
   return (
     <>
-      <Title order={4} mb="sm">{schedule.dayName || weekDayName}</Title>
-      <Group gap="md" mb="lg">
-        <Group gap={4}>
-          <IconClock size={14} />
-          <Text size="sm" c="dimmed">~60 min</Text>
+      <Box px="md" mb="sm">
+        <Text fw={700} size="lg">{schedule.dayName || weekDayName}</Text>
+        <Group gap="md" mt={4}>
+          <Group gap={4}>
+            <IconClock size={14} />
+            <Text size="xs" c="dimmed">~60 min</Text>
+          </Group>
+          <Group gap={4}>
+            <IconBarbell size={14} />
+            <Text size="xs" c="dimmed">{schedule.exercises_list?.length || 0} ejercicios</Text>
+          </Group>
         </Group>
-        <Group gap={4}>
-          <IconBarbell size={14} />
-          <Text size="sm" c="dimmed">{schedule.exercises_list?.length || 0} ejercicios</Text>
-        </Group>
-      </Group>
+      </Box>
 
       {schedule.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
-        <Box key={block.id || blockIndex} mb="lg">
-          <Group gap="xs" mb="sm">
+        <Box key={block.id || blockIndex} mb="md">
+          <Group gap="xs" px="md" mb="xs">
             <Badge
               color={block.type === "warmup" ? "orange" : block.type === "cooldown" ? "blue" : "yellow"}
               variant="light"
+              size="sm"
             >
               {block.type === "warmup" ? "Calentamiento" : block.type === "cooldown" ? "Enfriamiento" : "Principal"}
             </Badge>
-            <Text fw={600}>{block.name}</Text>
+            <Text fw={600} size="sm">{block.name}</Text>
           </Group>
-          <Stack gap="sm">
-            {block.exercises?.map((exercise, exIndex) => {
-              const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
-              const exImage2 = exercise.exercise?.image_url;
-              return (
-                <Paper key={exIndex} p="md" radius="md" withBorder>
-                  <Group gap="sm" mb="sm">
-                    {exImage2 ? (
-                      <Image src={exImage2} alt={exName} w={40} h={40} fit="cover" radius="md" onClick={() => onImageClick(exImage2, exName)} style={{ cursor: "pointer" }} />
-                    ) : (
-                      <ThemeIcon variant="light" color="gray" size="md">
-                        <IconBarbell size={16} />
-                      </ThemeIcon>
-                    )}
-                    <Box style={{ flex: 1 }}>
-                      <Text fw={600} size="sm">{exName}</Text>
-                      <Group gap={4} mt={2}>
-                        <Badge variant="light" color="blue" size="xs">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
-                        <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds || 60}s</Badge>
-                      </Group>
-                    </Box>
-                  </Group>
-                  {exercise.notes && <Text size="xs" c="dimmed"><strong>Notas:</strong> {exercise.notes}</Text>}
-                  {exercise.exercise?.description && <Text size="xs" c="dimmed" mt={2}>{exercise.exercise.description}</Text>}
+
+          {/* Edge-to-edge exercise rows */}
+          {block.exercises?.map((exercise, exIndex) => {
+            const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+            const exImage2 = exercise.exercise?.image_url;
+            return (
+              <Box
+                key={exIndex}
+                px="md"
+                py="sm"
+                style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+              >
+                <Group gap="sm" wrap="nowrap">
+                  {exImage2 ? (
+                    <Image src={exImage2} alt={exName} w={44} h={44} fit="cover" radius="lg" onClick={() => onImageClick(exImage2, exName)} style={{ cursor: "pointer", flexShrink: 0 }} />
+                  ) : (
+                    <ThemeIcon variant="light" color="gray" size={44} radius="lg" style={{ flexShrink: 0 }}>
+                      <IconBarbell size={20} />
+                    </ThemeIcon>
+                  )}
+                  <Box style={{ flex: 1, minWidth: 0 }}>
+                    <Text fw={600} size="sm" lineClamp={1}>{exName}</Text>
+                    <Group gap={6} mt={2}>
+                      <Badge variant="light" color="blue" size="xs">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
+                      <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds || 60}s</Badge>
+                    </Group>
+                    {exercise.notes && <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{exercise.notes}</Text>}
+                  </Box>
                   {(exercise.video_url || exercise.exercise?.video_url) && (
-                    <Button
+                    <ActionIcon
                       component="a"
                       href={exercise.video_url || exercise.exercise?.video_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      leftSection={<IconPlayerPlay size={14} />}
                       variant="light"
                       color="red"
-                      size="xs"
-                      mt="xs"
-                      radius="md"
+                      size="lg"
+                      radius="xl"
+                      style={{ flexShrink: 0 }}
                     >
-                      Ver vídeo
-                    </Button>
+                      <IconPlayerPlay size={18} />
+                    </ActionIcon>
                   )}
-                </Paper>
-              );
-            })}
-          </Stack>
+                </Group>
+              </Box>
+            );
+          })}
         </Box>
       ))}
     </>
@@ -1058,250 +1151,192 @@ export function MyWorkoutsPage() {
 
         <Tabs.Panel value="today">
           {data.isTodayRestDay && (
-            <Paper p="xl" ta="center" radius="lg" withBorder>
+            <Box ta="center" py="xl">
               <Text size="xl" mb="sm">🛌</Text>
-              <Text fw={600} size="lg">Hoy es día de descanso</Text>
-              <Text c="dimmed" mt="xs">
+              <Text fw={700} size="lg">Hoy es día de descanso</Text>
+              <Text c="dimmed" size="sm" mt="xs">
                 Tu cuerpo necesita recuperarse. ¡Aprovecha para descansar!
               </Text>
-            </Paper>
+            </Box>
           )}
           
           {!data.isTodayRestDay && data.todayWorkout && (
-            <Card shadow="sm" padding="lg" radius="lg" withBorder>
-              <Group justify="space-between" mb="lg">
-                <Box>
-                  <Group gap="xs">
-                    <Title order={4}>{data.todayWorkout.name}</Title>
-                    {data.isTodayCompleted && (
-                      <Badge color="green" variant="filled" leftSection={<IconCheck size={12} />}>
-                        Completado
-                      </Badge>
-                    )}
+            <Box>
+              {/* Workout header */}
+              <Box px="md" mb="md">
+                <Group gap="xs" mb={4}>
+                  <Text fw={700} size="lg">{data.todayWorkout.name}</Text>
+                  {data.isTodayCompleted && (
+                    <Badge color="green" variant="filled" size="sm" leftSection={<IconCheck size={10} />}>
+                      Completado
+                    </Badge>
+                  )}
+                </Group>
+                <Group gap="md">
+                  <Group gap={4}>
+                    <IconClock size={14} />
+                    <Text size="xs" c="dimmed">{data.todayWorkout.duration}</Text>
                   </Group>
-                  <Group gap="md" mt="xs">
-                    <Group gap={4}>
-                      <IconClock size={14} />
-                      <Text size="sm" c="dimmed">{data.todayWorkout.duration}</Text>
-                    </Group>
-                    <Group gap={4}>
-                      <IconBarbell size={14} />
-                      <Text size="sm" c="dimmed">{data.todayWorkout.exercises || data.todayWorkout.exercises_list?.length} ejercicios</Text>
-                    </Group>
+                  <Group gap={4}>
+                    <IconBarbell size={14} />
+                    <Text size="xs" c="dimmed">{data.todayWorkout.exercises || data.todayWorkout.exercises_list?.length} ejercicios</Text>
                   </Group>
-                </Box>
-                {data.isTodayCompleted ? (
-                  <Button 
-                    leftSection={<IconCheck size={16} />} 
-                    color="green"
-                    variant="light"
-                    disabled
-                  >
-                    Completado Hoy
-                  </Button>
-                ) : (
-                  <Button 
-                    leftSection={<IconPlayerPlay size={16} />} 
-                    color="yellow"
-                    onClick={openModal}
-                    disabled={!data.assignedProgram?.id}
-                  >
-                    Iniciar Entrenamiento
-                  </Button>
-                )}
-              </Group>
+                </Group>
+              </Box>
 
-              {/* Show blocks with exercises */}
+              {/* Edge-to-edge exercise list */}
               {data.todayWorkout.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { id?: string; name?: string; image_url?: string; video_url?: string; description?: string }; exercise_id?: string; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number }> }, blockIndex: number) => (
-                <Box key={block.id || blockIndex} mb="lg">
-                  <Group gap="xs" mb="sm">
+                <Box key={block.id || blockIndex} mb="md">
+                  <Group gap="xs" px="md" mb="xs">
                     <Badge 
                       color={block.type === 'warmup' ? 'orange' : block.type === 'cooldown' ? 'blue' : 'yellow'} 
                       variant="light"
+                      size="sm"
                     >
                       {block.type === 'warmup' ? 'Calentamiento' : block.type === 'cooldown' ? 'Enfriamiento' : 'Principal'}
                     </Badge>
-                    <Text fw={600}>{block.name}</Text>
-                    <Text size="sm" c="dimmed">{block.exercises?.length || 0} ejercicios</Text>
+                    <Text fw={600} size="sm">{block.name}</Text>
+                    <Text size="xs" c="dimmed">{block.exercises?.length || 0} ej.</Text>
                   </Group>
-                  <Accordion variant="separated">
-                    {block.exercises?.map((exercise, exIndex) => {
-                      const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
-                      const exImage = exercise.exercise?.image_url;
-                      return (
-                        <Accordion.Item key={exIndex} value={`${blockIndex}-${exIndex}`}>
-                          <Accordion.Control>
-                            <Group justify="space-between" pr="md">
-                              <Group>
-                                {exImage ? (
-                                  <Image src={exImage} alt={exName} w={36} h={36} fit="cover" radius="md" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exImage, name: exName}); }} style={{cursor: 'pointer'}} />
-                                ) : (
-                                  <ThemeIcon variant="light" color="gray" size="md">
-                                    <IconBarbell size={16} />
-                                  </ThemeIcon>
-                                )}
-                                <Text fw={500}>{exName}</Text>
-                              </Group>
-                              <Group gap="xs">
-                                <ActionIcon
-                                  variant="subtle"
-                                  color="yellow"
-                                  size="sm"
-                                  title="Sustituir ejercicio"
-                                  onClick={handleOpenSwap(
-                                    data.assignedProgram!.id,
-                                    todayDayIndex >= 0 ? todayDayIndex : 0,
-                                    blockIndex,
-                                    exIndex,
-                                    exName,
-                                    exercise.exercise?.id || exercise.exercise_id
-                                  )}
-                                >
-                                  <IconExchange size={16} />
-                                </ActionIcon>
-                                <Badge variant="light" color="blue">
-                                  {exercise.sets || 3} x {exercise.reps || "10-12"}
-                                  {exercise.duration_type === "seconds" ? " seg" : exercise.duration_type === "minutes" ? " min" : ""}
-                                </Badge>
-                                {exercise.target_weight && (
-                                  <Badge variant="light" color="yellow">{exercise.target_weight}kg</Badge>
-                                )}
-                                {exercise.rest_seconds && (
-                                  <Badge variant="light" color="gray">{exercise.rest_seconds}s desc.</Badge>
-                                )}
-                              </Group>
-                            </Group>
-                          </Accordion.Control>
-                          <Accordion.Panel>
-                            <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
-                              <Paper p="sm" radius="md" withBorder>
-                                <Group gap={4}>
-                                  <IconRepeat size={14} />
-                                  <Text size="sm" fw={500}>Series</Text>
-                                </Group>
-                                <Text size="lg" fw={700}>{exercise.sets || 3}</Text>
-                              </Paper>
-                              <Paper p="sm" radius="md" withBorder>
-                                <Group gap={4}>
-                                  <IconBarbell size={14} />
-                                  <Text size="sm" fw={500}>
-                                    {exercise.duration_type === "seconds" ? "Segundos" : exercise.duration_type === "minutes" ? "Minutos" : "Repeticiones"}
-                                  </Text>
-                                </Group>
-                                <Text size="lg" fw={700}>
-                                  {exercise.reps || "10-12"}
-                                  {exercise.duration_type === "seconds" ? " seg" : exercise.duration_type === "minutes" ? " min" : ""}
-                                </Text>
-                              </Paper>
-                              <Paper p="sm" radius="md" withBorder>
-                                <Group gap={4}>
-                                  <IconClock size={14} />
-                                  <Text size="sm" fw={500}>Descanso</Text>
-                                </Group>
-                                <Text size="lg" fw={700}>{exercise.rest_seconds || 60}s</Text>
-                              </Paper>
+
+                  {block.exercises?.map((exercise, exIndex) => {
+                    const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+                    const exImage = exercise.exercise?.image_url;
+                    return (
+                      <Box
+                        key={exIndex}
+                        px="md"
+                        py="sm"
+                        style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+                      >
+                        <Group gap="sm" wrap="nowrap" align="center">
+                          {exImage ? (
+                            <Image src={exImage} alt={exName} w={44} h={44} fit="cover" radius="lg" onClick={() => setEnlargedImage({url: exImage, name: exName})} style={{ cursor: "pointer", flexShrink: 0 }} />
+                          ) : (
+                            <ThemeIcon variant="light" color="gray" size={44} radius="lg" style={{ flexShrink: 0 }}>
+                              <IconBarbell size={20} />
+                            </ThemeIcon>
+                          )}
+                          <Box style={{ flex: 1, minWidth: 0 }}>
+                            <Text fw={600} size="sm" lineClamp={1}>{exName}</Text>
+                            <Group gap={6} mt={2} wrap="wrap">
+                              <Badge variant="light" color="blue" size="xs">
+                                {exercise.sets || 3} x {exercise.reps || "10-12"}
+                                {exercise.duration_type === "seconds" ? " seg" : exercise.duration_type === "minutes" ? " min" : ""}
+                              </Badge>
                               {exercise.target_weight && (
-                                <Paper p="sm" radius="md" withBorder style={{ border: "1px solid var(--mantine-color-yellow-3)" }}>
-                                  <Group gap={4}>
-                                    <IconBarbell size={14} color="var(--mantine-color-yellow-6)" />
-                                    <Text size="sm" fw={500} c="yellow.7">Objetivo</Text>
-                                  </Group>
-                                  <Text size="lg" fw={700}>
-                                    {exercise.target_weight}kg
-                                    {exercise.target_reps ? ` x ${exercise.target_reps}` : ""}
-                                  </Text>
-                                </Paper>
+                                <Badge variant="light" color="yellow" size="xs">{exercise.target_weight}kg</Badge>
                               )}
-                            </SimpleGrid>
-                            {exercise.notes && (
-                              <Text size="sm" c="dimmed" mt="sm">
-                                <strong>Notas:</strong> {exercise.notes}
-                              </Text>
-                            )}
-                            {exercise.exercise?.description && (
-                              <Text size="sm" c="dimmed" mt="xs">
-                                {exercise.exercise.description}
-                              </Text>
-                            )}
+                              {exercise.rest_seconds && (
+                                <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds}s</Badge>
+                              )}
+                            </Group>
+                            {exercise.notes && <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{exercise.notes}</Text>}
+                          </Box>
+                          <Group gap={4} style={{ flexShrink: 0 }}>
                             {(exercise.video_url || exercise.exercise?.video_url) && (
-                              <Button
+                              <ActionIcon
                                 component="a"
                                 href={exercise.video_url || exercise.exercise?.video_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                leftSection={<IconPlayerPlay size={16} />}
                                 variant="light"
                                 color="red"
-                                size="xs"
-                                mt="sm"
-                                radius="md"
+                                size="lg"
+                                radius="xl"
                               >
-                                Ver vídeo del ejercicio
-                              </Button>
+                                <IconPlayerPlay size={18} />
+                              </ActionIcon>
                             )}
-                          </Accordion.Panel>
-                        </Accordion.Item>
-                      );
-                    })}
-                  </Accordion>
+                            <ActionIcon
+                              variant="subtle"
+                              color="yellow"
+                              size="lg"
+                              radius="xl"
+                              title="Sustituir ejercicio"
+                              onClick={handleOpenSwap(
+                                data.assignedProgram!.id,
+                                todayDayIndex >= 0 ? todayDayIndex : 0,
+                                blockIndex,
+                                exIndex,
+                                exName,
+                                exercise.exercise?.id || exercise.exercise_id
+                              )}
+                            >
+                              <IconExchange size={18} />
+                            </ActionIcon>
+                          </Group>
+                        </Group>
+                      </Box>
+                    );
+                  })}
                 </Box>
               ))}
               
-              {/* Fallback: show flat exercise list if no blocks */}
+              {/* Fallback: flat exercise list */}
               {(!data.todayWorkout.blocks || data.todayWorkout.blocks.length === 0) && data.todayWorkout.exercises_list?.length > 0 && (
-                <Accordion variant="separated">
+                <>
                   {data.todayWorkout.exercises_list.map((exercise: { name: string; sets: number; reps: string; weight?: string; completed?: boolean }, index: number) => (
-                    <Accordion.Item key={index} value={exercise.name}>
-                      <Accordion.Control>
-                        <Group justify="space-between" pr="md">
-                          <Group>
-                            <ThemeIcon variant="light" color={exercise.completed ? "green" : "gray"} size="sm">
-                              {exercise.completed ? <IconCheck size={14} /> : <IconBarbell size={14} />}
-                            </ThemeIcon>
-                            <Text fw={500}>{exercise.name}</Text>
+                    <Box
+                      key={index}
+                      px="md"
+                      py="sm"
+                      style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+                    >
+                      <Group gap="sm" wrap="nowrap" align="center">
+                        <ThemeIcon variant="light" color={exercise.completed ? "green" : "gray"} size={44} radius="lg" style={{ flexShrink: 0 }}>
+                          {exercise.completed ? <IconCheck size={20} /> : <IconBarbell size={20} />}
+                        </ThemeIcon>
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <Text fw={600} size="sm" lineClamp={1}>{exercise.name}</Text>
+                          <Group gap={6} mt={2}>
+                            <Badge variant="light" color="blue" size="xs">{exercise.sets}x{exercise.reps}</Badge>
+                            {exercise.weight && <Badge variant="light" color="gray" size="xs">{exercise.weight}</Badge>}
                           </Group>
-                          <Group gap="xs">
-                            <Badge variant="light" color="blue">{exercise.sets}x{exercise.reps}</Badge>
-                            <Badge variant="light" color="gray">{exercise.weight}</Badge>
-                          </Group>
-                        </Group>
-                      </Accordion.Control>
-                      <Accordion.Panel>
-                        <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="md">
-                          <Paper p="sm" radius="md" withBorder>
-                            <Group gap={4}>
-                              <IconRepeat size={14} />
-                              <Text size="sm" fw={500}>Series</Text>
-                            </Group>
-                            <Text size="lg" fw={700}>{exercise.sets}</Text>
-                          </Paper>
-                          <Paper p="sm" radius="md" withBorder>
-                            <Group gap={4}>
-                              <IconBarbell size={14} />
-                              <Text size="sm" fw={500}>Repeticiones</Text>
-                            </Group>
-                            <Text size="lg" fw={700}>{exercise.reps}</Text>
-                          </Paper>
-                          <Paper p="sm" radius="md" withBorder>
-                            <Group gap={4}>
-                              <IconWeight size={14} />
-                              <Text size="sm" fw={500}>Peso</Text>
-                            </Group>
-                            <Text size="lg" fw={700}>{exercise.weight}</Text>
-                          </Paper>
-                        </SimpleGrid>
-                      </Accordion.Panel>
-                    </Accordion.Item>
+                        </Box>
+                      </Group>
+                    </Box>
                   ))}
-                </Accordion>
+                </>
               )}
-            </Card>
+
+              {/* CTA Button - prominent, fat-finger friendly */}
+              <Box px="md" mt="lg" mb="md">
+                {data.isTodayCompleted ? (
+                  <Button 
+                    leftSection={<IconCheck size={18} />} 
+                    color="green"
+                    variant="light"
+                    fullWidth
+                    size="lg"
+                    radius="xl"
+                    disabled
+                    styles={{ root: { height: 48 } }}
+                  >
+                    Entrenamiento Completado
+                  </Button>
+                ) : (
+                  <Button 
+                    leftSection={<IconPlayerPlay size={18} />} 
+                    color="yellow"
+                    onClick={openModal}
+                    disabled={!data.assignedProgram?.id}
+                    fullWidth
+                    size="lg"
+                    radius="xl"
+                    styles={{ root: { height: 48, fontWeight: 700 } }}
+                  >
+                    Iniciar Entrenamiento
+                  </Button>
+                )}
+              </Box>
+            </Box>
           )}
           
           {!data.isTodayRestDay && !data.todayWorkout && data.assignedProgram?.id && (
-            <Paper p="xl" ta="center" radius="lg" withBorder>
+            <Box ta="center" py="xl">
               <Text c="dimmed">No hay entrenamiento asignado para hoy.</Text>
-            </Paper>
+            </Box>
           )}
         </Tabs.Panel>
 

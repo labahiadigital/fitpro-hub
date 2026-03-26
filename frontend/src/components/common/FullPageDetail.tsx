@@ -1,4 +1,4 @@
-import { ActionIcon, Box, Group, Text, Title } from "@mantine/core";
+import { ActionIcon, Box, Group, Text } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { type ReactNode, useEffect } from "react";
 
@@ -8,9 +8,10 @@ interface FullPageDetailProps {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  footer?: ReactNode;
 }
 
-export function FullPageDetail({ opened, onClose, title, subtitle, children }: FullPageDetailProps) {
+export function FullPageDetail({ opened, onClose, title, subtitle, children, footer }: FullPageDetailProps) {
   useEffect(() => {
     if (opened) {
       document.body.style.overflow = "hidden";
@@ -31,8 +32,9 @@ export function FullPageDetail({ opened, onClose, title, subtitle, children }: F
       bottom={0}
       style={{
         zIndex: 200,
-        background: "var(--mantine-color-body)",
-        overflowY: "auto",
+        background: "var(--mantine-color-gray-0)",
+        display: "flex",
+        flexDirection: "column",
         animation: "slideInRight 0.25s ease-out",
       }}
     >
@@ -43,30 +45,52 @@ export function FullPageDetail({ opened, onClose, title, subtitle, children }: F
         }
       `}</style>
 
+      {/* Glassmorphism sticky header */}
       <Box
-        pos="sticky"
-        top={0}
         style={{
-          zIndex: 10,
-          background: "var(--mantine-color-body)",
-          borderBottom: "1px solid var(--mantine-color-gray-3)",
+          flexShrink: 0,
+          background: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid var(--mantine-color-gray-2)",
+          height: 56,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 16px",
         }}
-        p="md"
       >
-        <Group gap="sm">
-          <ActionIcon variant="subtle" size="lg" onClick={onClose} aria-label="Volver">
+        <Group gap="sm" wrap="nowrap" style={{ width: "100%" }}>
+          <ActionIcon variant="subtle" size="lg" onClick={onClose} aria-label="Volver" radius="xl">
             <IconArrowLeft size={22} />
           </ActionIcon>
-          <Box>
-            <Title order={4} lineClamp={1}>{title}</Title>
-            {subtitle && <Text size="xs" c="dimmed">{subtitle}</Text>}
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <Text fw={700} size="sm" lineClamp={1}>{title}</Text>
+            {subtitle && <Text size="xs" c="dimmed" lineClamp={1}>{subtitle}</Text>}
           </Box>
         </Group>
       </Box>
 
-      <Box p="md" pb="xl">
+      {/* Scrollable content */}
+      <Box style={{ flex: 1, overflowY: "auto" }} px="md" py="md">
         {children}
       </Box>
+
+      {/* Optional sticky footer */}
+      {footer && (
+        <Box
+          style={{
+            flexShrink: 0,
+            borderTop: "1px solid var(--mantine-color-gray-2)",
+            background: "#fff",
+            boxShadow: "0 -4px 12px rgba(0,0,0,0.05)",
+            paddingBottom: "env(safe-area-inset-bottom, 8px)",
+          }}
+          px="md"
+          py="sm"
+        >
+          {footer}
+        </Box>
+      )}
     </Box>
   );
 }

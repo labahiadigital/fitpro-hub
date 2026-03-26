@@ -1,4 +1,4 @@
-import { Badge, Card, Group, Progress, Text, Box } from "@mantine/core";
+import { Badge, Group, Progress, Text, Box } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
 import { type ReactNode } from "react";
 
@@ -26,32 +26,27 @@ export function DayCardMenu({
   progressColor,
 }: DayCardMenuProps) {
   return (
-    <Card
-      shadow="sm"
-      padding="md"
-      radius="lg"
-      withBorder
+    <Box
       onClick={isRestDay ? undefined : onClick}
       style={{
         cursor: isRestDay ? "default" : "pointer",
-        opacity: isRestDay ? 0.6 : 1,
-        transition: "transform 0.12s, box-shadow 0.12s",
-        border: isSelected
-          ? "2px solid var(--mantine-color-yellow-5)"
+        opacity: isRestDay ? 0.5 : 1,
+        borderBottom: "1px solid var(--mantine-color-gray-2)",
+        background: isSelected
+          ? "var(--mantine-color-yellow-0)"
           : isToday
-            ? "2px solid var(--mantine-color-blue-3)"
-            : undefined,
+            ? "var(--mantine-color-blue-0)"
+            : "transparent",
+        transition: "background 0.15s ease",
+        WebkitTapHighlightColor: "transparent",
+        userSelect: "none",
       }}
-      onMouseEnter={(e) => {
-        if (!isRestDay) (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.transform = "";
-      }}
+      px="md"
+      py="sm"
     >
-      <Group justify="space-between" wrap="nowrap">
+      <Group justify="space-between" wrap="nowrap" align="center">
         <Box style={{ flex: 1, minWidth: 0 }}>
-          <Group gap="xs" mb={4}>
+          <Group gap="xs" mb={2}>
             <Text fw={600} size="sm">{dayName}</Text>
             {isToday && <Badge size="xs" color="blue" variant="light">Hoy</Badge>}
             {isRestDay && <Badge size="xs" color="gray" variant="light">Descanso</Badge>}
@@ -64,12 +59,18 @@ export function DayCardMenu({
               color={progressColor || "yellow"}
               size="xs"
               radius="xl"
-              mt={6}
+              mt={4}
             />
           )}
         </Box>
-        {!isRestDay && <IconChevronRight size={18} color="var(--mantine-color-dimmed)" />}
+        {!isRestDay && (
+          <IconChevronRight
+            size={20}
+            color="var(--mantine-color-dimmed)"
+            style={{ flexShrink: 0 }}
+          />
+        )}
       </Group>
-    </Card>
+    </Box>
   );
 }
