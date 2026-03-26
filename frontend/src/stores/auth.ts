@@ -12,6 +12,8 @@ function isTokenExpired(token: string): boolean {
 
 type UserRole = 'owner' | 'collaborator' | 'client';
 
+export type PermissionsMap = Record<string, string[]>;
+
 interface User {
   id: string;
   email: string;
@@ -22,6 +24,8 @@ interface User {
   workspace_id?: string;
   preferences?: Record<string, unknown>;
   phone?: string;
+  permissions?: PermissionsMap;
+  assigned_clients?: string[];
 }
 
 interface Workspace {

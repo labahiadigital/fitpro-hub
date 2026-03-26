@@ -301,6 +301,8 @@ async def get_me(
         "preferences": user.preferences or {},
         "role": current_user.role.value if current_user.role else None,
         "workspace_id": str(current_user.workspace_id) if current_user.workspace_id else None,
+        "permissions": current_user.get_permissions(),
+        "assigned_clients": current_user.get_assigned_clients(),
         "created_at": user.created_at.isoformat(),
         "updated_at": user.updated_at.isoformat(),
     }

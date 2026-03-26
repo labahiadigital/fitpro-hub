@@ -137,6 +137,7 @@ async def list_workspace_members(
     
     members = []
     for user_role, user in result.all():
+        effective_permissions = user_role.get_permissions()
         members.append({
             "id": str(user_role.id),
             "user_id": str(user.id),
@@ -147,9 +148,12 @@ async def list_workspace_members(
             "role": user_role.role.value,
             "avatar_url": user.avatar_url,
             "is_active": user.is_active,
+            "permissions": effective_permissions,
+            "custom_permissions": user_role.permissions or {},
+            "assigned_clients": user_role.assigned_clients or [],
             "created_at": user_role.created_at.isoformat() if user_role.created_at else None
         })
-    
+
     return members
 
 

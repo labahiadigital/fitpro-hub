@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../services/api";
-import { usersApi } from "../services/api";
+import { api, usersApi } from "../services/api";
 import { notifications } from "@mantine/notifications";
 
 export interface TeamMember {
@@ -13,14 +12,22 @@ export interface TeamMember {
   role: "owner" | "collaborator" | "client";
   avatar_url?: string;
   is_active: boolean;
-  permissions?: {
-    clients?: boolean;
-    calendar?: boolean;
-    payments?: boolean;
-    reports?: boolean;
-    settings?: boolean;
-  };
+  permissions?: Record<string, string[]>;
+  custom_permissions?: Record<string, string[]>;
+  assigned_clients?: string[];
   created_at: string;
+}
+
+function mapUIRoleToBackend(uiRole: string): "owner" | "collaborator" | "client" {
+  if (uiRole === "client") return "client";
+  if (uiRole === "owner") return "owner";
+  return "collaborator";
+}
+
+function extractErrorMessage(error: unknown, fallback: string): string {
+  const err = error as { response?: { data?: { detail?: string | unknown[] } } };
+  const detail = err?.response?.data?.detail;
+  return typeof detail === "string" ? detail : fallback;
 }
 
 export function useTeamMembers() {
@@ -40,11 +47,19 @@ export function useTeamMembers() {
 export function useInviteTeamMember() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { email: string; role: string; send_email?: boolean }) => {
+    mutationFn: async (data: {
+      email: string;
+      role: string;
+      send_email?: boolean;
+      permissions?: Record<string, string[]>;
+      assigned_clients?: string[];
+    }) => {
       const response = await usersApi.invite({
         email: data.email,
-        role: data.role === "admin" ? "collaborator" : data.role,
+        role: mapUIRoleToBackend(data.role),
         ...({ send_email: data.send_email ?? true } as Record<string, unknown>),
+        ...(data.permissions ? { permissions: data.permissions } : {}),
+        ...(data.assigned_clients?.length ? { assigned_clients: data.assigned_clients } : {}),
       });
       return response.data;
     },
@@ -56,10 +71,10 @@ export function useInviteTeamMember() {
         color: "green",
       });
     },
-    onError: (error: { response?: { data?: { detail?: string } } }) => {
+    onError: (error: unknown) => {
       notifications.show({
         title: "Error al enviar invitación",
-        message: error.response?.data?.detail || "No se pudo enviar la invitación",
+        message: extractErrorMessage(error, "No se pudo enviar la invitación"),
         color: "red",
       });
     },
@@ -69,12 +84,23 @@ export function useInviteTeamMember() {
 export function useUpdateMemberPermissions() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { userId: string; role?: string; permissions?: Record<string, boolean>; assigned_clients?: string[] }) => {
-      const response = await api.put(`/users/${data.userId}/role`, {
-        role: data.role,
-        permissions: data.permissions,
-        assigned_clients: data.assigned_clients,
-      });
+    mutationFn: async (data: {
+      userId: string;
+      role?: string;
+      permissions?: Record<string, string[]>;
+      assigned_clients?: string[];
+    }) => {
+      const payload: Record<string, unknown> = {};
+      if (data.role) {
+        payload.role = mapUIRoleToBackend(data.role);
+      }
+      if (data.permissions) {
+        payload.permissions = data.permissions;
+      }
+      if (data.assigned_clients !== undefined) {
+        payload.assigned_clients = data.assigned_clients;
+      }
+      const response = await api.put(`/users/${data.userId}/role`, payload);
       return response.data;
     },
     onSuccess: () => {
@@ -85,10 +111,10 @@ export function useUpdateMemberPermissions() {
         color: "green",
       });
     },
-    onError: (error: { response?: { data?: { detail?: string } } }) => {
+    onError: (error: unknown) => {
       notifications.show({
         title: "Error al actualizar permisos",
-        message: error.response?.data?.detail || "No se pudieron actualizar los permisos",
+        message: extractErrorMessage(error, "No se pudieron actualizar los permisos"),
         color: "red",
       });
     },
@@ -110,10 +136,10 @@ export function useRemoveTeamMember() {
         color: "green",
       });
     },
-    onError: (error: { response?: { data?: { detail?: string } } }) => {
+    onError: (error: unknown) => {
       notifications.show({
         title: "Error al eliminar miembro",
-        message: error.response?.data?.detail || "No se pudo eliminar al miembro",
+        message: extractErrorMessage(error, "No se pudo eliminar al miembro"),
         color: "red",
       });
     },
@@ -125,7 +151,7 @@ export function useResendInvitation() {
     mutationFn: async (data: { email: string; role: string }) => {
       const response = await usersApi.invite({
         email: data.email,
-        role: data.role === "admin" ? "collaborator" : data.role,
+        role: mapUIRoleToBackend(data.role),
         ...({ send_email: true } as Record<string, unknown>),
       });
       return response.data;
@@ -137,10 +163,10 @@ export function useResendInvitation() {
         color: "green",
       });
     },
-    onError: (error: { response?: { data?: { detail?: string } } }) => {
+    onError: (error: unknown) => {
       notifications.show({
         title: "Error al reenviar",
-        message: error.response?.data?.detail || "No se pudo reenviar la invitación",
+        message: extractErrorMessage(error, "No se pudo reenviar la invitación"),
         color: "red",
       });
     },

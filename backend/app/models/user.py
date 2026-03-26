@@ -10,11 +10,30 @@ from app.models.base import BaseModel
 class RoleType(str, PyEnum):
     """Role types matching user_role_type enum (lowercase values)."""
     owner = "owner"
-    collaborator = "collaborator" 
+    collaborator = "collaborator"
     client = "client"
 
 
-# Default permissions for each role type (using lowercase enum values)
+ALL_PERMISSION_RESOURCES = [
+    "clients",
+    "workouts",
+    "nutrition",
+    "calendar",
+    "payments",
+    "team",
+    "settings",
+    "reports",
+    "chat",
+    "automations",
+    "forms",
+    "documents",
+    "catalog",
+    "billing",
+    "community",
+    "lms",
+    "live_classes",
+]
+
 DEFAULT_ROLE_PERMISSIONS = {
     RoleType.owner: {
         "clients": ["create", "read", "update", "delete"],
@@ -27,6 +46,13 @@ DEFAULT_ROLE_PERMISSIONS = {
         "reports": ["read"],
         "chat": ["read", "send"],
         "automations": ["create", "read", "update", "delete"],
+        "forms": ["create", "read", "update", "delete"],
+        "documents": ["create", "read", "update", "delete"],
+        "catalog": ["create", "read", "update", "delete"],
+        "billing": ["create", "read", "update", "delete"],
+        "community": ["create", "read", "update", "delete"],
+        "lms": ["create", "read", "update", "delete"],
+        "live_classes": ["create", "read", "update", "delete"],
     },
     RoleType.collaborator: {
         "clients": ["create", "read", "update"],
@@ -39,6 +65,13 @@ DEFAULT_ROLE_PERMISSIONS = {
         "reports": ["read"],
         "chat": ["read", "send"],
         "automations": ["read"],
+        "forms": ["read"],
+        "documents": ["read"],
+        "catalog": ["read"],
+        "billing": [],
+        "community": ["read"],
+        "lms": ["read"],
+        "live_classes": ["read"],
     },
     RoleType.client: {
         "clients": [],
@@ -51,6 +84,13 @@ DEFAULT_ROLE_PERMISSIONS = {
         "reports": [],
         "chat": ["read", "send"],
         "automations": [],
+        "forms": ["read"],
+        "documents": ["read"],
+        "catalog": ["read"],
+        "billing": [],
+        "community": ["read"],
+        "lms": ["read"],
+        "live_classes": ["read"],
     },
 }
 
@@ -122,28 +162,41 @@ class User(BaseModel):
 
 
 class UserRole(BaseModel):
-    """User role in a workspace - matches Supabase schema."""
+    """User role in a workspace."""
     __tablename__ = "user_roles"
-    
+
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     role = Column(Enum(RoleType, name="user_role_type", create_type=False), nullable=False, default=RoleType.collaborator)
-    is_default = Column(Boolean, default=False)  # Default workspace for user
-    
-    # Relationships
+    is_default = Column(Boolean, default=False)
+
+    permissions = Column(JSONB, nullable=False, default=dict, server_default="{}")
+    assigned_clients = Column(JSONB, nullable=False, default=list, server_default="[]")
+
     user = relationship("User", back_populates="workspace_roles")
     workspace = relationship("Workspace", back_populates="users")
-    
-    def get_permissions(self):
-        """Get effective permissions for this user role."""
-        return DEFAULT_ROLE_PERMISSIONS.get(self.role, {}).copy()
-    
+
+    def get_permissions(self) -> dict:
+        """Return effective permissions: custom overrides merged over role defaults.
+        If ``self.permissions`` is non-empty, it fully replaces the defaults for
+        every resource key it contains while keeping defaults for unlisted resources.
+        Owner always gets full permissions regardless of overrides."""
+        defaults = DEFAULT_ROLE_PERMISSIONS.get(self.role, {}).copy()
+        if self.role == RoleType.owner:
+            return defaults
+        custom = self.permissions or {}
+        if custom:
+            defaults.update(custom)
+        return defaults
+
     def has_permission(self, resource: str, action: str) -> bool:
-        """Check if user has a specific permission."""
         perms = self.get_permissions()
-        resource_perms = perms.get(resource, [])
-        return action in resource_perms
-    
+        return action in perms.get(resource, [])
+
+    def get_assigned_clients(self) -> list:
+        """Return list of client UUIDs this user can access. Empty = all."""
+        return self.assigned_clients or []
+
     def __repr__(self):
         return f"<UserRole {self.user_id} - {self.role} in {self.workspace_id}>"
 

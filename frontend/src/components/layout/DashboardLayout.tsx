@@ -61,27 +61,42 @@ interface NavItemProps {
   onNavigate?: () => void;
 }
 
-// Lista de navegación para Entrenadores/Owners/Collaborators (sin badge, se añade dinámicamente)
-const getTrainerNavItems = (unreadCount: number): NavItemProps[] => [
+interface NavItemWithPermission extends NavItemProps {
+  requiredResource?: string;
+}
+
+const ALL_TRAINER_NAV_ITEMS = (unreadCount: number): NavItemWithPermission[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Panel Principal", to: "/dashboard" },
-  { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients" },
-  { icon: <IconCalendarEvent size={20} />, label: "Calendario", to: "/calendar" },
-  { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts" },
-  { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition" },
-  { icon: <IconForms size={20} />, label: "Formularios", to: "/forms" },
-  { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents" },
-  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount },
-  { icon: <IconPackage size={20} />, label: "Catálogo", to: "/catalog" },
-  { icon: <IconReceipt size={20} />, label: "Facturación", to: "/billing" },
-  { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community" },
-  { icon: <IconUsersGroup size={20} />, label: "Equipo", to: "/team" },
-  { icon: <IconRobot size={20} />, label: "Automatizaciones", to: "/automations" },
-  { icon: <IconChartBar size={20} />, label: "Reportes", to: "/reports" },
-  { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms" },
-  { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes" },
+  { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients", requiredResource: "clients" },
+  { icon: <IconCalendarEvent size={20} />, label: "Calendario", to: "/calendar", requiredResource: "calendar" },
+  { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
+  { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
+  { icon: <IconForms size={20} />, label: "Formularios", to: "/forms", requiredResource: "forms" },
+  { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
+  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
+  { icon: <IconPackage size={20} />, label: "Catálogo", to: "/catalog", requiredResource: "catalog" },
+  { icon: <IconReceipt size={20} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
+  { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community", requiredResource: "community" },
+  { icon: <IconUsersGroup size={20} />, label: "Equipo", to: "/team", requiredResource: "team" },
+  { icon: <IconRobot size={20} />, label: "Automatizaciones", to: "/automations", requiredResource: "automations" },
+  { icon: <IconChartBar size={20} />, label: "Reportes", to: "/reports", requiredResource: "reports" },
+  { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
+  { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
   { icon: <IconBulb size={20} />, label: "Sugerencias", to: "/suggestions" },
-  { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings" },
+  { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings", requiredResource: "settings" },
 ];
+
+function getTrainerNavItems(unreadCount: number, permissions?: Record<string, string[]>): NavItemProps[] {
+  const items = ALL_TRAINER_NAV_ITEMS(unreadCount);
+  if (!permissions || Object.keys(permissions).length === 0) {
+    return items;
+  }
+  return items.filter((item) => {
+    if (!item.requiredResource) return true;
+    const resourcePerms = permissions[item.requiredResource];
+    return resourcePerms && resourcePerms.length > 0;
+  });
+}
 
 // Lista de navegación para Clientes (sin badge, se añade dinámicamente)
 const getClientNavItems = (unreadCount: number): NavItemProps[] => [
@@ -198,7 +213,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   });
   
   const unreadCount = unreadData?.unread_count || 0;
-  const navItems = isClient ? getClientNavItems(unreadCount) : getTrainerNavItems(unreadCount);
+  const navItems = isClient ? getClientNavItems(unreadCount) : getTrainerNavItems(unreadCount, user?.permissions);
   const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 
   return (

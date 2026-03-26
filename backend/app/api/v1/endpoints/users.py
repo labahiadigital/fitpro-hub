@@ -103,6 +103,8 @@ async def invite_user(
         workspace_id=current_user.workspace_id,
         role=data.role,
         is_default=is_new_user,
+        permissions=data.permissions or {},
+        assigned_clients=[str(c) for c in data.assigned_clients] if data.assigned_clients else [],
     )
     db.add(user_role)
     await db.commit()
@@ -144,6 +146,8 @@ async def invite_user(
         workspace_id=user_role.workspace_id,
         role=user_role.role,
         is_default=user_role.is_default,
+        permissions=user_role.permissions or {},
+        assigned_clients=user_role.assigned_clients or [],
         created_at=user_role.created_at
     )
 
@@ -337,15 +341,14 @@ async def update_user_role(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Actualizar rol de un usuario en el workspace (solo propietario).
+    Actualizar rol, permisos y clientes asignados de un usuario en el workspace (solo propietario).
     """
-    # Can't change own role
     if user_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No puedes cambiar tu propio rol"
         )
-    
+
     result = await db.execute(
         select(UserRole).where(
             UserRole.user_id == user_id,
@@ -353,23 +356,31 @@ async def update_user_role(
         )
     )
     user_role = result.scalar_one_or_none()
-    
+
     if not user_role:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuario no encontrado en este workspace"
         )
-    
-    user_role.role = data.role
+
+    if data.role is not None:
+        user_role.role = data.role
+    if data.permissions is not None:
+        user_role.permissions = data.permissions
+    if data.assigned_clients is not None:
+        user_role.assigned_clients = [str(c) for c in data.assigned_clients]
+
     await db.commit()
     await db.refresh(user_role)
-    
+
     return UserRoleResponse(
         id=user_role.id,
         user_id=user_role.user_id,
         workspace_id=user_role.workspace_id,
         role=user_role.role,
         is_default=user_role.is_default,
+        permissions=user_role.permissions or {},
+        assigned_clients=user_role.assigned_clients or [],
         created_at=user_role.created_at
     )
 

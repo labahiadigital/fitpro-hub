@@ -26,32 +26,49 @@ class CurrentUser:
         user: User,
         workspace_id: Optional[UUID] = None,
         role: Optional[RoleType] = None,
-        token_payload: Optional[dict] = None
+        token_payload: Optional[dict] = None,
+        user_role: Optional[UserRole] = None,
     ):
         self.user = user
         self.workspace_id = workspace_id
         self.role = role
         self.token_payload = token_payload
-    
+        self._user_role = user_role
+
     @property
     def id(self) -> UUID:
         return self.user.id
-    
+
     @property
     def email(self) -> str:
         return self.user.email
-    
+
     def has_role(self, roles: List[RoleType]) -> bool:
         return self.role in roles
-    
+
     def is_owner(self) -> bool:
         return self.role == RoleType.owner
-    
+
     def is_collaborator(self) -> bool:
         return self.role in [RoleType.owner, RoleType.collaborator]
-    
+
     def is_client(self) -> bool:
         return self.role == RoleType.client
+
+    def has_permission(self, resource: str, action: str) -> bool:
+        if self._user_role:
+            return self._user_role.has_permission(resource, action)
+        return False
+
+    def get_permissions(self) -> dict:
+        if self._user_role:
+            return self._user_role.get_permissions()
+        return {}
+
+    def get_assigned_clients(self) -> list:
+        if self._user_role:
+            return self._user_role.get_assigned_clients()
+        return []
 
 
 async def get_current_user(
@@ -95,65 +112,58 @@ async def get_current_user(
             detail="Usuario desactivado",
         )
     
-    # Get workspace context from token or user's default workspace
     workspace_id = None
     role = None
-    
-    # Check if workspace_id is in token payload
+    resolved_user_role = None
+
     token_workspace_id = None
-    token_role = None
-    
     if hasattr(payload, 'workspace_id'):
         token_workspace_id = payload.workspace_id
-        token_role = payload.role
-    
+
     if token_workspace_id:
         try:
             workspace_id = UUID(token_workspace_id) if isinstance(token_workspace_id, str) else token_workspace_id
-            # Get user role in this workspace
             result = await db.execute(
                 select(UserRole).where(
                     UserRole.user_id == user.id,
                     UserRole.workspace_id == workspace_id
                 )
             )
-            user_role = result.scalar_one_or_none()
-            if user_role:
-                role = user_role.role
+            resolved_user_role = result.scalar_one_or_none()
+            if resolved_user_role:
+                role = resolved_user_role.role
         except (ValueError, TypeError):
             pass
-    
+
     if not workspace_id:
-        # No workspace in token, try to get user's default workspace
         result = await db.execute(
             select(UserRole).where(
                 UserRole.user_id == user.id,
                 UserRole.is_default == True
             )
         )
-        default_role = result.scalar_one_or_none()
-        
-        if default_role:
-            workspace_id = default_role.workspace_id
-            role = default_role.role
+        resolved_user_role = result.scalar_one_or_none()
+
+        if resolved_user_role:
+            workspace_id = resolved_user_role.workspace_id
+            role = resolved_user_role.role
         else:
-            # No default, get first workspace
             result = await db.execute(
                 select(UserRole).where(UserRole.user_id == user.id).limit(1)
             )
-            first_role = result.scalar_one_or_none()
-            if first_role:
-                workspace_id = first_role.workspace_id
-                role = first_role.role
-    
-    # Convert payload to dict for storage
+            resolved_user_role = result.scalar_one_or_none()
+            if resolved_user_role:
+                workspace_id = resolved_user_role.workspace_id
+                role = resolved_user_role.role
+
     payload_dict = payload.model_dump() if hasattr(payload, 'model_dump') else (payload if isinstance(payload, dict) else {})
-    
+
     return CurrentUser(
         user=user,
         workspace_id=workspace_id,
         role=role,
-        token_payload=payload_dict
+        token_payload=payload_dict,
+        user_role=resolved_user_role,
     )
 
 
@@ -206,8 +216,24 @@ def require_roles(allowed_roles: List[RoleType]):
     return role_checker
 
 
-# Pre-defined role checkers
 require_owner = require_roles([RoleType.owner])
 require_staff = require_roles([RoleType.owner, RoleType.collaborator])
 require_any_role = require_roles([RoleType.owner, RoleType.collaborator, RoleType.client])
+
+
+def require_permission(resource: str, action: str):
+    """Dependency factory that checks granular permission on a resource.
+    Owners always pass. For collaborators, custom overrides are respected."""
+    async def permission_checker(
+        current_user: CurrentUser = Depends(require_workspace)
+    ) -> CurrentUser:
+        if current_user.is_owner():
+            return current_user
+        if not current_user.has_permission(resource, action):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"No tienes permiso de '{action}' en '{resource}'"
+            )
+        return current_user
+    return permission_checker
 
