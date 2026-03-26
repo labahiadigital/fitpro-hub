@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, type ComponentType } from "react";
 import { Center, Loader, MantineProvider } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
 import { Notifications, notifications } from "@mantine/notifications";
@@ -17,50 +17,63 @@ import "@mantine/dates/styles.css";
 import "@mantine/charts/styles.css";
 import "dayjs/locale/es";
 
-// Lazy-loaded pages — each becomes a separate chunk
-const LoginPage = lazy(() => import("./pages/auth/LoginPage").then(m => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import("./pages/auth/RegisterPage").then(m => ({ default: m.RegisterPage })));
-const ConfirmEmailPage = lazy(() => import("./pages/auth/ConfirmEmailPage").then(m => ({ default: m.ConfirmEmailPage })));
-const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage").then(m => ({ default: m.ForgotPasswordPage })));
-const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage").then(m => ({ default: m.ResetPasswordPage })));
-const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then(m => ({ default: m.GoogleCallbackPage })));
-const InvitationOnboardingPage = lazy(() => import("./pages/onboarding/InvitationOnboardingPage").then(m => ({ default: m.InvitationOnboardingPage })));
-const ClientOnboardingPage = lazy(() => import("./pages/onboarding/ClientOnboardingPage").then(m => ({ default: m.ClientOnboardingPage })));
-const OnboardingPage = lazy(() => import("./pages/onboarding/OnboardingPage").then(m => ({ default: m.OnboardingPage })));
-const AcceptStaffInvitePage = lazy(() => import("./pages/auth/AcceptStaffInvitePage").then(m => ({ default: m.AcceptStaffInvitePage })));
+function lazyRetry<T extends ComponentType<unknown>>(
+  factory: () => Promise<{ default: T }>,
+): React.LazyExoticComponent<T> {
+  return lazy(() =>
+    factory().catch((err: Error) => {
+      const reloaded = sessionStorage.getItem("trackfiz-chunk-retry");
+      if (!reloaded || Date.now() - Number(reloaded) > 10_000) {
+        sessionStorage.setItem("trackfiz-chunk-retry", String(Date.now()));
+        window.location.reload();
+      }
+      throw err;
+    }),
+  );
+}
 
-const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage").then(m => ({ default: m.DashboardPage })));
-const ClientsPage = lazy(() => import("./pages/clients/ClientsPage").then(m => ({ default: m.ClientsPage })));
-const ClientDetailPage = lazy(() => import("./pages/clients/ClientDetailPage").then(m => ({ default: m.ClientDetailPage })));
-const CalendarPage = lazy(() => import("./pages/calendar/CalendarPage").then(m => ({ default: m.CalendarPage })));
-const WorkoutsPage = lazy(() => import("./pages/workouts/WorkoutsPage"));
-const NutritionPage = lazy(() => import("./pages/nutrition/NutritionPage").then(m => ({ default: m.NutritionPage })));
-const MealPlanDetailPage = lazy(() => import("./pages/nutrition/MealPlanDetailPage").then(m => ({ default: m.MealPlanDetailPage })));
-const SupplementsPage = lazy(() => import("./pages/supplements/SupplementsPage").then(m => ({ default: m.SupplementsPage })));
-const FormsPage = lazy(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
-const CatalogPage = lazy(() => import("./pages/payments/CatalogPage").then(m => ({ default: m.CatalogPage })));
-const BillingPage = lazy(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
-const SuggestionsPage = lazy(() => import("./pages/suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
-const CommunityPage = lazy(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
-const DocumentsPage = lazy(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
-const TeamPage = lazy(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
-const AutomationsPage = lazy(() => import("./pages/automations/AutomationsPage").then(m => ({ default: m.AutomationsPage })));
-const ReportsPage = lazy(() => import("./pages/reports/ReportsPage").then(m => ({ default: m.ReportsPage })));
-const SettingsPage = lazy(() => import("./pages/settings/SettingsPage").then(m => ({ default: m.SettingsPage })));
-const LiveClassesPage = lazy(() => import("./pages/live-classes/LiveClassesPage").then(m => ({ default: m.LiveClassesPage })));
-const ChatPage = lazy(() => import("./pages/chat/ChatPage").then(m => ({ default: m.ChatPage })));
-const LMSPage = lazy(() => import("./pages/lms/LMSPage").then(m => ({ default: m.LMSPage })));
+const LoginPage = lazyRetry(() => import("./pages/auth/LoginPage").then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazyRetry(() => import("./pages/auth/RegisterPage").then(m => ({ default: m.RegisterPage })));
+const ConfirmEmailPage = lazyRetry(() => import("./pages/auth/ConfirmEmailPage").then(m => ({ default: m.ConfirmEmailPage })));
+const ForgotPasswordPage = lazyRetry(() => import("./pages/auth/ForgotPasswordPage").then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazyRetry(() => import("./pages/auth/ResetPasswordPage").then(m => ({ default: m.ResetPasswordPage })));
+const GoogleCallbackPage = lazyRetry(() => import("./pages/auth/GoogleCallbackPage").then(m => ({ default: m.GoogleCallbackPage })));
+const InvitationOnboardingPage = lazyRetry(() => import("./pages/onboarding/InvitationOnboardingPage").then(m => ({ default: m.InvitationOnboardingPage })));
+const ClientOnboardingPage = lazyRetry(() => import("./pages/onboarding/ClientOnboardingPage").then(m => ({ default: m.ClientOnboardingPage })));
+const OnboardingPage = lazyRetry(() => import("./pages/onboarding/OnboardingPage").then(m => ({ default: m.OnboardingPage })));
+const AcceptStaffInvitePage = lazyRetry(() => import("./pages/auth/AcceptStaffInvitePage").then(m => ({ default: m.AcceptStaffInvitePage })));
 
-// Client pages — import directly to enable per-page code splitting
-const ClientDashboardPage = lazy(() => import("./pages/client/ClientDashboardPage").then(m => ({ default: m.ClientDashboardPage })));
-const MyWorkoutsPage = lazy(() => import("./pages/client/MyWorkoutsPage").then(m => ({ default: m.MyWorkoutsPage })));
-const MyNutritionPage = lazy(() => import("./pages/client/MyNutritionPage").then(m => ({ default: m.MyNutritionPage })));
-const MyProgressPage = lazy(() => import("./pages/client/MyProgressPage").then(m => ({ default: m.MyProgressPage })));
-const MyCalendarPage = lazy(() => import("./pages/client/MyCalendarPage").then(m => ({ default: m.MyCalendarPage })));
-const MyDocumentsPage = lazy(() => import("./pages/client/MyDocumentsPage").then(m => ({ default: m.MyDocumentsPage })));
-const MyProfilePage = lazy(() => import("./pages/client/MyProfilePage").then(m => ({ default: m.MyProfilePage })));
-const MyMessagesPage = lazy(() => import("./pages/client/MyMessagesPage").then(m => ({ default: m.MyMessagesPage })));
-const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const DashboardPage = lazyRetry(() => import("./pages/dashboard/DashboardPage").then(m => ({ default: m.DashboardPage })));
+const ClientsPage = lazyRetry(() => import("./pages/clients/ClientsPage").then(m => ({ default: m.ClientsPage })));
+const ClientDetailPage = lazyRetry(() => import("./pages/clients/ClientDetailPage").then(m => ({ default: m.ClientDetailPage })));
+const CalendarPage = lazyRetry(() => import("./pages/calendar/CalendarPage").then(m => ({ default: m.CalendarPage })));
+const WorkoutsPage = lazyRetry(() => import("./pages/workouts/WorkoutsPage"));
+const NutritionPage = lazyRetry(() => import("./pages/nutrition/NutritionPage").then(m => ({ default: m.NutritionPage })));
+const MealPlanDetailPage = lazyRetry(() => import("./pages/nutrition/MealPlanDetailPage").then(m => ({ default: m.MealPlanDetailPage })));
+const SupplementsPage = lazyRetry(() => import("./pages/supplements/SupplementsPage").then(m => ({ default: m.SupplementsPage })));
+const FormsPage = lazyRetry(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
+const CatalogPage = lazyRetry(() => import("./pages/payments/CatalogPage").then(m => ({ default: m.CatalogPage })));
+const BillingPage = lazyRetry(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
+const SuggestionsPage = lazyRetry(() => import("./pages/suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
+const CommunityPage = lazyRetry(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
+const DocumentsPage = lazyRetry(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
+const TeamPage = lazyRetry(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
+const AutomationsPage = lazyRetry(() => import("./pages/automations/AutomationsPage").then(m => ({ default: m.AutomationsPage })));
+const ReportsPage = lazyRetry(() => import("./pages/reports/ReportsPage").then(m => ({ default: m.ReportsPage })));
+const SettingsPage = lazyRetry(() => import("./pages/settings/SettingsPage").then(m => ({ default: m.SettingsPage })));
+const LiveClassesPage = lazyRetry(() => import("./pages/live-classes/LiveClassesPage").then(m => ({ default: m.LiveClassesPage })));
+const ChatPage = lazyRetry(() => import("./pages/chat/ChatPage").then(m => ({ default: m.ChatPage })));
+const LMSPage = lazyRetry(() => import("./pages/lms/LMSPage").then(m => ({ default: m.LMSPage })));
+
+const ClientDashboardPage = lazyRetry(() => import("./pages/client/ClientDashboardPage").then(m => ({ default: m.ClientDashboardPage })));
+const MyWorkoutsPage = lazyRetry(() => import("./pages/client/MyWorkoutsPage").then(m => ({ default: m.MyWorkoutsPage })));
+const MyNutritionPage = lazyRetry(() => import("./pages/client/MyNutritionPage").then(m => ({ default: m.MyNutritionPage })));
+const MyProgressPage = lazyRetry(() => import("./pages/client/MyProgressPage").then(m => ({ default: m.MyProgressPage })));
+const MyCalendarPage = lazyRetry(() => import("./pages/client/MyCalendarPage").then(m => ({ default: m.MyCalendarPage })));
+const MyDocumentsPage = lazyRetry(() => import("./pages/client/MyDocumentsPage").then(m => ({ default: m.MyDocumentsPage })));
+const MyProfilePage = lazyRetry(() => import("./pages/client/MyProfilePage").then(m => ({ default: m.MyProfilePage })));
+const MyMessagesPage = lazyRetry(() => import("./pages/client/MyMessagesPage").then(m => ({ default: m.MyMessagesPage })));
+const NotFoundPage = lazyRetry(() => import("./pages/NotFoundPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
