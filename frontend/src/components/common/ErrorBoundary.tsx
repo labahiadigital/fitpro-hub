@@ -33,13 +33,20 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <Center h="60vh">
-          <Stack align="center" gap="md" maw={420}>
+          <Stack align="center" gap="md" maw={600}>
             <IconAlertTriangle size={48} color="var(--nv-warning)" stroke={1.5} />
             <Title order={3}>Algo salió mal</Title>
             <Text c="dimmed" ta="center" size="sm">
               Ha ocurrido un error inesperado. Puedes intentar recargar la
               sección o volver al inicio.
             </Text>
+            {this.state.error && (
+              <Text size="xs" c="red" ta="center" style={{ fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto", background: "#fff0f0", padding: 12, borderRadius: 8, width: "100%" }}>
+                {this.state.error.message}
+                {"\n\n"}
+                {this.state.error.stack?.split("\n").slice(0, 8).join("\n")}
+              </Text>
+            )}
             <Button variant="light" onClick={this.handleReset}>
               Reintentar
             </Button>
