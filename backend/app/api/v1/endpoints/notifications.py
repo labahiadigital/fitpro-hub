@@ -65,7 +65,7 @@ async def get_dashboard_alerts(
 
 # ==================== Notifications ====================
 
-@router.get("/", response_model=NotificationList)
+@router.get("", response_model=NotificationList)
 async def list_notifications(
     category: Optional[str] = None,
     is_read: Optional[bool] = None,

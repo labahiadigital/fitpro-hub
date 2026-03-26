@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
 from app.core.limiter import limiter
@@ -48,6 +49,7 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
     openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 
@@ -82,6 +84,18 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Workspace-ID"],
     expose_headers=["X-Total-Count"],
 )
+
+
+class ProxySchemeMiddleware(BaseHTTPMiddleware):
+    """Force HTTPS scheme when behind a reverse proxy (Coolify/Traefik)."""
+    async def dispatch(self, request: Request, call_next):
+        if request.headers.get("x-forwarded-proto") == "https":
+            request.scope["scheme"] = "https"
+        return await call_next(request)
+
+
+if settings.APP_ENV == "production":
+    app.add_middleware(ProxySchemeMiddleware)
 
 access_logger = logging.getLogger("api.access")
 
