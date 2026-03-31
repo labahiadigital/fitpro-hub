@@ -68,6 +68,7 @@ class ClientUpdate(BaseSchema):
     consents: Optional[ConsentSchema] = None
     tag_ids: Optional[List[UUID]] = None
     is_active: Optional[bool] = None
+    chat_enabled: Optional[bool] = None
     tax_id: Optional[str] = None
     billing_address: Optional[str] = None
     billing_city: Optional[str] = None
@@ -92,6 +93,7 @@ class ClientResponse(BaseSchema):
     goals: Optional[str] = None
     consents: Dict[str, Any]
     is_active: bool
+    chat_enabled: bool = False
     tags: List[ClientTagResponse] = []
     tax_id: Optional[str] = None
     billing_address: Optional[str] = None

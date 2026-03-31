@@ -29,6 +29,7 @@ import {
   Loader,
   ScrollArea,
   Collapse,
+  Paper,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
@@ -2558,7 +2559,7 @@ export function ClientDetailPage() {
                         }
                       }}
                     >
-                      Asignar Plan
+                      {mealPlans.filter((p: { status: string }) => p.status === "active").length > 0 ? "Cambiar Plan" : "Asignar Plan"}
                     </Button>
                   </Group>
 
@@ -3692,11 +3693,18 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={assignMealPlanModalOpened}
         onClose={closeAssignMealPlanModal}
-        title="Asignar Plan Nutricional"
+        title={mealPlans.filter((p: { status: string }) => p.status === "active").length > 0 ? "Cambiar Plan Nutricional" : "Asignar Plan Nutricional"}
         size="md"
         radius="lg"
       >
         <Stack gap="md">
+          {mealPlans.filter((p: { status: string }) => p.status === "active").length > 0 && (
+            <Paper p="sm" radius="md" style={{ background: "var(--mantine-color-yellow-light)" }}>
+              <Text size="sm" c="dimmed">
+                El plan actual será desactivado al asignar uno nuevo. Solo puede haber un plan activo a la vez.
+              </Text>
+            </Paper>
+          )}
           <Select
             label="Plan nutricional"
             placeholder="Selecciona un plan"

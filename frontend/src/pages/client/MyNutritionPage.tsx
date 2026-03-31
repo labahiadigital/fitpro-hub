@@ -19,6 +19,8 @@ import {
   Select,
   ActionIcon,
   Menu,
+  Modal,
+  ScrollArea,
   Tabs,
 } from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
@@ -215,7 +217,129 @@ function LogMealModal({
     setSatisfactionRating(null);
   };
 
+  const isMobileView = useMediaQuery("(max-width: 768px)");
+
   if (!opened) return null;
+
+  const foodRows = foods.map((food, index) => (
+    <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+      <Group gap="xs" mb="xs" wrap="nowrap">
+        <TextInput
+          placeholder="Nombre del alimento"
+          value={food.name}
+          onChange={(e) => updateFood(index, "name", e.target.value)}
+          size="sm"
+          style={{ flex: 1 }}
+          styles={{ input: { height: 44, borderRadius: 10 } }}
+        />
+        <NumberInput
+          placeholder="Cant."
+          value={food.quantity}
+          onChange={(val) => updateFood(index, "quantity", val || 1)}
+          min={0.1}
+          step={0.5}
+          decimalScale={1}
+          size="sm"
+          w={70}
+          hideControls
+          styles={{ input: { height: 44, borderRadius: 10, textAlign: "center" } }}
+        />
+        <ActionIcon
+          color="red"
+          variant="light"
+          onClick={() => removeFood(index)}
+          disabled={foods.length === 1}
+          size="lg"
+          radius="xl"
+        >
+          <IconTrash size={16} />
+        </ActionIcon>
+      </Group>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+        <NumberInput placeholder="Kcal" value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder="Prot" value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder="Carbs" value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder="Grasas" value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
+      </div>
+      {index === 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
+          <Text size="xs" c="dimmed" ta="center">Kcal</Text>
+          <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
+          <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
+          <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
+        </div>
+      )}
+    </Box>
+  ));
+
+  const addFoodButton = (
+    <Box px="md" mt="sm">
+      <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addFood} fullWidth size="md" radius="xl" styles={{ root: { height: 44 } }}>
+        Añadir alimento
+      </Button>
+    </Box>
+  );
+
+  const notesAndSatisfaction = (
+    <Box px="md" mt="md">
+      <TextInput placeholder="Notas (opcional)" {...form.getInputProps("notes")} size="sm" styles={{ input: { height: 44, borderRadius: 10 } }} />
+      <Box mt="sm">
+        <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
+      </Box>
+    </Box>
+  );
+
+  const submitButton = (
+    <Button
+      color="yellow"
+      onClick={handleSubmit}
+      loading={isLoading}
+      disabled={foods.every((f) => f.name.trim() === "")}
+      fullWidth
+      size="lg"
+      radius="xl"
+      styles={{ root: { height: 48, fontWeight: 700 } }}
+    >
+      Registrar Comida
+    </Button>
+  );
+
+  if (!isMobileView) {
+    return (
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title={
+          <Group gap="xs">
+            <Text fw={700}>Registrar Comida</Text>
+            <Select
+              data={MEAL_TYPES.map((m) => ({ value: m.value, label: m.label }))}
+              {...form.getInputProps("meal_name")}
+              size="xs"
+              w={130}
+              styles={{ input: { borderRadius: 10, height: 36 } }}
+            />
+          </Group>
+        }
+        size="lg"
+        radius="lg"
+        centered
+        styles={{
+          body: { padding: 0 },
+          header: { borderBottom: "1px solid var(--mantine-color-gray-2)", padding: "12px 20px" },
+        }}
+      >
+        <ScrollArea mah="60vh" p="md">
+          {foodRows}
+          {addFoodButton}
+          {notesAndSatisfaction}
+        </ScrollArea>
+        <Box p="md" style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}>
+          {submitButton}
+        </Box>
+      </Modal>
+    );
+  }
 
   return (
     <Box
@@ -226,7 +350,6 @@ function LogMealModal({
       bottom={0}
       style={{ zIndex: 300, background: "var(--mantine-color-gray-0)", display: "flex", flexDirection: "column" }}
     >
-      {/* Glassmorphism header */}
       <Box
         style={{
           flexShrink: 0,
@@ -260,122 +383,12 @@ function LogMealModal({
         </Group>
       </Box>
 
-      {/* Scrollable content */}
       <Box style={{ flex: 1, overflowY: "auto" }} py="sm">
-        {foods.map((food, index) => (
-          <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
-            <Group gap="xs" mb="xs" wrap="nowrap">
-              <TextInput
-                placeholder="Nombre del alimento"
-                value={food.name}
-                onChange={(e) => updateFood(index, "name", e.target.value)}
-                size="sm"
-                style={{ flex: 1 }}
-                styles={{ input: { height: 44, borderRadius: 10 } }}
-              />
-              <NumberInput
-                placeholder="Cant."
-                value={food.quantity}
-                onChange={(val) => updateFood(index, "quantity", val || 1)}
-                min={0.1}
-                step={0.5}
-                decimalScale={1}
-                size="sm"
-                w={70}
-                hideControls
-                styles={{ input: { height: 44, borderRadius: 10, textAlign: "center" } }}
-              />
-              <ActionIcon
-                color="red"
-                variant="light"
-                onClick={() => removeFood(index)}
-                disabled={foods.length === 1}
-                size="lg"
-                radius="xl"
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Group>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-              <NumberInput
-                placeholder="Kcal"
-                value={food.calories || ""}
-                onChange={(val) => updateFood(index, "calories", val || 0)}
-                min={0}
-                size="sm"
-                hideControls
-                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }}
-              />
-              <NumberInput
-                placeholder="Prot"
-                value={food.protein || ""}
-                onChange={(val) => updateFood(index, "protein", val || 0)}
-                min={0}
-                decimalScale={1}
-                size="sm"
-                hideControls
-                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }}
-              />
-              <NumberInput
-                placeholder="Carbs"
-                value={food.carbs || ""}
-                onChange={(val) => updateFood(index, "carbs", val || 0)}
-                min={0}
-                decimalScale={1}
-                size="sm"
-                hideControls
-                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }}
-              />
-              <NumberInput
-                placeholder="Grasas"
-                value={food.fat || ""}
-                onChange={(val) => updateFood(index, "fat", val || 0)}
-                min={0}
-                decimalScale={1}
-                size="sm"
-                hideControls
-                styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }}
-              />
-            </div>
-            {index === 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
-                <Text size="xs" c="dimmed" ta="center">Kcal</Text>
-                <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
-                <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
-                <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
-              </div>
-            )}
-          </Box>
-        ))}
-
-        <Box px="md" mt="sm">
-          <Button
-            variant="light"
-            leftSection={<IconPlus size={16} />}
-            onClick={addFood}
-            fullWidth
-            size="md"
-            radius="xl"
-            styles={{ root: { height: 44 } }}
-          >
-            Añadir alimento
-          </Button>
-        </Box>
-
-        <Box px="md" mt="md">
-          <TextInput
-            placeholder="Notas (opcional)"
-            {...form.getInputProps("notes")}
-            size="sm"
-            styles={{ input: { height: 44, borderRadius: 10 } }}
-          />
-          <Box mt="sm">
-            <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
-          </Box>
-        </Box>
+        {foodRows}
+        {addFoodButton}
+        {notesAndSatisfaction}
       </Box>
 
-      {/* Sticky footer */}
       <Box
         style={{
           flexShrink: 0,
@@ -387,18 +400,7 @@ function LogMealModal({
         px="md"
         py="sm"
       >
-        <Button
-          color="yellow"
-          onClick={handleSubmit}
-          loading={isLoading}
-          disabled={foods.every((f) => f.name.trim() === "")}
-          fullWidth
-          size="lg"
-          radius="xl"
-          styles={{ root: { height: 48, fontWeight: 700 } }}
-        >
-          Registrar Comida
-        </Button>
+        {submitButton}
       </Box>
     </Box>
   );

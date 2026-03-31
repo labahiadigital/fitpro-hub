@@ -429,7 +429,114 @@ function LogWorkoutModal({
     });
   };
 
+  const isMobileView = useMediaQuery("(max-width: 768px)");
+
   if (!opened) return null;
+
+  const exerciseList = (
+    <Stack gap="md" px="sm">
+      {exercises.map((exercise) => (
+        <ExerciseLogRow
+          key={exercise.exercise_id}
+          exercise={exercise}
+          setData={exerciseSets[exercise.exercise_id] || []}
+          onSetChange={(sets) => setExerciseSets((prev) => ({ ...prev, [exercise.exercise_id]: sets }))}
+        />
+      ))}
+    </Stack>
+  );
+
+  const summaryPanel = (
+    <Box px="md">
+      <SimpleGrid cols={2} spacing="sm">
+        <NumberInput
+          label="Duración (min)"
+          {...form.getInputProps("duration_minutes")}
+          min={1}
+          max={300}
+          leftSection={<IconClock size={16} />}
+          size="sm"
+          styles={{ input: { height: 44, borderRadius: 10 } }}
+        />
+        <NumberInput
+          label="Esfuerzo (1-10)"
+          {...form.getInputProps("perceived_effort")}
+          min={1}
+          max={10}
+          leftSection={<IconFlame size={16} />}
+          size="sm"
+          styles={{ input: { height: 44, borderRadius: 10 } }}
+        />
+      </SimpleGrid>
+
+      <Textarea
+        label="Notas (opcional)"
+        placeholder="¿Cómo te sentiste?"
+        {...form.getInputProps("notes")}
+        minRows={2}
+        mt="sm"
+        size="sm"
+        styles={{ input: { borderRadius: 10 } }}
+      />
+
+      <Box mt="md">
+        <WorkoutSatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
+      </Box>
+    </Box>
+  );
+
+  const submitButton = (
+    <Button
+      color="yellow"
+      onClick={handleSubmit}
+      loading={isLoading}
+      leftSection={<IconCheck size={18} />}
+      fullWidth
+      size="lg"
+      radius="xl"
+      styles={{ root: { height: 48, fontWeight: 700 } }}
+    >
+      Completar Entrenamiento
+    </Button>
+  );
+
+  if (!isMobileView) {
+    return (
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title={
+          <Group gap="xs">
+            <Text fw={700}>{workoutName}</Text>
+            <Badge color="yellow" variant="light" size="sm">
+              {exercises.length} ejercicios
+            </Badge>
+          </Group>
+        }
+        size="xl"
+        radius="lg"
+        centered
+        styles={{
+          body: { padding: 0 },
+          header: { borderBottom: "1px solid var(--mantine-color-gray-2)", padding: "12px 20px" },
+        }}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", minHeight: 500, maxHeight: "70vh" }}>
+          <ScrollArea style={{ borderRight: "1px solid var(--mantine-color-gray-2)" }} p="md">
+            {exerciseList}
+          </ScrollArea>
+          <Box style={{ display: "flex", flexDirection: "column" }}>
+            <ScrollArea style={{ flex: 1 }} p="md">
+              {summaryPanel}
+            </ScrollArea>
+            <Box p="md" style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}>
+              {submitButton}
+            </Box>
+          </Box>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Box
@@ -440,7 +547,6 @@ function LogWorkoutModal({
       bottom={0}
       style={{ zIndex: 300, background: "var(--mantine-color-gray-0)", display: "flex", flexDirection: "column" }}
     >
-      {/* Glassmorphism sticky header */}
       <Box
         pos="sticky"
         top={0}
@@ -472,60 +578,11 @@ function LogWorkoutModal({
         </Group>
       </Box>
 
-      {/* Scrollable content area */}
       <Box style={{ flex: 1, overflowY: "auto" }} px={0} py="sm">
-        {/* Exercise log rows - edge-to-edge */}
-        <Stack gap="md" px="sm">
-          {exercises.map((exercise) => (
-            <ExerciseLogRow
-              key={exercise.exercise_id}
-              exercise={exercise}
-              setData={exerciseSets[exercise.exercise_id] || []}
-              onSetChange={(sets) => setExerciseSets((prev) => ({ ...prev, [exercise.exercise_id]: sets }))}
-            />
-          ))}
-        </Stack>
-
-        {/* Duration, Effort, Notes */}
-        <Box px="md" mt="lg">
-          <SimpleGrid cols={2} spacing="sm">
-            <NumberInput
-              label="Duración (min)"
-              {...form.getInputProps("duration_minutes")}
-              min={1}
-              max={300}
-              leftSection={<IconClock size={16} />}
-              size="sm"
-              styles={{ input: { height: 44, borderRadius: 10 } }}
-            />
-            <NumberInput
-              label="Esfuerzo (1-10)"
-              {...form.getInputProps("perceived_effort")}
-              min={1}
-              max={10}
-              leftSection={<IconFlame size={16} />}
-              size="sm"
-              styles={{ input: { height: 44, borderRadius: 10 } }}
-            />
-          </SimpleGrid>
-
-          <Textarea
-            label="Notas (opcional)"
-            placeholder="¿Cómo te sentiste?"
-            {...form.getInputProps("notes")}
-            minRows={2}
-            mt="sm"
-            size="sm"
-            styles={{ input: { borderRadius: 10 } }}
-          />
-
-          <Box mt="md">
-            <WorkoutSatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
-          </Box>
-        </Box>
+        {exerciseList}
+        <Box mt="lg">{summaryPanel}</Box>
       </Box>
 
-      {/* Sticky footer with safe area */}
       <Box
         style={{
           flexShrink: 0,
@@ -537,18 +594,7 @@ function LogWorkoutModal({
         px="md"
         py="sm"
       >
-        <Button
-          color="yellow"
-          onClick={handleSubmit}
-          loading={isLoading}
-          leftSection={<IconCheck size={18} />}
-          fullWidth
-          size="lg"
-          radius="xl"
-          styles={{ root: { height: 48, fontWeight: 700 } }}
-        >
-          Completar Entrenamiento
-        </Button>
+        {submitButton}
       </Box>
     </Box>
   );

@@ -27,7 +27,7 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.models.payment import Payment, PaymentStatus
 from app.models.invitation import ClientInvitation
-from app.models.product import Product
+from app.models.product import Product, Coupon
 from app.models.client import Client
 from app.services.sequra import sequra_service
 from app.services.auto_invoice import create_invoice_for_payment
@@ -43,6 +43,7 @@ router = APIRouter()
 class StartOnboardingRequest(BaseModel):
     token: str = Field(..., min_length=10, max_length=100)
     product_code: str = Field("pp6", description="SeQura product code (pp6, pp3, i1, etc.)")
+    coupon_code: Optional[str] = Field(None, max_length=50, description="Optional coupon code for discount")
 
 
 class StartOnboardingResponse(BaseModel):
@@ -250,6 +251,32 @@ async def start_onboarding(
                 "country_code": "ES",
             })
 
+    # Handle coupon/discount if provided
+    discount_items = None
+    if data.coupon_code:
+        coupon_result = await db.execute(
+            select(Coupon).where(
+                Coupon.workspace_id == invitation.workspace_id,
+                Coupon.code == data.coupon_code,
+                Coupon.is_active == True,
+            )
+        )
+        coupon = coupon_result.scalar_one_or_none()
+        if coupon:
+            if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
+                logger.info(f"Coupon {data.coupon_code} exhausted, ignoring discount")
+            else:
+                if coupon.discount_type == "percentage":
+                    discount_cents = -int(round(amount_cents * float(coupon.discount_value) / 100))
+                else:
+                    discount_cents = -int(round(float(coupon.discount_value) * 100))
+                discount_cents = max(discount_cents, -(amount_cents - 1))
+                discount_items = [{
+                    "reference": coupon.code,
+                    "name": coupon.description or f"Descuento {coupon.code}",
+                    "total_with_tax": discount_cents,
+                }]
+
     order_data = sequra_service.build_order_payload(
         amount_cents=amount_cents,
         product_name=product.name[:125],
@@ -274,6 +301,7 @@ async def start_onboarding(
         billing_postal_code=billing_postal_code,
         billing_country_code=billing_country_code,
         previous_orders=previous_orders,
+        discount_items=discount_items,
     )
 
     # Start solicitation with SeQura
@@ -338,7 +366,7 @@ async def start_onboarding(
 @router.get("/identification-form", response_class=HTMLResponse)
 async def get_identification_form(
     order_uri: str = Query(..., description="SeQura order URI"),
-    product: str = Query("pp3", description="SeQura product code"),
+    product: str = Query("pp6", description="SeQura product code"),
 ):
     """
     Proxy endpoint to fetch SeQura's identification form HTML.

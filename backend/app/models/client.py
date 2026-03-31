@@ -102,6 +102,9 @@ class Client(BaseModel):
         "consent_date": None
     })
     
+    # Chat
+    chat_enabled = Column(Boolean, default=False)
+
     # Status
     is_active = Column(Boolean, default=True)
     

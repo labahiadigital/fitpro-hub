@@ -1,4 +1,5 @@
-import { Box, Text } from "@mantine/core";
+import { Box, Modal, ScrollArea, Text } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { IconX } from "@tabler/icons-react";
 import { type ReactNode, useEffect } from "react";
 
@@ -12,20 +13,52 @@ interface NativeBottomSheetProps {
 }
 
 export function NativeBottomSheet({ opened, onClose, title, subtitle, children, footer }: NativeBottomSheetProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   useEffect(() => {
-    if (opened) {
+    if (opened && isMobile) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
-  }, [opened]);
+  }, [opened, isMobile]);
 
   if (!opened) return null;
 
+  if (!isMobile) {
+    return (
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title={
+          <Box>
+            {title && <Text fw={700} size="md">{title}</Text>}
+            {subtitle && <Text size="xs" c="dimmed">{subtitle}</Text>}
+          </Box>
+        }
+        size="md"
+        radius="lg"
+        centered
+        styles={{
+          body: { padding: 0 },
+          header: { borderBottom: "1px solid var(--mantine-color-gray-2)", padding: "12px 20px" },
+        }}
+      >
+        <ScrollArea mah="60vh" px="md" py="md">
+          {children}
+        </ScrollArea>
+        {footer && (
+          <Box p="md" style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}>
+            {footer}
+          </Box>
+        )}
+      </Modal>
+    );
+  }
+
   return (
     <>
-      {/* Backdrop */}
       <Box
         pos="fixed"
         top={0}
@@ -42,7 +75,6 @@ export function NativeBottomSheet({ opened, onClose, title, subtitle, children, 
         }}
       />
 
-      {/* Panel */}
       <Box
         pos="fixed"
         left={0}
@@ -64,12 +96,10 @@ export function NativeBottomSheet({ opened, onClose, title, subtitle, children, 
           @keyframes nbsSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         `}</style>
 
-        {/* Handle bar */}
         <Box style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4, flexShrink: 0 }}>
           <Box style={{ width: 48, height: 5, borderRadius: 3, background: "var(--mantine-color-gray-3)" }} />
         </Box>
 
-        {/* Header */}
         {(title || subtitle) && (
           <Box px="md" pb="sm" style={{ flexShrink: 0, borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
             <Box style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -100,12 +130,10 @@ export function NativeBottomSheet({ opened, onClose, title, subtitle, children, 
           </Box>
         )}
 
-        {/* Scrollable content */}
         <Box style={{ flex: 1, overflowY: "auto" }} px="md" py="md">
           {children}
         </Box>
 
-        {/* Sticky footer */}
         {footer && (
           <Box
             style={{

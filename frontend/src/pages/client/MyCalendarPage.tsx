@@ -161,6 +161,7 @@ export function MyCalendarPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [highlightedSessionId, setHighlightedSessionId] = useState<string | null>(null);
   const [bookingModalOpened, { open: openBookingModal, close: closeBookingModal }] = useDisclosure(false);
+  const [selectedSession, setSelectedSession] = useState<typeof upcomingSessions[0] | null>(null);
 
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
 
@@ -346,7 +347,12 @@ export function MyCalendarPage() {
             padding="lg"
             radius="lg"
             withBorder
-            style={highlightedSessionId === session.id ? { borderColor: "var(--mantine-color-yellow-filled)", borderWidth: 2 } : undefined}
+            style={{
+              cursor: "pointer",
+              transition: "transform 0.1s, box-shadow 0.1s",
+              ...(highlightedSessionId === session.id ? { borderColor: "var(--mantine-color-yellow-filled)", borderWidth: 2 } : {}),
+            }}
+            onClick={() => setSelectedSession(session)}
           >
             <Group justify="space-between" wrap="nowrap">
               <Group wrap="nowrap">
@@ -389,7 +395,7 @@ export function MyCalendarPage() {
               </Group>
               <Stack gap="xs">
                 {session.type === "online" && (
-                  <Button size="sm" color="blue">Unirse</Button>
+                  <Button size="sm" color="blue" onClick={(e: React.MouseEvent) => e.stopPropagation()}>Unirse</Button>
                 )}
               </Stack>
             </Group>
@@ -408,7 +414,21 @@ export function MyCalendarPage() {
           </Card>
         )}
         {filteredPast.map((session) => (
-          <Card key={session.id} shadow="sm" padding="md" radius="md" withBorder style={{ opacity: 0.8 }}>
+          <Card
+            key={session.id}
+            shadow="sm"
+            padding="md"
+            radius="md"
+            withBorder
+            style={{ opacity: 0.8, cursor: "pointer" }}
+            onClick={() => setSelectedSession({
+              ...session,
+              trainer: "Trackfiz",
+              type: "presencial",
+              location: "Gimnasio",
+              status: "completed",
+            })}
+          >
             <Group justify="space-between">
               <Group>
                 <ThemeIcon size="md" radius="md" variant="light" color="green">
@@ -426,6 +446,75 @@ export function MyCalendarPage() {
       </Stack>
 
       <RequestBookingModal opened={bookingModalOpened} onClose={closeBookingModal} />
+
+      {/* Session Detail */}
+      <NativeBottomSheet
+        opened={!!selectedSession}
+        onClose={() => setSelectedSession(null)}
+        title={selectedSession?.title || "Sesión"}
+        subtitle={selectedSession?.date}
+      >
+        {selectedSession && (
+          <Stack gap="md">
+            <Paper p="md" radius="md" withBorder>
+              <Group gap="sm" mb="sm">
+                <ThemeIcon size="lg" radius="xl" variant="light" color={selectedSession.type === "online" ? "blue" : "yellow"}>
+                  {selectedSession.type === "online" ? <IconVideo size={20} /> : <IconCalendarEvent size={20} />}
+                </ThemeIcon>
+                <Box>
+                  <Text fw={600}>{selectedSession.title}</Text>
+                  <Badge
+                    color={selectedSession.status === "confirmed" ? "green" : "yellow"}
+                    variant="light"
+                    size="sm"
+                  >
+                    {selectedSession.status === "confirmed" ? "Confirmada" : "Pendiente"}
+                  </Badge>
+                </Box>
+              </Group>
+            </Paper>
+
+            <Stack gap="sm">
+              <Group gap="sm">
+                <ThemeIcon variant="light" color="gray" size="md" radius="xl">
+                  <IconClock size={16} />
+                </ThemeIcon>
+                <Box>
+                  <Text size="sm" fw={500}>Horario</Text>
+                  <Text size="sm" c="dimmed">{selectedSession.date} &bull; {selectedSession.time}</Text>
+                </Box>
+              </Group>
+              <Group gap="sm">
+                <ThemeIcon variant="light" color="gray" size="md" radius="xl">
+                  <IconUser size={16} />
+                </ThemeIcon>
+                <Box>
+                  <Text size="sm" fw={500}>Entrenador</Text>
+                  <Text size="sm" c="dimmed">{selectedSession.trainer}</Text>
+                </Box>
+              </Group>
+              <Group gap="sm">
+                <ThemeIcon variant="light" color="gray" size="md" radius="xl">
+                  <IconMapPin size={16} />
+                </ThemeIcon>
+                <Box>
+                  <Text size="sm" fw={500}>Ubicación</Text>
+                  <Text size="sm" c="dimmed">{selectedSession.location}</Text>
+                </Box>
+              </Group>
+              <Group gap="sm">
+                <ThemeIcon variant="light" color="gray" size="md" radius="xl">
+                  {selectedSession.type === "online" ? <IconVideo size={16} /> : <IconCalendarEvent size={16} />}
+                </ThemeIcon>
+                <Box>
+                  <Text size="sm" fw={500}>Tipo</Text>
+                  <Text size="sm" c="dimmed">{selectedSession.type === "online" ? "Online" : "Presencial"}</Text>
+                </Box>
+              </Group>
+            </Stack>
+          </Stack>
+        )}
+      </NativeBottomSheet>
     </Box>
   );
 }

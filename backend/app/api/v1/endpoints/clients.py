@@ -345,6 +345,7 @@ async def create_client(
         goals=client.goals,
         consents=client.consents,
         is_active=client.is_active,
+        chat_enabled=getattr(client, 'chat_enabled', False) or False,
         tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
         created_at=client.created_at,
         updated_at=client.updated_at
@@ -427,6 +428,7 @@ async def get_client(
         goals=client.goals,
         consents=client.consents,
         is_active=client.is_active,
+        chat_enabled=getattr(client, 'chat_enabled', False) or False,
         tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
         created_at=client.created_at,
         updated_at=client.updated_at
@@ -501,6 +503,7 @@ async def update_client(
         goals=client.goals,
         consents=client.consents,
         is_active=client.is_active,
+        chat_enabled=getattr(client, 'chat_enabled', False) or False,
         tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
         created_at=client.created_at,
         updated_at=client.updated_at
@@ -665,6 +668,7 @@ async def complete_onboarding(
         goals=client.goals,
         consents=client.consents or {},
         is_active=client.is_active,
+        chat_enabled=getattr(client, 'chat_enabled', False) or False,
         tags=[],
         created_at=client.created_at,
         updated_at=client.updated_at

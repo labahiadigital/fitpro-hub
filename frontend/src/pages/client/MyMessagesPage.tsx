@@ -205,11 +205,13 @@ export function MyMessagesPage() {
 
   return (
     <Box
-      h="calc(100vh - 60px)"
       style={{
         display: "flex",
         flexDirection: "column",
         backgroundColor: "var(--mantine-color-body)",
+        height: "calc(100vh - 60px)",
+        maxHeight: "calc(100dvh - 60px)",
+        overflow: "hidden",
       }}
     >
       {/* Header */}
@@ -314,6 +316,8 @@ export function MyMessagesPage() {
         style={{
           borderTop: "1px solid var(--mantine-color-gray-2)",
           backgroundColor: "white",
+          flexShrink: 0,
+          paddingBottom: "max(12px, env(safe-area-inset-bottom))",
         }}
       >
         <Group gap="sm">
