@@ -56,6 +56,8 @@ import {
   useDeleteNutritionLog,
   useNutritionHistory,
   useClientFoodSearch,
+  useMoveMeal,
+  useSwapDays,
 } from "../../hooks/useClientPortal";
 import { useClientRecipes } from "../../hooks/useRecipes";
 import { RecipeDetailModal } from "../../components/recipes/RecipeDetailModal";
@@ -309,7 +311,20 @@ function LogMealModal({
   const updateFood = (index: number, field: keyof FoodItem, value: string | number) => {
     setFoods((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      const old = updated[index];
+      if (field === "quantity" && typeof value === "number" && old.quantity > 0) {
+        const ratio = value / old.quantity;
+        updated[index] = {
+          ...old,
+          quantity: value,
+          calories: Math.round(old.calories * ratio),
+          protein: Math.round(old.protein * ratio * 10) / 10,
+          carbs: Math.round(old.carbs * ratio * 10) / 10,
+          fat: Math.round(old.fat * ratio * 10) / 10,
+        };
+      } else {
+        updated[index] = { ...old, [field]: value };
+      }
       return updated;
     });
   };
@@ -589,7 +604,6 @@ function LogPlanMealModal({
   opened,
   onClose,
   onSubmit,
-  onDeleteFirst,
   isLoading,
   meal,
   existingLog,
@@ -601,8 +615,8 @@ function LogPlanMealModal({
     foods: FoodItem[];
     notes?: string;
     satisfaction_rating?: number;
+    replace?: boolean;
   }) => void;
-  onDeleteFirst?: () => Promise<void>;
   isLoading: boolean;
   meal: PlanMeal | null;
   existingLog?: { foods: FoodItem[]; notes?: string; satisfaction_rating?: number } | null;
@@ -647,7 +661,20 @@ function LogPlanMealModal({
   const updateFood = (index: number, field: keyof FoodItem, value: string | number) => {
     setFoods((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      const old = updated[index];
+      if (field === "quantity" && typeof value === "number" && old.quantity > 0) {
+        const ratio = value / old.quantity;
+        updated[index] = {
+          ...old,
+          quantity: value,
+          calories: Math.round(old.calories * ratio),
+          protein: Math.round(old.protein * ratio * 10) / 10,
+          carbs: Math.round(old.carbs * ratio * 10) / 10,
+          fat: Math.round(old.fat * ratio * 10) / 10,
+        };
+      } else {
+        updated[index] = { ...old, [field]: value };
+      }
       return updated;
     });
   };
@@ -683,13 +710,10 @@ function LogPlanMealModal({
     const validFoods = foods.filter((f) => f.name.trim() !== "");
     if (validFoods.length === 0) return;
 
-    if (existingLog && onDeleteFirst) {
-      await onDeleteFirst();
-    }
-
     onSubmit({
       meal_name: meal?.name || "Comida",
       foods: validFoods,
+      replace: !!existingLog,
       notes: notes || undefined,
       satisfaction_rating: satisfactionRating ?? undefined,
     });
@@ -915,21 +939,43 @@ function NutritionDayDetail({
   dayData,
   targets,
   planMeals,
-  mealDayOverrides,
-  setMealDayOverrides,
-  selectedWeekDayIndex,
 }: {
-  dayData: { dayName: string; calories: number; totals: { protein?: number; carbs?: number; fat?: number } };
+  dayData: { dayName: string; calories: number; totals: { protein?: number; carbs?: number; fat?: number }; planDayNum?: number };
   targets: { calories: number };
   planMeals: PlanMeal[];
-  mealDayOverrides: Record<string, number>;
-  setMealDayOverrides: React.Dispatch<React.SetStateAction<Record<string, number>>>;
-  selectedWeekDayIndex: number;
 }) {
-  const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const planDayLabels = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  const moveMealMutation = useMoveMeal();
+  const swapDaysMutation = useSwapDays();
   return (
     <>
-      <Title order={4} mb="md">{dayData.dayName}</Title>
+      <Group justify="space-between" mb="md">
+        <Title order={4}>{dayData.dayName}</Title>
+        {dayData.planDayNum && (
+          <Menu shadow="md" position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal">
+                Intercambiar día
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Intercambiar comidas con</Menu.Label>
+              {planDayLabels.map((label, idx) => {
+                const targetDayNum = idx + 1;
+                if (targetDayNum === dayData.planDayNum) return null;
+                return (
+                  <Menu.Item
+                    key={idx}
+                    onClick={() => swapDaysMutation.mutate({ sourceDay: dayData.planDayNum!, targetDay: targetDayNum })}
+                  >
+                    {label}
+                  </Menu.Item>
+                );
+              })}
+            </Menu.Dropdown>
+          </Menu>
+        )}
+      </Group>
       <SimpleGrid cols={2} spacing="sm" mb="lg">
         <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
           <Text size="xl" fw={700}>{dayData.calories}</Text>
@@ -981,7 +1027,6 @@ function NutritionDayDetail({
               const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.carbs_g) || 0), 0);
               const totalFat = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.fat_g) || 0), 0);
               const MealIcon = mealType?.icon || IconSalad;
-              const mealKey = `${selectedWeekDayIndex}-${mealIndex}`;
 
               return (
                 <Card key={mealIndex} padding="md" radius="md" withBorder>
@@ -1008,17 +1053,20 @@ function NutritionDayDetail({
                         </Menu.Target>
                         <Menu.Dropdown>
                           <Menu.Label>Mover a</Menu.Label>
-                          {dayLabels.map((targetDay, targetIndex) => {
-                            if (targetIndex === selectedWeekDayIndex) return null;
+                          {planDayLabels.map((label, idx) => {
+                            const targetDayNum = idx + 1;
+                            if (targetDayNum === dayData.planDayNum) return null;
                             return (
                               <Menu.Item
-                                key={targetIndex}
+                                key={idx}
                                 leftSection={<IconArrowsExchange size={14} />}
                                 onClick={() => {
-                                  setMealDayOverrides((prev) => ({ ...prev, [mealKey]: targetIndex }));
+                                  if (dayData.planDayNum) {
+                                    moveMealMutation.mutate({ sourceDay: dayData.planDayNum, mealIndex, targetDay: targetDayNum });
+                                  }
                                 }}
                               >
-                                {targetDay}
+                                {label}
                               </Menu.Item>
                             );
                           })}
@@ -1026,11 +1074,6 @@ function NutritionDayDetail({
                       </Menu>
                     </Group>
                   </Group>
-                  {mealDayOverrides[mealKey] !== undefined && (
-                    <Badge variant="light" color="blue" size="xs" mt="xs">
-                      Movida a {dayLabels[mealDayOverrides[mealKey]]}
-                    </Badge>
-                  )}
                   {mealFoods.length > 0 && (
                     <Stack gap="xs" mt="sm" ml={54}>
                       {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
@@ -1063,7 +1106,7 @@ export function MyNutritionPage() {
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
   const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
   const [selectedWeekDayIndex, setSelectedWeekDayIndex] = useState<number | null>(null);
-  const [mealDayOverrides, setMealDayOverrides] = useState<Record<string, number>>({});
+  // mealDayOverrides removed - using real API calls now
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [historyDetailDay, setHistoryDetailDay] = useState<string | null>(null);
   
@@ -1074,6 +1117,8 @@ export function MyNutritionPage() {
   const { data: nutritionHistory } = useNutritionHistory(30);
   const logNutritionMutation = useLogNutrition();
   const deleteNutritionLogMutation = useDeleteNutritionLog();
+  const moveMealMutation = useMoveMeal();
+  const swapDaysMutation = useSwapDays();
 
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
   const selectedPlanDay = dayMapping[selectedDate.getDay()];
@@ -1187,6 +1232,7 @@ export function MyNutritionPage() {
           isToday: true,
           mealsLogged: nutritionLogs?.length || 0,
           planMeals: planMeals,
+          planDayNum,
           totals: {
             protein: dailyTotals.protein,
             carbs: dailyTotals.carbs,
@@ -1204,6 +1250,7 @@ export function MyNutritionPage() {
         isToday: false,
         mealsLogged: dayHistory?.meals?.length || 0,
         planMeals: planMeals,
+        planDayNum,
         totals: dayHistory?.totals || { protein: 0, carbs: 0, fat: 0 },
       };
     });
@@ -1214,6 +1261,7 @@ export function MyNutritionPage() {
     foods: FoodItem[];
     notes?: string;
     satisfaction_rating?: number;
+    replace?: boolean;
   }) => {
     try {
       await logNutritionMutation.mutateAsync({
@@ -1222,6 +1270,7 @@ export function MyNutritionPage() {
         foods: data.foods,
         notes: data.notes,
         satisfaction_rating: data.satisfaction_rating,
+        replace: data.replace,
       });
       closeModal();
       closePlanMealModal();
@@ -1607,6 +1656,29 @@ export function MyNutritionPage() {
             emptyMessage="Selecciona un día para ver el detalle nutricional"
             master={
               <>
+                <Card shadow="sm" padding="lg" radius="lg" withBorder mb="md">
+                  <Title order={5} mb="md">Resumen de la Semana</Title>
+                  <SimpleGrid cols={{ base: 1, xs: 3 }}>
+                    <Box ta="center">
+                      <Text size="xl" fw={700} c="yellow">
+                        {nutritionHistory?.summary?.avg_calories || 0}
+                      </Text>
+                      <Text size="sm" c="dimmed">Promedio kcal/día</Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={700} c="green">
+                        {nutritionHistory?.summary?.total_days || 0}
+                      </Text>
+                      <Text size="sm" c="dimmed">Días registrados</Text>
+                    </Box>
+                    <Box ta="center">
+                      <Text size="xl" fw={700} c="blue">
+                        {targets.calories}
+                      </Text>
+                      <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
+                    </Box>
+                  </SimpleGrid>
+                </Card>
                 {weekData.map((day, index) => {
                   const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
                   return (
@@ -1674,7 +1746,33 @@ export function MyNutritionPage() {
                 {/* Plan meals for this day */}
                 {weekData[selectedWeekDayIndex].planMeals && weekData[selectedWeekDayIndex].planMeals.length > 0 ? (
                   <Box>
-                    <Text fw={600} mb="sm">Comidas del plan para {weekData[selectedWeekDayIndex].dayName}</Text>
+                    <Group justify="space-between" mb="sm">
+                      <Text fw={600}>Comidas del plan para {weekData[selectedWeekDayIndex].dayName}</Text>
+                      {weekData[selectedWeekDayIndex].planDayNum && (
+                        <Menu shadow="md" position="bottom-end" withinPortal>
+                          <Menu.Target>
+                            <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal">
+                              Intercambiar día
+                            </Button>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Label>Intercambiar comidas con</Menu.Label>
+                            {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, idx) => {
+                              const targetDayNum = idx + 1;
+                              if (targetDayNum === weekData[selectedWeekDayIndex].planDayNum) return null;
+                              return (
+                                <Menu.Item
+                                  key={idx}
+                                  onClick={() => swapDaysMutation.mutate({ sourceDay: weekData[selectedWeekDayIndex].planDayNum!, targetDay: targetDayNum })}
+                                >
+                                  {label}
+                                </Menu.Item>
+                              );
+                            })}
+                          </Menu.Dropdown>
+                        </Menu>
+                      )}
+                    </Group>
                     <Stack gap="sm">
                       {weekData[selectedWeekDayIndex].planMeals.map((meal: PlanMeal, mealIndex: number) => {
                         const mealType = MEAL_TYPES.find(m => m.value === meal.name);
@@ -1702,8 +1800,8 @@ export function MyNutritionPage() {
                         
                         const MealIcon = mealType?.icon || IconSalad;
                         
-                        const mealKey = `${selectedWeekDayIndex}-${mealIndex}`;
-                        const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                        const currentPlanDayNum = weekData[selectedWeekDayIndex]?.planDayNum;
+                        const planDayLabelsMobile = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
                         
                         return (
                           <Card key={mealIndex} padding="md" radius="md" withBorder>
@@ -1735,17 +1833,18 @@ export function MyNutritionPage() {
                                   </Menu.Target>
                                   <Menu.Dropdown>
                                     <Menu.Label>Mover a</Menu.Label>
-                                    {dayLabels.map((targetDay, targetIndex) => {
-                                      if (targetIndex === selectedWeekDayIndex) return null;
+                                    {planDayLabelsMobile.map((label, idx) => {
+                                      const targetDayNum = idx + 1;
+                                      if (targetDayNum === currentPlanDayNum) return null;
                                       return (
                                         <Menu.Item
-                                          key={targetIndex}
+                                          key={idx}
                                           leftSection={<IconArrowsExchange size={14} />}
                                           onClick={() => {
-                                            setMealDayOverrides((prev) => ({ ...prev, [mealKey]: targetIndex }));
+                                            if (currentPlanDayNum) moveMealMutation.mutate({ sourceDay: currentPlanDayNum, mealIndex, targetDay: targetDayNum });
                                           }}
                                         >
-                                          {targetDay}
+                                          {label}
                                         </Menu.Item>
                                       );
                                     })}
@@ -1753,11 +1852,6 @@ export function MyNutritionPage() {
                                 </Menu>
                               </Group>
                             </Group>
-                            {mealDayOverrides[mealKey] !== undefined && (
-                              <Badge variant="light" color="blue" size="xs" mt="xs">
-                                Movida a {dayLabels[mealDayOverrides[mealKey]]}
-                              </Badge>
-                            )}
                             {mealFoods.length > 0 && (
                               <Stack gap="xs" mt="sm" ml={54}>
                                 {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
@@ -1781,29 +1875,6 @@ export function MyNutritionPage() {
               </FullPageDetail>
             )}
 
-                <Card shadow="sm" padding="lg" radius="lg" withBorder>
-                  <Title order={5} mb="md">Resumen de la Semana</Title>
-                  <SimpleGrid cols={{ base: 1, xs: 3 }}>
-                    <Box ta="center">
-                      <Text size="xl" fw={700} c="yellow">
-                        {nutritionHistory?.summary?.avg_calories || 0}
-                      </Text>
-                      <Text size="sm" c="dimmed">Promedio kcal/día</Text>
-                    </Box>
-                    <Box ta="center">
-                      <Text size="xl" fw={700} c="green">
-                        {nutritionHistory?.summary?.total_days || 0}
-                      </Text>
-                      <Text size="sm" c="dimmed">Días registrados</Text>
-                    </Box>
-                    <Box ta="center">
-                      <Text size="xl" fw={700} c="blue">
-                        {targets.calories}
-                      </Text>
-                      <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
-                    </Box>
-                  </SimpleGrid>
-                </Card>
               </>
             }
             detail={
@@ -1812,9 +1883,6 @@ export function MyNutritionPage() {
                   dayData={weekData[selectedWeekDayIndex]}
                   targets={targets}
                   planMeals={weekData[selectedWeekDayIndex].planMeals}
-                  mealDayOverrides={mealDayOverrides}
-                  setMealDayOverrides={setMealDayOverrides}
-                  selectedWeekDayIndex={selectedWeekDayIndex}
                 />
               ) : null
             }
@@ -1950,22 +2018,54 @@ export function MyNutritionPage() {
                 </SimpleGrid>
 
                 <Stack gap="sm">
-                  {selectedDay.meals.map((meal, mealIndex) => (
-                    <Paper key={mealIndex} p="md" radius="md" withBorder>
-                      <Group justify="space-between" mb="xs">
-                        <Text fw={600}>{meal.meal_name}</Text>
-                        <Badge variant="light" color="orange">{meal.total_calories} kcal</Badge>
-                      </Group>
-                      <Text size="sm" c="dimmed">
-                        {meal.foods.map((f) => f.name).join(", ")}
-                      </Text>
-                      <Group gap={4} mt="xs">
-                        <Badge size="xs" variant="outline" color="red">P:{Math.round(meal.total_protein || 0)}g</Badge>
-                        <Badge size="xs" variant="outline" color="blue">C:{Math.round(meal.total_carbs || 0)}g</Badge>
-                        <Badge size="xs" variant="outline" color="grape">G:{Math.round(meal.total_fat || 0)}g</Badge>
-                      </Group>
-                    </Paper>
-                  ))}
+                  {selectedDay.meals.map((meal: { meal_name: string; total_calories: number; total_protein: number; total_carbs: number; total_fat: number; foods: Array<{ name: string; calories: number; protein?: number; carbs?: number; fat?: number; quantity?: number }>; plan_reference?: { calories: number; protein: number; carbs: number; fat: number; foods: Array<{ name: string; calories: number; protein: number; carbs: number; fat: number; quantity: number }> } }, mealIndex: number) => {
+                    const ref = meal.plan_reference;
+                    const diffCal = ref ? meal.total_calories - ref.calories : 0;
+                    const diffProt = ref ? (meal.total_protein || 0) - ref.protein : 0;
+                    const diffCarbs = ref ? (meal.total_carbs || 0) - ref.carbs : 0;
+                    const diffFat = ref ? (meal.total_fat || 0) - ref.fat : 0;
+                    const fmtDiff = (v: number) => (v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`);
+                    const diffColor = (v: number) => (Math.abs(v) < 1 ? "gray" : v > 0 ? "red" : "green");
+
+                    const loggedNames = new Set(meal.foods.map(f => f.name));
+                    const planNames = new Set((ref?.foods || []).map(f => f.name));
+                    const addedFoods = meal.foods.filter(f => !planNames.has(f.name));
+                    const removedFoods = (ref?.foods || []).filter(f => !loggedNames.has(f.name));
+
+                    return (
+                      <Paper key={mealIndex} p="md" radius="md" withBorder>
+                        <Group justify="space-between" mb="xs">
+                          <Text fw={600}>{meal.meal_name}</Text>
+                          <Badge variant="light" color="orange">{meal.total_calories} kcal</Badge>
+                        </Group>
+                        <Text size="sm" c="dimmed" mb="xs">
+                          {meal.foods.map((f) => `${f.name}${f.quantity ? ` (${f.quantity}g)` : ""}`).join(", ")}
+                        </Text>
+                        <Group gap={4} mb="xs">
+                          <Badge size="xs" variant="outline" color="red">P:{Math.round(meal.total_protein || 0)}g</Badge>
+                          <Badge size="xs" variant="outline" color="blue">C:{Math.round(meal.total_carbs || 0)}g</Badge>
+                          <Badge size="xs" variant="outline" color="grape">G:{Math.round(meal.total_fat || 0)}g</Badge>
+                        </Group>
+                        {ref && (
+                          <Box p="xs" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
+                            <Text size="xs" fw={600} mb={4}>Variación vs plan:</Text>
+                            <Group gap={6} wrap="wrap">
+                              <Badge size="xs" variant="light" color={diffColor(diffCal)}>{fmtDiff(diffCal)} kcal</Badge>
+                              <Badge size="xs" variant="light" color={diffColor(diffProt)}>{fmtDiff(diffProt)}g prot</Badge>
+                              <Badge size="xs" variant="light" color={diffColor(diffCarbs)}>{fmtDiff(diffCarbs)}g carbs</Badge>
+                              <Badge size="xs" variant="light" color={diffColor(diffFat)}>{fmtDiff(diffFat)}g grasas</Badge>
+                            </Group>
+                            {addedFoods.length > 0 && (
+                              <Text size="xs" c="teal" mt={4}>+ Añadido: {addedFoods.map(f => f.name).join(", ")}</Text>
+                            )}
+                            {removedFoods.length > 0 && (
+                              <Text size="xs" c="red" mt={4}>− No comido: {removedFoods.map(f => f.name).join(", ")}</Text>
+                            )}
+                          </Box>
+                        )}
+                      </Paper>
+                    );
+                  })}
                 </Stack>
               </FullPageDetail>
             );
@@ -1993,11 +2093,6 @@ export function MyNutritionPage() {
           setSelectedPlanMeal(null);
         }}
         onSubmit={handleLogMeal}
-        onDeleteFirst={
-          selectedPlanMeal && registeredMeals[selectedPlanMeal.name]
-            ? () => handleUnregisterMeal(selectedPlanMeal.name)
-            : undefined
-        }
         isLoading={logNutritionMutation.isPending}
         meal={selectedPlanMeal}
         existingLog={

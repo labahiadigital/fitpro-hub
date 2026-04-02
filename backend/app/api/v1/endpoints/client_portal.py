@@ -905,16 +905,99 @@ async def get_all_meal_plans(
     return result.scalars().all()
 
 
-@router.post("/nutrition/logs", response_model=NutritionLogResponse, status_code=status.HTTP_201_CREATED)
-async def log_nutrition(
-    data: NutritionLogCreate,
+class MoveMealRequest(BaseModel):
+    source_day: int
+    meal_index: int
+    target_day: int
+
+@router.post("/nutrition/plan/move-meal")
+async def move_meal_between_days(
+    data: MoveMealRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Log food intake. Stores in the active meal plan's adherence field."""
+    """Move a specific meal from one day to another in the client's active plan."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+    )
+    meal_plan = result.scalar_one_or_none()
+    if not meal_plan:
+        raise HTTPException(status_code=404, detail="No hay plan activo")
+    
+    plan = dict(meal_plan.plan) if meal_plan.plan else {}
+    days = plan.get("days", [])
+    
+    src = next((d for d in days if d.get("day") == data.source_day), None)
+    dst = next((d for d in days if d.get("day") == data.target_day), None)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+    
+    meals = src.get("meals", [])
+    if data.meal_index < 0 or data.meal_index >= len(meals):
+        raise HTTPException(status_code=400, detail="Comida no encontrada")
+    
+    moved_meal = meals.pop(data.meal_index)
+    dst.setdefault("meals", []).append(moved_meal)
+    
+    meal_plan.plan = plan
+    flag_modified(meal_plan, "plan")
+    await db.commit()
+    return {"ok": True}
+
+
+class SwapDaysRequest(BaseModel):
+    source_day: int
+    target_day: int
+
+@router.post("/nutrition/plan/swap-days")
+async def swap_plan_days(
+    data: SwapDaysRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Swap all meals between two days in the client's active plan."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+    )
+    meal_plan = result.scalar_one_or_none()
+    if not meal_plan:
+        raise HTTPException(status_code=404, detail="No hay plan activo")
+    
+    plan = dict(meal_plan.plan) if meal_plan.plan else {}
+    days = plan.get("days", [])
+    
+    src = next((d for d in days if d.get("day") == data.source_day), None)
+    dst = next((d for d in days if d.get("day") == data.target_day), None)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+    
+    src_meals = src.get("meals", [])
+    dst_meals = dst.get("meals", [])
+    src["meals"] = dst_meals
+    dst["meals"] = src_meals
+    
+    meal_plan.plan = plan
+    flag_modified(meal_plan, "plan")
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/nutrition/logs", response_model=NutritionLogResponse, status_code=status.HTTP_201_CREATED)
+async def log_nutrition(
+    data: NutritionLogCreate,
+    replace: bool = Query(False),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Log food intake. Stores in the active meal plan's adherence field.
+    If replace=true, overwrites existing log for the same date+meal_name."""
+    from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
-    # Get active meal plan
     result = await db.execute(
         select(MealPlan)
         .where(MealPlan.client_id == client.id)
@@ -929,31 +1012,15 @@ async def log_nutrition(
             detail="No tienes un plan nutricional asignado"
         )
     
-    # Check if this meal was already logged for this date
     current_adherence = dict(meal_plan.adherence) if meal_plan.adherence else {"logs": []}
     if "logs" not in current_adherence:
         current_adherence["logs"] = []
     
-    # Check for duplicate: same date and meal_name
-    existing_log = next(
-        (log for log in current_adherence["logs"] 
-         if log.get("date") == data.date and log.get("meal_name") == data.meal_name),
-        None
-    )
-    
-    if existing_log:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Ya has registrado {data.meal_name} para el día {data.date}"
-        )
-    
-    # Totals: frontend sends pre-calculated per-food values (already adjusted for quantity)
     total_calories = sum(f.get("calories", 0) for f in data.foods)
     total_protein = sum(f.get("protein", 0) for f in data.foods)
     total_carbs = sum(f.get("carbs", 0) for f in data.foods)
     total_fat = sum(f.get("fat", 0) for f in data.foods)
     
-    # Create log entry
     log_entry = {
         "date": data.date,
         "meal_name": data.meal_name,
@@ -967,22 +1034,28 @@ async def log_nutrition(
         "logged_at": datetime.now().isoformat()
     }
     
-    current_adherence["logs"].append(log_entry)
+    existing_idx = next(
+        (i for i, log in enumerate(current_adherence["logs"])
+         if log.get("date") == data.date and log.get("meal_name") == data.meal_name),
+        None
+    )
     
-    # Reassign + flag_modified to trigger SQLAlchemy JSONB change detection
+    if existing_idx is not None:
+        if replace:
+            current_adherence["logs"][existing_idx] = log_entry
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Ya has registrado {data.meal_name} para el día {data.date}"
+            )
+    else:
+        current_adherence["logs"].append(log_entry)
+    
     meal_plan.adherence = current_adherence
-    from sqlalchemy.orm.attributes import flag_modified
     flag_modified(meal_plan, "adherence")
     
-    # Debug: print to verify
-    import logging
-    logging.info(f"[NUTRITION LOG] Saving adherence with {len(current_adherence['logs'])} logs")
-    
-    # Commit changes
     await db.commit()
     await db.refresh(meal_plan)
-    
-    logging.info(f"[NUTRITION LOG] After refresh: {len(meal_plan.adherence.get('logs', []))} logs")
     
     return NutritionLogResponse(
         date=data.date,
@@ -1074,6 +1147,38 @@ async def get_nutrition_history(
     
     from collections import defaultdict
     
+    def _calc_plan_meal_macros(mp_plan, meal_name, log_date_str):
+        """Calculate the planned macros for a given meal from the plan template."""
+        if not mp_plan:
+            return None
+        plan_days_list = mp_plan.get("days", [])
+        try:
+            d = date.fromisoformat(log_date_str)
+            # Monday=1 ... Sunday=7
+            plan_day_num = d.isoweekday()
+        except Exception:
+            return None
+        day_data = next((dd for dd in plan_days_list if dd.get("day") == plan_day_num), None)
+        if not day_data:
+            return None
+        meal_data = next((m for m in day_data.get("meals", []) if m.get("name") == meal_name), None)
+        if not meal_data:
+            return None
+        cal = prot = carb = fat = 0.0
+        plan_foods = []
+        for item in meal_data.get("items", []):
+            fd = item.get("food") or item.get("supplement") or {}
+            ss = float(fd.get("serving_size") or 100) or 100
+            qty = float(item.get("quantity_grams") or 0)
+            factor = qty / ss
+            ic = round(float(fd.get("calories") or 0) * factor)
+            ip = round(float(fd.get("protein") or 0) * factor, 1)
+            icb = round(float(fd.get("carbs") or 0) * factor, 1)
+            ift = round(float(fd.get("fat") or 0) * factor, 1)
+            cal += ic; prot += ip; carb += icb; fat += ift
+            plan_foods.append({"name": fd.get("name", ""), "calories": ic, "protein": ip, "carbs": icb, "fat": ift, "quantity": qty})
+        return {"calories": int(cal), "protein": round(prot, 1), "carbs": round(carb, 1), "fat": round(fat, 1), "foods": plan_foods}
+
     plan_groups = []
     all_days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
     
@@ -1088,11 +1193,14 @@ async def get_nutrition_history(
         if not filtered:
             continue
         
+        mp_plan = mp.plan if mp.plan else {}
         plan_days = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
         for log in filtered:
             log_date = log.get("date", "")
+            meal_name = log.get("meal_name")
+            plan_ref = _calc_plan_meal_macros(mp_plan, meal_name, log_date)
             entry = {
-                "meal_name": log.get("meal_name"),
+                "meal_name": meal_name,
                 "total_calories": log.get("total_calories", 0),
                 "total_protein": log.get("total_protein", 0),
                 "total_carbs": log.get("total_carbs", 0),
@@ -1101,6 +1209,7 @@ async def get_nutrition_history(
                 "logged_at": log.get("logged_at"),
                 "notes": log.get("notes"),
                 "satisfaction_rating": log.get("satisfaction_rating"),
+                "plan_reference": plan_ref,
             }
             plan_days[log_date]["meals"].append(entry)
             plan_days[log_date]["totals"]["calories"] += entry["total_calories"]
@@ -1177,8 +1286,10 @@ async def delete_nutrition_log(
             detail="Registro no encontrado"
         )
     
+    from sqlalchemy.orm.attributes import flag_modified
     logs.pop(log_index)
     meal_plan.adherence = {"logs": logs}
+    flag_modified(meal_plan, "adherence")
     await db.commit()
 
 

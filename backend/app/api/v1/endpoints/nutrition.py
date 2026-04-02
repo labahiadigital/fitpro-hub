@@ -575,70 +575,100 @@ async def get_client_nutrition_logs(
             detail="Cliente no encontrado"
         )
     
-    # Get client's active meal plan
     result = await db.execute(
         select(MealPlan)
         .where(MealPlan.client_id == client_id)
         .order_by(desc(MealPlan.created_at))
-        .limit(1)
     )
-    meal_plan = result.scalar_one_or_none()
+    meal_plans = result.scalars().all()
     
-    if not meal_plan or not meal_plan.adherence:
+    active_plan = next((mp for mp in meal_plans if mp.is_active), meal_plans[0] if meal_plans else None)
+    
+    if not meal_plans or all(not mp.adherence for mp in meal_plans):
         return {
             "client_id": str(client_id),
             "client_name": client.full_name,
             "logs": [],
             "summary": {"total_days": 0, "avg_calories": 0},
             "targets": {
-                "calories": float(meal_plan.target_calories) if meal_plan and meal_plan.target_calories else 2000,
-                "protein": float(meal_plan.target_protein) if meal_plan and meal_plan.target_protein else 140,
-                "carbs": float(meal_plan.target_carbs) if meal_plan and meal_plan.target_carbs else 250,
-                "fat": float(meal_plan.target_fat) if meal_plan and meal_plan.target_fat else 70,
+                "calories": float(active_plan.target_calories) if active_plan and active_plan.target_calories else 2000,
+                "protein": float(active_plan.target_protein) if active_plan and active_plan.target_protein else 140,
+                "carbs": float(active_plan.target_carbs) if active_plan and active_plan.target_carbs else 250,
+                "fat": float(active_plan.target_fat) if active_plan and active_plan.target_fat else 70,
             }
         }
     
-    logs = meal_plan.adherence.get("logs", [])
-    
-    # Calculate date range
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
     
-    # Filter logs by date range
-    filtered_logs = [
-        log for log in logs 
-        if start_date.isoformat() <= log.get("date", "") <= end_date.isoformat()
-    ]
+    def _calc_plan_meal_macros_trainer(mp_plan, meal_name, log_date_str):
+        if not mp_plan:
+            return None
+        plan_days_ref = mp_plan.get("days", [])
+        try:
+            d = date.fromisoformat(log_date_str)
+            plan_day_num = d.isoweekday()
+        except Exception:
+            return None
+        day_data = next((dd for dd in plan_days_ref if dd.get("day") == plan_day_num), None)
+        if not day_data:
+            return None
+        meal_data = next((m for m in day_data.get("meals", []) if m.get("name") == meal_name), None)
+        if not meal_data:
+            return None
+        cal = prot = carb = fat_v = 0.0
+        plan_foods = []
+        for item in meal_data.get("items", []):
+            fd = item.get("food") or item.get("supplement") or {}
+            ss = float(fd.get("serving_size") or 100) or 100
+            qty = float(item.get("quantity_grams") or 0)
+            factor = qty / ss
+            ic = round(float(fd.get("calories") or 0) * factor)
+            ip = round(float(fd.get("protein") or 0) * factor, 1)
+            icb = round(float(fd.get("carbs") or 0) * factor, 1)
+            ift = round(float(fd.get("fat") or 0) * factor, 1)
+            cal += ic; prot += ip; carb += icb; fat_v += ift
+            plan_foods.append({"name": fd.get("name", ""), "calories": ic, "protein": ip, "carbs": icb, "fat": ift, "quantity": qty})
+        return {"calories": int(cal), "protein": round(prot, 1), "carbs": round(carb, 1), "fat": round(fat_v, 1), "foods": plan_foods}
     
-    # Group by date
     from collections import defaultdict
     days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
     
-    for log in filtered_logs:
-        log_date = log.get("date", "")
-        days_data[log_date]["meals"].append({
-            "meal_name": log.get("meal_name"),
-            "total_calories": log.get("total_calories", 0),
-            "total_protein": log.get("total_protein", 0),
-            "total_carbs": log.get("total_carbs", 0),
-            "total_fat": log.get("total_fat", 0),
-            "foods": log.get("foods", []),
-            "logged_at": log.get("logged_at"),
-            "notes": log.get("notes"),
-            "satisfaction_rating": log.get("satisfaction_rating"),
-        })
-        days_data[log_date]["totals"]["calories"] += log.get("total_calories", 0)
-        days_data[log_date]["totals"]["protein"] += log.get("total_protein", 0)
-        days_data[log_date]["totals"]["carbs"] += log.get("total_carbs", 0)
-        days_data[log_date]["totals"]["fat"] += log.get("total_fat", 0)
+    for mp in meal_plans:
+        if not mp.adherence:
+            continue
+        logs = mp.adherence.get("logs", [])
+        mp_plan = mp.plan if mp.plan else {}
+        filtered_logs = [
+            log for log in logs
+            if start_date.isoformat() <= log.get("date", "") <= end_date.isoformat()
+        ]
+        for log in filtered_logs:
+            log_date = log.get("date", "")
+            meal_name = log.get("meal_name")
+            plan_ref = _calc_plan_meal_macros_trainer(mp_plan, meal_name, log_date)
+            days_data[log_date]["meals"].append({
+                "meal_name": meal_name,
+                "total_calories": log.get("total_calories", 0),
+                "total_protein": log.get("total_protein", 0),
+                "total_carbs": log.get("total_carbs", 0),
+                "total_fat": log.get("total_fat", 0),
+                "foods": log.get("foods", []),
+                "logged_at": log.get("logged_at"),
+                "notes": log.get("notes"),
+                "satisfaction_rating": log.get("satisfaction_rating"),
+                "plan_reference": plan_ref,
+            })
+            days_data[log_date]["totals"]["calories"] += log.get("total_calories", 0)
+            days_data[log_date]["totals"]["protein"] += log.get("total_protein", 0)
+            days_data[log_date]["totals"]["carbs"] += log.get("total_carbs", 0)
+            days_data[log_date]["totals"]["fat"] += log.get("total_fat", 0)
     
-    # Convert to list sorted by date descending
     days_list = [
         {"date": d, **data}
         for d, data in sorted(days_data.items(), key=lambda x: x[0], reverse=True)
     ]
     
-    # Calculate summary
     total_days = len(days_list)
     avg_calories = sum(d["totals"]["calories"] for d in days_list) / total_days if total_days > 0 else 0
     

@@ -565,8 +565,10 @@ export function useLogNutrition() {
       }>;
       notes?: string;
       satisfaction_rating?: number;
+      replace?: boolean;
     }) => {
-      const response = await clientPortalApi.logNutrition(data);
+      const { replace, ...payload } = data;
+      const response = await clientPortalApi.logNutrition(payload, replace);
       return response.data;
     },
     onSuccess: () => {
@@ -633,6 +635,34 @@ export function useDeleteNutritionLog() {
         message: "No se pudo eliminar el registro",
         color: "red",
       });
+    },
+  });
+}
+
+export function useMoveMeal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { sourceDay: number; mealIndex: number; targetDay: number }) => {
+      await clientPortalApi.moveMeal(data.sourceDay, data.mealIndex, data.targetDay);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
+      notifications.show({ title: "Comida movida", message: "La comida se ha movido al nuevo día", color: "green" });
+    },
+  });
+}
+
+export function useSwapDays() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { sourceDay: number; targetDay: number }) => {
+      await clientPortalApi.swapDays(data.sourceDay, data.targetDay);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
+      notifications.show({ title: "Días intercambiados", message: "Las comidas de los días se han intercambiado", color: "green" });
     },
   });
 }

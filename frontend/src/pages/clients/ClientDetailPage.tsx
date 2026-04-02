@@ -482,6 +482,32 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                     </Table.Tbody>
                   </Table>
                 )}
+                {meal?.plan_reference && (() => {
+                  const ref = meal.plan_reference;
+                  const dc = (meal.total_calories || meal.calories || 0) - ref.calories;
+                  const dp = (meal.total_protein || 0) - ref.protein;
+                  const dcb = (meal.total_carbs || 0) - ref.carbs;
+                  const df = (meal.total_fat || 0) - ref.fat;
+                  const fmt = (v: number) => (v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`);
+                  const clr = (v: number) => (Math.abs(v) < 1 ? "gray" : v > 0 ? "red" : "green");
+                  const loggedNames = new Set((meal.foods || []).map((f: any) => f.name));
+                  const planNames = new Set((ref.foods || []).map((f: any) => f.name));
+                  const added = (meal.foods || []).filter((f: any) => !planNames.has(f.name));
+                  const removed = (ref.foods || []).filter((f: any) => !loggedNames.has(f.name));
+                  return (
+                    <Box mt="xs" p="xs" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 6 }}>
+                      <Text size="xs" fw={600} mb={2}>Variación vs plan:</Text>
+                      <Group gap={4} wrap="wrap">
+                        <Badge size="xs" variant="light" color={clr(dc)}>{fmt(dc)} kcal</Badge>
+                        <Badge size="xs" variant="light" color={clr(dp)}>{fmt(dp)}g prot</Badge>
+                        <Badge size="xs" variant="light" color={clr(dcb)}>{fmt(dcb)}g carbs</Badge>
+                        <Badge size="xs" variant="light" color={clr(df)}>{fmt(df)}g grasas</Badge>
+                      </Group>
+                      {added.length > 0 && <Text size="xs" c="teal" mt={2}>+ Añadido: {added.map((f: any) => f.name).join(", ")}</Text>}
+                      {removed.length > 0 && <Text size="xs" c="red" mt={2}>− No comido: {removed.map((f: any) => f.name).join(", ")}</Text>}
+                    </Box>
+                  );
+                })()}
               </Box>
             ))}
           </Stack>
