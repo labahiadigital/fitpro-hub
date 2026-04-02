@@ -312,6 +312,21 @@ export function useDeleteMealPlan() {
   });
 }
 
+export function useActivateMealPlan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await nutritionApi.activatePlan(id);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meal-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["client-meal-plans"] });
+    },
+  });
+}
+
 // Hook para obtener plantillas de planes nutricionales
 export function useMealPlanTemplates() {
   return useQuery({

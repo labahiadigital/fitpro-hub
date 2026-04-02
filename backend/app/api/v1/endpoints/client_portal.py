@@ -1004,33 +1004,38 @@ async def get_nutrition_logs(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get nutrition logs from the meal plan adherence."""
+    """Get nutrition logs from ALL client meal plans (active + inactive)."""
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
-    # Get active meal plan
     result = await db.execute(
         select(MealPlan)
         .where(MealPlan.client_id == client.id)
         .order_by(desc(MealPlan.created_at))
-        .limit(1)
     )
-    meal_plan = result.scalar_one_or_none()
+    meal_plans = result.scalars().all()
     
-    if not meal_plan or not meal_plan.adherence:
+    if not meal_plans:
         return []
     
-    all_logs = meal_plan.adherence.get("logs", [])
-    
-    indexed_logs = [(i, l) for i, l in enumerate(all_logs)]
+    all_indexed: list = []
+    for mp in meal_plans:
+        if not mp.adherence:
+            continue
+        logs = mp.adherence.get("logs", [])
+        for i, l in enumerate(logs):
+            all_indexed.append((str(mp.id), i, l))
     
     if date_filter:
-        indexed_logs = [(i, l) for i, l in indexed_logs if l.get("date") == date_filter]
+        all_indexed = [x for x in all_indexed if x[2].get("date") == date_filter]
     
-    indexed_logs = sorted(indexed_logs, key=lambda x: x[1].get("logged_at", ""), reverse=True)[:limit]
+    all_indexed = sorted(all_indexed, key=lambda x: x[2].get("logged_at", ""), reverse=True)[:limit]
+    
+    active_plan = next((mp for mp in meal_plans if mp.is_active), meal_plans[0] if meal_plans else None)
+    active_plan_id = str(active_plan.id) if active_plan else None
     
     return [
         NutritionLogResponse(
-            log_index=idx,
+            log_index=idx if plan_id == active_plan_id else None,
             date=log.get("date", ""),
             meal_name=log.get("meal_name", ""),
             foods=log.get("foods", []),
@@ -1041,7 +1046,7 @@ async def get_nutrition_logs(
             notes=log.get("notes"),
             satisfaction_rating=log.get("satisfaction_rating")
         )
-        for idx, log in indexed_logs
+        for plan_id, idx, log in all_indexed
     ]
 
 
@@ -1051,69 +1056,92 @@ async def get_nutrition_history(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get nutrition history for the last N days, grouped by date."""
+    """Get nutrition history for the last N days from ALL plans, grouped by plan then date."""
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
-    # Get active meal plan
     result = await db.execute(
         select(MealPlan)
         .where(MealPlan.client_id == client.id)
         .order_by(desc(MealPlan.created_at))
-        .limit(1)
     )
-    meal_plan = result.scalar_one_or_none()
+    meal_plans = result.scalars().all()
     
-    if not meal_plan or not meal_plan.adherence:
-        return {"days": [], "summary": {"total_days": 0, "avg_calories": 0}}
+    if not meal_plans:
+        return {"days": [], "plan_groups": [], "summary": {"total_days": 0, "avg_calories": 0}}
     
-    logs = meal_plan.adherence.get("logs", [])
-    
-    # Calculate date range
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
     
-    # Filter logs by date range
-    filtered_logs = [
-        log for log in logs 
-        if start_date.isoformat() <= log.get("date", "") <= end_date.isoformat()
-    ]
-    
-    # Group by date
     from collections import defaultdict
-    days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
     
-    for log in filtered_logs:
-        log_date = log.get("date", "")
-        days_data[log_date]["meals"].append({
-            "meal_name": log.get("meal_name"),
-            "total_calories": log.get("total_calories", 0),
-            "total_protein": log.get("total_protein", 0),
-            "total_carbs": log.get("total_carbs", 0),
-            "total_fat": log.get("total_fat", 0),
-            "foods": log.get("foods", []),
-            "logged_at": log.get("logged_at"),
+    plan_groups = []
+    all_days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
+    
+    for mp in meal_plans:
+        if not mp.adherence:
+            continue
+        logs = mp.adherence.get("logs", [])
+        filtered = [
+            l for l in logs
+            if start_date.isoformat() <= l.get("date", "") <= end_date.isoformat()
+        ]
+        if not filtered:
+            continue
+        
+        plan_days = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
+        for log in filtered:
+            log_date = log.get("date", "")
+            entry = {
+                "meal_name": log.get("meal_name"),
+                "total_calories": log.get("total_calories", 0),
+                "total_protein": log.get("total_protein", 0),
+                "total_carbs": log.get("total_carbs", 0),
+                "total_fat": log.get("total_fat", 0),
+                "foods": log.get("foods", []),
+                "logged_at": log.get("logged_at"),
+                "notes": log.get("notes"),
+                "satisfaction_rating": log.get("satisfaction_rating"),
+            }
+            plan_days[log_date]["meals"].append(entry)
+            plan_days[log_date]["totals"]["calories"] += entry["total_calories"]
+            plan_days[log_date]["totals"]["protein"] += entry["total_protein"]
+            plan_days[log_date]["totals"]["carbs"] += entry["total_carbs"]
+            plan_days[log_date]["totals"]["fat"] += entry["total_fat"]
+            
+            all_days_data[log_date]["meals"].append(entry)
+            all_days_data[log_date]["totals"]["calories"] += entry["total_calories"]
+            all_days_data[log_date]["totals"]["protein"] += entry["total_protein"]
+            all_days_data[log_date]["totals"]["carbs"] += entry["total_carbs"]
+            all_days_data[log_date]["totals"]["fat"] += entry["total_fat"]
+        
+        plan_days_list = [
+            {"date": d, **data}
+            for d, data in sorted(plan_days.items(), key=lambda x: x[0], reverse=True)
+        ]
+        plan_groups.append({
+            "plan_id": str(mp.id),
+            "plan_name": mp.name,
+            "is_active": mp.is_active or False,
+            "days": plan_days_list,
         })
-        days_data[log_date]["totals"]["calories"] += log.get("total_calories", 0)
-        days_data[log_date]["totals"]["protein"] += log.get("total_protein", 0)
-        days_data[log_date]["totals"]["carbs"] += log.get("total_carbs", 0)
-        days_data[log_date]["totals"]["fat"] += log.get("total_fat", 0)
     
-    # Convert to list sorted by date descending
     days_list = [
         {"date": d, **data}
-        for d, data in sorted(days_data.items(), key=lambda x: x[0], reverse=True)
+        for d, data in sorted(all_days_data.items(), key=lambda x: x[0], reverse=True)
     ]
     
-    # Calculate summary
     total_days = len(days_list)
     avg_calories = sum(d["totals"]["calories"] for d in days_list) / total_days if total_days > 0 else 0
     
+    active_plan = next((mp for mp in meal_plans if mp.is_active), meal_plans[0] if meal_plans else None)
+    
     return {
         "days": days_list,
+        "plan_groups": plan_groups,
         "summary": {
             "total_days": total_days,
             "avg_calories": round(avg_calories),
-            "target_calories": meal_plan.target_calories,
+            "target_calories": active_plan.target_calories if active_plan else 2000,
         }
     }
 

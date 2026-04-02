@@ -1285,7 +1285,7 @@ export function MyNutritionPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "today", label: "Hoy" },
+            { value: "today", label: "Registrar comida" },
             { value: "week", label: "Esta Semana" },
             { value: "history", label: "Historial" },
             { value: "recipes", label: "Recetas" },
@@ -1299,7 +1299,7 @@ export function MyNutritionPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
-            Hoy
+            Registrar comida
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
             Esta Semana
@@ -1822,9 +1822,57 @@ export function MyNutritionPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="history">
-          <Stack gap="sm">
-            {nutritionHistory?.days && nutritionHistory.days.length > 0 ? (
-              nutritionHistory.days.map((day) => {
+          <Stack gap="md">
+            {nutritionHistory?.plan_groups && nutritionHistory.plan_groups.length > 0 ? (
+              nutritionHistory.plan_groups.map((group: { plan_id: string; plan_name: string; is_active: boolean; days: Array<{ date: string; meals: Array<{ meal_name: string; total_calories: number; total_protein: number; total_carbs: number; total_fat: number; foods: Array<object>; logged_at?: string }>; totals: { calories: number; protein: number; carbs: number; fat: number } }> }) => (
+                <Box key={group.plan_id}>
+                  <Group gap="sm" mb="xs">
+                    <Text fw={700} size="md">{group.plan_name}</Text>
+                    <Badge variant="light" color={group.is_active ? "green" : "gray"} size="sm">
+                      {group.is_active ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </Group>
+                  <Box pl="md" style={{ borderLeft: `3px solid var(--mantine-color-${group.is_active ? "green" : "gray"}-3)` }}>
+                    <Stack gap="xs">
+                      {group.days.map((day) => {
+                        const pct = day.totals.calories > 0 && targets.calories > 0
+                          ? (day.totals.calories / targets.calories) * 100
+                          : 0;
+                        const dateFormatted = new Date(day.date).toLocaleDateString("es-ES", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                        });
+                        return (
+                          <DayCardMenu
+                            key={day.date}
+                            dayName={dateFormatted}
+                            isToday={day.date === new Date().toISOString().split("T")[0]}
+                            onClick={() => setHistoryDetailDay(day.date)}
+                            badge={
+                              <Badge variant="light" color={pct >= 90 ? "green" : pct >= 70 ? "yellow" : "orange"} size="sm">
+                                {day.totals.calories} kcal
+                              </Badge>
+                            }
+                            summary={
+                              <Group gap={4} mt={2}>
+                                <Text size="xs" c="dimmed">{day.meals.length} comidas</Text>
+                                <Badge variant="outline" color="red" size="xs">P:{Math.round(day.totals.protein)}g</Badge>
+                                <Badge variant="outline" color="blue" size="xs">C:{Math.round(day.totals.carbs)}g</Badge>
+                                <Badge variant="outline" color="grape" size="xs">G:{Math.round(day.totals.fat)}g</Badge>
+                              </Group>
+                            }
+                            progressValue={pct}
+                            progressColor={pct >= 90 ? "green" : pct >= 70 ? "yellow" : "orange"}
+                          />
+                        );
+                      })}
+                    </Stack>
+                  </Box>
+                </Box>
+              ))
+            ) : nutritionHistory?.days && nutritionHistory.days.length > 0 ? (
+              nutritionHistory.days.map((day: { date: string; meals: Array<{ meal_name: string; total_calories: number; total_protein: number; total_carbs: number; total_fat: number; foods: Array<object>; logged_at?: string }>; totals: { calories: number; protein: number; carbs: number; fat: number } }) => {
                 const percentage = day.totals.calories > 0 && targets.calories > 0
                   ? (day.totals.calories / targets.calories) * 100
                   : 0;
@@ -1833,7 +1881,6 @@ export function MyNutritionPage() {
                   day: "numeric",
                   month: "long",
                 });
-
                 return (
                   <DayCardMenu
                     key={day.date}

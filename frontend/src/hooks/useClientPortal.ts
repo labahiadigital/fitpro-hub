@@ -656,8 +656,16 @@ interface NutritionHistoryDay {
   };
 }
 
+interface NutritionHistoryPlanGroup {
+  plan_id: string;
+  plan_name: string;
+  is_active: boolean;
+  days: NutritionHistoryDay[];
+}
+
 interface NutritionHistory {
   days: NutritionHistoryDay[];
+  plan_groups?: NutritionHistoryPlanGroup[];
   summary: {
     total_days: number;
     avg_calories: number;

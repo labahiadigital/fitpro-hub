@@ -65,6 +65,7 @@ import {
   IconScale,
   IconChevronDown,
   IconChevronUp,
+  IconPlayerPlay,
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -80,6 +81,7 @@ import {
   useClientWorkoutAssignments,
   useDeleteAssignedProgram,
   useDeleteAssignedMealPlan,
+  useActivateMealPlan,
 } from "../../hooks/useSupabaseData";
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
@@ -564,6 +566,7 @@ export function ClientDetailPage() {
   // Hooks para asignaciones
   const assignWorkoutProgram = useAssignWorkoutProgram();
   const assignMealPlan = useAssignMealPlan();
+  const activateMealPlan = useActivateMealPlan();
   
   // Hooks para eliminar asignaciones
   const deleteAssignedProgram = useDeleteAssignedProgram();
@@ -628,7 +631,8 @@ export function ClientDetailPage() {
     target_protein?: number;
     target_carbs?: number;
     target_fat?: number;
-    is_template?: string | boolean; 
+    is_template?: string | boolean;
+    is_active?: boolean;
     created_at: string 
   }) => ({
     id: plan.id,
@@ -637,7 +641,7 @@ export function ClientDetailPage() {
     target_protein: plan.target_protein || 0,
     target_carbs: plan.target_carbs || 0,
     target_fat: plan.target_fat || 0,
-    status: plan.is_template === false || plan.is_template === "N" ? "active" : "inactive",
+    status: plan.is_active ? "active" : "inactive",
     created_at: plan.created_at,
   }));
 
@@ -2613,6 +2617,19 @@ export function ClientDetailPage() {
                               >
                                 Ver detalles
                               </Menu.Item>
+                              {plan.status !== "active" && (
+                                <Menu.Item 
+                                  leftSection={<IconPlayerPlay size={16} />}
+                                  color="green"
+                                  onClick={async () => {
+                                    await activateMealPlan.mutateAsync(plan.id);
+                                    notifications.show({ title: "Plan activado", message: `"${plan.name}" es ahora el plan activo`, color: "green" });
+                                    refetch();
+                                  }}
+                                >
+                                  Activar plan
+                                </Menu.Item>
+                              )}
                               <Menu.Item 
                                 leftSection={<IconEdit size={16} />}
                                 onClick={() => navigate(`/nutrition?edit=${plan.id}&clientId=${id}&returnTo=/clients/${id}`)}

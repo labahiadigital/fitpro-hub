@@ -738,10 +738,6 @@ export function NutritionPage() {
       planForm.reset();
       setMealPlanDays(initialDays);
       setEditingPlan(null);
-      
-      if (clientId || returnTo) {
-        goBack();
-      }
     } catch {
       notifications.show({
         title: "Error",

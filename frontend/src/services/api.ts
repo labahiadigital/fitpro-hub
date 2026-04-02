@@ -332,6 +332,7 @@ export const nutritionApi = {
   updatePlan: (id: string, data: object) =>
     api.put(`/nutrition/meal-plans/${id}`, data),
   deletePlan: (id: string) => api.delete(`/nutrition/meal-plans/${id}`),
+  activatePlan: (id: string) => api.post(`/nutrition/meal-plans/${id}/activate`),
   assignPlan: (planId: string, clientId: string, startDate?: string, endDate?: string, notes?: string) =>
     api.post(`/nutrition/meal-plans/${planId}/assign`, { 
       client_id: clientId,

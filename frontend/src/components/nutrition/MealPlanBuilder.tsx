@@ -26,12 +26,14 @@ import {
   TextInput,
   ThemeIcon,
   Switch,
+  Modal,
   Tooltip,
 } from "@mantine/core";
 import { useDebouncedCallback, useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconApple,
+  IconArrowsExchange,
   IconClock,
   IconCopy,
   IconEdit,
@@ -515,6 +517,41 @@ export function MealPlanBuilder({
     );
   }, [currentDay, activeDay, days, onChange]);
 
+  const [moveMealsModalOpen, setMoveMealsModalOpen] = useState(false);
+  const [moveMealsSelected, setMoveMealsSelected] = useState<Set<string>>(new Set());
+  const [moveMealsTargetDay, setMoveMealsTargetDay] = useState<string | null>(null);
+
+  const openMoveMealsModal = () => {
+    setMoveMealsSelected(new Set());
+    setMoveMealsTargetDay(null);
+    setMoveMealsModalOpen(true);
+  };
+
+  const confirmMoveMeals = useCallback(() => {
+    if (!currentDay || moveMealsSelected.size === 0 || !moveMealsTargetDay) return;
+    const mealsToMove = currentDay.meals.filter((m) => moveMealsSelected.has(m.id));
+    if (mealsToMove.length === 0) return;
+
+    const copiedMeals = mealsToMove.map((m) => ({
+      ...m,
+      id: `meal-${Date.now()}-${Math.random()}`,
+      items: m.items.map((i) => ({ ...i, id: `item-${Date.now()}-${Math.random()}` })),
+    }));
+
+    onChange(
+      days.map((d) => {
+        if (d.id === activeDay) {
+          return { ...d, meals: d.meals.filter((m) => !moveMealsSelected.has(m.id)) };
+        }
+        if (d.id === moveMealsTargetDay) {
+          return { ...d, meals: [...d.meals, ...copiedMeals] };
+        }
+        return d;
+      })
+    );
+    setMoveMealsModalOpen(false);
+  }, [currentDay, moveMealsSelected, moveMealsTargetDay, activeDay, days, onChange]);
+
   const openAddFood = (mealId: string) => {
     setSelectedMealId(mealId);
     openFoodModal();
@@ -881,6 +918,18 @@ export function MealPlanBuilder({
                 </Stack>
               </Popover.Dropdown>
             </Popover>
+            {currentDay && currentDay.meals.length > 0 && (
+              <Button
+                leftSection={<IconArrowsExchange size={14} />}
+                onClick={openMoveMealsModal}
+                size="xs"
+                variant="light"
+                color="teal"
+                radius="md"
+              >
+                Mover comidas
+              </Button>
+            )}
             <Button
               leftSection={<IconShoppingCart size={14} />}
               onClick={openShoppingList}
@@ -2025,6 +2074,52 @@ export function MealPlanBuilder({
         recipe={prefilledRecipeItems.length > 0 ? { id: "", workspace_id: null, name: "", items: prefilledRecipeItems, tags: [], servings: 1, is_public: false, is_global: false, total_calories: 0, total_protein: 0, total_carbs: 0, total_fat: 0, total_fiber: 0, total_sugar: 0 } : null}
         loading={createRecipeMutation.isPending}
       />
+
+      <Modal
+        opened={moveMealsModalOpen}
+        onClose={() => setMoveMealsModalOpen(false)}
+        title="Mover comidas a otro día"
+        centered
+        radius="lg"
+      >
+        <Stack gap="md">
+          <Text size="sm" fw={500}>Selecciona las comidas a mover:</Text>
+          {currentDay?.meals.map((meal) => (
+            <Checkbox
+              key={meal.id}
+              label={`${meal.name} (${meal.time}) — ${meal.items.length} alimentos`}
+              checked={moveMealsSelected.has(meal.id)}
+              onChange={(e) => {
+                const next = new Set(moveMealsSelected);
+                if (e.currentTarget.checked) next.add(meal.id);
+                else next.delete(meal.id);
+                setMoveMealsSelected(next);
+              }}
+            />
+          ))}
+          <Divider />
+          <Text size="sm" fw={500}>Día destino:</Text>
+          <Select
+            placeholder="Selecciona día"
+            data={DAY_PLAN_OPTIONS.filter((d) => d.id !== activeDay).map((d) => ({
+              value: d.id,
+              label: d.dayName,
+            }))}
+            value={moveMealsTargetDay}
+            onChange={setMoveMealsTargetDay}
+          />
+          <Button
+            leftSection={<IconArrowsExchange size={16} />}
+            onClick={confirmMoveMeals}
+            disabled={moveMealsSelected.size === 0 || !moveMealsTargetDay}
+            fullWidth
+            radius="md"
+            color="teal"
+          >
+            Mover {moveMealsSelected.size} comida{moveMealsSelected.size !== 1 ? "s" : ""}
+          </Button>
+        </Stack>
+      </Modal>
     </>
   );
 }
