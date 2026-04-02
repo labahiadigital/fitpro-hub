@@ -603,6 +603,8 @@ export const clientPortalApi = {
   // Nutrition
   mealPlan: () => api.get("/my/nutrition/plan"),
   allMealPlans: () => api.get("/my/nutrition/plans"),
+  searchFoods: (params?: { search?: string; category?: string; page?: number; page_size?: number }) =>
+    api.get("/my/nutrition/foods", { params }),
   logNutrition: (data: { date: string; meal_name: string; foods: object[]; notes?: string }) =>
     api.post("/my/nutrition/logs", data),
   nutritionLogs: (date?: string, limit?: number) =>

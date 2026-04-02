@@ -8,8 +8,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
-revision = '018_add_documents'
-down_revision = '017_enhance_recipes_table'
+revision = '018'
+down_revision = '017'
 branch_labels = None
 depends_on = None
 

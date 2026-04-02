@@ -16,7 +16,7 @@ from app.core.storage import resolve_url
 from app.models.client import Client
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative, ClientMeasurement
-from app.models.nutrition import MealPlan, Recipe
+from app.models.nutrition import MealPlan, Recipe, Food
 from app.models.booking import Booking
 from app.middleware.auth import get_current_user, CurrentUser
 
@@ -1150,6 +1150,67 @@ async def delete_nutrition_log(
     logs.pop(log_index)
     meal_plan.adherence = {"logs": logs}
     await db.commit()
+
+
+# ============ FOODS SEARCH (client view) ============
+
+@router.get("/nutrition/foods")
+async def search_foods_for_client(
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=100),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Search foods available to the client (global + workspace foods)."""
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    query = select(Food).where(
+        or_(
+            Food.workspace_id == client.workspace_id,
+            Food.is_global == True
+        )
+    )
+
+    if search:
+        query = query.where(
+            func.unaccent(Food.name).ilike(func.unaccent(f"%{search}%"))
+        )
+
+    if category:
+        query = query.where(Food.category == category)
+
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(count_query) or 0
+
+    offset = (page - 1) * page_size
+    query = query.order_by(Food.name).offset(offset).limit(page_size)
+
+    result = await db.execute(query)
+    foods = result.scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": str(f.id),
+                "name": f.name,
+                "brand": f.brand,
+                "category": f.category,
+                "serving_size": float(f.serving_size) if f.serving_size else 100,
+                "serving_unit": f.serving_unit or "g",
+                "calories": float(f.calories) if f.calories else 0,
+                "protein": float(f.protein_g) if f.protein_g else 0,
+                "carbs": float(f.carbs_g) if f.carbs_g else 0,
+                "fat": float(f.fat_g) if f.fat_g else 0,
+                "fiber": float(f.fiber_g) if f.fiber_g else 0,
+            }
+            for f in foods
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 # ============ RECIPES (client view) ============

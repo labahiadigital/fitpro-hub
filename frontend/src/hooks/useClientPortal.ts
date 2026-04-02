@@ -510,6 +510,22 @@ export function useTodayWorkoutLogs() {
 
 // ============ NUTRITION ============
 
+export function useClientFoodSearch(search: string, page = 1) {
+  return useQuery({
+    queryKey: ["client-food-search", search, page],
+    queryFn: async () => {
+      const response = await clientPortalApi.searchFoods({
+        search: search || undefined,
+        page,
+        page_size: 20,
+      });
+      return response.data;
+    },
+    enabled: search.length >= 2,
+    placeholderData: (prev: unknown) => prev,
+  });
+}
+
 export function useMyMealPlan() {
   return useQuery<MealPlan | null>({
     queryKey: ["my-meal-plan"],

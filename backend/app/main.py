@@ -32,11 +32,40 @@ def _mask_url(url: str) -> str:
     return f"{parsed.hostname}:{parsed.port}/{parsed.path.lstrip('/')}"
 
 
+def _run_alembic_upgrade():
+    """Apply pending Alembic migrations (sync, runs before the async loop)."""
+    from alembic.config import Config
+    from alembic import command
+    import os
+
+    alembic_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic")
+    ini_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic.ini")
+
+    if not os.path.isfile(ini_path):
+        logger.warning("alembic.ini not found at %s — skipping auto-migration", ini_path)
+        return
+
+    cfg = Config(ini_path)
+    cfg.set_main_option("script_location", alembic_dir)
+
+    db_url = settings.DATABASE_URL
+    if db_url and "+asyncpg" in db_url:
+        db_url = db_url.replace("+asyncpg", "")
+    cfg.set_main_option("sqlalchemy.url", db_url)
+
+    try:
+        command.upgrade(cfg, "head")
+        logger.info("Alembic migrations applied successfully")
+    except Exception as exc:
+        logger.error("Alembic migration failed: %s", exc, exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting %s...", settings.APP_NAME)
     logger.info("REDIS_URL target → %s", _mask_url(settings.REDIS_URL))
     logger.info("DATABASE_URL target → %s", _mask_url(settings.DATABASE_URL) if settings.DATABASE_URL else "(empty)")
+    _run_alembic_upgrade()
     yield
     logger.info("Shutting down %s...", settings.APP_NAME)
 

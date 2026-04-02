@@ -16,7 +16,7 @@
 			var sequraConfigParams = {
 			  merchant: "dummy", // Your merchant reference given by SeQura.
 			  assetKey: "ADc3ZdOLh4", // Your asset key given by SeQura.
-			  products: ["i1", "pp3"], // List of SeQura products that you want to include components.
+			  products: ["i1", "pp6"], // List of SeQura products that you want to include components.
 			  scriptUri: "https://sandbox.sequracdn.com/assets/sequra-checkout.min.js", // SeQura Javascript library uri for production or sandbox.
 			  decimalSeparator: ",", // Decimal separator used in currencies formatting. Optional, default `,`.
 			  thousandSeparator: ".", // Thousand separator used in currencies formatting. Optional, default `.`.
@@ -35,7 +35,7 @@
 				document.getElementById('total').innerText = total + ' €';
 
 				//Update simulator
-				document.querySelector('div[data-product="pp3"]').setAttribute("data-amount",total*100);
+				document.querySelector('div[data-product="pp6"]').setAttribute("data-amount",total*100);
 				Sequra.refreshComponents();
 
 			}
@@ -68,7 +68,7 @@
 	<!-- simulador cuotas-->
 	<div
 	class="sequra-promotion-widget"
-	data-product="pp3"
+	data-product="pp6"
 	data-amount="100001"
 	data-type="text"
 	data-alignment="left"
@@ -122,7 +122,7 @@
 	<ul>
 		<li id="i1"><input type="radio" name="payment_method" value="i1" checked="true">Copra ahora, paga después   <span id="sequra_invoice_method_link" class="sequra-educational-popup" data-product="i1"> + info</span></li>
 		<li id="cc"><input type="radio" name="payment_method" value="cc">Tarjeta de crédito</li>
-		<li id="pp3"><input type="radio" name="payment_method" value="pp3">Pago fraccionado   <span id="sequra_partpayment_method_link" class="sequra-educational-popup" data-product="pp3"> + info</span><br/>
+		<li id="pp6"><input type="radio" name="payment_method" value="pp6">Pago fraccionado   <span id="sequra_partpayment_method_link" class="sequra-educational-popup" data-product="pp6"> + info</span><br/>
 		</li>
 	</ul>
 	<input type="submit" value="pagar"/>

@@ -1,4 +1,16 @@
 ---
-// Redirect to default language
+const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.trackfiz.com';
+const loginUrl = `${appUrl}/login`;
 ---
-<meta http-equiv="refresh" content="0;url=/es/" />
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="refresh" content={`0;url=${loginUrl}`} />
+  <link rel="canonical" href={loginUrl} />
+  <title>Redirigiendo...</title>
+</head>
+<body>
+  <p>Redirigiendo a <a href={loginUrl}>login</a>...</p>
+</body>
+</html>

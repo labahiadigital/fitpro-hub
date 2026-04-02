@@ -13,8 +13,8 @@ Create Date: 2026-03-26
 """
 from alembic import op
 
-revision = "019_migrate_r2_urls"
-down_revision = "018_add_documents_table"
+revision = "019"
+down_revision = "018"
 branch_labels = None
 depends_on = None
 

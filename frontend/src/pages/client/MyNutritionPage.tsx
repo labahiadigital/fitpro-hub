@@ -23,7 +23,7 @@ import {
   ScrollArea,
   Tabs,
 } from "@mantine/core";
-import { useDisclosure, useMediaQuery } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery, useDebouncedValue } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconApple,
@@ -45,6 +45,7 @@ import {
   IconMoodSmile,
   IconMoodSad,
   IconMoodEmpty,
+  IconX,
 } from "@tabler/icons-react";
 import { DateInput } from "@mantine/dates";
 import { useState, useMemo } from "react";
@@ -53,6 +54,7 @@ import {
   useNutritionLogs,
   useLogNutrition,
   useNutritionHistory,
+  useClientFoodSearch,
 } from "../../hooks/useClientPortal";
 import { useClientRecipes } from "../../hooks/useRecipes";
 import { RecipeDetailModal } from "../../components/recipes/RecipeDetailModal";
@@ -154,6 +156,102 @@ function SatisfactionSelector({
   );
 }
 
+interface SearchableFoodResult {
+  id: string;
+  name: string;
+  brand?: string;
+  category?: string;
+  serving_size: number;
+  serving_unit: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+function FoodSearchInput({
+  onSelect,
+}: {
+  onSelect: (food: SearchableFoodResult, grams: number) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [debouncedQuery] = useDebouncedValue(query, 300);
+  const [showResults, setShowResults] = useState(false);
+  const { data: searchResults, isFetching } = useClientFoodSearch(debouncedQuery);
+
+  const handleSelect = (food: SearchableFoodResult) => {
+    const grams = food.serving_size || 100;
+    onSelect(food, grams);
+    setQuery("");
+    setShowResults(false);
+  };
+
+  return (
+    <Box pos="relative" px="md" mb="sm">
+      <TextInput
+        leftSection={<IconSearch size={16} />}
+        rightSection={isFetching ? <Loader size={14} /> : query ? (
+          <ActionIcon size="sm" variant="subtle" onClick={() => { setQuery(""); setShowResults(false); }}>
+            <IconX size={14} />
+          </ActionIcon>
+        ) : null}
+        placeholder="Buscar alimento..."
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setShowResults(true);
+        }}
+        onFocus={() => query.length >= 2 && setShowResults(true)}
+        size="sm"
+        styles={{ input: { height: 44, borderRadius: 12 } }}
+      />
+      {showResults && searchResults?.items?.length > 0 && (
+        <Paper
+          shadow="lg"
+          radius="md"
+          withBorder
+          pos="absolute"
+          left={16}
+          right={16}
+          style={{ zIndex: 50, maxHeight: 260, overflowY: "auto" }}
+        >
+          {searchResults.items.map((food: SearchableFoodResult) => (
+            <Box
+              key={food.id}
+              px="sm"
+              py="xs"
+              onClick={() => handleSelect(food)}
+              style={{
+                cursor: "pointer",
+                borderBottom: "1px solid var(--mantine-color-gray-1)",
+                transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--mantine-color-gray-0)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            >
+              <Group justify="space-between" wrap="nowrap">
+                <Box style={{ minWidth: 0 }}>
+                  <Text size="sm" fw={500} lineClamp={1}>{food.name}</Text>
+                  {food.brand && <Text size="xs" c="dimmed">{food.brand}</Text>}
+                </Box>
+                <Group gap={4} style={{ flexShrink: 0 }}>
+                  <Badge size="xs" variant="light" color="orange">{Math.round(food.calories)} kcal</Badge>
+                  <Badge size="xs" variant="outline" color="red">P:{Math.round(food.protein)}</Badge>
+                </Group>
+              </Group>
+            </Box>
+          ))}
+        </Paper>
+      )}
+      {showResults && debouncedQuery.length >= 2 && !isFetching && (!searchResults?.items?.length) && (
+        <Paper shadow="md" radius="md" withBorder pos="absolute" left={16} right={16} style={{ zIndex: 50 }} p="md">
+          <Text size="sm" c="dimmed" ta="center">Sin resultados para "{debouncedQuery}"</Text>
+        </Paper>
+      )}
+    </Box>
+  );
+}
+
 function LogMealModal({
   opened,
   onClose,
@@ -170,9 +268,7 @@ function LogMealModal({
   }) => void;
   isLoading: boolean;
 }) {
-  const [foods, setFoods] = useState<FoodItem[]>([
-    { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 },
-  ]);
+  const [foods, setFoods] = useState<FoodItem[]>([]);
   const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
 
   const form = useForm({
@@ -182,23 +278,39 @@ function LogMealModal({
     },
   });
 
-  const addFood = () => {
-    setFoods([
-      ...foods,
-      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 },
+  const addFoodFromSearch = (food: SearchableFoodResult, grams: number) => {
+    const servingSize = food.serving_size || 100;
+    const factor = grams / servingSize;
+    setFoods((prev) => [
+      ...prev,
+      {
+        name: food.name,
+        calories: Math.round(food.calories * factor),
+        protein: Math.round(food.protein * factor * 10) / 10,
+        carbs: Math.round(food.carbs * factor * 10) / 10,
+        fat: Math.round(food.fat * factor * 10) / 10,
+        quantity: grams,
+      },
+    ]);
+  };
+
+  const addManualFood = () => {
+    setFoods((prev) => [
+      ...prev,
+      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 100 },
     ]);
   };
 
   const removeFood = (index: number) => {
-    if (foods.length > 1) {
-      setFoods(foods.filter((_, i) => i !== index));
-    }
+    setFoods((prev) => prev.filter((_, i) => i !== index));
   };
 
   const updateFood = (index: number, field: keyof FoodItem, value: string | number) => {
-    const newFoods = [...foods];
-    newFoods[index] = { ...newFoods[index], [field]: value };
-    setFoods(newFoods);
+    setFoods((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
   const handleSubmit = () => {
@@ -213,13 +325,23 @@ function LogMealModal({
     });
 
     form.reset();
-    setFoods([{ name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 1 }]);
+    setFoods([]);
     setSatisfactionRating(null);
   };
 
   const isMobileView = useMediaQuery("(max-width: 768px)");
 
   if (!opened) return null;
+
+  const totalMacros = foods.reduce(
+    (acc, f) => ({
+      calories: acc.calories + (f.calories || 0),
+      protein: acc.protein + (f.protein || 0),
+      carbs: acc.carbs + (f.carbs || 0),
+      fat: acc.fat + (f.fat || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  );
 
   const foodRows = foods.map((food, index) => (
     <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
@@ -233,22 +355,21 @@ function LogMealModal({
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         <NumberInput
-          placeholder="Cant."
+          placeholder="g"
           value={food.quantity}
-          onChange={(val) => updateFood(index, "quantity", val || 1)}
-          min={0.1}
-          step={0.5}
-          decimalScale={1}
+          onChange={(val) => updateFood(index, "quantity", val || 100)}
+          min={1}
+          step={10}
           size="sm"
           w={70}
           hideControls
+          suffix="g"
           styles={{ input: { height: 44, borderRadius: 10, textAlign: "center" } }}
         />
         <ActionIcon
           color="red"
           variant="light"
           onClick={() => removeFood(index)}
-          disabled={foods.length === 1}
           size="lg"
           radius="xl"
         >
@@ -272,11 +393,14 @@ function LogMealModal({
     </Box>
   ));
 
-  const addFoodButton = (
-    <Box px="md" mt="sm">
-      <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addFood} fullWidth size="md" radius="xl" styles={{ root: { height: 44 } }}>
-        Añadir alimento
-      </Button>
+  const searchAndAddButtons = (
+    <Box mt="sm">
+      <FoodSearchInput onSelect={addFoodFromSearch} />
+      <Box px="md">
+        <Button variant="subtle" leftSection={<IconPlus size={16} />} onClick={addManualFood} fullWidth size="sm" radius="xl" color="gray">
+          Añadir manualmente
+        </Button>
+      </Box>
     </Box>
   );
 
@@ -294,13 +418,13 @@ function LogMealModal({
       color="yellow"
       onClick={handleSubmit}
       loading={isLoading}
-      disabled={foods.every((f) => f.name.trim() === "")}
+      disabled={foods.length === 0 || foods.every((f) => f.name.trim() === "")}
       fullWidth
       size="lg"
       radius="xl"
       styles={{ root: { height: 48, fontWeight: 700 } }}
     >
-      Registrar Comida
+      Registrar Comida ({Math.round(totalMacros.calories)} kcal)
     </Button>
   );
 
@@ -329,9 +453,9 @@ function LogMealModal({
           header: { borderBottom: "1px solid var(--mantine-color-gray-2)", padding: "12px 20px" },
         }}
       >
-        <ScrollArea mah="60vh" p="md">
+        <ScrollArea mah="60vh">
           {foodRows}
-          {addFoodButton}
+          {searchAndAddButtons}
           {notesAndSatisfaction}
         </ScrollArea>
         <Box p="md" style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}>
@@ -366,11 +490,11 @@ function LogMealModal({
         <Group justify="space-between" style={{ width: "100%" }}>
           <Group gap="xs">
             <ActionIcon variant="subtle" size="lg" onClick={onClose} radius="xl">
-              <IconArrowsExchange size={20} style={{ transform: "rotate(180deg)" }} />
+              <IconX size={20} />
             </ActionIcon>
             <Box>
               <Text fw={700} size="sm">Registrar Comida</Text>
-              <Text size="xs" c="dimmed">{foods.filter(f => f.name.trim()).length} alimentos</Text>
+              <Text size="xs" c="dimmed">{foods.filter(f => f.name.trim()).length} alimentos • {Math.round(totalMacros.calories)} kcal</Text>
             </Box>
           </Group>
           <Select
@@ -385,7 +509,7 @@ function LogMealModal({
 
       <Box style={{ flex: 1, overflowY: "auto" }} py="sm">
         {foodRows}
-        {addFoodButton}
+        {searchAndAddButtons}
         {notesAndSatisfaction}
       </Box>
 
