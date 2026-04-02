@@ -83,6 +83,7 @@ interface FoodItem {
   carbs: number;
   fat: number;
   quantity: number;
+  recipe_group?: string;
 }
 
 function MacroCard({
@@ -555,6 +556,7 @@ interface PlanMealFoodItem {
   fat_g: number;
   quantity: number;
   unit: string;
+  recipe_group?: string;
 }
 
 interface SupplementData {
@@ -588,6 +590,7 @@ interface PlanMeal {
     supplement?: SupplementData;
     quantity_grams: number;
     type: "food" | "supplement";
+    recipe_group?: string;
   }>;
   foods?: PlanMealFoodItem[];
 }
@@ -643,6 +646,7 @@ function LogPlanMealModal({
           carbs: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
           fat: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
           quantity: item.quantity_grams,
+          recipe_group: item.recipe_group,
         };
       });
       setFoods(initial);
@@ -762,49 +766,103 @@ function LogPlanMealModal({
         </Button>
       }
     >
-      {foods.map((food, index) => (
-        <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
-          <Group gap="xs" mb="xs" wrap="nowrap">
-            <TextInput
-              placeholder="Nombre del alimento"
-              value={food.name}
-              onChange={(e) => updateFood(index, "name", e.target.value)}
-              size="sm"
-              style={{ flex: 1 }}
-              styles={{ input: { height: 44, borderRadius: 10 } }}
-            />
-            <NumberInput
-              placeholder="g"
-              value={food.quantity}
-              onChange={(val) => updateFood(index, "quantity", val || 100)}
-              min={1}
-              step={10}
-              size="sm"
-              w={70}
-              hideControls
-              suffix="g"
-              styles={{ input: { height: 44, borderRadius: 10, textAlign: "center" } }}
-            />
-            <ActionIcon color="red" variant="light" onClick={() => removeFood(index)} size="lg" radius="xl">
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Group>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-            <NumberInput placeholder="Kcal" value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
-            <NumberInput placeholder="Prot" value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
-            <NumberInput placeholder="Carbs" value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
-            <NumberInput placeholder="Grasas" value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
-          </div>
-          {index === 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
-              <Text size="xs" c="dimmed" ta="center">Kcal</Text>
-              <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
-              <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
-              <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
+      {(() => {
+        const recipeGroups = new Map<string, { indices: number[] }>();
+        const ungroupedIndices: number[] = [];
+        foods.forEach((food, idx) => {
+          if (food.recipe_group) {
+            const g = recipeGroups.get(food.recipe_group) || { indices: [] };
+            g.indices.push(idx);
+            recipeGroups.set(food.recipe_group, g);
+          } else {
+            ungroupedIndices.push(idx);
+          }
+        });
+
+        const renderFoodRow = (food: FoodItem, index: number, showLabels: boolean) => (
+          <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+            <Group gap="xs" mb="xs" wrap="nowrap">
+              <TextInput
+                placeholder="Nombre del alimento"
+                value={food.name}
+                onChange={(e) => updateFood(index, "name", e.target.value)}
+                size="sm"
+                style={{ flex: 1 }}
+                styles={{ input: { height: 44, borderRadius: 10 } }}
+              />
+              <NumberInput
+                placeholder="g"
+                value={food.quantity}
+                onChange={(val) => updateFood(index, "quantity", val || 100)}
+                min={1}
+                step={10}
+                size="sm"
+                w={70}
+                hideControls
+                suffix="g"
+                styles={{ input: { height: 44, borderRadius: 10, textAlign: "center" } }}
+              />
+              <ActionIcon color="red" variant="light" onClick={() => removeFood(index)} size="lg" radius="xl">
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Group>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+              <NumberInput placeholder="Kcal" value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder="Prot" value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder="Carbs" value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder="Grasas" value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
             </div>
-          )}
-        </Box>
-      ))}
+            {showLabels && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
+                <Text size="xs" c="dimmed" ta="center">Kcal</Text>
+                <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
+                <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
+                <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
+              </div>
+            )}
+          </Box>
+        );
+
+        const elements: React.ReactNode[] = [];
+        let isFirstRow = true;
+
+        recipeGroups.forEach((group, recipeName) => {
+          const recipeItems = group.indices.map(i => foods[i]);
+          const recipeTotals = recipeItems.reduce((acc, f) => ({
+            calories: acc.calories + (f.calories || 0),
+            protein: acc.protein + (f.protein || 0),
+            carbs: acc.carbs + (f.carbs || 0),
+            fat: acc.fat + (f.fat || 0),
+          }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+          elements.push(
+            <Paper key={`recipe-${recipeName}`} mx="md" mt="sm" p="xs" radius="md" withBorder style={{ borderColor: "var(--mantine-color-teal-3)", borderStyle: "dashed" }}>
+              <Group justify="space-between" mb="xs">
+                <Group gap="xs">
+                  <ThemeIcon variant="light" color="teal" size="sm" radius="xl">
+                    <IconToolsKitchen2 size={12} />
+                  </ThemeIcon>
+                  <Text size="sm" fw={700} c="teal">{recipeName}</Text>
+                </Group>
+                <Group gap={4}>
+                  <Badge size="xs" variant="light" color="yellow">{Math.round(recipeTotals.calories)} kcal</Badge>
+                  <Badge size="xs" variant="outline" color="red">P:{Math.round(recipeTotals.protein)}</Badge>
+                </Group>
+              </Group>
+              {group.indices.map((idx, j) => renderFoodRow(foods[idx], idx, isFirstRow && j === 0))}
+              {isFirstRow && (isFirstRow = false, null)}
+            </Paper>
+          );
+          isFirstRow = false;
+        });
+
+        ungroupedIndices.forEach((idx) => {
+          elements.push(renderFoodRow(foods[idx], idx, isFirstRow));
+          isFirstRow = false;
+        });
+
+        return elements;
+      })()}
 
       <Box mt="sm">
         <FoodSearchInput onSelect={addFoodFromSearch} />
@@ -1020,6 +1078,7 @@ function NutritionDayDetail({
                   fat_g: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
                   quantity: qty,
                   unit: "g",
+                  recipe_group: item.recipe_group,
                 };
               }) || [];
               const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
@@ -1037,7 +1096,16 @@ function NutritionDayDetail({
                       </ThemeIcon>
                       <Box>
                         <Text fw={600} size="sm">{mealType?.label || meal.name}</Text>
-                        <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
+                        <Text size="xs" c="dimmed">
+                          {(() => {
+                            const recipeNames = new Set(mealFoods.filter((f: PlanMealFoodItem) => f.recipe_group).map((f: PlanMealFoodItem) => f.recipe_group));
+                            const ungroupedCount = mealFoods.filter((f: PlanMealFoodItem) => !f.recipe_group).length;
+                            const parts: string[] = [];
+                            if (recipeNames.size > 0) parts.push(`${recipeNames.size} receta${recipeNames.size > 1 ? "s" : ""}`);
+                            if (ungroupedCount > 0) parts.push(`${ungroupedCount} alimento${ungroupedCount > 1 ? "s" : ""}`);
+                            return parts.join(" + ") || `${mealFoods.length} alimentos`;
+                          })()}
+                        </Text>
                       </Box>
                     </Group>
                     <Group gap="xs" wrap="wrap">
@@ -1076,14 +1144,48 @@ function NutritionDayDetail({
                   </Group>
                   {mealFoods.length > 0 && (
                     <Stack gap="xs" mt="sm" ml={54}>
-                      {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
-                        <Group key={foodIndex} justify="space-between">
-                          <Text size="sm">{food.name}</Text>
-                          <Text size="xs" c="dimmed">
-                            {food.quantity}{food.unit} - {food.calories} kcal
-                          </Text>
-                        </Group>
-                      ))}
+                      {(() => {
+                        const recipeGroups = new Map<string, PlanMealFoodItem[]>();
+                        const ungrouped: PlanMealFoodItem[] = [];
+                        mealFoods.forEach((food: PlanMealFoodItem) => {
+                          if (food.recipe_group) {
+                            const g = recipeGroups.get(food.recipe_group) || [];
+                            g.push(food);
+                            recipeGroups.set(food.recipe_group, g);
+                          } else {
+                            ungrouped.push(food);
+                          }
+                        });
+                        const elements: React.ReactNode[] = [];
+                        recipeGroups.forEach((items, recipeName) => {
+                          const rCal = items.reduce((s, f) => s + f.calories, 0);
+                          elements.push(
+                            <Paper key={`r-${recipeName}`} p="xs" radius="md" withBorder style={{ borderColor: "var(--mantine-color-teal-3)", borderStyle: "dashed" }}>
+                              <Group justify="space-between" mb={4}>
+                                <Text size="sm" fw={700} c="teal">🍳 {recipeName}</Text>
+                                <Badge size="xs" variant="light" color="yellow">{rCal} kcal</Badge>
+                              </Group>
+                              <Stack gap={2} ml="sm">
+                                {items.map((f, i) => (
+                                  <Group key={i} justify="space-between">
+                                    <Text size="xs">{f.name}</Text>
+                                    <Text size="xs" c="dimmed">{f.quantity}{f.unit} - {f.calories} kcal</Text>
+                                  </Group>
+                                ))}
+                              </Stack>
+                            </Paper>
+                          );
+                        });
+                        ungrouped.forEach((food, i) => {
+                          elements.push(
+                            <Group key={`u-${i}`} justify="space-between">
+                              <Text size="sm">{food.name}</Text>
+                              <Text size="xs" c="dimmed">{food.quantity}{food.unit} - {food.calories} kcal</Text>
+                            </Group>
+                          );
+                        });
+                        return elements;
+                      })()}
                     </Stack>
                   )}
                 </Card>
@@ -1335,7 +1437,8 @@ export function MyNutritionPage() {
           onChange={setActiveTab}
           data={[
             { value: "today", label: "Registrar comida" },
-            { value: "week", label: "Esta Semana" },
+            { value: "template", label: "Plantilla" },
+            { value: "week", label: "Tu plan" },
             { value: "history", label: "Historial" },
             { value: "recipes", label: "Recetas" },
           ]}
@@ -1350,8 +1453,11 @@ export function MyNutritionPage() {
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
             Registrar comida
           </Tabs.Tab>
+          <Tabs.Tab value="template" leftSection={<IconSalad size={16} />}>
+            Plantilla
+          </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
-            Esta Semana
+            Tu plan
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>
             Historial
@@ -1542,7 +1648,21 @@ export function MyNutritionPage() {
                       )}
                     </Group>
                     <Text size="xs" c="dimmed" lineClamp={1} mt={2}>
-                      {meal.items.map((item) => item.food?.name || "Alimento").join(" • ")}
+                      {(() => {
+                        const seen = new Set<string>();
+                        const labels: string[] = [];
+                        meal.items.forEach((item) => {
+                          if (item.recipe_group) {
+                            if (!seen.has(item.recipe_group)) {
+                              seen.add(item.recipe_group);
+                              labels.push(`🍳 ${item.recipe_group}`);
+                            }
+                          } else {
+                            labels.push(item.food?.name || "Alimento");
+                          }
+                        });
+                        return labels.join(" • ");
+                      })()}
                     </Text>
                   </Box>
                   <Badge variant="light" color={isRegistered ? "green" : "orange"} size="sm" style={{ flexShrink: 0 }}>
@@ -1648,6 +1768,101 @@ export function MyNutritionPage() {
         </Box>
       )}
 
+        </Tabs.Panel>
+
+        <Tabs.Panel value="template">
+          {mealPlan?.plan?.days && mealPlan.plan.days.length > 0 ? (
+            <Stack gap="md">
+              <Text size="sm" c="dimmed">
+                Plantilla original del plan &ldquo;{mealPlan?.name}&rdquo; diseñada por tu entrenador
+              </Text>
+              {(mealPlan?.plan?.days || []).map((day: PlanDay) => {
+                const dayLabels = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+                const dayName = day.dayName || dayLabels[day.day] || `Día ${day.day}`;
+                return (
+                  <Card key={day.id} shadow="sm" padding="md" radius="lg" withBorder>
+                    <Text fw={700} size="md" mb="sm">{dayName}</Text>
+                    {day.meals.length > 0 ? (
+                      <Stack gap="sm">
+                        {day.meals.map((meal: PlanMeal) => {
+                          const mealType = MEAL_TYPES.find(m => m.value === meal.name);
+                          const MealIcon = mealType?.icon || IconSalad;
+                          const recipeGroupsT = new Map<string, typeof meal.items>();
+                          const ungroupedT: typeof meal.items = [];
+                          meal.items.forEach((item) => {
+                            if (item.recipe_group) {
+                              const g = recipeGroupsT.get(item.recipe_group) || [];
+                              g.push(item);
+                              recipeGroupsT.set(item.recipe_group, g);
+                            } else {
+                              ungroupedT.push(item);
+                            }
+                          });
+                          const totalCal = meal.items.reduce((sum, item) => {
+                            const fd = item.food || item.supplement;
+                            const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
+                            return sum + Math.round(Number(fd?.calories || 0) * (item.quantity_grams / ss));
+                          }, 0);
+                          return (
+                            <Paper key={meal.id} p="sm" radius="md" withBorder>
+                              <Group justify="space-between" mb="xs">
+                                <Group gap="xs">
+                                  <ThemeIcon variant="light" color={mealType?.color || "gray"} size="md" radius="xl">
+                                    <MealIcon size={14} />
+                                  </ThemeIcon>
+                                  <Text fw={600} size="sm">{meal.name}</Text>
+                                  <Text size="xs" c="dimmed">{meal.time}</Text>
+                                </Group>
+                                <Badge variant="light" color="yellow" size="sm">{totalCal} kcal</Badge>
+                              </Group>
+                              <Stack gap={4} ml={36}>
+                                {(() => {
+                                  const els: React.ReactNode[] = [];
+                                  recipeGroupsT.forEach((items, rName) => {
+                                    els.push(
+                                      <Paper key={`rt-${rName}`} p="xs" radius="sm" style={{ borderLeft: "3px solid var(--mantine-color-teal-4)", background: "var(--mantine-color-teal-0)" }}>
+                                        <Text size="xs" fw={700} c="teal" mb={2}>🍳 {rName}</Text>
+                                        {items.map((item, i) => {
+                                          const fd = item.food || item.supplement;
+                                          return (
+                                            <Group key={i} justify="space-between">
+                                              <Text size="xs">{fd?.name || "Alimento"}</Text>
+                                              <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
+                                            </Group>
+                                          );
+                                        })}
+                                      </Paper>
+                                    );
+                                  });
+                                  ungroupedT.forEach((item, i) => {
+                                    const fd = item.food || item.supplement;
+                                    els.push(
+                                      <Group key={`ut-${i}`} justify="space-between">
+                                        <Text size="xs">{fd?.name || "Alimento"}</Text>
+                                        <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
+                                      </Group>
+                                    );
+                                  });
+                                  return els;
+                                })()}
+                              </Stack>
+                            </Paper>
+                          );
+                        })}
+                      </Stack>
+                    ) : (
+                      <Text size="sm" c="dimmed">Sin comidas asignadas</Text>
+                    )}
+                  </Card>
+                );
+              })}
+            </Stack>
+          ) : (
+            <Paper p="xl" radius="lg" ta="center" withBorder>
+              <Text fw={600} size="md" mb={4}>No hay plantilla disponible</Text>
+              <Text size="sm" c="dimmed">Tu entrenador aún no ha creado un plan nutricional.</Text>
+            </Paper>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="week">

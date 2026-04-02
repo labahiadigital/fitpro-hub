@@ -7,6 +7,7 @@ import {
   Divider,
   Group,
   Loader,
+  Menu,
   NumberInput,
   Paper,
   SegmentedControl,
@@ -18,6 +19,7 @@ import {
   Textarea,
   TextInput,
   ThemeIcon,
+  Tooltip,
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -29,7 +31,10 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconClock,
+  IconDotsVertical,
+  IconEdit,
   IconMapPin,
+  IconSettings,
   IconTrash,
   IconUser,
   IconUsers,
@@ -48,12 +53,14 @@ import {
   useUpdateBooking,
 } from "../../hooks/useBookings";
 import { useClients } from "../../hooks/useClients";
+import { useTeamMembers } from "../../hooks/useTeam";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import {
   useGoogleCalendarStatus,
   useGoogleCalendarEvents,
   type GoogleCalendarEvent,
 } from "../../hooks/useGoogleCalendar";
+import { useNavigate } from "react-router-dom";
 import "dayjs/locale/es";
 
 dayjs.locale("es");
@@ -85,12 +92,23 @@ interface CalendarEvent {
   googleEvent?: GoogleCalendarEvent;
 }
 
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  confirmed: { label: "Confirmada", color: "green" },
+  pending: { label: "Pendiente", color: "yellow" },
+  cancelled: { label: "Cancelada", color: "red" },
+  completed: { label: "Completada", color: "blue" },
+  no_show: { label: "No asistió", color: "gray" },
+};
+
 export function CalendarPage() {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("week");
   const [modalOpened, { open: openModal, close: closeModal }] =
     useDisclosure(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
 
   const startOfWeek = dayjs(currentDate).startOf("week");
   const endOfWeek = dayjs(currentDate).endOf("week");
@@ -128,6 +146,14 @@ export function CalendarPage() {
   });
 
   const { data: clientsData } = useClients({ page: 1 });
+  const { data: teamMembers } = useTeamMembers();
+
+  const teamMemberOptions = useMemo(() => {
+    if (!teamMembers) return [];
+    return teamMembers
+      .filter((m) => m.role !== "client" && m.is_active)
+      .map((m) => ({ value: m.user_id, label: m.full_name || m.name || m.email }));
+  }, [teamMembers]);
 
   const clientsMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -140,7 +166,7 @@ export function CalendarPage() {
   const bookings: Booking[] = (bookingsData || []).map((b: Booking) => ({
     ...b,
     client_name: b.client_name || (b.client_id ? clientsMap.get(b.client_id) : undefined) || "Sin cliente",
-  }));
+  })).filter((b: Booking) => !filterMemberId || (b as unknown as Record<string, unknown>).organizer_id === filterMemberId);
   
   // Combinar bookings con eventos de Google Calendar
   const allEvents: CalendarEvent[] = [
@@ -281,7 +307,39 @@ export function CalendarPage() {
     }
   };
 
-  const navigate = (direction: "prev" | "next") => {
+  const editForm = useForm({
+    initialValues: {
+      start_time: null as Date | null,
+      end_time: null as Date | null,
+    },
+  });
+
+  const handleOpenEdit = (booking: Booking) => {
+    editForm.setValues({
+      start_time: new Date(booking.start_time),
+      end_time: new Date(booking.end_time),
+    });
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedBooking || !editForm.values.start_time || !editForm.values.end_time) return;
+    try {
+      await updateBooking.mutateAsync({
+        id: selectedBooking.id,
+        data: {
+          start_time: editForm.values.start_time.toISOString(),
+          end_time: editForm.values.end_time.toISOString(),
+        },
+      });
+      setIsEditing(false);
+      setSelectedBooking(null);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const navigateDate = (direction: "prev" | "next") => {
     const unit = view === "month" ? "month" : view === "week" ? "week" : "day";
     setCurrentDate((current) =>
       direction === "prev"
@@ -377,10 +435,10 @@ export function CalendarPage() {
         description="Gestiona tus sesiones y reservas de forma eficiente"
         title="Calendario"
       >
-        <Group justify="space-between">
+        <Group justify="space-between" wrap="wrap">
           <Group>
             <ActionIcon
-              onClick={() => navigate("prev")}
+              onClick={() => navigateDate("prev")}
               size="lg"
               variant="default"
             >
@@ -398,7 +456,7 @@ export function CalendarPage() {
                   : dayjs(currentDate).format("dddd, D MMMM YYYY")}
             </Text>
             <ActionIcon
-              onClick={() => navigate("next")}
+              onClick={() => navigateDate("next")}
               size="lg"
               variant="default"
             >
@@ -412,15 +470,33 @@ export function CalendarPage() {
               Hoy
             </Button>
           </Group>
-          <SegmentedControl
-            data={[
-              { label: "Mes", value: "month" },
-              { label: "Semana", value: "week" },
-              { label: "Día", value: "day" },
-            ]}
-            onChange={(v) => setView(v as "month" | "week" | "day")}
-            value={view}
-          />
+          <Group gap="sm">
+            {teamMemberOptions.length > 1 && (
+              <Select
+                placeholder="Todos los miembros"
+                data={teamMemberOptions}
+                value={filterMemberId}
+                onChange={setFilterMemberId}
+                clearable
+                size="sm"
+                w={200}
+              />
+            )}
+            <SegmentedControl
+              data={[
+                { label: "Mes", value: "month" },
+                { label: "Semana", value: "week" },
+                { label: "Día", value: "day" },
+              ]}
+              onChange={(v) => setView(v as "month" | "week" | "day")}
+              value={view}
+            />
+            <Tooltip label="Configurar calendario">
+              <ActionIcon variant="light" size="lg" onClick={() => navigate("/settings")}>
+                <IconSettings size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
         </Group>
       </PageHeader>
 
@@ -599,23 +675,53 @@ export function CalendarPage() {
                     {day.format("D")}
                   </Text>
                   <Stack gap={2}>
-                    {dayBookings.slice(0, 2).map((booking) => (
-                      <Box
-                        key={booking.id}
-                        onClick={() => setSelectedBooking(booking)}
-                        p={2}
-                        style={{
-                          backgroundColor: `var(--mantine-color-${getStatusColor(booking.status)}-1)`,
-                          borderLeft: `2px solid var(--mantine-color-${getStatusColor(booking.status)}-6)`,
-                          borderRadius: 2,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Text size="xs" truncate>
-                          {booking.title}
-                        </Text>
-                      </Box>
-                    ))}
+                    {dayBookings.slice(0, 2).map((booking) => {
+                      const statusInfo = STATUS_LABELS[booking.status] || STATUS_LABELS.pending;
+                      return (
+                        <Box
+                          key={booking.id}
+                          p={2}
+                          style={{
+                            backgroundColor: `var(--mantine-color-${getStatusColor(booking.status)}-1)`,
+                            borderLeft: `2px solid var(--mantine-color-${getStatusColor(booking.status)}-6)`,
+                            borderRadius: 2,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Group gap={2} wrap="nowrap" justify="space-between">
+                            <Text size="xs" truncate style={{ flex: 1, minWidth: 0 }}>
+                              {booking.title}
+                            </Text>
+                            <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+                              <Menu.Target>
+                                <ActionIcon size={14} variant="transparent" color="gray" onClick={(e) => e.stopPropagation()}>
+                                  <IconDotsVertical size={10} />
+                                </ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item onClick={() => setSelectedBooking(booking)}>Ver detalle</Menu.Item>
+                                {booking.status === "pending" && (
+                                  <>
+                                    <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleConfirmBooking(booking.id)}>Aprobar</Menu.Item>
+                                    <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Rechazar</Menu.Item>
+                                  </>
+                                )}
+                                {booking.status === "confirmed" && (
+                                  <>
+                                    <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleCompleteBooking(booking.id)}>Completar</Menu.Item>
+                                    <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Cancelar</Menu.Item>
+                                  </>
+                                )}
+                                <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => { setSelectedBooking(booking); handleOpenEdit(booking); }}>Modificar</Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          </Group>
+                          <Badge size="xs" variant="dot" color={statusInfo.color} style={{ fontSize: 7 }}>
+                            {statusInfo.label}
+                          </Badge>
+                        </Box>
+                      );
+                    })}
                     {dayBookings.length > 2 && (
                       <Text c="dimmed" size="xs">
                         +{dayBookings.length - 2} más
@@ -718,34 +824,73 @@ export function CalendarPage() {
                     ))}
 
                     {/* Bookings de Trackfiz */}
-                    {getBookingsForDay(day).map((booking) => (
-                      <Box
-                        key={booking.id}
-                        onClick={() => setSelectedBooking(booking)}
-                        style={{
-                          position: "absolute",
-                          left: 2,
-                          right: 2,
-                          ...getBookingStyle(booking),
-                          backgroundColor: `var(--mantine-color-${getStatusColor(booking.status)}-1)`,
-                          borderLeft: `3px solid var(--mantine-color-${getStatusColor(booking.status)}-6)`,
-                          borderRadius: 4,
-                          padding: 4,
-                          cursor: "pointer",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Text fw={600} size="xs" truncate>
-                          {booking.title}
-                        </Text>
-                        <Text c="dimmed" size="xs" truncate>
-                          {booking.client_name}
-                        </Text>
-                        <Text c="dimmed" size="xs">
-                          {dayjs(booking.start_time).format("HH:mm")}
-                        </Text>
-                      </Box>
-                    ))}
+                    {getBookingsForDay(day).map((booking) => {
+                      const statusInfo = STATUS_LABELS[booking.status] || STATUS_LABELS.pending;
+                      return (
+                        <Box
+                          key={booking.id}
+                          style={{
+                            position: "absolute",
+                            left: 2,
+                            right: 2,
+                            ...getBookingStyle(booking),
+                            backgroundColor: `var(--mantine-color-${getStatusColor(booking.status)}-1)`,
+                            borderLeft: `3px solid var(--mantine-color-${getStatusColor(booking.status)}-6)`,
+                            borderRadius: 4,
+                            padding: 4,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <Group justify="space-between" wrap="nowrap" gap={2}>
+                            <Box style={{ minWidth: 0, flex: 1 }}>
+                              <Text fw={600} size="xs" truncate>{booking.title}</Text>
+                              <Text c="dimmed" size="xs" truncate>{booking.client_name}</Text>
+                            </Box>
+                            <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+                              <Menu.Target>
+                                <ActionIcon size="xs" variant="subtle" color="gray" onClick={(e) => e.stopPropagation()}>
+                                  <IconDotsVertical size={12} />
+                                </ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item onClick={() => setSelectedBooking(booking)}>
+                                  Ver detalle
+                                </Menu.Item>
+                                {booking.status === "pending" && (
+                                  <>
+                                    <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleConfirmBooking(booking.id)}>
+                                      Aprobar
+                                    </Menu.Item>
+                                    <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>
+                                      Rechazar
+                                    </Menu.Item>
+                                  </>
+                                )}
+                                {booking.status === "confirmed" && (
+                                  <>
+                                    <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleCompleteBooking(booking.id)}>
+                                      Completar
+                                    </Menu.Item>
+                                    <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>
+                                      Cancelar
+                                    </Menu.Item>
+                                  </>
+                                )}
+                                <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => { setSelectedBooking(booking); handleOpenEdit(booking); }}>
+                                  Modificar
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          </Group>
+                          <Group gap={4} mt={2}>
+                            <Badge size="xs" variant="filled" color={statusInfo.color} style={{ fontSize: 8, height: 14, padding: "0 4px" }}>
+                              {statusInfo.label}
+                            </Badge>
+                            <Text c="dimmed" size="xs">{dayjs(booking.start_time).format("HH:mm")}</Text>
+                          </Group>
+                        </Box>
+                      );
+                    })}
                     
                     {/* Eventos de Google Calendar (externos) */}
                     {getEventsForDay(day)
@@ -947,12 +1092,12 @@ export function CalendarPage() {
 
       {/* Booking Detail Modal */}
       <BottomSheet
-        onClose={() => setSelectedBooking(null)}
+        onClose={() => { setSelectedBooking(null); setIsEditing(false); }}
         opened={!!selectedBooking}
         size="md"
-        title="Detalle de Sesión"
+        title={isEditing ? "Modificar Sesión" : "Detalle de Sesión"}
       >
-        {selectedBooking && (
+        {selectedBooking && !isEditing && (
           <Stack>
             <Group justify="space-between">
               <Box>
@@ -963,16 +1108,9 @@ export function CalendarPage() {
                   color={getStatusColor(selectedBooking.status)}
                   mt="xs"
                   variant="light"
+                  size="lg"
                 >
-                  {selectedBooking.status === "confirmed"
-                    ? "Confirmada"
-                    : selectedBooking.status === "pending"
-                      ? "Pendiente"
-                      : selectedBooking.status === "cancelled"
-                        ? "Cancelada"
-                        : selectedBooking.status === "completed"
-                          ? "Completada"
-                          : "No asistió"}
+                  {STATUS_LABELS[selectedBooking.status]?.label || selectedBooking.status}
                 </Badge>
               </Box>
             </Group>
@@ -984,9 +1122,7 @@ export function CalendarPage() {
                 <IconUser size={16} />
               </ThemeIcon>
               <Box>
-                <Text c="dimmed" size="xs">
-                  Cliente
-                </Text>
+                <Text c="dimmed" size="xs">Cliente</Text>
                 <Text fw={500} size="sm">
                   {selectedBooking.client_name || "No especificado"}
                 </Text>
@@ -998,13 +1134,9 @@ export function CalendarPage() {
                 <IconClock size={16} />
               </ThemeIcon>
               <Box>
-                <Text c="dimmed" size="xs">
-                  Horario
-                </Text>
+                <Text c="dimmed" size="xs">Horario</Text>
                 <Text fw={500} size="sm">
-                  {dayjs(selectedBooking.start_time).format(
-                    "dddd, D MMMM YYYY"
-                  )}
+                  {dayjs(selectedBooking.start_time).format("dddd, D MMMM YYYY")}
                 </Text>
                 <Text size="sm">
                   {dayjs(selectedBooking.start_time).format("HH:mm")} -{" "}
@@ -1023,9 +1155,7 @@ export function CalendarPage() {
               </ThemeIcon>
               <Box>
                 <Text c="dimmed" size="xs">
-                  {selectedBooking.modality === "in_person"
-                    ? "Ubicación"
-                    : "Online"}
+                  {selectedBooking.modality === "in_person" ? "Ubicación" : "Online"}
                 </Text>
                 <Text fw={500} size="sm">
                   {selectedBooking.location?.address ||
@@ -1040,81 +1170,86 @@ export function CalendarPage() {
                 <IconUsers size={16} />
               </ThemeIcon>
               <Box>
-                <Text c="dimmed" size="xs">
-                  Tipo
-                </Text>
+                <Text c="dimmed" size="xs">Tipo</Text>
                 <Text fw={500} size="sm">
-                  {selectedBooking.session_type === "individual"
-                    ? "Individual"
-                    : "Grupal"}
+                  {selectedBooking.session_type === "individual" ? "Individual" : "Grupal"}
                 </Text>
               </Box>
             </Group>
 
             <Divider />
 
-            <Group gap="sm" justify="flex-end">
+            <Group gap="sm" justify="flex-end" wrap="wrap">
               {selectedBooking.status === "pending" && (
                 <>
-                  <Button
-                    color="green"
-                    leftSection={<IconCheck size={16} />}
-                    loading={updateBooking.isPending}
-                    onClick={() => handleConfirmBooking(selectedBooking.id)}
-                    variant="light"
-                  >
-                    Confirmar
+                  <Button color="green" leftSection={<IconCheck size={16} />} loading={updateBooking.isPending} onClick={() => handleConfirmBooking(selectedBooking.id)} variant="light">
+                    Aprobar
                   </Button>
-                  <Button
-                    color="red"
-                    leftSection={<IconX size={16} />}
-                    loading={cancelBooking.isPending}
-                    onClick={() => handleCancelBooking(selectedBooking.id)}
-                    variant="light"
-                  >
-                    Cancelar
+                  <Button color="red" leftSection={<IconX size={16} />} loading={cancelBooking.isPending} onClick={() => handleCancelBooking(selectedBooking.id)} variant="light">
+                    Rechazar
                   </Button>
                 </>
               )}
               {selectedBooking.status === "confirmed" && (
                 <>
-                  <Button
-                    color="green"
-                    leftSection={<IconCheck size={16} />}
-                    loading={completeBooking.isPending}
-                    onClick={() => handleCompleteBooking(selectedBooking.id)}
-                    variant="light"
-                  >
+                  <Button color="green" leftSection={<IconCheck size={16} />} loading={completeBooking.isPending} onClick={() => handleCompleteBooking(selectedBooking.id)} variant="light">
                     Completar
                   </Button>
-                  <Button
-                    color="red"
-                    leftSection={<IconX size={16} />}
-                    loading={cancelBooking.isPending}
-                    onClick={() => handleCancelBooking(selectedBooking.id)}
-                    variant="light"
-                  >
+                  <Button color="red" leftSection={<IconX size={16} />} loading={cancelBooking.isPending} onClick={() => handleCancelBooking(selectedBooking.id)} variant="light">
                     Cancelar
                   </Button>
                 </>
               )}
-              
-              {/* Botón eliminar siempre visible */}
-              <Button
-                color="red"
-                leftSection={<IconTrash size={16} />}
-                loading={deleteBooking.isPending}
-                onClick={() => handleDeleteBooking(selectedBooking.id)}
-                variant="outline"
-              >
+              <Button variant="light" leftSection={<IconEdit size={16} />} onClick={() => handleOpenEdit(selectedBooking)}>
+                Modificar fecha/hora
+              </Button>
+              <Button color="red" leftSection={<IconTrash size={16} />} loading={deleteBooking.isPending} onClick={() => handleDeleteBooking(selectedBooking.id)} variant="outline">
                 Eliminar
               </Button>
-              
-              <Button
-                onClick={() => setSelectedBooking(null)}
-                variant="default"
-              >
+              <Button onClick={() => { setSelectedBooking(null); setIsEditing(false); }} variant="default">
                 Cerrar
+              </Button>
+            </Group>
+          </Stack>
+        )}
+        {selectedBooking && isEditing && (
+          <Stack>
+            <Text fw={600} size="lg">{selectedBooking.title}</Text>
+            <Badge color={getStatusColor(selectedBooking.status)} variant="light">
+              {STATUS_LABELS[selectedBooking.status]?.label}
+            </Badge>
+            <Divider />
+            <DateTimePicker
+              label="Nuevo inicio"
+              leftSection={<IconClock size={16} />}
+              valueFormat="DD/MM/YYYY HH:mm"
+              value={editForm.values.start_time}
+              onChange={(value) => {
+                const dateValue = value ? (typeof value === "string" ? new Date(value) : value) : null;
+                editForm.setFieldValue("start_time", dateValue);
+                if (dateValue) {
+                  const newEnd = new Date(dateValue.getTime() + 60 * 60 * 1000);
+                  editForm.setFieldValue("end_time", newEnd);
+                }
+              }}
+            />
+            <DateTimePicker
+              label="Nuevo fin"
+              leftSection={<IconClock size={16} />}
+              valueFormat="DD/MM/YYYY HH:mm"
+              value={editForm.values.end_time}
+              minDate={editForm.values.start_time || undefined}
+              onChange={(value) => {
+                const dateValue = value ? (typeof value === "string" ? new Date(value) : value) : null;
+                editForm.setFieldValue("end_time", dateValue);
+              }}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={() => setIsEditing(false)}>
+                Volver
+              </Button>
+              <Button loading={updateBooking.isPending} onClick={handleSaveEdit}>
+                Guardar cambios
               </Button>
             </Group>
           </Stack>

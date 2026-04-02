@@ -601,6 +601,16 @@ async def get_client_nutrition_logs(
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
     
+    def _safe_float(val, default=0.0):
+        if val is None:
+            return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            import re as _re
+            m = _re.search(r"[\d.]+", str(val))
+            return float(m.group()) if m else default
+
     def _calc_plan_meal_macros_trainer(mp_plan, meal_name, log_date_str):
         if not mp_plan:
             return None
@@ -620,15 +630,20 @@ async def get_client_nutrition_logs(
         plan_foods = []
         for item in meal_data.get("items", []):
             fd = item.get("food") or item.get("supplement") or {}
-            ss = float(fd.get("serving_size") or 100) or 100
-            qty = float(item.get("quantity_grams") or 0)
+            ss = _safe_float(fd.get("serving_size"), 100) or 100
+            qty = _safe_float(item.get("quantity_grams"), 0)
             factor = qty / ss
-            ic = round(float(fd.get("calories") or 0) * factor)
-            ip = round(float(fd.get("protein") or 0) * factor, 1)
-            icb = round(float(fd.get("carbs") or 0) * factor, 1)
-            ift = round(float(fd.get("fat") or 0) * factor, 1)
+            ic = round(_safe_float(fd.get("calories")) * factor)
+            ip = round(_safe_float(fd.get("protein")) * factor, 1)
+            icb = round(_safe_float(fd.get("carbs")) * factor, 1)
+            ift = round(_safe_float(fd.get("fat")) * factor, 1)
             cal += ic; prot += ip; carb += icb; fat_v += ift
-            plan_foods.append({"name": fd.get("name", ""), "calories": ic, "protein": ip, "carbs": icb, "fat": ift, "quantity": qty})
+            plan_foods.append({
+                "name": fd.get("name", ""),
+                "calories": ic, "protein": ip, "carbs": icb, "fat": ift,
+                "quantity": qty,
+                "recipe_group": item.get("recipe_group"),
+            })
         return {"calories": int(cal), "protein": round(prot, 1), "carbs": round(carb, 1), "fat": round(fat_v, 1), "foods": plan_foods}
     
     from collections import defaultdict
