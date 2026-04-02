@@ -20,6 +20,7 @@ interface PlanEditorLayoutProps {
   badgeColor?: string;
   isSaving?: boolean;
   onSave: () => void;
+  saveDisabled?: boolean;
   saveLabel: string;
   sidebarContent: ReactNode;
   mainContent: ReactNode;
@@ -33,6 +34,7 @@ export function PlanEditorLayout({
   badgeColor = "blue",
   isSaving,
   onSave,
+  saveDisabled,
   saveLabel,
   sidebarContent,
   mainContent,
@@ -104,9 +106,10 @@ export function PlanEditorLayout({
               <Button
                 loading={isSaving}
                 onClick={onSave}
+                disabled={saveDisabled}
                 radius="xl"
                 size="sm"
-                style={{ backgroundColor: "var(--nv-primary)" }}
+                style={saveDisabled ? undefined : { backgroundColor: "var(--nv-primary)" }}
               >
                 {saveLabel}
               </Button>
@@ -199,9 +202,10 @@ export function PlanEditorLayout({
             fullWidth
             loading={isSaving}
             onClick={onSave}
+            disabled={saveDisabled}
             radius="xl"
             size="md"
-            style={{ backgroundColor: "var(--nv-primary)", minHeight: 44 }}
+            style={saveDisabled ? { minHeight: 44 } : { backgroundColor: "var(--nv-primary)", minHeight: 44 }}
           >
             {saveLabel}
           </Button>

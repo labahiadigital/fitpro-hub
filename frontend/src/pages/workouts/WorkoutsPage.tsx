@@ -38,6 +38,7 @@ import {
   IconTemplate,
   IconTrash,
   IconUser,
+  IconUsers,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -203,7 +204,7 @@ export function WorkoutsPage() {
     }
   }, [navigate, returnTo, clientId]);
   
-  const [activeTab, setActiveTab] = useState<string | null>("programs");
+  const [activeTab, setActiveTab] = useState<string | null>("templates");
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [
     exerciseModalOpened,
@@ -217,7 +218,7 @@ export function WorkoutsPage() {
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
-  const [isTemplateModeOn, setIsTemplateModeOn] = useState(true);
+  const [isTemplateModeOn, setIsTemplateModeOn] = useState(false);
 
   const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
@@ -270,11 +271,21 @@ export function WorkoutsPage() {
     [sourceFilteredExercises, searchExercise, sortFavoritesFirst],
   );
 
-  // When editing a client's program, we need to fetch all programs (not just templates)
   const { data: programs, isLoading: loadingPrograms } =
-    useWorkoutPrograms(clientId ? undefined : true);
+    useWorkoutPrograms();
   // Also fetch the specific program if editing a client's program
   const { data: specificClientProgram } = useWorkoutProgram(editProgramId && clientId ? editProgramId : "");
+
+  const clientsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (clientsData?.items || []).forEach((c: { id: string; first_name?: string; last_name?: string }) => {
+      map.set(c.id, `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre");
+    });
+    return map;
+  }, [clientsData]);
+
+  const templates = useMemo(() => (programs || []).filter((p: any) => p.is_template), [programs]);
+  const clientPrograms = useMemo(() => (programs || []).filter((p: any) => !p.is_template), [programs]);
   const createExercise = useCreateExercise();
   const updateExercise = useUpdateExercise();
   const deleteExercise = useDeleteExercise();
@@ -495,103 +506,103 @@ export function WorkoutsPage() {
     openBuilder();
   };
 
+  const canSaveProgram = !!(selectedClientId || programForm.values.client_id || clientId || isTemplateModeOn);
+
   const handleSaveProgram = async () => {
     const values = programForm.values;
-    if (!values.name) return;
+    if (!values.name || !canSaveProgram) return;
 
     const planClientId = selectedClientId || values.client_id || clientId || null;
-    const programData = {
-      ...values,
-      client_id: planClientId || undefined,
-      template: {
-        // Nueva estructura con días
-        days: workoutDays.map((day) => ({
-          id: day.id,
-          day: day.day,
-          dayName: day.dayName,
-          isRestDay: day.isRestDay,
-          notes: day.notes,
-          blocks: day.blocks.map((block) => ({
-            id: block.id,
-            name: block.name,
-            type: block.type,
-            rest_between_sets: block.rest_between_sets,
-            rounds: block.rounds,
-            exercises: block.exercises?.map((ex: any) => ({
-              id: ex.id,
-              exercise_id: ex.exercise_id || ex.exercise?.id,
-              exercise: ex.exercise,
-              sets: ex.sets,
-              reps: ex.reps,
-              rest_seconds: ex.rest_seconds,
-              duration_type: ex.duration_type ?? "reps",
-              notes: ex.notes,
-              order: ex.order,
-              target_weight: ex.target_weight,
-              target_reps: ex.target_reps,
-            })) || [],
-          })),
+
+    const templatePayload = {
+      days: workoutDays.map((day) => ({
+        id: day.id,
+        day: day.day,
+        dayName: day.dayName,
+        isRestDay: day.isRestDay,
+        notes: day.notes,
+        blocks: day.blocks.map((block) => ({
+          id: block.id,
+          name: block.name,
+          type: block.type,
+          rest_between_sets: block.rest_between_sets,
+          rounds: block.rounds,
+          exercises: block.exercises?.map((ex: any) => ({
+            id: ex.id,
+            exercise_id: ex.exercise_id || ex.exercise?.id,
+            exercise: ex.exercise,
+            sets: ex.sets,
+            reps: ex.reps,
+            rest_seconds: ex.rest_seconds,
+            duration_type: ex.duration_type ?? "reps",
+            notes: ex.notes,
+            order: ex.order,
+            target_weight: ex.target_weight,
+            target_reps: ex.target_reps,
+          })) || [],
         })),
-        // Retrocompatibilidad: también guardar bloques planos (todos los bloques de todos los días)
-        blocks: workoutDays.flatMap((day) =>
-          day.blocks.map((block) => ({
-            id: block.id,
-            name: block.name,
-            type: block.type,
-            rest_between_sets: block.rest_between_sets,
-            rounds: block.rounds,
-            exercises: block.exercises?.map((ex: any) => ({
-              id: ex.id,
-              exercise_id: ex.exercise_id || ex.exercise?.id,
-              exercise: ex.exercise,
-              sets: ex.sets,
-              reps: ex.reps,
-              rest_seconds: ex.rest_seconds,
-              duration_type: ex.duration_type ?? "reps",
-              notes: ex.notes,
-              order: ex.order,
-              target_weight: ex.target_weight,
-              target_reps: ex.target_reps,
-            })) || [],
-          }))
-        ),
-      },
-      // When editing a client's plan (clientId exists) or assigning to client, don't save as template
-      is_template: !planClientId,
+      })),
+      blocks: workoutDays.flatMap((day) =>
+        day.blocks.map((block) => ({
+          id: block.id,
+          name: block.name,
+          type: block.type,
+          rest_between_sets: block.rest_between_sets,
+          rounds: block.rounds,
+          exercises: block.exercises?.map((ex: any) => ({
+            id: ex.id,
+            exercise_id: ex.exercise_id || ex.exercise?.id,
+            exercise: ex.exercise,
+            sets: ex.sets,
+            reps: ex.reps,
+            rest_seconds: ex.rest_seconds,
+            duration_type: ex.duration_type ?? "reps",
+            notes: ex.notes,
+            order: ex.order,
+            target_weight: ex.target_weight,
+            target_reps: ex.target_reps,
+          })) || [],
+        }))
+      ),
     };
 
     try {
       if (editingProgram) {
-        const updateData = (clientId || planClientId)
-          ? { ...programData, is_template: editingProgram.is_template ?? false }
-          : programData;
         await updateProgram.mutateAsync({
           id: editingProgram.id,
-          data: updateData,
+          data: {
+            ...values,
+            client_id: planClientId || undefined,
+            template: templatePayload,
+            is_template: editingProgram.is_template ?? !planClientId,
+          },
         });
       } else {
-        await createProgram.mutateAsync(programData);
-      }
-
-      if (planClientId && isTemplateModeOn) {
-        const existingPrograms = programs || [];
-        const templateName = `${values.name} (Plantilla)`;
-        const templateAlreadyExists = existingPrograms.some(
-          (p: any) => p.is_template && (p.name === values.name || p.name === templateName)
-        );
-        if (!templateAlreadyExists) {
+        if (planClientId) {
           await createProgram.mutateAsync({
-            ...programData,
+            ...values,
+            client_id: planClientId,
+            template: templatePayload,
+            is_template: false,
+          });
+        }
+        if (isTemplateModeOn) {
+          const templateName = planClientId ? `${values.name} (Plantilla)` : values.name;
+          await createProgram.mutateAsync({
+            ...values,
             client_id: undefined,
+            template: templatePayload,
             is_template: true,
             name: templateName,
           });
-          notifications.show({
-            title: "Plantilla creada",
-            message: "Se guardó también como plantilla reutilizable",
-            color: "teal",
-            icon: <IconTemplate size={16} />,
-          });
+          if (planClientId) {
+            notifications.show({
+              title: "Plantilla creada",
+              message: "Se guardó también como plantilla reutilizable",
+              color: "teal",
+              icon: <IconTemplate size={16} />,
+            });
+          }
         }
       }
 
@@ -699,7 +710,8 @@ export function WorkoutsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "programs", label: "Programas" },
+            { value: "templates", label: "Plantillas" },
+            { value: "client-programs", label: "Programas de Clientes" },
             { value: "exercises", label: "Ejercicios" },
             { value: "warmup", label: "Calentamiento" },
             { value: "stretching", label: "Estiramientos" },
@@ -713,10 +725,16 @@ export function WorkoutsPage() {
       <Tabs onChange={setActiveTab} value={activeTab}>
         {!isMobile && (
           <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <Tabs.Tab leftSection={<IconTemplate size={14} />} value="programs" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Programas{" "}
-              {(programs?.length ?? 0) > 0 && (
-                <Badge ml="xs" size="xs" radius="md" variant="light">{programs?.length}</Badge>
+            <Tabs.Tab leftSection={<IconTemplate size={14} />} value="templates" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Plantillas{" "}
+              {templates.length > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">{templates.length}</Badge>
+              )}
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUsers size={14} />} value="client-programs" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Programas de Clientes{" "}
+              {clientPrograms.length > 0 && (
+                <Badge ml="xs" size="xs" radius="md" variant="light">{clientPrograms.length}</Badge>
               )}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 600, fontSize: "13px" }}>
@@ -746,16 +764,14 @@ export function WorkoutsPage() {
           </Tabs.List>
         )}
 
-        <Tabs.Panel value="programs">
-          {programs && programs.length > 0 ? (
+        <Tabs.Panel value="templates">
+          {templates.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
-              {programs.map((program: any) => (
+              {templates.map((program: any) => (
                 <Box key={program.id} className="nv-card" p="md">
                   <Group justify="space-between" mb="sm">
                     <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{program.name}</Text>
-                    <Badge color="blue" variant="light" radius="md" size="xs">
-                      {program.duration_weeks}sem
-                    </Badge>
+                    <Badge color="teal" variant="light" radius="md" size="xs">Plantilla</Badge>
                   </Group>
 
                   <Text c="dimmed" lineClamp={2} size="xs">
@@ -770,49 +786,22 @@ export function WorkoutsPage() {
                           ? "Intermedio"
                           : "Avanzado"}
                     </Badge>
-                    {program.tags?.slice(0, 1).map((tag: string) => (
-                      <Badge key={tag} size="xs" variant="light" radius="md">
-                        {tag}
-                      </Badge>
-                    ))}
+                    {program.duration_weeks && (
+                      <Badge size="xs" variant="light" color="blue" radius="md">{program.duration_weeks}sem</Badge>
+                    )}
                   </Group>
 
                   <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
 
                   <Group gap={6}>
-                    <Button
-                      flex={1}
-                      leftSection={<IconEdit size={12} />}
-                      onClick={() => openProgramBuilder(program)}
-                      size="xs"
-                      variant="light"
-                      radius="md"
-                      styles={{ root: { height: 28 } }}
-                    >
+                    <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => openProgramBuilder(program)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>
                       Editar
                     </Button>
-                    <ActionIcon color="blue" variant="light" radius="md" size="sm">
-                      <IconEye size={14} />
-                    </ActionIcon>
-                    <ActionIcon
-                      color="gray"
-                      variant="light"
-                      radius="md"
-                      size="sm"
-                      onClick={() => handleDuplicateProgram(program)}
-                      loading={createProgram.isPending}
-                      title="Duplicar programa"
-                    >
+                    <ActionIcon color="blue" variant="light" radius="md" size="sm"><IconEye size={14} /></ActionIcon>
+                    <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => handleDuplicateProgram(program)} loading={createProgram.isPending} title="Duplicar programa">
                       <IconCopy size={14} />
                     </ActionIcon>
-                    <ActionIcon 
-                      color="red" 
-                      variant="light" 
-                      radius="md" 
-                      size="sm"
-                      onClick={() => handleDeleteProgram(program.id)}
-                      loading={deleteProgram.isPending}
-                    >
+                    <ActionIcon color="red" variant="light" radius="md" size="sm" onClick={() => handleDeleteProgram(program.id)} loading={deleteProgram.isPending}>
                       <IconTrash size={14} />
                     </ActionIcon>
                   </Group>
@@ -831,7 +820,73 @@ export function WorkoutsPage() {
               description="Crea tu primer programa de entrenamiento para asignarlo a tus clientes."
               icon={<IconTemplate size={36} />}
               onAction={() => openProgramBuilder()}
-              title="No hay programas"
+              title="No hay plantillas"
+            />
+          )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="client-programs">
+          {clientPrograms.length > 0 ? (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
+              {clientPrograms.map((program: any) => (
+                <Box key={program.id} className="nv-card" p="md">
+                  <Group justify="space-between" mb="sm">
+                    <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{program.name}</Text>
+                    <Badge color="blue" variant="light" radius="md" size="xs">
+                      {program.duration_weeks}sem
+                    </Badge>
+                  </Group>
+
+                  <Text c="dimmed" lineClamp={2} size="xs">
+                    {program.description || "Sin descripción"}
+                  </Text>
+
+                  {program.client_id && (
+                    <Badge color="blue" mt="xs" size="xs" variant="outline" radius="md">
+                      {clientsMap.get(program.client_id) || "Cliente"}
+                    </Badge>
+                  )}
+
+                  <Group gap={4} mt="sm">
+                    <Badge size="xs" variant="outline" radius="md">
+                      {program.difficulty === "beginner"
+                        ? "Principiante"
+                        : program.difficulty === "intermediate"
+                          ? "Intermedio"
+                          : "Avanzado"}
+                    </Badge>
+                  </Group>
+
+                  <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
+
+                  <Group gap={6}>
+                    <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => openProgramBuilder(program)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>
+                      Editar
+                    </Button>
+                    <ActionIcon color="blue" variant="light" radius="md" size="sm"><IconEye size={14} /></ActionIcon>
+                    <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => handleDuplicateProgram(program)} loading={createProgram.isPending} title="Duplicar programa">
+                      <IconCopy size={14} />
+                    </ActionIcon>
+                    <ActionIcon color="red" variant="light" radius="md" size="sm" onClick={() => handleDeleteProgram(program.id)} loading={deleteProgram.isPending}>
+                      <IconTrash size={14} />
+                    </ActionIcon>
+                  </Group>
+                </Box>
+              ))}
+            </SimpleGrid>
+          ) : loadingPrograms ? (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} height={160} radius="lg" />
+              ))}
+            </SimpleGrid>
+          ) : (
+            <EmptyState
+              actionLabel="Crear Programa"
+              description="Asigna un programa a un cliente para verlo aquí."
+              icon={<IconUsers size={36} />}
+              onAction={() => openProgramBuilder()}
+              title="No hay programas de clientes"
             />
           )}
         </Tabs.Panel>
@@ -1205,6 +1260,7 @@ export function WorkoutsPage() {
         badgeColor="blue"
         isSaving={createProgram.isPending || updateProgram.isPending}
         onSave={handleSaveProgram}
+        saveDisabled={!canSaveProgram || !programForm.values.name}
         saveLabel={editingProgram ? "Guardar Cambios" : "Crear Programa"}
         sidebarContent={
           <Stack gap="md">
@@ -1226,24 +1282,26 @@ export function WorkoutsPage() {
                 setSelectedClientId(value);
                 if (value) {
                   loadClientData(value);
-                  setIsTemplateModeOn(true);
                 } else {
                   setSelectedClient(null);
                   programForm.setFieldValue("client_id", null);
-                  setIsTemplateModeOn(true);
                 }
               }}
             />
 
-            {(selectedClientId || clientId) && (
-              <Switch
-                label="Guardar también como plantilla"
-                description="Guarda una copia reutilizable además del programa del cliente"
-                checked={isTemplateModeOn}
-                onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
-                size="sm"
-                color="teal"
-              />
+            <Switch
+              label="Crear como plantilla"
+              description={selectedClientId || clientId
+                ? "Guarda una copia reutilizable además del programa del cliente"
+                : "Guarda como plantilla reutilizable"}
+              checked={isTemplateModeOn}
+              onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
+              size="sm"
+              color="teal"
+            />
+
+            {!canSaveProgram && (
+              <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>
             )}
 
             <TextInput

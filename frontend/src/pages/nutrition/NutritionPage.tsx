@@ -239,7 +239,7 @@ export function NutritionPage() {
   const [supplementModalOpened, { open: openSupplementModal, close: closeSupplementModal }] = useDisclosure(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
-  const [isTemplateModeOn, setIsTemplateModeOn] = useState(true);
+  const [isTemplateModeOn, setIsTemplateModeOn] = useState(false);
 
   // Recipes (professional module)
   const [recipeModalOpened, { open: openRecipeModal, close: closeRecipeModal }] = useDisclosure(false);
@@ -659,16 +659,17 @@ export function NutritionPage() {
     openBuilder();
   };
 
+  const canSavePlan = !!(selectedClientId || planForm.values.client_id || clientId || isTemplateModeOn);
+
   const handleSavePlan = async () => {
     const values = planForm.values;
-    if (!values.name) return;
+    if (!values.name || !canSavePlan) return;
 
     try {
       const hasClient = !!(selectedClientId || values.client_id || clientId);
       const planClientId = hasClient ? (selectedClientId || values.client_id || clientId) : null;
-      const savingAsTemplate = !hasClient || isTemplateModeOn;
 
-      const planData = {
+      const basePlanData = {
         name: values.name,
         description: values.description,
         duration_days: values.duration_days,
@@ -678,12 +679,15 @@ export function NutritionPage() {
         target_fat: values.target_fat,
         dietary_tags: values.dietary_tags,
         plan: { days: mealPlanDays },
-        client_id: hasClient ? (planClientId || undefined) : undefined,
-        is_template: hasClient ? false : true,
       };
 
       if (editingPlan) {
-        await updateMealPlan.mutateAsync({ id: editingPlan.id, ...planData });
+        await updateMealPlan.mutateAsync({
+          id: editingPlan.id,
+          ...basePlanData,
+          client_id: planClientId || undefined,
+          is_template: editingPlan.is_template ?? !hasClient,
+        });
         notifications.show({
           title: "Plan actualizado",
           message: `${values.name} se ha actualizado correctamente`,
@@ -691,29 +695,42 @@ export function NutritionPage() {
           icon: <IconCheck size={16} />,
         });
       } else {
-        await createMealPlan.mutateAsync(planData);
-        notifications.show({
-          title: "Plan creado",
-          message: `${values.name} se ha creado correctamente`,
-          color: "green",
-          icon: <IconCheck size={16} />,
-        });
-      }
-
-      if (hasClient && savingAsTemplate) {
-        const existingTemplates = mealPlans.filter((p: any) => p.is_template);
-        const templateAlreadyExists = existingTemplates.some(
-          (t: any) => t.name === values.name || t.name === `${values.name} (Plantilla)`
-        );
-        if (!templateAlreadyExists) {
-          const templateData = { ...planData, client_id: undefined, is_template: true, name: `${values.name} (Plantilla)` };
-          await createMealPlan.mutateAsync(templateData);
-          notifications.show({
-            title: "Plantilla creada",
-            message: `Se guardó también como plantilla reutilizable`,
-            color: "teal",
-            icon: <IconTemplate size={16} />,
+        if (hasClient) {
+          await createMealPlan.mutateAsync({
+            ...basePlanData,
+            client_id: planClientId || undefined,
+            is_template: false,
           });
+          notifications.show({
+            title: "Plan creado",
+            message: `${values.name} se ha creado correctamente`,
+            color: "green",
+            icon: <IconCheck size={16} />,
+          });
+        }
+        if (isTemplateModeOn) {
+          const templateName = hasClient ? `${values.name} (Plantilla)` : values.name;
+          await createMealPlan.mutateAsync({
+            ...basePlanData,
+            client_id: undefined,
+            is_template: true,
+            name: templateName,
+          });
+          if (hasClient) {
+            notifications.show({
+              title: "Plantilla creada",
+              message: "Se guardó también como plantilla reutilizable",
+              color: "teal",
+              icon: <IconTemplate size={16} />,
+            });
+          } else {
+            notifications.show({
+              title: "Plantilla creada",
+              message: `${values.name} se ha creado correctamente`,
+              color: "green",
+              icon: <IconCheck size={16} />,
+            });
+          }
         }
       }
 
@@ -2582,6 +2599,7 @@ export function NutritionPage() {
         badgeColor="green"
         isSaving={createMealPlan.isPending || updateMealPlan.isPending}
         onSave={handleSavePlan}
+        saveDisabled={!canSavePlan || !planForm.values.name}
         saveLabel={editingPlan ? "Guardar Cambios" : "Crear Plan"}
         sidebarContent={
           <Stack gap="md">
@@ -2604,25 +2622,26 @@ export function NutritionPage() {
                 setSelectedClientId(value);
                 if (value) {
                   loadClientData(value);
-                  setIsTemplateModeOn(true);
                 } else {
                   setSelectedClient(null);
                   planForm.setFieldValue("client_id", null);
-                  setIsTemplateModeOn(true);
                 }
               }}
-              description={!selectedClientId && !clientId ? "Sin cliente = se guarda como plantilla" : undefined}
             />
 
-            {(selectedClientId || clientId) && (
-              <Switch
-                label="Guardar también como plantilla"
-                description="Guarda una copia reutilizable además del plan del cliente"
-                checked={isTemplateModeOn}
-                onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
-                size="sm"
-                color="teal"
-              />
+            <Switch
+              label="Crear como plantilla"
+              description={selectedClientId || clientId
+                ? "Guarda una copia reutilizable además del plan del cliente"
+                : "Guarda como plantilla reutilizable"}
+              checked={isTemplateModeOn}
+              onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)}
+              size="sm"
+              color="teal"
+            />
+
+            {!canSavePlan && (
+              <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>
             )}
 
             <TextInput

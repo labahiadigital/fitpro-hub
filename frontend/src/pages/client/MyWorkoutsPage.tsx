@@ -376,6 +376,8 @@ function LogWorkoutModal({
     exercises.forEach((e) => {
       initial[e.exercise_id] = Array.from({ length: e.sets }, (_, i) => ({
         set_number: i + 1,
+        weight_kg: e.target_weight ?? undefined,
+        reps_completed: e.target_reps ?? undefined,
         completed: true,
       }));
     });

@@ -584,7 +584,6 @@ interface PlanDay {
   notes?: string;
 }
 
-// Modal para registrar comida del plan
 function LogPlanMealModal({
   opened,
   onClose,
@@ -603,165 +602,181 @@ function LogPlanMealModal({
   isLoading: boolean;
   meal: PlanMeal | null;
 }) {
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [foods, setFoods] = useState<FoodItem[]>([]);
   const [notes, setNotes] = useState("");
   const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  // Initialize all items as checked when modal opens
-  const handleOpen = () => {
-    if (meal) {
-      const initial: Record<string, boolean> = {};
-      meal.items.forEach((item) => {
-        initial[item.id] = true;
-      });
-      setCheckedItems(initial);
-    }
-  };
-
-  // Reset when opened
-  if (opened && Object.keys(checkedItems).length === 0 && meal) {
-    handleOpen();
-  }
-
-  const handleSubmit = () => {
-    if (!meal) return;
-
-    const selectedItems = meal.items.filter((item) => checkedItems[item.id]);
-    if (selectedItems.length === 0) return;
-
-    const foods: FoodItem[] = selectedItems.map((item) => {
+  if (opened && !initialized && meal) {
+    const initial: FoodItem[] = meal.items.map((item) => {
       const food = item.food || item.supplement;
       const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
       const factor = item.quantity_grams / servingSize;
       return {
         name: food?.name || "Alimento",
         calories: Math.round(Number(food?.calories || 0) * factor),
-        protein: Math.round(Number(food?.protein || 0) * factor),
-        carbs: Math.round(Number(food?.carbs || 0) * factor),
-        fat: Math.round(Number(food?.fat || 0) * factor),
+        protein: Math.round(Number(food?.protein || 0) * factor * 10) / 10,
+        carbs: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
+        fat: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
         quantity: item.quantity_grams,
       };
     });
+    setFoods(initial);
+    setInitialized(true);
+  }
+
+  const handleClose = () => {
+    setFoods([]);
+    setNotes("");
+    setSatisfactionRating(null);
+    setInitialized(false);
+    onClose();
+  };
+
+  const updateFood = (index: number, field: keyof FoodItem, value: string | number) => {
+    setFoods((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const removeFood = (index: number) => {
+    setFoods((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addFoodFromSearch = (food: SearchableFoodResult, grams: number) => {
+    const servingSize = food.serving_size || 100;
+    const factor = grams / servingSize;
+    setFoods((prev) => [
+      ...prev,
+      {
+        name: food.name,
+        calories: Math.round(food.calories * factor),
+        protein: Math.round(food.protein * factor * 10) / 10,
+        carbs: Math.round(food.carbs * factor * 10) / 10,
+        fat: Math.round(food.fat * factor * 10) / 10,
+        quantity: grams,
+      },
+    ]);
+  };
+
+  const addManualFood = () => {
+    setFoods((prev) => [
+      ...prev,
+      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 100 },
+    ]);
+  };
+
+  const handleSubmit = () => {
+    const validFoods = foods.filter((f) => f.name.trim() !== "");
+    if (validFoods.length === 0) return;
 
     onSubmit({
-      meal_name: meal.name,
-      foods,
+      meal_name: meal?.name || "Comida",
+      foods: validFoods,
       notes: notes || undefined,
       satisfaction_rating: satisfactionRating ?? undefined,
     });
 
-    setCheckedItems({});
+    setFoods([]);
     setNotes("");
     setSatisfactionRating(null);
+    setInitialized(false);
   };
 
-  const toggleItem = (itemId: string) => {
-    setCheckedItems((prev) => ({
-      ...prev,
-      [itemId]: !prev[itemId],
-    }));
-  };
-
-  const totalMacros = useMemo(() => {
-    if (!meal) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
-
-    return meal.items
-      .filter((item) => checkedItems[item.id])
-      .reduce(
-        (acc, item) => {
-          const food = item.food || item.supplement;
-          const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
-          const factor = item.quantity_grams / servingSize;
-          return {
-            calories: acc.calories + Math.round(Number(food?.calories || 0) * factor),
-            protein: acc.protein + Math.round(Number(food?.protein || 0) * factor),
-            carbs: acc.carbs + Math.round(Number(food?.carbs || 0) * factor),
-            fat: acc.fat + Math.round(Number(food?.fat || 0) * factor),
-          };
-        },
+  const totalMacros = useMemo(
+    () =>
+      foods.reduce(
+        (acc, f) => ({
+          calories: acc.calories + (f.calories || 0),
+          protein: acc.protein + (f.protein || 0),
+          carbs: acc.carbs + (f.carbs || 0),
+          fat: acc.fat + (f.fat || 0),
+        }),
         { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      );
-  }, [meal, checkedItems]);
+      ),
+    [foods]
+  );
 
   if (!meal) return null;
 
   return (
     <NativeBottomSheet
       opened={opened}
-      onClose={() => {
-        setCheckedItems({});
-        setNotes("");
-        onClose();
-      }}
+      onClose={handleClose}
       title={`Registrar ${meal.name}`}
-      subtitle={`${Object.values(checkedItems).filter(Boolean).length}/${meal.items.length} seleccionados • ${totalMacros.calories} kcal`}
+      subtitle={`${foods.length} alimentos • ${Math.round(totalMacros.calories)} kcal`}
       footer={
         <Button
           color="yellow"
           onClick={handleSubmit}
           loading={isLoading}
           leftSection={<IconCheck size={18} />}
-          disabled={Object.values(checkedItems).filter(Boolean).length === 0}
+          disabled={foods.length === 0 || foods.every((f) => f.name.trim() === "")}
           fullWidth
           size="lg"
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          Registrar Comida
+          Registrar ({Math.round(totalMacros.calories)} kcal)
         </Button>
       }
     >
-      {/* Edge-to-edge food items */}
-      {meal.items.map((item) => {
-        const isChecked = checkedItems[item.id] || false;
-        const itemCals = Math.round(Number(item.food?.calories || item.supplement?.calories || 0) * (item.quantity_grams / (parseFloat(String(item.food?.serving_size || item.supplement?.serving_size || "100")) || 100)));
-        return (
-          <Box
-            key={item.id}
-            onClick={() => toggleItem(item.id)}
-            px={0}
-            py="sm"
-            style={{
-              borderBottom: "1px solid var(--mantine-color-gray-2)",
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-              background: isChecked ? "var(--mantine-color-green-0)" : "transparent",
-              transition: "background 0.15s ease",
-            }}
-          >
-            <Group gap="sm" wrap="nowrap">
-              <button
-                type="button"
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  background: isChecked ? "var(--mantine-color-green-6)" : "var(--mantine-color-gray-1)",
-                  color: isChecked ? "#fff" : "var(--mantine-color-gray-5)",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <IconCheck size={18} />
-              </button>
-              <Box style={{ flex: 1, minWidth: 0 }}>
-                <Text fw={600} size="sm" lineClamp={1}>{item.food?.name || item.supplement?.name || "Alimento"}</Text>
-                <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
-              </Box>
-              <Badge variant="light" size="sm" style={{ flexShrink: 0 }}>
-                {itemCals} kcal
-              </Badge>
-            </Group>
-          </Box>
-        );
-      })}
+      {foods.map((food, index) => (
+        <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
+          <Group gap="xs" mb="xs" wrap="nowrap">
+            <TextInput
+              placeholder="Nombre del alimento"
+              value={food.name}
+              onChange={(e) => updateFood(index, "name", e.target.value)}
+              size="sm"
+              style={{ flex: 1 }}
+              styles={{ input: { height: 44, borderRadius: 10 } }}
+            />
+            <NumberInput
+              placeholder="g"
+              value={food.quantity}
+              onChange={(val) => updateFood(index, "quantity", val || 100)}
+              min={1}
+              step={10}
+              size="sm"
+              w={70}
+              hideControls
+              suffix="g"
+              styles={{ input: { height: 44, borderRadius: 10, textAlign: "center" } }}
+            />
+            <ActionIcon color="red" variant="light" onClick={() => removeFood(index)} size="lg" radius="xl">
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Group>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+            <NumberInput placeholder="Kcal" value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
+            <NumberInput placeholder="Prot" value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
+            <NumberInput placeholder="Carbs" value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
+            <NumberInput placeholder="Grasas" value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
+          </div>
+          {index === 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
+              <Text size="xs" c="dimmed" ta="center">Kcal</Text>
+              <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
+              <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
+              <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
+            </div>
+          )}
+        </Box>
+      ))}
 
-      <Box mt="md">
+      <Box mt="sm">
+        <FoodSearchInput onSelect={addFoodFromSearch} />
+        <Box px="md">
+          <Button variant="subtle" leftSection={<IconPlus size={16} />} onClick={addManualFood} fullWidth size="sm" radius="xl" color="gray">
+            Añadir manualmente
+          </Button>
+        </Box>
+      </Box>
+
+      <Box px="md" mt="md">
         <TextInput
           placeholder="Notas (opcional)"
           value={notes}
@@ -1226,46 +1241,13 @@ export function MyNutritionPage() {
 
   return (
     <Box p="xl" maw={1280} mx="auto">
-      <Group justify="space-between" mb="xl">
-        <Box>
-          <Title order={2}>Mi Nutrición</Title>
-          <Text c="dimmed">Seguimiento de tu alimentación diaria</Text>
-        </Box>
-        <Button leftSection={<IconPlus size={16} />} color="yellow" onClick={openModal}>
-          Registrar comida
-        </Button>
-      </Group>
+      <Box mb="xl">
+        <Title order={2}>Mi Nutrición</Title>
+        <Text c="dimmed">Seguimiento de tu alimentación diaria</Text>
+      </Box>
 
-      {/* Plan Info */}
-      {mealPlan ? (
-        <Paper
-          p="md"
-          radius="lg"
-          mb="xl"
-          style={{ background: "var(--mantine-color-yellow-light)" }}
-        >
-          <Group justify="space-between">
-            <Box>
-              <Text size="sm" c="dimmed">
-                Plan nutricional asignado
-              </Text>
-              <Text fw={600}>{mealPlan.name}</Text>
-            </Box>
-            <Box ta="right">
-              <Text size="sm" c="dimmed">
-                Objetivo diario
-              </Text>
-              <Text fw={500}>{targets.calories} kcal</Text>
-            </Box>
-          </Group>
-        </Paper>
-      ) : (
-        <Paper
-          p="md"
-          radius="lg"
-          mb="xl"
-          style={{ background: "var(--mantine-color-gray-light)" }}
-        >
+      {!mealPlan && (
+        <Paper p="md" radius="lg" mb="xl" style={{ background: "var(--mantine-color-gray-light)" }}>
           <Text ta="center" c="dimmed">
             No tienes un plan nutricional asignado. Contacta con tu entrenador.
           </Text>
@@ -1277,7 +1259,7 @@ export function MyNutritionPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "today", label: "Registrar comida" },
+            { value: "today", label: "Hoy" },
             { value: "week", label: "Esta Semana" },
             { value: "history", label: "Historial" },
             { value: "recipes", label: "Recetas" },
@@ -1291,7 +1273,7 @@ export function MyNutritionPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
-            Registrar comida
+            Hoy
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
             Esta Semana
@@ -1459,11 +1441,8 @@ export function MyNutritionPage() {
                 key={meal.id}
                 px="md"
                 py="sm"
-                onClick={() => !isRegistered && handleOpenPlanMeal(meal)}
                 style={{
                   borderBottom: "1px solid var(--mantine-color-gray-2)",
-                  cursor: isRegistered ? "default" : "pointer",
-                  WebkitTapHighlightColor: "transparent",
                   background: isRegistered ? "var(--mantine-color-green-0)" : "transparent",
                 }}
               >
@@ -1494,6 +1473,18 @@ export function MyNutritionPage() {
                   <Badge variant="light" color={isRegistered ? "green" : "orange"} size="sm" style={{ flexShrink: 0 }}>
                     {mealCalories} kcal
                   </Badge>
+                  {!isRegistered && (
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="yellow"
+                      radius="xl"
+                      onClick={() => handleOpenPlanMeal(meal)}
+                      style={{ flexShrink: 0 }}
+                    >
+                      Registrar
+                    </Button>
+                  )}
                 </Group>
               </Box>
             );
