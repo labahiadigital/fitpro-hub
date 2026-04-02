@@ -169,6 +169,7 @@ interface MealPlan {
 }
 
 interface NutritionLog {
+  log_index?: number;
   date: string;
   meal_name: string;
   foods: Array<{

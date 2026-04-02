@@ -624,6 +624,8 @@ async def get_client_nutrition_logs(
             "total_fat": log.get("total_fat", 0),
             "foods": log.get("foods", []),
             "logged_at": log.get("logged_at"),
+            "notes": log.get("notes"),
+            "satisfaction_rating": log.get("satisfaction_rating"),
         })
         days_data[log_date]["totals"]["calories"] += log.get("total_calories", 0)
         days_data[log_date]["totals"]["protein"] += log.get("total_protein", 0)

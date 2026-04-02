@@ -177,6 +177,7 @@ class NutritionLogCreate(BaseModel):
 
 class NutritionLogResponse(BaseModel):
     """Nutrition log response (stored in MealPlan.adherence)."""
+    log_index: Optional[int] = None
     date: str
     meal_name: str
     foods: List[dict]
@@ -1018,17 +1019,18 @@ async def get_nutrition_logs(
     if not meal_plan or not meal_plan.adherence:
         return []
     
-    logs = meal_plan.adherence.get("logs", [])
+    all_logs = meal_plan.adherence.get("logs", [])
     
-    # Filter by date if provided
+    indexed_logs = [(i, l) for i, l in enumerate(all_logs)]
+    
     if date_filter:
-        logs = [l for l in logs if l.get("date") == date_filter]
+        indexed_logs = [(i, l) for i, l in indexed_logs if l.get("date") == date_filter]
     
-    # Sort by date descending and limit
-    logs = sorted(logs, key=lambda x: x.get("logged_at", ""), reverse=True)[:limit]
+    indexed_logs = sorted(indexed_logs, key=lambda x: x[1].get("logged_at", ""), reverse=True)[:limit]
     
     return [
         NutritionLogResponse(
+            log_index=idx,
             date=log.get("date", ""),
             meal_name=log.get("meal_name", ""),
             foods=log.get("foods", []),
@@ -1039,7 +1041,7 @@ async def get_nutrition_logs(
             notes=log.get("notes"),
             satisfaction_rating=log.get("satisfaction_rating")
         )
-        for log in logs
+        for idx, log in indexed_logs
     ]
 
 

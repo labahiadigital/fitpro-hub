@@ -53,6 +53,7 @@ import {
   useMyMealPlan,
   useNutritionLogs,
   useLogNutrition,
+  useDeleteNutritionLog,
   useNutritionHistory,
   useClientFoodSearch,
 } from "../../hooks/useClientPortal";
@@ -588,8 +589,10 @@ function LogPlanMealModal({
   opened,
   onClose,
   onSubmit,
+  onDeleteFirst,
   isLoading,
   meal,
+  existingLog,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -599,8 +602,10 @@ function LogPlanMealModal({
     notes?: string;
     satisfaction_rating?: number;
   }) => void;
+  onDeleteFirst?: () => Promise<void>;
   isLoading: boolean;
   meal: PlanMeal | null;
+  existingLog?: { foods: FoodItem[]; notes?: string; satisfaction_rating?: number } | null;
 }) {
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [notes, setNotes] = useState("");
@@ -608,20 +613,26 @@ function LogPlanMealModal({
   const [initialized, setInitialized] = useState(false);
 
   if (opened && !initialized && meal) {
-    const initial: FoodItem[] = meal.items.map((item) => {
-      const food = item.food || item.supplement;
-      const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
-      const factor = item.quantity_grams / servingSize;
-      return {
-        name: food?.name || "Alimento",
-        calories: Math.round(Number(food?.calories || 0) * factor),
-        protein: Math.round(Number(food?.protein || 0) * factor * 10) / 10,
-        carbs: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
-        fat: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
-        quantity: item.quantity_grams,
-      };
-    });
-    setFoods(initial);
+    if (existingLog) {
+      setFoods(existingLog.foods);
+      setNotes(existingLog.notes || "");
+      setSatisfactionRating(existingLog.satisfaction_rating ?? null);
+    } else {
+      const initial: FoodItem[] = meal.items.map((item) => {
+        const food = item.food || item.supplement;
+        const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
+        const factor = item.quantity_grams / servingSize;
+        return {
+          name: food?.name || "Alimento",
+          calories: Math.round(Number(food?.calories || 0) * factor),
+          protein: Math.round(Number(food?.protein || 0) * factor * 10) / 10,
+          carbs: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
+          fat: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
+          quantity: item.quantity_grams,
+        };
+      });
+      setFoods(initial);
+    }
     setInitialized(true);
   }
 
@@ -668,9 +679,13 @@ function LogPlanMealModal({
     ]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validFoods = foods.filter((f) => f.name.trim() !== "");
     if (validFoods.length === 0) return;
+
+    if (existingLog && onDeleteFirst) {
+      await onDeleteFirst();
+    }
 
     onSubmit({
       meal_name: meal?.name || "Comida",
@@ -719,7 +734,7 @@ function LogPlanMealModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          Registrar ({Math.round(totalMacros.calories)} kcal)
+          {existingLog ? "Guardar cambios" : "Registrar"} ({Math.round(totalMacros.calories)} kcal)
         </Button>
       }
     >
@@ -1058,6 +1073,7 @@ export function MyNutritionPage() {
   const { data: nutritionLogs } = useNutritionLogs(selectedDateStr, 50);
   const { data: nutritionHistory } = useNutritionHistory(30);
   const logNutritionMutation = useLogNutrition();
+  const deleteNutritionLogMutation = useDeleteNutritionLog();
 
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
   const selectedPlanDay = dayMapping[selectedDate.getDay()];
@@ -1216,9 +1232,19 @@ export function MyNutritionPage() {
   };
 
   const handleOpenPlanMeal = (meal: PlanMeal) => {
-    if (registeredMeals[meal.name]) return;
     setSelectedPlanMeal(meal);
     openPlanMealModal();
+  };
+
+  const handleUnregisterMeal = async (mealName: string) => {
+    const logsForMeal = (nutritionLogs || []).filter(
+      (l) => l.meal_name === mealName && l.log_index != null
+    );
+    for (const log of logsForMeal) {
+      if (log.log_index != null) {
+        await deleteNutritionLogMutation.mutateAsync(log.log_index);
+      }
+    }
   };
 
   const isToday = selectedDateStr === new Date().toISOString().split("T")[0];
@@ -1473,7 +1499,30 @@ export function MyNutritionPage() {
                   <Badge variant="light" color={isRegistered ? "green" : "orange"} size="sm" style={{ flexShrink: 0 }}>
                     {mealCalories} kcal
                   </Badge>
-                  {!isRegistered && (
+                  {isRegistered ? (
+                    <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+                      <Menu.Target>
+                        <ActionIcon variant="subtle" color="gray" size="sm" style={{ flexShrink: 0 }}>
+                          <IconDotsVertical size={16} />
+                        </ActionIcon>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Item
+                          leftSection={<IconToolsKitchen2 size={14} />}
+                          onClick={() => handleOpenPlanMeal(meal)}
+                        >
+                          Editar registro
+                        </Menu.Item>
+                        <Menu.Item
+                          color="red"
+                          leftSection={<IconTrash size={14} />}
+                          onClick={() => handleUnregisterMeal(meal.name)}
+                        >
+                          Eliminar registro
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  ) : (
                     <Button
                       size="xs"
                       variant="light"
@@ -1889,7 +1938,7 @@ export function MyNutritionPage() {
         isLoading={logNutritionMutation.isPending}
       />
 
-      {/* Modal para registrar comida del plan */}
+      {/* Modal para registrar/editar comida del plan */}
       <LogPlanMealModal
         opened={planMealModalOpened}
         onClose={() => {
@@ -1897,8 +1946,36 @@ export function MyNutritionPage() {
           setSelectedPlanMeal(null);
         }}
         onSubmit={handleLogMeal}
+        onDeleteFirst={
+          selectedPlanMeal && registeredMeals[selectedPlanMeal.name]
+            ? () => handleUnregisterMeal(selectedPlanMeal.name)
+            : undefined
+        }
         isLoading={logNutritionMutation.isPending}
         meal={selectedPlanMeal}
+        existingLog={
+          selectedPlanMeal && registeredMeals[selectedPlanMeal.name]
+            ? (() => {
+                const logs = (nutritionLogs || []).filter(
+                  (l) => l.meal_name === selectedPlanMeal.name
+                );
+                if (logs.length === 0) return null;
+                const log = logs[0];
+                return {
+                  foods: (log.foods || []).map((f: Record<string, unknown>) => ({
+                    name: (f.name as string) || "",
+                    calories: Number(f.calories || 0),
+                    protein: Number(f.protein || 0),
+                    carbs: Number(f.carbs || 0),
+                    fat: Number(f.fat || 0),
+                    quantity: Number(f.quantity || 100),
+                  })),
+                  notes: log.notes || undefined,
+                  satisfaction_rating: log.satisfaction_rating ?? undefined,
+                };
+              })()
+            : null
+        }
       />
     </Box>
   );

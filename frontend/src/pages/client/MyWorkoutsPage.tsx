@@ -8,7 +8,6 @@ import {
   Badge,
   Button,
   SimpleGrid,
-  Progress,
   Paper,
   ThemeIcon,
   Tabs,
@@ -26,6 +25,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
+import { DateInput } from "@mantine/dates";
 import { useState } from "react";
 import {
   IconBarbell,
@@ -125,6 +125,12 @@ function checkAchievements(
   });
 
   return achievements;
+}
+
+function parseRepsFromString(reps?: string): number | undefined {
+  if (!reps) return undefined;
+  const match = reps.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : undefined;
 }
 
 const CARDIO_KEYWORDS = ["caminar", "correr", "trotar", "bicicleta", "elíptica", "nadar", "remo", "saltar", "cardio", "cinta", "andar"];
@@ -374,10 +380,11 @@ function LogWorkoutModal({
   const [exerciseSets, setExerciseSets] = useState<Record<string, SetLog[]>>(() => {
     const initial: Record<string, SetLog[]> = {};
     exercises.forEach((e) => {
+      const repsValue = e.target_reps ?? parseRepsFromString(e.reps);
       initial[e.exercise_id] = Array.from({ length: e.sets }, (_, i) => ({
         set_number: i + 1,
         weight_kg: e.target_weight ?? undefined,
-        reps_completed: e.target_reps ?? undefined,
+        reps_completed: repsValue,
         completed: true,
       }));
     });
@@ -422,8 +429,11 @@ function LogWorkoutModal({
     setExerciseSets(() => {
       const initial: Record<string, SetLog[]> = {};
       exercises.forEach((e) => {
+        const repsValue = e.target_reps ?? parseRepsFromString(e.reps);
         initial[e.exercise_id] = Array.from({ length: e.sets }, (_, i) => ({
           set_number: i + 1,
+          weight_kg: e.target_weight ?? undefined,
+          reps_completed: repsValue,
           completed: true,
         }));
       });
@@ -924,6 +934,7 @@ export function MyWorkoutsPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isMdUp = useMediaQuery("(min-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("today");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { data: workouts, isLoading: isLoadingWorkouts } = useMyWorkouts();
   const { data: history } = useWorkoutHistory(10);
   const { data: todayLogs } = useTodayWorkoutLogs();
@@ -1131,35 +1142,15 @@ export function MyWorkoutsPage() {
 
   const todayDayIndex = templateDays.findIndex((d: ProgramDay) => d.day === todayDayNum);
 
+  const selectedDateStr = selectedDate.toISOString().split("T")[0];
+  const isToday = selectedDateStr === new Date().toISOString().split("T")[0];
+
   return (
     <Box p="xl" maw={1280} mx="auto">
-      <Group justify="space-between" mb="xl">
-        <Box>
-          <Title order={2}>Mis Entrenamientos</Title>
-          <Text c="dimmed">Tu programa personalizado y progreso</Text>
-        </Box>
-      </Group>
-
-      {/* Active Program */}
-      {data.assignedProgram && data.assignedProgram.id && (
-        <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
-          <Group justify="space-between" mb="md">
-            <Box>
-              <Badge color="yellow" variant="light" mb="xs">PROGRAMA ACTIVO</Badge>
-              <Title order={4}>{data.assignedProgram.name}</Title>
-              <Text size="sm" c="dimmed">
-                {data.assignedProgram.duration} • {data.assignedProgram.difficulty}
-              </Text>
-            </Box>
-            <Box ta="right">
-              <Text size="sm" c="dimmed">Semana</Text>
-              <Text size="xl" fw={700}>{data.assignedProgram.currentWeek}/{data.assignedProgram.totalWeeks}</Text>
-            </Box>
-          </Group>
-          <Progress value={data.assignedProgram.progress} size="lg" radius="xl" color="yellow" />
-          <Text size="xs" c="dimmed" mt="xs">{data.assignedProgram.progress}% completado</Text>
-        </Card>
-      )}
+      <Box mb="xl">
+        <Title order={2}>Mis Entrenamientos</Title>
+        <Text c="dimmed">Tu programa personalizado y progreso</Text>
+      </Box>
 
       {!data.assignedProgram?.id && (
         <Paper p="md" radius="lg" mb="xl" style={{ background: "var(--mantine-color-gray-light)" }}>
@@ -1174,7 +1165,7 @@ export function MyWorkoutsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "today", label: "Hoy" },
+            { value: "today", label: "Registrar entrenamiento" },
             { value: "week", label: "Esta Semana" },
             { value: "history", label: "Historial" },
           ]}
@@ -1187,7 +1178,7 @@ export function MyWorkoutsPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconBarbell size={16} />}>
-            Hoy
+            Registrar entrenamiento
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
             Esta Semana
@@ -1199,6 +1190,28 @@ export function MyWorkoutsPage() {
         )}
 
         <Tabs.Panel value="today">
+          <Card shadow="sm" padding="md" radius="lg" withBorder mb="lg">
+            <Group gap="md" align="flex-end">
+              <DateInput
+                label="Fecha de registro"
+                value={selectedDate}
+                onChange={(d) => d && setSelectedDate(new Date(d))}
+                maxDate={new Date()}
+                locale="es"
+                valueFormat="DD/MM/YYYY"
+                style={{ flex: 1, maxWidth: 220 }}
+              />
+              {!isToday && (
+                <Button variant="subtle" size="sm" onClick={() => setSelectedDate(new Date())}>
+                  Volver a hoy
+                </Button>
+              )}
+              <Text size="sm" c="dimmed">
+                {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+              </Text>
+            </Group>
+          </Card>
+
           {data.isTodayRestDay && (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">🛌</Text>

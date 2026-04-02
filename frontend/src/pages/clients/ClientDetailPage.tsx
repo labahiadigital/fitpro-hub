@@ -433,7 +433,15 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                   {meal?.calories != null && (
                     <Badge size="xs" variant="light" color="yellow">{Math.round(meal.calories)} kcal</Badge>
                   )}
+                  {meal?.satisfaction_rating != null && (
+                    <Text size="sm">
+                      {meal.satisfaction_rating === 1 ? "😞" : meal.satisfaction_rating === 2 ? "😐" : "😊"}
+                    </Text>
+                  )}
                 </Group>
+                {meal?.notes && typeof meal.notes === "string" && (
+                  <Text size="xs" c="dimmed" fs="italic" mb={4} pl={16}>"{meal.notes}"</Text>
+                )}
                 {Array.isArray(meal?.foods) && meal.foods.length > 0 && (
                   <Table withColumnBorders={false} styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
                     <Table.Tbody>
