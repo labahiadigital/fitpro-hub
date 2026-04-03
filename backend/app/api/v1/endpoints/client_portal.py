@@ -928,7 +928,11 @@ class MoveMealRequest(BaseModel):
 def _ensure_executed_plan(meal_plan: MealPlan):
     """Lazily initialise executed_plan from plan if it's still None."""
     import copy
-    if meal_plan.executed_plan is None:
+    try:
+        val = meal_plan.executed_plan
+    except Exception:
+        val = None
+    if val is None:
         meal_plan.executed_plan = copy.deepcopy(meal_plan.plan) if meal_plan.plan else {}
 
 
