@@ -194,6 +194,9 @@ class MealPlan(BaseModel):
     # Adherence tracking - MutableDict allows SQLAlchemy to detect in-place changes
     adherence = Column(MutableDict.as_mutable(JSONB), default=lambda: {"logs": []})
     
+    # Executed plan: client-modified version of `plan`. Initialized as a copy of `plan` on assignment.
+    executed_plan = Column(MutableDict.as_mutable(JSONB), nullable=True)
+    
     # Relationships
     workspace = relationship("Workspace", back_populates="meal_plans")
     client = relationship("Client", back_populates="meal_plans")

@@ -1,14 +1,22 @@
-export type FormulaType = 'mifflin' | 'harris';
+export type FormulaType = 'mifflin' | 'harris' | 'katch';
 
 export interface BMRInput {
   weight_kg: number;
   height_cm: number;
   age: number;
   gender: 'male' | 'female';
+  body_fat_pct?: number;
 }
 
 export function calculateBMR(input: BMRInput, formula: FormulaType = 'mifflin'): number {
   const { weight_kg, height_cm, age, gender } = input;
+
+  if (formula === 'katch') {
+    const fatPct = input.body_fat_pct;
+    if (fatPct == null || fatPct <= 0) return 0;
+    const lbm = weight_kg * (1 - fatPct / 100);
+    return 370 + (21.6 * lbm);
+  }
 
   if (formula === 'harris') {
     if (gender === 'male') {

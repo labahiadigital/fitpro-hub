@@ -667,6 +667,20 @@ export function useSwapDays() {
   });
 }
 
+export function useSwapMeals() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { sourceDay: number; sourceMealIndex: number; targetDay: number; targetMealIndex: number }) => {
+      await clientPortalApi.swapMeals(data.sourceDay, data.sourceMealIndex, data.targetDay, data.targetMealIndex);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
+      notifications.show({ title: "Comidas intercambiadas", message: "Las comidas se han intercambiado correctamente", color: "green" });
+    },
+  });
+}
+
 interface NutritionHistoryDay {
   date: string;
   meals: Array<{

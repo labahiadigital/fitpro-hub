@@ -216,13 +216,27 @@ function hexToRgb(hex: string): [number, number, number] {
   return [parseInt(h.substring(0, 2), 16) || 0, parseInt(h.substring(2, 4), 16) || 0, parseInt(h.substring(4, 6), 16) || 0];
 }
 
+function lighten(rgb: [number, number, number], factor = 0.85): [number, number, number] {
+  return [
+    Math.round(rgb[0] + (255 - rgb[0]) * factor),
+    Math.round(rgb[1] + (255 - rgb[1]) * factor),
+    Math.round(rgb[2] + (255 - rgb[2]) * factor),
+  ];
+}
+
 function getBrandColors(branding?: PDFOptions["branding"]) {
   if (!branding) return C;
+  const primary = branding.primary_color ? hexToRgb(branding.primary_color) : C.primary;
+  const secondary = branding.secondary_color ? hexToRgb(branding.secondary_color) : C.secondary;
+  const accent = branding.accent_color ? hexToRgb(branding.accent_color) : C.accent;
   return {
     ...C,
-    primary: branding.primary_color ? hexToRgb(branding.primary_color) : C.primary,
-    secondary: branding.secondary_color ? hexToRgb(branding.secondary_color) : C.secondary,
-    accent: branding.accent_color ? hexToRgb(branding.accent_color) : C.accent,
+    primary,
+    primaryLight: lighten(primary, 0.88),
+    secondary,
+    accent,
+    accentBg: lighten(accent, 0.85),
+    coverBg: lighten(primary, 0.92),
   };
 }
 
@@ -848,16 +862,16 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
   drawMiniBox(MARGIN_P + halfW + 4, y, halfW, "NUTRICIÓN", nutValue, nutSub, C.secondary);
   y += 30;
 
-  // --- WEIGHT EVOLUTION CHART ---
+  // --- BODY EVOLUTION CHART (weight, body fat, muscle mass) ---
   const weightHist = progressData?.weightHistory || [];
   if (weightHist.length >= 2) {
-    if (y > 230) { doc.addPage("a4", "portrait"); drawTopBar(doc); y = 12; }
+    if (y > 220) { doc.addPage("a4", "portrait"); drawTopBar(doc); y = 12; }
     doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
     doc.text("Evolución Corporal", MARGIN_P, y);
     y += 5;
 
     const chartW = contentW;
-    const chartH = 45;
+    const chartH = 55;
     const chartX = MARGIN_P;
     const chartY = y;
 
@@ -866,38 +880,51 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
     doc.setDrawColor(...C.border); doc.setLineWidth(0.2);
     doc.roundedRect(chartX, chartY, chartW, chartH, 2, 2, "S");
 
-    const weights = weightHist.map(w => w.weight);
-    const minW = Math.min(...weights) - 1;
-    const maxW = Math.max(...weights) + 1;
-    const rangeW = maxW - minW || 1;
-    const padX = 6;
+    const padX = 8;
     const padY = 5;
     const innerW = chartW - padX * 2;
-    const innerH = chartH - padY * 2;
+    const innerH = chartH - padY * 2 - 6;
 
-    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.1);
+    type SeriesConfig = { values: number[]; color: [number, number, number]; label: string };
+    const series: SeriesConfig[] = [];
+    const weights = weightHist.map(w => w.weight).filter(v => v > 0);
+    if (weights.length >= 2) series.push({ values: weightHist.map(w => w.weight), color: C.primary, label: "Peso (kg)" });
+    const fatValues = weightHist.map(w => w.body_fat || 0);
+    if (fatValues.some(v => v > 0)) series.push({ values: fatValues, color: C.danger, label: "% Grasa" });
+    const muscleValues = weightHist.map(w => w.muscle_mass || 0);
+    if (muscleValues.some(v => v > 0)) series.push({ values: muscleValues, color: C.proteinColor, label: "M. Muscular (kg)" });
+
+    const allVals = series.flatMap(s => s.values.filter(v => v > 0));
+    const minV = Math.min(...allVals) - 1;
+    const maxV = Math.max(...allVals) + 1;
+    const rangeV = maxV - minV || 1;
+
+    doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.1);
     for (let g = 0; g <= 4; g++) {
       const gy = chartY + padY + (innerH * g) / 4;
       doc.line(chartX + padX, gy, chartX + padX + innerW, gy);
-      const val = maxW - (rangeW * g) / 4;
-      doc.setFontSize(5); doc.setTextColor(150, 150, 150);
+      const val = maxV - (rangeV * g) / 4;
+      doc.setFontSize(4.5); doc.setTextColor(150, 150, 150);
       doc.text(`${val.toFixed(0)}`, chartX + 1, gy + 1.5);
     }
 
-    doc.setDrawColor(...C.primary); doc.setLineWidth(0.5);
-    for (let i = 1; i < weightHist.length; i++) {
-      const x1 = chartX + padX + (innerW * (i - 1)) / (weightHist.length - 1);
-      const y1 = chartY + padY + innerH - ((weights[i - 1] - minW) / rangeW) * innerH;
-      const x2 = chartX + padX + (innerW * i) / (weightHist.length - 1);
-      const y2 = chartY + padY + innerH - ((weights[i] - minW) / rangeW) * innerH;
-      doc.line(x1, y1, x2, y2);
-    }
-
-    for (let i = 0; i < weightHist.length; i++) {
-      const px = chartX + padX + (innerW * i) / (weightHist.length - 1);
-      const py = chartY + padY + innerH - ((weights[i] - minW) / rangeW) * innerH;
-      doc.setFillColor(...C.primary);
-      doc.circle(px, py, 0.8, "F");
+    for (const s of series) {
+      doc.setDrawColor(...s.color); doc.setLineWidth(0.5);
+      for (let i = 1; i < weightHist.length; i++) {
+        if (s.values[i - 1] <= 0 || s.values[i] <= 0) continue;
+        const x1 = chartX + padX + (innerW * (i - 1)) / (weightHist.length - 1);
+        const y1 = chartY + padY + innerH - ((s.values[i - 1] - minV) / rangeV) * innerH;
+        const x2 = chartX + padX + (innerW * i) / (weightHist.length - 1);
+        const y2 = chartY + padY + innerH - ((s.values[i] - minV) / rangeV) * innerH;
+        doc.line(x1, y1, x2, y2);
+      }
+      for (let i = 0; i < weightHist.length; i++) {
+        if (s.values[i] <= 0) continue;
+        const dotX = chartX + padX + (innerW * i) / (weightHist.length - 1);
+        const dotY = chartY + padY + innerH - ((s.values[i] - minV) / rangeV) * innerH;
+        doc.setFillColor(...s.color);
+        doc.circle(dotX, dotY, 0.7, "F");
+      }
     }
 
     if (weightHist.length > 0) {
@@ -906,6 +933,17 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
       const lastDate = new Date(weightHist[weightHist.length - 1].date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
       doc.text(firstDate, chartX + padX, chartY + chartH - 1);
       doc.text(lastDate, chartX + padX + innerW - 8, chartY + chartH - 1);
+    }
+
+    // Legend
+    const legendY = chartY + chartH - 5;
+    let legendX = chartX + padX + 20;
+    for (const s of series) {
+      doc.setFillColor(...s.color);
+      doc.circle(legendX, legendY, 1, "F");
+      doc.setFontSize(4.5); doc.setTextColor(...C.text); doc.setFont("helvetica", "normal");
+      doc.text(s.label, legendX + 2.5, legendY + 1);
+      legendX += doc.getTextWidth(s.label) + 8;
     }
 
     y = chartY + chartH + 5;
@@ -1200,8 +1238,9 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
           const rP = group.foods.reduce((s, i) => s + i.p, 0);
           const rC = group.foods.reduce((s, i) => s + i.c, 0);
           const rF = group.foods.reduce((s, i) => s + i.f, 0);
+          const rQty = group.foods.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
           const comidaCell = isFirstRow ? mealLabel : "";
-          tableRows.push({ cells: [comidaCell, group.name, "", "", Math.round(rCal).toString(), rP.toFixed(1), rC.toFixed(1), rF.toFixed(1)], meta: "recipe" });
+          tableRows.push({ cells: [comidaCell, group.name, "", `${Math.round(rQty)}g`, Math.round(rCal).toString(), rP.toFixed(1), rC.toFixed(1), rF.toFixed(1)], meta: "recipe" });
           isFirstRow = false;
           for (const fd of group.foods) {
             tableRows.push({ cells: ["", "", fd.name, fd.qty, Math.round(fd.cal).toString(), fd.p.toFixed(1), fd.c.toFixed(1), fd.f.toFixed(1)], meta: "food-in-recipe" });
@@ -1287,11 +1326,11 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
   const supplements = mealPlan.supplements || [];
   if (supplements.length > 0) {
     doc.addPage("a4", "portrait");
-    drawTopBar(doc);
+    drawTopBar(doc, cc);
     const pw = doc.internal.pageSize.getWidth();
     const contentW = pw - MARGIN_P * 2;
     let y = 12;
-    doc.setFontSize(12); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    doc.setFontSize(12); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
     doc.text("SUPLEMENTACIÓN", MARGIN_P, y);
     y += 6;
     autoTable(doc, {
@@ -1299,9 +1338,9 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
       head: [["Suplemento", "Dosis / Modo de empleo", "Momento"]],
       body: supplements.map(s => [s.name, s.dosage || s.how_to_take || "—", s.timing || "—"]),
       theme: "grid", tableWidth: contentW, margin: { left: MARGIN_P },
-      headStyles: { fillColor: C.secondary, textColor: C.white, fontSize: 8 },
-      styles: { fontSize: 7, cellPadding: 2, textColor: C.text, lineColor: C.border, lineWidth: 0.2 },
-      alternateRowStyles: { fillColor: C.headerBg },
+      headStyles: { fillColor: cc.secondary, textColor: cc.white, fontSize: 8 },
+      styles: { fontSize: 7, cellPadding: 2, textColor: cc.text, lineColor: cc.border, lineWidth: 0.2 },
+      alternateRowStyles: { fillColor: cc.headerBg },
     });
   }
 
@@ -1309,10 +1348,10 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
     const currentPw = doc.internal.pageSize.getWidth();
     const cW = currentPw - MARGIN_P * 2;
     let ny = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 6 : 60;
-    doc.setFontSize(8); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    doc.setFontSize(8); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
     doc.text("Notas:", MARGIN_P, ny);
     ny += 4;
-    doc.setFontSize(7); doc.setTextColor(...C.text); doc.setFont("helvetica", "normal");
+    doc.setFontSize(7); doc.setTextColor(...cc.text); doc.setFont("helvetica", "normal");
     const noteLines = doc.splitTextToSize(mealPlan.nutritional_advice || mealPlan.notes || "", cW);
     doc.text(noteLines, MARGIN_P, ny);
   }

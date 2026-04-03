@@ -59,6 +59,9 @@ import {
   useClientFoodSearch,
   useMoveMeal,
   useSwapDays,
+  useSwapMeals,
+  useMeasurements,
+  useProgressPhotos,
 } from "../../hooks/useClientPortal";
 import { useClientRecipes } from "../../hooks/useRecipes";
 import { generateMealPlanPDF } from "../../services/pdfGenerator";
@@ -1016,19 +1019,24 @@ function NutritionDayDetail({
   dayData,
   targets,
   planMeals,
+  readOnly = false,
+  allDays = [],
 }: {
   dayData: { dayName: string; calories: number; totals: { protein?: number; carbs?: number; fat?: number }; planDayNum?: number };
   targets: { calories: number };
   planMeals: PlanMeal[];
+  readOnly?: boolean;
+  allDays?: PlanDay[];
 }) {
   const planDayLabels = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-  const moveMealMutation = useMoveMeal();
   const swapDaysMutation = useSwapDays();
+  const swapMealsMutation = useSwapMeals();
+  const [swapState, setSwapState] = useState<{ sourceMealIndex: number; step: "day" | "meal"; targetDay?: number } | null>(null);
   return (
     <>
       <Group justify="space-between" mb="md">
         <Title order={4}>{dayData.dayName}</Title>
-        {dayData.planDayNum && (
+        {!readOnly && dayData.planDayNum && (
           <Menu shadow="md" position="bottom-end" withinPortal>
             <Menu.Target>
               <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal">
@@ -1132,14 +1140,15 @@ function NutritionDayDetail({
                       <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
                       <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
                       <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
-                      <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+                      {!readOnly && (
+                      <Menu shadow="md" width={220} position="bottom-end" withinPortal>
                         <Menu.Target>
                           <ActionIcon variant="subtle" color="gray" size="sm">
                             <IconDotsVertical size={14} />
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          <Menu.Label>Mover a</Menu.Label>
+                          <Menu.Label>Intercambiar con</Menu.Label>
                           {planDayLabels.map((label, idx) => {
                             const targetDayNum = idx + 1;
                             if (targetDayNum === dayData.planDayNum) return null;
@@ -1147,11 +1156,7 @@ function NutritionDayDetail({
                               <Menu.Item
                                 key={idx}
                                 leftSection={<IconArrowsExchange size={14} />}
-                                onClick={() => {
-                                  if (dayData.planDayNum) {
-                                    moveMealMutation.mutate({ sourceDay: dayData.planDayNum, mealIndex, targetDay: targetDayNum });
-                                  }
-                                }}
+                                onClick={() => setSwapState({ sourceMealIndex: mealIndex, step: "meal", targetDay: targetDayNum })}
                               >
                                 {label}
                               </Menu.Item>
@@ -1159,6 +1164,7 @@ function NutritionDayDetail({
                           })}
                         </Menu.Dropdown>
                       </Menu>
+                      )}
                     </Group>
                   </Group>
                   {mealFoods.length > 0 && (
@@ -1215,6 +1221,54 @@ function NutritionDayDetail({
       ) : (
         <Text c="dimmed" ta="center">No hay comidas asignadas en el plan para este día</Text>
       )}
+
+      {/* Modal for selecting target meal to swap */}
+      <Modal
+        opened={swapState?.step === "meal" && swapState.targetDay != null}
+        onClose={() => setSwapState(null)}
+        title="Selecciona la comida a intercambiar"
+        size="sm"
+      >
+        {(() => {
+          if (!swapState || swapState.targetDay == null) return null;
+          const targetDayData = allDays.find(d => d.day === swapState.targetDay);
+          const targetMeals = targetDayData?.meals || [];
+          const targetDayLabel = planDayLabels[(swapState.targetDay - 1) % 7] || `Día ${swapState.targetDay}`;
+          if (targetMeals.length === 0) {
+            return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
+          }
+          return (
+            <Stack gap="xs">
+              <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
+              {targetMeals.map((meal: PlanMeal, tmi: number) => {
+                const mt = MEAL_TYPES.find(m => m.value === meal.name);
+                return (
+                  <Button
+                    key={tmi}
+                    variant="outline"
+                    fullWidth
+                    justify="start"
+                    leftSection={mt ? <ThemeIcon variant="light" color={mt.color} size="sm" radius="xl">{(() => { const I = mt.icon; return <I size={14} />; })()}</ThemeIcon> : null}
+                    onClick={() => {
+                      if (dayData.planDayNum) {
+                        swapMealsMutation.mutate({
+                          sourceDay: dayData.planDayNum,
+                          sourceMealIndex: swapState.sourceMealIndex,
+                          targetDay: swapState.targetDay!,
+                          targetMealIndex: tmi,
+                        });
+                      }
+                      setSwapState(null);
+                    }}
+                  >
+                    {mt?.label || meal.name}{meal.time ? ` (${meal.time})` : ""}
+                  </Button>
+                );
+              })}
+            </Stack>
+          );
+        })()}
+      </Modal>
     </>
   );
 }
@@ -1240,16 +1294,18 @@ export function MyNutritionPage() {
   const deleteNutritionLogMutation = useDeleteNutritionLog();
   const moveMealMutation = useMoveMeal();
   const swapDaysMutation = useSwapDays();
+  const { data: measurementsData } = useMeasurements(100);
+  const { data: progressPhotosData } = useProgressPhotos(50);
 
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
   const selectedPlanDay = dayMapping[selectedDate.getDay()];
 
-  const planDays = useMemo(() => {
-    if (!mealPlan?.plan) return [];
-    const plan = mealPlan.plan as unknown as { weeks?: { week: number; days: PlanDay[] }[]; days?: PlanDay[] };
+  const extractPlanDays = (rawPlan: unknown, mp: typeof mealPlan) => {
+    if (!rawPlan) return [];
+    const plan = rawPlan as { weeks?: { week: number; days: PlanDay[] }[]; days?: PlanDay[] };
     if (plan.weeks && plan.weeks.length > 0) {
-      const durationWeeks = (mealPlan as unknown as { duration_weeks?: number }).duration_weeks || plan.weeks.length;
-      const startDate = new Date(mealPlan.created_at);
+      const durationWeeks = (mp as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
+      const startDate = new Date(mp?.created_at || Date.now());
       const now = new Date();
       const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       const weekNum = durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
@@ -1257,7 +1313,10 @@ export function MyNutritionPage() {
       return wk?.days || plan.weeks[0]?.days || [];
     }
     return plan.days || [];
-  }, [mealPlan]);
+  };
+
+  const executedPlanSource = (mealPlan as any)?.executed_plan || mealPlan?.plan;
+  const planDays = useMemo(() => extractPlanDays(executedPlanSource, mealPlan), [executedPlanSource, mealPlan]);
 
   const allPlanWeeks = useMemo(() => {
     if (!mealPlan?.plan) return [];
@@ -1482,10 +1541,41 @@ export function MyNutritionPage() {
               size="sm"
               onClick={async () => {
                 const ws = useAuthStore.getState().currentWorkspace;
+                const measurements = (measurementsData || []).map((m: any) => ({
+                  date: m.measured_at || m.date,
+                  weight_kg: m.weight_kg,
+                  body_fat_percentage: m.body_fat_percentage,
+                  muscle_mass_kg: m.muscle_mass_kg,
+                  waist_cm: m.measurements?.waist,
+                  hip_cm: m.measurements?.hips,
+                  chest_cm: m.measurements?.chest,
+                  arm_cm: m.measurements?.arms,
+                  thigh_cm: m.measurements?.thighs,
+                }));
+                const weightHistory = measurements
+                  .filter((m: any) => m.weight_kg)
+                  .map((m: any) => ({
+                    date: m.date,
+                    weight: m.weight_kg,
+                    body_fat: m.body_fat_percentage || 0,
+                    muscle_mass: m.muscle_mass_kg || 0,
+                  }));
+                const photos = (progressPhotosData || []).map((p: any) => ({
+                  url: p.url || p.ref_url,
+                  type: p.type,
+                  date: p.measurement_date || p.uploaded_at,
+                }));
                 await generateMealPlanPDF(mealPlan as any, {
                   workspaceName: (ws as any)?.name || "Trackfiz",
                   branding: (ws as any)?.branding,
                   workspaceLogo: (ws as any)?.logo_url,
+                  progressData: {
+                    currentWeight: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : undefined,
+                    startWeight: weightHistory.length > 0 ? weightHistory[0].weight : undefined,
+                    measurements,
+                    weightHistory,
+                    photos,
+                  },
                 });
               }}
             >
@@ -1869,6 +1959,7 @@ export function MyNutritionPage() {
                   </Paper>
                 );
               }
+              const dayLabels = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
               return (
                 <Stack gap="md">
                   {allPlanWeeks.map((wk: { week: number; days: PlanDay[] }) => (
@@ -1877,7 +1968,6 @@ export function MyNutritionPage() {
                         <Text fw={700} size="md" mb="sm" c="blue">Semana {wk.week}</Text>
                       )}
                       {wk.days.map((day: PlanDay) => {
-                        const dayLabels = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
                         const dayName = day.dayName || dayLabels[day.day] || `Día ${day.day}`;
                         const dayTotalCal = day.meals.reduce((dsum, meal) => {
                           return dsum + (meal.foods || meal.items?.map(item => {
@@ -1886,74 +1976,40 @@ export function MyNutritionPage() {
                             return { calories: Math.round(Number(fd?.calories || 0) * (item.quantity_grams / ss)) };
                           }) || []).reduce((s: number, f: any) => s + (Number(f.calories) || 0), 0);
                         }, 0);
+                        const dayTotals = day.meals.reduce(
+                          (acc, meal) => {
+                            const foods = meal.foods || meal.items?.map(item => {
+                              const fd = item.food || item.supplement;
+                              const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
+                              const factor = (item.quantity_grams || 0) / ss;
+                              return {
+                                protein_g: Math.round(Number(fd?.protein || 0) * factor * 10) / 10,
+                                carbs_g: Math.round(Number(fd?.carbs || 0) * factor * 10) / 10,
+                                fat_g: Math.round(Number(fd?.fat || 0) * factor * 10) / 10,
+                              };
+                            }) || [];
+                            foods.forEach((f: any) => {
+                              acc.protein += Number(f.protein_g) || 0;
+                              acc.carbs += Number(f.carbs_g) || 0;
+                              acc.fat += Number(f.fat_g) || 0;
+                            });
+                            return acc;
+                          },
+                          { protein: 0, carbs: 0, fat: 0 }
+                        );
                         return (
                           <Card key={day.id || `${wk.week}-${day.day}`} shadow="sm" padding="md" radius="lg" withBorder mb="sm">
-                            <Group justify="space-between" mb="sm">
-                              <Text fw={700} size="md">{dayName}</Text>
-                              <Badge variant="light" color="yellow" size="sm">{dayTotalCal} kcal</Badge>
-                            </Group>
-                            {day.meals.length > 0 ? (
-                              <Stack gap="sm">
-                                {day.meals.map((meal: PlanMeal, mealIndex: number) => {
-                                  const mealType = MEAL_TYPES.find(m => m.value === meal.name);
-                                  const MealIcon = mealType?.icon || IconSalad;
-                                  const mealFoods = meal.foods || meal.items?.map(item => {
-                                    const food = item.food || item.supplement;
-                                    const ss = parseFloat(String(food?.serving_size || "100")) || 100;
-                                    const qty = item.quantity_grams || 0;
-                                    const factor = qty / ss;
-                                    return {
-                                      name: food?.name || "Alimento",
-                                      calories: Math.round(Number(food?.calories || 0) * factor),
-                                      protein_g: Math.round(Number(food?.protein || 0) * factor * 10) / 10,
-                                      carbs_g: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
-                                      fat_g: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
-                                      quantity: qty,
-                                      unit: "g",
-                                    };
-                                  }) || [];
-                                  const totalCalories = mealFoods.reduce((s: number, f: any) => s + (Number(f.calories) || 0), 0);
-                                  const totalProtein = mealFoods.reduce((s: number, f: any) => s + (Number(f.protein_g) || 0), 0);
-                                  const totalCarbs = mealFoods.reduce((s: number, f: any) => s + (Number(f.carbs_g) || 0), 0);
-                                  const totalFat = mealFoods.reduce((s: number, f: any) => s + (Number(f.fat_g) || 0), 0);
-                                  return (
-                                    <Card key={mealIndex} padding="md" radius="md" withBorder>
-                                      <Group justify="space-between">
-                                        <Group>
-                                          <ThemeIcon variant="light" color={mealType?.color || "gray"} size="lg" radius="xl">
-                                            <MealIcon size={18} />
-                                          </ThemeIcon>
-                                          <Box>
-                                            <Text fw={600} size="sm">{mealType?.label || meal.name}</Text>
-                                            <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
-                                          </Box>
-                                        </Group>
-                                        <Group gap="xs">
-                                          <Badge variant="light" color="yellow" size="sm">{totalCalories} kcal</Badge>
-                                          <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
-                                          <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
-                                          <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
-                                        </Group>
-                                      </Group>
-                                      {mealFoods.length > 0 && (
-                                        <Stack gap="xs" mt="sm" ml={54}>
-                                          {mealFoods.map((food: any, foodIndex: number) => (
-                                            <Group key={foodIndex} justify="space-between">
-                                              <Text size="sm">{food.name}</Text>
-                                              <Text size="xs" c="dimmed">
-                                                {food.quantity}{food.unit || "g"} - {food.calories} kcal
-                                              </Text>
-                                            </Group>
-                                          ))}
-                                        </Stack>
-                                      )}
-                                    </Card>
-                                  );
-                                })}
-                              </Stack>
-                            ) : (
-                              <Text size="sm" c="dimmed">Sin comidas asignadas</Text>
-                            )}
+                            <NutritionDayDetail
+                              dayData={{
+                                dayName,
+                                calories: dayTotalCal,
+                                totals: dayTotals,
+                                planDayNum: day.day,
+                              }}
+                              targets={targets}
+                              planMeals={day.meals}
+                              readOnly
+                            />
                           </Card>
                         );
                       })}
@@ -2138,14 +2194,14 @@ export function MyNutritionPage() {
                                 <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
                                 <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
                                 <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
-                                <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+                                <Menu shadow="md" width={220} position="bottom-end" withinPortal>
                                   <Menu.Target>
                                     <ActionIcon variant="subtle" color="gray" size="sm">
                                       <IconDotsVertical size={14} />
                                     </ActionIcon>
                                   </Menu.Target>
                                   <Menu.Dropdown>
-                                    <Menu.Label>Mover a</Menu.Label>
+                                    <Menu.Label>Intercambiar con</Menu.Label>
                                     {planDayLabelsMobile.map((label, idx) => {
                                       const targetDayNum = idx + 1;
                                       if (targetDayNum === currentPlanDayNum) return null;
@@ -2196,6 +2252,7 @@ export function MyNutritionPage() {
                   dayData={weekData[selectedWeekDayIndex]}
                   targets={targets}
                   planMeals={weekData[selectedWeekDayIndex].planMeals}
+                  allDays={planDays}
                 />
               ) : null
             }

@@ -617,6 +617,8 @@ export const clientPortalApi = {
     api.post("/my/nutrition/plan/move-meal", { source_day: sourceDay, meal_index: mealIndex, target_day: targetDay }),
   swapDays: (sourceDay: number, targetDay: number) =>
     api.post("/my/nutrition/plan/swap-days", { source_day: sourceDay, target_day: targetDay }),
+  swapMeals: (sourceDay: number, sourceMealIndex: number, targetDay: number, targetMealIndex: number) =>
+    api.post("/my/nutrition/plan/swap-meals", { source_day: sourceDay, source_meal_index: sourceMealIndex, target_day: targetDay, target_meal_index: targetMealIndex }),
   nutritionLogs: (date?: string, limit?: number) =>
     api.get("/my/nutrition/logs", { params: { date, limit } }),
   nutritionHistory: (days?: number) =>

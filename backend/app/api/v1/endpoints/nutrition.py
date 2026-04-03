@@ -397,6 +397,9 @@ async def activate_meal_plan(
         .values(is_active=False)
     )
     plan.is_active = True
+    if plan.executed_plan is None and plan.plan:
+        import copy
+        plan.executed_plan = copy.deepcopy(plan.plan)
     await db.commit()
     await db.refresh(plan)
     return plan
@@ -446,6 +449,7 @@ async def assign_meal_plan_to_client(
         .values(is_active=False)
     )
 
+    import copy
     # Create a copy assigned to the client
     assigned_plan = MealPlan(
         workspace_id=current_user.workspace_id,
@@ -461,6 +465,7 @@ async def assign_meal_plan_to_client(
         target_fat=template.target_fat,
         dietary_tags=template.dietary_tags,
         plan=template.plan,
+        executed_plan=copy.deepcopy(template.plan) if template.plan else None,
         meal_times=template.meal_times,
         is_template=False,
         is_active=True,

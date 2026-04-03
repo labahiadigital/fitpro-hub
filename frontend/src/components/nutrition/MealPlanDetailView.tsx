@@ -59,6 +59,7 @@ interface ClientData {
   body_tendency: "easy_gain" | "normal" | "hard_gain";
   goal_type: "fat_loss" | "maintenance" | "muscle_gain";
   goal_weight_kg?: number;
+  body_fat_pct?: number;
   allergies?: string[];
   intolerances?: string[];
 }
@@ -243,10 +244,10 @@ export function MealPlanDetailView({
   const bmr = useMemo(() => {
     const { gender, age, weight_kg, height_cm } = clientForm.values;
     return calculateBMR(
-      { weight_kg, height_cm, age, gender: gender as "male" | "female" },
+      { weight_kg, height_cm, age, gender: gender as "male" | "female", body_fat_pct: client?.body_fat_pct },
       selectedFormula
     );
-  }, [clientForm.values, selectedFormula]);
+  }, [clientForm.values, selectedFormula, client?.body_fat_pct]);
 
   // Calculate TDEE
   const tdee = useMemo(() => {
@@ -870,6 +871,7 @@ export function MealPlanDetailView({
                   data={[
                     { label: "Mifflin-St Jeor", value: "mifflin" },
                     { label: "Harris-Benedict", value: "harris" },
+                    { label: "Katch-McArdle", value: "katch" },
                   ]}
                   size="sm"
                   radius="md"

@@ -160,6 +160,7 @@ class MealPlanClientResponse(BaseModel):
     target_fat: Optional[float] = None
     meal_times: Optional[dict] = None
     plan: Optional[dict] = None
+    executed_plan: Optional[dict] = None
     adherence: Optional[dict] = None
     is_active: Optional[bool] = False
     created_at: datetime
@@ -924,13 +925,20 @@ class MoveMealRequest(BaseModel):
     target_day: int
     week: int = 1
 
+def _ensure_executed_plan(meal_plan: MealPlan):
+    """Lazily initialise executed_plan from plan if it's still None."""
+    import copy
+    if meal_plan.executed_plan is None:
+        meal_plan.executed_plan = copy.deepcopy(meal_plan.plan) if meal_plan.plan else {}
+
+
 @router.post("/nutrition/plan/move-meal")
 async def move_meal_between_days(
     data: MoveMealRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Move a specific meal from one day to another in the client's active plan."""
+    """Move a specific meal from one day to another in the client's executed plan."""
     from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
@@ -940,7 +948,8 @@ async def move_meal_between_days(
     if not meal_plan:
         raise HTTPException(status_code=404, detail="No hay plan activo")
     
-    plan = dict(meal_plan.plan) if meal_plan.plan else {}
+    _ensure_executed_plan(meal_plan)
+    plan = dict(meal_plan.executed_plan) if meal_plan.executed_plan else {}
     days = _get_plan_days_mutable(plan, data.week)
     
     src = next((d for d in days if d.get("day") == data.source_day), None)
@@ -955,8 +964,8 @@ async def move_meal_between_days(
     moved_meal = meals.pop(data.meal_index)
     dst.setdefault("meals", []).append(moved_meal)
     
-    meal_plan.plan = plan
-    flag_modified(meal_plan, "plan")
+    meal_plan.executed_plan = plan
+    flag_modified(meal_plan, "executed_plan")
     await db.commit()
     return {"ok": True}
 
@@ -972,7 +981,7 @@ async def swap_plan_days(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Swap all meals between two days in the client's active plan."""
+    """Swap all meals between two days in the client's executed plan."""
     from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
@@ -982,7 +991,8 @@ async def swap_plan_days(
     if not meal_plan:
         raise HTTPException(status_code=404, detail="No hay plan activo")
     
-    plan = dict(meal_plan.plan) if meal_plan.plan else {}
+    _ensure_executed_plan(meal_plan)
+    plan = dict(meal_plan.executed_plan) if meal_plan.executed_plan else {}
     days = _get_plan_days_mutable(plan, data.week)
     
     src = next((d for d in days if d.get("day") == data.source_day), None)
@@ -995,8 +1005,58 @@ async def swap_plan_days(
     src["meals"] = dst_meals
     dst["meals"] = src_meals
     
-    meal_plan.plan = plan
-    flag_modified(meal_plan, "plan")
+    meal_plan.executed_plan = plan
+    flag_modified(meal_plan, "executed_plan")
+    await db.commit()
+    return {"ok": True}
+
+
+class SwapMealsRequest(BaseModel):
+    source_day: int
+    source_meal_index: int
+    target_day: int
+    target_meal_index: int
+    week: int = 1
+
+
+@router.post("/nutrition/plan/swap-meals")
+async def swap_specific_meals(
+    data: SwapMealsRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Swap a specific meal from one day with a specific meal from another day in the executed plan."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+    )
+    meal_plan = result.scalar_one_or_none()
+    if not meal_plan:
+        raise HTTPException(status_code=404, detail="No hay plan activo")
+
+    _ensure_executed_plan(meal_plan)
+    plan = dict(meal_plan.executed_plan) if meal_plan.executed_plan else {}
+    days = _get_plan_days_mutable(plan, data.week)
+
+    src = next((d for d in days if d.get("day") == data.source_day), None)
+    dst = next((d for d in days if d.get("day") == data.target_day), None)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+
+    src_meals = src.get("meals", [])
+    dst_meals = dst.get("meals", [])
+    if data.source_meal_index < 0 or data.source_meal_index >= len(src_meals):
+        raise HTTPException(status_code=400, detail="Comida origen no encontrada")
+    if data.target_meal_index < 0 or data.target_meal_index >= len(dst_meals):
+        raise HTTPException(status_code=400, detail="Comida destino no encontrada")
+
+    src_meals[data.source_meal_index], dst_meals[data.target_meal_index] = (
+        dst_meals[data.target_meal_index], src_meals[data.source_meal_index]
+    )
+
+    meal_plan.executed_plan = plan
+    flag_modified(meal_plan, "executed_plan")
     await db.commit()
     return {"ok": True}
 

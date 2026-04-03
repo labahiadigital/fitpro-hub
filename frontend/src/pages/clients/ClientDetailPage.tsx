@@ -734,7 +734,7 @@ export function ClientDetailPage() {
     const height = parseFloat(String(client.height_cm)) || 170;
     const age = clientAge;
     const gender = (client.gender === "female" ? "female" : "male") as "male" | "female";
-    return calculateBMR({ weight_kg: weight, height_cm: height, age, gender }, selectedFormula);
+    return calculateBMR({ weight_kg: weight, height_cm: height, age, gender, body_fat_pct: client.body_fat_pct }, selectedFormula);
   })();
 
   // Calcular TDEE
@@ -2481,6 +2481,7 @@ export function ClientDetailPage() {
                     data={[
                       { label: "Mifflin-St Jeor", value: "mifflin" },
                       { label: "Harris-Benedict", value: "harris" },
+                      { label: "Katch-McArdle", value: "katch", disabled: !client?.body_fat_pct },
                     ]}
                     size="xs"
                     radius="md"
