@@ -176,6 +176,19 @@ const initialDays: DayPlan[] = [
   { id: "day-7", day: 7, dayName: "Domingo", meals: [] as Meal[], notes: "" },
 ];
 
+function extractWeeksFromPlan(plan: { weeks?: { week: number; days: DayPlan[] }[]; days?: DayPlan[] } | null | undefined): { week: number; days: DayPlan[] }[] {
+  if (!plan) return [{ week: 1, days: [...initialDays] }];
+  if (plan.weeks && plan.weeks.length > 0) return plan.weeks;
+  if (plan.days && plan.days.length > 0) return [{ week: 1, days: plan.days }];
+  return [{ week: 1, days: [...initialDays] }];
+}
+
+function getDurationWeeks(plan: any): number {
+  if (plan.duration_weeks && plan.duration_weeks > 0) return plan.duration_weeks;
+  if (plan.duration_days) return Math.max(1, Math.ceil(plan.duration_days / 7));
+  return 1;
+}
+
 const FOODS_PER_PAGE = 50;
 
 function calculateAge(birthDate: string | null | undefined): number {
@@ -226,7 +239,15 @@ export function NutritionPage() {
   const [debouncedSearch] = useDebouncedValue(searchFood, 300);
   const [debouncedSupplementSearch] = useDebouncedValue(searchSupplement, 300);
   const [currentPage, setCurrentPage] = useState(1);
-  const [mealPlanDays, setMealPlanDays] = useState(initialDays);
+  const [mealPlanWeeks, setMealPlanWeeks] = useState<{ week: number; days: DayPlan[] }[]>([{ week: 1, days: [...initialDays] }]);
+  const [currentWeek, setCurrentWeek] = useState(1);
+  const mealPlanDays = useMemo(() => {
+    const wk = mealPlanWeeks.find((w) => w.week === currentWeek);
+    return wk ? wk.days : initialDays;
+  }, [mealPlanWeeks, currentWeek]);
+  const setMealPlanDays = useCallback((days: DayPlan[]) => {
+    setMealPlanWeeks((prev) => prev.map((w) => w.week === currentWeek ? { ...w, days } : w));
+  }, [currentWeek]);
   const [editingPlan, setEditingPlan] = useState<any>(null);
   const [foodFilter, setFoodFilter] = useState<string>("all");
   const [foodSourceFilter, setFoodSourceFilter] = useState<string>("all");
@@ -412,12 +433,13 @@ export function NutritionPage() {
       name: plan.name,
       description: plan.description,
       duration_days: plan.duration_days || 7,
+      duration_weeks: getDurationWeeks(plan),
       target_calories: plan.target_calories || 2000,
       target_protein: plan.target_protein || 150,
       target_carbs: plan.target_carbs || 200,
       target_fat: plan.target_fat || 70,
       dietary_tags: plan.dietary_tags || [],
-      plan: plan.plan || { days: [] },
+      plan: plan.plan || { weeks: [{ week: 1, days: [] }] },
       client_id: plan.client_id,
       is_template: plan.is_template ?? true,
       is_active: plan.is_active ?? false,
@@ -443,12 +465,13 @@ export function NutritionPage() {
           name: specificClientPlan.name,
           description: specificClientPlan.description,
           duration_days: specificClientPlan.duration_days || 7,
+          duration_weeks: getDurationWeeks(specificClientPlan),
           target_calories: specificClientPlan.target_calories || 2000,
           target_protein: specificClientPlan.target_protein || 150,
           target_carbs: specificClientPlan.target_carbs || 200,
           target_fat: specificClientPlan.target_fat || 70,
           dietary_tags: specificClientPlan.dietary_tags || [],
-          plan: specificClientPlan.plan || { days: [] },
+          plan: specificClientPlan.plan || { weeks: [{ week: 1, days: [] }] },
           client_id: specificClientPlan.client_id,
         };
       }
@@ -474,7 +497,7 @@ export function NutritionPage() {
     planForm.setValues({
       name: plan.name,
       description: plan.description || "",
-      duration_days: plan.duration_days,
+      duration_weeks: getDurationWeeks(plan),
       target_calories: plan.target_calories,
       target_protein: plan.target_protein,
       target_carbs: plan.target_carbs,
@@ -482,11 +505,9 @@ export function NutritionPage() {
       dietary_tags: plan.dietary_tags || [],
       client_id: planClientId,
     });
-    if (plan.plan?.days?.length > 0) {
-      setMealPlanDays(plan.plan.days);
-    } else {
-      setMealPlanDays(initialDays);
-    }
+    const weeks = extractWeeksFromPlan(plan.plan);
+    setMealPlanWeeks(weeks);
+    setCurrentWeek(1);
     openBuilder();
   };
   
@@ -523,7 +544,7 @@ export function NutritionPage() {
     initialValues: {
       name: "",
       description: "",
-      duration_days: 7,
+      duration_weeks: 1,
       target_calories: 2000,
       target_protein: 150,
       target_carbs: 200,
@@ -629,7 +650,7 @@ export function NutritionPage() {
       planForm.setValues({
         name: plan.name,
         description: plan.description || "",
-        duration_days: plan.duration_days,
+        duration_weeks: getDurationWeeks(plan),
         target_calories: plan.target_calories,
         target_protein: plan.target_protein,
         target_carbs: plan.target_carbs,
@@ -637,14 +658,13 @@ export function NutritionPage() {
         dietary_tags: plan.dietary_tags || [],
         client_id: planClientId,
       });
-      if (plan.plan?.days?.length > 0) {
-        setMealPlanDays(plan.plan.days);
-      } else {
-        setMealPlanDays(initialDays);
-      }
+      const weeks = extractWeeksFromPlan(plan.plan);
+      setMealPlanWeeks(weeks);
+      setCurrentWeek(1);
     } else {
       setEditingPlan(null);
-      setMealPlanDays(initialDays);
+      setMealPlanWeeks([{ week: 1, days: [...initialDays] }]);
+      setCurrentWeek(1);
       planForm.reset();
       if (clientId) {
         setSelectedClientId(clientId);
@@ -672,13 +692,14 @@ export function NutritionPage() {
       const basePlanData = {
         name: values.name,
         description: values.description,
-        duration_days: values.duration_days,
+        duration_days: values.duration_weeks * 7,
+        duration_weeks: values.duration_weeks,
         target_calories: values.target_calories,
         target_protein: values.target_protein,
         target_carbs: values.target_carbs,
         target_fat: values.target_fat,
         dietary_tags: values.dietary_tags,
-        plan: { days: mealPlanDays },
+        plan: { weeks: mealPlanWeeks },
       };
 
       if (editingPlan) {
@@ -734,10 +755,21 @@ export function NutritionPage() {
         }
       }
 
-      handleCloseBuilder();
+      closeBuilder();
+      setSelectedClientId(null);
+      setSelectedClient(null);
+      if (editPlanId || clientId) {
+        setSearchParams({});
+      }
       planForm.reset();
-      setMealPlanDays(initialDays);
+      setMealPlanWeeks([{ week: 1, days: [...initialDays] }]);
+      setCurrentWeek(1);
       setEditingPlan(null);
+      if (clientId) {
+        navigate(`/clients/${clientId}`, { replace: true });
+      } else if (returnTo) {
+        navigate(returnTo, { replace: true });
+      }
     } catch {
       notifications.show({
         title: "Error",
@@ -770,6 +802,7 @@ export function NutritionPage() {
         name: `${plan.name} (copia)`,
         description: plan.description,
         duration_days: plan.duration_days,
+        duration_weeks: getDurationWeeks(plan),
         target_calories: plan.target_calories,
         target_protein: plan.target_protein,
         target_carbs: plan.target_carbs,
@@ -1032,7 +1065,7 @@ export function NutritionPage() {
                     <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{plan.name}</Text>
                     <Group gap={4}>
                       {plan.is_active && <Badge color="green" variant="filled" radius="md" size="xs">Activo</Badge>}
-                      <Badge color="blue" variant="light" radius="md" size="xs">{plan.duration_days}d</Badge>
+                      <Badge color="blue" variant="light" radius="md" size="xs">{getDurationWeeks(plan)} sem</Badge>
                     </Group>
                   </Group>
                   <Text c="dimmed" lineClamp={2} size="xs">{plan.description || "Sin descripción"}</Text>
@@ -2660,12 +2693,26 @@ export function NutritionPage() {
 
             <Group grow>
               <NumberInput
-                label="Duración (días)"
-                max={30}
+                label="Duración (semanas)"
+                max={12}
                 min={1}
                 radius="md"
                 size="sm"
-                {...planForm.getInputProps("duration_days")}
+                {...planForm.getInputProps("duration_weeks")}
+                onChange={(v) => {
+                  const weeks = Number(v) || 1;
+                  planForm.setFieldValue("duration_weeks", weeks);
+                  setMealPlanWeeks((prev) => {
+                    if (weeks > prev.length) {
+                      const newWeeks = [...prev];
+                      for (let i = prev.length; i < weeks; i++) {
+                        newWeeks.push({ week: i + 1, days: initialDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.day}`, meals: [] })) });
+                      }
+                      return newWeeks;
+                    }
+                    return prev.slice(0, weeks);
+                  });
+                }}
               />
             </Group>
 
@@ -2748,6 +2795,26 @@ export function NutritionPage() {
             onToggleFoodFavorite={handleToggleFoodFavoriteForBuilder}
             onToggleSupplementFavorite={handleToggleSupplementFavoriteForBuilder}
             recipes={recipes}
+            totalWeeks={planForm.values.duration_weeks}
+            currentWeek={currentWeek}
+            onWeekChange={setCurrentWeek}
+            onCopyWeek={(from, to) => {
+              setMealPlanWeeks((prev) => {
+                const srcWeek = prev.find((w) => w.week === from);
+                if (!srcWeek) return prev;
+                const copiedDays = srcWeek.days.map((d) => ({
+                  ...d,
+                  id: `day-${to}-${d.day}`,
+                  meals: d.meals.map((m) => ({
+                    ...m,
+                    id: `meal-${Date.now()}-${Math.random()}`,
+                    items: m.items.map((i) => ({ ...i, id: `item-${Date.now()}-${Math.random()}` })),
+                  })),
+                }));
+                return prev.map((w) => w.week === to ? { ...w, days: copiedDays } : w);
+              });
+              notifications.show({ title: "Semana copiada", message: `Semana ${from} copiada a Semana ${to}`, color: "green" });
+            }}
           />
         }
       />

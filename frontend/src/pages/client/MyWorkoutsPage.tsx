@@ -33,6 +33,7 @@ import {
   IconCheck,
   IconChevronRight,
   IconClock,
+  IconDownload,
   IconFlame,
   IconPlayerPlay,
   IconExchange,
@@ -42,6 +43,8 @@ import {
   IconSearch,
 } from "@tabler/icons-react";
 import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory } from "../../hooks/useClientPortal";
+import { generateWorkoutProgramPDF } from "../../services/pdfGenerator";
+import { useAuthStore } from "../../stores/auth";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
@@ -1148,8 +1151,29 @@ export function MyWorkoutsPage() {
   return (
     <Box p="xl" maw={1280} mx="auto">
       <Box mb="xl">
-        <Title order={2}>Mis Entrenamientos</Title>
-        <Text c="dimmed">Tu programa personalizado y progreso</Text>
+        <Group justify="space-between" align="flex-start">
+          <Box>
+            <Title order={2}>Mis Entrenamientos</Title>
+            <Text c="dimmed">Tu programa personalizado y progreso</Text>
+          </Box>
+          {data.assignedProgram?.id && (
+            <Button
+              leftSection={<IconDownload size={16} />}
+              variant="light"
+              size="sm"
+              onClick={async () => {
+                const ws = useAuthStore.getState().currentWorkspace;
+                await generateWorkoutProgramPDF(data.assignedProgram as any, {
+                  workspaceName: (ws as any)?.name || "Trackfiz",
+                  branding: (ws as any)?.branding,
+                  workspaceLogo: (ws as any)?.logo_url,
+                });
+              }}
+            >
+              Descargar entrenamiento
+            </Button>
+          )}
+        </Group>
       </Box>
 
       {!data.assignedProgram?.id && (

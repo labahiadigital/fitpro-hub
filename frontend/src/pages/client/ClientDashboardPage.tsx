@@ -21,6 +21,7 @@ import {
   IconBarbell,
   IconCalendarEvent,
   IconChartLine,
+  IconDownload,
   IconFlame,
   IconMessage,
   IconSalad,
@@ -31,6 +32,8 @@ import {
 } from "@tabler/icons-react";
 import { useClientDashboard } from "../../hooks/useClientPortal";
 import { useNavigate } from "react-router-dom";
+import { generateClientPlanPDF } from "../../services/pdfGenerator";
+import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
 
 function StatCard({ 
@@ -119,14 +122,33 @@ export function ClientDashboardPage() {
     <Box p="xl" maw={1280} mx="auto">
       {/* Welcome Section */}
       <Box mb="xl">
-        <Title order={2} mb={4}>
-          ¡Hola, {firstName}! 👋
-        </Title>
-        <Text c="dimmed" size="lg">
-          {data.weekProgress.workouts_completed > 0 
-            ? "Tu progreso esta semana va genial. ¡Sigue así!"
-            : "¡Comienza tu semana con energía!"}
-        </Text>
+        <Group justify="space-between" align="flex-start">
+          <Box>
+            <Title order={2} mb={4}>
+              ¡Hola, {firstName}! 👋
+            </Title>
+            <Text c="dimmed" size="lg">
+              {data.weekProgress.workouts_completed > 0 
+                ? "Tu progreso esta semana va genial. ¡Sigue así!"
+                : "¡Comienza tu semana con energía!"}
+            </Text>
+          </Box>
+          <Button
+            leftSection={<IconDownload size={16} />}
+            variant="light"
+            size="sm"
+            onClick={async () => {
+              const ws = useAuthStore.getState().currentWorkspace;
+              await generateClientPlanPDF(null, null, {
+                workspaceName: (ws as any)?.name || "Trackfiz",
+                branding: (ws as any)?.branding,
+                workspaceLogo: (ws as any)?.logo_url,
+              });
+            }}
+          >
+            Descargar Plan completo
+          </Button>
+        </Group>
       </Box>
 
       {/* Next Session Banner */}

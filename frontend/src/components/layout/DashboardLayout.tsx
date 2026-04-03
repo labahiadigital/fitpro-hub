@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Avatar,
   Box,
   Group,
@@ -44,7 +45,7 @@ import {
   IconCheck,
   IconBuildingStore,
 } from "@tabler/icons-react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore, type WorkspaceWithRole } from "../../stores/auth";
 import { clientPortalApi, messagesApi } from "../../services/api";
@@ -209,6 +210,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
   const { user, currentWorkspace } = useAuthStore();
   const { logout, switchWorkspace, loading } = useAuth();
   const [opened, { toggle, close }] = useDisclosure(false);
+  const navigate = useNavigate();
 
   const workspaces: WorkspaceWithRole[] = user?.workspaces || [];
   const currentWsId = currentWorkspace?.id || user?.workspace_id;
@@ -379,7 +381,17 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
                       </Badge>
                     </Box>
                     {isActive && !loading && (
-                      <IconCheck size={16} color="var(--nv-accent)" />
+                      <Group gap={4} wrap="nowrap">
+                        <ActionIcon
+                          size="xs"
+                          variant="subtle"
+                          color="gray"
+                          onClick={(e) => { e.stopPropagation(); navigate("/settings"); close(); onNavigate?.(); }}
+                        >
+                          <IconSettings size={14} color="rgba(255,255,255,0.5)" />
+                        </ActionIcon>
+                        <IconCheck size={16} color="var(--nv-accent)" />
+                      </Group>
                     )}
                     {isActive && loading && (
                       <Loader size={14} color="var(--nv-accent)" />

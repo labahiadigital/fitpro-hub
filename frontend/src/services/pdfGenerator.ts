@@ -157,6 +157,12 @@ interface PDFOptions {
   workspaceName?: string;
   trainerName?: string;
   client?: ClientData;
+  branding?: {
+    primary_color?: string;
+    secondary_color?: string;
+    accent_color?: string;
+  };
+  workspaceLogo?: string;
   progressData?: {
     currentWeight?: number;
     startWeight?: number;
@@ -176,6 +182,8 @@ interface PDFOptions {
     totalWorkouts?: number;
     completedWorkouts?: number;
     nutritionComplianceRate?: number;
+    weightHistory?: Array<{ date: string; weight: number; body_fat: number; muscle_mass: number }>;
+    photos?: Array<{ url: string; type?: string; date?: string }>;
   };
 }
 
@@ -202,6 +210,22 @@ const C = {
 
 const MARGIN_P = 14;
 const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [parseInt(h.substring(0, 2), 16) || 0, parseInt(h.substring(2, 4), 16) || 0, parseInt(h.substring(4, 6), 16) || 0];
+}
+
+function getBrandColors(branding?: PDFOptions["branding"]) {
+  if (!branding) return C;
+  return {
+    ...C,
+    primary: branding.primary_color ? hexToRgb(branding.primary_color) : C.primary,
+    secondary: branding.secondary_color ? hexToRgb(branding.secondary_color) : C.secondary,
+    accent: branding.accent_color ? hexToRgb(branding.accent_color) : C.accent,
+  };
+}
+
 // ============ HELPERS ============
 
 function toNum(value: unknown, def = 0): number {
@@ -312,7 +336,8 @@ export async function generateClientPlanPDF(
   options: PDFOptions = {}
 ): Promise<void> {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  const { workspaceName = "Trackfiz", trainerName = "Entrenador", client, progressData } = options;
+  const { workspaceName = "Trackfiz", trainerName = "Entrenador", client, progressData, branding, workspaceLogo } = options;
+  const brandColors = getBrandColors(branding);
   const clientName = client
     ? `${client.first_name || ""} ${client.last_name || ""}`.trim() || "Cliente"
     : "Cliente";
@@ -322,6 +347,11 @@ export async function generateClientPlanPDF(
   let avatarDataUrl: string | null = null;
   if (client?.avatar_url) {
     avatarDataUrl = await loadImageAsDataUrl(client.avatar_url);
+  }
+
+  let logoDataUrl: string | null = null;
+  if (workspaceLogo) {
+    logoDataUrl = await loadImageAsDataUrl(workspaceLogo);
   }
 
   const exerciseImages = new Map<string, string>();
@@ -344,7 +374,7 @@ export async function generateClientPlanPDF(
   // ================================================================
   //  PAGE 1 — COVER (PORTRAIT)
   // ================================================================
-  renderCoverPage(doc, planTitle, clientName, workspaceName, trainerName);
+  renderCoverPage(doc, planTitle, clientName, workspaceName, trainerName, logoDataUrl, brandColors);
 
   // ================================================================
   //  PAGE 2 — SUMMARY + OBJECTIVES (PORTRAIT)
@@ -405,67 +435,52 @@ export async function generateClientPlanPDF(
 //  PAGE 1: COVER
 // ================================================================
 
-function renderCoverPage(doc: jsPDF, planTitle: string, clientName: string, workspaceName: string, trainerName: string) {
+function renderCoverPage(doc: jsPDF, _planTitle: string, clientName: string, workspaceName: string, trainerName: string, logoDataUrl?: string | null, colors?: typeof C) {
+  const cc = colors || C;
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
 
-  doc.setFillColor(...C.coverBg);
+  doc.setFillColor(...cc.coverBg);
   doc.rect(0, 0, pw, ph, "F");
 
-  drawTopBar(doc);
-
-  doc.setFillColor(...C.primary);
+  doc.setFillColor(...cc.primary);
   doc.rect(0, 0, pw, 6, "F");
 
-  doc.setFontSize(14);
-  doc.setTextColor(...C.secondary);
-  doc.setFont("helvetica", "normal");
-  doc.text(workspaceName, pw / 2, 28, { align: "center" });
+  let logoEndY = 40;
+  if (logoDataUrl) {
+    try {
+      doc.addImage(logoDataUrl, "PNG", pw / 2 - 25, 16, 50, 50);
+      logoEndY = 72;
+    } catch { /* ignore */ }
+  }
 
-  doc.setDrawColor(...C.primary);
-  doc.setLineWidth(0.5);
-  doc.line(pw / 2 - 30, 34, pw / 2 + 30, 34);
-
-  doc.setFontSize(26);
-  doc.setTextColor(...C.primary);
+  doc.setFontSize(22);
+  doc.setTextColor(...cc.primary);
   doc.setFont("helvetica", "bold");
-  const titleLines = doc.splitTextToSize(planTitle, pw - 60);
-  doc.text(titleLines, pw / 2, 52, { align: "center" });
+  doc.text(workspaceName, pw / 2, logoEndY, { align: "center" });
 
-  const imageY = 75;
-  const imageW = 120;
-  const imageH = 100;
-  const imageX = (pw - imageW) / 2;
-
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(imageX, imageY, imageW, imageH, 4, 4, "F");
-  doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(imageX, imageY, imageW, imageH, 4, 4, "S");
-
-  doc.setFontSize(9);
-  doc.setTextColor(...C.textMuted);
-  doc.setFont("helvetica", "italic");
-  doc.text("Espacio reservado para imagen", pw / 2, imageY + imageH / 2, { align: "center" });
+  doc.setDrawColor(...cc.primary);
+  doc.setLineWidth(0.5);
+  doc.line(pw / 2 - 30, logoEndY + 6, pw / 2 + 30, logoEndY + 6);
 
   const bottomY = ph - 60;
 
-  doc.setDrawColor(...C.primary);
+  doc.setDrawColor(...cc.primary);
   doc.setLineWidth(0.3);
   doc.line(pw / 2 - 40, bottomY, pw / 2 + 40, bottomY);
 
   doc.setFontSize(10);
-  doc.setTextColor(...C.textMuted);
+  doc.setTextColor(...cc.textMuted);
   doc.setFont("helvetica", "normal");
   doc.text("Preparado para", pw / 2, bottomY + 8, { align: "center" });
 
   doc.setFontSize(20);
-  doc.setTextColor(...C.primary);
+  doc.setTextColor(...cc.primary);
   doc.setFont("helvetica", "bold");
   doc.text(clientName, pw / 2, bottomY + 18, { align: "center" });
 
   doc.setFontSize(9);
-  doc.setTextColor(...C.textMuted);
+  doc.setTextColor(...cc.textMuted);
   doc.setFont("helvetica", "normal");
   doc.text(`Entrenador: ${trainerName}`, pw / 2, bottomY + 26, { align: "center" });
   doc.text(new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" }), pw / 2, bottomY + 32, { align: "center" });
@@ -981,7 +996,18 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
 // ================================================================
 
 function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
-  const days = (mealPlan.plan?.days || []).filter(d => {
+  const plan = mealPlan.plan as any;
+  const allDays: NutritionDayPlan[] = [];
+  if (plan?.weeks && Array.isArray(plan.weeks)) {
+    for (const w of plan.weeks) {
+      for (const d of (w.days || [])) {
+        allDays.push({ ...d, dayName: d.dayName ? `S${w.week} - ${d.dayName}` : `Semana ${w.week} - Día ${d.day}` });
+      }
+    }
+  } else if (plan?.days) {
+    allDays.push(...plan.days);
+  }
+  const days = allDays.filter(d => {
     const meals = d.meals || [];
     return meals.length > 0 && meals.some(m => (m.items && m.items.length > 0) || (m.foods && m.foods.length > 0));
   });
@@ -1068,23 +1094,29 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
 
       for (const recipe of recipes) {
         if (recipe.name) {
-          tableRows.push([`🍳 ${recipe.name}`, "", "", "", "", ""]);
+          const rCal = recipe.items.reduce((s, i) => s + i.cal, 0);
+          const rP = recipe.items.reduce((s, i) => s + i.p, 0);
+          const rC = recipe.items.reduce((s, i) => s + i.c, 0);
+          const rF = recipe.items.reduce((s, i) => s + i.f, 0);
+          tableRows.push(["", recipe.name, "", "", Math.round(rCal).toString(), rP.toFixed(1), rC.toFixed(1), rF.toFixed(1)]);
         }
         for (const it of recipe.items) {
-          const prefix = recipe.name ? "    " : "";
           tableRows.push([
-            `${prefix}${it.name}`, it.qty,
+            "", "", it.name, it.qty,
             Math.round(it.cal).toString(), it.p.toFixed(1), it.c.toFixed(1), it.f.toFixed(1),
           ]);
           mealCal += it.cal; mealP += it.p; mealC += it.c; mealF += it.f;
         }
       }
+      if (tableRows.length > 0) {
+        tableRows[0][0] = mealLabel;
+      }
       dayCalTotal += mealCal; dayPTotal += mealP; dayCTotal += mealC; dayFTotal += mealF;
-      tableRows.push(["TOTAL", "", Math.round(mealCal).toString(), mealP.toFixed(1), mealC.toFixed(1), mealF.toFixed(1)]);
+      tableRows.push(["TOTAL", "", "", "", Math.round(mealCal).toString(), mealP.toFixed(1), mealC.toFixed(1), mealF.toFixed(1)]);
 
       autoTable(doc, {
         startY: y,
-        head: [["Alimento", "Cant.", "Kcal", "P", "C", "G"]],
+        head: [["Comida", "Receta", "Alimento", "Cant.", "Kcal", "P", "C", "G"]],
         body: tableRows,
         theme: "grid",
         tableWidth: contentW,
@@ -1092,12 +1124,14 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
         headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6.5, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
         styles: { fontSize: 6, cellPadding: 1.5, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize" },
         columnStyles: {
-          0: { cellWidth: contentW - 14 - 14 - 12 - 12 - 12 },
-          1: { halign: "center", cellWidth: 14 },
-          2: { halign: "center", cellWidth: 14 },
-          3: { halign: "center", cellWidth: 12 },
+          0: { cellWidth: 28 },
+          1: { cellWidth: 28 },
+          2: { cellWidth: contentW - 28 - 28 - 14 - 12 - 10 - 10 - 10 },
+          3: { halign: "center", cellWidth: 14 },
           4: { halign: "center", cellWidth: 12 },
-          5: { halign: "center", cellWidth: 12 },
+          5: { halign: "center", cellWidth: 10 },
+          6: { halign: "center", cellWidth: 10 },
+          7: { halign: "center", cellWidth: 10 },
         },
         showHead: "firstPage",
         rowPageBreak: "avoid",
@@ -1105,10 +1139,13 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
           if (data.section !== "body") return;
           const isTotal = data.row.index === tableRows.length - 1;
           if (isTotal) { data.cell.styles.fillColor = C.primaryLight; data.cell.styles.fontStyle = "bold"; }
-          const txt = String(tableRows[data.row.index]?.[0] || "");
-          if (txt.startsWith("🍳")) {
+          const row = tableRows[data.row.index];
+          if (row && row[1] && !row[2]) {
             data.cell.styles.fillColor = C.accentBg;
-            if (data.column.index === 0) data.cell.styles.fontStyle = "bold";
+            if (data.column.index === 1) data.cell.styles.fontStyle = "bold";
+          }
+          if (row && row[0] && row[0] !== "TOTAL" && data.column.index === 0) {
+            data.cell.styles.fontStyle = "bold";
           }
         },
       });

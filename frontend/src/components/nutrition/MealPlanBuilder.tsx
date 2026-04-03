@@ -151,17 +151,17 @@ interface MealPlanBuilderProps {
   targetProtein?: number;
   targetCarbs?: number;
   targetFat?: number;
-  /** Callback when target macros are changed via percentage sliders */
   onTargetMacrosChange?: (targets: { protein: number; carbs: number; fat: number }) => void;
-  /** Selected client for reference (weight, goals, allergies) */
   selectedClient?: { first_name?: string; last_name?: string; weight_kg?: number; height_cm?: number; goals?: string; health_data?: { allergies?: string[]; intolerances?: string[] } } | null;
-  // Favoritos
   foodFavorites?: string[];
   supplementFavorites?: string[];
   onToggleFoodFavorite?: (foodId: string, isFavorite: boolean) => void;
   onToggleSupplementFavorite?: (supplementId: string, isFavorite: boolean) => void;
-  // Recetas
   recipes?: Array<{ id: string; name: string; items?: Array<{ food_id?: string; name: string; calories?: number; protein?: number; carbs?: number; fat?: number; quantity_grams?: number; type?: string }>; total_calories?: number; total_protein?: number; total_carbs?: number; total_fat?: number; category?: string; difficulty?: string; prep_time_minutes?: number; cook_time_minutes?: number; servings?: number }>;
+  totalWeeks?: number;
+  currentWeek?: number;
+  onWeekChange?: (week: number) => void;
+  onCopyWeek?: (fromWeek: number, toWeek: number) => void;
 }
 
 export function MealPlanBuilder({
@@ -180,7 +180,12 @@ export function MealPlanBuilder({
   onToggleSupplementFavorite,
   onTargetMacrosChange,
   recipes = [],
+  totalWeeks = 1,
+  currentWeek = 1,
+  onWeekChange,
+  onCopyWeek,
 }: MealPlanBuilderProps) {
+  const [copyWeekTarget, setCopyWeekTarget] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
@@ -881,6 +886,59 @@ export function MealPlanBuilder({
             </Box>
           </Group>
         </Box>
+      )}
+
+      {totalWeeks > 1 && (
+        <Paper mb="md" p="sm" radius="lg" withBorder style={{ backgroundColor: "var(--nv-surface)" }}>
+          <Group justify="space-between">
+            <Group gap="sm">
+              <Text fw={600} size="sm">Semana</Text>
+              <Select
+                data={Array.from({ length: totalWeeks }, (_, i) => ({
+                  value: String(i + 1),
+                  label: `Semana ${i + 1}`,
+                }))}
+                value={String(currentWeek)}
+                onChange={(v) => onWeekChange?.(Number(v) || 1)}
+                size="xs"
+                radius="md"
+                w={140}
+              />
+            </Group>
+            {onCopyWeek && (
+              <Group gap="xs">
+                <Select
+                  placeholder="Copiar a..."
+                  data={Array.from({ length: totalWeeks }, (_, i) => ({
+                    value: String(i + 1),
+                    label: `Semana ${i + 1}`,
+                  })).filter((w) => Number(w.value) !== currentWeek)}
+                  value={copyWeekTarget}
+                  onChange={setCopyWeekTarget}
+                  size="xs"
+                  radius="md"
+                  w={140}
+                  clearable
+                />
+                <Button
+                  size="xs"
+                  variant="light"
+                  radius="md"
+                  leftSection={<IconCopy size={14} />}
+                  disabled={!copyWeekTarget}
+                  onClick={() => {
+                    if (copyWeekTarget) {
+                      onCopyWeek(currentWeek, Number(copyWeekTarget));
+                      setCopyWeekTarget(null);
+                    }
+                  }}
+                >
+                  Copiar semana
+                </Button>
+              </Group>
+            )}
+          </Group>
+        </Paper>
       )}
 
       <Paper mb="md" p="md" radius="lg" withBorder style={{ backgroundColor: "var(--nv-surface)" }}>

@@ -265,6 +265,7 @@ export function useCreateMealPlan() {
       name: string;
       description?: string;
       duration_days?: number;
+      duration_weeks?: number;
       target_calories?: number;
       target_protein?: number;
       target_carbs?: number;

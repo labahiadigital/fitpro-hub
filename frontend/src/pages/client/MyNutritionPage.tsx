@@ -45,6 +45,7 @@ import {
   IconMoodSmile,
   IconMoodSad,
   IconMoodEmpty,
+  IconDownload,
   IconX,
 } from "@tabler/icons-react";
 import { DateInput } from "@mantine/dates";
@@ -60,6 +61,8 @@ import {
   useSwapDays,
 } from "../../hooks/useClientPortal";
 import { useClientRecipes } from "../../hooks/useRecipes";
+import { generateMealPlanPDF } from "../../services/pdfGenerator";
+import { useAuthStore } from "../../stores/auth";
 import { RecipeDetailModal } from "../../components/recipes/RecipeDetailModal";
 import type { Recipe } from "../../types/recipe";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
@@ -313,25 +316,33 @@ function LogMealModal({
     setFoods((prev) => {
       const updated = [...prev];
       const old = updated[index];
-      if (field === "quantity" && typeof value === "number" && old.quantity > 0) {
-        const ratio = value / old.quantity;
+      const numVal = typeof value === "string" ? parseFloat(value) || 0 : value;
+      if (field === "quantity" && Number(old.quantity) > 0 && numVal > 0) {
+        const ratio = numVal / Number(old.quantity);
         updated[index] = {
           ...old,
-          quantity: value,
-          calories: Math.round(old.calories * ratio),
-          protein: Math.round(old.protein * ratio * 10) / 10,
-          carbs: Math.round(old.carbs * ratio * 10) / 10,
-          fat: Math.round(old.fat * ratio * 10) / 10,
+          quantity: numVal,
+          calories: Math.round(Number(old.calories) * ratio),
+          protein: Math.round(Number(old.protein) * ratio * 10) / 10,
+          carbs: Math.round(Number(old.carbs) * ratio * 10) / 10,
+          fat: Math.round(Number(old.fat) * ratio * 10) / 10,
         };
       } else {
-        updated[index] = { ...old, [field]: value };
+        updated[index] = { ...old, [field]: field === "name" ? value : numVal };
       }
       return updated;
     });
   };
 
   const handleSubmit = () => {
-    const validFoods = foods.filter((f) => f.name.trim() !== "");
+    const validFoods = foods.filter((f) => f.name.trim() !== "").map((f) => ({
+      ...f,
+      calories: Number(f.calories) || 0,
+      protein: Number(f.protein) || 0,
+      carbs: Number(f.carbs) || 0,
+      fat: Number(f.fat) || 0,
+      quantity: Number(f.quantity) || 0,
+    }));
     if (validFoods.length === 0) return;
 
     onSubmit({
@@ -666,18 +677,19 @@ function LogPlanMealModal({
     setFoods((prev) => {
       const updated = [...prev];
       const old = updated[index];
-      if (field === "quantity" && typeof value === "number" && old.quantity > 0) {
-        const ratio = value / old.quantity;
+      const numVal = typeof value === "string" ? parseFloat(value) || 0 : value;
+      if (field === "quantity" && Number(old.quantity) > 0 && numVal > 0) {
+        const ratio = numVal / Number(old.quantity);
         updated[index] = {
           ...old,
-          quantity: value,
-          calories: Math.round(old.calories * ratio),
-          protein: Math.round(old.protein * ratio * 10) / 10,
-          carbs: Math.round(old.carbs * ratio * 10) / 10,
-          fat: Math.round(old.fat * ratio * 10) / 10,
+          quantity: numVal,
+          calories: Math.round(Number(old.calories) * ratio),
+          protein: Math.round(Number(old.protein) * ratio * 10) / 10,
+          carbs: Math.round(Number(old.carbs) * ratio * 10) / 10,
+          fat: Math.round(Number(old.fat) * ratio * 10) / 10,
         };
       } else {
-        updated[index] = { ...old, [field]: value };
+        updated[index] = { ...old, [field]: field === "name" ? value : numVal };
       }
       return updated;
     });
@@ -711,7 +723,14 @@ function LogPlanMealModal({
   };
 
   const handleSubmit = async () => {
-    const validFoods = foods.filter((f) => f.name.trim() !== "");
+    const validFoods = foods.filter((f) => f.name.trim() !== "").map((f) => ({
+      ...f,
+      calories: Number(f.calories) || 0,
+      protein: Number(f.protein) || 0,
+      carbs: Number(f.carbs) || 0,
+      fat: Number(f.fat) || 0,
+      quantity: Number(f.quantity) || 0,
+    }));
     if (validFoods.length === 0) return;
 
     onSubmit({
@@ -1208,9 +1227,9 @@ export function MyNutritionPage() {
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
   const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
   const [selectedWeekDayIndex, setSelectedWeekDayIndex] = useState<number | null>(null);
-  // mealDayOverrides removed - using real API calls now
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [historyDetailDay, setHistoryDetailDay] = useState<string | null>(null);
+  const [planViewMode, setPlanViewMode] = useState<string>("modified");
   
   // Hooks para datos reales del backend
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
@@ -1225,12 +1244,34 @@ export function MyNutritionPage() {
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
   const selectedPlanDay = dayMapping[selectedDate.getDay()];
 
+  const planDays = useMemo(() => {
+    if (!mealPlan?.plan) return [];
+    const plan = mealPlan.plan as unknown as { weeks?: { week: number; days: PlanDay[] }[]; days?: PlanDay[] };
+    if (plan.weeks && plan.weeks.length > 0) {
+      const durationWeeks = (mealPlan as unknown as { duration_weeks?: number }).duration_weeks || plan.weeks.length;
+      const startDate = new Date(mealPlan.created_at);
+      const now = new Date();
+      const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weekNum = durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+      const wk = plan.weeks.find((w) => w.week === weekNum);
+      return wk?.days || plan.weeks[0]?.days || [];
+    }
+    return plan.days || [];
+  }, [mealPlan]);
+
+  const allPlanWeeks = useMemo(() => {
+    if (!mealPlan?.plan) return [];
+    const plan = mealPlan.plan as unknown as { weeks?: { week: number; days: PlanDay[] }[]; days?: PlanDay[] };
+    if (plan.weeks && plan.weeks.length > 0) return plan.weeks;
+    if (plan.days && plan.days.length > 0) return [{ week: 1, days: plan.days }];
+    return [];
+  }, [mealPlan]);
+
   const selectedPlanMeals = useMemo(() => {
-    if (!mealPlan?.plan?.days) return [];
-    
-    const dayPlan = mealPlan.plan.days.find((d: PlanDay) => d.day === selectedPlanDay);
+    if (!planDays || planDays.length === 0) return [];
+    const dayPlan = planDays.find((d: PlanDay) => d.day === selectedPlanDay);
     return dayPlan?.meals || [];
-  }, [mealPlan, selectedPlanDay]);
+  }, [planDays, selectedPlanDay]);
 
   // Calcular totales del día
   const dailyTotals = useMemo(() => {
@@ -1319,9 +1360,8 @@ export function MyNutritionPage() {
       // Buscar en el historial
       const dayHistory = nutritionHistory?.days?.find(d => d.date === dateStr);
       
-      // Obtener las comidas del plan para este día
       const planDayNum = dayMappingToPlan[i];
-      const dayPlan = mealPlan?.plan?.days?.find((d: PlanDay) => d.day === planDayNum);
+      const dayPlan = planDays.find((d: PlanDay) => d.day === planDayNum);
       const planMeals = dayPlan?.meals || [];
       
       if (isToday) {
@@ -1356,7 +1396,7 @@ export function MyNutritionPage() {
         totals: dayHistory?.totals || { protein: 0, carbs: 0, fat: 0 },
       };
     });
-  }, [dailyTotals, targets, nutritionHistory, nutritionLogs, mealPlan]);
+  }, [dailyTotals, targets, nutritionHistory, nutritionLogs, planDays]);
 
   const handleLogMeal = async (data: {
     meal_name: string;
@@ -1366,13 +1406,24 @@ export function MyNutritionPage() {
     replace?: boolean;
   }) => {
     try {
+      const sanitizedFoods = data.foods.map((f) => ({
+        ...f,
+        calories: Number(f.calories) || 0,
+        protein: Number(f.protein) || 0,
+        carbs: Number(f.carbs) || 0,
+        fat: Number(f.fat) || 0,
+        quantity: Number(f.quantity) || 0,
+      }));
+      const hasExisting = (nutritionLogs || []).some(
+        (l) => l.meal_name === data.meal_name
+      );
       await logNutritionMutation.mutateAsync({
         date: selectedDateStr,
         meal_name: data.meal_name,
-        foods: data.foods,
+        foods: sanitizedFoods,
         notes: data.notes,
         satisfaction_rating: data.satisfaction_rating,
-        replace: data.replace,
+        replace: data.replace || hasExisting,
       });
       closeModal();
       closePlanMealModal();
@@ -1419,8 +1470,29 @@ export function MyNutritionPage() {
   return (
     <Box p="xl" maw={1280} mx="auto">
       <Box mb="xl">
-        <Title order={2}>Mi Nutrición</Title>
-        <Text c="dimmed">Seguimiento de tu alimentación diaria</Text>
+        <Group justify="space-between" align="flex-start">
+          <Box>
+            <Title order={2}>Mi Nutrición</Title>
+            <Text c="dimmed">Seguimiento de tu alimentación diaria</Text>
+          </Box>
+          {mealPlan && (
+            <Button
+              leftSection={<IconDownload size={16} />}
+              variant="light"
+              size="sm"
+              onClick={async () => {
+                const ws = useAuthStore.getState().currentWorkspace;
+                await generateMealPlanPDF(mealPlan as any, {
+                  workspaceName: (ws as any)?.name || "Trackfiz",
+                  branding: (ws as any)?.branding,
+                  workspaceLogo: (ws as any)?.logo_url,
+                });
+              }}
+            >
+              Descargar mi nutrición
+            </Button>
+          )}
+        </Group>
       </Box>
 
       {!mealPlan && (
@@ -1437,7 +1509,6 @@ export function MyNutritionPage() {
           onChange={setActiveTab}
           data={[
             { value: "today", label: "Registrar comida" },
-            { value: "template", label: "Plantilla" },
             { value: "week", label: "Tu plan" },
             { value: "history", label: "Historial" },
             { value: "recipes", label: "Recetas" },
@@ -1452,9 +1523,6 @@ export function MyNutritionPage() {
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
             Registrar comida
-          </Tabs.Tab>
-          <Tabs.Tab value="template" leftSection={<IconSalad size={16} />}>
-            Plantilla
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
             Tu plan
@@ -1770,130 +1838,128 @@ export function MyNutritionPage() {
 
         </Tabs.Panel>
 
-        <Tabs.Panel value="template">
-          {mealPlan?.plan?.days && mealPlan.plan.days.length > 0 ? (
-            <Stack gap="md">
-              <Text size="sm" c="dimmed">
-                Plantilla original del plan &ldquo;{mealPlan?.name}&rdquo; diseñada por tu entrenador
-              </Text>
-              {(mealPlan?.plan?.days || []).map((day: PlanDay) => {
-                const dayLabels = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-                const dayName = day.dayName || dayLabels[day.day] || `Día ${day.day}`;
-                return (
-                  <Card key={day.id} shadow="sm" padding="md" radius="lg" withBorder>
-                    <Text fw={700} size="md" mb="sm">{dayName}</Text>
-                    {day.meals.length > 0 ? (
-                      <Stack gap="sm">
-                        {day.meals.map((meal: PlanMeal) => {
-                          const mealType = MEAL_TYPES.find(m => m.value === meal.name);
-                          const MealIcon = mealType?.icon || IconSalad;
-                          const recipeGroupsT = new Map<string, typeof meal.items>();
-                          const ungroupedT: typeof meal.items = [];
-                          meal.items.forEach((item) => {
-                            if (item.recipe_group) {
-                              const g = recipeGroupsT.get(item.recipe_group) || [];
-                              g.push(item);
-                              recipeGroupsT.set(item.recipe_group, g);
-                            } else {
-                              ungroupedT.push(item);
-                            }
-                          });
-                          const totalCal = meal.items.reduce((sum, item) => {
-                            const fd = item.food || item.supplement;
-                            const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
-                            return sum + Math.round(Number(fd?.calories || 0) * (item.quantity_grams / ss));
-                          }, 0);
-                          return (
-                            <Paper key={meal.id} p="sm" radius="md" withBorder>
-                              <Group justify="space-between" mb="xs">
-                                <Group gap="xs">
-                                  <ThemeIcon variant="light" color={mealType?.color || "gray"} size="md" radius="xl">
-                                    <MealIcon size={14} />
-                                  </ThemeIcon>
-                                  <Text fw={600} size="sm">{meal.name}</Text>
-                                  <Text size="xs" c="dimmed">{meal.time}</Text>
-                                </Group>
-                                <Badge variant="light" color="yellow" size="sm">{totalCal} kcal</Badge>
-                              </Group>
-                              <Stack gap={4} ml={36}>
-                                {(() => {
-                                  const els: React.ReactNode[] = [];
-                                  recipeGroupsT.forEach((items, rName) => {
-                                    els.push(
-                                      <Paper key={`rt-${rName}`} p="xs" radius="sm" style={{ borderLeft: "3px solid var(--mantine-color-teal-4)", background: "var(--mantine-color-teal-0)" }}>
-                                        <Text size="xs" fw={700} c="teal" mb={2}>🍳 {rName}</Text>
-                                        {items.map((item, i) => {
+        <Tabs.Panel value="week">
+          <Group justify="space-between" mb="md">
+            <Select
+              value={planViewMode}
+              onChange={(v) => setPlanViewMode(v || "modified")}
+              data={[
+                { value: "modified", label: "Plan modificado" },
+                { value: "original", label: "Plan original" },
+              ]}
+              size="xs"
+              radius="md"
+              w={180}
+            />
+            {allPlanWeeks.length > 1 && (
+              <Badge variant="light" color="blue" size="sm">
+                {allPlanWeeks.length} semanas
+              </Badge>
+            )}
+          </Group>
+
+          {planViewMode === "original" ? (
+            (() => {
+              const originalDays = allPlanWeeks.flatMap((w: { week: number; days: PlanDay[] }) => w.days);
+              return originalDays.length > 0 ? (
+                <Stack gap="md">
+                  <Text size="sm" c="dimmed">
+                    Plantilla original del plan &ldquo;{mealPlan?.name}&rdquo; diseñada por tu entrenador
+                  </Text>
+                  {allPlanWeeks.map((wk: { week: number; days: PlanDay[] }) => (
+                    <Box key={wk.week}>
+                      {allPlanWeeks.length > 1 && (
+                        <Text fw={700} size="md" mb="sm" c="blue">Semana {wk.week}</Text>
+                      )}
+                      {wk.days.map((day: PlanDay) => {
+                        const dayLabels = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+                        const dayName = day.dayName || dayLabels[day.day] || `Día ${day.day}`;
+                        return (
+                          <Card key={day.id || `${wk.week}-${day.day}`} shadow="sm" padding="md" radius="lg" withBorder mb="sm">
+                            <Text fw={700} size="md" mb="sm">{dayName}</Text>
+                            {day.meals.length > 0 ? (
+                              <Stack gap="sm">
+                                {day.meals.map((meal: PlanMeal) => {
+                                  const mealType = MEAL_TYPES.find(m => m.value === meal.name);
+                                  const MealIcon = mealType?.icon || IconSalad;
+                                  const totalCal = meal.items.reduce((sum, item) => {
+                                    const fd = item.food || item.supplement;
+                                    const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
+                                    return sum + Math.round(Number(fd?.calories || 0) * (item.quantity_grams / ss));
+                                  }, 0);
+                                  return (
+                                    <Paper key={meal.id} p="sm" radius="md" withBorder>
+                                      <Group justify="space-between" mb="xs">
+                                        <Group gap="xs">
+                                          <ThemeIcon variant="light" color={mealType?.color || "gray"} size="md" radius="xl">
+                                            <MealIcon size={14} />
+                                          </ThemeIcon>
+                                          <Text fw={600} size="sm">{meal.name}</Text>
+                                          <Text size="xs" c="dimmed">{meal.time}</Text>
+                                        </Group>
+                                        <Badge variant="light" color="yellow" size="sm">{totalCal} kcal</Badge>
+                                      </Group>
+                                      <Stack gap={4} ml={36}>
+                                        {meal.items.map((item, i) => {
                                           const fd = item.food || item.supplement;
                                           return (
                                             <Group key={i} justify="space-between">
-                                              <Text size="xs">{fd?.name || "Alimento"}</Text>
+                                              <Text size="xs">{item.recipe_group ? `🍳 ${fd?.name || "Alimento"}` : fd?.name || "Alimento"}</Text>
                                               <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
                                             </Group>
                                           );
                                         })}
-                                      </Paper>
-                                    );
-                                  });
-                                  ungroupedT.forEach((item, i) => {
-                                    const fd = item.food || item.supplement;
-                                    els.push(
-                                      <Group key={`ut-${i}`} justify="space-between">
-                                        <Text size="xs">{fd?.name || "Alimento"}</Text>
-                                        <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
-                                      </Group>
-                                    );
-                                  });
-                                  return els;
-                                })()}
+                                      </Stack>
+                                    </Paper>
+                                  );
+                                })}
                               </Stack>
-                            </Paper>
-                          );
-                        })}
-                      </Stack>
-                    ) : (
-                      <Text size="sm" c="dimmed">Sin comidas asignadas</Text>
-                    )}
-                  </Card>
-                );
-              })}
-            </Stack>
-          ) : (
-            <Paper p="xl" radius="lg" ta="center" withBorder>
-              <Text fw={600} size="md" mb={4}>No hay plantilla disponible</Text>
-              <Text size="sm" c="dimmed">Tu entrenador aún no ha creado un plan nutricional.</Text>
+                            ) : (
+                              <Text size="sm" c="dimmed">Sin comidas asignadas</Text>
+                            )}
+                          </Card>
+                        );
+                      })}
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Paper p="xl" radius="lg" ta="center" withBorder>
+                  <Text fw={600} size="md" mb={4}>No hay plantilla disponible</Text>
+                  <Text size="sm" c="dimmed">Tu entrenador aún no ha creado un plan nutricional.</Text>
             </Paper>
-          )}
-        </Tabs.Panel>
-
-        <Tabs.Panel value="week">
+              );
+            })()
+          ) : (
+          <>
+          <Card shadow="sm" padding="lg" radius="lg" withBorder mb="md">
+            <Title order={5} mb="md">Resumen de la Semana</Title>
+            <SimpleGrid cols={{ base: 1, xs: 3 }}>
+              <Box ta="center">
+                <Text size="xl" fw={700} c="yellow">
+                  {nutritionHistory?.summary?.avg_calories || 0}
+                </Text>
+                <Text size="sm" c="dimmed">Promedio kcal/día</Text>
+              </Box>
+              <Box ta="center">
+                <Text size="xl" fw={700} c="green">
+                  {nutritionHistory?.summary?.total_days || 0}
+                </Text>
+                <Text size="sm" c="dimmed">Días registrados</Text>
+              </Box>
+              <Box ta="center">
+                <Text size="xl" fw={700} c="blue">
+                  {targets.calories}
+                </Text>
+                <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
+              </Box>
+            </SimpleGrid>
+          </Card>
           <MasterDetailLayout
             hasSelection={selectedWeekDayIndex !== null}
             emptyMessage="Selecciona un día para ver el detalle nutricional"
             master={
               <>
-                <Card shadow="sm" padding="lg" radius="lg" withBorder mb="md">
-                  <Title order={5} mb="md">Resumen de la Semana</Title>
-                  <SimpleGrid cols={{ base: 1, xs: 3 }}>
-                    <Box ta="center">
-                      <Text size="xl" fw={700} c="yellow">
-                        {nutritionHistory?.summary?.avg_calories || 0}
-                      </Text>
-                      <Text size="sm" c="dimmed">Promedio kcal/día</Text>
-                    </Box>
-                    <Box ta="center">
-                      <Text size="xl" fw={700} c="green">
-                        {nutritionHistory?.summary?.total_days || 0}
-                      </Text>
-                      <Text size="sm" c="dimmed">Días registrados</Text>
-                    </Box>
-                    <Box ta="center">
-                      <Text size="xl" fw={700} c="blue">
-                        {targets.calories}
-                      </Text>
-                      <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
-                    </Box>
-                  </SimpleGrid>
-                </Card>
                 {weekData.map((day, index) => {
                   const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
                   return (
@@ -2102,61 +2168,33 @@ export function MyNutritionPage() {
               ) : null
             }
           />
+          </>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="history">
           <Stack gap="md">
-            {nutritionHistory?.plan_groups && nutritionHistory.plan_groups.length > 0 ? (
-              nutritionHistory.plan_groups.map((group: { plan_id: string; plan_name: string; is_active: boolean; days: Array<{ date: string; meals: Array<{ meal_name: string; total_calories: number; total_protein: number; total_carbs: number; total_fat: number; foods: Array<object>; logged_at?: string }>; totals: { calories: number; protein: number; carbs: number; fat: number } }> }) => (
-                <Box key={group.plan_id}>
-                  <Group gap="sm" mb="xs">
-                    <Text fw={700} size="md">{group.plan_name}</Text>
-                    <Badge variant="light" color={group.is_active ? "green" : "gray"} size="sm">
-                      {group.is_active ? "Activo" : "Inactivo"}
-                    </Badge>
+            {(() => {
+              type HistDay = { date: string; meals: Array<{ meal_name: string; total_calories: number; total_protein: number; total_carbs: number; total_fat: number; foods: Array<Record<string, unknown>>; logged_at?: string; plan_reference?: { calories: number; protein: number; carbs: number; fat: number; foods: Array<Record<string, unknown>> } | null; has_modifications?: boolean }>; totals: { calories: number; protein: number; carbs: number; fat: number }; plan_totals?: { calories: number; protein: number; carbs: number; fat: number }; has_modifications?: boolean };
+              const renderDeviations = (day: HistDay) => {
+                const pt = day.plan_totals;
+                if (!pt || (pt.calories === 0 && pt.protein === 0 && pt.carbs === 0 && pt.fat === 0)) return null;
+                const dCal = day.totals.calories - pt.calories;
+                const dProt = Math.round((day.totals.protein - pt.protein) * 10) / 10;
+                const dCarbs = Math.round((day.totals.carbs - pt.carbs) * 10) / 10;
+                const dFat = Math.round((day.totals.fat - pt.fat) * 10) / 10;
+                return (
+                  <Group gap={4} mt={2}>
+                    {dCal !== 0 && <Badge size="xs" variant="light" color={dCal > 0 ? "red" : "green"}>{dCal > 0 ? "+" : ""}{dCal} kcal</Badge>}
+                    {dProt !== 0 && <Badge size="xs" variant="light" color={dProt > 0 ? "red" : "green"}>{dProt > 0 ? "+" : ""}{dProt}g P</Badge>}
+                    {dCarbs !== 0 && <Badge size="xs" variant="light" color={dCarbs > 0 ? "red" : "green"}>{dCarbs > 0 ? "+" : ""}{dCarbs}g C</Badge>}
+                    {dFat !== 0 && <Badge size="xs" variant="light" color={dFat > 0 ? "red" : "green"}>{dFat > 0 ? "+" : ""}{dFat}g G</Badge>}
+                    {day.has_modifications && <Badge size="xs" variant="light" color="yellow">Modificado</Badge>}
                   </Group>
-                  <Box pl="md" style={{ borderLeft: `3px solid var(--mantine-color-${group.is_active ? "green" : "gray"}-3)` }}>
-                    <Stack gap="xs">
-                      {group.days.map((day) => {
-                        const pct = day.totals.calories > 0 && targets.calories > 0
-                          ? (day.totals.calories / targets.calories) * 100
-                          : 0;
-                        const dateFormatted = new Date(day.date).toLocaleDateString("es-ES", {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "long",
-                        });
-                        return (
-                          <DayCardMenu
-                            key={day.date}
-                            dayName={dateFormatted}
-                            isToday={day.date === new Date().toISOString().split("T")[0]}
-                            onClick={() => setHistoryDetailDay(day.date)}
-                            badge={
-                              <Badge variant="light" color={pct >= 90 ? "green" : pct >= 70 ? "yellow" : "orange"} size="sm">
-                                {day.totals.calories} kcal
-                              </Badge>
-                            }
-                            summary={
-                              <Group gap={4} mt={2}>
-                                <Text size="xs" c="dimmed">{day.meals.length} comidas</Text>
-                                <Badge variant="outline" color="red" size="xs">P:{Math.round(day.totals.protein)}g</Badge>
-                                <Badge variant="outline" color="blue" size="xs">C:{Math.round(day.totals.carbs)}g</Badge>
-                                <Badge variant="outline" color="grape" size="xs">G:{Math.round(day.totals.fat)}g</Badge>
-                              </Group>
-                            }
-                            progressValue={pct}
-                            progressColor={pct >= 90 ? "green" : pct >= 70 ? "yellow" : "orange"}
-                          />
-                        );
-                      })}
-                    </Stack>
-                  </Box>
-                </Box>
-              ))
-            ) : nutritionHistory?.days && nutritionHistory.days.length > 0 ? (
-              nutritionHistory.days.map((day: { date: string; meals: Array<{ meal_name: string; total_calories: number; total_protein: number; total_carbs: number; total_fat: number; foods: Array<object>; logged_at?: string }>; totals: { calories: number; protein: number; carbs: number; fat: number } }) => {
-                const percentage = day.totals.calories > 0 && targets.calories > 0
+                );
+              };
+              const renderDayCard = (day: HistDay) => {
+                const pct = day.totals.calories > 0 && targets.calories > 0
                   ? (day.totals.calories / targets.calories) * 100
                   : 0;
                 const dateFormatted = new Date(day.date).toLocaleDateString("es-ES", {
@@ -2171,24 +2209,46 @@ export function MyNutritionPage() {
                     isToday={day.date === new Date().toISOString().split("T")[0]}
                     onClick={() => setHistoryDetailDay(day.date)}
                     badge={
-                      <Badge variant="light" color={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"} size="sm">
+                      <Badge variant="light" color={pct >= 90 ? "green" : pct >= 70 ? "yellow" : "orange"} size="sm">
                         {day.totals.calories} kcal
                       </Badge>
                     }
                     summary={
-                      <Group gap={4} mt={2}>
-                        <Text size="xs" c="dimmed">{day.meals.length} comidas</Text>
-                        <Badge variant="outline" color="red" size="xs">P:{Math.round(day.totals.protein)}g</Badge>
-                        <Badge variant="outline" color="blue" size="xs">C:{Math.round(day.totals.carbs)}g</Badge>
-                        <Badge variant="outline" color="grape" size="xs">G:{Math.round(day.totals.fat)}g</Badge>
-                      </Group>
+                      <>
+                        <Group gap={4} mt={2}>
+                          <Text size="xs" c="dimmed">{day.meals.length} comidas</Text>
+                          <Badge variant="outline" color="red" size="xs">P:{Math.round(day.totals.protein)}g</Badge>
+                          <Badge variant="outline" color="blue" size="xs">C:{Math.round(day.totals.carbs)}g</Badge>
+                          <Badge variant="outline" color="grape" size="xs">G:{Math.round(day.totals.fat)}g</Badge>
+                        </Group>
+                        {renderDeviations(day)}
+                      </>
                     }
-                    progressValue={percentage}
-                    progressColor={percentage >= 90 ? "green" : percentage >= 70 ? "yellow" : "orange"}
+                    progressValue={pct}
+                    progressColor={pct >= 90 ? "green" : pct >= 70 ? "yellow" : "orange"}
                   />
                 );
-              })
-            ) : (
+              };
+              return nutritionHistory?.plan_groups && nutritionHistory.plan_groups.length > 0 ? (
+                nutritionHistory.plan_groups.map((group: { plan_id: string; plan_name: string; is_active: boolean; days: HistDay[] }) => (
+                  <Box key={group.plan_id} mb="lg">
+                    <Group gap="sm" mb="sm">
+                      <Text fw={700} size="lg">{group.plan_name}</Text>
+                      <Badge variant="light" color={group.is_active ? "green" : "gray"} size="sm">
+                        {group.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </Group>
+                    <Box pl="md" style={{ borderLeft: `3px solid var(--mantine-color-${group.is_active ? "green" : "gray"}-3)` }}>
+                      <Stack gap="xs">
+                        {group.days.map(renderDayCard)}
+                      </Stack>
+                    </Box>
+                  </Box>
+                ))
+              ) : nutritionHistory?.days && nutritionHistory.days.length > 0 ? (
+                (nutritionHistory.days as HistDay[]).map(renderDayCard)
+              ) : null;
+            })() || (
               <Paper p="xl" ta="center" radius="lg" withBorder>
                 <IconHistory size={48} color="gray" style={{ opacity: 0.5 }} />
                 <Text c="dimmed" mt="md">No hay historial de nutrición disponible</Text>
@@ -2263,18 +2323,40 @@ export function MyNutritionPage() {
                         </Group>
                         {ref && (
                           <Box p="xs" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
-                            <Text size="xs" fw={600} mb={4}>Variación vs plan:</Text>
-                            <Group gap={6} wrap="wrap">
-                              <Badge size="xs" variant="light" color={diffColor(diffCal)}>{fmtDiff(diffCal)} kcal</Badge>
-                              <Badge size="xs" variant="light" color={diffColor(diffProt)}>{fmtDiff(diffProt)}g prot</Badge>
-                              <Badge size="xs" variant="light" color={diffColor(diffCarbs)}>{fmtDiff(diffCarbs)}g carbs</Badge>
-                              <Badge size="xs" variant="light" color={diffColor(diffFat)}>{fmtDiff(diffFat)}g grasas</Badge>
-                            </Group>
-                            {addedFoods.length > 0 && (
-                              <Text size="xs" c="teal" mt={4}>+ Añadido: {addedFoods.map(f => f.name).join(", ")}</Text>
-                            )}
-                            {removedFoods.length > 0 && (
-                              <Text size="xs" c="red" mt={4}>− No comido: {removedFoods.map(f => f.name).join(", ")}</Text>
+                            {addedFoods.length === 0 && removedFoods.length === 0 && Math.abs(diffCal) < 5 && Math.abs(diffProt) < 1 && Math.abs(diffCarbs) < 1 && Math.abs(diffFat) < 1 ? (
+                              <Badge size="sm" variant="light" color="green">Sin variaciones</Badge>
+                            ) : (
+                              <>
+                                <Text size="xs" fw={600} mb={4}>Variación vs plan:</Text>
+                                <Group gap={6} wrap="wrap" mb={4}>
+                                  <Badge size="xs" variant="light" color={diffColor(diffCal)}>{fmtDiff(diffCal)} kcal</Badge>
+                                  <Badge size="xs" variant="light" color={diffColor(diffProt)}>{fmtDiff(diffProt)}g prot</Badge>
+                                  <Badge size="xs" variant="light" color={diffColor(diffCarbs)}>{fmtDiff(diffCarbs)}g carbs</Badge>
+                                  <Badge size="xs" variant="light" color={diffColor(diffFat)}>{fmtDiff(diffFat)}g grasas</Badge>
+                                </Group>
+                                {(addedFoods.length > 0 || removedFoods.length > 0) && (
+                                  <Box mt={4}>
+                                    <Text size="xs" fw={600} mb={2}>Alimentos originales vs finales:</Text>
+                                    {ref.foods.map((pf, pi) => {
+                                      const loggedEquiv = meal.foods.find(f => f.name === pf.name);
+                                      return (
+                                        <Group key={pi} gap={4} mb={2}>
+                                          <Text size="xs" c={loggedEquiv ? undefined : "red"} td={loggedEquiv ? undefined : "line-through"} style={{ flex: 1 }}>
+                                            {pf.name} ({pf.quantity}g)
+                                          </Text>
+                                          <Text size="xs" c="dimmed">{loggedEquiv ? `→ ${loggedEquiv.name} (${loggedEquiv.quantity || "?"}g)` : "No registrado"}</Text>
+                                        </Group>
+                                      );
+                                    })}
+                                    {addedFoods.map((af, ai) => (
+                                      <Group key={`a-${ai}`} gap={4} mb={2}>
+                                        <Text size="xs" c="teal" style={{ flex: 1 }}>+ {af.name} ({af.quantity || "?"}g)</Text>
+                                        <Text size="xs" c="dimmed">Añadido</Text>
+                                      </Group>
+                                    ))}
+                                  </Box>
+                                )}
+                              </>
                             )}
                           </Box>
                         )}

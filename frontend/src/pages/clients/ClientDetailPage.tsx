@@ -86,7 +86,7 @@ import {
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
 import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calories";
-import { generateClientPlanPDF } from "../../services/pdfGenerator";
+import { generateClientPlanPDF, generateMealPlanPDF, generateWorkoutProgramPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
 import { paymentsApi } from "../../services/api";
@@ -397,6 +397,14 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
     : "Sin fecha";
   const meals: any[] = Array.isArray(day?.meals) ? day.meals : [];
   const safePct = isNaN(percentage) ? 0 : percentage;
+  const pt = day?.plan_totals;
+  const hasPlanTotals = pt && (pt.calories > 0 || pt.protein > 0 || pt.carbs > 0 || pt.fat > 0);
+  const dCal = hasPlanTotals ? Math.round((day?.totals?.calories || 0) - pt.calories) : 0;
+  const dProt = hasPlanTotals ? Math.round(((day?.totals?.protein || 0) - pt.protein) * 10) / 10 : 0;
+  const dCarbs = hasPlanTotals ? Math.round(((day?.totals?.carbs || 0) - pt.carbs) * 10) / 10 : 0;
+  const dFat = hasPlanTotals ? Math.round(((day?.totals?.fat || 0) - pt.fat) * 10) / 10 : 0;
+  const diffColor = (v: number) => (Math.abs(v) < 1 ? "gray" : v > 0 ? "red" : "green");
+  const fmtDiff = (v: number) => (v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`);
   return (
     <Card padding="md" radius="md" withBorder>
       <Group justify="space-between" style={{ cursor: "pointer" }} onClick={() => setOpened(o => !o)}>
@@ -407,6 +415,15 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
           <Box>
             <Text fw={600} size="sm" tt="capitalize">{dateStr}</Text>
             <Text size="xs" c="dimmed">{meals.length} comidas registradas</Text>
+            {hasPlanTotals && (
+              <Group gap={4} mt={2}>
+                {dCal !== 0 && <Badge size="xs" variant="light" color={diffColor(dCal)}>{fmtDiff(dCal)} kcal</Badge>}
+                {dProt !== 0 && <Badge size="xs" variant="light" color={diffColor(dProt)}>{fmtDiff(dProt)}g P</Badge>}
+                {dCarbs !== 0 && <Badge size="xs" variant="light" color={diffColor(dCarbs)}>{fmtDiff(dCarbs)}g C</Badge>}
+                {dFat !== 0 && <Badge size="xs" variant="light" color={diffColor(dFat)}>{fmtDiff(dFat)}g G</Badge>}
+                {day?.has_modifications && <Badge size="xs" variant="light" color="yellow">Modificado</Badge>}
+              </Group>
+            )}
           </Box>
         </Group>
         <Group gap="md">
@@ -427,13 +444,23 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
         <Collapse in={opened}>
           <Divider my="sm" />
           <Stack gap="xs">
-            {meals.map((meal: any, mi: number) => (
+            {meals.map((meal: any, mi: number) => {
+              const ref = meal?.plan_reference;
+              const mealDiffCal = ref ? (meal.total_calories || 0) - ref.calories : 0;
+              const mealDiffProt = ref ? (meal.total_protein || 0) - ref.protein : 0;
+              const mealDiffCarbs = ref ? (meal.total_carbs || 0) - ref.carbs : 0;
+              const mealDiffFat = ref ? (meal.total_fat || 0) - ref.fat : 0;
+              const loggedNames = new Set((meal?.foods || []).map((f: any) => f.name));
+              const planNames = new Set((ref?.foods || []).map((f: any) => f.name));
+              const addedFoods = (meal?.foods || []).filter((f: any) => !planNames.has(f.name));
+              const removedFoods = (ref?.foods || []).filter((f: any) => !loggedNames.has(f.name));
+              return (
               <Box key={mi}>
                 <Group gap="xs" mb={4}>
                   <Text size="xs" fw={700} c="teal">{safeString(meal?.meal_name || meal?.name) || `Comida ${mi + 1}`}</Text>
                   {meal?.time && <Text size="xs" c="dimmed">({meal.time})</Text>}
-                  {meal?.calories != null && (
-                    <Badge size="xs" variant="light" color="yellow">{Math.round(meal.calories)} kcal</Badge>
+                  {(meal?.total_calories ?? meal?.calories) != null && (
+                    <Badge size="xs" variant="light" color="yellow">{Math.round(meal.total_calories ?? meal.calories)} kcal</Badge>
                   )}
                   {meal?.satisfaction_rating != null && (
                     <Text size="sm">
@@ -463,6 +490,29 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                     </Table.Tbody>
                   </Table>
                 )}
+                {ref && (
+                  <Box p="xs" mt={4} style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
+                    {addedFoods.length === 0 && removedFoods.length === 0 && Math.abs(mealDiffCal) < 5 && Math.abs(mealDiffProt) < 1 && Math.abs(mealDiffCarbs) < 1 && Math.abs(mealDiffFat) < 1 ? (
+                      <Badge size="sm" variant="light" color="green">Sin variaciones</Badge>
+                    ) : (
+                      <>
+                        <Text size="xs" fw={600} mb={4}>Variación vs plan:</Text>
+                        <Group gap={4} wrap="wrap" mb={4}>
+                          <Badge size="xs" variant="light" color={diffColor(mealDiffCal)}>{fmtDiff(mealDiffCal)} kcal</Badge>
+                          <Badge size="xs" variant="light" color={diffColor(mealDiffProt)}>{fmtDiff(mealDiffProt)}g prot</Badge>
+                          <Badge size="xs" variant="light" color={diffColor(mealDiffCarbs)}>{fmtDiff(mealDiffCarbs)}g carbs</Badge>
+                          <Badge size="xs" variant="light" color={diffColor(mealDiffFat)}>{fmtDiff(mealDiffFat)}g grasas</Badge>
+                        </Group>
+                        {addedFoods.map((af: any, ai: number) => (
+                          <Text key={`a-${ai}`} size="xs" c="teal">+ Añadido: {af.name}</Text>
+                        ))}
+                        {removedFoods.map((rf: any, ri: number) => (
+                          <Text key={`r-${ri}`} size="xs" c="red">- No comido: {rf.name}</Text>
+                        ))}
+                      </>
+                    )}
+                  </Box>
+                )}
                 {Array.isArray(meal?.items) && meal.items.length > 0 && (
                   <Table withColumnBorders={false} styles={{ table: { fontSize: "var(--mantine-font-size-xs)" } }}>
                     <Table.Tbody>
@@ -482,34 +532,9 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                     </Table.Tbody>
                   </Table>
                 )}
-                {meal?.plan_reference && (() => {
-                  const ref = meal.plan_reference;
-                  const dc = (meal.total_calories || meal.calories || 0) - ref.calories;
-                  const dp = (meal.total_protein || 0) - ref.protein;
-                  const dcb = (meal.total_carbs || 0) - ref.carbs;
-                  const df = (meal.total_fat || 0) - ref.fat;
-                  const fmt = (v: number) => (v > 0 ? `+${Math.round(v)}` : `${Math.round(v)}`);
-                  const clr = (v: number) => (Math.abs(v) < 1 ? "gray" : v > 0 ? "red" : "green");
-                  const loggedNames = new Set((meal.foods || []).map((f: any) => f.name));
-                  const planNames = new Set((ref.foods || []).map((f: any) => f.name));
-                  const added = (meal.foods || []).filter((f: any) => !planNames.has(f.name));
-                  const removed = (ref.foods || []).filter((f: any) => !loggedNames.has(f.name));
-                  return (
-                    <Box mt="xs" p="xs" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 6 }}>
-                      <Text size="xs" fw={600} mb={2}>Variación vs plan:</Text>
-                      <Group gap={4} wrap="wrap">
-                        <Badge size="xs" variant="light" color={clr(dc)}>{fmt(dc)} kcal</Badge>
-                        <Badge size="xs" variant="light" color={clr(dp)}>{fmt(dp)}g prot</Badge>
-                        <Badge size="xs" variant="light" color={clr(dcb)}>{fmt(dcb)}g carbs</Badge>
-                        <Badge size="xs" variant="light" color={clr(df)}>{fmt(df)}g grasas</Badge>
-                      </Group>
-                      {added.length > 0 && <Text size="xs" c="teal" mt={2}>+ Añadido: {added.map((f: any) => f.name).join(", ")}</Text>}
-                      {removed.length > 0 && <Text size="xs" c="red" mt={2}>− No comido: {removed.map((f: any) => f.name).join(", ")}</Text>}
-                    </Box>
-                  );
-                })()}
               </Box>
-            ))}
+              );
+            })}
           </Stack>
         </Collapse>
       )}
@@ -1536,6 +1561,27 @@ export function ClientDetailPage() {
               >
                 Nueva Sesión
               </Button>
+              <Menu position="bottom-end" withArrow shadow="lg">
+                <Menu.Target>
+                  <Button leftSection={<IconDownload size={16} />} variant="default" radius="xl" size="sm">
+                    PDF
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item leftSection={<IconDownload size={16} />} onClick={async () => {
+                    const pdfOpts = { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any };
+                    await generateClientPlanPDF(null, null, pdfOpts);
+                  }}>General</Menu.Item>
+                  <Menu.Item leftSection={<IconSalad size={16} />} onClick={async () => {
+                    const mp = clientMealPlans && clientMealPlans.length > 0 ? clientMealPlans.find((p: any) => p.is_active) || clientMealPlans[0] : null;
+                    if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                  }}>Nutrición</Menu.Item>
+                  <Menu.Item leftSection={<IconBarbell size={16} />} onClick={async () => {
+                    const prog = clientWorkoutPrograms && clientWorkoutPrograms.length > 0 ? clientWorkoutPrograms[0] : null;
+                    if (prog) { await generateWorkoutProgramPDF(prog as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                  }}>Entrenamiento</Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
               <Menu position="bottom-end" withArrow shadow="lg">
                 <Menu.Target>
                   <ActionIcon size="lg" variant="default" radius="xl">
@@ -2664,7 +2710,10 @@ export function ClientDetailPage() {
                               </Menu.Item>
                               <Menu.Item 
                                 leftSection={<IconDownload size={16} />}
-                                onClick={() => {/* TODO: Export PDF */}}
+                                onClick={async () => {
+                                  const mp = clientMealPlans?.find((p: any) => p.id === plan.id);
+                                  if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                                }}
                               >
                                 Descargar PDF
                               </Menu.Item>
@@ -3344,6 +3393,14 @@ export function ClientDetailPage() {
                             }}
                           >
                             Editar programa
+                          </Menu.Item>
+                          <Menu.Item 
+                            leftSection={<IconDownload size={16} />}
+                            onClick={async () => {
+                              await generateWorkoutProgramPDF(program as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any });
+                            }}
+                          >
+                            Descargar PDF
                           </Menu.Item>
                           <Menu.Divider />
                           <Menu.Item 

@@ -159,6 +159,7 @@ class MealPlan(BaseModel):
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     duration_days = Column(Integer, default=7)
+    duration_weeks = Column(Integer, default=1, server_default="1")
     
     # Dietary preferences
     dietary_tags = Column(ARRAY(Text), default=[])
@@ -178,8 +179,8 @@ class MealPlan(BaseModel):
         ]
     })
     
-    # Plan structure (days -> meals -> foods with portions)
-    plan = Column(JSONB, default=lambda: {"days": []})
+    # Plan structure: { weeks: [{ week: 1, days: [{ day: 1, meals: [...] }] }] }
+    plan = Column(JSONB, default=lambda: {"weeks": [{"week": 1, "days": []}]})
     
     # Shopping list (auto-generated)
     shopping_list = Column(JSONB, default=lambda: {"items": []})

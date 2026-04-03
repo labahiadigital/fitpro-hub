@@ -152,6 +152,8 @@ class MealPlanClientResponse(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
+    duration_days: Optional[int] = 7
+    duration_weeks: Optional[int] = 1
     target_calories: Optional[float] = None
     target_protein: Optional[float] = None
     target_carbs: Optional[float] = None
@@ -905,10 +907,22 @@ async def get_all_meal_plans(
     return result.scalars().all()
 
 
+def _get_plan_days_mutable(plan: dict, week_num: int = 1):
+    """Get a mutable reference to the days list for a given week, supporting both formats."""
+    if "weeks" in plan:
+        weeks = plan["weeks"]
+        wk = next((w for w in weeks if w.get("week") == week_num), None)
+        if wk:
+            return wk.get("days", [])
+        return []
+    return plan.get("days", [])
+
+
 class MoveMealRequest(BaseModel):
     source_day: int
     meal_index: int
     target_day: int
+    week: int = 1
 
 @router.post("/nutrition/plan/move-meal")
 async def move_meal_between_days(
@@ -927,7 +941,7 @@ async def move_meal_between_days(
         raise HTTPException(status_code=404, detail="No hay plan activo")
     
     plan = dict(meal_plan.plan) if meal_plan.plan else {}
-    days = plan.get("days", [])
+    days = _get_plan_days_mutable(plan, data.week)
     
     src = next((d for d in days if d.get("day") == data.source_day), None)
     dst = next((d for d in days if d.get("day") == data.target_day), None)
@@ -950,6 +964,7 @@ async def move_meal_between_days(
 class SwapDaysRequest(BaseModel):
     source_day: int
     target_day: int
+    week: int = 1
 
 @router.post("/nutrition/plan/swap-days")
 async def swap_plan_days(
@@ -968,7 +983,7 @@ async def swap_plan_days(
         raise HTTPException(status_code=404, detail="No hay plan activo")
     
     plan = dict(meal_plan.plan) if meal_plan.plan else {}
-    days = plan.get("days", [])
+    days = _get_plan_days_mutable(plan, data.week)
     
     src = next((d for d in days if d.get("day") == data.source_day), None)
     dst = next((d for d in days if d.get("day") == data.target_day), None)
@@ -1157,16 +1172,40 @@ async def get_nutrition_history(
             m = _re.search(r"[\d.]+", str(val))
             return float(m.group()) if m else default
 
-    def _calc_plan_meal_macros(mp_plan, meal_name, log_date_str):
+    def _get_plan_days(mp_plan, week_num=None):
+        """Extract the days array from plan, supporting both old {days} and new {weeks} formats."""
+        if not mp_plan:
+            return []
+        if "weeks" in mp_plan:
+            weeks = mp_plan["weeks"]
+            if not weeks:
+                return []
+            if week_num is not None:
+                wk = next((w for w in weeks if w.get("week") == week_num), None)
+                return wk.get("days", []) if wk else []
+            return weeks[0].get("days", [])
+        return mp_plan.get("days", [])
+
+    def _calc_plan_meal_macros(mp_plan, meal_name, log_date_str, plan_start_date=None, duration_weeks=1):
         """Calculate the planned macros for a given meal from the plan template."""
         if not mp_plan:
             return None
-        plan_days_list = mp_plan.get("days", [])
         try:
             d = date.fromisoformat(log_date_str)
             plan_day_num = d.isoweekday()
         except Exception:
             return None
+
+        week_num = 1
+        if plan_start_date and duration_weeks and duration_weeks > 1:
+            try:
+                start = plan_start_date if isinstance(plan_start_date, date) else date.fromisoformat(str(plan_start_date))
+                delta_days = (d - start).days
+                week_num = (delta_days // 7) % duration_weeks + 1
+            except Exception:
+                week_num = 1
+
+        plan_days_list = _get_plan_days(mp_plan, week_num)
         day_data = next((dd for dd in plan_days_list if dd.get("day") == plan_day_num), None)
         if not day_data:
             return None
@@ -1194,7 +1233,7 @@ async def get_nutrition_history(
         return {"calories": int(cal), "protein": round(prot, 1), "carbs": round(carb, 1), "fat": round(fat, 1), "foods": plan_foods}
 
     plan_groups = []
-    all_days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
+    all_days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "plan_totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "has_modifications": False})
     
     for mp in meal_plans:
         if not mp.adherence:
@@ -1208,11 +1247,20 @@ async def get_nutrition_history(
             continue
         
         mp_plan = mp.plan if mp.plan else {}
-        plan_days = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
+        mp_start = mp.created_at.date() if mp.created_at else None
+        mp_dur_weeks = mp.duration_weeks if hasattr(mp, 'duration_weeks') and mp.duration_weeks else 1
+        plan_days = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "plan_totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "has_modifications": False})
         for log in filtered:
             log_date = log.get("date", "")
             meal_name = log.get("meal_name")
-            plan_ref = _calc_plan_meal_macros(mp_plan, meal_name, log_date)
+            plan_ref = _calc_plan_meal_macros(mp_plan, meal_name, log_date, mp_start, mp_dur_weeks)
+
+            has_mods = False
+            if plan_ref:
+                logged_names = sorted([f.get("name", "") for f in log.get("foods", [])])
+                plan_names = sorted([f.get("name", "") for f in plan_ref.get("foods", [])])
+                has_mods = logged_names != plan_names
+
             entry = {
                 "meal_name": meal_name,
                 "total_calories": log.get("total_calories", 0),
@@ -1224,18 +1272,33 @@ async def get_nutrition_history(
                 "notes": log.get("notes"),
                 "satisfaction_rating": log.get("satisfaction_rating"),
                 "plan_reference": plan_ref,
+                "has_modifications": has_mods,
             }
             plan_days[log_date]["meals"].append(entry)
             plan_days[log_date]["totals"]["calories"] += entry["total_calories"]
             plan_days[log_date]["totals"]["protein"] += entry["total_protein"]
             plan_days[log_date]["totals"]["carbs"] += entry["total_carbs"]
             plan_days[log_date]["totals"]["fat"] += entry["total_fat"]
+            if plan_ref:
+                plan_days[log_date]["plan_totals"]["calories"] += plan_ref["calories"]
+                plan_days[log_date]["plan_totals"]["protein"] += plan_ref["protein"]
+                plan_days[log_date]["plan_totals"]["carbs"] += plan_ref["carbs"]
+                plan_days[log_date]["plan_totals"]["fat"] += plan_ref["fat"]
+            if has_mods:
+                plan_days[log_date]["has_modifications"] = True
             
             all_days_data[log_date]["meals"].append(entry)
             all_days_data[log_date]["totals"]["calories"] += entry["total_calories"]
             all_days_data[log_date]["totals"]["protein"] += entry["total_protein"]
             all_days_data[log_date]["totals"]["carbs"] += entry["total_carbs"]
             all_days_data[log_date]["totals"]["fat"] += entry["total_fat"]
+            if plan_ref:
+                all_days_data[log_date]["plan_totals"]["calories"] += plan_ref["calories"]
+                all_days_data[log_date]["plan_totals"]["protein"] += plan_ref["protein"]
+                all_days_data[log_date]["plan_totals"]["carbs"] += plan_ref["carbs"]
+                all_days_data[log_date]["plan_totals"]["fat"] += plan_ref["fat"]
+            if has_mods:
+                all_days_data[log_date]["has_modifications"] = True
         
         plan_days_list = [
             {"date": d, **data}

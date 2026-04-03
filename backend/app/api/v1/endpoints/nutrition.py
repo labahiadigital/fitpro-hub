@@ -48,12 +48,13 @@ class MealPlanCreate(BaseModel):
     description: Optional[str] = None
     client_id: Optional[UUID] = None
     duration_days: int = 7
+    duration_weeks: int = 1
     target_calories: Optional[float] = None
     target_protein: Optional[float] = None
     target_carbs: Optional[float] = None
     target_fat: Optional[float] = None
     dietary_tags: List[str] = []
-    plan: dict = {"days": []}
+    plan: dict = {"weeks": [{"week": 1, "days": []}]}
     is_template: bool = True
 
 
@@ -62,6 +63,7 @@ class MealPlanUpdate(BaseModel):
     description: Optional[str] = None
     client_id: Optional[UUID] = None
     duration_days: Optional[int] = None
+    duration_weeks: Optional[int] = None
     target_calories: Optional[float] = None
     target_protein: Optional[float] = None
     target_carbs: Optional[float] = None
@@ -78,6 +80,7 @@ class MealPlanResponse(BaseModel):
     name: str
     description: Optional[str] = None
     duration_days: int
+    duration_weeks: int = 1
     target_calories: Optional[Decimal] = None
     target_protein: Optional[Decimal] = None
     target_carbs: Optional[Decimal] = None
@@ -262,7 +265,8 @@ async def create_meal_plan(
         client_id=data.client_id,
         name=data.name,
         description=data.description,
-        duration_days=data.duration_days,
+        duration_days=data.duration_weeks * 7,
+        duration_weeks=data.duration_weeks,
         target_calories=data.target_calories,
         target_protein=data.target_protein,
         target_carbs=data.target_carbs,
@@ -450,6 +454,7 @@ async def assign_meal_plan_to_client(
         name=template.name,
         description=template.description,
         duration_days=template.duration_days,
+        duration_weeks=template.duration_weeks,
         target_calories=template.target_calories,
         target_protein=template.target_protein,
         target_carbs=template.target_carbs,
@@ -611,15 +616,38 @@ async def get_client_nutrition_logs(
             m = _re.search(r"[\d.]+", str(val))
             return float(m.group()) if m else default
 
-    def _calc_plan_meal_macros_trainer(mp_plan, meal_name, log_date_str):
+    def _get_plan_days_trainer(mp_plan, week_num=None):
+        if not mp_plan:
+            return []
+        if "weeks" in mp_plan:
+            weeks = mp_plan["weeks"]
+            if not weeks:
+                return []
+            if week_num is not None:
+                wk = next((w for w in weeks if w.get("week") == week_num), None)
+                return wk.get("days", []) if wk else []
+            return weeks[0].get("days", [])
+        return mp_plan.get("days", [])
+
+    def _calc_plan_meal_macros_trainer(mp_plan, meal_name, log_date_str, plan_start_date=None, duration_weeks=1):
         if not mp_plan:
             return None
-        plan_days_ref = mp_plan.get("days", [])
         try:
             d = date.fromisoformat(log_date_str)
             plan_day_num = d.isoweekday()
         except Exception:
             return None
+
+        week_num = 1
+        if plan_start_date and duration_weeks and duration_weeks > 1:
+            try:
+                start = plan_start_date if isinstance(plan_start_date, date) else date.fromisoformat(str(plan_start_date))
+                delta_days = (d - start).days
+                week_num = (delta_days // 7) % duration_weeks + 1
+            except Exception:
+                week_num = 1
+
+        plan_days_ref = _get_plan_days_trainer(mp_plan, week_num)
         day_data = next((dd for dd in plan_days_ref if dd.get("day") == plan_day_num), None)
         if not day_data:
             return None
@@ -647,13 +675,15 @@ async def get_client_nutrition_logs(
         return {"calories": int(cal), "protein": round(prot, 1), "carbs": round(carb, 1), "fat": round(fat_v, 1), "foods": plan_foods}
     
     from collections import defaultdict
-    days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}})
+    days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "plan_totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "has_modifications": False})
     
     for mp in meal_plans:
         if not mp.adherence:
             continue
         logs = mp.adherence.get("logs", [])
         mp_plan = mp.plan if mp.plan else {}
+        mp_start = mp.created_at.date() if mp.created_at else None
+        mp_dur_weeks = mp.duration_weeks if hasattr(mp, 'duration_weeks') and mp.duration_weeks else 1
         filtered_logs = [
             log for log in logs
             if start_date.isoformat() <= log.get("date", "") <= end_date.isoformat()
@@ -661,7 +691,13 @@ async def get_client_nutrition_logs(
         for log in filtered_logs:
             log_date = log.get("date", "")
             meal_name = log.get("meal_name")
-            plan_ref = _calc_plan_meal_macros_trainer(mp_plan, meal_name, log_date)
+            plan_ref = _calc_plan_meal_macros_trainer(mp_plan, meal_name, log_date, mp_start, mp_dur_weeks)
+            has_mods = False
+            if plan_ref:
+                logged_names = {f.get("name") for f in log.get("foods", [])}
+                plan_names = {f.get("name") for f in plan_ref.get("foods", [])}
+                if logged_names != plan_names:
+                    has_mods = True
             days_data[log_date]["meals"].append({
                 "meal_name": meal_name,
                 "total_calories": log.get("total_calories", 0),
@@ -673,11 +709,19 @@ async def get_client_nutrition_logs(
                 "notes": log.get("notes"),
                 "satisfaction_rating": log.get("satisfaction_rating"),
                 "plan_reference": plan_ref,
+                "has_modifications": has_mods,
             })
             days_data[log_date]["totals"]["calories"] += log.get("total_calories", 0)
             days_data[log_date]["totals"]["protein"] += log.get("total_protein", 0)
             days_data[log_date]["totals"]["carbs"] += log.get("total_carbs", 0)
             days_data[log_date]["totals"]["fat"] += log.get("total_fat", 0)
+            if plan_ref:
+                days_data[log_date]["plan_totals"]["calories"] += plan_ref["calories"]
+                days_data[log_date]["plan_totals"]["protein"] += plan_ref["protein"]
+                days_data[log_date]["plan_totals"]["carbs"] += plan_ref["carbs"]
+                days_data[log_date]["plan_totals"]["fat"] += plan_ref["fat"]
+            if has_mods:
+                days_data[log_date]["has_modifications"] = True
     
     days_list = [
         {"date": d, **data}
@@ -696,10 +740,10 @@ async def get_client_nutrition_logs(
             "avg_calories": round(avg_calories),
         },
         "targets": {
-            "calories": float(meal_plan.target_calories) if meal_plan.target_calories else 2000,
-            "protein": float(meal_plan.target_protein) if meal_plan.target_protein else 140,
-            "carbs": float(meal_plan.target_carbs) if meal_plan.target_carbs else 250,
-            "fat": float(meal_plan.target_fat) if meal_plan.target_fat else 70,
+            "calories": float(active_plan.target_calories) if active_plan and active_plan.target_calories else 2000,
+            "protein": float(active_plan.target_protein) if active_plan and active_plan.target_protein else 140,
+            "carbs": float(active_plan.target_carbs) if active_plan and active_plan.target_carbs else 250,
+            "fat": float(active_plan.target_fat) if active_plan and active_plan.target_fat else 70,
         }
     }
 
