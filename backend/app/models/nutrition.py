@@ -1,7 +1,7 @@
 """Nutrition and Food models."""
 from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.ext.mutable import MutableDict
 
 from app.models.base import BaseModel
@@ -159,7 +159,7 @@ class MealPlan(BaseModel):
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     duration_days = Column(Integer, default=7)
-    duration_weeks = Column(Integer, default=1, server_default="1")
+    _duration_weeks = deferred(Column("duration_weeks", Integer, default=1, server_default="1", nullable=True))
     
     # Dietary preferences
     dietary_tags = Column(ARRAY(Text), default=[])
@@ -197,6 +197,23 @@ class MealPlan(BaseModel):
     # Relationships
     workspace = relationship("Workspace", back_populates="meal_plans")
     client = relationship("Client", back_populates="meal_plans")
+
+    @property
+    def duration_weeks(self):
+        try:
+            from sqlalchemy import inspect as sa_inspect
+            state = sa_inspect(self)
+            if "_duration_weeks" in state.dict:
+                val = state.dict["_duration_weeks"]
+                if val is not None:
+                    return val
+        except Exception:
+            pass
+        return max(1, (self.duration_days or 7) // 7)
+
+    @duration_weeks.setter
+    def duration_weeks(self, value):
+        self._duration_weeks = value
     
     def __repr__(self):
         return f"<MealPlan {self.name}>"
