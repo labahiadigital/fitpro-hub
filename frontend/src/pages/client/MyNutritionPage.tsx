@@ -1403,28 +1403,28 @@ export function MyNutritionPage() {
 
   // Calcular datos de la semana desde el historial real
   const weekData = useMemo(() => {
-    const days = ["D", "L", "M", "X", "J", "V", "S"];
-    const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    const dayMappingToPlan = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
+    const days = ["L", "M", "X", "J", "V", "S", "D"];
+    const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const dayMappingToPlan = [1, 2, 3, 4, 5, 6, 7];
     const todayDate = new Date();
+    const todayJsDay = todayDate.getDay();
     
     return days.map((dayLabel, i) => {
-      // Calcular la fecha de este día de la semana
-      const daysFromToday = i - todayDate.getDay();
+      const jsDay = (i + 1) % 7;
+      const daysFromToday = jsDay - todayJsDay;
       const dateForDay = new Date(todayDate);
       dateForDay.setDate(todayDate.getDate() + daysFromToday);
       const dateStr = dateForDay.toISOString().split("T")[0];
       
-      const isToday = i === todayDate.getDay();
+      const isTodayDay = jsDay === todayJsDay;
       
-      // Buscar en el historial
       const dayHistory = nutritionHistory?.days?.find(d => d.date === dateStr);
       
       const planDayNum = dayMappingToPlan[i];
       const dayPlan = planDays.find((d: PlanDay) => d.day === planDayNum);
       const planMeals = dayPlan?.meals || [];
       
-      if (isToday) {
+      if (isTodayDay) {
         return {
           day: dayLabel,
           dayName: dayNames[i],
@@ -1459,13 +1459,16 @@ export function MyNutritionPage() {
   }, [dailyTotals, targets, nutritionHistory, nutritionLogs, planDays]);
 
   const weekDataOriginal = useMemo(() => {
-    const days = ["D", "L", "M", "X", "J", "V", "S"];
-    const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-    const dayMappingToPlan = [7, 1, 2, 3, 4, 5, 6];
+    const days = ["L", "M", "X", "J", "V", "S", "D"];
+    const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const dayMappingToPlan = [1, 2, 3, 4, 5, 6, 7];
     const todayDate = new Date();
 
+    const todayJsDay = todayDate.getDay();
+
     return days.map((dayLabel, i) => {
-      const daysFromToday = i - todayDate.getDay();
+      const jsDay = (i + 1) % 7;
+      const daysFromToday = jsDay - todayJsDay;
       const dateForDay = new Date(todayDate);
       dateForDay.setDate(todayDate.getDate() + daysFromToday);
       const dateStr = dateForDay.toISOString().split("T")[0];
@@ -1505,7 +1508,7 @@ export function MyNutritionPage() {
         date: dateStr,
         calories: macros.calories,
         target: targets.calories,
-        isToday: i === todayDate.getDay(),
+        isToday: jsDay === todayJsDay,
         mealsLogged: planMeals.length,
         planMeals,
         planDayNum,
@@ -2051,7 +2054,11 @@ export function MyNutritionPage() {
                         </Badge>
                       }
                       summary={
-                        <Text size="xs" c="dimmed">{planViewMode === "original" ? `${day.planMeals?.length || 0} comidas` : `${day.mealsLogged} comidas registradas`}</Text>
+                        <Text size="xs" c="dimmed">
+                          {planViewMode === "original"
+                            ? `${day.planMeals?.length || 0} comidas para este día`
+                            : `${day.mealsLogged}/${day.planMeals?.length || 0} comidas registradas`}
+                        </Text>
                       }
                       progressValue={percentage}
                       progressColor={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"}

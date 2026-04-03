@@ -1666,10 +1666,7 @@ async def upload_progress_photo(
             "clients", str(client.id), "progress-photos", filename,
             content_type=file.content_type or "image/jpeg",
         )
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error al subir el archivo al almacenamiento")
-        
-        # Create a photo entry (stored in a measurement or separate)
+
         target_date = date.today()
         if measurement_date:
             try:
@@ -1683,9 +1680,9 @@ async def upload_progress_photo(
             "notes": notes,
             "uploaded_at": datetime.now().isoformat(),
             "measurement_date": str(target_date),
-            "filename": storage_path
+            "filename": filename,
         }
-        
+
         db_result = await db.execute(
             select(ClientMeasurement)
             .where(
@@ -1699,32 +1696,32 @@ async def upload_progress_photo(
             .limit(1)
         )
         measurement = db_result.scalar_one_or_none()
-        
+
         if measurement:
-            # Append photo to existing measurement
             current_photos = list(measurement.photos or [])
             current_photos.append(photo_data)
             measurement.photos = current_photos
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(measurement, "photos")
         else:
-            # Create new measurement with just the photo
             measurement = ClientMeasurement(
                 client_id=client.id,
                 measured_at=datetime.now(),
                 photos=[photo_data]
             )
             db.add(measurement)
-        
+
         await db.commit()
-        
+
         return {
             "success": True,
             "url": public_url,
-            "photo": photo_data
+            "photo": photo_data,
         }
-        
+
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
         raise HTTPException(

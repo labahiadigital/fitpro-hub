@@ -39,7 +39,6 @@ import {
   IconBook,
   IconVideo,
   IconChartLine,
-  IconUser,
   IconBulb,
   IconChevronUp,
   IconCheck,
@@ -91,7 +90,6 @@ const ALL_TRAINER_NAV_ITEMS = (unreadCount: number): NavItemWithPermission[] => 
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
   { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
   { icon: <IconBulb size={20} />, label: "Sugerencias", to: "/suggestions" },
-  { icon: <IconSettings size={20} />, label: "Configuración", to: "/settings", requiredResource: "settings" },
 ];
 
 function getTrainerNavItems(unreadCount: number, permissions?: Record<string, string[]>): NavItemProps[] {
@@ -115,7 +113,6 @@ const getClientNavItems = (unreadCount: number): NavItemProps[] => [
   { icon: <IconMessage size={20} />, label: "Mensajes", to: "/my-messages", badge: unreadCount },
   { icon: <IconFileText size={20} />, label: "Mis Documentos", to: "/my-documents" },
   { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
-  { icon: <IconUser size={20} />, label: "Mi Perfil", to: "/my-profile" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -386,7 +383,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
                           size="xs"
                           variant="subtle"
                           color="gray"
-                          onClick={(e) => { e.stopPropagation(); navigate("/settings"); close(); onNavigate?.(); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(ws.role === "client" ? "/my-profile" : "/settings"); close(); onNavigate?.(); }}
                         >
                           <IconSettings size={14} color="rgba(255,255,255,0.5)" />
                         </ActionIcon>

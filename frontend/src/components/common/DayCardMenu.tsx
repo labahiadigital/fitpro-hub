@@ -50,9 +50,9 @@ export function DayCardMenu({
             <Text fw={600} size="sm">{dayName}</Text>
             {isToday && <Badge size="xs" color="blue" variant="light">Hoy</Badge>}
             {isRestDay && <Badge size="xs" color="gray" variant="light">Descanso</Badge>}
-            {badge}
           </Group>
           {summary}
+          {badge && <Box mt={2}>{badge}</Box>}
           {progressValue != null && (
             <Progress
               value={Math.min(progressValue, 100)}

@@ -1,7 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import pool
+from sqlalchemy import pool, engine_from_config
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -59,9 +59,31 @@ async def run_async_migrations() -> None:
     await connectable.dispose()
 
 
+def _run_sync_migrations() -> None:
+    """Fallback: run with a plain sync engine (psycopg2/pg8000)."""
+    url = config.get_main_option("sqlalchemy.url") or ""
+    sync_url = url.replace("+asyncpg", "")
+    connectable = engine_from_config(
+        {"sqlalchemy.url": sync_url},
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+    with connectable.connect() as connection:
+        do_run_migrations(connection)
+    connectable.dispose()
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    asyncio.run(run_async_migrations())
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        _run_sync_migrations()
+    else:
+        asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():
