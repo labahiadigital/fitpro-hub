@@ -1861,11 +1861,16 @@ export function MyNutritionPage() {
           {planViewMode === "original" ? (
             (() => {
               const originalDays = allPlanWeeks.flatMap((w: { week: number; days: PlanDay[] }) => w.days);
-              return originalDays.length > 0 ? (
+              if (originalDays.length === 0) {
+                return (
+                  <Paper p="xl" radius="lg" ta="center" withBorder>
+                    <Text fw={600} size="md" mb={4}>No hay plantilla disponible</Text>
+                    <Text size="sm" c="dimmed">Tu entrenador aún no ha creado un plan nutricional.</Text>
+                  </Paper>
+                );
+              }
+              return (
                 <Stack gap="md">
-                  <Text size="sm" c="dimmed">
-                    Plantilla original del plan &ldquo;{mealPlan?.name}&rdquo; diseñada por tu entrenador
-                  </Text>
                   {allPlanWeeks.map((wk: { week: number; days: PlanDay[] }) => (
                     <Box key={wk.week}>
                       {allPlanWeeks.length > 1 && (
@@ -1874,43 +1879,75 @@ export function MyNutritionPage() {
                       {wk.days.map((day: PlanDay) => {
                         const dayLabels = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
                         const dayName = day.dayName || dayLabels[day.day] || `Día ${day.day}`;
+                        const dayTotalCal = day.meals.reduce((dsum, meal) => {
+                          return dsum + (meal.foods || meal.items?.map(item => {
+                            const fd = item.food || item.supplement;
+                            const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
+                            return { calories: Math.round(Number(fd?.calories || 0) * (item.quantity_grams / ss)) };
+                          }) || []).reduce((s: number, f: any) => s + (Number(f.calories) || 0), 0);
+                        }, 0);
                         return (
                           <Card key={day.id || `${wk.week}-${day.day}`} shadow="sm" padding="md" radius="lg" withBorder mb="sm">
-                            <Text fw={700} size="md" mb="sm">{dayName}</Text>
+                            <Group justify="space-between" mb="sm">
+                              <Text fw={700} size="md">{dayName}</Text>
+                              <Badge variant="light" color="yellow" size="sm">{dayTotalCal} kcal</Badge>
+                            </Group>
                             {day.meals.length > 0 ? (
                               <Stack gap="sm">
-                                {day.meals.map((meal: PlanMeal) => {
+                                {day.meals.map((meal: PlanMeal, mealIndex: number) => {
                                   const mealType = MEAL_TYPES.find(m => m.value === meal.name);
                                   const MealIcon = mealType?.icon || IconSalad;
-                                  const totalCal = meal.items.reduce((sum, item) => {
-                                    const fd = item.food || item.supplement;
-                                    const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
-                                    return sum + Math.round(Number(fd?.calories || 0) * (item.quantity_grams / ss));
-                                  }, 0);
+                                  const mealFoods = meal.foods || meal.items?.map(item => {
+                                    const food = item.food || item.supplement;
+                                    const ss = parseFloat(String(food?.serving_size || "100")) || 100;
+                                    const qty = item.quantity_grams || 0;
+                                    const factor = qty / ss;
+                                    return {
+                                      name: food?.name || "Alimento",
+                                      calories: Math.round(Number(food?.calories || 0) * factor),
+                                      protein_g: Math.round(Number(food?.protein || 0) * factor * 10) / 10,
+                                      carbs_g: Math.round(Number(food?.carbs || 0) * factor * 10) / 10,
+                                      fat_g: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
+                                      quantity: qty,
+                                      unit: "g",
+                                    };
+                                  }) || [];
+                                  const totalCalories = mealFoods.reduce((s: number, f: any) => s + (Number(f.calories) || 0), 0);
+                                  const totalProtein = mealFoods.reduce((s: number, f: any) => s + (Number(f.protein_g) || 0), 0);
+                                  const totalCarbs = mealFoods.reduce((s: number, f: any) => s + (Number(f.carbs_g) || 0), 0);
+                                  const totalFat = mealFoods.reduce((s: number, f: any) => s + (Number(f.fat_g) || 0), 0);
                                   return (
-                                    <Paper key={meal.id} p="sm" radius="md" withBorder>
-                                      <Group justify="space-between" mb="xs">
-                                        <Group gap="xs">
-                                          <ThemeIcon variant="light" color={mealType?.color || "gray"} size="md" radius="xl">
-                                            <MealIcon size={14} />
+                                    <Card key={mealIndex} padding="md" radius="md" withBorder>
+                                      <Group justify="space-between">
+                                        <Group>
+                                          <ThemeIcon variant="light" color={mealType?.color || "gray"} size="lg" radius="xl">
+                                            <MealIcon size={18} />
                                           </ThemeIcon>
-                                          <Text fw={600} size="sm">{meal.name}</Text>
-                                          <Text size="xs" c="dimmed">{meal.time}</Text>
+                                          <Box>
+                                            <Text fw={600} size="sm">{mealType?.label || meal.name}</Text>
+                                            <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
+                                          </Box>
                                         </Group>
-                                        <Badge variant="light" color="yellow" size="sm">{totalCal} kcal</Badge>
+                                        <Group gap="xs">
+                                          <Badge variant="light" color="yellow" size="sm">{totalCalories} kcal</Badge>
+                                          <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
+                                          <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
+                                          <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                                        </Group>
                                       </Group>
-                                      <Stack gap={4} ml={36}>
-                                        {meal.items.map((item, i) => {
-                                          const fd = item.food || item.supplement;
-                                          return (
-                                            <Group key={i} justify="space-between">
-                                              <Text size="xs">{item.recipe_group ? `🍳 ${fd?.name || "Alimento"}` : fd?.name || "Alimento"}</Text>
-                                              <Text size="xs" c="dimmed">{item.quantity_grams}g</Text>
+                                      {mealFoods.length > 0 && (
+                                        <Stack gap="xs" mt="sm" ml={54}>
+                                          {mealFoods.map((food: any, foodIndex: number) => (
+                                            <Group key={foodIndex} justify="space-between">
+                                              <Text size="sm">{food.name}</Text>
+                                              <Text size="xs" c="dimmed">
+                                                {food.quantity}{food.unit || "g"} - {food.calories} kcal
+                                              </Text>
                                             </Group>
-                                          );
-                                        })}
-                                      </Stack>
-                                    </Paper>
+                                          ))}
+                                        </Stack>
+                                      )}
+                                    </Card>
                                   );
                                 })}
                               </Stack>
@@ -1923,11 +1960,6 @@ export function MyNutritionPage() {
                     </Box>
                   ))}
                 </Stack>
-              ) : (
-                <Paper p="xl" radius="lg" ta="center" withBorder>
-                  <Text fw={600} size="md" mb={4}>No hay plantilla disponible</Text>
-                  <Text size="sm" c="dimmed">Tu entrenador aún no ha creado un plan nutricional.</Text>
-            </Paper>
               );
             })()
           ) : (

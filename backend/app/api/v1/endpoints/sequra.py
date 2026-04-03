@@ -619,12 +619,15 @@ async def get_available_methods(
     except Exception as e:
         logger.warning(f"SeQura credit_agreements fetch failed: {e}")
 
-    # SeQura is available as long as it's configured, even without credit agreement details.
-    # The widget will show the actual installment info via its own JS.
+    # Force pp6 product code — SeQura requires us to use pp6 instead of pp3
+    methods = [m for m in methods if m.get("code") != "pp3"]
+    if not any(m.get("code") == "pp6" for m in methods):
+        methods = [{"code": "pp6", "name": "Pago en 6 cuotas"}] + methods
+
     return AvailableMethodsResponse(
         available=True,
         methods=methods if methods else [{"code": "pp6", "name": "Pago en 6 cuotas"}],
-        credit_agreements=flat_agreements,
+        credit_agreements=[a for a in flat_agreements if a.get("product_code") != "pp3"],
         **base_response,
     )
 

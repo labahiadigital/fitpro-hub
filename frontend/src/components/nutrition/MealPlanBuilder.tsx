@@ -435,10 +435,25 @@ export function MealPlanBuilder({
   const addMeal = useCallback((mealNumber: number) => {
     if (!currentDay) return;
 
+    let mealTime: string;
+    if (mealNumber === 999) {
+      mealTime = "16:00";
+    } else {
+      const existingMeals = currentDay.meals || [];
+      if (existingMeals.length === 0) {
+        mealTime = "08:00";
+      } else {
+        const lastMeal = existingMeals[existingMeals.length - 1];
+        const [h, m] = (lastMeal.time || "08:00").split(":").map(Number);
+        const newHour = Math.min(h + 3, 23);
+        mealTime = `${String(newHour).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
+      }
+    }
+
     const newMeal: Meal = {
       id: `meal-${Date.now()}`,
       name: mealNumber === 999 ? "Tentempié" : `Comida ${mealNumber}`,
-      time: mealNumber === 999 ? "16:00" : `${7 + mealNumber * 3}:00`,
+      time: mealTime,
       items: [],
     };
 

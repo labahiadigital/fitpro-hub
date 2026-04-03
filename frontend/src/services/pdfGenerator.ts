@@ -299,9 +299,10 @@ function blockTypeLabel(type?: string): string {
   return map[type || "main"] || "Principal";
 }
 
-function drawTopBar(doc: jsPDF) {
+function drawTopBar(doc: jsPDF, colors?: typeof C) {
+  const cc = colors || C;
   const pw = doc.internal.pageSize.getWidth();
-  doc.setFillColor(...C.primary);
+  doc.setFillColor(...cc.primary);
   doc.rect(0, 0, pw, 4, "F");
 }
 
@@ -380,15 +381,15 @@ export async function generateClientPlanPDF(
   //  PAGE 2 — SUMMARY + OBJECTIVES (PORTRAIT)
   // ================================================================
   doc.addPage("a4", "portrait");
-  drawTopBar(doc);
+  drawTopBar(doc, brandColors);
   renderSummaryPage(doc, client, mealPlan, workoutProgram, trainerName, avatarDataUrl);
 
   // ================================================================
   //  PAGE 3 — STATS & PROGRESS (PORTRAIT)
   // ================================================================
   doc.addPage("a4", "portrait");
-  drawTopBar(doc);
-  renderProgressPage(doc, client, progressData);
+  drawTopBar(doc, brandColors);
+  await renderProgressPage(doc, client, progressData);
 
   // ================================================================
   //  WORKOUT PLAN — PORTRAIT PAGES (1 day per page)
@@ -401,7 +402,7 @@ export async function generateClientPlanPDF(
   //  NUTRITION PLAN — PORTRAIT PAGES
   // ================================================================
   if (mealPlan) {
-    renderNutritionSection(doc, mealPlan);
+    renderNutritionSection(doc, mealPlan, brandColors);
   }
 
   // ================================================================
@@ -737,7 +738,7 @@ function renderSummaryPage(
 //  PAGE 3: STATS & PROGRESS (placeholders)
 // ================================================================
 
-function renderProgressPage(doc: jsPDF, client: ClientData | undefined, progressData?: PDFOptions["progressData"]) {
+async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, progressData?: PDFOptions["progressData"]) {
   const pw = doc.internal.pageSize.getWidth();
   const contentW = pw - MARGIN_P * 2;
   let y = 12;
@@ -846,6 +847,106 @@ function renderProgressPage(doc: jsPDF, client: ClientData | undefined, progress
   drawMiniBox(MARGIN_P, y, halfW, "ENTRENAMIENTOS", wkValue, wkSub, C.primary);
   drawMiniBox(MARGIN_P + halfW + 4, y, halfW, "NUTRICIÓN", nutValue, nutSub, C.secondary);
   y += 30;
+
+  // --- WEIGHT EVOLUTION CHART ---
+  const weightHist = progressData?.weightHistory || [];
+  if (weightHist.length >= 2) {
+    if (y > 230) { doc.addPage("a4", "portrait"); drawTopBar(doc); y = 12; }
+    doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    doc.text("Evolución Corporal", MARGIN_P, y);
+    y += 5;
+
+    const chartW = contentW;
+    const chartH = 45;
+    const chartX = MARGIN_P;
+    const chartY = y;
+
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(chartX, chartY, chartW, chartH, 2, 2, "F");
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.2);
+    doc.roundedRect(chartX, chartY, chartW, chartH, 2, 2, "S");
+
+    const weights = weightHist.map(w => w.weight);
+    const minW = Math.min(...weights) - 1;
+    const maxW = Math.max(...weights) + 1;
+    const rangeW = maxW - minW || 1;
+    const padX = 6;
+    const padY = 5;
+    const innerW = chartW - padX * 2;
+    const innerH = chartH - padY * 2;
+
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.1);
+    for (let g = 0; g <= 4; g++) {
+      const gy = chartY + padY + (innerH * g) / 4;
+      doc.line(chartX + padX, gy, chartX + padX + innerW, gy);
+      const val = maxW - (rangeW * g) / 4;
+      doc.setFontSize(5); doc.setTextColor(150, 150, 150);
+      doc.text(`${val.toFixed(0)}`, chartX + 1, gy + 1.5);
+    }
+
+    doc.setDrawColor(...C.primary); doc.setLineWidth(0.5);
+    for (let i = 1; i < weightHist.length; i++) {
+      const x1 = chartX + padX + (innerW * (i - 1)) / (weightHist.length - 1);
+      const y1 = chartY + padY + innerH - ((weights[i - 1] - minW) / rangeW) * innerH;
+      const x2 = chartX + padX + (innerW * i) / (weightHist.length - 1);
+      const y2 = chartY + padY + innerH - ((weights[i] - minW) / rangeW) * innerH;
+      doc.line(x1, y1, x2, y2);
+    }
+
+    for (let i = 0; i < weightHist.length; i++) {
+      const px = chartX + padX + (innerW * i) / (weightHist.length - 1);
+      const py = chartY + padY + innerH - ((weights[i] - minW) / rangeW) * innerH;
+      doc.setFillColor(...C.primary);
+      doc.circle(px, py, 0.8, "F");
+    }
+
+    if (weightHist.length > 0) {
+      doc.setFontSize(4.5); doc.setTextColor(...C.textMuted);
+      const firstDate = new Date(weightHist[0].date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+      const lastDate = new Date(weightHist[weightHist.length - 1].date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+      doc.text(firstDate, chartX + padX, chartY + chartH - 1);
+      doc.text(lastDate, chartX + padX + innerW - 8, chartY + chartH - 1);
+    }
+
+    y = chartY + chartH + 5;
+  }
+
+  // --- PROGRESS PHOTOS ---
+  const photos = progressData?.photos || [];
+  const frontPhotos = photos.filter(p => p.type === "front" || !p.type).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  if (frontPhotos.length >= 1) {
+    if (y > 200) { doc.addPage("a4", "portrait"); drawTopBar(doc); y = 12; }
+    doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    doc.text("Evolución Física", MARGIN_P, y);
+    y += 5;
+
+    const firstPhoto = frontPhotos[0];
+    const lastPhoto = frontPhotos.length > 1 ? frontPhotos[frontPhotos.length - 1] : null;
+    const photoW = 45;
+    const photoH = 60;
+    const gap = 10;
+
+    const photosToDraw = lastPhoto ? [firstPhoto, lastPhoto] : [firstPhoto];
+    const totalW = photosToDraw.length * photoW + (photosToDraw.length - 1) * gap;
+    let px = MARGIN_P + (contentW - totalW) / 2;
+
+    for (const photo of photosToDraw) {
+      try {
+        const imgData = await loadImageAsDataUrl(photo.url);
+        if (imgData) {
+          doc.addImage(imgData, "JPEG", px, y, photoW, photoH);
+          doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+          doc.rect(px, y, photoW, photoH, "S");
+          if (photo.date) {
+            doc.setFontSize(5.5); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "normal");
+            doc.text(new Date(photo.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" }), px + photoW / 2, y + photoH + 3, { align: "center" });
+          }
+        }
+      } catch { /* ignore load errors */ }
+      px += photoW + gap;
+    }
+    y += photoH + 8;
+  }
 
   doc.setFillColor(...C.accentBg);
   doc.roundedRect(MARGIN_P, y, contentW, 10, 2, 2, "F");
@@ -995,7 +1096,8 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
 //  NUTRITION SECTION — PORTRAIT, 1 DAY PER PAGE
 // ================================================================
 
-function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
+function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?: typeof C) {
+  const cc = brandColors || C;
   const plan = mealPlan.plan as any;
   const allDays: NutritionDayPlan[] = [];
   if (plan?.weeks && Array.isArray(plan.weeks)) {
@@ -1016,21 +1118,21 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
   for (let di = 0; di < days.length; di++) {
     const day = days[di];
     doc.addPage("a4", "portrait");
-    drawTopBar(doc);
+    drawTopBar(doc, cc);
     const pw = doc.internal.pageSize.getWidth();
     const contentW = pw - MARGIN_P * 2;
     let y = 12;
 
     if (di === 0) {
-      doc.setFontSize(13); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+      doc.setFontSize(13); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
       doc.text("PLAN NUTRICIONAL", MARGIN_P, y);
-      doc.setFontSize(8); doc.setTextColor(...C.secondary); doc.setFont("helvetica", "normal");
+      doc.setFontSize(8); doc.setTextColor(...cc.secondary); doc.setFont("helvetica", "normal");
       doc.text(mealPlan.name, MARGIN_P + 48, y);
       y += 8;
     }
 
     const dayName = day.dayName || DAY_NAMES[(day.day - 1) % 7] || `Día ${day.day}`;
-    doc.setFillColor(...C.secondary);
+    doc.setFillColor(...cc.secondary);
     doc.roundedRect(MARGIN_P, y, contentW, 7, 1.5, 1.5, "F");
     doc.setFontSize(10); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
     doc.text(dayName, MARGIN_P + 4, y + 5);
@@ -1041,18 +1143,13 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
     for (const meal of day.meals || []) {
       const mealLabel = meal.name + (meal.time ? ` (${meal.time})` : "");
 
-      doc.setFillColor(...C.primaryLight);
-      doc.roundedRect(MARGIN_P, y, contentW, 6, 1, 1, "F");
-      doc.setFontSize(8); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
-      doc.text(mealLabel, MARGIN_P + 3, y + 4.2);
-      y += 8;
-
       const items = meal.items || [];
       const legacyFoods = meal.foods || [];
 
-      interface GroupedRecipe { name: string; items: { name: string; qty: string; cal: number; p: number; c: number; f: number }[] }
-      const recipes: GroupedRecipe[] = [];
-      let currentRecipe: GroupedRecipe | null = null;
+      interface FoodEntry { name: string; qty: string; cal: number; p: number; c: number; f: number }
+      interface RecipeGroup { name: string; foods: FoodEntry[] }
+      const groups: Array<RecipeGroup | FoodEntry> = [];
+      let currentRecipe: RecipeGroup | null = null;
 
       if (items.length > 0) {
         for (const item of items) {
@@ -1061,68 +1158,87 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
           const m = getItemMacros(item);
           const recipeName = item.recipe_name || "";
           if (recipeName && (!currentRecipe || currentRecipe.name !== recipeName)) {
-            currentRecipe = { name: recipeName, items: [] };
-            recipes.push(currentRecipe);
+            currentRecipe = { name: recipeName, foods: [] };
+            groups.push(currentRecipe);
           } else if (!recipeName && currentRecipe) {
             currentRecipe = null;
           }
-
-          const entry = {
+          const entry: FoodEntry = {
             name: data.name || "—",
             qty: `${Math.round(item.quantity_grams)}g`,
             cal: m.calories, p: m.protein, c: m.carbs, f: m.fat,
           };
           if (currentRecipe) {
-            currentRecipe.items.push(entry);
+            currentRecipe.foods.push(entry);
           } else {
-            recipes.push({ name: "", items: [entry] });
+            groups.push(entry);
           }
         }
       } else if (legacyFoods.length > 0) {
         for (const food of legacyFoods) {
-          recipes.push({
-            name: "", items: [{
-              name: food.name || "—", qty: `${Math.round(toNum(food.quantity, 100))}g`,
-              cal: toNum(food.calories), p: toNum(food.protein), c: toNum(food.carbs), f: toNum(food.fat),
-            }]
+          groups.push({
+            name: food.name || "—", qty: `${Math.round(toNum(food.quantity, 100))}g`,
+            cal: toNum(food.calories), p: toNum(food.protein), c: toNum(food.carbs), f: toNum(food.fat),
           });
         }
       }
 
-      const tableRows: string[][] = [];
+      // Build rows: Comida | Receta | Alimento | Cant | Kcal | P | C | G
+      // _meta: "recipe" | "food-in-recipe" | "food-standalone" | "separator" | "total"
+      const tableRows: Array<{ cells: string[]; meta: string }> = [];
       let mealCal = 0, mealP = 0, mealC = 0, mealF = 0;
+      let isFirstRow = true;
+      let lastWasRecipe = false;
 
-      for (const recipe of recipes) {
-        if (recipe.name) {
-          const rCal = recipe.items.reduce((s, i) => s + i.cal, 0);
-          const rP = recipe.items.reduce((s, i) => s + i.p, 0);
-          const rC = recipe.items.reduce((s, i) => s + i.c, 0);
-          const rF = recipe.items.reduce((s, i) => s + i.f, 0);
-          tableRows.push(["", recipe.name, "", "", Math.round(rCal).toString(), rP.toFixed(1), rC.toFixed(1), rF.toFixed(1)]);
-        }
-        for (const it of recipe.items) {
-          tableRows.push([
-            "", "", it.name, it.qty,
-            Math.round(it.cal).toString(), it.p.toFixed(1), it.c.toFixed(1), it.f.toFixed(1),
-          ]);
-          mealCal += it.cal; mealP += it.p; mealC += it.c; mealF += it.f;
+      for (const group of groups) {
+        if ("foods" in group) {
+          // Recipe group
+          if (lastWasRecipe) {
+            tableRows.push({ cells: ["", "", "", "", "", "", "", ""], meta: "separator" });
+          }
+          const rCal = group.foods.reduce((s, i) => s + i.cal, 0);
+          const rP = group.foods.reduce((s, i) => s + i.p, 0);
+          const rC = group.foods.reduce((s, i) => s + i.c, 0);
+          const rF = group.foods.reduce((s, i) => s + i.f, 0);
+          const comidaCell = isFirstRow ? mealLabel : "";
+          tableRows.push({ cells: [comidaCell, group.name, "", "", Math.round(rCal).toString(), rP.toFixed(1), rC.toFixed(1), rF.toFixed(1)], meta: "recipe" });
+          isFirstRow = false;
+          for (const fd of group.foods) {
+            tableRows.push({ cells: ["", "", fd.name, fd.qty, Math.round(fd.cal).toString(), fd.p.toFixed(1), fd.c.toFixed(1), fd.f.toFixed(1)], meta: "food-in-recipe" });
+            mealCal += fd.cal; mealP += fd.p; mealC += fd.c; mealF += fd.f;
+          }
+          lastWasRecipe = true;
+        } else {
+          // Standalone food
+          if (lastWasRecipe) {
+            tableRows.push({ cells: ["", "", "", "", "", "", "", ""], meta: "separator" });
+            lastWasRecipe = false;
+          }
+          const comidaCell = isFirstRow ? mealLabel : "";
+          tableRows.push({ cells: [comidaCell, "", group.name, group.qty, Math.round(group.cal).toString(), group.p.toFixed(1), group.c.toFixed(1), group.f.toFixed(1)], meta: "food-standalone" });
+          mealCal += group.cal; mealP += group.p; mealC += group.c; mealF += group.f;
+          isFirstRow = false;
         }
       }
-      if (tableRows.length > 0) {
-        tableRows[0][0] = mealLabel;
+
+      if (isFirstRow && tableRows.length === 0) {
+        tableRows.push({ cells: [mealLabel, "", "", "", "", "", "", ""], meta: "food-standalone" });
       }
+
       dayCalTotal += mealCal; dayPTotal += mealP; dayCTotal += mealC; dayFTotal += mealF;
-      tableRows.push(["TOTAL", "", "", "", Math.round(mealCal).toString(), mealP.toFixed(1), mealC.toFixed(1), mealF.toFixed(1)]);
+      tableRows.push({ cells: ["TOTAL", "", "", "", Math.round(mealCal).toString(), mealP.toFixed(1), mealC.toFixed(1), mealF.toFixed(1)], meta: "total" });
+
+      const bodyRows = tableRows.map(r => r.cells);
 
       autoTable(doc, {
         startY: y,
         head: [["Comida", "Receta", "Alimento", "Cant.", "Kcal", "P", "C", "G"]],
-        body: tableRows,
+        body: bodyRows,
         theme: "grid",
         tableWidth: contentW,
         margin: { left: MARGIN_P },
-        headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6.5, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
-        styles: { fontSize: 6, cellPadding: 1.5, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize" },
+        headStyles: { fillColor: cc.headerBg, textColor: cc.text, fontSize: 6.5, fontStyle: "bold", lineColor: cc.border, lineWidth: 0.2 },
+        styles: { fontSize: 6, cellPadding: 1.5, textColor: cc.text, lineColor: cc.border, lineWidth: 0.15, overflow: "ellipsize" },
         columnStyles: {
           0: { cellWidth: 28 },
           1: { cellWidth: 28 },
@@ -1137,14 +1253,20 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
         rowPageBreak: "avoid",
         didParseCell: (data: any) => {
           if (data.section !== "body") return;
-          const isTotal = data.row.index === tableRows.length - 1;
-          if (isTotal) { data.cell.styles.fillColor = C.primaryLight; data.cell.styles.fontStyle = "bold"; }
-          const row = tableRows[data.row.index];
-          if (row && row[1] && !row[2]) {
-            data.cell.styles.fillColor = C.accentBg;
+          const meta = tableRows[data.row.index]?.meta;
+          if (meta === "total") {
+            data.cell.styles.fillColor = cc.primaryLight;
+            data.cell.styles.fontStyle = "bold";
+          } else if (meta === "recipe") {
+            data.cell.styles.fillColor = cc.accentBg;
             if (data.column.index === 1) data.cell.styles.fontStyle = "bold";
+          } else if (meta === "separator") {
+            data.cell.styles.fillColor = [255, 255, 255];
+            data.cell.styles.lineWidth = 0;
+            data.cell.styles.cellPadding = 0.5;
+            data.cell.styles.minCellHeight = 1.5;
           }
-          if (row && row[0] && row[0] !== "TOTAL" && data.column.index === 0) {
+          if (meta !== "separator" && meta !== "total" && data.column.index === 0 && data.cell.raw) {
             data.cell.styles.fontStyle = "bold";
           }
         },
@@ -1152,9 +1274,9 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData) {
       y = (doc as any).lastAutoTable.finalY + 4;
     }
 
-    doc.setFillColor(...C.primaryLight);
+    doc.setFillColor(...cc.primaryLight);
     doc.roundedRect(MARGIN_P, y, contentW, 8, 2, 2, "F");
-    doc.setFontSize(7.5); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
     doc.text(
       `Total del día:  ${Math.round(dayCalTotal)} kcal  |  P: ${dayPTotal.toFixed(1)}g  |  C: ${dayCTotal.toFixed(1)}g  |  G: ${dayFTotal.toFixed(1)}g`,
       MARGIN_P + 4, y + 5.5

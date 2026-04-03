@@ -13,6 +13,7 @@ import {
   Center,
   Loader,
   Textarea,
+  Modal,
 } from "@mantine/core";
 import { DatePicker } from "@mantine/dates";
 import { useDisclosure } from "@mantine/hooks";
@@ -22,13 +23,15 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconClock,
+  IconEdit,
   IconMapPin,
+  IconTrash,
   IconUser,
   IconVideo,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useMyBookings, useAvailableSlots, useCreateClientBooking } from "../../hooks/useClientPortal";
+import { useMyBookings, useAvailableSlots, useCreateClientBooking, useCancelClientBooking, useUpdateClientBooking } from "../../hooks/useClientPortal";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 
 function getWeekDays(weekOffset: number) {
@@ -153,6 +156,110 @@ function RequestBookingModal({
   );
 }
 
+function EditBookingModal({
+  opened,
+  onClose,
+  bookingId,
+}: {
+  opened: boolean;
+  onClose: () => void;
+  bookingId: string | null;
+}) {
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const dateStr = selectedDate ? selectedDate.toISOString().split("T")[0] : "";
+  const { data: slots = [], isLoading: loadingSlots } = useAvailableSlots(dateStr);
+  const updateBooking = useUpdateClientBooking();
+
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + 1);
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 30);
+
+  const handleSubmit = async () => {
+    if (!selectedSlot || !bookingId) return;
+    await updateBooking.mutateAsync({ bookingId, data: { start_time: selectedSlot, notes: notes || undefined } });
+    setSelectedDate(null);
+    setSelectedSlot(null);
+    setNotes("");
+    onClose();
+  };
+
+  return (
+    <NativeBottomSheet
+      opened={opened}
+      onClose={onClose}
+      title="Modificar cita"
+      subtitle="Selecciona nueva fecha y horario"
+      footer={
+        <Button
+          color="blue"
+          onClick={handleSubmit}
+          loading={updateBooking.isPending}
+          disabled={!selectedSlot}
+          leftSection={<IconEdit size={18} />}
+          fullWidth
+          size="lg"
+          radius="xl"
+          styles={{ root: { height: 48, fontWeight: 700 } }}
+        >
+          Confirmar cambio
+        </Button>
+      }
+    >
+      <Center>
+        <DatePicker
+          value={selectedDate}
+          onChange={(d) => { setSelectedDate(d ? new Date(d) : null); setSelectedSlot(null); }}
+          minDate={minDate}
+          maxDate={maxDate}
+          locale="es"
+        />
+      </Center>
+
+      {selectedDate && (
+        <Box mt="md">
+          <Text fw={500} size="sm" mb="xs">
+            Horarios disponibles - {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+          </Text>
+          {loadingSlots ? (
+            <Center py="md"><Loader size="sm" /></Center>
+          ) : slots.length > 0 ? (
+            <Group gap="xs">
+              {slots.map((slot: { start: string; end: string }) => (
+                <Button
+                  key={slot.start}
+                  variant={selectedSlot === slot.start ? "filled" : "outline"}
+                  color="blue"
+                  size="sm"
+                  radius="xl"
+                  onClick={() => setSelectedSlot(slot.start)}
+                  styles={{ root: { height: 40 } }}
+                >
+                  {new Date(slot.start).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                </Button>
+              ))}
+            </Group>
+          ) : (
+            <Text size="sm" c="dimmed" ta="center">No hay horarios disponibles</Text>
+          )}
+        </Box>
+      )}
+
+      <Textarea
+        placeholder="Notas (opcional)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        minRows={2}
+        mt="md"
+        size="sm"
+        styles={{ input: { borderRadius: 10 } }}
+      />
+    </NativeBottomSheet>
+  );
+}
+
 export function MyCalendarPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: upcomingBookings, isLoading: isLoadingUpcoming } = useMyBookings({ upcoming_only: true, limit: 20 });
@@ -161,7 +268,11 @@ export function MyCalendarPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [highlightedSessionId, setHighlightedSessionId] = useState<string | null>(null);
   const [bookingModalOpened, { open: openBookingModal, close: closeBookingModal }] = useDisclosure(false);
+  const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
+  const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<typeof upcomingSessions[0] | null>(null);
+  const cancelBooking = useCancelClientBooking();
 
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
 
@@ -446,6 +557,22 @@ export function MyCalendarPage() {
       </Stack>
 
       <RequestBookingModal opened={bookingModalOpened} onClose={closeBookingModal} />
+      <EditBookingModal opened={editModalOpened} onClose={() => { closeEditModal(); setEditingBookingId(null); }} bookingId={editingBookingId} />
+
+      {/* Cancel confirmation modal */}
+      <Modal opened={!!cancelConfirmId} onClose={() => setCancelConfirmId(null)} title="Cancelar cita" centered size="sm">
+        <Text size="sm" mb="lg">¿Estás seguro de que quieres cancelar esta cita?</Text>
+        <Group justify="flex-end">
+          <Button variant="subtle" color="gray" onClick={() => setCancelConfirmId(null)}>No, volver</Button>
+          <Button color="red" loading={cancelBooking.isPending} onClick={async () => {
+            if (cancelConfirmId) {
+              await cancelBooking.mutateAsync(cancelConfirmId);
+              setCancelConfirmId(null);
+              setSelectedSession(null);
+            }
+          }}>Sí, cancelar cita</Button>
+        </Group>
+      </Modal>
 
       {/* Session Detail */}
       <NativeBottomSheet
@@ -464,11 +591,11 @@ export function MyCalendarPage() {
                 <Box>
                   <Text fw={600}>{selectedSession.title}</Text>
                   <Badge
-                    color={selectedSession.status === "confirmed" ? "green" : "yellow"}
+                    color={selectedSession.status === "confirmed" ? "green" : selectedSession.status === "cancelled" ? "red" : "yellow"}
                     variant="light"
                     size="sm"
                   >
-                    {selectedSession.status === "confirmed" ? "Confirmada" : "Pendiente"}
+                    {selectedSession.status === "confirmed" ? "Confirmada" : selectedSession.status === "cancelled" ? "Cancelada" : "Pendiente"}
                   </Badge>
                 </Box>
               </Group>
@@ -512,6 +639,31 @@ export function MyCalendarPage() {
                 </Box>
               </Group>
             </Stack>
+
+            {selectedSession.status !== "completed" && selectedSession.status !== "no_show" && selectedSession.status !== "cancelled" && (
+              <Group grow mt="sm">
+                <Button
+                  variant="light"
+                  color="blue"
+                  leftSection={<IconEdit size={16} />}
+                  onClick={() => {
+                    setEditingBookingId(selectedSession.id);
+                    openEditModal();
+                    setSelectedSession(null);
+                  }}
+                >
+                  Modificar
+                </Button>
+                <Button
+                  variant="light"
+                  color="red"
+                  leftSection={<IconTrash size={16} />}
+                  onClick={() => setCancelConfirmId(selectedSession.id)}
+                >
+                  Cancelar cita
+                </Button>
+              </Group>
+            )}
           </Stack>
         )}
       </NativeBottomSheet>

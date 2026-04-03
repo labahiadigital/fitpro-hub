@@ -201,6 +201,11 @@ export const workspacesApi = {
   get: (id: string) => api.get(`/workspaces/${id}`),
   create: (data: object) => api.post("/workspaces", data),
   update: (id: string, data: object) => api.put(`/workspaces/${id}`, data),
+  uploadLogo: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/workspaces/${id}/logo`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+  },
   invite: (id: string, data: { email: string; role: string }) =>
     api.post(`/workspaces/${id}/invite`, data),
 };
@@ -657,6 +662,10 @@ export const clientPortalApi = {
   availableSlots: (date: string) => api.get("/my/calendar/available-slots", { params: { date } }),
   createBooking: (data: { start_time: string; notes?: string }) =>
     api.post("/my/calendar/bookings", data),
+  cancelBooking: (id: string) =>
+    api.post(`/my/calendar/bookings/${id}/cancel`),
+  updateBooking: (id: string, data: { start_time: string; notes?: string }) =>
+    api.put(`/my/calendar/bookings/${id}`, data),
   
   // Messages/Chat
   getConversation: () => api.get("/my/messages/conversation"),

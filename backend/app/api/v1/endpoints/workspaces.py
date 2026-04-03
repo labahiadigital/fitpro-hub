@@ -1,6 +1,6 @@
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -236,6 +236,50 @@ async def update_workspace(
     await db.refresh(workspace)
     
     return workspace
+
+
+@router.post("/{workspace_id}/logo")
+async def upload_workspace_logo(
+    workspace_id: UUID,
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db)
+):
+    """Upload a logo/photo for the workspace."""
+    result = await db.execute(
+        select(Workspace).where(
+            Workspace.id == workspace_id,
+            Workspace.id == current_user.workspace_id,
+        )
+    )
+    workspace = result.scalar_one_or_none()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace no encontrado")
+
+    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Usa JPEG, PNG o WebP.")
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Máximo 5 MB")
+
+    from app.core.storage import upload_workspace_file, generate_filename, resolve_url
+
+    filename = generate_filename(file.filename)
+    try:
+        public_url = await upload_workspace_file(
+            content, str(workspace_id),
+            "workspace", "logo", filename,
+            content_type=file.content_type or "image/jpeg",
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al subir la imagen")
+
+    workspace.logo_url = public_url
+    await db.commit()
+    presigned = await resolve_url(public_url)
+    return {"logo_url": presigned}
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)

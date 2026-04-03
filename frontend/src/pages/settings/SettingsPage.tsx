@@ -8,6 +8,7 @@ import {
   ColorInput,
   Container,
   Divider,
+  FileButton,
   FileInput,
   Group,
   List,
@@ -685,6 +686,38 @@ export function SettingsPage() {
               <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Información del Workspace
               </Text>
+
+              <Group mb="xl">
+                <Avatar color="primary" radius="md" size={80} src={currentWorkspace?.logo_url}>
+                  {currentWorkspace?.name?.charAt(0) || "W"}
+                </Avatar>
+                <Box>
+                  <Text fw={500}>{currentWorkspace?.name || "Workspace"}</Text>
+                  <Text c="dimmed" size="sm">Foto del workspace (aparecerá en PDFs)</Text>
+                  <FileButton
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={async (file) => {
+                      if (!file || !currentWorkspace?.id) return;
+                      try {
+                        const res = await workspacesApi.uploadLogo(currentWorkspace.id, file);
+                        setWorkspace({ ...currentWorkspace, logo_url: res.data.logo_url });
+                        notifications.show({ title: "Foto actualizada", message: "La foto del workspace se ha guardado", color: "green" });
+                      } catch {
+                        notifications.show({ title: "Error", message: "No se pudo subir la foto", color: "red" });
+                      }
+                    }}
+                  >
+                    {(props) => (
+                      <Button {...props} leftSection={<IconUpload size={14} />} mt="xs" size="xs" variant="light">
+                        Cambiar foto
+                      </Button>
+                    )}
+                  </FileButton>
+                </Box>
+              </Group>
+
+              <Divider mb="lg" />
+
               <form onSubmit={workspaceForm.onSubmit((v) => workspaceUpdateMutation.mutate(v))}>
                 <Stack gap="md">
                   <Group grow>

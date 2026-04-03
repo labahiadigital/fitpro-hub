@@ -1969,6 +1969,94 @@ async def create_client_booking(
     return {"id": str(booking.id), "status": "pending", "start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
 
 
+@router.post("/calendar/bookings/{booking_id}/cancel")
+async def cancel_client_booking(
+    booking_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Cancel a booking requested by the client."""
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(Booking).where(
+            Booking.id == booking_id,
+            Booking.workspace_id == current_user.workspace_id,
+            Booking.client_id == client.id,
+        )
+    )
+    booking = result.scalar_one_or_none()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Reserva no encontrada")
+    if booking.status in ("completed", "no_show"):
+        raise HTTPException(status_code=400, detail="No se puede cancelar una sesión ya finalizada")
+
+    booking.status = "cancelled"
+    await db.commit()
+    await db.refresh(booking)
+    return {"id": str(booking.id), "status": booking.status}
+
+
+class ClientBookingUpdate(BaseModel):
+    start_time: str
+    notes: Optional[str] = None
+
+
+@router.put("/calendar/bookings/{booking_id}")
+async def update_client_booking(
+    booking_id: UUID,
+    data: ClientBookingUpdate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Modify a booking – resets status to pending for trainer re-confirmation."""
+    from app.models.workspace import Workspace
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(Booking).where(
+            Booking.id == booking_id,
+            Booking.workspace_id == current_user.workspace_id,
+            Booking.client_id == client.id,
+        )
+    )
+    booking = result.scalar_one_or_none()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Reserva no encontrada")
+    if booking.status in ("completed", "no_show", "cancelled"):
+        raise HTTPException(status_code=400, detail="No se puede modificar una sesión finalizada o cancelada")
+
+    try:
+        new_start = datetime.fromisoformat(data.start_time)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de hora inválido")
+
+    ws_result = await db.execute(select(Workspace).where(Workspace.id == current_user.workspace_id))
+    workspace = ws_result.scalar_one_or_none()
+    ws_settings = workspace.settings or {} if workspace else {}
+    default_duration = ws_settings.get("booking_policies", {}).get("default_duration", 60)
+    new_end = new_start + timedelta(minutes=default_duration)
+
+    conflict = await db.execute(
+        select(Booking).where(
+            Booking.workspace_id == current_user.workspace_id,
+            Booking.start_time == new_start,
+            Booking.status.in_(["pending", "confirmed"]),
+            Booking.id != booking_id,
+        )
+    )
+    if conflict.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Este horario ya no está disponible")
+
+    booking.start_time = new_start
+    booking.end_time = new_end
+    if data.notes is not None:
+        booking.notes = data.notes
+    booking.status = "pending"
+    await db.commit()
+    await db.refresh(booking)
+    return {"id": str(booking.id), "status": "pending", "start_time": new_start.isoformat(), "end_time": new_end.isoformat()}
+
+
 # ============ MESSAGES / CHAT ============
 
 from app.models.message import (

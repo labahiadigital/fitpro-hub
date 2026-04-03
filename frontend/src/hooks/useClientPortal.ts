@@ -1073,6 +1073,42 @@ export function useCreateClientBooking() {
   });
 }
 
+export function useCancelClientBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await clientPortalApi.cancelBooking(bookingId);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["available-slots"] });
+      notifications.show({ title: "Cita cancelada", message: "La cita ha sido cancelada correctamente", color: "orange" });
+    },
+    onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
+      notifications.show({ title: "Error", message: error.response?.data?.detail || "No se pudo cancelar la cita", color: "red" });
+    },
+  });
+}
+
+export function useUpdateClientBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ bookingId, data }: { bookingId: string; data: { start_time: string; notes?: string } }) => {
+      const response = await clientPortalApi.updateBooking(bookingId, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["available-slots"] });
+      notifications.show({ title: "Cita modificada", message: "La cita ha sido modificada y está pendiente de confirmación", color: "blue" });
+    },
+    onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
+      notifications.show({ title: "Error", message: error.response?.data?.detail || "No se pudo modificar la cita", color: "red" });
+    },
+  });
+}
+
 export function useTodayEmotion() {
   return useQuery<ClientEmotion | null>({
     queryKey: ["today-emotion"],

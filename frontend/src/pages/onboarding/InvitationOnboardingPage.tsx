@@ -363,8 +363,7 @@ export function InvitationOnboardingPage() {
     setPaymentLoading(true);
     setPaymentError(null);
     try {
-      const productCode = sequraMethods.length > 0 ? sequraMethods[0].code : "pp6";
-      const res = await sequraApi.startOnboarding(token, productCode);
+      const res = await sequraApi.startOnboarding(token, "pp6");
       const { form_html } = res.data;
 
       if (form_html) {
@@ -492,7 +491,7 @@ export function InvitationOnboardingPage() {
     const sequraConfigParams = {
       merchant: sequraMerchant,
       assetKey: sequraAssetKey,
-      products: sequraMethods.map((m: any) => m.code).filter(Boolean),
+      products: ["pp6"],
       scriptUri: sequraScriptUri,
       decimalSeparator: ",",
       thousandSeparator: ".",
@@ -959,7 +958,7 @@ export function InvitationOnboardingPage() {
                         <div
                           className="sequra-promotion-widget"
                           data-amount={String(Math.round(product.price * 100))}
-                          data-product={sequraMethods.length > 0 ? sequraMethods[0].code : "pp6"}
+                          data-product="pp6"
                           data-size="M"
                           data-alignment="left"
                           data-branding="default"
