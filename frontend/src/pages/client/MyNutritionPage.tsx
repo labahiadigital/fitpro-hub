@@ -1844,8 +1844,8 @@ export function MyNutritionPage() {
               value={planViewMode}
               onChange={(v) => setPlanViewMode(v || "modified")}
               data={[
-                { value: "modified", label: "Plan modificado" },
-                { value: "original", label: "Plan original" },
+                { value: "modified", label: "Plan ejecutado" },
+                { value: "original", label: "Plan asignado" },
               ]}
               size="xs"
               radius="md"
