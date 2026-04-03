@@ -18,7 +18,9 @@ from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative, ClientMeasurement
 from app.models.nutrition import MealPlan, Recipe, Food
 from app.models.booking import Booking
+from app.models.workspace import Workspace
 from app.middleware.auth import get_current_user, CurrentUser
+from app.services.notification_service import notify
 
 router = APIRouter()
 
@@ -2030,6 +2032,27 @@ async def create_client_booking(
     await db.commit()
     await db.refresh(booking)
 
+    from app.models.user import UserRole, RoleType
+    owner_result = await db.execute(
+        select(UserRole.user_id).where(
+            UserRole.workspace_id == current_user.workspace_id,
+            UserRole.role == RoleType.owner,
+        ).limit(1)
+    )
+    owner_uid = owner_result.scalar_one_or_none()
+    if owner_uid:
+        start_str = start_time.strftime("%d/%m/%Y %H:%M")
+        await notify(
+            db=db,
+            event="booking_requested",
+            user_id=owner_uid,
+            workspace_id=current_user.workspace_id,
+            title="Nueva solicitud de sesión",
+            body=f"{client.full_name} ha solicitado una sesión el {start_str}",
+            link="/calendar",
+            notification_type="booking",
+        )
+
     return {"id": str(booking.id), "status": "pending", "start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
 
 
@@ -2057,6 +2080,28 @@ async def cancel_client_booking(
     booking.status = "cancelled"
     await db.commit()
     await db.refresh(booking)
+
+    from app.models.user import UserRole, RoleType
+    owner_result = await db.execute(
+        select(UserRole.user_id).where(
+            UserRole.workspace_id == current_user.workspace_id,
+            UserRole.role == RoleType.owner,
+        ).limit(1)
+    )
+    owner_uid = owner_result.scalar_one_or_none()
+    if owner_uid:
+        start_str = booking.start_time.strftime("%d/%m/%Y %H:%M") if booking.start_time else ""
+        await notify(
+            db=db,
+            event="booking_cancelled_by_client",
+            user_id=owner_uid,
+            workspace_id=current_user.workspace_id,
+            title="Cliente canceló sesión",
+            body=f"{client.full_name} ha cancelado su sesión del {start_str}",
+            link="/calendar",
+            notification_type="booking",
+        )
+
     return {"id": str(booking.id), "status": booking.status}
 
 
@@ -2118,6 +2163,28 @@ async def update_client_booking(
     booking.status = "pending"
     await db.commit()
     await db.refresh(booking)
+
+    from app.models.user import UserRole, RoleType
+    owner_result = await db.execute(
+        select(UserRole.user_id).where(
+            UserRole.workspace_id == current_user.workspace_id,
+            UserRole.role == RoleType.owner,
+        ).limit(1)
+    )
+    owner_uid = owner_result.scalar_one_or_none()
+    if owner_uid:
+        start_str = new_start.strftime("%d/%m/%Y %H:%M")
+        await notify(
+            db=db,
+            event="booking_modified_by_client",
+            user_id=owner_uid,
+            workspace_id=current_user.workspace_id,
+            title="Cliente modificó sesión",
+            body=f"{client.full_name} cambió su sesión al {start_str}. Pendiente de confirmación.",
+            link="/calendar",
+            notification_type="booking",
+        )
+
     return {"id": str(booking.id), "status": "pending", "start_time": new_start.isoformat(), "end_time": new_end.isoformat()}
 
 

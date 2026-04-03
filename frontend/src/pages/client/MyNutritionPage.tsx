@@ -1317,6 +1317,7 @@ export function MyNutritionPage() {
 
   const executedPlanSource = (mealPlan as any)?.executed_plan || mealPlan?.plan;
   const planDays = useMemo(() => extractPlanDays(executedPlanSource, mealPlan), [executedPlanSource, mealPlan]);
+  const originalPlanDays = useMemo(() => extractPlanDays(mealPlan?.plan, mealPlan), [mealPlan]);
 
   const allPlanWeeks = useMemo(() => {
     if (!mealPlan?.plan) return [];
@@ -1456,6 +1457,65 @@ export function MyNutritionPage() {
       };
     });
   }, [dailyTotals, targets, nutritionHistory, nutritionLogs, planDays]);
+
+  const weekDataOriginal = useMemo(() => {
+    const days = ["D", "L", "M", "X", "J", "V", "S"];
+    const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const dayMappingToPlan = [7, 1, 2, 3, 4, 5, 6];
+    const todayDate = new Date();
+
+    return days.map((dayLabel, i) => {
+      const daysFromToday = i - todayDate.getDay();
+      const dateForDay = new Date(todayDate);
+      dateForDay.setDate(todayDate.getDate() + daysFromToday);
+      const dateStr = dateForDay.toISOString().split("T")[0];
+      const planDayNum = dayMappingToPlan[i];
+      const dayPlan = originalPlanDays.find((d: PlanDay) => d.day === planDayNum);
+      const planMeals = dayPlan?.meals || [];
+
+      const computeMacros = (meals: PlanMeal[]) => {
+        let calories = 0, protein = 0, carbs = 0, fat = 0;
+        for (const meal of meals) {
+          const foods = meal.foods || meal.items?.map(item => {
+            const fd = item.food || item.supplement;
+            const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
+            const factor = (item.quantity_grams || 0) / ss;
+            return {
+              calories: Math.round(Number(fd?.calories || 0) * factor),
+              protein: Math.round(Number(fd?.protein || 0) * factor * 10) / 10,
+              carbs: Math.round(Number(fd?.carbs || 0) * factor * 10) / 10,
+              fat: Math.round(Number(fd?.fat || 0) * factor * 10) / 10,
+            };
+          }) || [];
+          for (const f of foods) {
+            calories += Number((f as any).calories) || 0;
+            protein += Number((f as any).protein ?? (f as any).protein_g) || 0;
+            carbs += Number((f as any).carbs ?? (f as any).carbs_g) || 0;
+            fat += Number((f as any).fat ?? (f as any).fat_g) || 0;
+          }
+        }
+        return { calories, protein, carbs, fat };
+      };
+
+      const macros = computeMacros(planMeals);
+
+      return {
+        day: dayLabel,
+        dayName: dayNames[i],
+        date: dateStr,
+        calories: macros.calories,
+        target: targets.calories,
+        isToday: i === todayDate.getDay(),
+        mealsLogged: planMeals.length,
+        planMeals,
+        planDayNum,
+        totals: { protein: macros.protein, carbs: macros.carbs, fat: macros.fat },
+      };
+    });
+  }, [targets, originalPlanDays]);
+
+  const activeWeekData = planViewMode === "original" ? weekDataOriginal : weekData;
+  const activePlanDays = planViewMode === "original" ? originalPlanDays : planDays;
 
   const handleLogMeal = async (data: {
     meal_name: string;
@@ -1948,78 +2008,6 @@ export function MyNutritionPage() {
             )}
           </Group>
 
-          {planViewMode === "original" ? (
-            (() => {
-              const originalDays = allPlanWeeks.flatMap((w: { week: number; days: PlanDay[] }) => w.days);
-              if (originalDays.length === 0) {
-                return (
-                  <Paper p="xl" radius="lg" ta="center" withBorder>
-                    <Text fw={600} size="md" mb={4}>No hay plantilla disponible</Text>
-                    <Text size="sm" c="dimmed">Tu entrenador aún no ha creado un plan nutricional.</Text>
-                  </Paper>
-                );
-              }
-              const dayLabels = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-              return (
-                <Stack gap="md">
-                  {allPlanWeeks.map((wk: { week: number; days: PlanDay[] }) => (
-                    <Box key={wk.week}>
-                      {allPlanWeeks.length > 1 && (
-                        <Text fw={700} size="md" mb="sm" c="blue">Semana {wk.week}</Text>
-                      )}
-                      {wk.days.map((day: PlanDay) => {
-                        const dayName = day.dayName || dayLabels[day.day] || `Día ${day.day}`;
-                        const dayTotalCal = day.meals.reduce((dsum, meal) => {
-                          return dsum + (meal.foods || meal.items?.map(item => {
-                            const fd = item.food || item.supplement;
-                            const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
-                            return { calories: Math.round(Number(fd?.calories || 0) * (item.quantity_grams / ss)) };
-                          }) || []).reduce((s: number, f: any) => s + (Number(f.calories) || 0), 0);
-                        }, 0);
-                        const dayTotals = day.meals.reduce(
-                          (acc, meal) => {
-                            const foods = meal.foods || meal.items?.map(item => {
-                              const fd = item.food || item.supplement;
-                              const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
-                              const factor = (item.quantity_grams || 0) / ss;
-                              return {
-                                protein_g: Math.round(Number(fd?.protein || 0) * factor * 10) / 10,
-                                carbs_g: Math.round(Number(fd?.carbs || 0) * factor * 10) / 10,
-                                fat_g: Math.round(Number(fd?.fat || 0) * factor * 10) / 10,
-                              };
-                            }) || [];
-                            foods.forEach((f: any) => {
-                              acc.protein += Number(f.protein_g) || 0;
-                              acc.carbs += Number(f.carbs_g) || 0;
-                              acc.fat += Number(f.fat_g) || 0;
-                            });
-                            return acc;
-                          },
-                          { protein: 0, carbs: 0, fat: 0 }
-                        );
-                        return (
-                          <Card key={day.id || `${wk.week}-${day.day}`} shadow="sm" padding="md" radius="lg" withBorder mb="sm">
-                            <NutritionDayDetail
-                              dayData={{
-                                dayName,
-                                calories: dayTotalCal,
-                                totals: dayTotals,
-                                planDayNum: day.day,
-                              }}
-                              targets={targets}
-                              planMeals={day.meals}
-                              readOnly
-                            />
-                          </Card>
-                        );
-                      })}
-                    </Box>
-                  ))}
-                </Stack>
-              );
-            })()
-          ) : (
-          <>
           <Card shadow="sm" padding="lg" radius="lg" withBorder mb="md">
             <Title order={5} mb="md">Resumen de la Semana</Title>
             <SimpleGrid cols={{ base: 1, xs: 3 }}>
@@ -2048,7 +2036,7 @@ export function MyNutritionPage() {
             emptyMessage="Selecciona un día para ver el detalle nutricional"
             master={
               <>
-                {weekData.map((day, index) => {
+                {activeWeekData.map((day, index) => {
                   const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
                   return (
                     <DayCardMenu
@@ -2063,7 +2051,7 @@ export function MyNutritionPage() {
                         </Badge>
                       }
                       summary={
-                        <Text size="xs" c="dimmed">{day.mealsLogged} comidas registradas</Text>
+                        <Text size="xs" c="dimmed">{planViewMode === "original" ? `${day.planMeals?.length || 0} comidas` : `${day.mealsLogged} comidas registradas`}</Text>
                       }
                       progressValue={percentage}
                       progressColor={percentage >= 90 ? "green" : percentage > 0 ? "yellow" : "gray"}
@@ -2072,21 +2060,21 @@ export function MyNutritionPage() {
                 })}
 
                 {/* FullPageDetail for mobile */}
-                {!isMdUp && selectedWeekDayIndex !== null && weekData[selectedWeekDayIndex] && (
+                {!isMdUp && selectedWeekDayIndex !== null && activeWeekData[selectedWeekDayIndex] && (
                   <FullPageDetail
                     opened={true}
                     onClose={() => setSelectedWeekDayIndex(null)}
-                    title={weekData[selectedWeekDayIndex].dayName}
-                    subtitle={new Date(weekData[selectedWeekDayIndex].date).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+                    title={activeWeekData[selectedWeekDayIndex].dayName}
+                    subtitle={new Date(activeWeekData[selectedWeekDayIndex].date).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
                   >
                 <SimpleGrid cols={2} spacing="sm" mb="lg">
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
-                      {weekData[selectedWeekDayIndex].calories}
+                      {activeWeekData[selectedWeekDayIndex].calories}
                     </Text>
                     <Text size="xs" c="dimmed">kcal consumidas</Text>
                     <Progress
-                      value={targets.calories > 0 ? Math.min((weekData[selectedWeekDayIndex].calories / targets.calories) * 100, 100) : 0}
+                      value={targets.calories > 0 ? Math.min((activeWeekData[selectedWeekDayIndex].calories / targets.calories) * 100, 100) : 0}
                       color="yellow"
                       size="sm"
                       mt="xs"
@@ -2094,30 +2082,30 @@ export function MyNutritionPage() {
                   </Box>
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-red-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
-                      {Math.round(weekData[selectedWeekDayIndex].totals?.protein || 0)}g
+                      {Math.round(activeWeekData[selectedWeekDayIndex].totals?.protein || 0)}g
                     </Text>
                     <Text size="xs" c="dimmed">Proteína</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
-                      {Math.round(weekData[selectedWeekDayIndex].totals?.carbs || 0)}g
+                      {Math.round(activeWeekData[selectedWeekDayIndex].totals?.carbs || 0)}g
                     </Text>
                     <Text size="xs" c="dimmed">Carbohidratos</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-grape-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
-                      {Math.round(weekData[selectedWeekDayIndex].totals?.fat || 0)}g
+                      {Math.round(activeWeekData[selectedWeekDayIndex].totals?.fat || 0)}g
                     </Text>
                     <Text size="xs" c="dimmed">Grasas</Text>
                   </Box>
                 </SimpleGrid>
 
                 {/* Plan meals for this day */}
-                {weekData[selectedWeekDayIndex].planMeals && weekData[selectedWeekDayIndex].planMeals.length > 0 ? (
+                {activeWeekData[selectedWeekDayIndex].planMeals && activeWeekData[selectedWeekDayIndex].planMeals.length > 0 ? (
                   <Box>
                     <Group justify="space-between" mb="sm">
-                      <Text fw={600}>Comidas del plan para {weekData[selectedWeekDayIndex].dayName}</Text>
-                      {weekData[selectedWeekDayIndex].planDayNum && (
+                      <Text fw={600}>Comidas del plan para {activeWeekData[selectedWeekDayIndex].dayName}</Text>
+                      {planViewMode !== "original" && activeWeekData[selectedWeekDayIndex].planDayNum && (
                         <Menu shadow="md" position="bottom-end" withinPortal>
                           <Menu.Target>
                             <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal">
@@ -2128,11 +2116,11 @@ export function MyNutritionPage() {
                             <Menu.Label>Intercambiar comidas con</Menu.Label>
                             {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, idx) => {
                               const targetDayNum = idx + 1;
-                              if (targetDayNum === weekData[selectedWeekDayIndex].planDayNum) return null;
+                              if (targetDayNum === activeWeekData[selectedWeekDayIndex].planDayNum) return null;
                               return (
                                 <Menu.Item
                                   key={idx}
-                                  onClick={() => swapDaysMutation.mutate({ sourceDay: weekData[selectedWeekDayIndex].planDayNum!, targetDay: targetDayNum })}
+                                  onClick={() => swapDaysMutation.mutate({ sourceDay: activeWeekData[selectedWeekDayIndex].planDayNum!, targetDay: targetDayNum })}
                                 >
                                   {label}
                                 </Menu.Item>
@@ -2143,7 +2131,7 @@ export function MyNutritionPage() {
                       )}
                     </Group>
                     <Stack gap="sm">
-                      {weekData[selectedWeekDayIndex].planMeals.map((meal: PlanMeal, mealIndex: number) => {
+                      {activeWeekData[selectedWeekDayIndex].planMeals.map((meal: PlanMeal, mealIndex: number) => {
                         const mealType = MEAL_TYPES.find(m => m.value === meal.name);
                         // Support both foods array and items array
                         const mealFoods = meal.foods || meal.items?.map(item => {
@@ -2169,7 +2157,7 @@ export function MyNutritionPage() {
                         
                         const MealIcon = mealType?.icon || IconSalad;
                         
-                        const currentPlanDayNum = weekData[selectedWeekDayIndex]?.planDayNum;
+                        const currentPlanDayNum = activeWeekData[selectedWeekDayIndex]?.planDayNum;
                         const planDayLabelsMobile = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
                         
                         return (
@@ -2194,6 +2182,7 @@ export function MyNutritionPage() {
                                 <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
                                 <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
                                 <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                                {planViewMode !== "original" && (
                                 <Menu shadow="md" width={220} position="bottom-end" withinPortal>
                                   <Menu.Target>
                                     <ActionIcon variant="subtle" color="gray" size="sm">
@@ -2219,6 +2208,7 @@ export function MyNutritionPage() {
                                     })}
                                   </Menu.Dropdown>
                                 </Menu>
+                                )}
                               </Group>
                             </Group>
                             {mealFoods.length > 0 && (
@@ -2247,18 +2237,17 @@ export function MyNutritionPage() {
               </>
             }
             detail={
-              selectedWeekDayIndex !== null && weekData[selectedWeekDayIndex] ? (
+              selectedWeekDayIndex !== null && activeWeekData[selectedWeekDayIndex] ? (
                 <NutritionDayDetail
-                  dayData={weekData[selectedWeekDayIndex]}
+                  dayData={activeWeekData[selectedWeekDayIndex]}
                   targets={targets}
-                  planMeals={weekData[selectedWeekDayIndex].planMeals}
-                  allDays={planDays}
+                  planMeals={activeWeekData[selectedWeekDayIndex].planMeals}
+                  allDays={activePlanDays}
+                  readOnly={planViewMode === "original"}
                 />
               ) : null
             }
           />
-          </>
-          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="history">

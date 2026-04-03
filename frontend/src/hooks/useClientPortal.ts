@@ -879,6 +879,8 @@ export function useMyBookings(params?: {
       const response = await clientPortalApi.bookings(params);
       return response.data;
     },
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -890,6 +892,8 @@ export function useMyBooking(id: string) {
       return response.data;
     },
     enabled: !!id,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 }
 

@@ -34,6 +34,16 @@ import { useSearchParams } from "react-router-dom";
 import { useMyBookings, useAvailableSlots, useCreateClientBooking, useCancelClientBooking, useUpdateClientBooking } from "../../hooks/useClientPortal";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 
+function formatTimeUTC(isoStr: string) {
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+}
+
+function formatDateUTC(isoStr: string, opts?: Intl.DateTimeFormatOptions) {
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("es-ES", { ...opts, timeZone: "UTC" });
+}
+
 function getWeekDays(weekOffset: number) {
   const today = new Date();
   const startOfWeek = new Date(today);
@@ -133,7 +143,7 @@ function RequestBookingModal({
                   onClick={() => setSelectedSlot(slot.start)}
                   styles={{ root: { height: 40 } }}
                 >
-                  {new Date(slot.start).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                  {formatTimeUTC(slot.start)}
                 </Button>
               ))}
             </Group>
@@ -237,7 +247,7 @@ function EditBookingModal({
                   onClick={() => setSelectedSlot(slot.start)}
                   styles={{ root: { height: 40 } }}
                 >
-                  {new Date(slot.start).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                  {formatTimeUTC(slot.start)}
                 </Button>
               ))}
             </Group>
@@ -301,8 +311,8 @@ export function MyCalendarPage() {
   const upcomingSessions = useMemo(() => (upcomingBookings || []).map(b => ({
     id: b.id,
     startDate: new Date(b.start_time),
-    date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
-    time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
+    date: formatDateUTC(b.start_time, { weekday: 'long', day: 'numeric', month: 'short' }),
+    time: `${formatTimeUTC(b.start_time)} - ${formatTimeUTC(b.end_time)}`,
     title: b.title,
     trainer: "Trackfiz",
     type: b.session_type || "presencial",
@@ -317,8 +327,8 @@ export function MyCalendarPage() {
       id: b.id,
       startDate: new Date(b.start_time),
       title: b.title,
-      date: new Date(b.start_time).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
-      time: `${new Date(b.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} - ${new Date(b.end_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
+      date: formatDateUTC(b.start_time, { weekday: 'long', day: 'numeric', month: 'short' }),
+      time: `${formatTimeUTC(b.start_time)} - ${formatTimeUTC(b.end_time)}`,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     })), [allBookings]);
 

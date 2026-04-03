@@ -226,6 +226,12 @@ export function MealPlanDetailView({
   const [selectedFormula, setSelectedFormula] = useState<FormulaType>("mifflin");
   const isMobile = useMediaQuery("(max-width: 768px)");
 
+  const planDays = useMemo(() => {
+    const p = mealPlan.plan as { weeks?: { week: number; days: DayPlan[] }[]; days?: DayPlan[] } | undefined;
+    if (p?.weeks && p.weeks.length > 0) return p.weeks.flatMap(w => w.days);
+    return p?.days || [];
+  }, [mealPlan.plan]);
+
   // Form for client data (for calculations)
   const clientForm = useForm({
     initialValues: {
@@ -355,18 +361,17 @@ export function MealPlanDetailView({
 
   // Calculate actual macros from plan
   const actualMacros = useMemo(() => {
-    if (!mealPlan.plan?.days?.length) {
+    if (!planDays.length) {
       return { calories: 0, protein: 0, carbs: 0, fat: 0 };
     }
 
-    // Calculate average from all days
     let totalCalories = 0;
     let totalProtein = 0;
     let totalCarbs = 0;
     let totalFat = 0;
     let daysCount = 0;
 
-    mealPlan.plan.days.forEach((day) => {
+    planDays.forEach((day) => {
       let dayCalories = 0;
       let dayProtein = 0;
       let dayCarbs = 0;
@@ -398,7 +403,7 @@ export function MealPlanDetailView({
       carbs: Math.round((totalCarbs / daysCount) * 10) / 10,
       fat: Math.round((totalFat / daysCount) * 10) / 10,
     };
-  }, [mealPlan.plan]);
+  }, [planDays]);
 
   // Calculate macro percentages
   const macroPercentages = useMemo(() => {
@@ -425,7 +430,7 @@ export function MealPlanDetailView({
     const clientAllergens = [...(client.allergies || []), ...(client.intolerances || [])];
     const warnings: { food: string; allergen: string; meal: string; day: string }[] = [];
 
-    mealPlan.plan?.days?.forEach((day) => {
+    planDays.forEach((day) => {
       day.meals?.forEach((meal) => {
         getMealFoods(meal).forEach((food) => {
           food.allergens?.forEach((allergen) => {
@@ -443,7 +448,7 @@ export function MealPlanDetailView({
     });
 
     return warnings;
-  }, [mealPlan.plan, client]);
+  }, [planDays, client]);
 
   const handleExportPDF = () => {
     if (onExportPDF) {
@@ -843,7 +848,7 @@ export function MealPlanDetailView({
         {/* Meals Tab */}
         <Tabs.Panel value="meals">
           <MealPlanDaysView 
-            days={mealPlan.plan?.days || []} 
+            days={planDays} 
             clientAllergens={[...(client?.allergies || []), ...(client?.intolerances || [])]}
           />
         </Tabs.Panel>

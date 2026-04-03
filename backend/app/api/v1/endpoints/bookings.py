@@ -159,6 +159,54 @@ class BookingResponse(BaseModel):
         from_attributes = True
 
 
+async def _get_client_user_id(db: AsyncSession, client_id: Optional[UUID]) -> Optional[UUID]:
+    """Resolve a Client record's linked user_id (for in-app notifications)."""
+    if not client_id:
+        return None
+    result = await db.execute(select(Client.user_id).where(Client.id == client_id))
+    return result.scalar_one_or_none()
+
+
+async def _notify_booking_parties(
+    db: AsyncSession,
+    booking: Booking,
+    *,
+    event: str,
+    trainer_title: str,
+    trainer_body: str,
+    client_title: str,
+    client_body: str,
+    link: str = "/calendar",
+):
+    """Send in-app notifications to both trainer and client for a booking event."""
+    start_str = booking.start_time.strftime("%d/%m/%Y %H:%M") if booking.start_time else ""
+
+    if booking.organizer_id:
+        await notify(
+            db=db,
+            event=event,
+            user_id=booking.organizer_id,
+            workspace_id=booking.workspace_id,
+            title=trainer_title,
+            body=trainer_body.replace("{time}", start_str),
+            link=link,
+            notification_type="booking",
+        )
+
+    client_user_id = await _get_client_user_id(db, booking.client_id)
+    if client_user_id:
+        await notify(
+            db=db,
+            event=event,
+            user_id=client_user_id,
+            workspace_id=booking.workspace_id,
+            title=client_title,
+            body=client_body.replace("{time}", start_str),
+            link="/my-calendar",
+            notification_type="booking",
+        )
+
+
 # ============ ENDPOINTS ============
 
 @router.get("", response_model=List[BookingResponse])
@@ -317,18 +365,13 @@ async def create_booking(
         client_id=data.client_id
     )
 
-    start_str = booking.start_time.strftime("%d/%m/%Y %H:%M") if booking.start_time else ""
-    await notify(
-        db=db,
+    await _notify_booking_parties(
+        db, booking,
         event="booking_created",
-        user_id=current_user.id,
-        workspace_id=current_user.workspace_id,
-        title="Nueva reserva creada",
-        body=f"{booking.title} — {start_str}",
-        link="/calendar",
-        notification_type="booking",
-        email_subject=f"Nueva reserva: {booking.title}",
-        email_html=f"<p>Se ha creado la reserva <strong>{booking.title}</strong> para el {start_str}.</p>",
+        trainer_title="Nueva reserva creada",
+        trainer_body=f"{booking.title} — {{time}}",
+        client_title="Nueva sesión programada",
+        client_body=f"Tu entrenador ha programado una sesión el {{time}}",
     )
 
     return booking
@@ -418,7 +461,26 @@ async def update_booking(
         organizer_id=booking.organizer_id,
         client_id=booking.client_id
     )
-    
+
+    if data.status and data.status == BookingStatus.confirmed:
+        await _notify_booking_parties(
+            db, booking,
+            event="booking_confirmed",
+            trainer_title="Reserva confirmada",
+            trainer_body=f"{booking.title} confirmada — {{time}}",
+            client_title="Sesión confirmada",
+            client_body=f"Tu sesión del {{time}} ha sido confirmada por tu entrenador",
+        )
+    else:
+        await _notify_booking_parties(
+            db, booking,
+            event="booking_updated",
+            trainer_title="Reserva modificada",
+            trainer_body=f"{booking.title} ha sido actualizada — {{time}}",
+            client_title="Sesión modificada",
+            client_body=f"Tu sesión ha sido modificada. Nuevo horario: {{time}}",
+        )
+
     return booking
 
 
@@ -525,17 +587,13 @@ async def cancel_booking(
         client_id=booking.client_id
     )
 
-    await notify(
-        db=db,
+    await _notify_booking_parties(
+        db, booking,
         event="booking_cancelled",
-        user_id=booking.organizer_id,
-        workspace_id=current_user.workspace_id,
-        title="Reserva cancelada",
-        body=f"{booking.title} ha sido cancelada",
-        link="/calendar",
-        notification_type="booking",
-        email_subject=f"Reserva cancelada: {booking.title}",
-        email_html=f"<p>La reserva <strong>{booking.title}</strong> ha sido cancelada.</p>",
+        trainer_title="Reserva cancelada",
+        trainer_body=f"{booking.title} ha sido cancelada",
+        client_title="Sesión cancelada",
+        client_body=f"Tu sesión del {{time}} ha sido cancelada",
     )
 
     return booking
@@ -576,6 +634,15 @@ async def complete_booking(
         organizer_id=booking.organizer_id,
         client_id=booking.client_id
     )
-    
+
+    await _notify_booking_parties(
+        db, booking,
+        event="booking_completed",
+        trainer_title="Sesión completada",
+        trainer_body=f"{booking.title} marcada como completada",
+        client_title="Sesión completada",
+        client_body=f"Tu sesión del {{time}} ha sido completada. ¡Buen trabajo!",
+    )
+
     return booking
 
