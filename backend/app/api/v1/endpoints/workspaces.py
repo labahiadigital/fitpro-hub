@@ -36,6 +36,8 @@ async def list_workspaces(
             name=workspace.name,
             slug=workspace.slug,
             logo_url=workspace.logo_url,
+            branding=workspace.branding or {},
+            settings=workspace.settings or {},
             role=user_role.role.value
         ))
     

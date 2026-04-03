@@ -510,6 +510,17 @@ export function SettingsPage() {
     },
   });
 
+  useEffect(() => {
+    if (currentWorkspace?.branding) {
+      brandingForm.setValues({
+        primary_color: currentWorkspace.branding.primary_color || "#2D6A4F",
+        secondary_color: currentWorkspace.branding.secondary_color || "#40916C",
+        accent_color: currentWorkspace.branding.accent_color || "#95D5B2",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWorkspace?.branding?.primary_color, currentWorkspace?.branding?.secondary_color, currentWorkspace?.branding?.accent_color]);
+
   const brandingUpdateMutation = useMutation({
     mutationFn: (values: typeof brandingForm.values) => {
       const id = currentWorkspace?.id;

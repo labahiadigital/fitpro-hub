@@ -1569,16 +1569,49 @@ export function ClientDetailPage() {
                 </Menu.Target>
                 <Menu.Dropdown>
                   <Menu.Item leftSection={<IconDownload size={16} />} onClick={async () => {
-                    const pdfOpts = { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any };
-                    await generateClientPlanPDF(null, null, pdfOpts);
+                    const mp = clientMealPlans && clientMealPlans.length > 0 ? (clientMealPlans.find((p: any) => p.is_active) || clientMealPlans[0]) : null;
+                    const prog = clientWorkoutPrograms && clientWorkoutPrograms.length > 0 ? clientWorkoutPrograms[0] : null;
+
+                    const transformDaysGeneral = (template: any) => {
+                      if (!template) return [];
+                      const rawDays = template.days || [];
+                      if (rawDays.length === 0 && template.blocks) {
+                        return [{ id: "day-1", day: 1, dayName: "Entrenamiento", blocks: template.blocks.map((b: any, bi: number) => ({ id: `block-${bi}`, name: b.name, type: (b.type || "main") as any, exercises: (b.exercises || []).map((ex: any, j: number) => ({ id: `ex-${j}`, exercise_id: "", exercise: { id: "", name: ex.exercise?.name || ex.name || "Ejercicio", image_url: ex.exercise?.image_url, video_url: ex.exercise?.video_url }, sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes })) })), isRestDay: false }];
+                      }
+                      return rawDays.map((d: any) => ({ id: d.id, day: d.day, dayName: d.dayName, isRestDay: d.isRestDay || false, notes: d.notes, blocks: (d.blocks || []).map((b: any, bi: number) => ({ id: b.id || `block-${bi}`, name: b.name, type: (b.type || "main") as any, exercises: (b.exercises || []).map((ex: any, j: number) => ({ id: ex.id || `ex-${j}`, exercise_id: ex.exercise_id || "", exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups, image_url: ex.exercise?.image_url, video_url: ex.exercise?.video_url }, sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes })) })) }));
+                    };
+
+                    const frontPhotos = (clientPhotos || []).filter((p: any) => p.type === "front" || !p.type).sort((a: any, b: any) => ((a.measurement_date || a.uploaded_at || "") as string).localeCompare((b.measurement_date || b.uploaded_at || "") as string));
+
+                    await generateClientPlanPDF(
+                      mp ? { id: mp.id, name: mp.name, description: mp.description, target_calories: mp.target_calories || 2000, target_protein: mp.target_protein || 150, target_carbs: mp.target_carbs || 200, target_fat: mp.target_fat || 70, plan: mp.plan || { days: [] }, supplements: mp.supplements || [], notes: mp.notes, nutritional_advice: mp.nutritional_advice } : null,
+                      prog ? { id: (prog as any).id, name: (prog as any).name, description: (prog as any).description, duration_weeks: (prog as any).duration_weeks, difficulty: (prog as any).difficulty, days: transformDaysGeneral((prog as any).template) } : null,
+                      {
+                        workspaceName: currentWorkspace?.name || "Trackfiz",
+                        trainerName: user?.full_name || "Entrenador",
+                        branding: (currentWorkspace as any)?.branding,
+                        workspaceLogo: (currentWorkspace as any)?.logo_url,
+                        client: { first_name: client.first_name, last_name: client.last_name, email: client.email, phone: client.phone, birth_date: (client as any).birth_date, gender: client.gender, weight_kg: client.weight_kg, height_cm: client.height_cm, body_fat_pct: (client as any).body_fat_pct, activity_level: (client as any).activity_level, allergies: (client as any).health_data?.allergens || [], intolerances: (client as any).health_data?.intolerances || [], goals: client.goals, health_data: (client as any).health_data, avatar_url: (client as any).avatar_url },
+                        progressData: {
+                          currentWeight: clientMeasurements?.[0]?.weight_kg ?? clientProgressSummary?.current_stats?.weight ?? client.weight_kg ?? undefined,
+                          startWeight: clientMeasurements?.length > 1 ? (clientMeasurements[clientMeasurements.length - 1]?.weight_kg ?? undefined) : (clientProgressSummary?.start_stats?.weight ?? undefined),
+                          measurements: clientMeasurements?.map((m: any) => ({ date: m.measured_at || m.created_at, weight_kg: m.weight_kg, body_fat_percentage: m.body_fat_percentage, muscle_mass_kg: m.muscle_mass_kg, waist_cm: m.measurements?.waist, hip_cm: m.measurements?.hips, chest_cm: m.measurements?.chest, arm_cm: m.measurements?.arms || m.measurements?.arm, thigh_cm: m.measurements?.thighs || m.measurements?.thigh, notes: m.notes })) || [],
+                          weightHistory: clientMeasurements?.filter((m: any) => m.weight_kg).map((m: any) => ({ date: m.measured_at || m.created_at, weight: m.weight_kg, body_fat: m.body_fat_percentage || 0, muscle_mass: m.muscle_mass_kg || 0 })) || [],
+                          photos: frontPhotos.map((p: any) => ({ url: p.url, type: "front", date: p.measurement_date || p.uploaded_at })),
+                          totalWorkouts: clientWorkoutLogs?.length || undefined,
+                          completedWorkouts: clientWorkoutLogs?.filter((l: any) => l.log?.exercises?.some((e: any) => e.completed))?.length || undefined,
+                          workoutCompletionRate: clientWorkoutLogs?.length ? Math.round((clientWorkoutLogs.filter((l: any) => l.log?.exercises?.every((e: any) => e.completed)).length / clientWorkoutLogs.length) * 100) : undefined,
+                        },
+                      }
+                    );
                   }}>General</Menu.Item>
                   <Menu.Item leftSection={<IconSalad size={16} />} onClick={async () => {
                     const mp = clientMealPlans && clientMealPlans.length > 0 ? clientMealPlans.find((p: any) => p.is_active) || clientMealPlans[0] : null;
-                    if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                    if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
                   }}>Nutrición</Menu.Item>
                   <Menu.Item leftSection={<IconBarbell size={16} />} onClick={async () => {
                     const prog = clientWorkoutPrograms && clientWorkoutPrograms.length > 0 ? clientWorkoutPrograms[0] : null;
-                    if (prog) { await generateWorkoutProgramPDF(prog as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                    if (prog) { await generateWorkoutProgramPDF(prog as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
                   }}>Entrenamiento</Menu.Item>
                 </Menu.Dropdown>
               </Menu>

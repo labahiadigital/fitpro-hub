@@ -92,5 +92,7 @@ class WorkspaceListResponse(BaseSchema):
     name: str
     slug: str
     logo_url: Optional[str] = None
+    branding: Dict[str, Any] = {}
+    settings: Dict[str, Any] = {}
     role: str
 

@@ -320,10 +320,11 @@ function drawTopBar(doc: jsPDF, colors?: typeof C) {
   doc.rect(0, 0, pw, 4, "F");
 }
 
-function drawBottomBar(doc: jsPDF) {
+function drawBottomBar(doc: jsPDF, colors?: typeof C) {
+  const cc = colors || C;
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
-  doc.setFillColor(...C.primary);
+  doc.setFillColor(...cc.primary);
   doc.rect(0, ph - 3, pw, 3, "F");
 }
 
@@ -396,20 +397,20 @@ export async function generateClientPlanPDF(
   // ================================================================
   doc.addPage("a4", "portrait");
   drawTopBar(doc, brandColors);
-  renderSummaryPage(doc, client, mealPlan, workoutProgram, trainerName, avatarDataUrl);
+  renderSummaryPage(doc, client, mealPlan, workoutProgram, trainerName, avatarDataUrl, brandColors);
 
   // ================================================================
   //  PAGE 3 — STATS & PROGRESS (PORTRAIT)
   // ================================================================
   doc.addPage("a4", "portrait");
   drawTopBar(doc, brandColors);
-  await renderProgressPage(doc, client, progressData);
+  await renderProgressPage(doc, client, progressData, brandColors);
 
   // ================================================================
   //  WORKOUT PLAN — PORTRAIT PAGES (1 day per page)
   // ================================================================
   if (workoutProgram?.days && workoutProgram.days.length > 0) {
-    renderWorkoutSection(doc, workoutProgram, exerciseImages);
+    renderWorkoutSection(doc, workoutProgram, exerciseImages, brandColors);
   }
 
   // ================================================================
@@ -422,7 +423,7 @@ export async function generateClientPlanPDF(
   // ================================================================
   //  LEGAL DISCLAIMER — LAST PAGE (PORTRAIT)
   // ================================================================
-  renderDisclaimerPage(doc, workspaceName);
+  renderDisclaimerPage(doc, workspaceName, brandColors);
 
   // ================================================================
   //  FOOTER ON ALL PAGES
@@ -432,9 +433,9 @@ export async function generateClientPlanPDF(
     doc.setPage(i);
     const pagePw = doc.internal.pageSize.getWidth();
     const pagePh = doc.internal.pageSize.getHeight();
-    drawBottomBar(doc);
+    drawBottomBar(doc, brandColors);
     doc.setFontSize(5.5);
-    doc.setTextColor(...C.textMuted);
+    doc.setTextColor(...brandColors.textMuted);
     doc.setFont("helvetica", "normal");
     doc.text(
       `${workspaceName} — ${new Date().toLocaleDateString("es-ES")} — Pág. ${i}/${totalPages}`,
@@ -461,22 +462,21 @@ function renderCoverPage(doc: jsPDF, _planTitle: string, clientName: string, wor
   doc.setFillColor(...cc.primary);
   doc.rect(0, 0, pw, 6, "F");
 
-  let logoEndY = 40;
-  if (logoDataUrl) {
-    try {
-      doc.addImage(logoDataUrl, "PNG", pw / 2 - 25, 16, 50, 50);
-      logoEndY = 72;
-    } catch { /* ignore */ }
-  }
-
+  let nameY = 40;
   doc.setFontSize(22);
   doc.setTextColor(...cc.primary);
   doc.setFont("helvetica", "bold");
-  doc.text(workspaceName, pw / 2, logoEndY, { align: "center" });
+  doc.text(workspaceName, pw / 2, nameY, { align: "center" });
 
   doc.setDrawColor(...cc.primary);
   doc.setLineWidth(0.5);
-  doc.line(pw / 2 - 30, logoEndY + 6, pw / 2 + 30, logoEndY + 6);
+  doc.line(pw / 2 - 30, nameY + 6, pw / 2 + 30, nameY + 6);
+
+  if (logoDataUrl) {
+    try {
+      doc.addImage(logoDataUrl, "PNG", pw / 2 - 25, nameY + 14, 50, 50);
+    } catch { /* ignore */ }
+  }
 
   const bottomY = ph - 60;
 
@@ -512,17 +512,19 @@ function renderSummaryPage(
   workoutProgram: WorkoutProgramData | null,
   trainerName: string,
   avatarDataUrl?: string | null,
+  colors?: typeof C,
 ) {
+  const cc = colors || C;
   const pw = doc.internal.pageSize.getWidth();
   const contentW = pw - MARGIN_P * 2;
   let y = 12;
 
   doc.setFontSize(14);
-  doc.setTextColor(...C.primary);
+  doc.setTextColor(...cc.primary);
   doc.setFont("helvetica", "bold");
   doc.text("RESUMEN DEL CLIENTE", MARGIN_P, y);
   y += 2;
-  doc.setDrawColor(...C.primary);
+  doc.setDrawColor(...cc.primary);
   doc.setLineWidth(0.4);
   doc.line(MARGIN_P, y, MARGIN_P + 55, y);
   y += 5;
@@ -534,7 +536,7 @@ function renderSummaryPage(
     try {
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(avatarX - 1, avatarY - 1, avatarSize + 2, avatarSize + 2, 3, 3, "F");
-      doc.setDrawColor(...C.primary);
+      doc.setDrawColor(...cc.primary);
       doc.setLineWidth(0.5);
       doc.roundedRect(avatarX - 1, avatarY - 1, avatarSize + 2, avatarSize + 2, 3, 3, "S");
       doc.addImage(avatarDataUrl, "JPEG", avatarX, avatarY, avatarSize, avatarSize);
@@ -562,14 +564,14 @@ function renderSummaryPage(
     startY: y,
     body: infoRows,
     theme: "plain",
-    styles: { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: C.text },
+    styles: { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: cc.text },
     columnStyles: {
-      0: { fontStyle: "bold", textColor: C.textMuted, cellWidth: 28 },
+      0: { fontStyle: "bold", textColor: cc.textMuted, cellWidth: 28 },
       1: { cellWidth: 56 },
-      2: { fontStyle: "bold", textColor: C.textMuted, cellWidth: 28 },
+      2: { fontStyle: "bold", textColor: cc.textMuted, cellWidth: 28 },
       3: { cellWidth: 56 },
     },
-    alternateRowStyles: { fillColor: C.headerBg },
+    alternateRowStyles: { fillColor: cc.headerBg },
   });
   y = (doc as any).lastAutoTable.finalY + 4;
 
@@ -577,15 +579,15 @@ function renderSummaryPage(
   const ht = toNum(client?.height_cm);
   if (wt > 0 && ht > 0) {
     const imc = wt / ((ht / 100) ** 2);
-    let imcCat = "Normopeso", imcCol = C.secondary;
-    if (imc < 18.5) { imcCat = "Bajo peso"; imcCol = C.accent; }
-    else if (imc >= 25 && imc < 30) { imcCat = "Sobrepeso"; imcCol = C.accent; }
-    else if (imc >= 30) { imcCat = "Obesidad"; imcCol = C.danger; }
+    let imcCat = "Normopeso", imcCol = cc.secondary;
+    if (imc < 18.5) { imcCat = "Bajo peso"; imcCol = cc.accent; }
+    else if (imc >= 25 && imc < 30) { imcCat = "Sobrepeso"; imcCol = cc.accent; }
+    else if (imc >= 30) { imcCat = "Obesidad"; imcCol = cc.danger; }
 
-    doc.setFillColor(...C.primaryLight);
+    doc.setFillColor(...cc.primaryLight);
     doc.roundedRect(MARGIN_P, y, contentW, 10, 2, 2, "F");
     doc.setFontSize(8);
-    doc.setTextColor(...C.textMuted);
+    doc.setTextColor(...cc.textMuted);
     doc.setFont("helvetica", "bold");
     doc.text("IMC:", MARGIN_P + 4, y + 6.5);
     doc.setTextColor(...imcCol);
@@ -597,29 +599,28 @@ function renderSummaryPage(
   const intolerances = client?.intolerances || client?.health_data?.intolerances || [];
   const allRestrictions = [...allergies, ...intolerances];
   if (allRestrictions.length > 0) {
-    doc.setFillColor(...C.dangerBg);
+    doc.setFillColor(...cc.dangerBg);
     doc.roundedRect(MARGIN_P, y, contentW, 12, 2, 2, "F");
-    doc.setDrawColor(...C.danger);
+    doc.setDrawColor(...cc.danger);
     doc.setLineWidth(0.4);
     doc.line(MARGIN_P, y, MARGIN_P, y + 12);
     doc.setFontSize(7);
-    doc.setTextColor(...C.danger);
+    doc.setTextColor(...cc.danger);
     doc.setFont("helvetica", "bold");
     doc.text("RESTRICCIONES ALIMENTARIAS", MARGIN_P + 4, y + 4.5);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(...C.text);
+    doc.setTextColor(...cc.text);
     doc.text(allRestrictions.join(", "), MARGIN_P + 4, y + 9);
     y += 15;
   }
 
-  // --- MACRONUTRIENT OBJECTIVES ---
   if (mealPlan) {
     doc.setFontSize(12);
-    doc.setTextColor(...C.primary);
+    doc.setTextColor(...cc.primary);
     doc.setFont("helvetica", "bold");
     doc.text("OBJETIVOS NUTRICIONALES", MARGIN_P, y);
     y += 2;
-    doc.setDrawColor(...C.primary);
+    doc.setDrawColor(...cc.primary);
     doc.setLineWidth(0.3);
     doc.line(MARGIN_P, y, MARGIN_P + 50, y);
     y += 4;
@@ -646,18 +647,18 @@ function renderSummaryPage(
     autoTable(doc, {
       startY: y, body: macroTableData, theme: "grid", tableWidth: 90,
       margin: { left: MARGIN_P },
-      styles: { fontSize: 7.5, cellPadding: 2, textColor: C.text, lineColor: C.border, lineWidth: 0.3 },
+      styles: { fontSize: 7.5, cellPadding: 2, textColor: cc.text, lineColor: cc.border, lineWidth: 0.3 },
       columnStyles: {
         0: { fontStyle: "bold", cellWidth: 28 }, 1: { halign: "center", cellWidth: 20 },
         2: { halign: "center", cellWidth: 20 }, 3: { halign: "center", cellWidth: 22 },
       },
       didParseCell: (data: any) => {
-        if (data.row.index === 0) { data.cell.styles.fillColor = C.primary; data.cell.styles.textColor = C.white; data.cell.styles.fontStyle = "bold"; }
-        if (data.row.index === 4) { data.cell.styles.fillColor = C.primaryLight; data.cell.styles.fontStyle = "bold"; }
+        if (data.row.index === 0) { data.cell.styles.fillColor = cc.primary; data.cell.styles.textColor = cc.white; data.cell.styles.fontStyle = "bold"; }
+        if (data.row.index === 4) { data.cell.styles.fillColor = cc.primaryLight; data.cell.styles.fontStyle = "bold"; }
         if (data.column.index === 0) {
-          if (data.row.index === 1) data.cell.styles.textColor = C.proteinColor;
-          if (data.row.index === 2) data.cell.styles.textColor = C.carbsColor;
-          if (data.row.index === 3) data.cell.styles.textColor = C.fatColor;
+          if (data.row.index === 1) data.cell.styles.textColor = cc.proteinColor;
+          if (data.row.index === 2) data.cell.styles.textColor = cc.carbsColor;
+          if (data.row.index === 3) data.cell.styles.textColor = cc.fatColor;
         }
       },
     });
@@ -666,9 +667,9 @@ function renderSummaryPage(
     const chartCY = tableStartY + 18;
     const chartR = 16;
     const slices = [
-      { pct: proPct, color: C.proteinColor, label: "Proteínas" },
-      { pct: carbPct, color: C.carbsColor, label: "Carbohidratos" },
-      { pct: fatPct, color: C.fatColor, label: "Grasas" },
+      { pct: proPct, color: cc.proteinColor, label: "Proteínas" },
+      { pct: carbPct, color: cc.carbsColor, label: "Carbohidratos" },
+      { pct: fatPct, color: cc.fatColor, label: "Grasas" },
     ];
     let startAngle = -Math.PI / 2;
     for (const slice of slices) {
@@ -691,30 +692,29 @@ function renderSummaryPage(
     }
     doc.setFillColor(255, 255, 255);
     doc.circle(chartCX, chartCY, chartR * 0.55, "F");
-    doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    doc.setFontSize(10); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
     doc.text(`${Math.round(tCal)}`, chartCX, chartCY - 1, { align: "center" });
-    doc.setFontSize(5.5); doc.setTextColor(...C.textMuted);
+    doc.setFontSize(5.5); doc.setTextColor(...cc.textMuted);
     doc.text("kcal/día", chartCX, chartCY + 3, { align: "center" });
 
     const legY = chartCY + chartR + 4;
     let legX = chartCX - 24;
     for (const s of slices) {
       doc.setFillColor(...s.color); doc.rect(legX, legY, 2.5, 2.5, "F");
-      doc.setFontSize(5.5); doc.setTextColor(...C.text); doc.setFont("helvetica", "normal");
+      doc.setFontSize(5.5); doc.setTextColor(...cc.text); doc.setFont("helvetica", "normal");
       doc.text(`${s.label} ${s.pct}%`, legX + 3.5, legY + 2.2);
       legX += 20;
     }
     y = Math.max((doc as any).lastAutoTable.finalY, legY + 4) + 5;
   }
 
-  // --- WORKOUT OBJECTIVES ---
   if (workoutProgram) {
     doc.setFontSize(12);
-    doc.setTextColor(...C.primary);
+    doc.setTextColor(...cc.primary);
     doc.setFont("helvetica", "bold");
     doc.text("OBJETIVOS DE ENTRENAMIENTO", MARGIN_P, y);
     y += 2;
-    doc.setDrawColor(...C.primary);
+    doc.setDrawColor(...cc.primary);
     doc.setLineWidth(0.3);
     doc.line(MARGIN_P, y, MARGIN_P + 55, y);
     y += 5;
@@ -730,20 +730,20 @@ function renderSummaryPage(
 
     autoTable(doc, {
       startY: y, body: wkRows, theme: "plain",
-      styles: { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: C.text },
-      columnStyles: { 0: { fontStyle: "bold", textColor: C.textMuted, cellWidth: 32 }, 1: {} },
-      alternateRowStyles: { fillColor: C.headerBg },
+      styles: { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }, textColor: cc.text },
+      columnStyles: { 0: { fontStyle: "bold", textColor: cc.textMuted, cellWidth: 32 }, 1: {} },
+      alternateRowStyles: { fillColor: cc.headerBg },
     });
     y = (doc as any).lastAutoTable.finalY + 4;
   }
 
   const clientGoal = client?.goals || client?.health_data?.fitness_goal;
   if (clientGoal && mealPlan) {
-    doc.setFillColor(...C.accentBg);
+    doc.setFillColor(...cc.accentBg);
     doc.roundedRect(MARGIN_P, y, contentW, 10, 2, 2, "F");
-    doc.setFontSize(8); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "bold");
+    doc.setFontSize(8); doc.setTextColor(...cc.textMuted); doc.setFont("helvetica", "bold");
     doc.text("Objetivo:", MARGIN_P + 4, y + 6.5);
-    doc.setTextColor(...C.primary);
+    doc.setTextColor(...cc.primary);
     doc.text(`${goalLabel(clientGoal)} — ${Math.round(toNum(mealPlan.target_calories, 2000))} kcal/día`, MARGIN_P + 25, y + 6.5);
   }
 }
@@ -752,19 +752,19 @@ function renderSummaryPage(
 //  PAGE 3: STATS & PROGRESS (placeholders)
 // ================================================================
 
-async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, progressData?: PDFOptions["progressData"]) {
+async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, progressData?: PDFOptions["progressData"], colors?: typeof C) {
+  const cc = colors || C;
   const pw = doc.internal.pageSize.getWidth();
   const contentW = pw - MARGIN_P * 2;
   let y = 12;
 
-  doc.setFontSize(14); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+  doc.setFontSize(14); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
   doc.text("ESTADÍSTICAS Y PROGRESO", MARGIN_P, y);
   y += 2;
-  doc.setDrawColor(...C.primary); doc.setLineWidth(0.4); doc.line(MARGIN_P, y, MARGIN_P + 55, y);
+  doc.setDrawColor(...cc.primary); doc.setLineWidth(0.4); doc.line(MARGIN_P, y, MARGIN_P + 55, y);
   y += 6;
 
-  // --- SITUACIÓN ACTUAL ---
-  doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+  doc.setFontSize(10); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
   doc.text("Situación Actual", MARGIN_P, y);
   y += 4;
 
@@ -784,15 +784,14 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
 
   autoTable(doc, {
     startY: y, body: statusRows, theme: "plain",
-    styles: { fontSize: 7.5, cellPadding: { top: 1.5, bottom: 1.5, left: 3, right: 3 }, textColor: C.text },
-    columnStyles: { 0: { fontStyle: "bold", textColor: C.textMuted, cellWidth: 38 }, 1: {} },
-    alternateRowStyles: { fillColor: C.headerBg },
+    styles: { fontSize: 7.5, cellPadding: { top: 1.5, bottom: 1.5, left: 3, right: 3 }, textColor: cc.text },
+    columnStyles: { 0: { fontStyle: "bold", textColor: cc.textMuted, cellWidth: 38 }, 1: {} },
+    alternateRowStyles: { fillColor: cc.headerBg },
   });
   y = (doc as any).lastAutoTable.finalY + 5;
 
-  // --- EVOLUCIÓN DE MEDIDAS ---
   const measurements = progressData?.measurements || [];
-  doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+  doc.setFontSize(10); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
   doc.text("Evolución de Medidas", MARGIN_P, y);
   y += 4;
 
@@ -813,29 +812,28 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
     autoTable(doc, {
       startY: y, head: [measHead], body: measBody, theme: "grid",
       tableWidth: contentW, margin: { left: MARGIN_P },
-      headStyles: { fillColor: C.primary, textColor: C.white, fontSize: 6, fontStyle: "bold" },
-      styles: { fontSize: 6, cellPadding: 1.5, textColor: C.text, lineColor: C.border, lineWidth: 0.15, halign: "center" },
+      headStyles: { fillColor: cc.primary, textColor: cc.white, fontSize: 6, fontStyle: "bold" },
+      styles: { fontSize: 6, cellPadding: 1.5, textColor: cc.text, lineColor: cc.border, lineWidth: 0.15, halign: "center" },
       columnStyles: { 0: { halign: "left", cellWidth: 22 } },
-      alternateRowStyles: { fillColor: C.headerBg },
+      alternateRowStyles: { fillColor: cc.headerBg },
     });
     y = (doc as any).lastAutoTable.finalY + 5;
   } else {
-    doc.setFontSize(7); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "italic");
+    doc.setFontSize(7); doc.setTextColor(...cc.textMuted); doc.setFont("helvetica", "italic");
     doc.text("No hay mediciones registradas todavía. Consulta tu perfil en la app para añadir medidas.", MARGIN_P, y);
     y += 8;
   }
 
-  // --- CUMPLIMIENTO ---
   const halfW = (contentW - 4) / 2;
 
-  doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+  doc.setFontSize(10); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
   doc.text("Cumplimiento", MARGIN_P, y);
   y += 5;
 
   const drawMiniBox = (x: number, yPos: number, w: number, title: string, value: string, subtitle: string, color: [number, number, number]) => {
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(x, yPos, w, 24, 2, 2, "F");
-    doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+    doc.setDrawColor(...cc.border); doc.setLineWidth(0.3);
     doc.roundedRect(x, yPos, w, 24, 2, 2, "S");
     doc.setFillColor(...color);
     doc.roundedRect(x, yPos, w, 6, 2, 2, "F");
@@ -844,7 +842,7 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
     doc.text(title, x + 3, yPos + 4.2);
     doc.setFontSize(14); doc.setTextColor(...color); doc.setFont("helvetica", "bold");
     doc.text(value, x + w / 2, yPos + 15, { align: "center" });
-    doc.setFontSize(6); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "normal");
+    doc.setFontSize(6); doc.setTextColor(...cc.textMuted); doc.setFont("helvetica", "normal");
     doc.text(subtitle, x + w / 2, yPos + 20, { align: "center" });
   };
 
@@ -858,15 +856,14 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
   const nutValue = nutritionRate != null ? `${nutritionRate}%` : "—";
   const nutSub = nutritionRate != null ? "objetivos diarios" : "Sin datos";
 
-  drawMiniBox(MARGIN_P, y, halfW, "ENTRENAMIENTOS", wkValue, wkSub, C.primary);
-  drawMiniBox(MARGIN_P + halfW + 4, y, halfW, "NUTRICIÓN", nutValue, nutSub, C.secondary);
+  drawMiniBox(MARGIN_P, y, halfW, "ENTRENAMIENTOS", wkValue, wkSub, cc.primary);
+  drawMiniBox(MARGIN_P + halfW + 4, y, halfW, "NUTRICIÓN", nutValue, nutSub, cc.secondary);
   y += 30;
 
-  // --- BODY EVOLUTION CHART (weight, body fat, muscle mass) ---
   const weightHist = progressData?.weightHistory || [];
   if (weightHist.length >= 2) {
-    if (y > 220) { doc.addPage("a4", "portrait"); drawTopBar(doc); y = 12; }
-    doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    if (y > 220) { doc.addPage("a4", "portrait"); drawTopBar(doc, cc); y = 12; }
+    doc.setFontSize(10); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
     doc.text("Evolución Corporal", MARGIN_P, y);
     y += 5;
 
@@ -877,7 +874,7 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
 
     doc.setFillColor(250, 250, 250);
     doc.roundedRect(chartX, chartY, chartW, chartH, 2, 2, "F");
-    doc.setDrawColor(...C.border); doc.setLineWidth(0.2);
+    doc.setDrawColor(...cc.border); doc.setLineWidth(0.2);
     doc.roundedRect(chartX, chartY, chartW, chartH, 2, 2, "S");
 
     const padX = 8;
@@ -888,11 +885,11 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
     type SeriesConfig = { values: number[]; color: [number, number, number]; label: string };
     const series: SeriesConfig[] = [];
     const weights = weightHist.map(w => w.weight).filter(v => v > 0);
-    if (weights.length >= 2) series.push({ values: weightHist.map(w => w.weight), color: C.primary, label: "Peso (kg)" });
+    if (weights.length >= 2) series.push({ values: weightHist.map(w => w.weight), color: cc.primary, label: "Peso (kg)" });
     const fatValues = weightHist.map(w => w.body_fat || 0);
-    if (fatValues.some(v => v > 0)) series.push({ values: fatValues, color: C.danger, label: "% Grasa" });
+    if (fatValues.some(v => v > 0)) series.push({ values: fatValues, color: cc.danger, label: "% Grasa" });
     const muscleValues = weightHist.map(w => w.muscle_mass || 0);
-    if (muscleValues.some(v => v > 0)) series.push({ values: muscleValues, color: C.proteinColor, label: "M. Muscular (kg)" });
+    if (muscleValues.some(v => v > 0)) series.push({ values: muscleValues, color: cc.proteinColor, label: "M. Muscular (kg)" });
 
     const allVals = series.flatMap(s => s.values.filter(v => v > 0));
     const minV = Math.min(...allVals) - 1;
@@ -928,20 +925,19 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
     }
 
     if (weightHist.length > 0) {
-      doc.setFontSize(4.5); doc.setTextColor(...C.textMuted);
+      doc.setFontSize(4.5); doc.setTextColor(...cc.textMuted);
       const firstDate = new Date(weightHist[0].date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
       const lastDate = new Date(weightHist[weightHist.length - 1].date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
       doc.text(firstDate, chartX + padX, chartY + chartH - 1);
       doc.text(lastDate, chartX + padX + innerW - 8, chartY + chartH - 1);
     }
 
-    // Legend
     const legendY = chartY + chartH - 5;
     let legendX = chartX + padX + 20;
     for (const s of series) {
       doc.setFillColor(...s.color);
       doc.circle(legendX, legendY, 1, "F");
-      doc.setFontSize(4.5); doc.setTextColor(...C.text); doc.setFont("helvetica", "normal");
+      doc.setFontSize(4.5); doc.setTextColor(...cc.text); doc.setFont("helvetica", "normal");
       doc.text(s.label, legendX + 2.5, legendY + 1);
       legendX += doc.getTextWidth(s.label) + 8;
     }
@@ -949,12 +945,11 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
     y = chartY + chartH + 5;
   }
 
-  // --- PROGRESS PHOTOS ---
   const photos = progressData?.photos || [];
   const frontPhotos = photos.filter(p => p.type === "front" || !p.type).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   if (frontPhotos.length >= 1) {
-    if (y > 200) { doc.addPage("a4", "portrait"); drawTopBar(doc); y = 12; }
-    doc.setFontSize(10); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+    if (y > 200) { doc.addPage("a4", "portrait"); drawTopBar(doc, cc); y = 12; }
+    doc.setFontSize(10); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
     doc.text("Evolución Física", MARGIN_P, y);
     y += 5;
 
@@ -973,10 +968,10 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
         const imgData = await loadImageAsDataUrl(photo.url);
         if (imgData) {
           doc.addImage(imgData, "JPEG", px, y, photoW, photoH);
-          doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+          doc.setDrawColor(...cc.border); doc.setLineWidth(0.3);
           doc.rect(px, y, photoW, photoH, "S");
           if (photo.date) {
-            doc.setFontSize(5.5); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "normal");
+            doc.setFontSize(5.5); doc.setTextColor(...cc.textMuted); doc.setFont("helvetica", "normal");
             doc.text(new Date(photo.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" }), px + photoW / 2, y + photoH + 3, { align: "center" });
           }
         }
@@ -986,11 +981,11 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
     y += photoH + 8;
   }
 
-  doc.setFillColor(...C.accentBg);
+  doc.setFillColor(...cc.accentBg);
   doc.roundedRect(MARGIN_P, y, contentW, 10, 2, 2, "F");
-  doc.setFontSize(7); doc.setTextColor(...C.accent); doc.setFont("helvetica", "bold");
+  doc.setFontSize(7); doc.setTextColor(...cc.accent); doc.setFont("helvetica", "bold");
   doc.text("NOTA", MARGIN_P + 4, y + 4);
-  doc.setFont("helvetica", "normal"); doc.setTextColor(...C.text); doc.setFontSize(6.5);
+  doc.setFont("helvetica", "normal"); doc.setTextColor(...cc.text); doc.setFontSize(6.5);
   doc.text("Los datos detallados de progreso y gráficas de evolución están disponibles en tu perfil de la aplicación.", MARGIN_P + 4, y + 8);
 }
 
@@ -998,7 +993,8 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
 //  WORKOUT SECTION — LANDSCAPE, 1 DAY PER PAGE
 // ================================================================
 
-function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, exerciseImages: Map<string, string>) {
+function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, exerciseImages: Map<string, string>, colors?: typeof C) {
+  const cc = colors || C;
   const activeDays = (workoutProgram.days || []).filter(d => {
     if (d.isRestDay) return false;
     return (d.blocks || []).some(b => b.exercises && b.exercises.length > 0);
@@ -1011,24 +1007,24 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
   for (let i = 0; i < activeDays.length; i++) {
     const day = activeDays[i];
     doc.addPage("a4", "portrait");
-    drawTopBar(doc);
+    drawTopBar(doc, cc);
     const pw = doc.internal.pageSize.getWidth();
     const contentW = pw - MARGIN_P * 2;
     let y = 12;
 
     if (i === 0) {
-      doc.setFontSize(13); doc.setTextColor(...C.primary); doc.setFont("helvetica", "bold");
+      doc.setFontSize(13); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
       doc.text("PLAN DE ENTRENAMIENTO", MARGIN_P, y);
       let sub = workoutProgram.name;
       if (workoutProgram.duration_weeks) sub += ` — ${workoutProgram.duration_weeks} sem.`;
       if (workoutProgram.difficulty) sub += ` — ${difficultyLabel(workoutProgram.difficulty)}`;
-      doc.setFontSize(8); doc.setTextColor(...C.secondary); doc.setFont("helvetica", "normal");
+      doc.setFontSize(8); doc.setTextColor(...cc.secondary); doc.setFont("helvetica", "normal");
       doc.text(sub, MARGIN_P + 62, y);
       y += 8;
     }
 
     const dayName = day.dayName || DAY_NAMES[(day.day - 1) % 7] || `Día ${day.day}`;
-    doc.setFillColor(...C.primary);
+    doc.setFillColor(...cc.primary);
     doc.roundedRect(MARGIN_P, y, contentW, 7, 1.5, 1.5, "F");
     doc.setFontSize(10); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
     doc.text(dayName, MARGIN_P + 4, y + 5);
@@ -1071,8 +1067,8 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
       theme: "grid",
       tableWidth: contentW,
       margin: { left: MARGIN_P },
-      headStyles: { fillColor: C.headerBg, textColor: C.text, fontSize: 6, fontStyle: "bold", lineColor: C.border, lineWidth: 0.2 },
-      styles: { fontSize: 6, cellPadding: 1.5, textColor: C.text, lineColor: C.border, lineWidth: 0.15, overflow: "ellipsize", minCellHeight: IMG_SIZE + 2 },
+      headStyles: { fillColor: cc.headerBg, textColor: cc.text, fontSize: 6, fontStyle: "bold", lineColor: cc.border, lineWidth: 0.2 },
+      styles: { fontSize: 6, cellPadding: 1.5, textColor: cc.text, lineColor: cc.border, lineWidth: 0.15, overflow: "ellipsize", minCellHeight: IMG_SIZE + 2 },
       columnStyles: {
         0: { cellWidth: 24, fontStyle: "bold" },
         1: { cellWidth: remainingW },
@@ -1085,7 +1081,7 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
         8: { cellWidth: 12, halign: "center" },
         9: { cellWidth: 14, halign: "center" },
       },
-      alternateRowStyles: { fillColor: C.headerBg },
+      alternateRowStyles: { fillColor: cc.headerBg },
       showHead: "firstPage",
       rowPageBreak: "avoid",
       didDrawCell: (data: any) => {
@@ -1113,7 +1109,7 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
 
     if (day.notes) {
       const tblEnd = (doc as any).lastAutoTable.finalY + 3;
-      doc.setFontSize(6.5); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "italic");
+      doc.setFontSize(6.5); doc.setTextColor(...cc.textMuted); doc.setFont("helvetica", "italic");
       doc.text(`Notas: ${day.notes}`, MARGIN_P, tblEnd);
     }
   }
@@ -1122,9 +1118,9 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
     const lastContentW = doc.internal.pageSize.getWidth() - MARGIN_P * 2;
     const lastY = (doc as any).lastAutoTable?.finalY || 20;
     const restY = lastY + 8;
-    doc.setFillColor(...C.headerBg);
+    doc.setFillColor(...cc.headerBg);
     doc.roundedRect(MARGIN_P, restY, lastContentW, 7, 1, 1, "F");
-    doc.setFontSize(7); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "italic");
+    doc.setFontSize(7); doc.setTextColor(...cc.textMuted); doc.setFont("helvetica", "italic");
     const restNames = restDays.map(d => d.dayName || DAY_NAMES[(d.day - 1) % 7]).join(", ");
     doc.text(`Días de descanso: ${restNames}`, MARGIN_P + 3, restY + 4.5);
   }
@@ -1238,9 +1234,8 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
           const rP = group.foods.reduce((s, i) => s + i.p, 0);
           const rC = group.foods.reduce((s, i) => s + i.c, 0);
           const rF = group.foods.reduce((s, i) => s + i.f, 0);
-          const rQty = group.foods.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
           const comidaCell = isFirstRow ? mealLabel : "";
-          tableRows.push({ cells: [comidaCell, group.name, "", `${Math.round(rQty)}g`, Math.round(rCal).toString(), rP.toFixed(1), rC.toFixed(1), rF.toFixed(1)], meta: "recipe" });
+          tableRows.push({ cells: [comidaCell, group.name, "", "", Math.round(rCal).toString(), rP.toFixed(1), rC.toFixed(1), rF.toFixed(1)], meta: "recipe" });
           isFirstRow = false;
           for (const fd of group.foods) {
             tableRows.push({ cells: ["", "", fd.name, fd.qty, Math.round(fd.cal).toString(), fd.p.toFixed(1), fd.c.toFixed(1), fd.f.toFixed(1)], meta: "food-in-recipe" });
@@ -1361,21 +1356,22 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
 //  LAST PAGE: LEGAL DISCLAIMER
 // ================================================================
 
-function renderDisclaimerPage(doc: jsPDF, workspaceName: string) {
+function renderDisclaimerPage(doc: jsPDF, workspaceName: string, colors?: typeof C) {
+  const cc = colors || C;
   doc.addPage("a4", "portrait");
-  drawTopBar(doc);
+  drawTopBar(doc, cc);
   const pw = doc.internal.pageSize.getWidth();
   const contentW = pw - MARGIN_P * 2;
   let y = 16;
 
-  doc.setFontSize(14); doc.setTextColor(...C.danger); doc.setFont("helvetica", "bold");
+  doc.setFontSize(14); doc.setTextColor(...cc.danger); doc.setFont("helvetica", "bold");
   doc.text("AVISO LEGAL Y RENUNCIA DE RESPONSABILIDAD", pw / 2, y, { align: "center" });
   y += 3;
-  doc.setDrawColor(...C.danger); doc.setLineWidth(0.4);
+  doc.setDrawColor(...cc.danger); doc.setLineWidth(0.4);
   doc.line(MARGIN_P + 20, y, pw - MARGIN_P - 20, y);
   y += 8;
 
-  doc.setFontSize(7.5); doc.setTextColor(...C.text); doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5); doc.setTextColor(...cc.text); doc.setFont("helvetica", "normal");
 
   const paragraphs = [
     "La información contenida en este plan tiene fines exclusivamente informativos y educativos. No pretende sustituir el consejo, diagnóstico o tratamiento médico profesional.",
@@ -1391,36 +1387,36 @@ function renderDisclaimerPage(doc: jsPDF, workspaceName: string) {
   }
 
   y += 4;
-  doc.setFillColor(...C.dangerBg);
+  doc.setFillColor(...cc.dangerBg);
   doc.roundedRect(MARGIN_P, y, contentW, 42, 3, 3, "F");
-  doc.setDrawColor(...C.danger); doc.setLineWidth(0.5);
+  doc.setDrawColor(...cc.danger); doc.setLineWidth(0.5);
   doc.line(MARGIN_P, y, MARGIN_P, y + 42);
 
-  doc.setFontSize(8); doc.setTextColor(...C.danger); doc.setFont("helvetica", "bold");
+  doc.setFontSize(8); doc.setTextColor(...cc.danger); doc.setFont("helvetica", "bold");
   doc.text("AVISO LEGAL", MARGIN_P + 5, y + 6);
 
-  doc.setFontSize(7); doc.setTextColor(...C.text); doc.setFont("helvetica", "normal");
+  doc.setFontSize(7); doc.setTextColor(...cc.text); doc.setFont("helvetica", "normal");
   const legalText = `Al utilizar este Plan de Entrenamiento / Dieta, usted reconoce que el ejercicio físico y los cambios nutricionales conllevan riesgos para la salud. ${workspaceName} no se hace responsable de las lesiones, enfermedades o problemas de salud derivados de la aplicación de este contenido.\n\nEste documento no constituye una receta médica. Es responsabilidad del usuario asegurarse de que está físicamente apto para realizar las actividades propuestas. Si siente dolor, mareos o molestias graves, deténgase de inmediato y busque atención médica.`;
   const legalLines = doc.splitTextToSize(legalText, contentW - 12);
   doc.text(legalLines, MARGIN_P + 5, y + 12);
 
   y += 48;
 
-  doc.setFillColor(...C.accentBg);
+  doc.setFillColor(...cc.accentBg);
   doc.roundedRect(MARGIN_P, y, contentW, 28, 3, 3, "F");
-  doc.setDrawColor(...C.accent); doc.setLineWidth(0.5);
+  doc.setDrawColor(...cc.accent); doc.setLineWidth(0.5);
   doc.line(MARGIN_P, y, MARGIN_P, y + 28);
 
-  doc.setFontSize(8); doc.setTextColor(...C.accent); doc.setFont("helvetica", "bold");
+  doc.setFontSize(8); doc.setTextColor(...cc.accent); doc.setFont("helvetica", "bold");
   doc.text("NOTA SOBRE LOS DATOS", MARGIN_P + 5, y + 6);
 
-  doc.setFontSize(7); doc.setTextColor(...C.text); doc.setFont("helvetica", "normal");
+  doc.setFontSize(7); doc.setTextColor(...cc.text); doc.setFont("helvetica", "normal");
   const dataDisclaimer = "Trackfiz no es responsable de los datos mostrados en este documento. La información aquí contenida ha sido confeccionada por el profesional y el cliente que utilizan la plataforma. Este documento es únicamente una plantilla que muestra los datos reflejados por los usuarios de la aplicación.";
   const dataLines = doc.splitTextToSize(dataDisclaimer, contentW - 12);
   doc.text(dataLines, MARGIN_P + 5, y + 12);
 
   y += 34;
-  doc.setFontSize(6.5); doc.setTextColor(...C.textMuted); doc.setFont("helvetica", "italic");
+  doc.setFontSize(6.5); doc.setTextColor(...cc.textMuted); doc.setFont("helvetica", "italic");
   doc.text(`Documento generado el ${new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })}`, pw / 2, y, { align: "center" });
 }
 
