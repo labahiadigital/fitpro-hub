@@ -15,6 +15,7 @@ import {
   IconBulb,
   IconCalendarEvent,
   IconChartBar,
+  IconChartLine,
   IconFileText,
   IconForms,
   IconHome,
@@ -38,9 +39,10 @@ import { normalizeText } from "../../utils/text";
 interface CommandPaletteProps {
   opened: boolean;
   close: () => void;
+  isClient?: boolean;
 }
 
-const actions = [
+const trainerActions = [
   {
     group: "Navegación",
     items: [
@@ -74,10 +76,29 @@ const actions = [
   },
 ];
 
-export function CommandPalette({ opened, close }: CommandPaletteProps) {
+const clientActions = [
+  {
+    group: "Navegación",
+    items: [
+      { icon: IconHome, label: "Mi Panel", description: "Tu resumen y métricas", to: "/dashboard" },
+      { icon: IconBarbell, label: "Mis Entrenamientos", description: "Programas de entrenamiento asignados", to: "/my-workouts" },
+      { icon: IconSalad, label: "Mi Nutrición", description: "Tu plan de alimentación", to: "/my-nutrition" },
+      { icon: IconChartLine, label: "Mi Progreso", description: "Fotos, medidas y evolución", to: "/my-progress" },
+      { icon: IconCalendarEvent, label: "Mis Citas", description: "Agenda y próximas sesiones", to: "/my-calendar" },
+      { icon: IconMessage, label: "Mensajes", description: "Chat con tu entrenador", to: "/my-messages" },
+      { icon: IconFileText, label: "Mis Documentos", description: "Documentos compartidos", to: "/my-documents" },
+      { icon: IconBook, label: "Academia", description: "Cursos y contenidos formativos", to: "/lms" },
+      { icon: IconUser, label: "Mi Perfil", description: "Datos personales y preferencias", to: "/my-profile" },
+    ],
+  },
+];
+
+export function CommandPalette({ opened, close, isClient }: CommandPaletteProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const actions = isClient ? clientActions : trainerActions;
 
   const filteredActions = useMemo(
     () =>
@@ -91,7 +112,7 @@ export function CommandPalette({ opened, close }: CommandPaletteProps) {
           ),
         }))
         .filter((group) => group.items.length > 0),
-    [query]
+    [query, actions]
   );
 
   const flatItems = useMemo(

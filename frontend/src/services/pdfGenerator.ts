@@ -41,6 +41,7 @@ interface MealItem {
   quantity_grams: number;
   type: "food" | "supplement";
   recipe_name?: string;
+  recipe_group?: string;
 }
 
 interface Meal {
@@ -946,7 +947,7 @@ async function renderProgressPage(doc: jsPDF, client: ClientData | undefined, pr
   }
 
   const photos = progressData?.photos || [];
-  const frontPhotos = photos.filter(p => p.type === "front" || !p.type).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const frontPhotos = photos.filter(p => !p.type || p.type === "front" || p.type === "unknown").sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   if (frontPhotos.length >= 1) {
     if (y > 200) { doc.addPage("a4", "portrait"); drawTopBar(doc, cc); y = 12; }
     doc.setFontSize(10); doc.setTextColor(...cc.primary); doc.setFont("helvetica", "bold");
@@ -1190,7 +1191,7 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
           const data = item.type === "food" ? item.food : item.supplement;
           if (!data) continue;
           const m = getItemMacros(item);
-          const recipeName = item.recipe_name || "";
+          const recipeName = item.recipe_group || item.recipe_name || "";
           if (recipeName && (!currentRecipe || currentRecipe.name !== recipeName)) {
             currentRecipe = { name: recipeName, foods: [] };
             groups.push(currentRecipe);

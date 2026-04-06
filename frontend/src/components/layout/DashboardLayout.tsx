@@ -562,6 +562,8 @@ export function DashboardLayout() {
   const [paletteOpen, { open: openPalette, close: closePalette }] = useDisclosure(false);
   const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false);
   const breadcrumbLabel = useBreadcrumb();
+  const { user: layoutUser } = useAuthStore();
+  const isClientLayout = layoutUser?.role === "client";
 
   const { data: notifData } = useNotifications();
   const { data: unreadData } = useUnreadCount();
@@ -711,7 +713,7 @@ export function DashboardLayout() {
         </div>
       </Box>
 
-      <CommandPalette opened={paletteOpen} close={closePalette} />
+      <CommandPalette opened={paletteOpen} close={closePalette} isClient={isClientLayout} />
       <NotificationCenter
         opened={notifOpen}
         onClose={closeNotif}

@@ -1581,7 +1581,7 @@ export function ClientDetailPage() {
                       return rawDays.map((d: any) => ({ id: d.id, day: d.day, dayName: d.dayName, isRestDay: d.isRestDay || false, notes: d.notes, blocks: (d.blocks || []).map((b: any, bi: number) => ({ id: b.id || `block-${bi}`, name: b.name, type: (b.type || "main") as any, exercises: (b.exercises || []).map((ex: any, j: number) => ({ id: ex.id || `ex-${j}`, exercise_id: ex.exercise_id || "", exercise: { id: ex.exercise?.id || "", name: ex.exercise?.name || ex.name || "Ejercicio", muscle_groups: ex.exercise?.muscle_groups, image_url: ex.exercise?.image_url, video_url: ex.exercise?.video_url }, sets: ex.sets || 3, reps: ex.reps || "10-12", rest_seconds: ex.rest_seconds || 60, notes: ex.notes })) })) }));
                     };
 
-                    const frontPhotos = (clientPhotos || []).filter((p: any) => p.type === "front" || !p.type).sort((a: any, b: any) => ((a.measurement_date || a.uploaded_at || "") as string).localeCompare((b.measurement_date || b.uploaded_at || "") as string));
+                    const frontPhotos = (clientPhotos || []).filter((p: any) => !p.type || p.type === "front" || p.type === "unknown").sort((a: any, b: any) => ((a.measurement_date || a.uploaded_at || "") as string).localeCompare((b.measurement_date || b.uploaded_at || "") as string));
 
                     await generateClientPlanPDF(
                       mp ? { id: mp.id, name: mp.name, description: mp.description, target_calories: mp.target_calories || 2000, target_protein: mp.target_protein || 150, target_carbs: mp.target_carbs || 200, target_fat: mp.target_fat || 70, plan: mp.plan || { days: [] }, supplements: mp.supplements || [], notes: mp.notes, nutritional_advice: mp.nutritional_advice } : null,
@@ -2451,6 +2451,8 @@ export function ClientDetailPage() {
                               thigh_cm: m.measurements?.thighs || m.measurements?.thigh,
                               notes: m.notes,
                             })) || [],
+                            weightHistory: clientMeasurements?.filter((m: any) => m.weight_kg).map((m: any) => ({ date: m.measured_at || m.created_at, weight: m.weight_kg, body_fat: m.body_fat_percentage || 0, muscle_mass: m.muscle_mass_kg || 0 })) || [],
+                            photos: (clientPhotos || []).filter((p: any) => !p.type || p.type === "front" || p.type === "unknown").sort((a: any, b: any) => ((a.measurement_date || a.uploaded_at || "") as string).localeCompare((b.measurement_date || b.uploaded_at || "") as string)).map((p: any) => ({ url: p.url, type: "front", date: p.measurement_date || p.uploaded_at })),
                             totalWorkouts: clientWorkoutLogs?.length || undefined,
                             completedWorkouts: clientWorkoutLogs?.filter(l => l.log?.exercises?.some((e: any) => e.completed))?.length || undefined,
                             workoutCompletionRate: clientWorkoutLogs?.length ? Math.round((clientWorkoutLogs.filter(l => l.log?.exercises?.every((e: any) => e.completed)).length / clientWorkoutLogs.length) * 100) : undefined,
@@ -4123,6 +4125,8 @@ export function ClientDetailPage() {
                               thigh_cm: m.measurements?.thighs || m.measurements?.thigh,
                               notes: m.notes,
                             })) || [],
+                            weightHistory: clientMeasurements?.filter((m: any) => m.weight_kg).map((m: any) => ({ date: m.measured_at || m.created_at, weight: m.weight_kg, body_fat: m.body_fat_percentage || 0, muscle_mass: m.muscle_mass_kg || 0 })) || [],
+                            photos: (clientPhotos || []).filter((p: any) => !p.type || p.type === "front" || p.type === "unknown").sort((a: any, b: any) => ((a.measurement_date || a.uploaded_at || "") as string).localeCompare((b.measurement_date || b.uploaded_at || "") as string)).map((p: any) => ({ url: p.url, type: "front", date: p.measurement_date || p.uploaded_at })),
                             totalWorkouts: clientWorkoutLogs?.length || undefined,
                             completedWorkouts: clientWorkoutLogs?.filter(l => l.log?.exercises?.some((e: any) => e.completed))?.length || undefined,
                             workoutCompletionRate: clientWorkoutLogs?.length ? Math.round((clientWorkoutLogs.filter(l => l.log?.exercises?.every((e: any) => e.completed)).length / clientWorkoutLogs.length) * 100) : undefined,
