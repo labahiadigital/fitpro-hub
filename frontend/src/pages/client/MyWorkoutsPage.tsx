@@ -1173,8 +1173,9 @@ export function MyWorkoutsPage() {
     });
   };
 
-  const weekSchedule = useMemo(() => buildScheduleFromDays(executedTemplateDays, legacyBlocks), [executedTemplateDays, legacyBlocks]);
-  const weekScheduleOriginal = useMemo(() => buildScheduleFromDays(originalTemplateDays, originalTemplateSrc?.blocks || []), [originalTemplateDays, originalTemplateSrc]);
+  const weekSchedule = buildScheduleFromDays(executedTemplateDays, legacyBlocks);
+  const originalLegacyBlocks = (originalTemplateSrc?.blocks || []) as ProgramDay["blocks"];
+  const weekScheduleOriginal = buildScheduleFromDays(originalTemplateDays, originalLegacyBlocks);
 
   const displaySchedule = programViewMode === "original" ? weekScheduleOriginal : weekSchedule;
 
