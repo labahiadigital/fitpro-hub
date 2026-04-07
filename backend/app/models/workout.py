@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Text, Integer, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -18,11 +19,13 @@ class WorkoutProgram(BaseModel):
     duration_weeks = Column(Integer, default=4)
     difficulty = Column(String(50), default="intermediate")
     
-    # Template structure
-    # Contains: weeks -> days -> exercises with sets, reps, rest, etc.
+    # Template structure (original from trainer)
     template = Column(JSONB, default=lambda: {
         "weeks": []
     })
+
+    # Executed template: client-modified version. Initialized as a copy of template on assignment.
+    executed_template = Column(MutableDict.as_mutable(JSONB), nullable=True)
     
     # Tags for categorization
     tags = Column(ARRAY(String), default=[])

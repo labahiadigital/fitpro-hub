@@ -14,6 +14,7 @@ import {
   ActionIcon,
   Center,
   Loader,
+  Menu,
   Modal,
   NumberInput,
   Textarea,
@@ -26,15 +27,18 @@ import {
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { DateInput } from "@mantine/dates";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
+  IconArrowsExchange,
   IconBarbell,
   IconCalendarEvent,
   IconCheck,
   IconChevronRight,
   IconClock,
   IconDownload,
+  IconFilter,
   IconFlame,
+  IconList,
   IconPlayerPlay,
   IconExchange,
   IconMoodEmpty,
@@ -42,7 +46,7 @@ import {
   IconMoodSmile,
   IconSearch,
 } from "@tabler/icons-react";
-import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory } from "../../hooks/useClientPortal";
+import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory, useSwapWorkoutDays } from "../../hooks/useClientPortal";
 import { generateWorkoutProgramPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
@@ -50,7 +54,144 @@ import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
 import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
 
-// No mock data - all data comes from backend
+function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
+  const { data: allExercises } = useClientExercises({ limit: 500 });
+  const [equipFilter, setEquipFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const programExerciseIds = useMemo(() => {
+    const ids = new Set<string>();
+    templateDays.forEach((d) => {
+      d.blocks?.forEach((b) => {
+        b.exercises?.forEach((ex) => {
+          const id = ex.exercise_id || ex.exercise?.id;
+          if (id) ids.add(id);
+        });
+      });
+    });
+    return ids;
+  }, [templateDays]);
+
+  const exercisesInProgram = useMemo(() => {
+    if (!allExercises) return [];
+    return allExercises.filter((ex) => programExerciseIds.has(ex.id));
+  }, [allExercises, programExerciseIds]);
+
+  const equipmentOptions = useMemo(() => {
+    const set = new Set<string>();
+    exercisesInProgram.forEach((ex) => ex.equipment?.forEach((eq) => set.add(eq)));
+    return Array.from(set).sort().map((e) => ({ value: e, label: e }));
+  }, [exercisesInProgram]);
+
+  const filtered = useMemo(() => {
+    let list = exercisesInProgram;
+    if (equipFilter) list = list.filter((ex) => ex.equipment?.includes(equipFilter));
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((ex) => ex.name.toLowerCase().includes(q));
+    }
+    return list;
+  }, [exercisesInProgram, equipFilter, searchQuery]);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, typeof filtered> = {};
+    filtered.forEach((ex) => {
+      const groups = ex.muscle_groups?.length ? ex.muscle_groups : ["Sin grupo"];
+      groups.forEach((g) => {
+        if (!map[g]) map[g] = [];
+        map[g].push(ex);
+      });
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered]);
+
+  const programSets = useMemo(() => {
+    const map: Record<string, { sets: number; reps: string }> = {};
+    templateDays.forEach((d) => {
+      d.blocks?.forEach((b) => {
+        b.exercises?.forEach((ex) => {
+          const id = ex.exercise_id || ex.exercise?.id;
+          if (id) map[id] = { sets: ex.sets || 3, reps: ex.reps || "—" };
+        });
+      });
+    });
+    return map;
+  }, [templateDays]);
+
+  return (
+    <Stack gap="md">
+      <Group gap="sm">
+        <TextInput
+          placeholder="Buscar ejercicio..."
+          leftSection={<IconSearch size={14} />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          size="sm"
+          radius="md"
+          style={{ flex: 1 }}
+        />
+        {equipmentOptions.length > 0 && (
+          <Select
+            placeholder="Filtrar por equipo"
+            data={equipmentOptions}
+            value={equipFilter}
+            onChange={setEquipFilter}
+            clearable
+            size="sm"
+            radius="md"
+            leftSection={<IconFilter size={14} />}
+            w={200}
+          />
+        )}
+      </Group>
+
+      <Text size="sm" c="dimmed">{filtered.length} ejercicios en tu programa</Text>
+
+      {grouped.length > 0 ? (
+        grouped.map(([group, exercises]) => (
+          <Box key={group}>
+            <Group gap="xs" mb="xs">
+              <ThemeIcon variant="light" color="blue" size="md" radius="xl">
+                <IconBarbell size={14} />
+              </ThemeIcon>
+              <Text fw={600} size="sm" tt="capitalize">{group}</Text>
+              <Badge variant="light" size="xs">{exercises.length}</Badge>
+            </Group>
+            <Stack gap={4}>
+              {exercises.map((ex) => {
+                const prog = programSets[ex.id];
+                return (
+                  <Paper key={ex.id} px="sm" py="xs" radius="sm" withBorder>
+                    <Group justify="space-between" wrap="nowrap">
+                      <Box>
+                        <Text size="sm" fw={500}>{ex.name}</Text>
+                        <Group gap={4}>
+                          {ex.equipment?.map((eq) => (
+                            <Badge key={eq} variant="outline" size="xs" color="gray">{eq}</Badge>
+                          ))}
+                          {ex.category && <Badge variant="light" size="xs" color="teal">{ex.category}</Badge>}
+                        </Group>
+                      </Box>
+                      {prog && (
+                        <Badge variant="light" color="yellow" size="sm">
+                          {prog.sets} × {prog.reps}
+                        </Badge>
+                      )}
+                    </Group>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          </Box>
+        ))
+      ) : (
+        <Paper p="lg" radius="md" ta="center">
+          <Text c="dimmed">No hay ejercicios asignados</Text>
+        </Paper>
+      )}
+    </Stack>
+  );
+}
 
 interface ExerciseForLog {
   exercise_id: string;
@@ -831,7 +972,8 @@ interface ProgramDay {
     name: string;
     type?: string;
     exercises?: Array<{
-      exercise?: { name?: string; image_url?: string; video_url?: string; description?: string };
+      exercise_id?: string;
+      exercise?: { id?: string; name?: string; image_url?: string; video_url?: string; description?: string; muscle_groups?: string[] };
       name?: string;
       sets?: number;
       reps?: string;
@@ -948,6 +1090,8 @@ export function MyWorkoutsPage() {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [swapModalOpened, { open: openSwapModal, close: closeSwapModal }] = useDisclosure(false);
   const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
+  const [programViewMode, setProgramViewMode] = useState<string>("executed");
+  const swapWorkoutDaysMutation = useSwapWorkoutDays();
   const [swapTarget, setSwapTarget] = useState<{
     programId: string;
     dayIndex: number;
@@ -973,9 +1117,15 @@ export function MyWorkoutsPage() {
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Mapear: Domingo=7, Lunes=1, etc.
   const todayDayNum = dayMapping[todayJsDay];
   
+  const executedTemplateSrc = (activeProgram as any)?.executed_template || activeProgram?.template;
+  const originalTemplateSrc = activeProgram?.template;
+
+  const executedTemplateDays: ProgramDay[] = executedTemplateSrc?.days || [];
+  const originalTemplateDays: ProgramDay[] = originalTemplateSrc?.days || [];
+
   // Obtener días del template (nueva estructura) o usar retrocompatibilidad
-  const templateDays: ProgramDay[] = activeProgram?.template?.days || [];
-  const legacyBlocks = activeProgram?.template?.blocks || [];
+  const templateDays: ProgramDay[] = executedTemplateDays;
+  const legacyBlocks: ProgramDay["blocks"] = (executedTemplateSrc?.blocks || []) as ProgramDay["blocks"];
   
   // Obtener el entrenamiento de hoy
   const todayWorkoutDay = templateDays.find((d: ProgramDay) => d.day === todayDayNum);
@@ -994,68 +1144,39 @@ export function MyWorkoutsPage() {
     }))
   );
   
-  // Create week schedule from days template
   const weekDays = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-  const weekSchedule = weekDays.map((dayName, index) => {
-    const dayNum = index + 1;
-    const dayData = templateDays.find((d: ProgramDay) => d.day === dayNum);
-    
-    if (dayData) {
-      const exerciseCount = dayData.blocks?.reduce((sum: number, b: { exercises?: Array<unknown> }) => sum + (b.exercises?.length || 0), 0) || 0;
-      const exercises = dayData.blocks?.flatMap((block: { exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }) => 
-        (block.exercises || []).map(ex => ({
-          name: ex.exercise?.name || ex.name || "Ejercicio",
-          sets: ex.sets || 3,
-          reps: ex.reps || "10-12",
-          weight: ex.rest_seconds ? `${ex.rest_seconds}s descanso` : "",
-          notes: ex.notes,
-        }))
-      ) || [];
-      return {
-        day: dayName,
-        dayName: dayData.dayName || dayName,
-        type: dayData.isRestDay ? "Descanso" : `${exerciseCount} ejercicios`,
-        completed: false,
-        isRestDay: dayData.isRestDay,
-        blocks: dayData.blocks,
-        exercises_list: exercises,
-      };
-    }
-    
-    // Retrocompatibilidad: solo mostrar bloques en el primer día
-    if (index === 0 && legacyBlocks.length > 0) {
-      const exercises = legacyBlocks.flatMap((block: { exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }) => 
-        (block.exercises || []).map(ex => ({
-          name: ex.exercise?.name || ex.name || "Ejercicio",
-          sets: ex.sets || 3,
-          reps: ex.reps || "10-12",
-          weight: ex.rest_seconds ? `${ex.rest_seconds}s descanso` : "",
-          notes: ex.notes,
-        }))
-      );
-      return {
-        day: dayName,
-        dayName: dayName,
-        type: `${legacyBlocks.reduce((sum: number, b: { exercises?: Array<unknown> }) => sum + (b.exercises?.length || 0), 0)} ejercicios`,
-        completed: false,
-        isRestDay: false,
-        blocks: legacyBlocks,
-        exercises_list: exercises,
-      };
-    }
-    
-    return {
-      day: dayName,
-      dayName: dayName,
-      type: "Sin asignar",
-      completed: false,
-      isRestDay: true,
-      blocks: [],
-      exercises_list: [],
-    };
-  });
 
-  const displaySchedule = weekSchedule;
+  const buildScheduleFromDays = (days: ProgramDay[], fallbackBlocks: ProgramDay["blocks"]) => {
+    return weekDays.map((dayName, index) => {
+      const dayNum = index + 1;
+      const dayData = days.find((d: ProgramDay) => d.day === dayNum);
+      if (dayData) {
+        const exerciseCount = dayData.blocks?.reduce((sum: number, b) => sum + (b.exercises?.length || 0), 0) || 0;
+        const exercises = dayData.blocks?.flatMap((block) =>
+          (block.exercises || []).map(ex => ({
+            name: ex.exercise?.name || ex.name || "Ejercicio",
+            sets: ex.sets || 3,
+            reps: ex.reps || "10-12",
+            weight: ex.rest_seconds ? `${ex.rest_seconds}s descanso` : "",
+            notes: ex.notes,
+          }))
+        ) || [];
+        return { day: dayName, dayName: dayData.dayName || dayName, dayNum, type: dayData.isRestDay ? "Descanso" : `${exerciseCount} ejercicios`, completed: false, isRestDay: dayData.isRestDay, blocks: dayData.blocks, exercises_list: exercises };
+      }
+      if (index === 0 && fallbackBlocks.length > 0) {
+        const exercises = fallbackBlocks.flatMap((block) =>
+          (block.exercises || []).map(ex => ({ name: ex.exercise?.name || ex.name || "Ejercicio", sets: ex.sets || 3, reps: ex.reps || "10-12", weight: ex.rest_seconds ? `${ex.rest_seconds}s descanso` : "", notes: ex.notes }))
+        );
+        return { day: dayName, dayName, dayNum, type: `${fallbackBlocks.reduce((sum, b) => sum + (b.exercises?.length || 0), 0)} ejercicios`, completed: false, isRestDay: false, blocks: fallbackBlocks, exercises_list: exercises };
+      }
+      return { day: dayName, dayName, dayNum, type: "Sin asignar", completed: false, isRestDay: true, blocks: [] as ProgramDay["blocks"], exercises_list: [] as Array<{ name: string; sets: number; reps: string }> };
+    });
+  };
+
+  const weekSchedule = useMemo(() => buildScheduleFromDays(executedTemplateDays, legacyBlocks), [executedTemplateDays, legacyBlocks]);
+  const weekScheduleOriginal = useMemo(() => buildScheduleFromDays(originalTemplateDays, originalTemplateSrc?.blocks || []), [originalTemplateDays, originalTemplateSrc]);
+
+  const displaySchedule = programViewMode === "original" ? weekScheduleOriginal : weekSchedule;
 
   // Check if today's workout has already been completed
   const isTodayCompleted = activeProgram && todayLogs?.completed_program_ids?.includes(activeProgram.id);
@@ -1190,8 +1311,9 @@ export function MyWorkoutsPage() {
           onChange={setActiveTab}
           data={[
             { value: "today", label: "Registrar entrenamiento" },
-            { value: "week", label: "Esta Semana" },
+            { value: "week", label: "Tu programa" },
             { value: "history", label: "Historial" },
+            { value: "exercises", label: "Todos mis ejercicios" },
           ]}
           size="sm"
           radius="md"
@@ -1205,10 +1327,13 @@ export function MyWorkoutsPage() {
             Registrar entrenamiento
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
-            Esta Semana
+            Tu programa
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconClock size={16} />}>
             Historial
+          </Tabs.Tab>
+          <Tabs.Tab value="exercises" leftSection={<IconList size={16} />}>
+            Todos mis ejercicios
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -1427,13 +1552,27 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
+          <Group justify="space-between" mb="md">
+            <Select
+              value={programViewMode}
+              onChange={(v) => setProgramViewMode(v || "executed")}
+              data={[
+                { value: "executed", label: "Programa ejecutado" },
+                { value: "original", label: "Programa asignado" },
+              ]}
+              size="xs"
+              radius="md"
+              w={200}
+            />
+          </Group>
           <MasterDetailLayout
             hasSelection={selectedDayIndex !== null && !displaySchedule[selectedDayIndex]?.isRestDay}
             emptyMessage="Selecciona un día de entrenamiento para ver los ejercicios"
             master={
               <>
                 {displaySchedule.map((day, index) => {
-                  const isToday = index + 1 === todayDayNum;
+                  const dayNum = index + 1;
+                  const isToday = dayNum === todayDayNum;
                   const exCount = day.exercises_list?.length || 0;
                   return (
                     <DayCardMenu
@@ -1444,11 +1583,40 @@ export function MyWorkoutsPage() {
                       isRestDay={day.isRestDay}
                       onClick={() => setSelectedDayIndex(index)}
                       badge={
-                        day.completed ? (
-                          <Badge color="green" variant="light" size="xs" leftSection={<IconCheck size={10} />}>
-                            Completado
-                          </Badge>
-                        ) : undefined
+                        <>
+                          {day.completed && (
+                            <Badge color="green" variant="light" size="xs" leftSection={<IconCheck size={10} />}>
+                              Completado
+                            </Badge>
+                          )}
+                          {programViewMode !== "original" && !day.isRestDay && activeProgram && (
+                            <Menu shadow="md" position="bottom-end" withinPortal>
+                              <Menu.Target>
+                                <ActionIcon variant="subtle" color="gray" size="xs" onClick={(e) => e.stopPropagation()}>
+                                  <IconArrowsExchange size={12} />
+                                </ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Label>Intercambiar día con</Menu.Label>
+                                {weekDays.map((label, idx) => {
+                                  const targetDayNum = idx + 1;
+                                  if (targetDayNum === dayNum) return null;
+                                  return (
+                                    <Menu.Item
+                                      key={idx}
+                                      onClick={(e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        swapWorkoutDaysMutation.mutate({ programId: activeProgram.id, sourceDay: dayNum, targetDay: targetDayNum });
+                                      }}
+                                    >
+                                      {label}
+                                    </Menu.Item>
+                                  );
+                                })}
+                              </Menu.Dropdown>
+                            </Menu>
+                          )}
+                        </>
                       }
                       summary={
                         <Text size="xs" c="dimmed">
@@ -1491,35 +1659,88 @@ export function MyWorkoutsPage() {
         <Tabs.Panel value="history">
           <Stack gap="sm">
             {data.history.length > 0 ? (
-              data.history.map((workout, index) => (
-                <Card key={index} shadow="sm" padding="md" radius="md" withBorder>
-                  <Group justify="space-between">
-                    <Box>
-                      <Text fw={600}>{workout.name}</Text>
-                      <Text size="sm" c="dimmed">{workout.date}</Text>
-                    </Box>
-                    <Group gap="md">
-                      <Group gap={4}>
-                        <IconClock size={14} />
-                        <Text size="sm">{workout.duration}</Text>
+              data.history.map((workout, index) => {
+                const logData = (history || [])[index]?.log as Record<string, unknown> | undefined;
+                const exercises = (logData?.exercises || []) as Array<{
+                  exercise_name?: string;
+                  exercise_id?: string;
+                  sets?: Array<{ weight_kg?: number; reps_completed?: number; duration_minutes?: number; distance_km?: number; completed?: boolean }>;
+                }>;
+                const satisfaction = logData?.satisfaction_rating as number | undefined;
+                const effort = logData?.perceived_effort as number | undefined;
+
+                const programDay = templateDays.find((d: ProgramDay) => {
+                  const dayIdx = logData?.day_index as number | undefined;
+                  return dayIdx !== undefined && d.day === dayIdx + 1;
+                });
+                const programExercises = programDay?.blocks?.flatMap((b: { exercises?: Array<{ exercise?: { name?: string }; sets?: number; reps?: string; target_weight?: number; target_reps?: number }> }) =>
+                  (b.exercises || []).map(ex => ({ name: ex.exercise?.name || "", sets: ex.sets || 3, reps: ex.reps || "", target_weight: ex.target_weight, target_reps: ex.target_reps }))
+                ) || [];
+
+                return (
+                  <Card key={index} shadow="sm" padding="md" radius="md" withBorder>
+                    <Group justify="space-between" mb="xs">
+                      <Box>
+                        <Text fw={600}>{workout.name}</Text>
+                        <Text size="sm" c="dimmed">{workout.date}</Text>
+                      </Box>
+                      <Group gap="xs">
+                        <Badge variant="light" color="gray" size="sm" leftSection={<IconClock size={10} />}>{workout.duration}</Badge>
+                        {effort && <Badge variant="light" color="orange" size="sm" leftSection={<IconFlame size={10} />}>Esfuerzo: {effort}/10</Badge>}
+                        {satisfaction && <Text size="sm">{satisfaction === 1 ? "😞" : satisfaction === 2 ? "😐" : "😊"}</Text>}
                       </Group>
-                      <Group gap={4}>
-                        <IconFlame size={14} color="orange" />
-                        <Text size="sm">{workout.calories} kcal</Text>
-                      </Group>
-                      <ActionIcon variant="light">
-                        <IconChevronRight size={16} />
-                      </ActionIcon>
                     </Group>
-                  </Group>
-                </Card>
-              ))
+
+                    {exercises.length > 0 && (
+                      <Stack gap="xs" mt="xs">
+                        {exercises.map((ex, exIdx) => {
+                          const programEx = programExercises.find((pe: { name: string }) => pe.name === ex.exercise_name);
+                          const bestSet = (ex.sets || []).reduce<{ weight_kg?: number; reps_completed?: number } | null>((best, s) => {
+                            if (!best) return s;
+                            if ((s.weight_kg || 0) > (best.weight_kg || 0)) return s;
+                            return best;
+                          }, null);
+                          const diffWeight = programEx?.target_weight && bestSet?.weight_kg != null
+                            ? bestSet.weight_kg - programEx.target_weight
+                            : null;
+
+                          return (
+                            <Box key={exIdx} px="sm" py="xs" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
+                              <Group justify="space-between" wrap="nowrap">
+                                <Text size="sm" fw={500}>{ex.exercise_name}</Text>
+                                <Group gap={4}>
+                                  {(ex.sets || []).map((s, si) => (
+                                    <Badge key={si} size="xs" variant={s.completed ? "light" : "outline"} color={s.completed ? "green" : "gray"}>
+                                      {s.weight_kg ?? "—"}kg×{s.reps_completed ?? "—"}
+                                    </Badge>
+                                  ))}
+                                </Group>
+                              </Group>
+                              {diffWeight !== null && Math.abs(diffWeight) >= 0.5 && (
+                                <Group gap={4} mt={2}>
+                                  <Badge size="xs" variant="light" color={diffWeight > 0 ? "green" : "red"}>
+                                    {diffWeight > 0 ? "+" : ""}{diffWeight}kg vs plan
+                                  </Badge>
+                                </Group>
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    )}
+                  </Card>
+                );
+              })
             ) : (
               <Paper p="lg" radius="md" ta="center">
                 <Text c="dimmed">No hay entrenamientos registrados aún</Text>
               </Paper>
             )}
           </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="exercises">
+          <AllMyExercisesTab templateDays={originalTemplateDays} />
         </Tabs.Panel>
       </Tabs>
 

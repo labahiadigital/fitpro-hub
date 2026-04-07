@@ -61,57 +61,58 @@ interface ClientProfile {
   health_data: Record<string, unknown>;
 }
 
+interface WorkoutTemplateStructure {
+  days?: Array<{
+    id: string;
+    day: number;
+    dayName: string;
+    isRestDay: boolean;
+    notes?: string;
+    blocks: Array<{
+      id: string;
+      name: string;
+      type?: string;
+      rest_between_sets?: number;
+      rounds?: number;
+      exercises?: Array<{
+        id: string;
+        exercise_id?: string;
+        exercise?: {
+          id: string;
+          name: string;
+          muscle_groups?: string[];
+        };
+        name?: string;
+        sets: number;
+        reps: string;
+        rest_seconds?: number;
+        notes?: string;
+      }>;
+    }>;
+  }>;
+  blocks?: Array<{
+    id: string;
+    name: string;
+    type?: string;
+    exercises?: Array<{
+      exercise?: { name?: string };
+      name?: string;
+      sets?: number;
+      reps?: string;
+      rest_seconds?: number;
+      notes?: string;
+    }>;
+  }>;
+}
+
 interface WorkoutProgram {
   id: string;
   name: string;
   description?: string;
   duration_weeks?: number;
   difficulty?: string;
-  template?: {
-    // Nueva estructura con días de la semana
-    days?: Array<{
-      id: string;
-      day: number;
-      dayName: string;
-      isRestDay: boolean;
-      notes?: string;
-      blocks: Array<{
-        id: string;
-        name: string;
-        type?: string;
-        rest_between_sets?: number;
-        rounds?: number;
-        exercises?: Array<{
-          id: string;
-          exercise_id?: string;
-          exercise?: {
-            id: string;
-            name: string;
-            muscle_groups?: string[];
-          };
-          name?: string;
-          sets: number;
-          reps: string;
-          rest_seconds?: number;
-          notes?: string;
-        }>;
-      }>;
-    }>;
-    // Retrocompatibilidad: bloques planos
-    blocks?: Array<{
-      id: string;
-      name: string;
-      type?: string;
-      exercises?: Array<{
-        exercise?: { name?: string };
-        name?: string;
-        sets?: number;
-        reps?: string;
-        rest_seconds?: number;
-        notes?: string;
-      }>;
-    }>;
-  };
+  template?: WorkoutTemplateStructure;
+  executed_template?: WorkoutTemplateStructure;
   tags?: string[];
   created_at: string;
 }
@@ -468,6 +469,32 @@ export function useLogWorkoutDetailed() {
   });
 }
 
+export function useSwapWorkoutDays() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { programId: string; sourceDay: number; targetDay: number }) => {
+      await clientPortalApi.swapWorkoutDays(data.programId, data.sourceDay, data.targetDay);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      notifications.show({ title: "Días intercambiados", message: "Los entrenamientos se han intercambiado", color: "green" });
+    },
+  });
+}
+
+export function useSwapWorkouts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { programId: string; sourceDay: number; sourceBlockIndex: number; targetDay: number; targetBlockIndex: number }) => {
+      await clientPortalApi.swapWorkouts(data.programId, data.sourceDay, data.sourceBlockIndex, data.targetDay, data.targetBlockIndex);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      notifications.show({ title: "Entrenamientos intercambiados", message: "Los bloques se han intercambiado correctamente", color: "green" });
+    },
+  });
+}
+
 export function useExerciseHistory(exerciseId: string | null, limit = 5) {
   return useQuery({
     queryKey: ["exercise-history", exerciseId, limit],
@@ -677,6 +704,34 @@ export function useSwapMeals() {
       queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
       queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
       notifications.show({ title: "Comidas intercambiadas", message: "Las comidas se han intercambiado correctamente", color: "green" });
+    },
+  });
+}
+
+export function useUpdateMealTime() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { day: number; mealIndex: number; newTime: string }) => {
+      await clientPortalApi.updateMealTime(data.day, data.mealIndex, data.newTime);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
+      notifications.show({ title: "Hora actualizada", message: "La hora de la comida se ha actualizado y reordenado", color: "green" });
+    },
+  });
+}
+
+export function useUpdateMealName() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { day: number; mealIndex: number; displayName: string }) => {
+      await clientPortalApi.updateMealName(data.day, data.mealIndex, data.displayName);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["my-meal-plans"] });
+      notifications.show({ title: "Nombre actualizado", message: "El nombre de la comida se ha actualizado", color: "green" });
     },
   });
 }

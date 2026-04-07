@@ -22,6 +22,7 @@ import {
   Modal,
   ScrollArea,
   Tabs,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure, useMediaQuery, useDebouncedValue } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
@@ -33,6 +34,7 @@ import {
   IconClock,
   IconCoffee,
   IconDotsVertical,
+  IconEdit,
   IconHistory,
   IconPlus,
   IconSalad,
@@ -60,6 +62,8 @@ import {
   useMoveMeal,
   useSwapDays,
   useSwapMeals,
+  useUpdateMealTime,
+  useUpdateMealName,
   useMeasurements,
   useProgressPhotos,
 } from "../../hooks/useClientPortal";
@@ -1090,7 +1094,7 @@ function NutritionDayDetail({
         <Box>
           <Text fw={600} mb="sm">Comidas del plan para {dayData.dayName}</Text>
           <Stack gap="sm">
-            {planMeals.map((meal: PlanMeal, mealIndex: number) => {
+            {[...planMeals].sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00")).map((meal: PlanMeal, mealIndex: number) => {
               const mealType = MEAL_TYPES.find(m => m.value === meal.name);
               const mealFoods = meal.foods || meal.items?.map(item => {
                 const food = item.food || item.supplement;
@@ -1122,7 +1126,10 @@ function NutritionDayDetail({
                         <MealIcon size={18} />
                       </ThemeIcon>
                       <Box>
-                        <Text fw={600} size="sm">{mealType?.label || meal.name}</Text>
+                        <Group gap="xs">
+                          <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
+                          {meal.time && <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time}</Badge>}
+                        </Group>
                         <Text size="xs" c="dimmed">
                           {(() => {
                             const recipeNames = new Set(mealFoods.filter((f: PlanMealFoodItem) => f.recipe_group).map((f: PlanMealFoodItem) => f.recipe_group));
@@ -1294,6 +1301,10 @@ export function MyNutritionPage() {
   const deleteNutritionLogMutation = useDeleteNutritionLog();
   const moveMealMutation = useMoveMeal();
   const swapDaysMutation = useSwapDays();
+  const updateMealTimeMutation = useUpdateMealTime();
+  const updateMealNameMutation = useUpdateMealName();
+  const [editingMealTime, setEditingMealTime] = useState<{ dayNum: number; mealIndex: number; time: string } | null>(null);
+  const [editingMealName, setEditingMealName] = useState<{ dayNum: number; mealIndex: number; name: string } | null>(null);
   const { data: measurementsData } = useMeasurements(100);
   const { data: progressPhotosData } = useProgressPhotos(50);
 
@@ -1330,7 +1341,8 @@ export function MyNutritionPage() {
   const selectedPlanMeals = useMemo(() => {
     if (!planDays || planDays.length === 0) return [];
     const dayPlan = planDays.find((d: PlanDay) => d.day === selectedPlanDay);
-    return dayPlan?.meals || [];
+    const meals = dayPlan?.meals || [];
+    return [...meals].sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
   }, [planDays, selectedPlanDay]);
 
   // Calcular totales del día
@@ -1825,7 +1837,7 @@ export function MyNutritionPage() {
       
       {selectedPlanMeals.length > 0 ? (
         <Box mb="xl">
-          {selectedPlanMeals.map((meal: PlanMeal) => {
+          {selectedPlanMeals.map((meal: PlanMeal, sortedIdx: number) => {
             const isRegistered = registeredMeals[meal.name];
             const mealLogs = mealsByType[meal.name] || [];
             const mealCalories = isRegistered 
@@ -1837,6 +1849,9 @@ export function MyNutritionPage() {
                 }, 0);
             const mealType = MEAL_TYPES.find(m => m.value === meal.name);
             const MealIcon = mealType?.icon || IconApple;
+            const displayName = (meal as PlanMeal & { display_name?: string }).display_name || meal.name;
+            const mealDayPlan = planDays.find((d: PlanDay) => d.day === selectedPlanDay);
+            const originalMealIndex = mealDayPlan?.meals?.findIndex((m: PlanMeal) => m.id === meal.id) ?? sortedIdx;
 
             return (
               <Box
@@ -1859,9 +1874,80 @@ export function MyNutritionPage() {
                     {isRegistered ? <IconCheck size={22} /> : <MealIcon size={22} />}
                   </ThemeIcon>
                   <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Group gap="xs">
-                      <Text fw={600} size="sm">{meal.name}</Text>
-                      <Text size="xs" c="dimmed">{meal.time}</Text>
+                    <Group gap="xs" wrap="nowrap">
+                      {editingMealName?.dayNum === selectedPlanDay && editingMealName?.mealIndex === originalMealIndex ? (
+                        <Group gap={4}>
+                          <TextInput
+                            size="xs"
+                            value={editingMealName.name}
+                            onChange={(e) => setEditingMealName({ ...editingMealName, name: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && editingMealName.name.trim()) {
+                                updateMealNameMutation.mutate({ day: selectedPlanDay, mealIndex: originalMealIndex, displayName: editingMealName.name });
+                                setEditingMealName(null);
+                              } else if (e.key === "Escape") setEditingMealName(null);
+                            }}
+                            autoFocus
+                            styles={{ input: { minWidth: 100, fontWeight: 600 } }}
+                          />
+                          <ActionIcon size="xs" color="green" variant="light" onClick={() => {
+                            if (editingMealName.name.trim()) {
+                              updateMealNameMutation.mutate({ day: selectedPlanDay, mealIndex: originalMealIndex, displayName: editingMealName.name });
+                            }
+                            setEditingMealName(null);
+                          }}><IconCheck size={12} /></ActionIcon>
+                          <ActionIcon size="xs" color="gray" variant="light" onClick={() => setEditingMealName(null)}><IconX size={12} /></ActionIcon>
+                        </Group>
+                      ) : (
+                        <Group gap={4}>
+                          <Text fw={600} size="sm">{displayName}</Text>
+                          {planViewMode !== "original" && (
+                            <Tooltip label="Editar nombre">
+                              <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealName({ dayNum: selectedPlanDay, mealIndex: originalMealIndex, name: displayName })}>
+                                <IconEdit size={11} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                        </Group>
+                      )}
+                      {(meal as PlanMeal & { display_name?: string }).display_name && (
+                        <Text size="xs" c="dimmed">({meal.name})</Text>
+                      )}
+                      {editingMealTime?.dayNum === selectedPlanDay && editingMealTime?.mealIndex === originalMealIndex ? (
+                        <Group gap={4}>
+                          <TextInput
+                            size="xs"
+                            type="time"
+                            value={editingMealTime.time}
+                            onChange={(e) => setEditingMealTime({ ...editingMealTime, time: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                updateMealTimeMutation.mutate({ day: selectedPlanDay, mealIndex: originalMealIndex, newTime: editingMealTime.time });
+                                setEditingMealTime(null);
+                              } else if (e.key === "Escape") setEditingMealTime(null);
+                            }}
+                            autoFocus
+                            w={90}
+                            styles={{ input: { textAlign: "center", height: 28 } }}
+                          />
+                          <ActionIcon size="xs" color="green" variant="light" onClick={() => {
+                            updateMealTimeMutation.mutate({ day: selectedPlanDay, mealIndex: originalMealIndex, newTime: editingMealTime.time });
+                            setEditingMealTime(null);
+                          }}><IconCheck size={12} /></ActionIcon>
+                          <ActionIcon size="xs" color="gray" variant="light" onClick={() => setEditingMealTime(null)}><IconX size={12} /></ActionIcon>
+                        </Group>
+                      ) : (
+                        <Group gap={2}>
+                          <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time || "--:--"}</Badge>
+                          {planViewMode !== "original" && (
+                            <Tooltip label="Editar hora">
+                              <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealTime({ dayNum: selectedPlanDay, mealIndex: originalMealIndex, time: meal.time || "12:00" })}>
+                                <IconEdit size={10} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                        </Group>
+                      )}
                       {isRegistered && mealSatisfaction[meal.name] && (
                         <Text size="sm">
                           {mealSatisfaction[meal.name] === 1 ? "😞" : mealSatisfaction[meal.name] === 2 ? "😐" : "😊"}
@@ -2138,9 +2224,8 @@ export function MyNutritionPage() {
                       )}
                     </Group>
                     <Stack gap="sm">
-                      {activeWeekData[selectedWeekDayIndex].planMeals.map((meal: PlanMeal, mealIndex: number) => {
+                      {[...activeWeekData[selectedWeekDayIndex].planMeals].sort((a: PlanMeal, b: PlanMeal) => (a.time || "00:00").localeCompare(b.time || "00:00")).map((meal: PlanMeal, mealIndex: number) => {
                         const mealType = MEAL_TYPES.find(m => m.value === meal.name);
-                        // Support both foods array and items array
                         const mealFoods = meal.foods || meal.items?.map(item => {
                           const food = item.food || item.supplement;
                           const ss = parseFloat(String(food?.serving_size || "100")) || 100;
@@ -2180,7 +2265,10 @@ export function MyNutritionPage() {
                                   <MealIcon size={18} />
                                 </ThemeIcon>
                                 <Box>
-                                  <Text fw={600} size="sm">{mealType?.label || meal.name}</Text>
+                                  <Group gap="xs">
+                                    <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
+                                    {meal.time && <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time}</Badge>}
+                                  </Group>
                                   <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
                                 </Box>
                               </Group>

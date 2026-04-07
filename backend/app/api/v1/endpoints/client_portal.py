@@ -92,9 +92,10 @@ class WorkoutProgramClientResponse(BaseModel):
     duration_weeks: Optional[int] = None
     difficulty: Optional[str] = None
     template: Optional[dict] = None
+    executed_template: Optional[dict] = None
     tags: Optional[List[str]] = []
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -653,6 +654,120 @@ async def get_my_workout(
     return program
 
 
+def _ensure_executed_template(program: WorkoutProgram):
+    """Lazily initialise executed_template from template if it's still None."""
+    import copy
+    try:
+        val = program.executed_template
+    except Exception:
+        val = None
+    if val is None:
+        program.executed_template = copy.deepcopy(program.template) if program.template else {}
+
+
+def _get_template_days_mutable(tmpl: dict) -> list:
+    """Get the mutable days list from a workout template."""
+    if "days" in tmpl:
+        return tmpl["days"]
+    return []
+
+
+class SwapWorkoutDaysRequest(BaseModel):
+    program_id: UUID
+    source_day: int
+    target_day: int
+
+
+@router.post("/workouts/swap-days")
+async def swap_workout_days(
+    data: SwapWorkoutDaysRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Swap all workouts between two days in the executed template."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == data.program_id,
+            WorkoutProgram.client_id == client.id,
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(status_code=404, detail="Programa no encontrado")
+
+    _ensure_executed_template(program)
+    tmpl = dict(program.executed_template) if program.executed_template else {}
+    days = _get_template_days_mutable(tmpl)
+
+    src = next((d for d in days if d.get("day") == data.source_day), None)
+    dst = next((d for d in days if d.get("day") == data.target_day), None)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+
+    for key in ("blocks", "dayName", "isRestDay", "notes"):
+        src[key], dst[key] = dst.get(key), src.get(key)
+
+    program.executed_template = tmpl
+    flag_modified(program, "executed_template")
+    await db.commit()
+    return {"ok": True}
+
+
+class SwapWorkoutsRequest(BaseModel):
+    program_id: UUID
+    source_day: int
+    source_block_index: int
+    target_day: int
+    target_block_index: int
+
+
+@router.post("/workouts/swap-workouts")
+async def swap_specific_workouts(
+    data: SwapWorkoutsRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Swap a specific workout block between two days in the executed template."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == data.program_id,
+            WorkoutProgram.client_id == client.id,
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(status_code=404, detail="Programa no encontrado")
+
+    _ensure_executed_template(program)
+    tmpl = dict(program.executed_template) if program.executed_template else {}
+    days = _get_template_days_mutable(tmpl)
+
+    src = next((d for d in days if d.get("day") == data.source_day), None)
+    dst = next((d for d in days if d.get("day") == data.target_day), None)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+
+    src_blocks = src.get("blocks", [])
+    dst_blocks = dst.get("blocks", [])
+    if data.source_block_index < 0 or data.source_block_index >= len(src_blocks):
+        raise HTTPException(status_code=400, detail="Bloque origen no encontrado")
+    if data.target_block_index < 0 or data.target_block_index >= len(dst_blocks):
+        raise HTTPException(status_code=400, detail="Bloque destino no encontrado")
+
+    src_blocks[data.source_block_index], dst_blocks[data.target_block_index] = (
+        dst_blocks[data.target_block_index], src_blocks[data.source_block_index]
+    )
+
+    program.executed_template = tmpl
+    flag_modified(program, "executed_template")
+    await db.commit()
+    return {"ok": True}
+
+
 @router.post("/workouts/logs", response_model=WorkoutLogResponse, status_code=status.HTTP_201_CREATED)
 async def log_workout(
     data: WorkoutLogCreate,
@@ -1060,6 +1175,93 @@ async def swap_specific_meals(
     src_meals[data.source_meal_index], dst_meals[data.target_meal_index] = (
         dst_meals[data.target_meal_index], src_meals[data.source_meal_index]
     )
+
+    meal_plan.executed_plan = plan
+    flag_modified(meal_plan, "executed_plan")
+    await db.commit()
+    return {"ok": True}
+
+
+class UpdateMealTimeRequest(BaseModel):
+    day: int
+    meal_index: int
+    new_time: str
+    week: int = 1
+
+
+@router.put("/nutrition/plan/update-meal-time")
+async def update_meal_time(
+    data: UpdateMealTimeRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the time of a meal in the executed plan and re-sort meals by time."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+    )
+    meal_plan = result.scalar_one_or_none()
+    if not meal_plan:
+        raise HTTPException(status_code=404, detail="No hay plan activo")
+
+    _ensure_executed_plan(meal_plan)
+    plan = dict(meal_plan.executed_plan) if meal_plan.executed_plan else {}
+    days = _get_plan_days_mutable(plan, data.week)
+
+    day_data = next((d for d in days if d.get("day") == data.day), None)
+    if not day_data:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+
+    meals = day_data.get("meals", [])
+    if data.meal_index < 0 or data.meal_index >= len(meals):
+        raise HTTPException(status_code=400, detail="Comida no encontrada")
+
+    meals[data.meal_index]["time"] = data.new_time
+    day_data["meals"] = sorted(meals, key=lambda m: m.get("time", "00:00"))
+
+    meal_plan.executed_plan = plan
+    flag_modified(meal_plan, "executed_plan")
+    await db.commit()
+    return {"ok": True}
+
+
+class UpdateMealNameRequest(BaseModel):
+    day: int
+    meal_index: int
+    display_name: str
+    week: int = 1
+
+
+@router.put("/nutrition/plan/update-meal-name")
+async def update_meal_name(
+    data: UpdateMealNameRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the display name (alias) of a meal in the executed plan."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+    )
+    meal_plan = result.scalar_one_or_none()
+    if not meal_plan:
+        raise HTTPException(status_code=404, detail="No hay plan activo")
+
+    _ensure_executed_plan(meal_plan)
+    plan = dict(meal_plan.executed_plan) if meal_plan.executed_plan else {}
+    days = _get_plan_days_mutable(plan, data.week)
+
+    day_data = next((d for d in days if d.get("day") == data.day), None)
+    if not day_data:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+
+    meals = day_data.get("meals", [])
+    if data.meal_index < 0 or data.meal_index >= len(meals):
+        raise HTTPException(status_code=400, detail="Comida no encontrada")
+
+    meals[data.meal_index]["display_name"] = data.display_name.strip()
 
     meal_plan.executed_plan = plan
     flag_modified(meal_plan, "executed_plan")

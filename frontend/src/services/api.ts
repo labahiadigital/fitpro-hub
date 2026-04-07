@@ -604,6 +604,10 @@ export const clientPortalApi = {
     api.get(`/my/workouts/exercise-history/${exerciseId}`, { params: { limit } }),
   workoutHistory: (limit?: number) => 
     api.get("/my/workouts/logs/history", { params: { limit } }),
+  swapWorkoutDays: (programId: string, sourceDay: number, targetDay: number) =>
+    api.post("/my/workouts/swap-days", { program_id: programId, source_day: sourceDay, target_day: targetDay }),
+  swapWorkouts: (programId: string, sourceDay: number, sourceBlockIndex: number, targetDay: number, targetBlockIndex: number) =>
+    api.post("/my/workouts/swap-workouts", { program_id: programId, source_day: sourceDay, source_block_index: sourceBlockIndex, target_day: targetDay, target_block_index: targetBlockIndex }),
   todayWorkoutLogs: () => api.get("/my/workouts/logs/today"),
   
   // Nutrition
@@ -619,6 +623,10 @@ export const clientPortalApi = {
     api.post("/my/nutrition/plan/swap-days", { source_day: sourceDay, target_day: targetDay }),
   swapMeals: (sourceDay: number, sourceMealIndex: number, targetDay: number, targetMealIndex: number) =>
     api.post("/my/nutrition/plan/swap-meals", { source_day: sourceDay, source_meal_index: sourceMealIndex, target_day: targetDay, target_meal_index: targetMealIndex }),
+  updateMealTime: (day: number, mealIndex: number, newTime: string) =>
+    api.put("/my/nutrition/plan/update-meal-time", { day, meal_index: mealIndex, new_time: newTime }),
+  updateMealName: (day: number, mealIndex: number, displayName: string) =>
+    api.put("/my/nutrition/plan/update-meal-name", { day, meal_index: mealIndex, display_name: displayName }),
   nutritionLogs: (date?: string, limit?: number) =>
     api.get("/my/nutrition/logs", { params: { date, limit } }),
   nutritionHistory: (days?: number) =>
