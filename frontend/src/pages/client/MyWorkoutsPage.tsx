@@ -1170,30 +1170,22 @@ export function MyWorkoutsPage() {
 
   const toLocalDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  if (isLoadingWorkouts) {
-    return (
-      <Center h={400}>
-        <Loader size="lg" color="yellow" />
-      </Center>
-    );
-  }
-
-  const activeProgram = (() => {
+  const activeProgram = useMemo(() => {
+    if (!workouts || workouts.length === 0) return undefined;
     const todayStr = toLocalDateStr(new Date());
-    const activeOnes = workouts?.filter((p) => p.is_active) || [];
+    const activeOnes = workouts.filter((p) => p.is_active);
     const inWindow = activeOnes.find((p) => {
       if (p.start_date && todayStr < p.start_date) return false;
       if (p.end_date && todayStr > p.end_date) return false;
       return true;
     });
-    return inWindow || activeOnes[0] || workouts?.[0];
-  })();
-  
-  // Obtener el día de la semana actual (1=Lunes, 7=Domingo)
-  const todayJsDay = new Date().getDay(); // 0=Domingo, 1=Lunes, etc.
-  const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Mapear: Domingo=7, Lunes=1, etc.
+    return inWindow || activeOnes[0] || workouts[0];
+  }, [workouts]);
+
+  const todayJsDay = new Date().getDay();
+  const dayMapping = [7, 1, 2, 3, 4, 5, 6];
   const todayDayNum = dayMapping[todayJsDay];
-  
+
   const executedTemplateSrc = activeProgram?.executed_template || activeProgram?.template;
   const originalTemplateSrc = activeProgram?.template;
 
@@ -1215,6 +1207,52 @@ export function MyWorkoutsPage() {
     const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     return (Math.floor(Math.max(0, daysDiff) / 7) % durationWeeks) + 1;
   }, [executedTemplateSrc, activeProgram]);
+
+  const activeWeekNum = selectedWeekOverride ? parseInt(selectedWeekOverride, 10) : currentAutoWeek;
+
+  const programDateRange = useMemo(() => {
+    if (!activeProgram?.start_date) return null;
+    const start = new Date(activeProgram.start_date);
+    const end = activeProgram.end_date ? new Date(activeProgram.end_date) : null;
+    if (isNaN(start.getTime())) return null;
+    return {
+      start,
+      end: end && !isNaN(end.getTime()) ? end : null,
+      startStr: start.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+      endStr: end && !isNaN(end.getTime()) ? end.toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : null,
+    };
+  }, [activeProgram]);
+
+  const weekDateRange = useMemo(() => {
+    if (!programDateRange?.start) return null;
+    const weekStart = new Date(programDateRange.start);
+    weekStart.setDate(weekStart.getDate() + (activeWeekNum - 1) * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const cap = programDateRange.end;
+    const effectiveEnd = cap && weekEnd > cap ? cap : weekEnd;
+    return {
+      start: weekStart,
+      end: effectiveEnd,
+      startStr: weekStart.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+      endStr: effectiveEnd.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+    };
+  }, [programDateRange, activeWeekNum]);
+
+  const getDayDate = (dayIndex: number): string | null => {
+    if (!weekDateRange?.start) return null;
+    const d = new Date(weekDateRange.start);
+    d.setDate(d.getDate() + dayIndex);
+    return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  };
+
+  if (isLoadingWorkouts) {
+    return (
+      <Center h={400}>
+        <Loader size="lg" color="yellow" />
+      </Center>
+    );
+  }
 
   const extractDaysForWeek = (src: any, weekOverride?: number): ProgramDay[] => {
     if (!src) return [];
@@ -1713,8 +1751,8 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <Group justify="space-between" mb="md" wrap="wrap">
-            <Group gap="sm">
+          <Stack gap="xs" mb="md">
+            <Group gap="sm" wrap="wrap">
               <Select
                 value={programViewMode}
                 onChange={(v) => setProgramViewMode(v || "executed")}
@@ -1726,7 +1764,14 @@ export function MyWorkoutsPage() {
                 radius="md"
                 w={200}
               />
-              {allProgramWeeks.length > 1 && (
+              {programDateRange && (
+                <Badge variant="light" color="gray" size="sm">
+                  {programDateRange.startStr}{programDateRange.endStr ? ` – ${programDateRange.endStr}` : ""}
+                </Badge>
+              )}
+            </Group>
+            {allProgramWeeks.length > 1 && (
+              <Group gap="sm" wrap="wrap">
                 <Select
                   value={selectedWeekOverride || String(currentAutoWeek)}
                   onChange={(v) => setSelectedWeekOverride(v)}
@@ -1736,14 +1781,14 @@ export function MyWorkoutsPage() {
                   w={150}
                   allowDeselect={false}
                 />
-              )}
-            </Group>
-            {allProgramWeeks.length > 1 && (
-              <Badge variant="light" color="blue" size="sm">
-                {allProgramWeeks.length} semanas
-              </Badge>
+                {weekDateRange && (
+                  <Badge variant="light" color="blue" size="sm">
+                    {weekDateRange.startStr} – {weekDateRange.endStr}
+                  </Badge>
+                )}
+              </Group>
             )}
-          </Group>
+          </Stack>
           <MasterDetailLayout
             hasSelection={selectedDayIndex !== null && !displaySchedule[selectedDayIndex]?.isRestDay}
             emptyMessage="Selecciona un día de entrenamiento para ver los ejercicios"
@@ -1753,10 +1798,11 @@ export function MyWorkoutsPage() {
                   const dayNum = index + 1;
                   const isToday = dayNum === todayDayNum;
                   const exCount = day.exercises_list?.length || 0;
+                  const dayDate = getDayDate(index);
                   return (
                     <DayCardMenu
                       key={index}
-                      dayName={weekDays[index]}
+                      dayName={dayDate ? `${weekDays[index]} · ${dayDate}` : weekDays[index]}
                       isToday={isToday}
                       isSelected={selectedDayIndex === index}
                       isRestDay={day.isRestDay}
