@@ -1180,8 +1180,8 @@ export function MyWorkoutsPage() {
 
   const activeProgram = (() => {
     const todayStr = toLocalDateStr(new Date());
-    const activeOnes = workouts?.filter((p: any) => p.is_active) || [];
-    const inWindow = activeOnes.find((p: any) => {
+    const activeOnes = workouts?.filter((p) => p.is_active) || [];
+    const inWindow = activeOnes.find((p) => {
       if (p.start_date && todayStr < p.start_date) return false;
       if (p.end_date && todayStr > p.end_date) return false;
       return true;
@@ -1194,7 +1194,7 @@ export function MyWorkoutsPage() {
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Mapear: Domingo=7, Lunes=1, etc.
   const todayDayNum = dayMapping[todayJsDay];
   
-  const executedTemplateSrc = (activeProgram as any)?.executed_template || activeProgram?.template;
+  const executedTemplateSrc = activeProgram?.executed_template || activeProgram?.template;
   const originalTemplateSrc = activeProgram?.template;
 
   const allProgramWeeks = useMemo(() => {
@@ -1207,24 +1207,19 @@ export function MyWorkoutsPage() {
     const src = executedTemplateSrc;
     if (!src?.weeks || src.weeks.length === 0) return 1;
     const durationWeeks = activeProgram?.duration_weeks || src.weeks.length;
-    const startDateStr = (activeProgram as any)?.start_date;
+    if (!durationWeeks || durationWeeks <= 1) return 1;
+    const startDateStr = activeProgram?.start_date;
     const startDate = startDateStr ? new Date(startDateStr) : new Date(activeProgram?.created_at || Date.now());
+    if (isNaN(startDate.getTime())) return 1;
     const now = new Date();
     const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+    return (Math.floor(Math.max(0, daysDiff) / 7) % durationWeeks) + 1;
   }, [executedTemplateSrc, activeProgram]);
 
   const extractDaysForWeek = (src: any, weekOverride?: number): ProgramDay[] => {
     if (!src) return [];
     if (src.weeks && src.weeks.length > 0) {
-      const durationWeeks = activeProgram?.duration_weeks || src.weeks.length;
-      const weekNum = weekOverride || (() => {
-        const startDateStr = (activeProgram as any)?.start_date;
-        const startDate = startDateStr ? new Date(startDateStr) : new Date(activeProgram?.created_at || Date.now());
-        const now = new Date();
-        const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
-      })();
+      const weekNum = weekOverride || currentAutoWeek;
       const wk = src.weeks.find((w: any) => w.week === weekNum);
       return wk?.days || src.weeks[0]?.days || [];
     }

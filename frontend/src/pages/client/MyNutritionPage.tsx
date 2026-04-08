@@ -1427,41 +1427,36 @@ export function MyNutritionPage() {
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
   const selectedPlanDay = dayMapping[selectedDate.getDay()];
 
-  const extractPlanDays = (rawPlan: unknown, mp: typeof mealPlan, weekOverride?: number) => {
+  const currentAutoWeek = useMemo(() => {
+    if (!mealPlan?.plan) return 1;
+    const plan = mealPlan.plan as unknown as { weeks?: { week: number; days: PlanDay[] }[] };
+    if (!plan.weeks || plan.weeks.length === 0) return 1;
+    const durationWeeks = (mealPlan as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
+    if (!durationWeeks || durationWeeks <= 1) return 1;
+    const startDateStr = (mealPlan as any)?.start_date;
+    const startDate = startDateStr ? new Date(startDateStr) : new Date(mealPlan?.created_at || Date.now());
+    if (isNaN(startDate.getTime())) return 1;
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    return (Math.floor(Math.max(0, daysDiff) / 7) % durationWeeks) + 1;
+  }, [mealPlan]);
+
+  const extractPlanDays = (rawPlan: unknown, weekOverride?: number) => {
     if (!rawPlan) return [];
     const plan = rawPlan as { weeks?: { week: number; days: PlanDay[] }[]; days?: PlanDay[] };
     if (plan.weeks && plan.weeks.length > 0) {
-      const durationWeeks = (mp as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
-      const weekNum = weekOverride || (() => {
-        const startDateStr = (mp as any)?.start_date;
-        const startDate = startDateStr ? new Date(startDateStr) : new Date(mp?.created_at || Date.now());
-        const now = new Date();
-        const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
-      })();
+      const weekNum = weekOverride || currentAutoWeek;
       const wk = plan.weeks.find((w) => w.week === weekNum);
       return wk?.days || plan.weeks[0]?.days || [];
     }
     return plan.days || [];
   };
 
-  const currentAutoWeek = useMemo(() => {
-    if (!mealPlan?.plan) return 1;
-    const plan = mealPlan.plan as unknown as { weeks?: { week: number; days: PlanDay[] }[] };
-    if (!plan.weeks || plan.weeks.length === 0) return 1;
-    const durationWeeks = (mealPlan as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
-    const startDateStr = (mealPlan as any)?.start_date;
-    const startDate = startDateStr ? new Date(startDateStr) : new Date(mealPlan?.created_at || Date.now());
-    const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
-  }, [mealPlan]);
-
   const weekOverrideNum = selectedWeekOverride ? parseInt(selectedWeekOverride, 10) : undefined;
 
   const executedPlanSource = (mealPlan as any)?.executed_plan || mealPlan?.plan;
-  const planDays = useMemo(() => extractPlanDays(executedPlanSource, mealPlan, weekOverrideNum), [executedPlanSource, mealPlan, weekOverrideNum]);
-  const originalPlanDays = useMemo(() => extractPlanDays(mealPlan?.plan, mealPlan, weekOverrideNum), [mealPlan, weekOverrideNum]);
+  const planDays = useMemo(() => extractPlanDays(executedPlanSource, weekOverrideNum), [executedPlanSource, weekOverrideNum, currentAutoWeek]);
+  const originalPlanDays = useMemo(() => extractPlanDays(mealPlan?.plan, weekOverrideNum), [mealPlan?.plan, weekOverrideNum, currentAutoWeek]);
 
   const allPlanWeeks = useMemo(() => {
     if (!mealPlan?.plan) return [];

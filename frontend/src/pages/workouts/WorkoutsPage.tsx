@@ -1404,7 +1404,7 @@ export function WorkoutsPage() {
 
             <Group grow>
               <NumberInput
-                label="Duración (sem.)"
+                label="Programación (semanal)"
                 max={52}
                 min={1}
                 radius="md"

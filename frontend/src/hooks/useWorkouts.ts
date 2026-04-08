@@ -136,6 +136,7 @@ export function useCreateWorkoutProgram() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
+      queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
       notifications.show({
         title: "Programa creado",
         message: "El programa de entrenamiento ha sido creado correctamente",
@@ -160,6 +161,7 @@ export function useUpdateWorkoutProgram() {
       workoutsApi.updateProgram(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
+      queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
       queryClient.invalidateQueries({
         queryKey: ["workout-program", variables.id],
       });
@@ -186,6 +188,7 @@ export function useDeleteWorkoutProgram() {
     mutationFn: (id: string) => workoutsApi.deleteProgram(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
+      queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
       notifications.show({
         title: "Programa eliminado",
         message: "El programa ha sido eliminado correctamente",

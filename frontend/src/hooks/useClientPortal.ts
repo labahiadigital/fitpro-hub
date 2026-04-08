@@ -61,35 +61,48 @@ interface ClientProfile {
   health_data: Record<string, unknown>;
 }
 
-interface WorkoutTemplateStructure {
-  days?: Array<{
+interface WorkoutTemplateDay {
+  id: string;
+  day: number;
+  dayName: string;
+  isRestDay: boolean;
+  notes?: string;
+  blocks: Array<{
     id: string;
-    day: number;
-    dayName: string;
-    isRestDay: boolean;
-    notes?: string;
-    blocks: Array<{
+    name: string;
+    type?: string;
+    rest_between_sets?: number;
+    rounds?: number;
+    exercises?: Array<{
       id: string;
-      name: string;
-      type?: string;
-      rest_between_sets?: number;
-      rounds?: number;
-      exercises?: Array<{
+      exercise_id?: string;
+      exercise?: {
         id: string;
-        exercise_id?: string;
-        exercise?: {
-          id: string;
-          name: string;
-          muscle_groups?: string[];
-        };
-        name?: string;
-        sets: number;
-        reps: string;
-        rest_seconds?: number;
-        notes?: string;
-      }>;
+        name: string;
+        muscle_groups?: string[];
+        image_url?: string;
+        video_url?: string;
+        description?: string;
+      };
+      name?: string;
+      sets: number;
+      reps: string;
+      rest_seconds?: number;
+      notes?: string;
+      video_url?: string;
+      duration_type?: string;
+      target_weight?: number;
+      target_reps?: number;
     }>;
   }>;
+}
+
+interface WorkoutTemplateStructure {
+  weeks?: Array<{
+    week: number;
+    days: WorkoutTemplateDay[];
+  }>;
+  days?: WorkoutTemplateDay[];
   blocks?: Array<{
     id: string;
     name: string;
@@ -114,6 +127,9 @@ interface WorkoutProgram {
   template?: WorkoutTemplateStructure;
   executed_template?: WorkoutTemplateStructure;
   tags?: string[];
+  is_active?: boolean;
+  start_date?: string;
+  end_date?: string;
   created_at: string;
 }
 

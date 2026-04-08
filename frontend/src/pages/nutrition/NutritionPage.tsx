@@ -2731,7 +2731,7 @@ export function NutritionPage() {
 
             <Group grow>
               <NumberInput
-                label="Duración (semanas)"
+                label="Programación (semanal)"
                 max={12}
                 min={1}
                 radius="md"
