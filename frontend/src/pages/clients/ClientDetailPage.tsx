@@ -3998,51 +3998,96 @@ export function ClientDetailPage() {
             </Group>
             
             <Divider my="sm" label="Ejercicios" labelPosition="center" />
-            
-            {selectedProgramForView.template?.blocks?.map((block, blockIndex) => (
-              <Box key={blockIndex}>
-                <Group gap="xs" mb="sm">
-                  <Badge 
-                    color={block.type === 'warmup' ? 'orange' : block.type === 'cooldown' ? 'blue' : 'yellow'} 
-                    variant="light"
-                    size="sm"
-                  >
-                    {block.type === 'warmup' ? 'Calentamiento' : block.type === 'cooldown' ? 'Enfriamiento' : 'Principal'}
-                  </Badge>
-                  <Text fw={600} size="sm">{block.name}</Text>
-                </Group>
-                <Stack gap="xs">
-                  {block.exercises?.map((ex, exIndex) => (
-                    <Card key={exIndex} padding="sm" radius="md" withBorder>
-                      <Group justify="space-between">
-                        <Text size="sm" fw={500}>
-                          {ex.exercise?.name || ex.name || "Ejercicio"}
-                        </Text>
-                        <Group gap="xs">
-                          <Badge variant="light" color="blue" size="sm">
-                            {ex.sets || 3} x {ex.reps || "10-12"}
-                          </Badge>
-                          {ex.rest_seconds && (
-                            <Badge variant="light" color="gray" size="sm">
-                              {ex.rest_seconds}s
-                            </Badge>
-                          )}
-                        </Group>
-                      </Group>
-                      {ex.notes && (
-                        <Text size="xs" c="dimmed" mt="xs">{ex.notes}</Text>
-                      )}
-                    </Card>
-                  ))}
-                </Stack>
-              </Box>
-            ))}
-            
-            {(!selectedProgramForView.template?.blocks || selectedProgramForView.template.blocks.length === 0) && (
-              <Text c="dimmed" ta="center" py="xl">
-                Este programa no tiene ejercicios configurados
-              </Text>
-            )}
+
+            {(() => {
+              const tmpl = selectedProgramForView.template as any;
+              const weeksList = tmpl?.weeks as Array<{ week: number; days: Array<{ dayName?: string; isRestDay?: boolean; blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> }> }> | undefined;
+              const daysList = tmpl?.days as Array<{ dayName?: string; isRestDay?: boolean; blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> }> | undefined;
+              const allWeeks = weeksList && weeksList.length > 0
+                ? weeksList
+                : daysList && daysList.length > 0
+                  ? [{ week: 1, days: daysList }]
+                  : null;
+
+              if (allWeeks) {
+                return allWeeks.map((wk) => (
+                  <Box key={wk.week}>
+                    {allWeeks.length > 1 && (
+                      <Text fw={700} size="sm" mb="xs" c="blue">Semana {wk.week}</Text>
+                    )}
+                    {wk.days.map((day, dayIdx) => {
+                      if (day.isRestDay) return null;
+                      const dayExercises = day.blocks?.flatMap((b) => b.exercises || []) || [];
+                      if (dayExercises.length === 0) return null;
+                      return (
+                        <Box key={dayIdx} mb="md">
+                          <Text fw={600} size="sm" mb="xs">{day.dayName || `Día ${dayIdx + 1}`} — {dayExercises.length} ejercicios</Text>
+                          {day.blocks?.map((block, blockIndex) => (
+                            <Box key={blockIndex} mb="xs">
+                              <Group gap="xs" mb={4}>
+                                <Badge color={block.type === 'warmup' ? 'orange' : block.type === 'cooldown' ? 'blue' : 'yellow'} variant="light" size="xs">
+                                  {block.type === 'warmup' ? 'Calentamiento' : block.type === 'cooldown' ? 'Enfriamiento' : 'Principal'}
+                                </Badge>
+                                <Text size="xs" fw={500} c="dimmed">{block.name}</Text>
+                              </Group>
+                              <Stack gap={4}>
+                                {block.exercises?.map((ex, exIndex) => (
+                                  <Card key={exIndex} padding="xs" radius="md" withBorder>
+                                    <Group justify="space-between">
+                                      <Text size="sm" fw={500}>{ex.exercise?.name || ex.name || "Ejercicio"}</Text>
+                                      <Group gap="xs">
+                                        <Badge variant="light" color="blue" size="sm">{ex.sets || 3} x {ex.reps || "10-12"}</Badge>
+                                        {ex.rest_seconds && <Badge variant="light" color="gray" size="sm">{ex.rest_seconds}s</Badge>}
+                                      </Group>
+                                    </Group>
+                                    {ex.notes && <Text size="xs" c="dimmed" mt={2}>{ex.notes}</Text>}
+                                  </Card>
+                                ))}
+                              </Stack>
+                            </Box>
+                          ))}
+                          <Divider my="xs" />
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                ));
+              }
+
+              const blocks = tmpl?.blocks as Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> | undefined;
+              if (blocks && blocks.length > 0) {
+                return blocks.map((block, blockIndex) => (
+                  <Box key={blockIndex}>
+                    <Group gap="xs" mb="sm">
+                      <Badge color={block.type === 'warmup' ? 'orange' : block.type === 'cooldown' ? 'blue' : 'yellow'} variant="light" size="sm">
+                        {block.type === 'warmup' ? 'Calentamiento' : block.type === 'cooldown' ? 'Enfriamiento' : 'Principal'}
+                      </Badge>
+                      <Text fw={600} size="sm">{block.name}</Text>
+                    </Group>
+                    <Stack gap="xs">
+                      {block.exercises?.map((ex, exIndex) => (
+                        <Card key={exIndex} padding="sm" radius="md" withBorder>
+                          <Group justify="space-between">
+                            <Text size="sm" fw={500}>{ex.exercise?.name || ex.name || "Ejercicio"}</Text>
+                            <Group gap="xs">
+                              <Badge variant="light" color="blue" size="sm">{ex.sets || 3} x {ex.reps || "10-12"}</Badge>
+                              {ex.rest_seconds && <Badge variant="light" color="gray" size="sm">{ex.rest_seconds}s</Badge>}
+                            </Group>
+                          </Group>
+                          {ex.notes && <Text size="xs" c="dimmed" mt="xs">{ex.notes}</Text>}
+                        </Card>
+                      ))}
+                    </Stack>
+                  </Box>
+                ));
+              }
+
+              return (
+                <Text c="dimmed" ta="center" py="xl">
+                  Este programa no tiene ejercicios configurados
+                </Text>
+              );
+            })()}
             
             <Group justify="flex-end" mt="md">
               <Button variant="light" onClick={closeViewProgramModal}>

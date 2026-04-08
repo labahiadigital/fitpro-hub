@@ -184,6 +184,10 @@ interface WorkoutBuilderWithDaysProps {
     difficulty: string;
     description?: string;
   }) => Promise<Exercise>;
+  totalWeeks?: number;
+  currentWeek?: number;
+  onWeekChange?: (week: number) => void;
+  onCopyWeek?: (from: number, to: number) => void;
 }
 
 // Días iniciales por defecto
@@ -1292,6 +1296,10 @@ export function WorkoutBuilderWithDays({
   exerciseFavorites = [],
   onToggleExerciseFavorite,
   onCreateExercise,
+  totalWeeks = 1,
+  currentWeek = 1,
+  onWeekChange,
+  onCopyWeek,
 }: WorkoutBuilderWithDaysProps) {
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "day-1");
   const [copyDaysPopoverOpened, setCopyDaysPopoverOpened] = useState(false);
@@ -1373,6 +1381,57 @@ export function WorkoutBuilderWithDays({
             </Box>
           </Group>
         </Box>
+      )}
+
+      {totalWeeks > 1 && (
+        <Paper p="sm" radius="lg" mb="md" withBorder>
+          <Group justify="space-between">
+            <Group gap="sm" align="center">
+              <Text size="sm" fw={600}>Semana</Text>
+              <Select
+                size="xs"
+                w={120}
+                data={Array.from({ length: totalWeeks }, (_, i) => ({
+                  value: String(i + 1),
+                  label: `Semana ${i + 1}`,
+                }))}
+                value={String(currentWeek)}
+                onChange={(v) => onWeekChange?.(Number(v) || 1)}
+                allowDeselect={false}
+              />
+            </Group>
+            <Group gap="xs">
+              <Popover position="bottom-end">
+                <Popover.Target>
+                  <Button variant="light" size="xs" leftSection={<IconCopy size={14} />}>Copiar a...</Button>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Text size="xs" fw={600}>Copiar semana {currentWeek} a:</Text>
+                    {Array.from({ length: totalWeeks }, (_, i) => i + 1)
+                      .filter((w) => w !== currentWeek)
+                      .map((w) => (
+                        <Button key={w} variant="light" size="xs" onClick={() => onCopyWeek?.(currentWeek, w)}>
+                          Semana {w}
+                        </Button>
+                      ))}
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+              <Button
+                variant="light"
+                size="xs"
+                leftSection={<IconCopy size={14} />}
+                onClick={() => {
+                  const target = currentWeek < totalWeeks ? currentWeek + 1 : 1;
+                  onCopyWeek?.(currentWeek, target);
+                }}
+              >
+                Copiar semana
+              </Button>
+            </Group>
+          </Group>
+        </Paper>
       )}
 
       {/* Resumen de la semana */}

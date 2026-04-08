@@ -1175,8 +1175,7 @@ export function MyWorkoutsPage() {
     );
   }
 
-  // Get first assigned program as active
-  const activeProgram = workouts?.[0];
+  const activeProgram = workouts?.find((p: any) => p.is_active) || workouts?.[0];
   
   // Obtener el día de la semana actual (1=Lunes, 7=Domingo)
   const todayJsDay = new Date().getDay(); // 0=Domingo, 1=Lunes, etc.

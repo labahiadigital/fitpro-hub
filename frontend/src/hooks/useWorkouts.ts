@@ -50,12 +50,10 @@ interface WorkoutProgram {
   difficulty: string;
   template: {
     blocks?: WorkoutBlock[];
-    // Legacy structure support
+    days?: any[];
     weeks?: Array<{
-      days: Array<{
-        day?: string;
-        exercises: WorkoutExercise[];
-      }>;
+      week?: number;
+      days: any[];
     }>;
   };
   tags: string[];

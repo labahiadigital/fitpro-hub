@@ -94,6 +94,7 @@ class WorkoutProgramClientResponse(BaseModel):
     template: Optional[dict] = None
     executed_template: Optional[dict] = None
     tags: Optional[List[str]] = []
+    is_active: Optional[bool] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     created_at: datetime

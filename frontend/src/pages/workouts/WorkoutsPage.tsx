@@ -214,7 +214,15 @@ export function WorkoutsPage() {
     useDisclosure(false);
   const [searchExercise, setSearchExercise] = useState("");
   const [exerciseSourceFilter, setExerciseSourceFilter] = useState("all");
-  const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>(initialWorkoutDays);
+  const [workoutWeeks, setWorkoutWeeks] = useState<{ week: number; days: WorkoutDay[] }[]>([{ week: 1, days: [...initialWorkoutDays] }]);
+  const [currentWeek, setCurrentWeek] = useState(1);
+  const workoutDays = useMemo(() => {
+    const wk = workoutWeeks.find((w) => w.week === currentWeek);
+    return wk ? wk.days : initialWorkoutDays;
+  }, [workoutWeeks, currentWeek]);
+  const setWorkoutDays = useCallback((days: WorkoutDay[]) => {
+    setWorkoutWeeks((prev) => prev.map((w) => w.week === currentWeek ? { ...w, days } : w));
+  }, [currentWeek]);
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
@@ -314,6 +322,43 @@ export function WorkoutsPage() {
     }
   }, [editProgramId, programs, specificClientProgram, builderOpened]);
   
+  const loadTemplateIntoWeeks = (program: any) => {
+    const tmpl = program.template;
+    const numWeeks = program.duration_weeks || 1;
+    if (tmpl?.weeks && Array.isArray(tmpl.weeks) && tmpl.weeks.length > 0) {
+      const weeks = tmpl.weeks.map((w: any, idx: number) => ({
+        week: w.week || idx + 1,
+        days: w.days || [...initialWorkoutDays],
+      }));
+      while (weeks.length < numWeeks) {
+        weeks.push({ week: weeks.length + 1, days: initialWorkoutDays.map((d) => ({ ...d, id: `day-${weeks.length + 1}-${d.id}` })) });
+      }
+      setWorkoutWeeks(weeks.slice(0, numWeeks));
+    } else if (tmpl?.days) {
+      const firstWeek = { week: 1, days: tmpl.days };
+      const weeks = [firstWeek];
+      for (let i = 1; i < numWeeks; i++) {
+        weeks.push({ week: i + 1, days: initialWorkoutDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.id}` })) });
+      }
+      setWorkoutWeeks(weeks);
+    } else if (tmpl?.blocks) {
+      const newDays = initialWorkoutDays.map((d, i) =>
+        i === 0 ? { ...d, blocks: tmpl.blocks, isRestDay: false } : { ...d }
+      );
+      const weeks = [{ week: 1, days: newDays }];
+      for (let i = 1; i < numWeeks; i++) {
+        weeks.push({ week: i + 1, days: initialWorkoutDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.id}` })) });
+      }
+      setWorkoutWeeks(weeks);
+    } else {
+      const weeks = [];
+      for (let i = 0; i < numWeeks; i++) {
+        weeks.push({ week: i + 1, days: initialWorkoutDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.id}` })) });
+      }
+      setWorkoutWeeks(weeks);
+    }
+  };
+
   const openProgramBuilderFromUrl = (program: any) => {
     setEditingProgram(program);
     const planClientId = program.client_id || clientId || null;
@@ -325,28 +370,18 @@ export function WorkoutsPage() {
     } else {
       setSelectedClient(null);
     }
-    if (program.template?.days) {
-      setWorkoutDays(program.template.days);
-    } else if (program.template?.blocks) {
-      const newDays = initialWorkoutDays.map((d, i) =>
-        i === 0
-          ? { ...d, blocks: program.template.blocks, isRestDay: false }
-          : { ...d }
-      );
-      setWorkoutDays(newDays);
-    } else {
-      setWorkoutDays(initialWorkoutDays);
-    }
+    loadTemplateIntoWeeks(program);
     programForm.setValues({
       name: program.name,
       description: program.description || "",
-      duration_weeks: program.duration_weeks,
+      duration_weeks: program.duration_weeks || 1,
       difficulty: program.difficulty,
       tags: program.tags || [],
       client_id: planClientId,
       start_date: program.start_date || "",
       end_date: program.end_date || "",
     });
+    setCurrentWeek(1);
     openBuilder();
   };
   
@@ -475,31 +510,22 @@ export function WorkoutsPage() {
       } else {
         setSelectedClient(null);
       }
-      if (program.template?.days) {
-        setWorkoutDays(program.template.days);
-      } else if (program.template?.blocks) {
-        const newDays = initialWorkoutDays.map((d, i) =>
-          i === 0
-            ? { ...d, blocks: program.template.blocks, isRestDay: false }
-            : { ...d }
-        );
-        setWorkoutDays(newDays);
-      } else {
-        setWorkoutDays(initialWorkoutDays);
-      }
+      loadTemplateIntoWeeks(program);
       programForm.setValues({
         name: program.name,
         description: program.description || "",
-        duration_weeks: program.duration_weeks,
+        duration_weeks: program.duration_weeks || 1,
         difficulty: program.difficulty,
         tags: program.tags || [],
         client_id: planClientId,
         start_date: program.start_date || "",
         end_date: program.end_date || "",
       });
+      setCurrentWeek(1);
     } else {
       setEditingProgram(null);
-      setWorkoutDays(initialWorkoutDays);
+      setWorkoutWeeks([{ week: 1, days: [...initialWorkoutDays] }]);
+      setCurrentWeek(1);
       programForm.reset();
       if (clientId) {
         setSelectedClientId(clientId);
@@ -520,8 +546,8 @@ export function WorkoutsPage() {
 
     const planClientId = selectedClientId || values.client_id || clientId || null;
 
-    const templatePayload = {
-      days: workoutDays.map((day) => ({
+    const serializeDays = (days: WorkoutDay[]) =>
+      days.map((day) => ({
         id: day.id,
         day: day.day,
         dayName: day.dayName,
@@ -547,7 +573,14 @@ export function WorkoutsPage() {
             target_reps: ex.target_reps,
           })) || [],
         })),
+      }));
+
+    const templatePayload = {
+      weeks: workoutWeeks.map((w) => ({
+        week: w.week,
+        days: serializeDays(w.days),
       })),
+      days: serializeDays(workoutDays),
       blocks: workoutDays.flatMap((day) =>
         day.blocks.map((block) => ({
           id: block.id,
@@ -623,7 +656,8 @@ export function WorkoutsPage() {
 
       handleCloseBuilder();
       programForm.reset();
-      setWorkoutDays(initialWorkoutDays);
+      setWorkoutWeeks([{ week: 1, days: [...initialWorkoutDays] }]);
+      setCurrentWeek(1);
       setEditingProgram(null);
       
       if (clientId || returnTo) {
@@ -1345,6 +1379,21 @@ export function WorkoutsPage() {
                 radius="md"
                 size="sm"
                 {...programForm.getInputProps("duration_weeks")}
+                onChange={(v) => {
+                  const weeks = Number(v) || 1;
+                  programForm.setFieldValue("duration_weeks", weeks);
+                  setWorkoutWeeks((prev) => {
+                    if (weeks > prev.length) {
+                      const newWeeks = [...prev];
+                      for (let i = prev.length; i < weeks; i++) {
+                        newWeeks.push({ week: i + 1, days: initialWorkoutDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.id}` })) });
+                      }
+                      return newWeeks;
+                    }
+                    return prev.slice(0, weeks);
+                  });
+                  if (currentWeek > weeks) setCurrentWeek(weeks);
+                }}
               />
               <Select
                 data={[
@@ -1405,6 +1454,29 @@ export function WorkoutsPage() {
             exerciseFavorites={exerciseFavorites}
             onToggleExerciseFavorite={handleToggleExerciseFavorite}
             onCreateExercise={handleCreateExerciseFromBuilder}
+            totalWeeks={programForm.values.duration_weeks}
+            currentWeek={currentWeek}
+            onWeekChange={setCurrentWeek}
+            onCopyWeek={(from, to) => {
+              setWorkoutWeeks((prev) => {
+                const srcWeek = prev.find((w) => w.week === from);
+                if (!srcWeek) return prev;
+                const copiedDays = srcWeek.days.map((d) => ({
+                  ...d,
+                  id: `day-${to}-${d.day || d.id}`,
+                  blocks: d.blocks.map((b) => ({
+                    ...b,
+                    id: `block-${Date.now()}-${Math.random()}`,
+                    exercises: b.exercises.map((e) => ({
+                      ...e,
+                      id: `ex-${Date.now()}-${Math.random()}`,
+                    })),
+                  })),
+                }));
+                return prev.map((w) => w.week === to ? { ...w, days: copiedDays } : w);
+              });
+              notifications.show({ title: "Semana copiada", message: `Semana ${from} copiada a Semana ${to}`, color: "green" });
+            }}
           />
         }
       />
