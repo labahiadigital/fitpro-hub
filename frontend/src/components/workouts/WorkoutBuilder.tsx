@@ -1304,6 +1304,7 @@ export function WorkoutBuilderWithDays({
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "day-1");
   const [copyDaysPopoverOpened, setCopyDaysPopoverOpened] = useState(false);
   const [copyToDayIds, setCopyToDayIds] = useState<string[]>([]);
+  const [copyWeekPopoverOpened, setCopyWeekPopoverOpened] = useState(false);
   const { data: alternativesCounts } = useAlternativesCounts();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -1401,9 +1402,9 @@ export function WorkoutBuilderWithDays({
               />
             </Group>
             <Group gap="xs">
-              <Popover position="bottom-end">
+              <Popover position="bottom-end" opened={copyWeekPopoverOpened} onChange={setCopyWeekPopoverOpened}>
                 <Popover.Target>
-                  <Button variant="light" size="xs" leftSection={<IconCopy size={14} />}>Copiar a...</Button>
+                  <Button variant="light" size="xs" leftSection={<IconCopy size={14} />} onClick={() => setCopyWeekPopoverOpened((o) => !o)}>Copiar a...</Button>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
@@ -1411,7 +1412,7 @@ export function WorkoutBuilderWithDays({
                     {Array.from({ length: totalWeeks }, (_, i) => i + 1)
                       .filter((w) => w !== currentWeek)
                       .map((w) => (
-                        <Button key={w} variant="light" size="xs" onClick={() => onCopyWeek?.(currentWeek, w)}>
+                        <Button key={w} variant="light" size="xs" onClick={() => { onCopyWeek?.(currentWeek, w); setCopyWeekPopoverOpened(false); }}>
                           Semana {w}
                         </Button>
                       ))}

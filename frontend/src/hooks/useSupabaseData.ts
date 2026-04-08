@@ -274,6 +274,8 @@ export function useCreateMealPlan() {
       plan?: object;
       client_id?: string;
       is_template?: boolean;
+      start_date?: string;
+      end_date?: string;
     }) => {
       const response = await nutritionApi.createPlan(data);
       return response.data;

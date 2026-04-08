@@ -1461,20 +1461,22 @@ export function WorkoutsPage() {
               setWorkoutWeeks((prev) => {
                 const srcWeek = prev.find((w) => w.week === from);
                 if (!srcWeek) return prev;
-                const copiedDays = srcWeek.days.map((d) => ({
+                const now = Date.now();
+                const copiedDays = srcWeek.days.map((d, di) => ({
                   ...d,
                   id: `day-${to}-${d.day || d.id}`,
-                  blocks: d.blocks.map((b) => ({
+                  blocks: d.blocks.map((b, bi) => ({
                     ...b,
-                    id: `block-${Date.now()}-${Math.random()}`,
-                    exercises: b.exercises.map((e) => ({
+                    id: `block-${now}-${di}-${bi}`,
+                    exercises: b.exercises.map((e, ei) => ({
                       ...e,
-                      id: `ex-${Date.now()}-${Math.random()}`,
+                      id: `ex-${now}-${di}-${bi}-${ei}`,
                     })),
                   })),
                 }));
                 return prev.map((w) => w.week === to ? { ...w, days: copiedDays } : w);
               });
+              setCurrentWeek(to);
               notifications.show({ title: "Semana copiada", message: `Semana ${from} copiada a Semana ${to}`, color: "green" });
             }}
           />

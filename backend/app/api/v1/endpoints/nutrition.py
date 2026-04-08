@@ -56,6 +56,8 @@ class MealPlanCreate(BaseModel):
     dietary_tags: List[str] = []
     plan: dict = {"weeks": [{"week": 1, "days": []}]}
     is_template: bool = True
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
 
 class MealPlanUpdate(BaseModel):
@@ -71,6 +73,8 @@ class MealPlanUpdate(BaseModel):
     dietary_tags: Optional[List[str]] = None
     plan: Optional[dict] = None
     is_template: Optional[bool] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
 
 class MealPlanResponse(BaseModel):
@@ -261,6 +265,22 @@ async def create_meal_plan(
             .values(is_active=False)
         )
     
+    from datetime import date as date_type
+    import copy
+
+    parsed_start = None
+    parsed_end = None
+    if data.start_date:
+        try:
+            parsed_start = date_type.fromisoformat(data.start_date)
+        except (ValueError, TypeError):
+            pass
+    if data.end_date:
+        try:
+            parsed_end = date_type.fromisoformat(data.end_date)
+        except (ValueError, TypeError):
+            pass
+
     meal_plan = MealPlan(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -275,8 +295,11 @@ async def create_meal_plan(
         target_fat=data.target_fat,
         dietary_tags=data.dietary_tags,
         plan=data.plan,
+        executed_plan=copy.deepcopy(data.plan) if should_activate else None,
         is_template=data.is_template,
         is_active=should_activate,
+        start_date=parsed_start,
+        end_date=parsed_end,
     )
     db.add(meal_plan)
     await db.commit()
@@ -334,9 +357,15 @@ async def update_meal_plan(
             detail="Plan nutricional no encontrado"
         )
     
-    # Only update fields that are provided (not None)
+    from datetime import date as date_type
+
     for field, value in data.model_dump(exclude_unset=True).items():
         if value is not None:
+            if field in ("start_date", "end_date") and isinstance(value, str):
+                try:
+                    value = date_type.fromisoformat(value) if value else None
+                except (ValueError, TypeError):
+                    value = None
             setattr(plan, field, value)
     
     await db.commit()

@@ -504,6 +504,8 @@ export function NutritionPage() {
       target_fat: plan.target_fat,
       dietary_tags: plan.dietary_tags || [],
       client_id: planClientId,
+      start_date: plan.start_date || "",
+      end_date: plan.end_date || "",
     });
     const weeks = extractWeeksFromPlan(plan.plan);
     setMealPlanWeeks(weeks);
@@ -551,6 +553,8 @@ export function NutritionPage() {
       target_fat: 70,
       dietary_tags: [] as string[],
       client_id: null as string | null,
+      start_date: "",
+      end_date: "",
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
@@ -657,6 +661,8 @@ export function NutritionPage() {
         target_fat: plan.target_fat,
         dietary_tags: plan.dietary_tags || [],
         client_id: planClientId,
+        start_date: plan.start_date || "",
+        end_date: plan.end_date || "",
       });
       const weeks = extractWeeksFromPlan(plan.plan);
       setMealPlanWeeks(weeks);
@@ -689,6 +695,11 @@ export function NutritionPage() {
       const hasClient = !!(selectedClientId || values.client_id || clientId);
       const planClientId = hasClient ? (selectedClientId || values.client_id || clientId) : null;
 
+      const cleanDates = {
+        start_date: values.start_date || undefined,
+        end_date: values.end_date || undefined,
+      };
+
       const basePlanData = {
         name: values.name,
         description: values.description,
@@ -706,6 +717,7 @@ export function NutritionPage() {
         await updateMealPlan.mutateAsync({
           id: editingPlan.id,
           ...basePlanData,
+          ...cleanDates,
           client_id: planClientId || undefined,
           is_template: editingPlan.is_template ?? !hasClient,
         });
@@ -719,6 +731,7 @@ export function NutritionPage() {
         if (hasClient) {
           await createMealPlan.mutateAsync({
             ...basePlanData,
+            ...cleanDates,
             client_id: planClientId || undefined,
             is_template: false,
           });
@@ -736,6 +749,8 @@ export function NutritionPage() {
             client_id: undefined,
             is_template: true,
             name: templateName,
+            start_date: undefined,
+            end_date: undefined,
           });
           if (hasClient) {
             notifications.show({
@@ -2716,6 +2731,26 @@ export function NutritionPage() {
               />
             </Group>
 
+            {(selectedClientId || clientId) && (
+              <Group grow>
+                <TextInput
+                  label="Fecha de inicio"
+                  type="date"
+                  radius="md"
+                  size="sm"
+                  {...planForm.getInputProps("start_date")}
+                />
+                <TextInput
+                  label="Fecha de fin (opcional)"
+                  description="Si no se indica, las semanas se repiten indefinidamente"
+                  type="date"
+                  radius="md"
+                  size="sm"
+                  {...planForm.getInputProps("end_date")}
+                />
+              </Group>
+            )}
+
             <Divider
               label="Objetivos nutricionales"
               labelPosition="center"
@@ -2802,17 +2837,19 @@ export function NutritionPage() {
               setMealPlanWeeks((prev) => {
                 const srcWeek = prev.find((w) => w.week === from);
                 if (!srcWeek) return prev;
-                const copiedDays = srcWeek.days.map((d) => ({
+                const now = Date.now();
+                const copiedDays = srcWeek.days.map((d, di) => ({
                   ...d,
                   id: `day-${to}-${d.day}`,
-                  meals: d.meals.map((m) => ({
+                  meals: d.meals.map((m, mi) => ({
                     ...m,
-                    id: `meal-${Date.now()}-${Math.random()}`,
-                    items: m.items.map((i) => ({ ...i, id: `item-${Date.now()}-${Math.random()}` })),
+                    id: `meal-${now}-${di}-${mi}`,
+                    items: m.items.map((item, ii) => ({ ...item, id: `item-${now}-${di}-${mi}-${ii}` })),
                   })),
                 }));
                 return prev.map((w) => w.week === to ? { ...w, days: copiedDays } : w);
               });
+              setCurrentWeek(to);
               notifications.show({ title: "Semana copiada", message: `Semana ${from} copiada a Semana ${to}`, color: "green" });
             }}
           />
