@@ -1035,7 +1035,12 @@ function NutritionDayDetail({
   const planDayLabels = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
   const swapDaysMutation = useSwapDays();
   const swapMealsMutation = useSwapMeals();
+  const moveMealMut = useMoveMeal();
+  const updateMealTimeMut = useUpdateMealTime();
+  const updateMealNameMut = useUpdateMealName();
   const [swapState, setSwapState] = useState<{ sourceMealIndex: number; step: "day" | "meal"; targetDay?: number } | null>(null);
+  const [editName, setEditName] = useState<{ idx: number; name: string } | null>(null);
+  const [editTime, setEditTime] = useState<{ idx: number; time: string } | null>(null);
   return (
     <>
       <Group justify="space-between" mb="md">
@@ -1127,8 +1132,78 @@ function NutritionDayDetail({
                       </ThemeIcon>
                       <Box>
                         <Group gap="xs">
-                          <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
-                          {meal.time && <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time}</Badge>}
+                          {!readOnly && editName?.idx === mealIndex ? (
+                            <Group gap={4}>
+                              <TextInput
+                                size="xs"
+                                value={editName.name}
+                                onChange={(e) => setEditName({ ...editName, name: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && editName.name.trim() && dayData.planDayNum) {
+                                    updateMealNameMut.mutate({ day: dayData.planDayNum, mealIndex, displayName: editName.name });
+                                    setEditName(null);
+                                  } else if (e.key === "Escape") setEditName(null);
+                                }}
+                                autoFocus
+                                styles={{ input: { minWidth: 100, fontWeight: 600 } }}
+                              />
+                              <ActionIcon size="xs" color="green" variant="light" onClick={() => {
+                                if (editName.name.trim() && dayData.planDayNum) {
+                                  updateMealNameMut.mutate({ day: dayData.planDayNum, mealIndex, displayName: editName.name });
+                                }
+                                setEditName(null);
+                              }}><IconCheck size={12} /></ActionIcon>
+                              <ActionIcon size="xs" color="gray" variant="light" onClick={() => setEditName(null)}><IconX size={12} /></ActionIcon>
+                            </Group>
+                          ) : (
+                            <Group gap={4}>
+                              <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
+                              {!readOnly && (
+                                <Tooltip label="Editar nombre">
+                                  <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditName({ idx: mealIndex, name: (meal as any).display_name || mealType?.label || meal.name })}>
+                                    <IconEdit size={11} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              )}
+                            </Group>
+                          )}
+                          {!readOnly && editTime?.idx === mealIndex ? (
+                            <Group gap={4}>
+                              <TextInput
+                                size="xs"
+                                type="time"
+                                value={editTime.time}
+                                onChange={(e) => setEditTime({ ...editTime, time: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && dayData.planDayNum) {
+                                    updateMealTimeMut.mutate({ day: dayData.planDayNum, mealIndex, newTime: editTime.time });
+                                    setEditTime(null);
+                                  } else if (e.key === "Escape") setEditTime(null);
+                                }}
+                                autoFocus
+                                w={90}
+                                styles={{ input: { textAlign: "center", height: 28 } }}
+                              />
+                              <ActionIcon size="xs" color="green" variant="light" onClick={() => {
+                                if (dayData.planDayNum) {
+                                  updateMealTimeMut.mutate({ day: dayData.planDayNum, mealIndex, newTime: editTime.time });
+                                }
+                                setEditTime(null);
+                              }}><IconCheck size={12} /></ActionIcon>
+                              <ActionIcon size="xs" color="gray" variant="light" onClick={() => setEditTime(null)}><IconX size={12} /></ActionIcon>
+                            </Group>
+                          ) : (
+                            <Group gap={2}>
+                              {meal.time && <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time}</Badge>}
+                              {!readOnly && (
+                                <Tooltip label="Editar hora">
+                                  <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditTime({ idx: mealIndex, time: meal.time || "12:00" })}>
+                                    <IconEdit size={10} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              )}
+                            </Group>
+                          )}
                         </Group>
                         <Text size="xs" c="dimmed">
                           {(() => {
@@ -1239,13 +1314,37 @@ function NutritionDayDetail({
         {(() => {
           if (!swapState || swapState.targetDay == null) return null;
           const targetDayData = allDays.find(d => d.day === swapState.targetDay);
-          const targetMeals = targetDayData?.meals || [];
+          const rawTargetMeals = targetDayData?.meals || [];
+          const seenKeys = new Set<string>();
+          const targetMeals = rawTargetMeals.filter((meal: PlanMeal) => {
+            if (seenKeys.has(`${meal.name}-${meal.time || ""}`)) return false;
+            seenKeys.add(`${meal.name}-${meal.time || ""}`);
+            return true;
+          });
           const targetDayLabel = planDayLabels[(swapState.targetDay - 1) % 7] || `Día ${swapState.targetDay}`;
           if (targetMeals.length === 0) {
             return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
           }
           return (
             <Stack gap="xs">
+              <Button
+                variant="filled"
+                color="red"
+                fullWidth
+                justify="start"
+                onClick={() => {
+                  if (dayData.planDayNum) {
+                    moveMealMut.mutate({
+                      sourceDay: dayData.planDayNum,
+                      mealIndex: swapState.sourceMealIndex,
+                      targetDay: swapState.targetDay!,
+                    });
+                  }
+                  setSwapState(null);
+                }}
+              >
+                Mover sin intercambiar
+              </Button>
               <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
               {targetMeals.map((meal: PlanMeal, tmi: number) => {
                 const mt = MEAL_TYPES.find(m => m.value === meal.name);
@@ -1301,10 +1400,12 @@ export function MyNutritionPage() {
   const deleteNutritionLogMutation = useDeleteNutritionLog();
   const moveMealMutation = useMoveMeal();
   const swapDaysMutation = useSwapDays();
+  const swapMealsMutation = useSwapMeals();
   const updateMealTimeMutation = useUpdateMealTime();
   const updateMealNameMutation = useUpdateMealName();
   const [editingMealTime, setEditingMealTime] = useState<{ dayNum: number; mealIndex: number; time: string } | null>(null);
   const [editingMealName, setEditingMealName] = useState<{ dayNum: number; mealIndex: number; name: string } | null>(null);
+  const [registerSwapState, setRegisterSwapState] = useState<{ sourceMealIndex: number; step: "day" | "meal"; targetDay?: number } | null>(null);
   const { data: measurementsData } = useMeasurements(100);
   const { data: progressPhotosData } = useProgressPhotos(50);
 
@@ -1316,7 +1417,8 @@ export function MyNutritionPage() {
     const plan = rawPlan as { weeks?: { week: number; days: PlanDay[] }[]; days?: PlanDay[] };
     if (plan.weeks && plan.weeks.length > 0) {
       const durationWeeks = (mp as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
-      const startDate = new Date(mp?.created_at || Date.now());
+      const startDateStr = (mp as any)?.start_date;
+      const startDate = startDateStr ? new Date(startDateStr) : new Date(mp?.created_at || Date.now());
       const now = new Date();
       const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       const weekNum = durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
@@ -1976,7 +2078,7 @@ export function MyNutritionPage() {
                     {mealCalories} kcal
                   </Badge>
                   {isRegistered ? (
-                    <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+                    <Menu shadow="md" width={180} position="bottom-end" withinPortal>
                       <Menu.Target>
                         <ActionIcon variant="subtle" color="gray" size="sm" style={{ flexShrink: 0 }}>
                           <IconDotsVertical size={16} />
@@ -1990,6 +2092,12 @@ export function MyNutritionPage() {
                           Editar registro
                         </Menu.Item>
                         <Menu.Item
+                          leftSection={<IconArrowsExchange size={14} />}
+                          onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
+                        >
+                          Intercambiar
+                        </Menu.Item>
+                        <Menu.Item
                           color="red"
                           leftSection={<IconTrash size={14} />}
                           onClick={() => handleUnregisterMeal(meal.name)}
@@ -1999,16 +2107,26 @@ export function MyNutritionPage() {
                       </Menu.Dropdown>
                     </Menu>
                   ) : (
-                    <Button
-                      size="xs"
-                      variant="light"
-                      color="yellow"
-                      radius="xl"
-                      onClick={() => handleOpenPlanMeal(meal)}
-                      style={{ flexShrink: 0 }}
-                    >
-                      Registrar
-                    </Button>
+                    <Group gap={4} style={{ flexShrink: 0 }}>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="yellow"
+                        radius="xl"
+                        onClick={() => handleOpenPlanMeal(meal)}
+                      >
+                        Registrar
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        color="teal"
+                        radius="xl"
+                        onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
+                      >
+                        Intercambiar
+                      </Button>
+                    </Group>
                   )}
                 </Group>
               </Box>
@@ -2074,6 +2192,100 @@ export function MyNutritionPage() {
           })}
         </Box>
       )}
+
+      {/* Swap modals for Registrar tab */}
+      <Modal
+        opened={registerSwapState?.step === "day"}
+        onClose={() => setRegisterSwapState(null)}
+        title="Selecciona el día de destino"
+        size="sm"
+      >
+        <Stack gap="xs">
+          {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, i) => {
+            const targetDayNum = i + 1;
+            if (targetDayNum === selectedPlanDay) return null;
+            return (
+              <Button
+                key={targetDayNum}
+                variant="outline"
+                fullWidth
+                justify="start"
+                onClick={() => setRegisterSwapState(prev => prev ? { ...prev, step: "meal", targetDay: targetDayNum } : null)}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={registerSwapState?.step === "meal" && registerSwapState?.targetDay != null}
+        onClose={() => setRegisterSwapState(null)}
+        title="Selecciona la comida a intercambiar"
+        size="sm"
+      >
+        {(() => {
+          if (!registerSwapState || registerSwapState.targetDay == null) return null;
+          const targetDayData = planDays.find((d: PlanDay) => d.day === registerSwapState.targetDay);
+          const rawTargetMeals = targetDayData?.meals || [];
+          const seenKeys = new Set<string>();
+          const targetMeals = rawTargetMeals.filter((meal: PlanMeal) => {
+            const key = `${meal.name}-${meal.time || ""}`;
+            if (seenKeys.has(key)) return false;
+            seenKeys.add(key);
+            return true;
+          });
+          const targetDayLabel = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(registerSwapState.targetDay - 1) % 7] || `Día ${registerSwapState.targetDay}`;
+          if (targetMeals.length === 0) {
+            return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
+          }
+          return (
+            <Stack gap="xs">
+              <Button
+                variant="filled"
+                color="red"
+                fullWidth
+                justify="start"
+                onClick={() => {
+                  moveMealMutation.mutate({
+                    sourceDay: selectedPlanDay,
+                    mealIndex: registerSwapState.sourceMealIndex,
+                    targetDay: registerSwapState.targetDay!,
+                  });
+                  setRegisterSwapState(null);
+                }}
+              >
+                Mover sin intercambiar
+              </Button>
+              <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
+              {targetMeals.map((meal: PlanMeal, tmi: number) => {
+                const mt = MEAL_TYPES.find(m => m.value === meal.name);
+                return (
+                  <Button
+                    key={tmi}
+                    variant="outline"
+                    fullWidth
+                    justify="start"
+                    leftSection={mt ? <ThemeIcon variant="light" color={mt.color} size="sm" radius="xl">{(() => { const I = mt.icon; return <I size={14} />; })()}</ThemeIcon> : null}
+                    onClick={() => {
+                      swapMealsMutation.mutate({
+                        sourceDay: selectedPlanDay,
+                        sourceMealIndex: registerSwapState.sourceMealIndex,
+                        targetDay: registerSwapState.targetDay!,
+                        targetMealIndex: tmi,
+                      });
+                      setRegisterSwapState(null);
+                    }}
+                  >
+                    {mt?.label || meal.name}{meal.time ? ` (${meal.time})` : ""}
+                  </Button>
+                );
+              })}
+            </Stack>
+          );
+        })()}
+      </Modal>
 
         </Tabs.Panel>
 

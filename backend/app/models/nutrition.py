@@ -1,5 +1,5 @@
 """Nutrition and Food models."""
-from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR, UniqueConstraint
+from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR, UniqueConstraint, Date
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.ext.mutable import MutableDict
@@ -196,6 +196,10 @@ class MealPlan(BaseModel):
     
     # Executed plan: client-modified version of `plan`. Initialized as a copy of `plan` on assignment.
     executed_plan = Column(MutableDict.as_mutable(JSONB), nullable=True)
+
+    # Assignment dates
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
     
     # Relationships
     workspace = relationship("Workspace", back_populates="meal_plans")

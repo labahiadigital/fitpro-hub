@@ -89,7 +89,9 @@ class MealPlanResponse(BaseModel):
     plan: dict = {}
     is_template: bool
     is_active: Optional[bool] = False
-    
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -450,7 +452,20 @@ async def assign_meal_plan_to_client(
     )
 
     import copy
-    # Create a copy assigned to the client
+    from datetime import date as date_type
+    parsed_start = None
+    parsed_end = None
+    if data.start_date:
+        try:
+            parsed_start = date_type.fromisoformat(data.start_date)
+        except (ValueError, TypeError):
+            pass
+    if data.end_date:
+        try:
+            parsed_end = date_type.fromisoformat(data.end_date)
+        except (ValueError, TypeError):
+            pass
+
     assigned_plan = MealPlan(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -469,6 +484,8 @@ async def assign_meal_plan_to_client(
         meal_times=template.meal_times,
         is_template=False,
         is_active=True,
+        start_date=parsed_start,
+        end_date=parsed_end,
     )
     
     db.add(assigned_plan)

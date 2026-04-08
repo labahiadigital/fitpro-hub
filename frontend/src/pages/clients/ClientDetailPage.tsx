@@ -3375,7 +3375,12 @@ export function ClientDetailPage() {
                 </Button>
               </Group>
               <Stack gap="md">
-                {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at?: string; assigned_at?: string; start_date?: string; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } }) => (
+                {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at?: string; assigned_at?: string; start_date?: string; end_date?: string; is_active?: boolean; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } }, progIdx: number) => {
+                  const isActive = program.is_active ?? (progIdx === 0);
+                  const endDate = program.end_date ? new Date(program.end_date) : null;
+                  const isExpired = endDate && endDate < new Date();
+                  const showActive = isActive && !isExpired;
+                  return (
                   <Card key={program.id} padding="lg" radius="md" withBorder>
                     <Group justify="space-between" align="flex-start" wrap="nowrap">
                       <Box style={{ flex: 1, minWidth: 0 }}>
@@ -3384,6 +3389,9 @@ export function ClientDetailPage() {
                             <IconBarbell size={18} />
                           </ThemeIcon>
                           <Text fw={600} size="md">{program.name}</Text>
+                          <Badge variant="filled" color={showActive ? "green" : "gray"} size="sm">
+                            {showActive ? "Activo" : "Inactivo"}
+                          </Badge>
                         </Group>
                         {program.description && (
                           <Text size="sm" c="dimmed" mb="sm">{program.description}</Text>
@@ -3450,7 +3458,8 @@ export function ClientDetailPage() {
                       </Menu>
                     </Group>
                   </Card>
-                ))}
+                  );
+                })}
               </Stack>
             </Box>
           ) : (

@@ -82,7 +82,10 @@ class WorkoutProgramResponse(BaseModel):
     template: Optional[dict] = None
     tags: Optional[List[str]] = []
     is_template: bool = True
-    
+    is_active: Optional[bool] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -578,6 +581,20 @@ async def assign_program_to_client(
             detail="Cliente no encontrado en este workspace"
         )
 
+    from datetime import date as date_type
+    parsed_start = None
+    parsed_end = None
+    if data.start_date:
+        try:
+            parsed_start = date_type.fromisoformat(data.start_date)
+        except (ValueError, TypeError):
+            pass
+    if data.end_date:
+        try:
+            parsed_end = date_type.fromisoformat(data.end_date)
+        except (ValueError, TypeError):
+            pass
+
     assigned_program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -587,8 +604,11 @@ async def assign_program_to_client(
         duration_weeks=template.duration_weeks,
         difficulty=template.difficulty,
         template=template.template,
+        executed_template=template.template,
         tags=template.tags,
-        is_template=False  # This is an assigned instance, not a template
+        is_template=False,
+        start_date=parsed_start,
+        end_date=parsed_end,
     )
     
     db.add(assigned_program)

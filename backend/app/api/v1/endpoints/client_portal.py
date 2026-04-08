@@ -94,6 +94,8 @@ class WorkoutProgramClientResponse(BaseModel):
     template: Optional[dict] = None
     executed_template: Optional[dict] = None
     tags: Optional[List[str]] = []
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -137,6 +139,7 @@ class WorkoutLogCreateDetailed(BaseModel):
     perceived_effort: Optional[int] = None  # 1-10
     satisfaction_rating: Optional[int] = None  # 1=triste, 2=neutral, 3=contento
     notes: Optional[str] = None
+    log_date: Optional[str] = None
 
 
 class WorkoutLogResponse(BaseModel):
@@ -166,6 +169,8 @@ class MealPlanClientResponse(BaseModel):
     executed_plan: Optional[dict] = None
     adherence: Optional[dict] = None
     is_active: Optional[bool] = False
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     created_at: datetime
     
     class Config:
@@ -768,6 +773,120 @@ async def swap_specific_workouts(
     return {"ok": True}
 
 
+class MoveExerciseRequest(BaseModel):
+    program_id: UUID
+    source_day: int
+    source_block_index: int
+    source_exercise_index: int
+    target_day: int
+    target_block_index: int = 0
+
+
+@router.post("/workouts/move-exercise")
+async def move_exercise_between_days(
+    data: MoveExerciseRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Move an exercise from one day/block to another (no swap) in the executed template."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == data.program_id,
+            WorkoutProgram.client_id == client.id,
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(status_code=404, detail="Programa no encontrado")
+
+    _ensure_executed_template(program)
+    tmpl = dict(program.executed_template) if program.executed_template else {}
+    days = _get_template_days_mutable(tmpl)
+
+    src = next((d for d in days if d.get("day") == data.source_day), None)
+    dst = next((d for d in days if d.get("day") == data.target_day), None)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+
+    src_blocks = src.get("blocks", [])
+    if data.source_block_index < 0 or data.source_block_index >= len(src_blocks):
+        raise HTTPException(status_code=400, detail="Bloque origen no encontrado")
+
+    src_exercises = src_blocks[data.source_block_index].get("exercises", [])
+    if data.source_exercise_index < 0 or data.source_exercise_index >= len(src_exercises):
+        raise HTTPException(status_code=400, detail="Ejercicio no encontrado")
+
+    exercise = src_exercises.pop(data.source_exercise_index)
+
+    dst_blocks = dst.get("blocks", [])
+    if len(dst_blocks) == 0:
+        dst_blocks.append({"name": "Bloque 1", "exercises": []})
+        dst["blocks"] = dst_blocks
+    target_bi = min(data.target_block_index, len(dst_blocks) - 1)
+    dst_blocks[target_bi].setdefault("exercises", []).append(exercise)
+
+    program.executed_template = tmpl
+    flag_modified(program, "executed_template")
+    await db.commit()
+    return {"ok": True}
+
+
+class SwapExercisesRequest(BaseModel):
+    program_id: UUID
+    source_day: int
+    source_block_index: int
+    source_exercise_index: int
+    target_day: int
+    target_block_index: int
+    target_exercise_index: int
+
+
+@router.post("/workouts/swap-exercises")
+async def swap_exercises_between_days(
+    data: SwapExercisesRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Swap two specific exercises between days in the executed template."""
+    from sqlalchemy.orm.attributes import flag_modified
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == data.program_id,
+            WorkoutProgram.client_id == client.id,
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(status_code=404, detail="Programa no encontrado")
+
+    _ensure_executed_template(program)
+    tmpl = dict(program.executed_template) if program.executed_template else {}
+    days = _get_template_days_mutable(tmpl)
+
+    src = next((d for d in days if d.get("day") == data.source_day), None)
+    dst = next((d for d in days if d.get("day") == data.target_day), None)
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="Día no encontrado")
+
+    src_exercises = src.get("blocks", [])[data.source_block_index].get("exercises", []) if data.source_block_index < len(src.get("blocks", [])) else []
+    dst_exercises = dst.get("blocks", [])[data.target_block_index].get("exercises", []) if data.target_block_index < len(dst.get("blocks", [])) else []
+
+    if data.source_exercise_index >= len(src_exercises) or data.target_exercise_index >= len(dst_exercises):
+        raise HTTPException(status_code=400, detail="Ejercicio no encontrado")
+
+    src_exercises[data.source_exercise_index], dst_exercises[data.target_exercise_index] = (
+        dst_exercises[data.target_exercise_index], src_exercises[data.source_exercise_index]
+    )
+
+    program.executed_template = tmpl
+    flag_modified(program, "executed_template")
+    await db.commit()
+    return {"ok": True}
+
+
 @router.post("/workouts/logs", response_model=WorkoutLogResponse, status_code=status.HTTP_201_CREATED)
 async def log_workout(
     data: WorkoutLogCreate,
@@ -849,29 +968,39 @@ async def create_detailed_workout_log(
             detail="No tienes acceso a este programa"
         )
 
-    # Check if workout was already logged today for this program
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    # Determine target date for the log
+    if data.log_date:
+        try:
+            target_date = datetime.fromisoformat(data.log_date.replace("Z", "+00:00")).replace(tzinfo=None)
+        except (ValueError, TypeError):
+            target_date = datetime.utcnow()
+    else:
+        target_date = datetime.utcnow()
+
+    day_start = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end = day_start.replace(hour=23, minute=59, second=59, microsecond=999999)
     existing_log_result = await db.execute(
         select(WorkoutLog)
         .where(
             WorkoutLog.client_id == client.id,
             WorkoutLog.program_id == UUID(data.program_id),
-            WorkoutLog.created_at >= today_start,
-            WorkoutLog.created_at <= today_end
+            WorkoutLog.created_at >= day_start,
+            WorkoutLog.created_at <= day_end
         )
     )
     if existing_log_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Ya has registrado este entrenamiento hoy"
+            detail="Ya has registrado este entrenamiento en esa fecha"
         )
 
+    log_created_at = target_date.replace(hour=12, minute=0, second=0, microsecond=0)
     log = WorkoutLog(
         program_id=UUID(data.program_id),
         client_id=client.id,
+        created_at=log_created_at,
         log={
-            "date": datetime.utcnow().isoformat(),
+            "date": target_date.isoformat(),
             "day_index": data.day_index,
             "exercises": [ex.model_dump() for ex in data.exercises],
             "duration_minutes": data.duration_minutes,

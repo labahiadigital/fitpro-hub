@@ -475,7 +475,8 @@ function renderCoverPage(doc: jsPDF, _planTitle: string, clientName: string, wor
 
   if (logoDataUrl) {
     try {
-      doc.addImage(logoDataUrl, "PNG", pw / 2 - 25, nameY + 14, 50, 50);
+      const logoSize = 130;
+      doc.addImage(logoDataUrl, "PNG", pw / 2 - logoSize / 2, nameY + 14, logoSize, logoSize);
     } catch { /* ignore */ }
   }
 

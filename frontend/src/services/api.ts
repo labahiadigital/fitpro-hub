@@ -582,6 +582,7 @@ export const clientPortalApi = {
   logWorkoutDetailed: (data: {
     program_id: string;
     day_index: number;
+    log_date?: string;
     exercises: Array<{
       exercise_id: string;
       exercise_name: string;
@@ -608,6 +609,10 @@ export const clientPortalApi = {
     api.post("/my/workouts/swap-days", { program_id: programId, source_day: sourceDay, target_day: targetDay }),
   swapWorkouts: (programId: string, sourceDay: number, sourceBlockIndex: number, targetDay: number, targetBlockIndex: number) =>
     api.post("/my/workouts/swap-workouts", { program_id: programId, source_day: sourceDay, source_block_index: sourceBlockIndex, target_day: targetDay, target_block_index: targetBlockIndex }),
+  moveExercise: (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index?: number }) =>
+    api.post("/my/workouts/move-exercise", data),
+  swapExercises: (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index: number; target_exercise_index: number }) =>
+    api.post("/my/workouts/swap-exercises", data),
   todayWorkoutLogs: () => api.get("/my/workouts/logs/today"),
   
   // Nutrition

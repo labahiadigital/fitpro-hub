@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, String, Text, Integer, ForeignKey, Boolean, Date
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
@@ -26,6 +26,10 @@ class WorkoutProgram(BaseModel):
 
     # Executed template: client-modified version. Initialized as a copy of template on assignment.
     executed_template = Column(MutableDict.as_mutable(JSONB), nullable=True)
+
+    # Assignment dates
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
     
     # Tags for categorization
     tags = Column(ARRAY(String), default=[])

@@ -46,7 +46,7 @@ import {
   IconMoodSmile,
   IconSearch,
 } from "@tabler/icons-react";
-import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory, useSwapWorkoutDays } from "../../hooks/useClientPortal";
+import { useMyWorkouts, useWorkoutHistory, useTodayWorkoutLogs, useClientExercises, useClientExerciseAlternatives, useUpdateProgramExercise, useLogWorkoutDetailed, useExerciseHistory, useSwapWorkoutDays, useMoveExercise, useSwapExercises } from "../../hooks/useClientPortal";
 import { generateWorkoutProgramPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
 import { FullPageDetail } from "../../components/common/FullPageDetail";
@@ -72,10 +72,35 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
     return ids;
   }, [templateDays]);
 
+  const exercisesFromTemplate = useMemo(() => {
+    const list: Array<{ id: string; name: string; muscle_groups: string[]; equipment: string[]; category?: string; image_url?: string }> = [];
+    const seen = new Set<string>();
+    templateDays.forEach((d) => {
+      d.blocks?.forEach((b) => {
+        b.exercises?.forEach((ex) => {
+          const id = ex.exercise_id || ex.exercise?.id || ex.name || "";
+          if (id && !seen.has(id)) {
+            seen.add(id);
+            list.push({
+              id,
+              name: ex.exercise?.name || ex.name || "Ejercicio",
+              muscle_groups: (ex as any).muscle_groups || (ex.exercise as any)?.muscle_groups || [],
+              equipment: (ex as any).equipment || (ex.exercise as any)?.equipment || [],
+              category: (ex as any).category || (ex.exercise as any)?.category,
+              image_url: (ex.exercise as any)?.image_url,
+            });
+          }
+        });
+      });
+    });
+    return list;
+  }, [templateDays]);
+
   const exercisesInProgram = useMemo(() => {
-    if (!allExercises) return [];
-    return allExercises.filter((ex) => programExerciseIds.has(ex.id));
-  }, [allExercises, programExerciseIds]);
+    if (!allExercises || allExercises.length === 0) return exercisesFromTemplate;
+    const matched = allExercises.filter((ex) => programExerciseIds.has(ex.id));
+    return matched.length > 0 ? matched : exercisesFromTemplate;
+  }, [allExercises, programExerciseIds, exercisesFromTemplate]);
 
   const equipmentOptions = useMemo(() => {
     const set = new Set<string>();
@@ -486,12 +511,14 @@ function LogWorkoutModal({
   exercises,
   programId,
   dayIndex,
+  logDate,
 }: {
   opened: boolean;
   onClose: () => void;
   onSubmit: (data: {
     program_id: string;
     day_index: number;
+    log_date?: string;
     exercises: Array<{
       exercise_id: string;
       exercise_name: string;
@@ -519,6 +546,7 @@ function LogWorkoutModal({
   exercises: ExerciseForLog[];
   programId: string;
   dayIndex: number;
+  logDate?: Date;
 }) {
   const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
   const [exerciseSets, setExerciseSets] = useState<Record<string, SetLog[]>>(() => {
@@ -547,6 +575,7 @@ function LogWorkoutModal({
     onSubmit({
       program_id: programId,
       day_index: dayIndex,
+      log_date: logDate?.toISOString(),
       exercises: exercises.map((e) => ({
         exercise_id: e.exercise_id,
         exercise_name: e.name,
@@ -989,10 +1018,14 @@ function WeekDayDetail({
   schedule,
   weekDayName,
   onImageClick,
+  onSwapExercise,
+  isExecutedView = false,
 }: {
   schedule: { dayName?: string; exercises_list?: Array<{ name: string; sets: number; reps: string }>; blocks?: Array<{ id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }> };
   weekDayName: string;
   onImageClick: (url: string, name: string) => void;
+  onSwapExercise?: (blockIndex: number, exerciseIndex: number, exerciseName: string) => void;
+  isExecutedView?: boolean;
 }) {
   return (
     <>
@@ -1050,21 +1083,33 @@ function WeekDayDetail({
                     </Group>
                     {exercise.notes && <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{exercise.notes}</Text>}
                   </Box>
-                  {(exercise.video_url || exercise.exercise?.video_url) && (
-                    <ActionIcon
-                      component="a"
-                      href={exercise.video_url || exercise.exercise?.video_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      variant="light"
-                      color="red"
-                      size="lg"
-                      radius="xl"
-                      style={{ flexShrink: 0 }}
-                    >
-                      <IconPlayerPlay size={18} />
-                    </ActionIcon>
-                  )}
+                  <Group gap={4} style={{ flexShrink: 0 }}>
+                    {(exercise.video_url || exercise.exercise?.video_url) && (
+                      <ActionIcon
+                        component="a"
+                        href={exercise.video_url || exercise.exercise?.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="light"
+                        color="red"
+                        size="lg"
+                        radius="xl"
+                      >
+                        <IconPlayerPlay size={18} />
+                      </ActionIcon>
+                    )}
+                    {isExecutedView && onSwapExercise && (
+                      <ActionIcon
+                        variant="light"
+                        color="teal"
+                        size="lg"
+                        radius="xl"
+                        onClick={() => onSwapExercise(blockIndex, exIndex, exName)}
+                      >
+                        <IconArrowsExchange size={18} />
+                      </ActionIcon>
+                    )}
+                  </Group>
                 </Group>
               </Box>
             );
@@ -1092,6 +1137,8 @@ export function MyWorkoutsPage() {
   const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
   const [programViewMode, setProgramViewMode] = useState<string>("executed");
   const swapWorkoutDaysMutation = useSwapWorkoutDays();
+  const moveExerciseMutation = useMoveExercise();
+  const swapExercisesMutation = useSwapExercises();
   const [swapTarget, setSwapTarget] = useState<{
     programId: string;
     dayIndex: number;
@@ -1099,6 +1146,13 @@ export function MyWorkoutsPage() {
     exerciseIndex: number;
     currentExerciseName: string;
     currentExerciseId?: string;
+  } | null>(null);
+  const [exerciseSwapState, setExerciseSwapState] = useState<{
+    sourceBlockIndex: number;
+    sourceExerciseIndex: number;
+    exerciseName: string;
+    step: "day" | "exercise";
+    targetDay?: number;
   } | null>(null);
 
   if (isLoadingWorkouts) {
@@ -1120,8 +1174,23 @@ export function MyWorkoutsPage() {
   const executedTemplateSrc = (activeProgram as any)?.executed_template || activeProgram?.template;
   const originalTemplateSrc = activeProgram?.template;
 
-  const executedTemplateDays: ProgramDay[] = executedTemplateSrc?.days || [];
-  const originalTemplateDays: ProgramDay[] = originalTemplateSrc?.days || [];
+  const extractDaysForWeek = (src: any): ProgramDay[] => {
+    if (!src) return [];
+    if (src.weeks && src.weeks.length > 0) {
+      const durationWeeks = activeProgram?.duration_weeks || src.weeks.length;
+      const startDateStr = (activeProgram as any)?.start_date;
+      const startDate = startDateStr ? new Date(startDateStr) : new Date(activeProgram?.created_at || Date.now());
+      const now = new Date();
+      const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weekNum = durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+      const wk = src.weeks.find((w: any) => w.week === weekNum);
+      return wk?.days || src.weeks[0]?.days || [];
+    }
+    return src.days || [];
+  };
+
+  const executedTemplateDays: ProgramDay[] = extractDaysForWeek(executedTemplateSrc);
+  const originalTemplateDays: ProgramDay[] = extractDaysForWeek(originalTemplateSrc);
 
   // Obtener días del template (nueva estructura) o usar retrocompatibilidad
   const templateDays: ProgramDay[] = executedTemplateDays;
@@ -1218,6 +1287,7 @@ export function MyWorkoutsPage() {
   const handleLogWorkout = async (logData: {
     program_id: string;
     day_index: number;
+    log_date?: string;
     exercises: Array<{
       exercise_id: string;
       exercise_name: string;
@@ -1285,7 +1355,15 @@ export function MyWorkoutsPage() {
               size="sm"
               onClick={async () => {
                 const ws = useAuthStore.getState().currentWorkspace;
-                await generateWorkoutProgramPDF(data.assignedProgram as any, {
+                const programForPdf = {
+                  id: activeProgram?.id || "",
+                  name: activeProgram?.name || "Programa",
+                  description: activeProgram?.description,
+                  duration_weeks: activeProgram?.duration_weeks,
+                  difficulty: activeProgram?.difficulty,
+                  days: (activeProgram?.template as any)?.days || [],
+                };
+                await generateWorkoutProgramPDF(programForPdf as any, {
                   workspaceName: (ws as any)?.name || "Trackfiz",
                   branding: (ws as any)?.branding,
                   workspaceLogo: (ws as any)?.logo_url,
@@ -1374,6 +1452,51 @@ export function MyWorkoutsPage() {
           
           {!data.isTodayRestDay && data.todayWorkout && (
             <Box>
+              {/* Button at top - between date and day name */}
+              <Box px="md" mb="md">
+                {data.isTodayCompleted ? (
+                  <Group justify="space-between">
+                    <Button
+                      leftSection={<IconCheck size={18} />}
+                      color="green"
+                      variant="light"
+                      fullWidth
+                      size="lg"
+                      radius="xl"
+                      disabled
+                      styles={{ root: { height: 48, flex: 1 } }}
+                    >
+                      Entrenamiento Completado
+                    </Button>
+                    <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+                      <Menu.Target>
+                        <ActionIcon variant="subtle" color="gray" size="lg">
+                          <IconBarbell size={18} />
+                        </ActionIcon>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Item leftSection={<IconPlayerPlay size={14} />} onClick={openModal}>
+                          Editar registro
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  </Group>
+                ) : (
+                  <Button
+                    leftSection={<IconPlayerPlay size={18} />}
+                    color="yellow"
+                    onClick={openModal}
+                    disabled={!data.assignedProgram?.id}
+                    fullWidth
+                    size="lg"
+                    radius="xl"
+                    styles={{ root: { height: 48, fontWeight: 700 } }}
+                  >
+                    Iniciar Entrenamiento
+                  </Button>
+                )}
+              </Box>
+
               {/* Workout header */}
               <Box px="md" mb="md">
                 <Group gap="xs" mb={4}>
@@ -1393,6 +1516,15 @@ export function MyWorkoutsPage() {
                     <IconBarbell size={14} />
                     <Text size="xs" c="dimmed">{data.todayWorkout.exercises || data.todayWorkout.exercises_list?.length} ejercicios</Text>
                   </Group>
+                  <Text size="xs" c="dimmed" fw={500}>
+                    {(() => {
+                      const todayLogData = todayLogs?.logs?.[0]?.log as Record<string, unknown> | undefined;
+                      const logExercises = (todayLogData?.exercises || []) as Array<{ completed?: boolean }>;
+                      const completedCount = logExercises.filter(e => e.completed).length;
+                      const totalCount = allExercises.length;
+                      return `${completedCount}/${totalCount} ejercicios completados`;
+                    })()}
+                  </Text>
                 </Group>
               </Box>
 
@@ -1445,39 +1577,48 @@ export function MyWorkoutsPage() {
                             </Group>
                             {exercise.notes && <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{exercise.notes}</Text>}
                           </Box>
-                          <Group gap={4} style={{ flexShrink: 0 }}>
-                            {(exercise.video_url || exercise.exercise?.video_url) && (
-                              <ActionIcon
-                                component="a"
-                                href={exercise.video_url || exercise.exercise?.video_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                variant="light"
-                                color="red"
-                                size="lg"
-                                radius="xl"
-                              >
-                                <IconPlayerPlay size={18} />
-                              </ActionIcon>
-                            )}
-                            <ActionIcon
-                              variant="subtle"
-                              color="yellow"
-                              size="lg"
-                              radius="xl"
-                              title="Sustituir ejercicio"
-                              onClick={handleOpenSwap(
-                                data.assignedProgram!.id,
-                                todayDayIndex >= 0 ? todayDayIndex : 0,
-                                blockIndex,
-                                exIndex,
-                                exName,
-                                exercise.exercise?.id || exercise.exercise_id
+                          <Stack gap={4} style={{ flexShrink: 0 }} align="flex-end">
+                            {(() => {
+                              const todayLogData = todayLogs?.logs?.[0]?.log as Record<string, unknown> | undefined;
+                              const logExercises = (todayLogData?.exercises || []) as Array<{ exercise_id?: string; exercise_name?: string; completed?: boolean }>;
+                              const isExCompleted = logExercises.some(le => (le.exercise_id === (exercise.exercise_id || exercise.exercise?.id) || le.exercise_name === exName) && le.completed);
+                              return isExCompleted ? (
+                                <Badge color="green" variant="filled" size="xs" leftSection={<IconCheck size={8} />}>Completado</Badge>
+                              ) : null;
+                            })()}
+                            <Group gap={4}>
+                              {(exercise.video_url || exercise.exercise?.video_url) && (
+                                <ActionIcon
+                                  component="a"
+                                  href={exercise.video_url || exercise.exercise?.video_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  variant="light"
+                                  color="red"
+                                  size="lg"
+                                  radius="xl"
+                                >
+                                  <IconPlayerPlay size={18} />
+                                </ActionIcon>
                               )}
-                            >
-                              <IconExchange size={18} />
-                            </ActionIcon>
-                          </Group>
+                              <Button
+                                variant="subtle"
+                                color="yellow"
+                                size="xs"
+                                radius="xl"
+                                onClick={handleOpenSwap(
+                                  data.assignedProgram!.id,
+                                  todayDayIndex >= 0 ? todayDayIndex : 0,
+                                  blockIndex,
+                                  exIndex,
+                                  exName,
+                                  exercise.exercise?.id || exercise.exercise_id
+                                )}
+                              >
+                                Sustituir
+                              </Button>
+                            </Group>
+                          </Stack>
                         </Group>
                       </Box>
                     );
@@ -1512,36 +1653,8 @@ export function MyWorkoutsPage() {
                 </>
               )}
 
-              {/* CTA Button - prominent, fat-finger friendly */}
-              <Box px="md" mt="lg" mb="md">
-                {data.isTodayCompleted ? (
-                  <Button 
-                    leftSection={<IconCheck size={18} />} 
-                    color="green"
-                    variant="light"
-                    fullWidth
-                    size="lg"
-                    radius="xl"
-                    disabled
-                    styles={{ root: { height: 48 } }}
-                  >
-                    Entrenamiento Completado
-                  </Button>
-                ) : (
-                  <Button 
-                    leftSection={<IconPlayerPlay size={18} />} 
-                    color="yellow"
-                    onClick={openModal}
-                    disabled={!data.assignedProgram?.id}
-                    fullWidth
-                    size="lg"
-                    radius="xl"
-                    styles={{ root: { height: 48, fontWeight: 700 } }}
-                  >
-                    Iniciar Entrenamiento
-                  </Button>
-                )}
-              </Box>
+              {/* Bottom spacing */}
+              <Box px="md" mt="lg" mb="md" />
             </Box>
           )}
           
@@ -1640,6 +1753,8 @@ export function MyWorkoutsPage() {
                       schedule={displaySchedule[selectedDayIndex]}
                       weekDayName={weekDays[selectedDayIndex]}
                       onImageClick={(url, name) => setEnlargedImage({ url, name })}
+                      isExecutedView={programViewMode === "executed"}
+                      onSwapExercise={(bi, ei, name) => setExerciseSwapState({ sourceBlockIndex: bi, sourceExerciseIndex: ei, exerciseName: name, step: "day" })}
                     />
                   </FullPageDetail>
                 )}
@@ -1651,6 +1766,8 @@ export function MyWorkoutsPage() {
                   schedule={displaySchedule[selectedDayIndex]}
                   weekDayName={displaySchedule[selectedDayIndex].dayName || weekDays[selectedDayIndex]}
                   onImageClick={(url, name) => setEnlargedImage({ url, name })}
+                  isExecutedView={programViewMode === "executed"}
+                  onSwapExercise={(bi, ei, name) => setExerciseSwapState({ sourceBlockIndex: bi, sourceExerciseIndex: ei, exerciseName: name, step: "day" })}
                 />
               ) : null
             }
@@ -1659,8 +1776,8 @@ export function MyWorkoutsPage() {
 
         <Tabs.Panel value="history">
           <Stack gap="sm">
-            {data.history.length > 0 ? (
-              data.history.map((workout, index) => {
+            {(data.history || []).length > 0 ? (
+              (data.history || []).map((workout, index) => {
                 const logData = (history || [])[index]?.log as Record<string, unknown> | undefined;
                 const exercises = (logData?.exercises || []) as Array<{
                   exercise_name?: string;
@@ -1669,6 +1786,7 @@ export function MyWorkoutsPage() {
                 }>;
                 const satisfaction = logData?.satisfaction_rating as number | undefined;
                 const effort = logData?.perceived_effort as number | undefined;
+                const durationMin = logData?.duration_minutes as number | undefined;
 
                 const programDay = templateDays.find((d: ProgramDay) => {
                   const dayIdx = logData?.day_index as number | undefined;
@@ -1677,6 +1795,31 @@ export function MyWorkoutsPage() {
                 const programExercises = programDay?.blocks?.flatMap((b: { exercises?: Array<{ exercise?: { name?: string }; sets?: number; reps?: string; target_weight?: number; target_reps?: number }> }) =>
                   (b.exercises || []).map(ex => ({ name: ex.exercise?.name || "", sets: ex.sets || 3, reps: ex.reps || "", target_weight: ex.target_weight, target_reps: ex.target_reps }))
                 ) || [];
+
+                let totalVolumeActual = 0;
+                let totalVolumePlanned = 0;
+                let totalDistanceActual = 0;
+                let totalDistancePlanned = 0;
+
+                exercises.forEach(ex => {
+                  (ex.sets || []).forEach(s => {
+                    totalVolumeActual += (s.weight_kg || 0) * (s.reps_completed || 0);
+                    totalDistanceActual += (s.distance_km || 0);
+                  });
+                });
+
+                programExercises.forEach(pe => {
+                  const reps = parseInt(pe.reps) || 10;
+                  totalVolumePlanned += (pe.target_weight || 0) * reps * (pe.sets || 3);
+                });
+
+                const MET_STRENGTH = 5;
+                const MET_CARDIO = 7;
+                const bodyWeightKg = 70;
+                const hasCardio = totalDistanceActual > 0;
+                const avgMet = hasCardio ? MET_CARDIO : MET_STRENGTH;
+                const estCalories = Math.round(avgMet * bodyWeightKg * ((durationMin || 60) / 60));
+                const projCalories = Math.round(avgMet * bodyWeightKg * ((durationMin || 60) / 60));
 
                 return (
                   <Card key={index} shadow="sm" padding="md" radius="md" withBorder>
@@ -1687,9 +1830,27 @@ export function MyWorkoutsPage() {
                       </Box>
                       <Group gap="xs">
                         <Badge variant="light" color="gray" size="sm" leftSection={<IconClock size={10} />}>{workout.duration}</Badge>
-                        {effort && <Badge variant="light" color="orange" size="sm" leftSection={<IconFlame size={10} />}>Esfuerzo: {effort}/10</Badge>}
-                        {satisfaction && <Text size="sm">{satisfaction === 1 ? "😞" : satisfaction === 2 ? "😐" : "😊"}</Text>}
+                        {effort != null && <Badge variant="light" color="orange" size="sm" leftSection={<IconFlame size={10} />}>Esfuerzo: {effort}/10</Badge>}
+                        {satisfaction != null && <Text size="sm">{satisfaction === 1 ? "😞" : satisfaction === 2 ? "😐" : "😊"}</Text>}
                       </Group>
+                    </Group>
+
+                    <Group gap="xs" mb="xs">
+                      {totalVolumeActual > 0 && (
+                        <Badge variant="light" color="violet" size="sm">
+                          Vol: {totalVolumeActual.toLocaleString()}kg
+                          {totalVolumePlanned > 0 && ` / ${totalVolumePlanned.toLocaleString()}kg plan`}
+                        </Badge>
+                      )}
+                      {totalDistanceActual > 0 && (
+                        <Badge variant="light" color="cyan" size="sm">
+                          Dist: {totalDistanceActual.toFixed(1)}km
+                          {totalDistancePlanned > 0 && ` / ${totalDistancePlanned.toFixed(1)}km plan`}
+                        </Badge>
+                      )}
+                      <Badge variant="light" color="red" size="sm" leftSection={<IconFlame size={10} />}>
+                        ~{estCalories} kcal est.{projCalories !== estCalories ? ` / ~${projCalories} proy.` : ""}
+                      </Badge>
                     </Group>
 
                     {exercises.length > 0 && (
@@ -1755,6 +1916,7 @@ export function MyWorkoutsPage() {
         exercises={allExercises}
         programId={data.assignedProgram?.id || ""}
         dayIndex={todayDayIndex >= 0 ? todayDayIndex : 0}
+        logDate={selectedDate}
       />
 
       {/* Modal para sustituir ejercicio */}
@@ -1778,6 +1940,106 @@ export function MyWorkoutsPage() {
       {/* Image Enlargement Modal */}
       <Modal opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} size="lg" title={enlargedImage?.name} centered>
         {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
+      </Modal>
+
+      {/* Exercise swap - select target day */}
+      <Modal
+        opened={exerciseSwapState?.step === "day"}
+        onClose={() => setExerciseSwapState(null)}
+        title={`Mover "${exerciseSwapState?.exerciseName}" a otro día`}
+        size="sm"
+      >
+        <Stack gap="xs">
+          {weekDays.map((dayLabel, i) => {
+            const dayNum = i + 1;
+            const currentDayNum = selectedDayIndex != null ? selectedDayIndex + 1 : 0;
+            if (dayNum === currentDayNum) return null;
+            return (
+              <Button
+                key={dayNum}
+                variant="outline"
+                fullWidth
+                justify="start"
+                onClick={() => setExerciseSwapState(prev => prev ? { ...prev, step: "exercise", targetDay: dayNum } : null)}
+              >
+                {dayLabel}
+              </Button>
+            );
+          })}
+        </Stack>
+      </Modal>
+
+      {/* Exercise swap - select target exercise */}
+      <Modal
+        opened={exerciseSwapState?.step === "exercise" && exerciseSwapState?.targetDay != null}
+        onClose={() => setExerciseSwapState(null)}
+        title="Selecciona el ejercicio a intercambiar"
+        size="sm"
+      >
+        {(() => {
+          if (!exerciseSwapState || exerciseSwapState.targetDay == null || !activeProgram) return null;
+          const targetDayData = executedTemplateDays.find((d: ProgramDay) => d.day === exerciseSwapState.targetDay);
+          const targetExercises: Array<{ name: string; blockIndex: number; exerciseIndex: number }> = [];
+          targetDayData?.blocks?.forEach((block, bi) => {
+            block.exercises?.forEach((ex, ei) => {
+              targetExercises.push({ name: ex.exercise?.name || ex.name || "Ejercicio", blockIndex: bi, exerciseIndex: ei });
+            });
+          });
+          const currentDayNum = selectedDayIndex != null ? selectedDayIndex + 1 : 1;
+          const targetDayLabel = weekDays[(exerciseSwapState.targetDay - 1) % 7] || `Día ${exerciseSwapState.targetDay}`;
+
+          return (
+            <Stack gap="xs">
+              <Button
+                variant="filled"
+                color="red"
+                fullWidth
+                justify="start"
+                onClick={() => {
+                  moveExerciseMutation.mutate({
+                    program_id: activeProgram.id,
+                    source_day: currentDayNum,
+                    source_block_index: exerciseSwapState.sourceBlockIndex,
+                    source_exercise_index: exerciseSwapState.sourceExerciseIndex,
+                    target_day: exerciseSwapState.targetDay!,
+                  });
+                  setExerciseSwapState(null);
+                }}
+              >
+                Mover sin intercambiar
+              </Button>
+              {targetExercises.length > 0 ? (
+                <>
+                  <Text size="sm" c="dimmed" mb="xs">Ejercicios de {targetDayLabel}:</Text>
+                  {targetExercises.map((tex, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      fullWidth
+                      justify="start"
+                      onClick={() => {
+                        swapExercisesMutation.mutate({
+                          program_id: activeProgram.id,
+                          source_day: currentDayNum,
+                          source_block_index: exerciseSwapState.sourceBlockIndex,
+                          source_exercise_index: exerciseSwapState.sourceExerciseIndex,
+                          target_day: exerciseSwapState.targetDay!,
+                          target_block_index: tex.blockIndex,
+                          target_exercise_index: tex.exerciseIndex,
+                        });
+                        setExerciseSwapState(null);
+                      }}
+                    >
+                      {tex.name}
+                    </Button>
+                  ))}
+                </>
+              ) : (
+                <Text c="dimmed" ta="center" py="md">No hay ejercicios en {targetDayLabel}</Text>
+              )}
+            </Stack>
+          );
+        })()}
       </Modal>
 
       {/* Modal de resultados tras registrar entrenamiento */}

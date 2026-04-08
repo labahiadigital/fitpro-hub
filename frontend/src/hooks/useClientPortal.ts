@@ -495,6 +495,32 @@ export function useSwapWorkouts() {
   });
 }
 
+export function useMoveExercise() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index?: number }) => {
+      await clientPortalApi.moveExercise(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      notifications.show({ title: "Ejercicio movido", message: "El ejercicio se ha movido correctamente", color: "green" });
+    },
+  });
+}
+
+export function useSwapExercises() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index: number; target_exercise_index: number }) => {
+      await clientPortalApi.swapExercises(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
+      notifications.show({ title: "Ejercicios intercambiados", message: "Los ejercicios se han intercambiado correctamente", color: "green" });
+    },
+  });
+}
+
 export function useExerciseHistory(exerciseId: string | null, limit = 5) {
   return useQuery({
     queryKey: ["exercise-history", exerciseId, limit],
