@@ -1147,6 +1147,7 @@ export function MyWorkoutsPage() {
   const [swapModalOpened, { open: openSwapModal, close: closeSwapModal }] = useDisclosure(false);
   const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
   const [programViewMode, setProgramViewMode] = useState<string>("executed");
+  const [selectedWeekOverride, setSelectedWeekOverride] = useState<string | null>(null);
   const swapWorkoutDaysMutation = useSwapWorkoutDays();
   const moveExerciseMutation = useMoveExercise();
   const swapExercisesMutation = useSwapExercises();
@@ -1196,23 +1197,43 @@ export function MyWorkoutsPage() {
   const executedTemplateSrc = (activeProgram as any)?.executed_template || activeProgram?.template;
   const originalTemplateSrc = activeProgram?.template;
 
-  const extractDaysForWeek = (src: any): ProgramDay[] => {
+  const allProgramWeeks = useMemo(() => {
+    const src = programViewMode === "original" ? originalTemplateSrc : executedTemplateSrc;
+    if (!src?.weeks || src.weeks.length === 0) return [];
+    return src.weeks.map((w: any) => ({ value: String(w.week), label: `Semana ${w.week}` }));
+  }, [executedTemplateSrc, originalTemplateSrc, programViewMode]);
+
+  const currentAutoWeek = useMemo(() => {
+    const src = executedTemplateSrc;
+    if (!src?.weeks || src.weeks.length === 0) return 1;
+    const durationWeeks = activeProgram?.duration_weeks || src.weeks.length;
+    const startDateStr = (activeProgram as any)?.start_date;
+    const startDate = startDateStr ? new Date(startDateStr) : new Date(activeProgram?.created_at || Date.now());
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+  }, [executedTemplateSrc, activeProgram]);
+
+  const extractDaysForWeek = (src: any, weekOverride?: number): ProgramDay[] => {
     if (!src) return [];
     if (src.weeks && src.weeks.length > 0) {
       const durationWeeks = activeProgram?.duration_weeks || src.weeks.length;
-      const startDateStr = (activeProgram as any)?.start_date;
-      const startDate = startDateStr ? new Date(startDateStr) : new Date(activeProgram?.created_at || Date.now());
-      const now = new Date();
-      const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const weekNum = durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+      const weekNum = weekOverride || (() => {
+        const startDateStr = (activeProgram as any)?.start_date;
+        const startDate = startDateStr ? new Date(startDateStr) : new Date(activeProgram?.created_at || Date.now());
+        const now = new Date();
+        const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+      })();
       const wk = src.weeks.find((w: any) => w.week === weekNum);
       return wk?.days || src.weeks[0]?.days || [];
     }
     return src.days || [];
   };
 
-  const executedTemplateDays: ProgramDay[] = extractDaysForWeek(executedTemplateSrc);
-  const originalTemplateDays: ProgramDay[] = extractDaysForWeek(originalTemplateSrc);
+  const weekOverrideNum = selectedWeekOverride ? parseInt(selectedWeekOverride, 10) : undefined;
+  const executedTemplateDays: ProgramDay[] = extractDaysForWeek(executedTemplateSrc, weekOverrideNum);
+  const originalTemplateDays: ProgramDay[] = extractDaysForWeek(originalTemplateSrc, weekOverrideNum);
 
   // Obtener días del template (nueva estructura) o usar retrocompatibilidad
   const templateDays: ProgramDay[] = executedTemplateDays;
@@ -1697,18 +1718,36 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <Group justify="space-between" mb="md">
-            <Select
-              value={programViewMode}
-              onChange={(v) => setProgramViewMode(v || "executed")}
-              data={[
-                { value: "executed", label: "Programa ejecutado" },
-                { value: "original", label: "Programa asignado" },
-              ]}
-              size="xs"
-              radius="md"
-              w={200}
-            />
+          <Group justify="space-between" mb="md" wrap="wrap">
+            <Group gap="sm">
+              <Select
+                value={programViewMode}
+                onChange={(v) => setProgramViewMode(v || "executed")}
+                data={[
+                  { value: "executed", label: "Programa ejecutado" },
+                  { value: "original", label: "Programa asignado" },
+                ]}
+                size="xs"
+                radius="md"
+                w={200}
+              />
+              {allProgramWeeks.length > 1 && (
+                <Select
+                  value={selectedWeekOverride || String(currentAutoWeek)}
+                  onChange={(v) => setSelectedWeekOverride(v)}
+                  data={allProgramWeeks}
+                  size="xs"
+                  radius="md"
+                  w={150}
+                  allowDeselect={false}
+                />
+              )}
+            </Group>
+            {allProgramWeeks.length > 1 && (
+              <Badge variant="light" color="blue" size="sm">
+                {allProgramWeeks.length} semanas
+              </Badge>
+            )}
           </Group>
           <MasterDetailLayout
             hasSelection={selectedDayIndex !== null && !displaySchedule[selectedDayIndex]?.isRestDay}

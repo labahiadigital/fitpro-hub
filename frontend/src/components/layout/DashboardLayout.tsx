@@ -13,6 +13,7 @@ import {
   Divider,
   Badge,
   Loader,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure, useHotkeys } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -43,6 +44,7 @@ import {
   IconChevronUp,
   IconCheck,
   IconBuildingStore,
+  IconDownload,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -57,6 +59,7 @@ import {
   useMarkAllRead,
   useDeleteNotification,
 } from "../../hooks/useNotifications";
+import { usePWAInstall } from "../../hooks/usePWAInstall";
 
 // --- TIPOS Y DATOS ---
 
@@ -572,6 +575,7 @@ export function DashboardLayout() {
   const deleteNotif = useDeleteNotification();
 
   const unreadNotifCount = unreadData?.unread_count || 0;
+  const { canInstall, install: installPWA } = usePWAInstall();
 
   const mappedNotifications = (notifData?.items || []).map((n) => ({
     id: n.id,
@@ -687,6 +691,13 @@ export function DashboardLayout() {
 
           {/* Actions */}
           <Group gap="md">
+            {canInstall && (
+              <Tooltip label="Instalar app" withArrow>
+                <UnstyledButton aria-label="Instalar aplicación" onClick={installPWA}>
+                  <IconDownload size={22} color="var(--nv-text-secondary)" stroke={1.5} />
+                </UnstyledButton>
+              </Tooltip>
+            )}
             <UnstyledButton style={{ position: "relative" }} aria-label="Notificaciones" onClick={openNotif}>
               <IconBell size={22} color="var(--nv-text-secondary)" stroke={1.5} />
               {unreadNotifCount > 0 && (

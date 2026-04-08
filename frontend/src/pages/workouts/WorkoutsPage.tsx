@@ -227,6 +227,8 @@ export function WorkoutsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isTemplateModeOn, setIsTemplateModeOn] = useState(false);
+  const [viewingProgram, setViewingProgram] = useState<any>(null);
+  const [viewProgramOpened, { open: openViewProgram, close: closeViewProgram }] = useDisclosure(false);
 
   const { data: exercises = [], isLoading: loadingExercises } =
     useExercises({ search: searchExercise });
@@ -846,7 +848,9 @@ export function WorkoutsPage() {
                     <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => openProgramBuilder(program)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>
                       Editar
                     </Button>
-                    <ActionIcon color="blue" variant="light" radius="md" size="sm"><IconEye size={14} /></ActionIcon>
+                    <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => { setViewingProgram(program); openViewProgram(); }}>
+                      <IconEye size={14} />
+                    </ActionIcon>
                     <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => handleDuplicateProgram(program)} loading={createProgram.isPending} title="Duplicar programa">
                       <IconCopy size={14} />
                     </ActionIcon>
@@ -877,13 +881,22 @@ export function WorkoutsPage() {
         <Tabs.Panel value="client-programs">
           {clientPrograms.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
-              {clientPrograms.map((program: any) => (
+              {clientPrograms.map((program: any) => {
+                const endDate = program.end_date ? new Date(program.end_date) : null;
+                const isExpired = endDate && endDate < new Date();
+                const showActive = (program.is_active ?? false) && !isExpired;
+                return (
                 <Box key={program.id} className="nv-card" p="md">
                   <Group justify="space-between" mb="sm">
                     <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{program.name}</Text>
-                    <Badge color="blue" variant="light" radius="md" size="xs">
-                      {program.duration_weeks}sem
-                    </Badge>
+                    <Group gap={4}>
+                      <Badge color={showActive ? "green" : "gray"} variant="filled" radius="md" size="xs">
+                        {showActive ? "Activo" : "Inactivo"}
+                      </Badge>
+                      <Badge color="blue" variant="light" radius="md" size="xs">
+                        {program.duration_weeks}sem
+                      </Badge>
+                    </Group>
                   </Group>
 
                   <Text c="dimmed" lineClamp={2} size="xs">
@@ -894,6 +907,21 @@ export function WorkoutsPage() {
                     <Badge color="blue" mt="xs" size="xs" variant="outline" radius="md">
                       {clientsMap.get(program.client_id) || "Cliente"}
                     </Badge>
+                  )}
+
+                  {(program.start_date || program.end_date) && (
+                    <Group gap="xs" mt="xs">
+                      {program.start_date && (
+                        <Text size="xs" c="dimmed">
+                          Inicio: {new Date(program.start_date).toLocaleDateString('es-ES')}
+                        </Text>
+                      )}
+                      {program.end_date && (
+                        <Text size="xs" c="dimmed">
+                          Fin: {new Date(program.end_date).toLocaleDateString('es-ES')}
+                        </Text>
+                      )}
+                    </Group>
                   )}
 
                   <Group gap={4} mt="sm">
@@ -912,7 +940,9 @@ export function WorkoutsPage() {
                     <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => openProgramBuilder(program)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>
                       Editar
                     </Button>
-                    <ActionIcon color="blue" variant="light" radius="md" size="sm"><IconEye size={14} /></ActionIcon>
+                    <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => { setViewingProgram(program); openViewProgram(); }}>
+                      <IconEye size={14} />
+                    </ActionIcon>
                     <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => handleDuplicateProgram(program)} loading={createProgram.isPending} title="Duplicar programa">
                       <IconCopy size={14} />
                     </ActionIcon>
@@ -921,7 +951,8 @@ export function WorkoutsPage() {
                     </ActionIcon>
                   </Group>
                 </Box>
-              ))}
+                );
+              })}
             </SimpleGrid>
           ) : loadingPrograms ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
@@ -1486,6 +1517,103 @@ export function WorkoutsPage() {
       {/* Image Enlargement Modal */}
       <BottomSheet opened={!!enlargedImage} onClose={() => setEnlargedImage(null)} desktopSize="lg" title={enlargedImage?.name} centered>
         {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
+      </BottomSheet>
+
+      {/* View Program Detail Modal */}
+      <BottomSheet
+        opened={viewProgramOpened}
+        onClose={closeViewProgram}
+        title={viewingProgram?.name || "Programa de Entrenamiento"}
+        desktopSize="lg"
+      >
+        {viewingProgram && (
+          <Stack gap="md">
+            {viewingProgram.description && (
+              <Text size="sm" c="dimmed">{viewingProgram.description}</Text>
+            )}
+            <Group gap="md" wrap="wrap">
+              {viewingProgram.duration_weeks && (
+                <Badge variant="light" color="blue">{viewingProgram.duration_weeks} semanas</Badge>
+              )}
+              {viewingProgram.difficulty && (
+                <Badge variant="light" color="gray">
+                  {viewingProgram.difficulty === "beginner" ? "Principiante" : viewingProgram.difficulty === "intermediate" ? "Intermedio" : "Avanzado"}
+                </Badge>
+              )}
+              {viewingProgram.client_id && (
+                <Badge variant="outline" color="blue">{clientsMap.get(viewingProgram.client_id) || "Cliente"}</Badge>
+              )}
+              {viewingProgram.start_date && (
+                <Text size="xs" c="dimmed">Inicio: {new Date(viewingProgram.start_date).toLocaleDateString('es-ES')}</Text>
+              )}
+              {viewingProgram.end_date && (
+                <Text size="xs" c="dimmed">Fin: {new Date(viewingProgram.end_date).toLocaleDateString('es-ES')}</Text>
+              )}
+            </Group>
+
+            <Divider my="sm" label="Ejercicios" labelPosition="center" />
+
+            {(() => {
+              const tmpl = viewingProgram.template as any;
+              const weeksList = tmpl?.weeks as Array<{ week: number; days: Array<{ dayName?: string; isRestDay?: boolean; blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> }> }> | undefined;
+              const daysList = tmpl?.days as Array<{ dayName?: string; isRestDay?: boolean; blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> }> | undefined;
+              const allWeeks = weeksList && weeksList.length > 0
+                ? weeksList
+                : daysList && daysList.length > 0
+                  ? [{ week: 1, days: daysList }]
+                  : [];
+
+              if (allWeeks.length === 0) {
+                return <Text c="dimmed" ta="center" py="md">No hay ejercicios definidos</Text>;
+              }
+
+              return allWeeks.map((wk) => (
+                <Box key={wk.week}>
+                  {allWeeks.length > 1 && (
+                    <Text fw={700} mb="xs">Semana {wk.week}</Text>
+                  )}
+                  <Stack gap="xs">
+                    {wk.days.map((day, dayIdx) => (
+                      <Box key={dayIdx} p="sm" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
+                        <Group gap="xs" mb="xs">
+                          <Text fw={600} size="sm">{day.dayName || `Día ${dayIdx + 1}`}</Text>
+                          {day.isRestDay && <Badge variant="light" color="orange" size="xs">Descanso</Badge>}
+                        </Group>
+                        {!day.isRestDay && day.blocks?.map((block, bi) => (
+                          <Box key={bi} ml="sm" mb="xs">
+                            <Text size="xs" fw={600} c="dimmed" mb={2}>
+                              {block.type === "warmup" ? "Calentamiento" : block.type === "cooldown" ? "Enfriamiento" : "Principal"}: {block.name}
+                            </Text>
+                            {block.exercises?.map((ex, ei) => (
+                              <Group key={ei} gap="xs" ml="sm">
+                                <Text size="xs">• {ex.exercise?.name || ex.name || "Ejercicio"}</Text>
+                                <Badge size="xs" variant="light" color="blue">{ex.sets || 3}x{ex.reps || "10-12"}</Badge>
+                                {ex.rest_seconds && <Badge size="xs" variant="light" color="gray">{ex.rest_seconds}s</Badge>}
+                              </Group>
+                            ))}
+                          </Box>
+                        ))}
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+              ));
+            })()}
+
+            <Group justify="flex-end" mt="md">
+              <Button variant="light" onClick={closeViewProgram}>Cerrar</Button>
+              <Button
+                leftSection={<IconEdit size={16} />}
+                onClick={() => {
+                  closeViewProgram();
+                  openProgramBuilder(viewingProgram);
+                }}
+              >
+                Editar programa
+              </Button>
+            </Group>
+          </Stack>
+        )}
       </BottomSheet>
     </Container>
   );

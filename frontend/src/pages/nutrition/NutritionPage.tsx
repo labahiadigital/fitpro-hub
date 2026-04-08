@@ -443,6 +443,8 @@ export function NutritionPage() {
       client_id: plan.client_id,
       is_template: plan.is_template ?? true,
       is_active: plan.is_active ?? false,
+      start_date: plan.start_date,
+      end_date: plan.end_date,
       client_name: plan.clients
         ? `${plan.clients.first_name} ${plan.clients.last_name}`
         : null,
@@ -1074,18 +1076,38 @@ export function NutritionPage() {
             <Center py="xl"><Loader size="md" /></Center>
           ) : clientPlans.length > 0 ? (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
-              {clientPlans.map((plan: any) => (
+              {clientPlans.map((plan: any) => {
+                const endDate = plan.end_date ? new Date(plan.end_date) : null;
+                const isExpired = endDate && endDate < new Date();
+                const showActive = plan.is_active && !isExpired;
+                return (
                 <Box key={plan.id} className="nv-card" p="md">
                   <Group justify="space-between" mb="sm">
                     <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{plan.name}</Text>
                     <Group gap={4}>
-                      {plan.is_active && <Badge color="green" variant="filled" radius="md" size="xs">Activo</Badge>}
+                      <Badge color={showActive ? "green" : "gray"} variant="filled" radius="md" size="xs">
+                        {showActive ? "Activo" : "Inactivo"}
+                      </Badge>
                       <Badge color="blue" variant="light" radius="md" size="xs">{getDurationWeeks(plan)} sem</Badge>
                     </Group>
                   </Group>
                   <Text c="dimmed" lineClamp={2} size="xs">{plan.description || "Sin descripción"}</Text>
                   {plan.client_name && (
                     <Badge color="blue" mt="xs" size="xs" variant="outline" radius="md">{plan.client_name}</Badge>
+                  )}
+                  {(plan.start_date || plan.end_date) && (
+                    <Group gap="xs" mt="xs">
+                      {plan.start_date && (
+                        <Text size="xs" c="dimmed">
+                          Inicio: {new Date(plan.start_date).toLocaleDateString('es-ES')}
+                        </Text>
+                      )}
+                      {plan.end_date && (
+                        <Text size="xs" c="dimmed">
+                          Fin: {new Date(plan.end_date).toLocaleDateString('es-ES')}
+                        </Text>
+                      )}
+                    </Group>
                   )}
                   <Stack gap={4} mt="sm">
                     <Group justify="space-between">
@@ -1106,7 +1128,8 @@ export function NutritionPage() {
                     <ActionIcon color="red" loading={deleteMealPlan.isPending} onClick={() => handleDeletePlan(plan.id, plan.name)} variant="light" radius="md" size="sm"><IconTrash size={14} /></ActionIcon>
                   </Group>
                 </Box>
-              ))}
+                );
+              })}
             </SimpleGrid>
           ) : (
             <EmptyState

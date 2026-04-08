@@ -1,0 +1,36 @@
+{
+  "name": "Trackfiz",
+  "short_name": "Trackfiz",
+  "description": "Plataforma CRM/ERP/LMS para profesionales del fitness y bienestar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2F4EF",
+  "theme_color": "#F2F4EF",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["fitness", "health", "productivity"],
+  "lang": "es",
+  "scope": "/"
+}

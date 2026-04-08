@@ -686,17 +686,28 @@ export function ClientDetailPage() {
     target_fat?: number;
     is_template?: string | boolean;
     is_active?: boolean;
-    created_at: string 
-  }) => ({
-    id: plan.id,
-    name: plan.name,
-    target_calories: plan.target_calories || 2000,
-    target_protein: plan.target_protein || 0,
-    target_carbs: plan.target_carbs || 0,
-    target_fat: plan.target_fat || 0,
-    status: plan.is_active ? "active" : "inactive",
-    created_at: plan.created_at,
-  }));
+    created_at: string;
+    start_date?: string;
+    end_date?: string;
+    assigned_at?: string;
+  }) => {
+    const isActive = plan.is_active ?? false;
+    const endDate = plan.end_date ? new Date(plan.end_date) : null;
+    const isExpired = endDate && endDate < new Date();
+    return {
+      id: plan.id,
+      name: plan.name,
+      target_calories: plan.target_calories || 2000,
+      target_protein: plan.target_protein || 0,
+      target_carbs: plan.target_carbs || 0,
+      target_fat: plan.target_fat || 0,
+      status: (isActive && !isExpired) ? "active" : "inactive",
+      created_at: plan.created_at,
+      start_date: plan.start_date,
+      end_date: plan.end_date,
+      assigned_at: plan.assigned_at,
+    };
+  });
 
   const supplements: { id: string; name: string; dosage: string; frequency: string }[] = [];
 
@@ -2686,7 +2697,7 @@ export function ClientDetailPage() {
                   </Group>
 
                   <Stack gap="sm">
-                    {mealPlans.map((plan: { id: string; name: string; target_calories: number; status: string; created_at?: string; assigned_at?: string; start_date?: string }) => (
+                    {mealPlans.map((plan: { id: string; name: string; target_calories: number; status: string; created_at?: string; assigned_at?: string; start_date?: string; end_date?: string }) => (
                       <Card key={plan.id} padding="lg" radius="md" withBorder>
                         <Group justify="space-between" align="flex-start" wrap="nowrap">
                           <Box style={{ flex: 1, minWidth: 0 }}>
@@ -2695,21 +2706,31 @@ export function ClientDetailPage() {
                                 <IconSalad size={18} />
                               </ThemeIcon>
                               <Text fw={600} size="md">{plan.name}</Text>
-                            </Group>
-                            <Group gap="md" wrap="wrap">
-                              <Badge variant="light" color="green" size="sm">
-                                {plan.target_calories} kcal/día
-                              </Badge>
                               <Badge 
-                                variant="light"
+                                variant="filled"
                                 color={plan.status === "active" ? "green" : "gray"}
                                 size="sm"
                               >
                                 {plan.status === "active" ? "Activo" : "Inactivo"}
                               </Badge>
-                              {(plan.assigned_at || plan.start_date || plan.created_at) && !isNaN(new Date(plan.assigned_at || plan.start_date || plan.created_at || "").getTime()) && (
+                            </Group>
+                            <Group gap="md" wrap="wrap">
+                              <Badge variant="light" color="green" size="sm">
+                                {plan.target_calories} kcal/día
+                              </Badge>
+                              {plan.start_date && (
                                 <Text size="xs" c="dimmed">
-                                  Asignado: {new Date(plan.assigned_at || plan.start_date || plan.created_at || "").toLocaleDateString('es-ES')}
+                                  Inicio: {new Date(plan.start_date).toLocaleDateString('es-ES')}
+                                </Text>
+                              )}
+                              {plan.end_date && (
+                                <Text size="xs" c="dimmed">
+                                  Fin: {new Date(plan.end_date).toLocaleDateString('es-ES')}
+                                </Text>
+                              )}
+                              {!plan.start_date && (plan.assigned_at || plan.created_at) && !isNaN(new Date(plan.assigned_at || plan.created_at || "").getTime()) && (
+                                <Text size="xs" c="dimmed">
+                                  Asignado: {new Date(plan.assigned_at || plan.created_at || "").toLocaleDateString('es-ES')}
                                 </Text>
                               )}
                             </Group>
@@ -3409,9 +3430,19 @@ export function ClientDetailPage() {
                               {program.difficulty}
                             </Badge>
                           )}
-                          {(program.assigned_at || program.start_date || program.created_at) && !isNaN(new Date(program.assigned_at || program.start_date || program.created_at || "").getTime()) && (
+                          {program.start_date && (
                             <Text size="xs" c="dimmed">
-                              Asignado: {new Date(program.assigned_at || program.start_date || program.created_at || "").toLocaleDateString('es-ES')}
+                              Inicio: {new Date(program.start_date).toLocaleDateString('es-ES')}
+                            </Text>
+                          )}
+                          {program.end_date && (
+                            <Text size="xs" c="dimmed">
+                              Fin: {new Date(program.end_date).toLocaleDateString('es-ES')}
+                            </Text>
+                          )}
+                          {!program.start_date && (program.assigned_at || program.created_at) && !isNaN(new Date(program.assigned_at || program.created_at || "").getTime()) && (
+                            <Text size="xs" c="dimmed">
+                              Asignado: {new Date(program.assigned_at || program.created_at || "").toLocaleDateString('es-ES')}
                             </Text>
                           )}
                         </Group>

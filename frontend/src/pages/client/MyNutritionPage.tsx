@@ -1403,6 +1403,7 @@ export function MyNutritionPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [historyDetailDay, setHistoryDetailDay] = useState<string | null>(null);
   const [planViewMode, setPlanViewMode] = useState<string>("modified");
+  const [selectedWeekOverride, setSelectedWeekOverride] = useState<string | null>(null);
   
   // Hooks para datos reales del backend
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
@@ -1426,25 +1427,41 @@ export function MyNutritionPage() {
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
   const selectedPlanDay = dayMapping[selectedDate.getDay()];
 
-  const extractPlanDays = (rawPlan: unknown, mp: typeof mealPlan) => {
+  const extractPlanDays = (rawPlan: unknown, mp: typeof mealPlan, weekOverride?: number) => {
     if (!rawPlan) return [];
     const plan = rawPlan as { weeks?: { week: number; days: PlanDay[] }[]; days?: PlanDay[] };
     if (plan.weeks && plan.weeks.length > 0) {
       const durationWeeks = (mp as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
-      const startDateStr = (mp as any)?.start_date;
-      const startDate = startDateStr ? new Date(startDateStr) : new Date(mp?.created_at || Date.now());
-      const now = new Date();
-      const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const weekNum = durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+      const weekNum = weekOverride || (() => {
+        const startDateStr = (mp as any)?.start_date;
+        const startDate = startDateStr ? new Date(startDateStr) : new Date(mp?.created_at || Date.now());
+        const now = new Date();
+        const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+      })();
       const wk = plan.weeks.find((w) => w.week === weekNum);
       return wk?.days || plan.weeks[0]?.days || [];
     }
     return plan.days || [];
   };
 
+  const currentAutoWeek = useMemo(() => {
+    if (!mealPlan?.plan) return 1;
+    const plan = mealPlan.plan as unknown as { weeks?: { week: number; days: PlanDay[] }[] };
+    if (!plan.weeks || plan.weeks.length === 0) return 1;
+    const durationWeeks = (mealPlan as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
+    const startDateStr = (mealPlan as any)?.start_date;
+    const startDate = startDateStr ? new Date(startDateStr) : new Date(mealPlan?.created_at || Date.now());
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    return durationWeeks > 1 ? (Math.floor(daysDiff / 7) % durationWeeks) + 1 : 1;
+  }, [mealPlan]);
+
+  const weekOverrideNum = selectedWeekOverride ? parseInt(selectedWeekOverride, 10) : undefined;
+
   const executedPlanSource = (mealPlan as any)?.executed_plan || mealPlan?.plan;
-  const planDays = useMemo(() => extractPlanDays(executedPlanSource, mealPlan), [executedPlanSource, mealPlan]);
-  const originalPlanDays = useMemo(() => extractPlanDays(mealPlan?.plan, mealPlan), [mealPlan]);
+  const planDays = useMemo(() => extractPlanDays(executedPlanSource, mealPlan, weekOverrideNum), [executedPlanSource, mealPlan, weekOverrideNum]);
+  const originalPlanDays = useMemo(() => extractPlanDays(mealPlan?.plan, mealPlan, weekOverrideNum), [mealPlan, weekOverrideNum]);
 
   const allPlanWeeks = useMemo(() => {
     if (!mealPlan?.plan) return [];
@@ -2295,18 +2312,31 @@ export function MyNutritionPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <Group justify="space-between" mb="md">
-            <Select
-              value={planViewMode}
-              onChange={(v) => setPlanViewMode(v || "modified")}
-              data={[
-                { value: "modified", label: "Plan ejecutado" },
-                { value: "original", label: "Plan asignado" },
-              ]}
-              size="xs"
-              radius="md"
-              w={180}
-            />
+          <Group justify="space-between" mb="md" wrap="wrap">
+            <Group gap="sm">
+              <Select
+                value={planViewMode}
+                onChange={(v) => setPlanViewMode(v || "modified")}
+                data={[
+                  { value: "modified", label: "Plan ejecutado" },
+                  { value: "original", label: "Plan asignado" },
+                ]}
+                size="xs"
+                radius="md"
+                w={180}
+              />
+              {allPlanWeeks.length > 1 && (
+                <Select
+                  value={selectedWeekOverride || String(currentAutoWeek)}
+                  onChange={(v) => setSelectedWeekOverride(v)}
+                  data={allPlanWeeks.map((w: { week: number }) => ({ value: String(w.week), label: `Semana ${w.week}` }))}
+                  size="xs"
+                  radius="md"
+                  w={150}
+                  allowDeselect={false}
+                />
+              )}
+            </Group>
             {allPlanWeeks.length > 1 && (
               <Badge variant="light" color="blue" size="sm">
                 {allPlanWeeks.length} semanas
