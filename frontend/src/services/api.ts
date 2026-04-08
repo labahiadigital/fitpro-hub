@@ -317,6 +317,7 @@ export const workoutsApi = {
       end_date: endDate,
       notes: notes
     }),
+  activateProgram: (id: string) => api.post(`/workouts/programs/${id}/activate`),
 
   // Logs
   logs: (clientId: string) => api.get(`/workouts/logs/${clientId}`),

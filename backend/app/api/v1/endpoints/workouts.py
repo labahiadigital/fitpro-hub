@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func, String
+from sqlalchemy import select, or_, func, String, update
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -58,6 +58,8 @@ class WorkoutProgramCreate(BaseModel):
     template: dict = {"weeks": []}
     tags: List[str] = []
     is_template: bool = True
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
 
 class WorkoutProgramUpdate(BaseModel):
@@ -69,6 +71,8 @@ class WorkoutProgramUpdate(BaseModel):
     template: Optional[dict] = None
     tags: Optional[List[str]] = None
     is_template: Optional[bool] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
 
 class WorkoutProgramResponse(BaseModel):
@@ -430,6 +434,34 @@ async def create_program(
     """
     Crear un nuevo programa de entrenamiento.
     """
+    import copy
+    from datetime import date as date_type
+
+    should_activate = data.client_id is not None and not data.is_template
+
+    if should_activate:
+        await db.execute(
+            update(WorkoutProgram)
+            .where(
+                WorkoutProgram.client_id == data.client_id,
+                WorkoutProgram.workspace_id == current_user.workspace_id,
+            )
+            .values(is_active=False)
+        )
+
+    parsed_start = None
+    parsed_end = None
+    if data.start_date:
+        try:
+            parsed_start = date_type.fromisoformat(data.start_date)
+        except (ValueError, TypeError):
+            pass
+    if data.end_date:
+        try:
+            parsed_end = date_type.fromisoformat(data.end_date)
+        except (ValueError, TypeError):
+            pass
+
     program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -439,8 +471,12 @@ async def create_program(
         duration_weeks=data.duration_weeks,
         difficulty=data.difficulty,
         template=data.template,
+        executed_template=copy.deepcopy(data.template) if should_activate else None,
         tags=data.tags,
-        is_template=data.is_template
+        is_template=data.is_template,
+        is_active=should_activate,
+        start_date=parsed_start,
+        end_date=parsed_end,
     )
     db.add(program)
     await db.commit()
@@ -498,11 +534,23 @@ async def update_program(
             detail="Programa no encontrado"
         )
     
-    # Only update fields that are provided (not None)
+    from datetime import date as date_type
+
     for field, value in data.model_dump(exclude_unset=True).items():
-        if value is not None:
+        if value is None:
+            continue
+        if field in ("start_date", "end_date"):
+            try:
+                setattr(program, field, date_type.fromisoformat(value) if value else None)
+            except (ValueError, TypeError):
+                pass
+        else:
             setattr(program, field, value)
-    
+
+    if data.template is not None and program.client_id and not program.is_template:
+        import copy
+        program.executed_template = copy.deepcopy(data.template)
+
     await db.commit()
     await db.refresh(program)
     return program
@@ -533,6 +581,40 @@ async def delete_program(
     
     await db.delete(program)
     await db.commit()
+
+
+@router.post("/programs/{program_id}/activate", response_model=WorkoutProgramResponse)
+async def activate_program(
+    program_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Mark a program as active and deactivate all other programs for the same client."""
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == program_id,
+            WorkoutProgram.workspace_id == current_user.workspace_id
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(status_code=404, detail="Programa no encontrado")
+    if not program.client_id:
+        raise HTTPException(status_code=400, detail="Solo se pueden activar programas asignados a un cliente")
+
+    await db.execute(
+        update(WorkoutProgram)
+        .where(
+            WorkoutProgram.client_id == program.client_id,
+            WorkoutProgram.workspace_id == current_user.workspace_id,
+        )
+        .values(is_active=False)
+    )
+
+    program.is_active = True
+    await db.commit()
+    await db.refresh(program)
+    return program
 
 
 # Schema for assign request
@@ -595,6 +677,17 @@ async def assign_program_to_client(
         except (ValueError, TypeError):
             pass
 
+    import copy
+
+    await db.execute(
+        update(WorkoutProgram)
+        .where(
+            WorkoutProgram.client_id == data.client_id,
+            WorkoutProgram.workspace_id == current_user.workspace_id,
+        )
+        .values(is_active=False)
+    )
+
     assigned_program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -604,13 +697,14 @@ async def assign_program_to_client(
         duration_weeks=template.duration_weeks,
         difficulty=template.difficulty,
         template=template.template,
-        executed_template=template.template,
+        executed_template=copy.deepcopy(template.template),
         tags=template.tags,
         is_template=False,
+        is_active=True,
         start_date=parsed_start,
         end_date=parsed_end,
     )
-    
+
     db.add(assigned_program)
     await db.commit()
     await db.refresh(assigned_program)

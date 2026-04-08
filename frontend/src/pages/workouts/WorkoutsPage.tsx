@@ -344,6 +344,8 @@ export function WorkoutsPage() {
       difficulty: program.difficulty,
       tags: program.tags || [],
       client_id: planClientId,
+      start_date: program.start_date || "",
+      end_date: program.end_date || "",
     });
     openBuilder();
   };
@@ -411,6 +413,8 @@ export function WorkoutsPage() {
       difficulty: "intermediate",
       tags: [] as string[],
       client_id: null as string | null,
+      start_date: "",
+      end_date: "",
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
@@ -490,6 +494,8 @@ export function WorkoutsPage() {
         difficulty: program.difficulty,
         tags: program.tags || [],
         client_id: planClientId,
+        start_date: program.start_date || "",
+        end_date: program.end_date || "",
       });
     } else {
       setEditingProgram(null);
@@ -567,11 +573,17 @@ export function WorkoutsPage() {
     };
 
     try {
+      const cleanDates = {
+        start_date: values.start_date || undefined,
+        end_date: values.end_date || undefined,
+      };
+
       if (editingProgram) {
         await updateProgram.mutateAsync({
           id: editingProgram.id,
           data: {
             ...values,
+            ...cleanDates,
             client_id: planClientId || undefined,
             template: templatePayload,
             is_template: editingProgram.is_template ?? !planClientId,
@@ -581,6 +593,7 @@ export function WorkoutsPage() {
         if (planClientId) {
           await createProgram.mutateAsync({
             ...values,
+            ...cleanDates,
             client_id: planClientId,
             template: templatePayload,
             is_template: false,
@@ -594,6 +607,8 @@ export function WorkoutsPage() {
             template: templatePayload,
             is_template: true,
             name: templateName,
+            start_date: undefined,
+            end_date: undefined,
           });
           if (planClientId) {
             notifications.show({
@@ -1359,6 +1374,26 @@ export function WorkoutsPage() {
               size="sm"
               {...programForm.getInputProps("tags")}
             />
+
+            {(selectedClientId || clientId) && (
+              <Group grow>
+                <TextInput
+                  label="Fecha de inicio"
+                  type="date"
+                  radius="md"
+                  size="sm"
+                  {...programForm.getInputProps("start_date")}
+                />
+                <TextInput
+                  label="Fecha de fin (opcional)"
+                  description="Si no se indica, las semanas se repiten indefinidamente"
+                  type="date"
+                  radius="md"
+                  size="sm"
+                  {...programForm.getInputProps("end_date")}
+                />
+              </Group>
+            )}
           </Stack>
         }
         mainContent={

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Integer, ForeignKey, Boolean, Date
+from sqlalchemy import Column, String, Text, Integer, ForeignKey, Boolean, Date, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
@@ -36,6 +36,9 @@ class WorkoutProgram(BaseModel):
     
     # Is this a template or assigned program (DB uses boolean)
     is_template = Column(Boolean, default=True)
+
+    # Whether this program is the active one for the client
+    is_active = Column(Boolean, default=False, server_default="false")
     
     # Relationships
     workspace = relationship("Workspace", back_populates="workout_programs")

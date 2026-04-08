@@ -76,6 +76,7 @@ import {
   useWorkoutProgramTemplates,
   useMealPlanTemplates,
   useAssignWorkoutProgram,
+  useActivateWorkoutProgram,
   useAssignMealPlan,
   useSupabaseMealPlan,
   useClientWorkoutAssignments,
@@ -616,6 +617,7 @@ export function ClientDetailPage() {
   
   // Hooks para asignaciones
   const assignWorkoutProgram = useAssignWorkoutProgram();
+  const activateWorkoutProgram = useActivateWorkoutProgram();
   const assignMealPlan = useAssignMealPlan();
   const activateMealPlan = useActivateMealPlan();
   
@@ -3430,6 +3432,19 @@ export function ClientDetailPage() {
                           >
                             Ver detalles
                           </Menu.Item>
+                          {!showActive && (
+                            <Menu.Item
+                              leftSection={<IconPlayerPlay size={16} />}
+                              color="green"
+                              onClick={async () => {
+                                await activateWorkoutProgram.mutateAsync(program.id);
+                                notifications.show({ title: "Programa activado", message: `"${program.name}" es ahora el programa activo`, color: "green" });
+                                refetch();
+                              }}
+                            >
+                              Activar programa
+                            </Menu.Item>
+                          )}
                           <Menu.Item 
                             leftSection={<IconEdit size={16} />}
                             onClick={() => {

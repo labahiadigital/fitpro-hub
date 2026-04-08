@@ -622,6 +622,21 @@ export function useAssignWorkoutProgram() {
   });
 }
 
+export function useActivateWorkoutProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await workoutsApi.activateProgram(id);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
+      queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
+    },
+  });
+}
+
 // Hook para asignar un plan nutricional
 export function useAssignMealPlan() {
   const queryClient = useQueryClient();
