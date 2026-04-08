@@ -1397,7 +1397,7 @@ export function WorkoutBuilderWithDays({
                   label: `Semana ${i + 1}`,
                 }))}
                 value={String(currentWeek)}
-                onChange={(v) => onWeekChange?.(Number(v) || 1)}
+                onChange={(v) => { onWeekChange?.(Number(v) || 1); setActiveDay(days[0]?.id || "day-1"); }}
                 allowDeselect={false}
               />
             </Group>
