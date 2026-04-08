@@ -1019,27 +1019,38 @@ function WeekDayDetail({
   weekDayName,
   onImageClick,
   onSwapExercise,
+  onSwapDay,
   isExecutedView = false,
 }: {
   schedule: { dayName?: string; exercises_list?: Array<{ name: string; sets: number; reps: string }>; blocks?: Array<{ id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }> };
   weekDayName: string;
   onImageClick: (url: string, name: string) => void;
   onSwapExercise?: (blockIndex: number, exerciseIndex: number, exerciseName: string) => void;
+  onSwapDay?: () => void;
   isExecutedView?: boolean;
 }) {
   return (
     <>
       <Box px="md" mb="sm">
-        <Text fw={700} size="lg">{schedule.dayName || weekDayName}</Text>
-        <Group gap="md" mt={4}>
-          <Group gap={4}>
-            <IconClock size={14} />
-            <Text size="xs" c="dimmed">~60 min</Text>
-          </Group>
-          <Group gap={4}>
-            <IconBarbell size={14} />
-            <Text size="xs" c="dimmed">{schedule.exercises_list?.length || 0} ejercicios</Text>
-          </Group>
+        <Group justify="space-between" align="flex-start">
+          <Box>
+            <Text fw={700} size="lg">{schedule.dayName || weekDayName}</Text>
+            <Group gap="md" mt={4}>
+              <Group gap={4}>
+                <IconClock size={14} />
+                <Text size="xs" c="dimmed">~60 min</Text>
+              </Group>
+              <Group gap={4}>
+                <IconBarbell size={14} />
+                <Text size="xs" c="dimmed">{schedule.exercises_list?.length || 0} ejercicios</Text>
+              </Group>
+            </Group>
+          </Box>
+          {isExecutedView && onSwapDay && (
+            <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal" onClick={onSwapDay}>
+              Intercambiar día
+            </Button>
+          )}
         </Group>
       </Box>
 
@@ -1154,6 +1165,7 @@ export function MyWorkoutsPage() {
     step: "day" | "exercise";
     targetDay?: number;
   } | null>(null);
+  const [daySwapSourceDay, setDaySwapSourceDay] = useState<number | null>(null);
 
   if (isLoadingWorkouts) {
     return (
@@ -1755,6 +1767,7 @@ export function MyWorkoutsPage() {
                       onImageClick={(url, name) => setEnlargedImage({ url, name })}
                       isExecutedView={programViewMode === "executed"}
                       onSwapExercise={(bi, ei, name) => setExerciseSwapState({ sourceBlockIndex: bi, sourceExerciseIndex: ei, exerciseName: name, step: "day" })}
+                      onSwapDay={() => setDaySwapSourceDay(selectedDayIndex + 1)}
                     />
                   </FullPageDetail>
                 )}
@@ -1768,6 +1781,7 @@ export function MyWorkoutsPage() {
                   onImageClick={(url, name) => setEnlargedImage({ url, name })}
                   isExecutedView={programViewMode === "executed"}
                   onSwapExercise={(bi, ei, name) => setExerciseSwapState({ sourceBlockIndex: bi, sourceExerciseIndex: ei, exerciseName: name, step: "day" })}
+                  onSwapDay={() => setDaySwapSourceDay(selectedDayIndex + 1)}
                 />
               ) : null
             }
@@ -2040,6 +2054,38 @@ export function MyWorkoutsPage() {
             </Stack>
           );
         })()}
+      </Modal>
+
+      {/* Day swap - select target day */}
+      <Modal
+        opened={daySwapSourceDay != null}
+        onClose={() => setDaySwapSourceDay(null)}
+        title="Intercambiar día con"
+        size="sm"
+      >
+        <Stack gap="xs">
+          {weekDays.map((dayLabel, i) => {
+            const dayNum = i + 1;
+            if (dayNum === daySwapSourceDay) return null;
+            return (
+              <Button
+                key={dayNum}
+                variant="light"
+                fullWidth
+                justify="start"
+                leftSection={<IconArrowsExchange size={14} />}
+                onClick={() => {
+                  if (activeProgram && daySwapSourceDay != null) {
+                    swapWorkoutDaysMutation.mutate({ programId: activeProgram.id, sourceDay: daySwapSourceDay, targetDay: dayNum });
+                  }
+                  setDaySwapSourceDay(null);
+                }}
+              >
+                {dayLabel}
+              </Button>
+            );
+          })}
+        </Stack>
       </Modal>
 
       {/* Modal de resultados tras registrar entrenamiento */}

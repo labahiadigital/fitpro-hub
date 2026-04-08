@@ -1223,29 +1223,11 @@ function NutritionDayDetail({
                       <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
                       <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
                       {!readOnly && (
-                      <Menu shadow="md" width={220} position="bottom-end" withinPortal>
-                        <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray" size="sm">
-                            <IconDotsVertical size={14} />
+                        <Tooltip label="Intercambiar comida">
+                          <ActionIcon variant="subtle" color="teal" size="sm" onClick={() => setSwapState({ sourceMealIndex: mealIndex, step: "day" })}>
+                            <IconArrowsExchange size={14} />
                           </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Label>Intercambiar con</Menu.Label>
-                          {planDayLabels.map((label, idx) => {
-                            const targetDayNum = idx + 1;
-                            if (targetDayNum === dayData.planDayNum) return null;
-                            return (
-                              <Menu.Item
-                                key={idx}
-                                leftSection={<IconArrowsExchange size={14} />}
-                                onClick={() => setSwapState({ sourceMealIndex: mealIndex, step: "meal", targetDay: targetDayNum })}
-                              >
-                                {label}
-                              </Menu.Item>
-                            );
-                          })}
-                        </Menu.Dropdown>
-                      </Menu>
+                        </Tooltip>
                       )}
                     </Group>
                   </Group>
@@ -1304,7 +1286,34 @@ function NutritionDayDetail({
         <Text c="dimmed" ta="center">No hay comidas asignadas en el plan para este día</Text>
       )}
 
-      {/* Modal for selecting target meal to swap */}
+      {/* Modal step 1: select target day */}
+      <Modal
+        opened={swapState?.step === "day"}
+        onClose={() => setSwapState(null)}
+        title="Intercambiar con"
+        size="sm"
+      >
+        <Stack gap="xs">
+          {planDayLabels.map((label, idx) => {
+            const targetDayNum = idx + 1;
+            if (targetDayNum === dayData.planDayNum) return null;
+            return (
+              <Button
+                key={idx}
+                variant="light"
+                fullWidth
+                justify="start"
+                leftSection={<IconArrowsExchange size={14} />}
+                onClick={() => setSwapState(prev => prev ? { ...prev, step: "meal", targetDay: targetDayNum } : null)}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </Stack>
+      </Modal>
+
+      {/* Modal step 2: select target meal to swap */}
       <Modal
         opened={swapState?.step === "meal" && swapState.targetDay != null}
         onClose={() => setSwapState(null)}
@@ -1406,6 +1415,7 @@ export function MyNutritionPage() {
   const [editingMealTime, setEditingMealTime] = useState<{ dayNum: number; mealIndex: number; time: string } | null>(null);
   const [editingMealName, setEditingMealName] = useState<{ dayNum: number; mealIndex: number; name: string } | null>(null);
   const [registerSwapState, setRegisterSwapState] = useState<{ sourceMealIndex: number; step: "day" | "meal"; targetDay?: number } | null>(null);
+  const [planSwapState, setPlanSwapState] = useState<{ sourceMealIndex: number; sourceDayNum: number; step: "day" | "meal"; targetDay?: number } | null>(null);
   const { data: measurementsData } = useMeasurements(100);
   const { data: progressPhotosData } = useProgressPhotos(50);
 
@@ -1965,18 +1975,18 @@ export function MyNutritionPage() {
                   background: isRegistered ? "var(--mantine-color-green-0)" : "transparent",
                 }}
               >
-                <Group gap="sm" wrap="nowrap" align="center">
+                <Group gap="sm" wrap="nowrap" align="flex-start">
                   <ThemeIcon
                     variant={isRegistered ? "filled" : "light"}
                     color={isRegistered ? "green" : mealType?.color || "yellow"}
-                    size={44}
+                    size={40}
                     radius="lg"
-                    style={{ flexShrink: 0 }}
+                    style={{ flexShrink: 0, marginTop: 2 }}
                   >
-                    {isRegistered ? <IconCheck size={22} /> : <MealIcon size={22} />}
+                    {isRegistered ? <IconCheck size={20} /> : <MealIcon size={20} />}
                   </ThemeIcon>
                   <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Group gap="xs" wrap="nowrap">
+                    <Group gap="xs" wrap="wrap">
                       {editingMealName?.dayNum === selectedPlanDay && editingMealName?.mealIndex === originalMealIndex ? (
                         <Group gap={4}>
                           <TextInput
@@ -1990,7 +2000,7 @@ export function MyNutritionPage() {
                               } else if (e.key === "Escape") setEditingMealName(null);
                             }}
                             autoFocus
-                            styles={{ input: { minWidth: 100, fontWeight: 600 } }}
+                            styles={{ input: { minWidth: 80, fontWeight: 600 } }}
                           />
                           <ActionIcon size="xs" color="green" variant="light" onClick={() => {
                             if (editingMealName.name.trim()) {
@@ -2001,8 +2011,8 @@ export function MyNutritionPage() {
                           <ActionIcon size="xs" color="gray" variant="light" onClick={() => setEditingMealName(null)}><IconX size={12} /></ActionIcon>
                         </Group>
                       ) : (
-                        <Group gap={4}>
-                          <Text fw={600} size="sm">{displayName}</Text>
+                        <Group gap={4} wrap="nowrap">
+                          <Text fw={600} size="sm" lineClamp={1}>{displayName}</Text>
                           {planViewMode !== "original" && (
                             <Tooltip label="Editar nombre">
                               <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealName({ dayNum: selectedPlanDay, mealIndex: originalMealIndex, name: displayName })}>
@@ -2056,78 +2066,63 @@ export function MyNutritionPage() {
                         </Text>
                       )}
                     </Group>
-                    <Text size="xs" c="dimmed" lineClamp={1} mt={2}>
-                      {(() => {
-                        const seen = new Set<string>();
-                        const labels: string[] = [];
-                        meal.items.forEach((item) => {
-                          if (item.recipe_group) {
-                            if (!seen.has(item.recipe_group)) {
-                              seen.add(item.recipe_group);
-                              labels.push(`🍳 ${item.recipe_group}`);
-                            }
-                          } else {
-                            labels.push(item.food?.name || "Alimento");
-                          }
-                        });
-                        return labels.join(" • ");
-                      })()}
-                    </Text>
-                  </Box>
-                  <Badge variant="light" color={isRegistered ? "green" : "orange"} size="sm" style={{ flexShrink: 0 }}>
-                    {mealCalories} kcal
-                  </Badge>
-                  {isRegistered ? (
-                    <Menu shadow="md" width={180} position="bottom-end" withinPortal>
-                      <Menu.Target>
-                        <ActionIcon variant="subtle" color="gray" size="sm" style={{ flexShrink: 0 }}>
-                          <IconDotsVertical size={16} />
-                        </ActionIcon>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        <Menu.Item
-                          leftSection={<IconToolsKitchen2 size={14} />}
-                          onClick={() => handleOpenPlanMeal(meal)}
-                        >
-                          Editar registro
-                        </Menu.Item>
-                        <Menu.Item
-                          leftSection={<IconArrowsExchange size={14} />}
-                          onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
-                        >
-                          Intercambiar
-                        </Menu.Item>
-                        <Menu.Item
-                          color="red"
-                          leftSection={<IconTrash size={14} />}
-                          onClick={() => handleUnregisterMeal(meal.name)}
-                        >
-                          Eliminar registro
-                        </Menu.Item>
-                      </Menu.Dropdown>
-                    </Menu>
-                  ) : (
-                    <Group gap={4} style={{ flexShrink: 0 }}>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        color="yellow"
-                        radius="xl"
-                        onClick={() => handleOpenPlanMeal(meal)}
-                      >
-                        Registrar
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        color="teal"
-                        radius="xl"
-                        onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
-                      >
-                        Intercambiar
-                      </Button>
+                    <Group gap="xs" mt={4} wrap="wrap">
+                      <Badge variant="light" color={isRegistered ? "green" : "orange"} size="sm">
+                        {mealCalories} kcal
+                      </Badge>
+                      {isRegistered ? (
+                        <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+                          <Menu.Target>
+                            <ActionIcon variant="subtle" color="gray" size="sm">
+                              <IconDotsVertical size={16} />
+                            </ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Item
+                              leftSection={<IconToolsKitchen2 size={14} />}
+                              onClick={() => handleOpenPlanMeal(meal)}
+                            >
+                              Editar registro
+                            </Menu.Item>
+                            <Menu.Item
+                              leftSection={<IconArrowsExchange size={14} />}
+                              onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
+                            >
+                              Intercambiar
+                            </Menu.Item>
+                            <Menu.Item
+                              color="red"
+                              leftSection={<IconTrash size={14} />}
+                              onClick={() => handleUnregisterMeal(meal.name)}
+                            >
+                              Eliminar registro
+                            </Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
+                      ) : (
+                        <>
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color="yellow"
+                            radius="xl"
+                            onClick={() => handleOpenPlanMeal(meal)}
+                          >
+                            Registrar
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            color="teal"
+                            radius="xl"
+                            onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
+                          >
+                            Intercambiar
+                          </Button>
+                        </>
+                      )}
                     </Group>
-                  )}
+                  </Box>
                 </Group>
               </Box>
             );
@@ -2462,7 +2457,6 @@ export function MyNutritionPage() {
                         const MealIcon = mealType?.icon || IconSalad;
                         
                         const currentPlanDayNum = activeWeekData[selectedWeekDayIndex]?.planDayNum;
-                        const planDayLabelsMobile = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
                         
                         return (
                           <Card key={mealIndex} padding="md" radius="md" withBorder>
@@ -2477,9 +2471,75 @@ export function MyNutritionPage() {
                                   <MealIcon size={18} />
                                 </ThemeIcon>
                                 <Box>
-                                  <Group gap="xs">
-                                    <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
-                                    {meal.time && <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time}</Badge>}
+                                  <Group gap="xs" wrap="wrap">
+                                    {planViewMode !== "original" && editingMealName?.dayNum === currentPlanDayNum && editingMealName?.mealIndex === mealIndex ? (
+                                      <Group gap={4}>
+                                        <TextInput
+                                          size="xs"
+                                          value={editingMealName.name}
+                                          onChange={(e) => setEditingMealName({ ...editingMealName, name: e.target.value })}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter" && editingMealName.name.trim()) {
+                                              updateMealNameMutation.mutate({ day: currentPlanDayNum!, mealIndex, displayName: editingMealName.name });
+                                              setEditingMealName(null);
+                                            } else if (e.key === "Escape") setEditingMealName(null);
+                                          }}
+                                          autoFocus
+                                          styles={{ input: { minWidth: 80, fontWeight: 600 } }}
+                                        />
+                                        <ActionIcon size="xs" color="green" variant="light" onClick={() => {
+                                          if (editingMealName.name.trim()) updateMealNameMutation.mutate({ day: currentPlanDayNum!, mealIndex, displayName: editingMealName.name });
+                                          setEditingMealName(null);
+                                        }}><IconCheck size={12} /></ActionIcon>
+                                        <ActionIcon size="xs" color="gray" variant="light" onClick={() => setEditingMealName(null)}><IconX size={12} /></ActionIcon>
+                                      </Group>
+                                    ) : (
+                                      <Group gap={4} wrap="nowrap">
+                                        <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
+                                        {planViewMode !== "original" && (
+                                          <Tooltip label="Editar nombre">
+                                            <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealName({ dayNum: currentPlanDayNum!, mealIndex, name: (meal as any).display_name || mealType?.label || meal.name })}>
+                                              <IconEdit size={11} />
+                                            </ActionIcon>
+                                          </Tooltip>
+                                        )}
+                                      </Group>
+                                    )}
+                                    {planViewMode !== "original" && editingMealTime?.dayNum === currentPlanDayNum && editingMealTime?.mealIndex === mealIndex ? (
+                                      <Group gap={4}>
+                                        <TextInput
+                                          size="xs"
+                                          type="time"
+                                          value={editingMealTime.time}
+                                          onChange={(e) => setEditingMealTime({ ...editingMealTime, time: e.target.value })}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                              updateMealTimeMutation.mutate({ day: currentPlanDayNum!, mealIndex, newTime: editingMealTime.time });
+                                              setEditingMealTime(null);
+                                            } else if (e.key === "Escape") setEditingMealTime(null);
+                                          }}
+                                          autoFocus
+                                          w={90}
+                                          styles={{ input: { textAlign: "center", height: 28 } }}
+                                        />
+                                        <ActionIcon size="xs" color="green" variant="light" onClick={() => {
+                                          updateMealTimeMutation.mutate({ day: currentPlanDayNum!, mealIndex, newTime: editingMealTime.time });
+                                          setEditingMealTime(null);
+                                        }}><IconCheck size={12} /></ActionIcon>
+                                        <ActionIcon size="xs" color="gray" variant="light" onClick={() => setEditingMealTime(null)}><IconX size={12} /></ActionIcon>
+                                      </Group>
+                                    ) : (
+                                      <Group gap={2}>
+                                        <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time || "--:--"}</Badge>
+                                        {planViewMode !== "original" && (
+                                          <Tooltip label="Editar hora">
+                                            <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealTime({ dayNum: currentPlanDayNum!, mealIndex, time: meal.time || "12:00" })}>
+                                              <IconEdit size={10} />
+                                            </ActionIcon>
+                                          </Tooltip>
+                                        )}
+                                      </Group>
+                                    )}
                                   </Group>
                                   <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
                                 </Box>
@@ -2489,32 +2549,12 @@ export function MyNutritionPage() {
                                 <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
                                 <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
                                 <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
-                                {planViewMode !== "original" && (
-                                <Menu shadow="md" width={220} position="bottom-end" withinPortal>
-                                  <Menu.Target>
-                                    <ActionIcon variant="subtle" color="gray" size="sm">
-                                      <IconDotsVertical size={14} />
+                                {planViewMode !== "original" && currentPlanDayNum && (
+                                  <Tooltip label="Intercambiar comida">
+                                    <ActionIcon variant="subtle" color="teal" size="sm" onClick={() => setPlanSwapState({ sourceMealIndex: mealIndex, sourceDayNum: currentPlanDayNum, step: "day" })}>
+                                      <IconArrowsExchange size={14} />
                                     </ActionIcon>
-                                  </Menu.Target>
-                                  <Menu.Dropdown>
-                                    <Menu.Label>Intercambiar con</Menu.Label>
-                                    {planDayLabelsMobile.map((label, idx) => {
-                                      const targetDayNum = idx + 1;
-                                      if (targetDayNum === currentPlanDayNum) return null;
-                                      return (
-                                        <Menu.Item
-                                          key={idx}
-                                          leftSection={<IconArrowsExchange size={14} />}
-                                          onClick={() => {
-                                            if (currentPlanDayNum) moveMealMutation.mutate({ sourceDay: currentPlanDayNum, mealIndex, targetDay: targetDayNum });
-                                          }}
-                                        >
-                                          {label}
-                                        </Menu.Item>
-                                      );
-                                    })}
-                                  </Menu.Dropdown>
-                                </Menu>
+                                  </Tooltip>
                                 )}
                               </Group>
                             </Group>
@@ -2555,6 +2595,103 @@ export function MyNutritionPage() {
               ) : null
             }
           />
+
+          {/* Modal paso 1: seleccionar día destino (Tu Plan mobile) */}
+          <Modal
+            opened={planSwapState?.step === "day"}
+            onClose={() => setPlanSwapState(null)}
+            title="Intercambiar con"
+            size="sm"
+          >
+            <Stack gap="xs">
+              {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, idx) => {
+                const targetDayNum = idx + 1;
+                if (targetDayNum === planSwapState?.sourceDayNum) return null;
+                return (
+                  <Button
+                    key={idx}
+                    variant="light"
+                    fullWidth
+                    justify="start"
+                    leftSection={<IconArrowsExchange size={14} />}
+                    onClick={() => setPlanSwapState(prev => prev ? { ...prev, step: "meal", targetDay: targetDayNum } : null)}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </Stack>
+          </Modal>
+
+          {/* Modal paso 2: seleccionar comida o mover sin intercambiar (Tu Plan mobile) */}
+          <Modal
+            opened={planSwapState?.step === "meal" && planSwapState?.targetDay != null}
+            onClose={() => setPlanSwapState(null)}
+            title="Selecciona la comida a intercambiar"
+            size="sm"
+          >
+            {(() => {
+              if (!planSwapState || planSwapState.targetDay == null) return null;
+              const targetDayData = activePlanDays.find((d: PlanDay) => d.day === planSwapState.targetDay);
+              const rawTargetMeals = targetDayData?.meals || [];
+              const seenKeys = new Set<string>();
+              const targetMeals = rawTargetMeals.filter((meal: PlanMeal) => {
+                const key = `${meal.name}-${meal.time || ""}`;
+                if (seenKeys.has(key)) return false;
+                seenKeys.add(key);
+                return true;
+              });
+              const dayLabels = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+              const targetDayLabel = dayLabels[(planSwapState.targetDay - 1) % 7] || `Día ${planSwapState.targetDay}`;
+              if (targetMeals.length === 0) {
+                return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
+              }
+              return (
+                <Stack gap="xs">
+                  <Button
+                    variant="filled"
+                    color="red"
+                    fullWidth
+                    justify="start"
+                    onClick={() => {
+                      moveMealMutation.mutate({
+                        sourceDay: planSwapState.sourceDayNum,
+                        mealIndex: planSwapState.sourceMealIndex,
+                        targetDay: planSwapState.targetDay!,
+                      });
+                      setPlanSwapState(null);
+                    }}
+                  >
+                    Mover sin intercambiar
+                  </Button>
+                  <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
+                  {targetMeals.map((meal: PlanMeal, tmi: number) => {
+                    const mt = MEAL_TYPES.find(m => m.value === meal.name);
+                    return (
+                      <Button
+                        key={tmi}
+                        variant="outline"
+                        fullWidth
+                        justify="start"
+                        leftSection={mt ? <ThemeIcon variant="light" color={mt.color} size="sm" radius="xl">{(() => { const I = mt.icon; return <I size={14} />; })()}</ThemeIcon> : null}
+                        onClick={() => {
+                          swapMealsMutation.mutate({
+                            sourceDay: planSwapState.sourceDayNum,
+                            sourceMealIndex: planSwapState.sourceMealIndex,
+                            targetDay: planSwapState.targetDay!,
+                            targetMealIndex: tmi,
+                          });
+                          setPlanSwapState(null);
+                        }}
+                      >
+                        {mt?.label || meal.name}{meal.time ? ` (${meal.time})` : ""}
+                      </Button>
+                    );
+                  })}
+                </Stack>
+              );
+            })()}
+          </Modal>
         </Tabs.Panel>
 
         <Tabs.Panel value="history">
