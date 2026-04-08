@@ -1388,6 +1388,10 @@ function NutritionDayDetail({
   );
 }
 
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function MyNutritionPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isMdUp = useMediaQuery("(min-width: 1024px)");
@@ -1402,7 +1406,7 @@ export function MyNutritionPage() {
   
   // Hooks para datos reales del backend
   const { data: mealPlan, isLoading: isLoadingPlan } = useMyMealPlan();
-  const selectedDateStr = selectedDate.toISOString().split("T")[0];
+  const selectedDateStr = toLocalDateStr(selectedDate);
   const { data: nutritionLogs } = useNutritionLogs(selectedDateStr, 50);
   const { data: nutritionHistory } = useNutritionHistory(30);
   const logNutritionMutation = useLogNutrition();
@@ -1538,7 +1542,7 @@ export function MyNutritionPage() {
       const daysFromToday = jsDay - todayJsDay;
       const dateForDay = new Date(todayDate);
       dateForDay.setDate(todayDate.getDate() + daysFromToday);
-      const dateStr = dateForDay.toISOString().split("T")[0];
+      const dateStr = toLocalDateStr(dateForDay);
       
       const isTodayDay = jsDay === todayJsDay;
       
@@ -1595,7 +1599,7 @@ export function MyNutritionPage() {
       const daysFromToday = jsDay - todayJsDay;
       const dateForDay = new Date(todayDate);
       dateForDay.setDate(todayDate.getDate() + daysFromToday);
-      const dateStr = dateForDay.toISOString().split("T")[0];
+      const dateStr = toLocalDateStr(dateForDay);
       const planDayNum = dayMappingToPlan[i];
       const dayPlan = originalPlanDays.find((d: PlanDay) => d.day === planDayNum);
       const planMeals = dayPlan?.meals || [];
@@ -1695,7 +1699,7 @@ export function MyNutritionPage() {
     }
   };
 
-  const isToday = selectedDateStr === new Date().toISOString().split("T")[0];
+  const isToday = selectedDateStr === toLocalDateStr(new Date());
 
   if (isLoadingPlan) {
     return (
@@ -1952,13 +1956,19 @@ export function MyNutritionPage() {
           {selectedPlanMeals.map((meal: PlanMeal, sortedIdx: number) => {
             const isRegistered = registeredMeals[meal.name];
             const mealLogs = mealsByType[meal.name] || [];
-            const mealCalories = isRegistered 
-              ? mealLogs.reduce((sum, l) => sum + (l.total_calories || 0), 0)
-              : meal.items.reduce((sum, item) => {
-                  const food = item.food || item.supplement;
-                  const ss = parseFloat(String(food?.serving_size || "100")) || 100;
-                  return sum + Math.round(Number(food?.calories || 0) * (item.quantity_grams / ss));
-                }, 0);
+            const mealCalories = isRegistered
+              ? mealLogs.reduce((sum, l) => sum + (Number(l.total_calories) || 0), 0)
+              : (() => {
+                  if (meal.foods && meal.foods.length > 0) {
+                    return meal.foods.reduce((sum, f) => sum + (Number(f.calories) || 0), 0);
+                  }
+                  return (meal.items || []).reduce((sum, item) => {
+                    const food = item.food || item.supplement;
+                    const ss = parseFloat(String(food?.serving_size || "100")) || 100;
+                    const qty = Number(item.quantity_grams) || 0;
+                    return sum + Math.round(Number(food?.calories || 0) * qty / ss);
+                  }, 0);
+                })();
             const mealType = MEAL_TYPES.find(m => m.value === meal.name);
             const MealIcon = mealType?.icon || IconApple;
             const displayName = (meal as PlanMeal & { display_name?: string }).display_name || meal.name;
@@ -2728,7 +2738,7 @@ export function MyNutritionPage() {
                   <DayCardMenu
                     key={day.date}
                     dayName={dateFormatted}
-                    isToday={day.date === new Date().toISOString().split("T")[0]}
+                    isToday={day.date === toLocalDateStr(new Date())}
                     onClick={() => setHistoryDetailDay(day.date)}
                     badge={
                       <Badge variant="light" color={pct >= 90 ? "green" : pct >= 70 ? "yellow" : "orange"} size="sm">

@@ -95,8 +95,8 @@ class WorkoutProgramClientResponse(BaseModel):
     executed_template: Optional[dict] = None
     tags: Optional[List[str]] = []
     is_active: Optional[bool] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     created_at: datetime
 
     class Config:
@@ -170,8 +170,8 @@ class MealPlanClientResponse(BaseModel):
     executed_plan: Optional[dict] = None
     adherence: Optional[dict] = None
     is_active: Optional[bool] = False
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     created_at: datetime
     
     class Config:
@@ -969,10 +969,13 @@ async def create_detailed_workout_log(
             detail="No tienes acceso a este programa"
         )
 
-    # Determine target date for the log
     if data.log_date:
         try:
-            target_date = datetime.fromisoformat(data.log_date.replace("Z", "+00:00")).replace(tzinfo=None)
+            raw = data.log_date.strip()
+            if len(raw) == 10:
+                target_date = datetime.strptime(raw, "%Y-%m-%d")
+            else:
+                target_date = datetime.fromisoformat(raw.replace("Z", "+00:00")).replace(tzinfo=None)
         except (ValueError, TypeError):
             target_date = datetime.utcnow()
     else:
@@ -1117,26 +1120,36 @@ async def get_my_meal_plan(
 ):
     """Get the active meal plan for the client."""
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    
-    # First try to find an explicitly active plan
+    today = date.today()
+
     result = await db.execute(
         select(MealPlan)
         .where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+        .order_by(desc(MealPlan.created_at))
+    )
+    active_plans = result.scalars().all()
+
+    for plan in active_plans:
+        sd = plan.start_date
+        ed = plan.end_date
+        if sd and today < sd:
+            continue
+        if ed and today > ed:
+            continue
+        return plan
+
+    if active_plans:
+        no_dates = [p for p in active_plans if not p.start_date and not p.end_date]
+        if no_dates:
+            return no_dates[0]
+
+    result = await db.execute(
+        select(MealPlan)
+        .where(MealPlan.client_id == client.id)
+        .order_by(desc(MealPlan.created_at))
         .limit(1)
     )
-    plan = result.scalar_one_or_none()
-    
-    # Fallback: most recent plan
-    if not plan:
-        result = await db.execute(
-            select(MealPlan)
-            .where(MealPlan.client_id == client.id)
-            .order_by(desc(MealPlan.created_at))
-            .limit(1)
-        )
-        plan = result.scalar_one_or_none()
-    
-    return plan
+    return result.scalar_one_or_none()
 
 
 @router.get("/nutrition/plans", response_model=List[MealPlanClientResponse])

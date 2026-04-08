@@ -575,7 +575,7 @@ function LogWorkoutModal({
     onSubmit({
       program_id: programId,
       day_index: dayIndex,
-      log_date: logDate?.toISOString(),
+      log_date: logDate ? `${logDate.getFullYear()}-${String(logDate.getMonth() + 1).padStart(2, "0")}-${String(logDate.getDate()).padStart(2, "0")}` : undefined,
       exercises: exercises.map((e) => ({
         exercise_id: e.exercise_id,
         exercise_name: e.name,
@@ -1167,6 +1167,8 @@ export function MyWorkoutsPage() {
   } | null>(null);
   const [daySwapSourceDay, setDaySwapSourceDay] = useState<number | null>(null);
 
+  const toLocalDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
   if (isLoadingWorkouts) {
     return (
       <Center h={400}>
@@ -1175,7 +1177,16 @@ export function MyWorkoutsPage() {
     );
   }
 
-  const activeProgram = workouts?.find((p: any) => p.is_active) || workouts?.[0];
+  const activeProgram = (() => {
+    const todayStr = toLocalDateStr(new Date());
+    const activeOnes = workouts?.filter((p: any) => p.is_active) || [];
+    const inWindow = activeOnes.find((p: any) => {
+      if (p.start_date && todayStr < p.start_date) return false;
+      if (p.end_date && todayStr > p.end_date) return false;
+      return true;
+    });
+    return inWindow || activeOnes[0] || workouts?.[0];
+  })();
   
   // Obtener el día de la semana actual (1=Lunes, 7=Domingo)
   const todayJsDay = new Date().getDay(); // 0=Domingo, 1=Lunes, etc.
@@ -1348,8 +1359,8 @@ export function MyWorkoutsPage() {
 
   const todayDayIndex = templateDays.findIndex((d: ProgramDay) => d.day === todayDayNum);
 
-  const selectedDateStr = selectedDate.toISOString().split("T")[0];
-  const isToday = selectedDateStr === new Date().toISOString().split("T")[0];
+  const selectedDateStr = toLocalDateStr(selectedDate);
+  const isToday = selectedDateStr === toLocalDateStr(new Date());
 
   return (
     <Box p="xl" maw={1280} mx="auto">
@@ -1612,6 +1623,15 @@ export function MyWorkoutsPage() {
                                   <IconPlayerPlay size={18} />
                                 </ActionIcon>
                               )}
+                              <Button
+                                variant="subtle"
+                                color="green"
+                                size="xs"
+                                radius="xl"
+                                onClick={openModal}
+                              >
+                                Registrar
+                              </Button>
                               <Button
                                 variant="subtle"
                                 color="yellow"

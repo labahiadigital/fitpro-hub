@@ -1,5 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, String, update
@@ -87,8 +88,8 @@ class WorkoutProgramResponse(BaseModel):
     tags: Optional[List[str]] = []
     is_template: bool = True
     is_active: Optional[bool] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
 
     class Config:
         from_attributes = True
