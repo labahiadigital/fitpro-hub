@@ -25,6 +25,7 @@ export function useSupabaseClients() {
         total: response.data?.length || 0,
       };
     },
+    staleTime: 30 * 1000,
   });
 }
 
@@ -38,6 +39,7 @@ export function useClient(id: string) {
       return response.data;
     },
     enabled: !!id,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -70,6 +72,7 @@ export function useSupabaseClientTags() {
       const response = await clientsApi.tags();
       return response.data || [];
     },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -83,6 +86,7 @@ export function useSupabaseBookings() {
       const response = await api.get("/bookings");
       return response.data || [];
     },
+    staleTime: 30 * 1000,
   });
 }
 
@@ -96,6 +100,7 @@ export function useSupabaseExercises() {
       const response = await workoutsApi.exercises();
       return response.data || [];
     },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -109,6 +114,7 @@ export function useSupabaseFoods(enabled = true) {
       return response.data?.items || [];
     },
     enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -147,6 +153,7 @@ export function useSupabaseFoodsCount() {
       const response = await nutritionApi.foods({ limit: 1 });
       return response.data?.total || 0;
     },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -216,6 +223,7 @@ export function useSupabaseWorkoutPrograms() {
       const response = await workoutsApi.programs();
       return response.data || [];
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -227,6 +235,7 @@ export function useWorkoutProgramTemplates() {
       const response = await workoutsApi.programs({ is_template: true });
       return response.data || [];
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -240,6 +249,7 @@ export function useSupabaseMealPlans(options?: { is_template?: boolean }) {
       const response = await nutritionApi.plans(options);
       return response.data || [];
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -253,6 +263,7 @@ export function useSupabaseMealPlan(id: string) {
       return response.data;
     },
     enabled: !!id,
+    staleTime: 60 * 1000,
   });
 }
 
@@ -338,6 +349,7 @@ export function useMealPlanTemplates() {
       const response = await nutritionApi.plans({ is_template: true });
       return response.data || [];
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -355,6 +367,7 @@ export function useClientMealPlans(clientId: string) {
       return response.data || [];
     },
     enabled: !!clientId && !clientId.startsWith("demo-"),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -438,6 +451,7 @@ export function useSupabaseKPIs() {
       const response = await api.get("/reports/kpis");
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -563,7 +577,6 @@ export function useClientWorkoutAssignments(clientId: string) {
     queryFn: async () => {
       if (!clientId || clientId.startsWith("demo-")) return [];
       try {
-        // Obtiene programas del cliente (is_template=false, client_id=XXX)
         const response = await workoutsApi.programs({ client_id: clientId });
         return response.data || [];
       } catch {
@@ -571,6 +584,7 @@ export function useClientWorkoutAssignments(clientId: string) {
       }
     },
     enabled: !!clientId && !clientId.startsWith("demo-"),
+    staleTime: 60 * 1000,
   });
 }
 

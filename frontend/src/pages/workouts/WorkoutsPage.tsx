@@ -1023,15 +1023,18 @@ export function WorkoutsPage() {
                   {exercise.image_url ? (
                     <HoverCard width={320} shadow="lg" openDelay={300} position="right">
                       <HoverCard.Target>
-                        <Image
-                          src={exercise.image_url}
-                          alt={exercise.name}
-                          h={80}
-                          fit="cover"
-                          fallbackSrc={undefined}
-                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }}
-                          style={{cursor: 'pointer'}}
-                        />
+                        <Box h={80} style={{ background: "var(--nv-surface-subtle)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                          <Image
+                            src={exercise.image_url}
+                            alt={exercise.name}
+                            h={80}
+                            w="100%"
+                            fit="contain"
+                            fallbackSrc={undefined}
+                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({url: exercise.image_url, name: exercise.name}); }}
+                            style={{cursor: 'pointer'}}
+                          />
+                        </Box>
                       </HoverCard.Target>
                       <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
                         <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
@@ -1147,7 +1150,9 @@ export function WorkoutsPage() {
                       {exercise.image_url ? (
                         <HoverCard width={320} shadow="lg" openDelay={300} position="right">
                           <HoverCard.Target>
-                            <Image src={exercise.image_url} alt={exercise.name} h={80} fit="cover" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({ url: exercise.image_url, name: exercise.name }); }} style={{ cursor: "pointer" }} />
+                            <Box h={80} style={{ background: "var(--nv-surface-subtle)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                              <Image src={exercise.image_url} alt={exercise.name} h={80} w="100%" fit="contain" fallbackSrc={undefined} onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEnlargedImage({ url: exercise.image_url, name: exercise.name }); }} style={{ cursor: "pointer" }} />
+                            </Box>
                           </HoverCard.Target>
                           <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
                             <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />

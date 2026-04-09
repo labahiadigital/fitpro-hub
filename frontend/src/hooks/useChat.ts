@@ -66,6 +66,9 @@ export function useConversations() {
     queryKey: ["conversations"],
     queryFn: async () => api.get("/messages/conversations"),
     select: (response) => response.data as Conversation[],
+    staleTime: 15 * 1000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -90,7 +93,8 @@ export function useMessages(conversationId: string | null) {
     },
     select: (response) => response.data as Message[],
     enabled: !!conversationId,
-    refetchInterval: 5000,
+    staleTime: 5 * 1000,
+    refetchInterval: 10_000,
     refetchIntervalInBackground: false,
   });
 }

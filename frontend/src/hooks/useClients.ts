@@ -166,6 +166,7 @@ export function useClientTags() {
     queryKey: ["client-tags"],
     queryFn: async () => clientsApi.tags(),
     select: (response) => response.data,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -258,6 +259,7 @@ export function useClientMeasurements(clientId: string, limit = 50) {
     queryFn: async () => clientsApi.getMeasurements(clientId, limit),
     select: (response) => response.data as ClientMeasurement[],
     enabled: !!clientId && !clientId.startsWith("demo-"),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -267,6 +269,7 @@ export function useClientPhotos(clientId: string, limit = 50) {
     queryFn: async () => clientsApi.getPhotos(clientId, limit),
     select: (response) => response.data as ClientPhoto[],
     enabled: !!clientId && !clientId.startsWith("demo-"),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -276,6 +279,7 @@ export function useClientProgressSummary(clientId: string) {
     queryFn: async () => clientsApi.getProgressSummary(clientId),
     select: (response) => response.data as ClientProgressSummary,
     enabled: !!clientId && !clientId.startsWith("demo-"),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -305,6 +309,7 @@ export function useClientWorkoutLogs(clientId: string, programId?: string) {
     queryFn: async () => workoutsApi.logs(clientId),
     select: (response) => response.data as WorkoutLogEntry[],
     enabled: !!clientId && !clientId.startsWith("demo-"),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -350,5 +355,6 @@ export function useClientNutritionLogs(clientId: string, days = 30) {
     queryFn: async () => nutritionApi.clientLogs(clientId, days),
     select: (response) => response.data as ClientNutritionLogs,
     enabled: !!clientId && !clientId.startsWith("demo-"),
+    staleTime: 60 * 1000,
   });
 }

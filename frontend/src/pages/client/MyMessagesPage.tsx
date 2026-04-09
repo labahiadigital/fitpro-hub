@@ -132,7 +132,9 @@ export function MyMessagesPage() {
       const response = await clientPortalApi.getMessages(100);
       return response.data;
     },
-    refetchInterval: 3000, // Poll every 3 seconds
+    staleTime: 5 * 1000,
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
     enabled: !!conversation,
   });
 

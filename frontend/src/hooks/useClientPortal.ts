@@ -264,6 +264,7 @@ export function useClientDashboard() {
       const response = await clientPortalApi.dashboard();
       return response.data;
     },
+    staleTime: 30 * 1000,
   });
 }
 
@@ -276,6 +277,7 @@ export function useClientProfile() {
       const response = await clientPortalApi.profile();
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -314,6 +316,7 @@ export function useMyWorkouts() {
       const response = await clientPortalApi.workouts();
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -325,6 +328,7 @@ export function useMyWorkout(id: string) {
       return response.data;
     },
     enabled: !!id,
+    staleTime: 60 * 1000,
   });
 }
 
@@ -555,6 +559,7 @@ export function useWorkoutHistory(limit?: number) {
       const response = await clientPortalApi.workoutHistory(limit);
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -575,6 +580,7 @@ export function useTodayWorkoutLogs() {
       const response = await clientPortalApi.todayWorkoutLogs();
       return response.data;
     },
+    staleTime: 30 * 1000,
   });
 }
 
@@ -603,6 +609,7 @@ export function useMyMealPlan() {
       const response = await clientPortalApi.mealPlan();
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -613,6 +620,7 @@ export function useAllMealPlans() {
       const response = await clientPortalApi.allMealPlans();
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -677,6 +685,7 @@ export function useNutritionLogs(date?: string, limit?: number) {
       const response = await clientPortalApi.nutritionLogs(date, limit);
       return response.data;
     },
+    staleTime: 30 * 1000,
   });
 }
 
@@ -821,6 +830,7 @@ export function useNutritionHistory(days?: number) {
       const response = await clientPortalApi.nutritionHistory(days);
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -833,6 +843,7 @@ export function useMeasurements(limit?: number) {
       const response = await clientPortalApi.measurements(limit);
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -884,6 +895,7 @@ export function useProgressSummary() {
       const response = await clientPortalApi.progressSummary();
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -904,6 +916,7 @@ export function useProgressPhotos(limit = 50) {
       const response = await clientPortalApi.getPhotos(limit);
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 

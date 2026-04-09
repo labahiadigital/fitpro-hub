@@ -46,6 +46,7 @@ export function useExerciseCategories() {
       const response = await api.get("/exercises/categories/");
       return response.data;
     },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -60,6 +61,7 @@ export function useExercises(filters?: ExerciseFilters) {
       });
       return response.data;
     },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -71,6 +73,7 @@ export function useExercise(id: string) {
       return response.data;
     },
     enabled: !!id,
+    staleTime: 60 * 1000,
   });
 }
 

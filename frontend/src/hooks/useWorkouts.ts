@@ -78,6 +78,7 @@ export function useExercises(filters: ExerciseFilters = {}) {
     },
     select: (response) => response.data as Exercise[],
     placeholderData: (previousData) => previousData,
+    staleTime: 60 * 1000,
   });
 }
 
@@ -115,6 +116,7 @@ export function useWorkoutPrograms(isTemplate?: boolean) {
       });
     },
     select: (response) => response.data as WorkoutProgram[],
+    staleTime: 60 * 1000,
   });
 }
 
@@ -124,6 +126,7 @@ export function useWorkoutProgram(programId: string) {
     queryFn: () => workoutsApi.getProgram(programId),
     select: (response) => response.data,
     enabled: !!programId,
+    staleTime: 60 * 1000,
   });
 }
 
