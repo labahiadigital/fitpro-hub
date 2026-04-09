@@ -40,6 +40,13 @@ async def get_client_for_user(user_id: UUID, db: AsyncSession, workspace_id: UUI
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No se encontró perfil de cliente para este usuario"
         )
+
+    if not client.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu cuenta de cliente ha sido desactivada. Contacta con tu entrenador."
+        )
+
     return client
 
 

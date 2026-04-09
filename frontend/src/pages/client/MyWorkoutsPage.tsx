@@ -512,6 +512,7 @@ function LogWorkoutModal({
   programId,
   dayIndex,
   logDate,
+  existingLogData,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -547,18 +548,57 @@ function LogWorkoutModal({
   programId: string;
   dayIndex: number;
   logDate?: Date;
+  existingLogData?: Record<string, unknown> | null;
 }) {
   const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
   const [exerciseSets, setExerciseSets] = useState<Record<string, SetLog[]>>(() => {
     const initial: Record<string, SetLog[]> = {};
+    const existingExercises = (existingLogData?.exercises || []) as Array<{
+      exercise_id?: string;
+      exercise_name?: string;
+      sets?: Array<{
+        set_number?: number;
+        weight_kg?: number;
+        reps_completed?: number;
+        duration_seconds?: number;
+        distance_km?: number;
+        speed_kmh?: number;
+        duration_minutes?: number;
+        completed?: boolean;
+      }>;
+    }>;
     exercises.forEach((e) => {
-      const repsValue = e.target_reps ?? parseRepsFromString(e.reps);
-      initial[e.exercise_id] = Array.from({ length: e.sets }, (_, i) => ({
-        set_number: i + 1,
-        weight_kg: e.target_weight ?? undefined,
-        reps_completed: repsValue,
-        completed: true,
-      }));
+      const existingEx = existingExercises.find(
+        (ee) => ee.exercise_id === e.exercise_id || ee.exercise_name === e.name
+      );
+      if (existingEx?.sets && existingEx.sets.length > 0) {
+        initial[e.exercise_id] = existingEx.sets.map((s, i) => ({
+          set_number: s.set_number ?? i + 1,
+          weight_kg: s.weight_kg,
+          reps_completed: s.reps_completed,
+          duration_seconds: s.duration_seconds,
+          distance_km: s.distance_km,
+          speed_kmh: s.speed_kmh,
+          duration_minutes: s.duration_minutes,
+          completed: s.completed ?? false,
+        }));
+        while (initial[e.exercise_id].length < e.sets) {
+          initial[e.exercise_id].push({
+            set_number: initial[e.exercise_id].length + 1,
+            weight_kg: e.target_weight ?? undefined,
+            reps_completed: e.target_reps ?? parseRepsFromString(e.reps),
+            completed: false,
+          });
+        }
+      } else {
+        const repsValue = e.target_reps ?? parseRepsFromString(e.reps);
+        initial[e.exercise_id] = Array.from({ length: e.sets }, (_, i) => ({
+          set_number: i + 1,
+          weight_kg: e.target_weight ?? undefined,
+          reps_completed: repsValue,
+          completed: false,
+        }));
+      }
     });
     return initial;
   });
@@ -576,10 +616,8 @@ function LogWorkoutModal({
       program_id: programId,
       day_index: dayIndex,
       log_date: logDate ? `${logDate.getFullYear()}-${String(logDate.getMonth() + 1).padStart(2, "0")}-${String(logDate.getDate()).padStart(2, "0")}` : undefined,
-      exercises: exercises.map((e) => ({
-        exercise_id: e.exercise_id,
-        exercise_name: e.name,
-        sets: (exerciseSets[e.exercise_id] || []).map((s) => ({
+      exercises: exercises.map((e) => {
+        const sets = (exerciseSets[e.exercise_id] || []).map((s) => ({
           set_number: s.set_number,
           weight_kg: s.weight_kg,
           reps_completed: s.reps_completed,
@@ -589,9 +627,15 @@ function LogWorkoutModal({
           duration_minutes: s.duration_minutes,
           completed: s.completed,
           notes: s.notes,
-        })),
-        completed: true,
-      })),
+        }));
+        const anySetCompleted = sets.some((s) => s.completed);
+        return {
+          exercise_id: e.exercise_id,
+          exercise_name: e.name,
+          sets,
+          completed: anySetCompleted,
+        };
+      }),
       duration_minutes: form.values.duration_minutes,
       perceived_effort: form.values.perceived_effort,
       satisfaction_rating: satisfactionRating ?? undefined,
@@ -607,7 +651,7 @@ function LogWorkoutModal({
           set_number: i + 1,
           weight_kg: e.target_weight ?? undefined,
           reps_completed: repsValue,
-          completed: true,
+          completed: false,
         }));
       });
       return initial;
@@ -1167,6 +1211,8 @@ export function MyWorkoutsPage() {
     targetDay?: number;
   } | null>(null);
   const [daySwapSourceDay, setDaySwapSourceDay] = useState<number | null>(null);
+  const [singleExerciseModalOpened, { open: openSingleExerciseModal, close: closeSingleExerciseModal }] = useDisclosure(false);
+  const [singleExercise, setSingleExercise] = useState<ExerciseForLog | null>(null);
 
   const toLocalDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -1245,6 +1291,32 @@ export function MyWorkoutsPage() {
     d.setDate(d.getDate() + dayIndex);
     return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
   };
+
+  const isDayInProgramRange = (dayIndex: number): boolean => {
+    if (!weekDateRange?.start || !programDateRange) return true;
+    const d = new Date(weekDateRange.start);
+    d.setDate(d.getDate() + dayIndex);
+    const dStr = toLocalDateStr(d);
+    const startStr = toLocalDateStr(programDateRange.start);
+    if (dStr < startStr) return false;
+    if (programDateRange.end) {
+      const endStr = toLocalDateStr(programDateRange.end);
+      if (dStr > endStr) return false;
+    }
+    return true;
+  };
+
+  const isSelectedDateInRange = useMemo(() => {
+    if (!programDateRange) return true;
+    const selStr = toLocalDateStr(selectedDate);
+    const startStr = toLocalDateStr(programDateRange.start);
+    if (selStr < startStr) return false;
+    if (programDateRange.end) {
+      const endStr = toLocalDateStr(programDateRange.end);
+      if (selStr > endStr) return false;
+    }
+    return true;
+  }, [selectedDate, programDateRange]);
 
   if (isLoadingWorkouts) {
     return (
@@ -1391,6 +1463,72 @@ export function MyWorkoutsPage() {
     openResultsModal();
   };
 
+  const handleOpenSingleExercise = (exercise: ExerciseForLog) => {
+    setSingleExercise(exercise);
+    openSingleExerciseModal();
+  };
+
+  const handleLogSingleExercise = async (logData: {
+    program_id: string;
+    day_index: number;
+    log_date?: string;
+    exercises: Array<{
+      exercise_id: string;
+      exercise_name: string;
+      sets: Array<{
+        set_number: number;
+        weight_kg?: number;
+        reps_completed?: number;
+        duration_seconds?: number;
+        completed?: boolean;
+        notes?: string;
+      }>;
+      completed?: boolean;
+      notes?: string;
+    }>;
+    duration_minutes?: number;
+    perceived_effort?: number;
+    satisfaction_rating?: number;
+    notes?: string;
+  }) => {
+    const existingLogData = todayLogs?.logs?.[0]?.log as Record<string, unknown> | undefined;
+    const existingExercises = ((existingLogData?.exercises || []) as Array<{
+      exercise_id?: string;
+      exercise_name?: string;
+      sets?: Array<Record<string, unknown>>;
+      completed?: boolean;
+    }>);
+
+    const newExercise = logData.exercises[0];
+    const mergedExercises = allExercises.map((ae) => {
+      if (ae.exercise_id === newExercise?.exercise_id) {
+        return newExercise;
+      }
+      const existing = existingExercises.find(
+        (ee) => ee.exercise_id === ae.exercise_id || ee.exercise_name === ae.name
+      );
+      if (existing) {
+        return existing;
+      }
+      return {
+        exercise_id: ae.exercise_id,
+        exercise_name: ae.name,
+        sets: [],
+        completed: false,
+      };
+    });
+
+    await logWorkoutMutation.mutateAsync({
+      ...logData,
+      exercises: mergedExercises as typeof logData.exercises,
+      duration_minutes: logData.duration_minutes || (existingLogData?.duration_minutes as number) || undefined,
+      perceived_effort: logData.perceived_effort || (existingLogData?.perceived_effort as number) || undefined,
+      satisfaction_rating: logData.satisfaction_rating || (existingLogData?.satisfaction_rating as number) || undefined,
+    });
+    closeSingleExerciseModal();
+    setSingleExercise(null);
+  };
+
   const handleOpenSwap = (
     programId: string,
     dayIndex: number,
@@ -1500,7 +1638,8 @@ export function MyWorkoutsPage() {
                 label="Fecha de registro"
                 value={selectedDate}
                 onChange={(d) => d && setSelectedDate(new Date(d))}
-                maxDate={new Date()}
+                minDate={programDateRange?.start || undefined}
+                maxDate={programDateRange?.end && programDateRange.end < new Date() ? programDateRange.end : new Date()}
                 locale="es"
                 valueFormat="DD/MM/YYYY"
                 style={{ flex: 1, maxWidth: 220 }}
@@ -1516,7 +1655,18 @@ export function MyWorkoutsPage() {
             </Group>
           </Card>
 
-          {data.isTodayRestDay && (
+          {!isSelectedDateInRange && data.assignedProgram?.id && (
+            <Box ta="center" py="xl">
+              <Text size="xl" mb="sm">📅</Text>
+              <Text fw={700} size="lg">Fecha fuera del programa</Text>
+              <Text c="dimmed" size="sm" mt="xs">
+                Tu programa va del {programDateRange?.startStr} al {programDateRange?.endStr || "—"}.
+                Selecciona una fecha dentro de ese rango.
+              </Text>
+            </Box>
+          )}
+
+          {isSelectedDateInRange && data.isTodayRestDay && (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">🛌</Text>
               <Text fw={700} size="lg">Hoy es día de descanso</Text>
@@ -1526,7 +1676,7 @@ export function MyWorkoutsPage() {
             </Box>
           )}
           
-          {!data.isTodayRestDay && data.todayWorkout && (
+          {isSelectedDateInRange && !data.isTodayRestDay && data.todayWorkout && (
             <Box>
               {/* Button at top - between date and day name */}
               <Box px="md" mb="md">
@@ -1656,11 +1806,17 @@ export function MyWorkoutsPage() {
                           <Stack gap={4} style={{ flexShrink: 0 }} align="flex-end">
                             {(() => {
                               const todayLogData = todayLogs?.logs?.[0]?.log as Record<string, unknown> | undefined;
-                              const logExercises = (todayLogData?.exercises || []) as Array<{ exercise_id?: string; exercise_name?: string; completed?: boolean }>;
-                              const isExCompleted = logExercises.some(le => (le.exercise_id === (exercise.exercise_id || exercise.exercise?.id) || le.exercise_name === exName) && le.completed);
-                              return isExCompleted ? (
+                              const logExercises = (todayLogData?.exercises || []) as Array<{ exercise_id?: string; exercise_name?: string; completed?: boolean; sets?: Array<{ completed?: boolean }> }>;
+                              const logEx = logExercises.find(le => le.exercise_id === (exercise.exercise_id || exercise.exercise?.id) || le.exercise_name === exName);
+                              if (!logEx) return null;
+                              const completedSets = (logEx.sets || []).filter(s => s.completed).length;
+                              const totalSets = logEx.sets?.length || 0;
+                              if (completedSets === 0) return null;
+                              return completedSets >= totalSets ? (
                                 <Badge color="green" variant="filled" size="xs" leftSection={<IconCheck size={8} />}>Completado</Badge>
-                              ) : null;
+                              ) : (
+                                <Badge color="yellow" variant="light" size="xs">{completedSets}/{totalSets} series</Badge>
+                              );
                             })()}
                             <Group gap={4}>
                               {(exercise.video_url || exercise.exercise?.video_url) && (
@@ -1682,7 +1838,14 @@ export function MyWorkoutsPage() {
                                 color="green"
                                 size="xs"
                                 radius="xl"
-                                onClick={openModal}
+                                onClick={() => handleOpenSingleExercise({
+                                  exercise_id: exercise.exercise_id || exercise.exercise?.id || "",
+                                  name: exName,
+                                  sets: exercise.sets || 3,
+                                  reps: exercise.reps || "10-12",
+                                  target_weight: exercise.target_weight,
+                                  target_reps: exercise.target_reps,
+                                })}
                               >
                                 Registrar
                               </Button>
@@ -1743,7 +1906,7 @@ export function MyWorkoutsPage() {
             </Box>
           )}
           
-          {!data.isTodayRestDay && !data.todayWorkout && data.assignedProgram?.id && (
+          {isSelectedDateInRange && !data.isTodayRestDay && !data.todayWorkout && data.assignedProgram?.id && (
             <Box ta="center" py="xl">
               <Text c="dimmed">No hay entrenamiento asignado para hoy.</Text>
             </Box>
@@ -1799,22 +1962,28 @@ export function MyWorkoutsPage() {
                   const isToday = dayNum === todayDayNum;
                   const exCount = day.exercises_list?.length || 0;
                   const dayDate = getDayDate(index);
+                  const inRange = isDayInProgramRange(index);
                   return (
                     <DayCardMenu
                       key={index}
                       dayName={dayDate ? `${weekDays[index]} · ${dayDate}` : weekDays[index]}
-                      isToday={isToday}
+                      isToday={isToday && inRange}
                       isSelected={selectedDayIndex === index}
-                      isRestDay={day.isRestDay}
-                      onClick={() => setSelectedDayIndex(index)}
+                      isRestDay={day.isRestDay || !inRange}
+                      onClick={() => inRange && setSelectedDayIndex(index)}
                       badge={
                         <>
-                          {day.completed && (
+                          {!inRange && (
+                            <Badge color="gray" variant="light" size="xs">
+                              Fuera del programa
+                            </Badge>
+                          )}
+                          {inRange && day.completed && (
                             <Badge color="green" variant="light" size="xs" leftSection={<IconCheck size={10} />}>
                               Completado
                             </Badge>
                           )}
-                          {programViewMode !== "original" && !day.isRestDay && activeProgram && (
+                          {inRange && programViewMode !== "original" && !day.isRestDay && activeProgram && (
                             <Menu shadow="md" position="bottom-end" withinPortal>
                               <Menu.Target>
                                 <ActionIcon variant="subtle" color="gray" size="xs" onClick={(e) => e.stopPropagation()}>
@@ -1824,6 +1993,7 @@ export function MyWorkoutsPage() {
                               <Menu.Dropdown>
                                 <Menu.Label>Intercambiar día con</Menu.Label>
                                 {weekDays.map((label, idx) => {
+                                  if (!isDayInProgramRange(idx)) return null;
                                   const targetDayNum = idx + 1;
                                   if (targetDayNum === dayNum) return null;
                                   return (
@@ -1845,7 +2015,7 @@ export function MyWorkoutsPage() {
                       }
                       summary={
                         <Text size="xs" c="dimmed">
-                          {day.isRestDay ? "Descanso" : `${day.type} - ${exCount} ejercicios`}
+                          {!inRange ? "Sin programa" : day.isRestDay ? "Descanso" : `${day.type} - ${exCount} ejercicios`}
                         </Text>
                       }
                     />
@@ -2019,7 +2189,7 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
       </Tabs>
 
-      {/* Modal para registrar entrenamiento */}
+      {/* Modal para registrar entrenamiento completo */}
       <LogWorkoutModal
         opened={modalOpened}
         onClose={closeModal}
@@ -2030,7 +2200,23 @@ export function MyWorkoutsPage() {
         programId={data.assignedProgram?.id || ""}
         dayIndex={todayDayIndex >= 0 ? todayDayIndex : 0}
         logDate={selectedDate}
+        existingLogData={todayLogs?.logs?.[0]?.log as Record<string, unknown> | undefined}
       />
+
+      {/* Modal para registrar ejercicio individual */}
+      {singleExercise && (
+        <LogWorkoutModal
+          opened={singleExerciseModalOpened}
+          onClose={() => { closeSingleExerciseModal(); setSingleExercise(null); }}
+          onSubmit={handleLogSingleExercise}
+          isLoading={logWorkoutMutation.isPending}
+          workoutName={singleExercise.name}
+          exercises={[singleExercise]}
+          programId={data.assignedProgram?.id || ""}
+          dayIndex={todayDayIndex >= 0 ? todayDayIndex : 0}
+          logDate={selectedDate}
+        />
+      )}
 
       {/* Modal para sustituir ejercicio */}
       {swapTarget && (

@@ -1713,6 +1713,62 @@ export function MyNutritionPage() {
 
   const isToday = selectedDateStr === toLocalDateStr(new Date());
 
+  const activeNutritionWeekNum = selectedWeekOverride ? parseInt(selectedWeekOverride, 10) : currentAutoWeek;
+
+  const nutritionWeekDateRange = useMemo(() => {
+    const startStr = (mealPlan as any)?.start_date;
+    if (!startStr) return null;
+    const programStart = new Date(startStr);
+    if (isNaN(programStart.getTime())) return null;
+    const weekStart = new Date(programStart);
+    weekStart.setDate(weekStart.getDate() + (activeNutritionWeekNum - 1) * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const endStr = (mealPlan as any)?.end_date;
+    const cap = endStr ? new Date(endStr) : null;
+    const effectiveEnd = cap && !isNaN(cap.getTime()) && weekEnd > cap ? cap : weekEnd;
+    return {
+      start: weekStart,
+      end: effectiveEnd,
+      startStr: weekStart.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+      endStr: effectiveEnd.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+    };
+  }, [mealPlan, activeNutritionWeekNum]);
+
+  const getNutritionDayDate = (dayIndex: number): string | null => {
+    if (!nutritionWeekDateRange?.start) return null;
+    const d = new Date(nutritionWeekDateRange.start);
+    d.setDate(d.getDate() + dayIndex);
+    return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  };
+
+  const nutritionDateRange = useMemo(() => {
+    const startStr = (mealPlan as any)?.start_date;
+    const endStr = (mealPlan as any)?.end_date;
+    if (!startStr) return null;
+    const start = new Date(startStr);
+    const end = endStr ? new Date(endStr) : null;
+    if (isNaN(start.getTime())) return null;
+    return {
+      start,
+      end: end && !isNaN(end.getTime()) ? end : null,
+      startStr: start.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+      endStr: end && !isNaN(end.getTime()) ? end.toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : null,
+    };
+  }, [mealPlan]);
+
+  const isSelectedDateInRange = useMemo(() => {
+    if (!nutritionDateRange) return true;
+    const selStr = toLocalDateStr(selectedDate);
+    const startStr = toLocalDateStr(nutritionDateRange.start);
+    if (selStr < startStr) return false;
+    if (nutritionDateRange.end) {
+      const endStr = toLocalDateStr(nutritionDateRange.end);
+      if (selStr > endStr) return false;
+    }
+    return true;
+  }, [selectedDate, nutritionDateRange]);
+
   if (isLoadingPlan) {
     return (
       <Center h={400}>
@@ -1836,7 +1892,8 @@ export function MyNutritionPage() {
                 label="Fecha de registro"
                 value={selectedDate}
                 onChange={(d) => d && setSelectedDate(new Date(d))}
-                maxDate={new Date()}
+                minDate={nutritionDateRange?.start || undefined}
+                maxDate={nutritionDateRange?.end && nutritionDateRange.end < new Date() ? nutritionDateRange.end : new Date()}
                 locale="es"
                 valueFormat="DD/MM/YYYY"
                 style={{ flex: 1, maxWidth: 220 }}
@@ -1852,6 +1909,19 @@ export function MyNutritionPage() {
             </Group>
           </Card>
 
+          {!isSelectedDateInRange && mealPlan && (
+            <Box ta="center" py="xl">
+              <Text size="xl" mb="sm">📅</Text>
+              <Text fw={700} size="lg">Fecha fuera del plan nutricional</Text>
+              <Text c="dimmed" size="sm" mt="xs">
+                Tu plan va del {nutritionDateRange?.startStr} al {nutritionDateRange?.endStr || "—"}.
+                Selecciona una fecha dentro de ese rango.
+              </Text>
+            </Box>
+          )}
+
+          {isSelectedDateInRange && (
+          <>
           {/* Daily Summary */}
       <Card shadow="sm" padding="lg" radius="lg" withBorder mb="xl">
         <Group justify="space-between" align="flex-start">
@@ -2304,11 +2374,13 @@ export function MyNutritionPage() {
         })()}
       </Modal>
 
+          </>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
-          <Group justify="space-between" mb="md" wrap="wrap">
-            <Group gap="sm">
+          <Stack gap="xs" mb="md">
+            <Group gap="sm" wrap="wrap">
               <Select
                 value={planViewMode}
                 onChange={(v) => setPlanViewMode(v || "modified")}
@@ -2320,7 +2392,14 @@ export function MyNutritionPage() {
                 radius="md"
                 w={180}
               />
-              {allPlanWeeks.length > 1 && (
+              {nutritionDateRange && (
+                <Badge variant="light" color="gray" size="sm">
+                  {nutritionDateRange.startStr}{nutritionDateRange.endStr ? ` – ${nutritionDateRange.endStr}` : ""}
+                </Badge>
+              )}
+            </Group>
+            {allPlanWeeks.length > 1 && (
+              <Group gap="sm" wrap="wrap">
                 <Select
                   value={selectedWeekOverride || String(currentAutoWeek)}
                   onChange={(v) => setSelectedWeekOverride(v)}
@@ -2330,14 +2409,14 @@ export function MyNutritionPage() {
                   w={150}
                   allowDeselect={false}
                 />
-              )}
-            </Group>
-            {allPlanWeeks.length > 1 && (
-              <Badge variant="light" color="blue" size="sm">
-                {allPlanWeeks.length} semanas
-              </Badge>
+                {nutritionWeekDateRange && (
+                  <Badge variant="light" color="blue" size="sm">
+                    {nutritionWeekDateRange.startStr} – {nutritionWeekDateRange.endStr}
+                  </Badge>
+                )}
+              </Group>
             )}
-          </Group>
+          </Stack>
 
           <Card shadow="sm" padding="lg" radius="lg" withBorder mb="md">
             <Title order={5} mb="md">Resumen de la Semana</Title>
@@ -2369,10 +2448,11 @@ export function MyNutritionPage() {
               <>
                 {activeWeekData.map((day, index) => {
                   const percentage = day.calories > 0 ? (day.calories / day.target) * 100 : 0;
+                  const dayDate = getNutritionDayDate(index);
                   return (
                     <DayCardMenu
                       key={index}
-                      dayName={`${day.day} - ${day.dayName}`}
+                      dayName={dayDate ? `${day.dayName} · ${dayDate}` : `${day.day} - ${day.dayName}`}
                       isToday={day.isToday}
                       isSelected={selectedWeekDayIndex === index}
                       onClick={() => setSelectedWeekDayIndex(index)}

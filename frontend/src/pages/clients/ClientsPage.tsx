@@ -34,6 +34,7 @@ import {
   IconCalendar,
   IconSend,
   IconCheck,
+  IconUserCheck,
 } from "@tabler/icons-react";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -330,6 +331,8 @@ export function ClientsPage() {
     inviteForm.reset();
   };
 
+  // @ts-expect-error — kept for future use when re-enabling invite actions
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleResendInvitation = async (client: any) => {
     const existingInvitation = invitations?.find(
       (inv: any) => inv.email === client.email && (inv.status === "pending" || inv.status === "expired")
@@ -398,6 +401,19 @@ export function ClientsPage() {
       closeEditModal();
       editForm.reset();
       setEditingClient(null);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleReactivate = async (client: any) => {
+    try {
+      await updateClient.mutateAsync({ id: client.id, data: { is_active: true } });
+      notifications.show({
+        title: "Cliente reactivado",
+        message: `${client.first_name} ${client.last_name} ha sido reactivado`,
+        color: "green",
+      });
     } catch {
       // Error handled by mutation
     }
@@ -494,11 +510,12 @@ export function ClientsPage() {
             <Button
               size="xs"
               variant="light"
+              color="green"
               radius="xl"
-              leftSection={<IconSend size={14} />}
+              leftSection={<IconUserCheck size={14} />}
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
-                handleResendInvitation(client);
+                handleReactivate(client);
               }}
               styles={{
                 root: {
@@ -506,7 +523,7 @@ export function ClientsPage() {
                 },
               }}
             >
-              Reenviar invitación
+              Reactivar
             </Button>
             <Button
               size="xs"

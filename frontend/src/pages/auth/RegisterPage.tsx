@@ -21,8 +21,38 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
+const REGISTRATION_ENABLED = false;
+
 export function RegisterPage() {
   const { register, loading } = useAuth();
+
+  if (!REGISTRATION_ENABLED) {
+    return (
+      <Stack gap="lg" ta="center">
+        <Title order={2} c="white" fw={700} style={{ letterSpacing: "-0.02em" }}>
+          Registro temporalmente deshabilitado
+        </Title>
+        <Text c="gray.5" size="sm">
+          El registro de nuevas cuentas de entrenador está temporalmente deshabilitado.
+          Si ya tienes cuenta, inicia sesión.
+        </Text>
+        <Button
+          component={Link}
+          to="/login"
+          size="lg"
+          style={{
+            background: "var(--nv-accent)",
+            color: "#1a1a2e",
+            fontWeight: 600,
+            height: 48,
+            borderRadius: 12,
+          }}
+        >
+          Ir a Iniciar Sesión
+        </Button>
+      </Stack>
+    );
+  }
 
   const form = useForm({
     initialValues: {
