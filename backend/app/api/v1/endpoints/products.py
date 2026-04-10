@@ -79,7 +79,7 @@ async def get_product_public(
 ):
     """Get a product's public info (no auth required). Only returns active products."""
     result = await db.execute(
-        select(Product).where(Product.id == product_id, Product.is_active == True)
+        select(Product).where(Product.id == product_id, Product.is_active.is_(True))
     )
     product = result.scalar_one_or_none()
     

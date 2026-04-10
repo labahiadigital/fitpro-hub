@@ -77,7 +77,7 @@ async def list_exercises(
     query = select(Exercise).where(
         or_(
             Exercise.workspace_id == current_user.workspace_id,
-            Exercise.is_global == True
+            Exercise.is_global.is_(True)
         )
     )
     
@@ -176,7 +176,7 @@ async def seed_exercises(
         select(func.count()).select_from(Exercise).where(
             or_(
                 Exercise.workspace_id == current_user.workspace_id,
-                Exercise.is_global == True
+                Exercise.is_global.is_(True)
             )
         )
     )
@@ -215,7 +215,7 @@ async def get_exercise(
             Exercise.id == exercise_id,
             or_(
                 Exercise.workspace_id == current_user.workspace_id,
-                Exercise.is_global == True
+                Exercise.is_global.is_(True)
             )
         )
     )

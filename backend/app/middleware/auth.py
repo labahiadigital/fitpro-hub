@@ -206,7 +206,7 @@ async def get_current_user(
         result = await db.execute(
             select(UserRole).where(
                 UserRole.user_id == user.id,
-                UserRole.is_default == True
+                UserRole.is_default.is_(True)
             )
         )
         resolved_user_role = result.scalar_one_or_none()

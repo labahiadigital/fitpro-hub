@@ -1,16 +1,20 @@
 """Nutrition endpoints - simplified to match actual DB schema."""
+import copy
+from collections import defaultdict
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
-from decimal import Decimal
-from datetime import datetime, date
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func, update
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy import desc, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.nutrition import Food, MealPlan, FoodFavorite, Recipe, FoodGroup
-from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
+from app.middleware.auth import CurrentUser, get_current_user, require_staff, require_workspace
+from app.models.client import Client
+from app.models.nutrition import Food, FoodFavorite, FoodGroup, MealPlan, Recipe
 
 router = APIRouter()
 
@@ -117,7 +121,7 @@ async def list_foods(
     query = select(Food).where(
         or_(
             Food.workspace_id == current_user.workspace_id,
-            Food.is_global == True
+            Food.is_global.is_(True)
         )
     )
     
@@ -163,7 +167,7 @@ async def get_food(
             Food.id == food_id,
             or_(
                 Food.workspace_id == current_user.workspace_id,
-                Food.is_global == True
+                Food.is_global.is_(True)
             )
         )
     )
@@ -275,20 +279,17 @@ async def create_meal_plan(
             )
             .values(is_active=False)
         )
-    
-    from datetime import date as date_type
-    import copy
 
     parsed_start = None
     parsed_end = None
     if data.start_date:
         try:
-            parsed_start = date_type.fromisoformat(data.start_date)
+            parsed_start = date.fromisoformat(data.start_date)
         except (ValueError, TypeError):
             pass
     if data.end_date:
         try:
-            parsed_end = date_type.fromisoformat(data.end_date)
+            parsed_end = date.fromisoformat(data.end_date)
         except (ValueError, TypeError):
             pass
 
@@ -368,13 +369,11 @@ async def update_meal_plan(
             detail="Plan nutricional no encontrado"
         )
     
-    from datetime import date as date_type
-
     for field, value in data.model_dump(exclude_unset=True).items():
         if value is not None:
             if field in ("start_date", "end_date") and isinstance(value, str):
                 try:
-                    value = date_type.fromisoformat(value) if value else None
+                    value = date.fromisoformat(value) if value else None
                 except (ValueError, TypeError):
                     value = None
             setattr(plan, field, value)
@@ -440,7 +439,6 @@ async def activate_meal_plan(
     )
     plan.is_active = True
     if plan.executed_plan is None and plan.plan:
-        import copy
         plan.executed_plan = copy.deepcopy(plan.plan)
     await db.commit()
     await db.refresh(plan)
@@ -514,18 +512,16 @@ async def assign_meal_plan_to_client(
         .values(is_active=False)
     )
 
-    import copy
-    from datetime import date as date_type
     parsed_start = None
     parsed_end = None
     if data.start_date:
         try:
-            parsed_start = date_type.fromisoformat(data.start_date)
+            parsed_start = date.fromisoformat(data.start_date)
         except (ValueError, TypeError):
             pass
     if data.end_date:
         try:
-            parsed_end = date_type.fromisoformat(data.end_date)
+            parsed_end = date.fromisoformat(data.end_date)
         except (ValueError, TypeError):
             pass
 
@@ -646,11 +642,6 @@ async def get_client_nutrition_logs(
     Obtener los logs de nutrición de un cliente específico.
     Solo accesible por staff (entrenadores).
     """
-    from datetime import date, timedelta
-    from sqlalchemy import desc
-    
-    # Verify client belongs to this workspace
-    from app.models.client import Client
     client_result = await db.execute(
         select(Client).where(
             Client.id == client_id,
@@ -759,7 +750,6 @@ async def get_client_nutrition_logs(
             })
         return {"calories": int(cal), "protein": round(prot, 1), "carbs": round(carb, 1), "fat": round(fat_v, 1), "foods": plan_foods}
     
-    from collections import defaultdict
     days_data = defaultdict(lambda: {"meals": [], "totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "plan_totals": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}, "has_modifications": False})
     
     for mp in meal_plans:
@@ -919,7 +909,7 @@ async def list_recipes(
     query = select(Recipe).where(
         or_(
             Recipe.workspace_id == current_user.workspace_id,
-            Recipe.is_global == True
+            Recipe.is_global.is_(True)
         )
     )
 
@@ -952,7 +942,7 @@ async def get_recipe(
             Recipe.id == recipe_id,
             or_(
                 Recipe.workspace_id == current_user.workspace_id,
-                Recipe.is_global == True
+                Recipe.is_global.is_(True)
             )
         )
     )
@@ -1028,7 +1018,7 @@ async def duplicate_recipe(
             Recipe.id == recipe_id,
             or_(
                 Recipe.workspace_id == current_user.workspace_id,
-                Recipe.is_global == True
+                Recipe.is_global.is_(True)
             )
         )
     )
@@ -1095,8 +1085,8 @@ async def auto_activate_plans(
         update(MealPlan)
         .where(
             MealPlan.workspace_id == current_user.workspace_id,
-            MealPlan.is_active == True,
-            MealPlan.end_date != None,
+            MealPlan.is_active.is_(True),
+            MealPlan.end_date.isnot(None),
             MealPlan.end_date < today,
         )
         .values(is_active=False)
@@ -1106,12 +1096,12 @@ async def auto_activate_plans(
     pending = await db.execute(
         select(MealPlan).where(
             MealPlan.workspace_id == current_user.workspace_id,
-            MealPlan.is_active == False,
-            MealPlan.client_id != None,
-            MealPlan.is_template == False,
-            MealPlan.start_date != None,
+            MealPlan.is_active.is_(False),
+            MealPlan.client_id.isnot(None),
+            MealPlan.is_template.is_(False),
+            MealPlan.start_date.isnot(None),
             MealPlan.start_date <= today,
-            or_(MealPlan.end_date == None, MealPlan.end_date >= today),
+            or_(MealPlan.end_date.is_(None), MealPlan.end_date >= today),
         )
     )
     to_activate = pending.scalars().all()
@@ -1121,13 +1111,12 @@ async def auto_activate_plans(
         has_active = await db.scalar(
             select(func.count()).select_from(MealPlan).where(
                 MealPlan.client_id == plan.client_id,
-                MealPlan.is_active == True,
+                MealPlan.is_active.is_(True),
             )
         )
         if not has_active:
             plan.is_active = True
             if plan.executed_plan is None and plan.plan:
-                import copy
                 plan.executed_plan = copy.deepcopy(plan.plan)
             activated_count += 1
 
@@ -1174,7 +1163,7 @@ async def list_food_groups(
     query = select(FoodGroup).where(
         or_(
             FoodGroup.workspace_id == current_user.workspace_id,
-            FoodGroup.is_global == True,
+            FoodGroup.is_global.is_(True),
         )
     )
     if search:

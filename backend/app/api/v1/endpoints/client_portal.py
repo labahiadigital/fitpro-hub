@@ -291,7 +291,7 @@ async def get_client_dashboard(
         select(WorkoutProgram)
         .where(
             WorkoutProgram.client_id == client.id,
-            WorkoutProgram.is_template == False
+            WorkoutProgram.is_template.is_(False)
         )
     )
     assigned_programs = programs_result.scalars().all()
@@ -479,7 +479,7 @@ async def get_my_exercises(
     query = select(Exercise).where(
         or_(
             Exercise.workspace_id == client.workspace_id,
-            Exercise.is_global == True
+            Exercise.is_global.is_(True)
         )
     )
     if search:
@@ -555,7 +555,7 @@ async def get_my_workouts(
         select(WorkoutProgram)
         .where(
             WorkoutProgram.client_id == client.id,
-            WorkoutProgram.is_template == False
+            WorkoutProgram.is_template.is_(False)
         )
         .order_by(desc(WorkoutProgram.created_at))
     )
@@ -1131,7 +1131,7 @@ async def get_my_meal_plan(
 
     result = await db.execute(
         select(MealPlan)
-        .where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+        .where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
         .order_by(desc(MealPlan.created_at))
     )
     active_plans = result.scalars().all()
@@ -1213,7 +1213,7 @@ async def move_meal_between_days(
     from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
-        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
     )
     meal_plan = result.scalar_one_or_none()
     if not meal_plan:
@@ -1256,7 +1256,7 @@ async def swap_plan_days(
     from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
-        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
     )
     meal_plan = result.scalar_one_or_none()
     if not meal_plan:
@@ -1300,7 +1300,7 @@ async def swap_specific_meals(
     from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
-        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
     )
     meal_plan = result.scalar_one_or_none()
     if not meal_plan:
@@ -1349,7 +1349,7 @@ async def update_meal_time(
     from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
-        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
     )
     meal_plan = result.scalar_one_or_none()
     if not meal_plan:
@@ -1393,7 +1393,7 @@ async def update_meal_name(
     from sqlalchemy.orm.attributes import flag_modified
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
-        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active == True)
+        select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
     )
     meal_plan = result.scalar_one_or_none()
     if not meal_plan:
@@ -1805,7 +1805,7 @@ async def search_foods_for_client(
     query = select(Food).where(
         or_(
             Food.workspace_id == client.workspace_id,
-            Food.is_global == True
+            Food.is_global.is_(True)
         )
     )
 
@@ -1863,8 +1863,8 @@ async def list_client_recipes(
 
     query = select(Recipe).where(
         or_(
-            and_(Recipe.workspace_id == client.workspace_id, Recipe.is_public == True),
-            Recipe.is_global == True
+            and_(Recipe.workspace_id == client.workspace_id, Recipe.is_public.is_(True)),
+            Recipe.is_global.is_(True)
         )
     )
 
@@ -2094,7 +2094,7 @@ async def get_progress_photos(
     result = await db.execute(
         select(ClientMeasurement)
         .where(ClientMeasurement.client_id == client.id)
-        .where(ClientMeasurement.photos != None)
+        .where(ClientMeasurement.photos.isnot(None))
         .order_by(desc(ClientMeasurement.measured_at))
         .limit(limit)
     )
@@ -2128,7 +2128,7 @@ async def delete_progress_photo(
     result = await db.execute(
         select(ClientMeasurement)
         .where(ClientMeasurement.client_id == client.id)
-        .where(ClientMeasurement.photos != None)
+        .where(ClientMeasurement.photos.isnot(None))
     )
     measurements = result.scalars().all()
 
@@ -2665,7 +2665,7 @@ async def get_client_messages(
     query = select(Message).where(
         and_(
             Message.conversation_id == conversation.id,
-            Message.is_deleted == False
+            Message.is_deleted.is_(False)
         )
     )
     
@@ -2830,7 +2830,7 @@ async def get_client_unread_count(
             and_(
                 Message.conversation_id == conversation.id,
                 Message.direction == MessageDirection.OUTBOUND,  # From trainer
-                Message.is_deleted == False,
+                Message.is_deleted.is_(False),
                 ~Message.read_by.contains([current_user.id])  # Not read by this user
             )
         )

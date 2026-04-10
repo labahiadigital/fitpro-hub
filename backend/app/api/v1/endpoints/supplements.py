@@ -71,7 +71,7 @@ async def list_supplements(
     query = select(Supplement).where(
         or_(
             Supplement.workspace_id == current_user.workspace_id,
-            Supplement.is_global == True
+            Supplement.is_global.is_(True)
         )
     )
     
@@ -132,7 +132,7 @@ async def get_supplement(
             Supplement.id == supplement_id,
             or_(
                 Supplement.workspace_id == current_user.workspace_id,
-                Supplement.is_global == True
+                Supplement.is_global.is_(True)
             )
         )
     )

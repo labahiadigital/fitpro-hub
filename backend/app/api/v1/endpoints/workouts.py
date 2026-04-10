@@ -131,7 +131,7 @@ async def list_exercises(
     query = select(Exercise).where(
         or_(
             Exercise.workspace_id == current_user.workspace_id,
-            Exercise.is_global == True
+            Exercise.is_global.is_(True)
         )
     )
     
@@ -834,8 +834,8 @@ async def auto_activate_programs(
         update(WorkoutProgram)
         .where(
             WorkoutProgram.workspace_id == current_user.workspace_id,
-            WorkoutProgram.is_active == True,
-            WorkoutProgram.end_date != None,
+            WorkoutProgram.is_active.is_(True),
+            WorkoutProgram.end_date.isnot(None),
             WorkoutProgram.end_date < today,
         )
         .values(is_active=False)
@@ -845,12 +845,12 @@ async def auto_activate_programs(
     pending = await db.execute(
         select(WorkoutProgram).where(
             WorkoutProgram.workspace_id == current_user.workspace_id,
-            WorkoutProgram.is_active == False,
-            WorkoutProgram.client_id != None,
-            WorkoutProgram.is_template == False,
-            WorkoutProgram.start_date != None,
+            WorkoutProgram.is_active.is_(False),
+            WorkoutProgram.client_id.isnot(None),
+            WorkoutProgram.is_template.is_(False),
+            WorkoutProgram.start_date.isnot(None),
             WorkoutProgram.start_date <= today,
-            or_(WorkoutProgram.end_date == None, WorkoutProgram.end_date >= today),
+            or_(WorkoutProgram.end_date.is_(None), WorkoutProgram.end_date >= today),
         )
     )
     to_activate = pending.scalars().all()
@@ -860,7 +860,7 @@ async def auto_activate_programs(
         has_active = await db.scalar(
             select(func.count()).select_from(WorkoutProgram).where(
                 WorkoutProgram.client_id == program.client_id,
-                WorkoutProgram.is_active == True,
+                WorkoutProgram.is_active.is_(True),
             )
         )
         if not has_active:
