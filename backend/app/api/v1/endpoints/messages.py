@@ -129,8 +129,18 @@ async def list_conversations(
 
         if scope:
             query = query.where(Conversation.scope == scope)
-        
-        result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
+
+        try:
+            result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
+        except Exception:
+            await db.rollback()
+            query = select(Conversation).where(
+                Conversation.workspace_id == current_user.workspace_id
+            ).options(selectinload(Conversation.client))
+            if not include_archived:
+                query = query.where(Conversation.is_archived == False)
+            result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
+
         conversations = result.scalars().all()
         
         # Enrich with client data
@@ -218,7 +228,7 @@ async def create_conversation(
         if existing:
             return _conversation_to_response(existing)
     
-    conversation = Conversation(
+    conv_kwargs = dict(
         workspace_id=current_user.workspace_id,
         client_id=data.client_id,
         name=data.name,
@@ -228,8 +238,16 @@ async def create_conversation(
         preferred_channel=MessageSource.WHATSAPP if data.whatsapp_phone else MessageSource.PLATFORM,
         scope=data.scope,
     )
+    conversation = Conversation(**conv_kwargs)
     db.add(conversation)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        conv_kwargs.pop("scope", None)
+        conversation = Conversation(**conv_kwargs)
+        db.add(conversation)
+        await db.commit()
     await db.refresh(conversation)
     
     return _conversation_to_response(conversation)

@@ -122,6 +122,8 @@ interface FoodItem {
   fat: number;
   quantity: number;
   recipe_group?: string;
+  food_category?: string;
+  is_manual?: boolean;
 }
 
 function MacroCard({
@@ -339,7 +341,7 @@ function LogMealModal({
   const addManualFood = () => {
     setFoods((prev) => [
       ...prev,
-      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 100 },
+      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 100, is_manual: true },
     ]);
   };
 
@@ -363,7 +365,7 @@ function LogMealModal({
           fat: Math.round(Number(old.fat) * ratio * 10) / 10,
         };
       } else {
-        updated[index] = { ...old, [field]: field === "name" ? value : numVal };
+        updated[index] = { ...old, [field]: (field === "name" || field === "food_category") ? value : numVal };
       }
       return updated;
     });
@@ -452,6 +454,18 @@ function LogMealModal({
           <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
           <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
         </div>
+      )}
+      {food.is_manual && (
+        <Select
+          placeholder="Categoría (opcional)"
+          data={FOOD_CATEGORY_ORDER.map((c) => ({ value: c, label: c }))}
+          value={food.food_category || null}
+          onChange={(val) => updateFood(index, "food_category", val || "")}
+          size="xs"
+          radius="md"
+          mt={6}
+          clearable
+        />
       )}
     </Box>
   ));
@@ -724,7 +738,7 @@ function LogPlanMealModal({
           fat: Math.round(Number(old.fat) * ratio * 10) / 10,
         };
       } else {
-        updated[index] = { ...old, [field]: field === "name" ? value : numVal };
+        updated[index] = { ...old, [field]: (field === "name" || field === "food_category") ? value : numVal };
       }
       return updated;
     });
@@ -753,7 +767,7 @@ function LogPlanMealModal({
   const addManualFood = () => {
     setFoods((prev) => [
       ...prev,
-      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 100 },
+      { name: "", calories: 0, protein: 0, carbs: 0, fat: 0, quantity: 100, is_manual: true },
     ]);
   };
 
@@ -873,6 +887,18 @@ function LogPlanMealModal({
                 <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
                 <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
               </div>
+            )}
+            {food.is_manual && (
+              <Select
+                placeholder="Categoría (opcional)"
+                data={FOOD_CATEGORY_ORDER.map((c) => ({ value: c, label: c }))}
+                value={food.food_category || null}
+                onChange={(val) => updateFood(index, "food_category", val || "")}
+                size="xs"
+                radius="md"
+                mt={6}
+                clearable
+              />
             )}
           </Box>
         );
@@ -1554,11 +1580,33 @@ export function MyNutritionPage() {
   }, [nutritionLogs]);
 
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [shoppingWeek, setShoppingWeek] = useState<string | null>(null);
+
+  const shoppingWeekNum = shoppingWeek ? parseInt(shoppingWeek, 10) : currentAutoWeek;
+  const shoppingPlanDays = useMemo(
+    () => extractPlanDays(executedPlanSource, shoppingWeekNum),
+    [executedPlanSource, shoppingWeekNum, currentAutoWeek]
+  );
+
+  const shoppingWeekDateRange = useMemo(() => {
+    const startStr = (mealPlan as any)?.start_date;
+    if (!startStr) return null;
+    const programStart = new Date(startStr);
+    if (isNaN(programStart.getTime())) return null;
+    const weekStart = new Date(programStart);
+    weekStart.setDate(weekStart.getDate() + (shoppingWeekNum - 1) * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    return {
+      startStr: weekStart.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+      endStr: weekEnd.toLocaleDateString("es-ES", { day: "numeric", month: "short" }),
+    };
+  }, [mealPlan, shoppingWeekNum]);
 
   const shoppingList = useMemo(() => {
-    if (!planDays || planDays.length === 0) return [];
+    if (!shoppingPlanDays || shoppingPlanDays.length === 0) return [];
     const foodMap = new Map<string, { name: string; totalGrams: number; category: string }>();
-    for (const day of planDays) {
+    for (const day of shoppingPlanDays) {
       for (const meal of (day.meals || [])) {
         for (const item of (meal.items || [])) {
           if (item.type === "supplement") continue;
@@ -1596,7 +1644,7 @@ export function MyNutritionPage() {
     return FOOD_CATEGORY_ORDER
       .filter((cat) => grouped[cat] && grouped[cat].length > 0)
       .map((cat) => ({ category: cat, items: grouped[cat] }));
-  }, [planDays]);
+  }, [shoppingPlanDays]);
 
   const toggleChecked = (foodName: string) => {
     setCheckedItems((prev) => {
@@ -3107,11 +3155,11 @@ export function MyNutritionPage() {
             </Paper>
           ) : (
             <Stack gap="lg">
-              <Group justify="space-between">
+              <Group justify="space-between" align="flex-start">
                 <Box>
                   <Title order={4}>Cesta de la compra</Title>
                   <Text size="sm" c="dimmed">
-                    Semana {selectedWeekOverride || currentAutoWeek} — {shoppingList.reduce((sum, g) => sum + g.items.length, 0)} alimentos
+                    {shoppingList.reduce((sum, g) => sum + g.items.length, 0)} alimentos
                   </Text>
                 </Box>
                 {checkedItems.size > 0 && (
@@ -3120,6 +3168,25 @@ export function MyNutritionPage() {
                   </Button>
                 )}
               </Group>
+
+              {allPlanWeeks.length > 0 && (
+                <Group gap="sm" wrap="wrap">
+                  <Select
+                    value={shoppingWeek || String(currentAutoWeek)}
+                    onChange={(v) => { setShoppingWeek(v); setCheckedItems(new Set()); }}
+                    data={allPlanWeeks.map((w: { week: number }) => ({ value: String(w.week), label: `Semana ${w.week}` }))}
+                    size="xs"
+                    radius="md"
+                    w={150}
+                    allowDeselect={false}
+                  />
+                  {shoppingWeekDateRange && (
+                    <Badge variant="light" color="blue" size="sm">
+                      {shoppingWeekDateRange.startStr} – {shoppingWeekDateRange.endStr}
+                    </Badge>
+                  )}
+                </Group>
+              )}
 
               {shoppingList.map((group) => (
                 <Box key={group.category}>

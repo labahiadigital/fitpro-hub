@@ -67,6 +67,7 @@ import { useClients } from "../../hooks/useClients";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { useTeamGroupsList } from "../../hooks/useTeamGroups";
 import { useWhatsAppStatus } from "../../hooks/useWhatsApp";
+import { useAuthStore } from "../../stores/auth";
 import "dayjs/locale/es";
 import { BottomSheet } from "../../components/common/BottomSheet";
 
@@ -308,6 +309,7 @@ export function ChatPage() {
   const isWhatsAppEnabled = whatsappStatus?.connected ?? false;
 
   // Team data for internal chat
+  const { user: currentUser } = useAuthStore();
   const { data: teamMembersData = [] } = useTeamMembers();
   const { data: teamGroups = [] } = useTeamGroupsList();
 
@@ -997,10 +999,12 @@ export function ChatPage() {
           />
           {internalChatType === "member" ? (
             <Select
-              data={teamMembersData.map((m) => ({
-                value: m.user_id || m.id,
-                label: m.full_name || m.name || m.email,
-              }))}
+              data={teamMembersData
+                .filter((m) => (m.user_id || m.id) !== currentUser?.id)
+                .map((m) => ({
+                  value: m.user_id || m.id,
+                  label: m.full_name || m.name || m.email,
+                }))}
               label="Selecciona un miembro"
               placeholder="Buscar miembro..."
               searchable

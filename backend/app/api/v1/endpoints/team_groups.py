@@ -80,6 +80,10 @@ async def list_groups(
         )
         return result.scalars().all()
     except Exception as e:
+        await db.rollback()
+        error_msg = str(e).lower()
+        if "does not exist" in error_msg or "no such table" in error_msg or "undefined table" in error_msg:
+            return []
         logger.exception("Error listing groups: %s", e)
         raise HTTPException(status_code=500, detail="Error al obtener grupos")
 

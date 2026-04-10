@@ -105,7 +105,8 @@ function getTrainerNavItems(unreadCount: number, permissions?: Record<string, st
   return items.filter((item) => {
     if (!item.requiredResource) return true;
     const resourcePerms = permissions[item.requiredResource];
-    return resourcePerms && resourcePerms.length > 0;
+    if (resourcePerms === undefined) return true;
+    return resourcePerms.length > 0;
   });
 }
 
