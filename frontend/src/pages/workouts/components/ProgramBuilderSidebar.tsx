@@ -1,0 +1,161 @@
+import {
+  Group,
+  MultiSelect,
+  NumberInput,
+  Select,
+  Stack,
+  Switch,
+  Text,
+  Textarea,
+  TextInput,
+} from "@mantine/core";
+import type { UseFormReturnType } from "@mantine/form";
+import { IconUser } from "@tabler/icons-react";
+
+interface ProgramFormValues {
+  name: string;
+  description: string;
+  duration_weeks: number;
+  difficulty: string;
+  tags: string[];
+  client_id: string | null;
+  start_date: string;
+  end_date: string;
+}
+
+interface ProgramBuilderSidebarProps {
+  programForm: UseFormReturnType<ProgramFormValues>;
+  clientOptions: Array<{ value: string; label: string }>;
+  selectedClientId: string | null;
+  isTemplateModeOn: boolean;
+  clientId: string | null;
+  canSaveProgram: boolean;
+  onClientChange: (value: string | null) => void;
+  onTemplateModeChange: (checked: boolean) => void;
+  onDurationChange: (value: number) => void;
+}
+
+export function ProgramBuilderSidebar({
+  programForm,
+  clientOptions,
+  selectedClientId,
+  isTemplateModeOn,
+  clientId,
+  canSaveProgram,
+  onClientChange,
+  onTemplateModeChange,
+  onDurationChange,
+}: ProgramBuilderSidebarProps) {
+  return (
+    <Stack gap="md">
+      <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
+        Configuración
+      </Text>
+
+      <Select
+        label="Asignar a cliente"
+        placeholder="Buscar cliente..."
+        data={clientOptions}
+        searchable
+        clearable
+        radius="md"
+        size="sm"
+        leftSection={<IconUser size={14} />}
+        value={selectedClientId}
+        onChange={onClientChange}
+      />
+
+      <Switch
+        label="Crear como plantilla"
+        description={selectedClientId || clientId
+          ? "Guarda una copia reutilizable además del programa del cliente"
+          : "Guarda como plantilla reutilizable"}
+        checked={isTemplateModeOn}
+        onChange={(e) => onTemplateModeChange(e.currentTarget.checked)}
+        size="sm"
+        color="teal"
+      />
+
+      {!canSaveProgram && (
+        <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>
+      )}
+
+      <TextInput
+        label="Nombre del programa"
+        placeholder="Programa de Hipertrofia"
+        required
+        radius="md"
+        size="sm"
+        {...programForm.getInputProps("name")}
+      />
+
+      <Textarea
+        label="Descripción"
+        minRows={2}
+        placeholder="Describe el programa..."
+        radius="md"
+        size="sm"
+        {...programForm.getInputProps("description")}
+      />
+
+      <Group grow>
+        <NumberInput
+          label="Programación (semanal)"
+          max={52}
+          min={1}
+          radius="md"
+          size="sm"
+          {...programForm.getInputProps("duration_weeks")}
+          onChange={(v) => onDurationChange(Number(v) || 1)}
+        />
+        <Select
+          data={[
+            { value: "beginner", label: "Principiante" },
+            { value: "intermediate", label: "Intermedio" },
+            { value: "advanced", label: "Avanzado" },
+          ]}
+          label="Dificultad"
+          radius="md"
+          size="sm"
+          {...programForm.getInputProps("difficulty")}
+        />
+      </Group>
+
+      <MultiSelect
+        data={[
+          { value: "hipertrofia", label: "Hipertrofia" },
+          { value: "fuerza", label: "Fuerza" },
+          { value: "pérdida de peso", label: "Pérdida de peso" },
+          { value: "tonificación", label: "Tonificación" },
+          { value: "resistencia", label: "Resistencia" },
+        ]}
+        label="Etiquetas"
+        placeholder="Añade etiquetas"
+        searchable
+        radius="md"
+        size="sm"
+        {...programForm.getInputProps("tags")}
+      />
+
+      {(selectedClientId || clientId) && (
+        <Group grow>
+          <TextInput
+            label="Fecha de inicio"
+            type="date"
+            radius="md"
+            size="sm"
+            {...programForm.getInputProps("start_date")}
+          />
+          <TextInput
+            label="Fecha de fin (opcional)"
+            description="Si no se indica, las semanas se repiten indefinidamente"
+            type="date"
+            radius="md"
+            size="sm"
+            {...programForm.getInputProps("end_date")}
+          />
+        </Group>
+      )}
+    </Stack>
+  );
+}
