@@ -2,6 +2,9 @@
 Endpoints de la API para el módulo ERP (Facturación profesional con VeriFactu)
 """
 
+import base64
+import logging
+import time
 from datetime import date, datetime, timezone
 from typing import Any, List, Optional
 from uuid import UUID
@@ -1191,7 +1194,6 @@ async def send_invoice_email(
         qr_data=invoice.verifactu_qr_data,
     )
 
-    import base64
     try:
         from app.services.email import EmailService
         email_service = EmailService()
@@ -1490,7 +1492,6 @@ CERT_RATE_CLEANUP_INTERVAL = 7200  # purge stale entries every 2 hours
 
 def _check_cert_rate_limit(workspace_id: str) -> None:
     global _cert_rate_last_cleanup
-    import time
     now = time.time()
 
     if now - _cert_rate_last_cleanup > CERT_RATE_CLEANUP_INTERVAL:
@@ -1545,7 +1546,6 @@ async def upload_certificate(
     db: AsyncSession = Depends(get_db),
 ):
     """Upload a .p12/.pfx certificate. Extracts cert+key, encrypts key at rest."""
-    import logging
     logger = logging.getLogger(__name__)
 
     _check_cert_rate_limit(current_user.workspace_id)
@@ -1624,7 +1624,6 @@ async def revoke_certificate(
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke (delete) the stored certificate and encrypted private key."""
-    import logging
     logger = logging.getLogger(__name__)
 
     settings = await _get_settings(db, current_user.workspace_id)

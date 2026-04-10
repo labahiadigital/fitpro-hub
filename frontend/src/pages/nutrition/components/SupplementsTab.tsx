@@ -188,14 +188,36 @@ export function SupplementsTab({
                     </Box>
                   </Box>
                 )}
+
+                {supp.how_to_take && (
+                  <Text size="xs" c="dimmed" lineClamp={2} style={{ paddingTop: "var(--space-xs)", borderTop: "1px solid var(--border-subtle)" }}>
+                    <Text component="span" fw={600} c="violet">Cómo tomar:</Text> {supp.how_to_take}
+                  </Text>
+                )}
               </Box>
             ))}
           </SimpleGrid>
         </>
+      ) : supplementFilter === "favorites" ? (
+        <EmptyState
+          actionLabel="Ver todos"
+          description="No tienes suplementos marcados como favoritos."
+          icon={<IconStar size={40} />}
+          onAction={() => onFilterChange("all")}
+          title="Sin favoritos"
+        />
+      ) : debouncedSupplementSearch ? (
+        <EmptyState
+          actionLabel="Limpiar búsqueda"
+          description={`No se encontraron suplementos que coincidan con "${debouncedSupplementSearch}"`}
+          icon={<IconSearch size={40} />}
+          onAction={() => onSearchChange("")}
+          title="Sin resultados"
+        />
       ) : (
         <EmptyState
           actionLabel="Añadir Suplemento"
-          description="Añade suplementos a tu biblioteca para usarlos en tus planes."
+          description="Los suplementos se cargan desde la base de datos. Añade suplementos para verlos aquí."
           icon={<IconPill size={40} />}
           onAction={onNew}
           title="No hay suplementos"

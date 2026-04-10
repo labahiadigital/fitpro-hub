@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.middleware.auth import require_workspace
+from app.models.client import Client
 from app.models.wearables import (
     ConnectedDevice,
     DailyHealthSummary,
@@ -218,7 +219,6 @@ async def connect_device(
         )
 
     # Verify client belongs to this workspace
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client).where(
             Client.id == request.client_id,
@@ -315,7 +315,6 @@ async def list_health_metrics(
     limit: int = Query(100, le=1000),
 ):
     """Listar métricas de salud de un cliente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -344,7 +343,6 @@ async def create_health_metric(
     db: AsyncSession = Depends(get_db),
 ):
     """Registrar una métrica de salud manualmente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == metric.client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -387,7 +385,6 @@ async def list_activities(
     limit: int = Query(50, le=200),
 ):
     """Listar actividades sincronizadas de un cliente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -422,7 +419,6 @@ async def get_daily_summaries(
     to_date: Optional[date] = Query(None),
 ):
     """Obtener resúmenes diarios de un cliente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -449,7 +445,6 @@ async def get_today_summary(
     client_id: UUID = Query(...),
 ):
     """Obtener resumen del día actual"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -477,7 +472,6 @@ async def get_health_goals(
     db: AsyncSession = Depends(get_db),
 ):
     """Obtener objetivos de salud de un cliente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -512,7 +506,6 @@ async def update_health_goals(
     db: AsyncSession = Depends(get_db),
 ):
     """Actualizar objetivos de salud de un cliente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -550,7 +543,6 @@ async def list_health_alerts(
     limit: int = Query(50, le=200),
 ):
     """Listar alertas de salud de un cliente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )
@@ -575,7 +567,6 @@ async def mark_alert_read(
     db: AsyncSession = Depends(get_db),
 ):
     """Marcar alerta como leída"""
-    from app.models.client import Client
     result = await db.execute(
         select(HealthAlert).join(Client, HealthAlert.client_id == Client.id).where(
             HealthAlert.id == alert_id,
@@ -603,7 +594,6 @@ async def get_health_dashboard(
     db: AsyncSession = Depends(get_db),
 ):
     """Obtener dashboard de salud completo de un cliente"""
-    from app.models.client import Client
     client_check = await db.execute(
         select(Client.id).where(Client.id == client_id, Client.workspace_id == current_user.workspace_id)
     )

@@ -5,10 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from app.core.database import get_db
 from app.core.security import create_tokens
+from app.core.storage import upload_workspace_file, generate_filename, resolve_url
+from app.models.user import User, UserRole, RoleType
 from app.models.workspace import Workspace, generate_slug, check_slug_available
-from app.models.user import UserRole, RoleType
 from app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate, WorkspaceResponse, WorkspaceListResponse
 from app.middleware.auth import get_current_user, require_workspace, require_owner, CurrentUser
 
@@ -125,8 +128,6 @@ async def list_workspace_members(
     Excluye a los usuarios con rol 'client' - estos se muestran en la sección de clientes.
     Solo devuelve owners y collaborators (miembros del equipo).
     """
-    from app.models.user import User
-    
     result = await db.execute(
         select(UserRole, User)
         .join(User, UserRole.user_id == User.id)
@@ -229,7 +230,6 @@ async def update_workspace(
                 current_value = dict(getattr(workspace, field) or {})
                 current_value.update(value)
                 setattr(workspace, field, current_value)
-                from sqlalchemy.orm.attributes import flag_modified
                 flag_modified(workspace, field)
             else:
                 setattr(workspace, field, value)
@@ -265,8 +265,6 @@ async def upload_workspace_logo(
     content = await file.read()
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Máximo 5 MB")
-
-    from app.core.storage import upload_workspace_file, generate_filename, resolve_url
 
     filename = generate_filename(file.filename)
     try:

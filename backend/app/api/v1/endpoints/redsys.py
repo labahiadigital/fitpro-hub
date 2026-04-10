@@ -10,6 +10,7 @@ Provides:
   - GET  /config-status          → Check if Redsys is configured
 """
 import logging
+import time
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -152,7 +153,6 @@ _RATE_LIMIT_WINDOW = 3600  # 1 hour
 
 def _check_rate_limit(token: str) -> bool:
     """Returns True if request is allowed, False if rate-limited."""
-    import time
     now = time.time()
     if token in _onboarding_rate_limit:
         count, first_time = _onboarding_rate_limit[token]

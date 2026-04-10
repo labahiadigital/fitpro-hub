@@ -9,6 +9,7 @@ Updated: 2026-02-02
 """
 import logging
 from typing import Optional
+from urllib.parse import unquote
 from uuid import UUID
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
@@ -349,7 +350,6 @@ async def handle_phone_number_created(data: dict, db: AsyncSession):
     
     # Decodificar número si está URL encoded
     if display_phone_number and "%2B" in display_phone_number:
-        from urllib.parse import unquote
         display_phone_number = unquote(display_phone_number)
     
     new_settings = dict(workspace.settings) if workspace.settings else {}

@@ -312,15 +312,10 @@ class GoogleCalendarService:
             return calendar_id
             
         except HttpError as e:
-            logger.error("[Google Calendar] Error al crear/obtener calendario Trackfiz: %s", e.reason)
-            import traceback
-            traceback.print_exc()
-            # Fallback al calendario principal
+            logger.exception("[Google Calendar] Error al crear/obtener calendario Trackfiz: %s", e.reason)
             return token.calendar_id or 'primary'
         except Exception as e:
-            logger.error("[Google Calendar] Error inesperado en get_or_create_trackfiz_calendar: %s", e)
-            import traceback
-            traceback.print_exc()
+            logger.exception("[Google Calendar] Error inesperado en get_or_create_trackfiz_calendar: %s", e)
             return token.calendar_id or 'primary'
     
     async def get_calendar_info(self, token: GoogleCalendarToken) -> dict:
@@ -627,9 +622,7 @@ class GoogleCalendarService:
             logger.error("[Google Calendar] GoogleCalendarError sincronizando booking %s: %s", booking.id, e.message)
             return None
         except Exception as e:
-            logger.error("[Google Calendar] Error inesperado sincronizando booking %s: %s", booking.id, e)
-            import traceback
-            traceback.print_exc()
+            logger.exception("[Google Calendar] Error inesperado sincronizando booking %s: %s", booking.id, e)
             return None
     
     async def delete_booking_from_google(
