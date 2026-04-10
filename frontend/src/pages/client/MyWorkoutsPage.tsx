@@ -1046,7 +1046,7 @@ interface ProgramDay {
     type?: string;
     exercises?: Array<{
       exercise_id?: string;
-      exercise?: { id?: string; name?: string; image_url?: string; video_url?: string; description?: string; muscle_groups?: string[] };
+      exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string; muscle_groups?: string[] };
       name?: string;
       sets?: number;
       reps?: string;
@@ -1066,7 +1066,7 @@ function WeekDayDetail({
   onSwapDay,
   isExecutedView = false,
 }: {
-  schedule: { dayName?: string; exercises_list?: Array<{ name: string; sets: number; reps: string }>; blocks?: Array<{ id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }> };
+  schedule: { dayName?: string; exercises_list?: Array<{ name: string; sets: number; reps: string }>; blocks?: Array<{ id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }> };
   weekDayName: string;
   onImageClick: (url: string, name: string) => void;
   onSwapExercise?: (blockIndex: number, exerciseIndex: number, exerciseName: string) => void;
@@ -1098,7 +1098,7 @@ function WeekDayDetail({
         </Group>
       </Box>
 
-      {schedule.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
+      {schedule.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
         <Box key={block.id || blockIndex} mb="md">
           <Group gap="xs" px="md" mb="xs">
             <Badge
@@ -1113,7 +1113,9 @@ function WeekDayDetail({
 
           {/* Edge-to-edge exercise rows */}
           {block.exercises?.map((exercise, exIndex) => {
-            const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+            const baseExName = exercise.exercise?.name || exercise.name || "Ejercicio";
+            const exAlias = exercise.exercise?.alias;
+            const exName = exAlias ? `${baseExName} (${exAlias})` : baseExName;
             const exImage2 = exercise.exercise?.image_url;
             return (
               <Box
@@ -1350,7 +1352,7 @@ export function MyWorkoutsPage() {
   const isTodayRestDay = todayWorkoutDay?.isRestDay ?? false;
   
   // Flatten all exercises from today's blocks (with exercise_id for history/targets)
-  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; target_weight?: number; target_reps?: number }> }) => 
+  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; target_weight?: number; target_reps?: number }> }) => 
     (block.exercises || []).map(ex => ({
       exercise_id: ex.exercise_id || ex.exercise?.id || "",
       name: ex.exercise?.name || ex.name || "Ejercicio",
@@ -1755,7 +1757,7 @@ export function MyWorkoutsPage() {
               </Box>
 
               {/* Edge-to-edge exercise list */}
-              {data.todayWorkout.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { id?: string; name?: string; image_url?: string; video_url?: string; description?: string }; exercise_id?: string; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number }> }, blockIndex: number) => (
+              {data.todayWorkout.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; exercise_id?: string; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number }> }, blockIndex: number) => (
                 <Box key={block.id || blockIndex} mb="md">
                   <Group gap="xs" px="md" mb="xs">
                     <Badge 
@@ -1770,7 +1772,9 @@ export function MyWorkoutsPage() {
                   </Group>
 
                   {block.exercises?.map((exercise, exIndex) => {
-                    const exName = exercise.exercise?.name || exercise.name || "Ejercicio";
+                    const baseExName2 = exercise.exercise?.name || exercise.name || "Ejercicio";
+                    const exAlias2 = exercise.exercise?.alias;
+                    const exName = exAlias2 ? `${baseExName2} (${exAlias2})` : baseExName2;
                     const exImage = exercise.exercise?.image_url;
                     return (
                       <Box

@@ -83,10 +83,11 @@ async def list_exercises(
     
     if search:
         search_pattern = f"%{search}%"
+        alias_filter = Exercise.alias.isnot(None) & func.unaccent(Exercise.alias).ilike(func.unaccent(search_pattern))
         query = query.where(
             or_(
                 func.unaccent(Exercise.name).ilike(func.unaccent(search_pattern)),
-                Exercise.alias.ilike(search_pattern),
+                alias_filter,
                 Exercise.muscle_groups.cast(String).ilike(search_pattern),
             )
         )

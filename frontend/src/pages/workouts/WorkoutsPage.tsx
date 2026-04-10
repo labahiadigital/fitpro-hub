@@ -1040,7 +1040,7 @@ export function WorkoutsPage() {
                       <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
                         <Image src={exercise.image_url} alt={exercise.name} fit="contain" h={280} />
                         <Box p="xs">
-                          <Text fw={600} size="sm">{exercise.name}</Text>
+                          <Text fw={600} size="sm">{exercise.name}{exercise.alias ? ` (${exercise.alias})` : ""}</Text>
                           {exercise.muscle_groups?.length > 0 && (
                             <Group gap={4} mt={4}>
                               {exercise.muscle_groups.map((m: string) => (
@@ -1167,7 +1167,7 @@ export function WorkoutsPage() {
                       )}
                       <Box p="xs">
                         <Group gap={4} wrap="nowrap">
-                          <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>{exercise.name}</Text>
+                          <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>{exercise.name}{exercise.alias ? ` (${exercise.alias})` : ""}</Text>
                           {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
                         </Group>
                         <Group gap={4} mt={4} justify="space-between">
