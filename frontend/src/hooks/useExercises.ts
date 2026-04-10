@@ -123,49 +123,57 @@ export function useDeleteExercise() {
   });
 }
 
+const MUSCLE_GROUPS = [
+  { value: "chest", label: "Pecho" },
+  { value: "back", label: "Espalda" },
+  { value: "shoulders", label: "Hombros" },
+  { value: "biceps", label: "Bíceps" },
+  { value: "triceps", label: "Tríceps" },
+  { value: "forearms", label: "Antebrazos" },
+  { value: "abs", label: "Abdominales" },
+  { value: "obliques", label: "Oblicuos" },
+  { value: "lower_back", label: "Lumbar" },
+  { value: "glutes", label: "Glúteos" },
+  { value: "quadriceps", label: "Cuádriceps" },
+  { value: "hamstrings", label: "Isquiotibiales" },
+  { value: "calves", label: "Gemelos" },
+  { value: "hip_flexors", label: "Flexores de cadera" },
+  { value: "full_body", label: "Cuerpo completo" },
+] as const;
+
+const EQUIPMENT = [
+  { value: "bodyweight", label: "Peso corporal" },
+  { value: "barbell", label: "Barra" },
+  { value: "dumbbell", label: "Mancuernas" },
+  { value: "kettlebell", label: "Kettlebell" },
+  { value: "cable", label: "Poleas" },
+  { value: "machine", label: "Máquina" },
+  { value: "resistance_band", label: "Banda elástica" },
+  { value: "medicine_ball", label: "Balón medicinal" },
+  { value: "pull_up_bar", label: "Barra de dominadas" },
+  { value: "bench", label: "Banco" },
+  { value: "box", label: "Cajón" },
+  { value: "trx", label: "TRX" },
+  { value: "foam_roller", label: "Foam roller" },
+  { value: "yoga_mat", label: "Esterilla" },
+  { value: "none", label: "Sin equipamiento" },
+] as const;
+
 export function useMuscleGroups() {
   return useQuery({
     queryKey: ["muscle-groups"],
-    queryFn: async () => [
-      { value: "chest", label: "Pecho" },
-      { value: "back", label: "Espalda" },
-      { value: "shoulders", label: "Hombros" },
-      { value: "biceps", label: "Bíceps" },
-      { value: "triceps", label: "Tríceps" },
-      { value: "forearms", label: "Antebrazos" },
-      { value: "abs", label: "Abdominales" },
-      { value: "obliques", label: "Oblicuos" },
-      { value: "lower_back", label: "Lumbar" },
-      { value: "glutes", label: "Glúteos" },
-      { value: "quadriceps", label: "Cuádriceps" },
-      { value: "hamstrings", label: "Isquiotibiales" },
-      { value: "calves", label: "Gemelos" },
-      { value: "hip_flexors", label: "Flexores de cadera" },
-      { value: "full_body", label: "Cuerpo completo" },
-    ],
+    queryFn: () => [...MUSCLE_GROUPS],
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 }
 
 export function useEquipment() {
   return useQuery({
     queryKey: ["equipment"],
-    queryFn: async () => [
-      { value: "bodyweight", label: "Peso corporal" },
-      { value: "barbell", label: "Barra" },
-      { value: "dumbbell", label: "Mancuernas" },
-      { value: "kettlebell", label: "Kettlebell" },
-      { value: "cable", label: "Poleas" },
-      { value: "machine", label: "Máquina" },
-      { value: "resistance_band", label: "Banda elástica" },
-      { value: "medicine_ball", label: "Balón medicinal" },
-      { value: "pull_up_bar", label: "Barra de dominadas" },
-      { value: "bench", label: "Banco" },
-      { value: "box", label: "Cajón" },
-      { value: "trx", label: "TRX" },
-      { value: "foam_roller", label: "Foam roller" },
-      { value: "yoga_mat", label: "Esterilla" },
-      { value: "none", label: "Sin equipamiento" },
-    ],
+    queryFn: () => [...EQUIPMENT],
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 }
 

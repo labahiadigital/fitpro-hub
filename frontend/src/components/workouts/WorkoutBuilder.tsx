@@ -227,8 +227,8 @@ export function WorkoutBuilder({
 }: WorkoutBuilderProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
-  const [expandedBlocks, setExpandedBlocks] = useState<string[]>(
-    blocks.map((b) => b.id)
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(
+    () => new Set(blocks.map((b) => b.id))
   );
   const [
     exerciseModalOpened,
@@ -256,14 +256,16 @@ export function WorkoutBuilder({
     },
   });
   
-  // Helper para verificar si un ejercicio es favorito
-  const isExerciseFavorite = (exerciseId: string) => exerciseFavorites.includes(exerciseId);
+  const exerciseFavoritesSet = useMemo(() => new Set(exerciseFavorites), [exerciseFavorites]);
+  const isExerciseFavorite = (exerciseId: string) => exerciseFavoritesSet.has(exerciseId);
 
   const toggleBlock = (blockId: string) => {
-    setExpandedBlocks((prev) =>
-      prev.includes(blockId)
-        ? prev.filter((id) => id !== blockId)
-        : [...prev, blockId]
+    setExpandedBlocks((prev) => {
+      const next = new Set(prev);
+      if (next.has(blockId)) next.delete(blockId);
+      else next.add(blockId);
+      return next;
+    }
     );
   };
 
@@ -344,7 +346,7 @@ export function WorkoutBuilder({
       rounds: type === "circuit" ? 3 : undefined,
     };
     onChange([...blocks, newBlock]);
-    setExpandedBlocks((prev) => [...prev, newBlock.id]);
+    setExpandedBlocks((prev) => new Set([...prev, newBlock.id]));
   };
 
   const removeBlock = (blockId: string) => {
@@ -559,10 +561,10 @@ export function WorkoutBuilder({
                         p="md"
                         style={{
                           backgroundColor: `var(--mantine-color-${getBlockColor(block.type)}-0)`,
-                          borderBottom: expandedBlocks.includes(block.id)
+                          borderBottom: expandedBlocks.has(block.id)
                             ? "1px solid var(--mantine-color-gray-2)"
                             : undefined,
-                          borderRadius: expandedBlocks.includes(block.id)
+                          borderRadius: expandedBlocks.has(block.id)
                             ? "16px 16px 0 0"
                             : "16px",
                         }}
@@ -628,7 +630,7 @@ export function WorkoutBuilder({
                             onClick={() => toggleBlock(block.id)}
                             variant="subtle"
                           >
-                            {expandedBlocks.includes(block.id) ? (
+                            {expandedBlocks.has(block.id) ? (
                               <IconChevronUp size={18} />
                             ) : (
                               <IconChevronDown size={18} />
@@ -638,7 +640,7 @@ export function WorkoutBuilder({
                       </Group>
 
                       {/* Block Content */}
-                      <Collapse in={expandedBlocks.includes(block.id)}>
+                      <Collapse in={expandedBlocks.has(block.id)}>
                         <Box p="md">
                           {/* Block Settings */}
                           {(block.type === "circuit" ||

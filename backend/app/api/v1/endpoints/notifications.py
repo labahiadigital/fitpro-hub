@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
 from app.middleware.auth import get_current_user, require_workspace, CurrentUser
@@ -259,7 +260,6 @@ async def update_notification_preferences(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    from app.models.user import User
     result = await db.execute(select(User).where(User.id == current_user.id))
     user = result.scalar_one_or_none()
     if not user:
@@ -284,7 +284,6 @@ async def update_notification_preferences(
 
     current_prefs["notifications"] = notif_prefs
     user.preferences = current_prefs
-    from sqlalchemy.orm.attributes import flag_modified
     flag_modified(user, "preferences")
     await db.commit()
     await db.refresh(user)

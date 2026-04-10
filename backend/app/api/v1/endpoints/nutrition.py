@@ -1,5 +1,6 @@
 """Nutrition endpoints - simplified to match actual DB schema."""
 import copy
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -688,8 +689,7 @@ async def get_client_nutrition_logs(
         try:
             return float(val)
         except (ValueError, TypeError):
-            import re as _re
-            m = _re.search(r"[\d.]+", str(val))
+            m = re.search(r"[\d.]+", str(val))
             return float(m.group()) if m else default
 
     def _get_plan_days_trainer(mp_plan, week_num=None):

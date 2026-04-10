@@ -3,25 +3,43 @@ Client Portal API endpoints.
 These endpoints are accessible by clients to view/manage their own data.
 All data is filtered to only show what belongs to the authenticated client.
 """
+import copy
+import logging
+import re as _re
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, date, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, func, or_
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
+from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
-from app.core.storage import resolve_url
-from app.models.client import Client
-from app.models.workout import WorkoutProgram, WorkoutLog
-from app.models.exercise import Exercise, ExerciseAlternative, ClientMeasurement
-from app.models.nutrition import MealPlan, Recipe, Food
+from app.core.storage import (
+    delete_workspace_file,
+    generate_filename,
+    resolve_url,
+    upload_workspace_file,
+    workspace_key_from_url,
+)
+from app.middleware.auth import CurrentUser, get_current_user
 from app.models.booking import Booking
+from app.models.client import Client
+from app.models.exercise import ClientMeasurement, Exercise, ExerciseAlternative
+from app.models.message import Message
+from app.models.nutrition import Food, MealPlan, Recipe
+from app.models.user import RoleType, User, UserRole
+from app.models.workout import WorkoutLog, WorkoutProgram
 from app.models.workspace import Workspace
-from app.middleware.auth import get_current_user, CurrentUser
+from app.models.feedback import ClientDietFeedback, ClientEmotion, ClientFeedback, ClientWorkoutFeedback
+from app.models.payment import Payment, Subscription, SubscriptionStatus
+from app.models.document import Document
 from app.services.notification_service import notify
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -411,7 +429,7 @@ async def upload_client_avatar(
     db: AsyncSession = Depends(get_db)
 ):
     """Upload avatar photo for the client. Updates both Client and User models."""
-    from app.models.user import User
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -426,7 +444,7 @@ async def upload_client_avatar(
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Máximo 5 MB")
 
-    from app.core.storage import upload_workspace_file, generate_filename
+
 
     filename = generate_filename(file.filename)
 
@@ -634,7 +652,7 @@ async def update_program_exercise(
     except (IndexError, KeyError, TypeError) as e:
         raise HTTPException(status_code=400, detail="Posición de ejercicio inválida")
 
-    from sqlalchemy.orm.attributes import flag_modified
+
     flag_modified(program, "template")
     await db.commit()
 
@@ -669,7 +687,7 @@ async def get_my_workout(
 
 def _ensure_executed_template(program: WorkoutProgram):
     """Lazily initialise executed_template from template if it's still None."""
-    import copy
+
     try:
         val = program.executed_template
     except Exception:
@@ -698,7 +716,7 @@ async def swap_workout_days(
     db: AsyncSession = Depends(get_db),
 ):
     """Swap all workouts between two days in the executed template."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(WorkoutProgram).where(
@@ -743,7 +761,7 @@ async def swap_specific_workouts(
     db: AsyncSession = Depends(get_db),
 ):
     """Swap a specific workout block between two days in the executed template."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(WorkoutProgram).where(
@@ -797,7 +815,7 @@ async def move_exercise_between_days(
     db: AsyncSession = Depends(get_db),
 ):
     """Move an exercise from one day/block to another (no swap) in the executed template."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(WorkoutProgram).where(
@@ -858,7 +876,7 @@ async def swap_exercises_between_days(
     db: AsyncSession = Depends(get_db),
 ):
     """Swap two specific exercises between days in the executed template."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(WorkoutProgram).where(
@@ -1194,7 +1212,7 @@ class MoveMealRequest(BaseModel):
 
 def _ensure_executed_plan(meal_plan: MealPlan):
     """Lazily initialise executed_plan from plan if it's still None."""
-    import copy
+
     try:
         val = meal_plan.executed_plan
     except Exception:
@@ -1210,7 +1228,7 @@ async def move_meal_between_days(
     db: AsyncSession = Depends(get_db)
 ):
     """Move a specific meal from one day to another in the client's executed plan."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
@@ -1253,7 +1271,7 @@ async def swap_plan_days(
     db: AsyncSession = Depends(get_db)
 ):
     """Swap all meals between two days in the client's executed plan."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
@@ -1297,7 +1315,7 @@ async def swap_specific_meals(
     db: AsyncSession = Depends(get_db)
 ):
     """Swap a specific meal from one day with a specific meal from another day in the executed plan."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
@@ -1346,7 +1364,7 @@ async def update_meal_time(
     db: AsyncSession = Depends(get_db),
 ):
     """Update the time of a meal in the executed plan and re-sort meals by time."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
@@ -1390,7 +1408,7 @@ async def update_meal_name(
     db: AsyncSession = Depends(get_db),
 ):
     """Update the display name (alias) of a meal in the executed plan."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
         select(MealPlan).where(MealPlan.client_id == client.id, MealPlan.is_active.is_(True))
@@ -1428,7 +1446,7 @@ async def log_nutrition(
 ):
     """Log food intake. Stores in the active meal plan's adherence field.
     If replace=true, overwrites existing log for the same date+meal_name."""
-    from sqlalchemy.orm.attributes import flag_modified
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
     result = await db.execute(
@@ -1578,7 +1596,7 @@ async def get_nutrition_history(
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
     
-    from collections import defaultdict
+
     
     def _safe_float(val, default=0.0):
         if val is None:
@@ -1586,7 +1604,7 @@ async def get_nutrition_history(
         try:
             return float(val)
         except (ValueError, TypeError):
-            import re as _re
+
             m = _re.search(r"[\d.]+", str(val))
             return float(m.group()) if m else default
 
@@ -1781,7 +1799,7 @@ async def delete_nutrition_log(
             detail="Registro no encontrado"
         )
     
-    from sqlalchemy.orm.attributes import flag_modified
+
     logs.pop(log_index)
     meal_plan.adherence = {"logs": logs}
     flag_modified(meal_plan, "adherence")
@@ -2005,7 +2023,7 @@ async def upload_progress_photo(
             detail=f"Tipo de archivo {file.content_type} no permitido. Usa JPEG, PNG o WebP."
         )
     
-    from app.core.storage import upload_workspace_file, generate_filename
+
 
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
@@ -2053,7 +2071,7 @@ async def upload_progress_photo(
             current_photos = list(measurement.photos or [])
             current_photos.append(photo_data)
             measurement.photos = current_photos
-            from sqlalchemy.orm.attributes import flag_modified
+        
             flag_modified(measurement, "photos")
         else:
             measurement = ClientMeasurement(
@@ -2074,8 +2092,7 @@ async def upload_progress_photo(
     except HTTPException:
         raise
     except Exception:
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error al subir la foto")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al subir la foto"
@@ -2121,7 +2138,7 @@ async def delete_progress_photo(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a specific progress photo by its stored reference URL."""
-    from sqlalchemy.orm.attributes import flag_modified
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -2148,7 +2165,7 @@ async def delete_progress_photo(
 
     await db.commit()
 
-    from app.core.storage import workspace_key_from_url, delete_workspace_file
+
     key = workspace_key_from_url(photo_url)
     if key and key.startswith("w/"):
         parts = key.split("/")
@@ -2268,7 +2285,7 @@ async def get_available_slots(
     db: AsyncSession = Depends(get_db)
 ):
     """Get available booking slots for a given date based on trainer weekly schedule."""
-    from app.models.workspace import Workspace
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -2339,7 +2356,7 @@ async def create_client_booking(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a booking request from a client."""
-    from app.models.workspace import Workspace
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -2381,7 +2398,7 @@ async def create_client_booking(
     await db.commit()
     await db.refresh(booking)
 
-    from app.models.user import UserRole, RoleType
+
     owner_result = await db.execute(
         select(UserRole.user_id).where(
             UserRole.workspace_id == current_user.workspace_id,
@@ -2430,7 +2447,7 @@ async def cancel_client_booking(
     await db.commit()
     await db.refresh(booking)
 
-    from app.models.user import UserRole, RoleType
+
     owner_result = await db.execute(
         select(UserRole.user_id).where(
             UserRole.workspace_id == current_user.workspace_id,
@@ -2467,7 +2484,7 @@ async def update_client_booking(
     db: AsyncSession = Depends(get_db)
 ):
     """Modify a booking – resets status to pending for trainer re-confirmation."""
-    from app.models.workspace import Workspace
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     result = await db.execute(
@@ -2513,7 +2530,7 @@ async def update_client_booking(
     await db.commit()
     await db.refresh(booking)
 
-    from app.models.user import UserRole, RoleType
+
     owner_result = await db.execute(
         select(UserRole.user_id).where(
             UserRole.workspace_id == current_user.workspace_id,
@@ -2614,7 +2631,7 @@ async def get_or_create_client_conversation(
         await db.refresh(conversation)
     
     # Get trainer info (the one who created the client)
-    from app.models.user import User
+
     trainer_name = None
     trainer_avatar = None
     if client.created_by:
@@ -2931,7 +2948,7 @@ async def create_client_feedback(
     db: AsyncSession = Depends(get_db)
 ):
     """Create feedback for a specific exercise, meal, workout or diet."""
-    from app.models.feedback import ClientFeedback
+
     
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
@@ -2961,7 +2978,7 @@ async def get_client_feedback(
     db: AsyncSession = Depends(get_db)
 ):
     """Get client's feedback history."""
-    from app.models.feedback import ClientFeedback
+
     
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
@@ -2984,7 +3001,7 @@ async def create_workout_program_feedback(
     db: AsyncSession = Depends(get_db)
 ):
     """Create overall feedback for a complete workout program."""
-    from app.models.feedback import ClientWorkoutFeedback
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -3028,7 +3045,7 @@ async def create_diet_feedback(
     db: AsyncSession = Depends(get_db)
 ):
     """Create overall feedback for a complete meal plan / diet."""
-    from app.models.feedback import ClientDietFeedback
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -3076,7 +3093,7 @@ async def create_client_emotion(
     db: AsyncSession = Depends(get_db)
 ):
     """Log client's daily mood/emotion."""
-    from app.models.feedback import ClientEmotion
+
     
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
@@ -3134,7 +3151,7 @@ async def get_client_emotions(
     db: AsyncSession = Depends(get_db)
 ):
     """Get client's emotion/mood history."""
-    from app.models.feedback import ClientEmotion
+
     
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
@@ -3158,11 +3175,11 @@ async def get_today_emotion(
     db: AsyncSession = Depends(get_db)
 ):
     """Get client's emotion for today."""
-    from app.models.feedback import ClientEmotion
-    from datetime import date as date_type
+
+
     
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    today = date_type.today()
+    today = date.today()
     
     result = await db.execute(
         select(ClientEmotion).where(
@@ -3232,7 +3249,7 @@ async def get_my_subscription(
     db: AsyncSession = Depends(get_db),
 ):
     """Get the client's active subscription with recent payments."""
-    from app.models.payment import Subscription, Payment
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -3295,7 +3312,7 @@ async def get_my_payments(
     limit: int = Query(20, ge=1, le=100),
 ):
     """Get the client's payment history."""
-    from app.models.payment import Payment
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -3328,7 +3345,7 @@ async def cancel_my_subscription(
     db: AsyncSession = Depends(get_db),
 ):
     """Cancel the client's active subscription. Access continues until period end."""
-    from app.models.payment import Subscription, SubscriptionStatus
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -3387,7 +3404,7 @@ async def client_upload_document(
     db: AsyncSession = Depends(get_db),
 ):
     """Client uploads a document."""
-    from app.models.document import Document
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -3395,7 +3412,7 @@ async def client_upload_document(
     if len(content) > 20 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="El archivo supera el límite de 20 MB")
 
-    from app.core.storage import upload_workspace_file, generate_filename
+
 
     filename = generate_filename(file.filename)
 
@@ -3442,7 +3459,7 @@ async def client_list_documents(
     db: AsyncSession = Depends(get_db),
 ):
     """Client lists their own documents."""
-    from app.models.document import Document
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 
@@ -3479,7 +3496,7 @@ async def client_delete_document(
     db: AsyncSession = Depends(get_db),
 ):
     """Client deletes their own document."""
-    from app.models.document import Document
+
 
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
 

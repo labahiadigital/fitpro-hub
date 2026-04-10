@@ -40,7 +40,7 @@ import {
   IconUser,
   IconUsers,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useMediaQuery } from "@mantine/hooks";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -216,13 +216,15 @@ export function WorkoutsPage() {
   const [exerciseSourceFilter, setExerciseSourceFilter] = useState("all");
   const [workoutWeeks, setWorkoutWeeks] = useState<{ week: number; days: WorkoutDay[] }[]>([{ week: 1, days: [...initialWorkoutDays] }]);
   const [currentWeek, setCurrentWeek] = useState(1);
+  const currentWeekRef = useRef(currentWeek);
+  currentWeekRef.current = currentWeek;
   const workoutDays = useMemo(() => {
     const wk = workoutWeeks.find((w) => w.week === currentWeek);
     return wk ? wk.days : initialWorkoutDays;
   }, [workoutWeeks, currentWeek]);
   const setWorkoutDays = useCallback((days: WorkoutDay[]) => {
-    setWorkoutWeeks((prev) => prev.map((w) => w.week === currentWeek ? { ...w, days } : w));
-  }, [currentWeek]);
+    setWorkoutWeeks((prev) => prev.map((w) => w.week === currentWeekRef.current ? { ...w, days } : w));
+  }, []);
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
@@ -236,34 +238,36 @@ export function WorkoutsPage() {
   // Favoritos de ejercicios (must be before sourceFilteredExercises)
   const { data: exerciseFavorites = [] } = useExerciseFavorites();
   const toggleExerciseFavorite = useToggleExerciseFavorite();
+  const favoritesSet = useMemo(() => new Set(exerciseFavorites), [exerciseFavorites]);
 
   const sourceFilteredExercises = useMemo(() => {
-    if (exerciseSourceFilter === "favorites") return exercises.filter((e: any) => exerciseFavorites.includes(e.id));
+    if (exerciseSourceFilter === "favorites") return exercises.filter((e: any) => favoritesSet.has(e.id));
     if (exerciseSourceFilter === "system") return exercises.filter((e: any) => e.is_global);
     if (exerciseSourceFilter === "custom") return exercises.filter((e: any) => !e.is_global);
     return exercises;
-  }, [exercises, exerciseSourceFilter, exerciseFavorites]);
+  }, [exercises, exerciseSourceFilter, favoritesSet]);
 
   const exerciseCounts = useMemo(() => {
-    const all = exercises || [];
-    return {
-      fuerza: all.filter((e: any) => !e.category || e.category === "fuerza").length,
-      calentamiento: all.filter((e: any) => e.category?.toLowerCase() === "calentamiento").length,
-      estiramiento: all.filter((e: any) => e.category?.toLowerCase() === "estiramiento").length,
-      cardio: all.filter((e: any) => e.category?.toLowerCase() === "cardio").length,
-    };
+    const counts = { fuerza: 0, calentamiento: 0, estiramiento: 0, cardio: 0 };
+    for (const e of exercises || []) {
+      const cat = e.category?.toLowerCase();
+      if (!cat || cat === "fuerza") counts.fuerza++;
+      else if (cat === "calentamiento") counts.calentamiento++;
+      else if (cat === "estiramiento") counts.estiramiento++;
+      else if (cat === "cardio") counts.cardio++;
+    }
+    return counts;
   }, [exercises]);
 
   const sortFavoritesFirst = useCallback(
     (list: any[]) => {
-      const favSet = new Set(exerciseFavorites);
       return [...list].sort((a, b) => {
-        const aFav = favSet.has(a.id) ? 0 : 1;
-        const bFav = favSet.has(b.id) ? 0 : 1;
+        const aFav = favoritesSet.has(a.id) ? 0 : 1;
+        const bFav = favoritesSet.has(b.id) ? 0 : 1;
         return aFav - bFav || a.name.localeCompare(b.name);
       });
     },
-    [exerciseFavorites],
+    [favoritesSet],
   );
 
   const getFilteredByCategory = useCallback(
@@ -1010,15 +1014,15 @@ export function WorkoutsPage() {
                   {/* Estrella de favorito */}
                   <ActionIcon
                     size="xs"
-                    variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
+                    variant={favoritesSet.has(exercise.id) ? "filled" : "subtle"}
                     color="yellow"
                     style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) });
+                      toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: favoritesSet.has(exercise.id) });
                     }}
                   >
-                    {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
+                    {favoritesSet.has(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
                   </ActionIcon>
                   
                   {exercise.image_url ? (
@@ -1141,12 +1145,12 @@ export function WorkoutsPage() {
                     <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openEditExercise(exercise)}>
                       <ActionIcon
                         size="xs"
-                        variant={exerciseFavorites.includes(exercise.id) ? "filled" : "subtle"}
+                        variant={favoritesSet.has(exercise.id) ? "filled" : "subtle"}
                         color="yellow"
                         style={{ position: "absolute", top: 4, right: 4, zIndex: 1 }}
-                        onClick={(e) => { e.stopPropagation(); toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: exerciseFavorites.includes(exercise.id) }); }}
+                        onClick={(e) => { e.stopPropagation(); toggleExerciseFavorite.mutate({ exerciseId: exercise.id, isFavorite: favoritesSet.has(exercise.id) }); }}
                       >
-                        {exerciseFavorites.includes(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
+                        {favoritesSet.has(exercise.id) ? <IconStarFilled size={12} /> : <IconStar size={12} />}
                       </ActionIcon>
                       {exercise.image_url ? (
                         <HoverCard width={320} shadow="lg" openDelay={300} position="right">

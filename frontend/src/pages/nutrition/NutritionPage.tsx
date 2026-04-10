@@ -514,15 +514,22 @@ export function NutritionPage() {
     }));
   }, [supabaseSupplements]);
 
-  // Check if food is favorite - foodFavorites is an array of food IDs
-  const isFoodFavorite = useCallback((foodId: string) => {
-    return Array.isArray(foodFavorites) && foodFavorites.includes(foodId);
-  }, [foodFavorites]);
+  const foodFavoritesSet = useMemo(
+    () => new Set(Array.isArray(foodFavorites) ? foodFavorites : []),
+    [foodFavorites],
+  );
+  const supplementFavoritesSet = useMemo(
+    () => new Set(Array.isArray(supplementFavorites) ? supplementFavorites : []),
+    [supplementFavorites],
+  );
 
-  // Check if supplement is favorite - supplementFavorites is an array of supplement IDs
+  const isFoodFavorite = useCallback((foodId: string) => {
+    return foodFavoritesSet.has(foodId);
+  }, [foodFavoritesSet]);
+
   const isSupplementFavorite = useCallback((supplementId: string) => {
-    return Array.isArray(supplementFavorites) && supplementFavorites.includes(supplementId);
-  }, [supplementFavorites]);
+    return supplementFavoritesSet.has(supplementId);
+  }, [supplementFavoritesSet]);
 
   // Toggle food favorite
   const handleToggleFoodFavorite = async (foodId: string, e?: React.MouseEvent) => {

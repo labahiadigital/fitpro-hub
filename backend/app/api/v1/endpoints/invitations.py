@@ -1,6 +1,8 @@
 """Client invitation endpoints."""
 import secrets
 from datetime import datetime, timedelta
+
+from dateutil.relativedelta import relativedelta
 from typing import List, Optional
 from uuid import UUID
 
@@ -703,8 +705,6 @@ async def complete_invitation(
             )
             product = product_result.scalar_one_or_none()
             if product:
-                from dateutil.relativedelta import relativedelta
-                
                 now = datetime.now(timezone.utc)
                 ic = product.interval_count or 1
                 interval_map = {
