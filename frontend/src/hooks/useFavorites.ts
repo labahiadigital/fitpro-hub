@@ -43,14 +43,25 @@ export function useToggleFoodFavorite() {
       }
 
       if (isFavorite) {
-        // Remove from favorites
         await api.delete(`/nutrition/favorites/foods/${foodId}`);
       } else {
-        // Add to favorites
         await api.post(`/nutrition/favorites/foods/${foodId}`);
       }
     },
-    onSuccess: () => {
+    onMutate: async ({ foodId, isFavorite }) => {
+      await queryClient.cancelQueries({ queryKey: ['food-favorites', userId] });
+      const previous = queryClient.getQueryData<string[]>(['food-favorites', userId]);
+      queryClient.setQueryData<string[]>(['food-favorites', userId], (old = []) =>
+        isFavorite ? old.filter((id) => id !== foodId) : [...old, foodId],
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['food-favorites', userId], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['food-favorites', userId] });
     },
   });
@@ -88,14 +99,25 @@ export function useToggleSupplementFavorite() {
       }
 
       if (isFavorite) {
-        // Remove from favorites
         await api.delete(`/supplements/favorites/${supplementId}`);
       } else {
-        // Add to favorites
         await api.post(`/supplements/favorites/${supplementId}`);
       }
     },
-    onSuccess: () => {
+    onMutate: async ({ supplementId, isFavorite }) => {
+      await queryClient.cancelQueries({ queryKey: ['supplement-favorites', userId] });
+      const previous = queryClient.getQueryData<string[]>(['supplement-favorites', userId]);
+      queryClient.setQueryData<string[]>(['supplement-favorites', userId], (old = []) =>
+        isFavorite ? old.filter((id) => id !== supplementId) : [...old, supplementId],
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['supplement-favorites', userId], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['supplement-favorites', userId] });
     },
   });
@@ -133,14 +155,25 @@ export function useToggleExerciseFavorite() {
       }
 
       if (isFavorite) {
-        // Remove from favorites
         await api.delete(`/exercises/favorites/${exerciseId}`);
       } else {
-        // Add to favorites
         await api.post(`/exercises/favorites/${exerciseId}`);
       }
     },
-    onSuccess: () => {
+    onMutate: async ({ exerciseId, isFavorite }) => {
+      await queryClient.cancelQueries({ queryKey: ['exercise-favorites', userId] });
+      const previous = queryClient.getQueryData<string[]>(['exercise-favorites', userId]);
+      queryClient.setQueryData<string[]>(['exercise-favorites', userId], (old = []) =>
+        isFavorite ? old.filter((id) => id !== exerciseId) : [...old, exerciseId],
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['exercise-favorites', userId], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['exercise-favorites', userId] });
     },
   });

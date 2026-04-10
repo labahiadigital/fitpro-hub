@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Tuple
-from jose import jwt, JWTError
-import bcrypt
-from pydantic import BaseModel, ValidationError
-import secrets
 import re
+import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Tuple
+
+import bcrypt
+from jose import JWTError, jwt
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import settings
 

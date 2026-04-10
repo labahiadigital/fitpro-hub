@@ -1,11 +1,13 @@
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
-from pydantic import BaseModel
+
 import stripe
+from dateutil.relativedelta import relativedelta
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from pydantic import BaseModel
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -190,9 +192,7 @@ async def get_payment_kpis(
     """
     Obtener KPIs de pagos del workspace.
     """
-    from sqlalchemy import func
-    from datetime import datetime
-    from dateutil.relativedelta import relativedelta
+    
     
     now = datetime.utcnow()
     first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)

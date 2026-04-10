@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 ? "Se ha publicado una actualización. Recarga la página para continuar."
                 : "Ha ocurrido un error inesperado. Puedes intentar recargar la sección o volver al inicio."}
             </Text>
-            {!isChunk && this.state.error && (
+            {!isChunk && this.state.error && import.meta.env.DEV && (
               <Text size="xs" c="red" ta="center" style={{ fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto", background: "#fff0f0", padding: 12, borderRadius: 8, width: "100%" }}>
                 {this.state.error.message}
                 {"\n\n"}

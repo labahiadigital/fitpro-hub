@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.api.v1.router import api_router
+from app.middleware.permissions import PermissionsMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -126,7 +127,6 @@ class ProxySchemeMiddleware(BaseHTTPMiddleware):
 if settings.APP_ENV == "production":
     app.add_middleware(ProxySchemeMiddleware)
 
-from app.middleware.permissions import PermissionsMiddleware
 app.add_middleware(PermissionsMiddleware)
 
 access_logger = logging.getLogger("api.access")

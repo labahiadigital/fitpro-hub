@@ -1,7 +1,9 @@
+import hashlib
+import hmac
 import logging
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, func
@@ -521,8 +523,7 @@ async def whatsapp_webhook(
     # Verify webhook signature from Kapso/WhatsApp provider
     webhook_secret = settings.WHATSAPP_WEBHOOK_SECRET if hasattr(settings, "WHATSAPP_WEBHOOK_SECRET") else None
     if webhook_secret:
-        import hmac
-        import hashlib
+
         signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")
         if not signature:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Firma de webhook ausente")
@@ -619,8 +620,7 @@ async def whatsapp_status_webhook(
     """
     webhook_secret = settings.WHATSAPP_WEBHOOK_SECRET if hasattr(settings, "WHATSAPP_WEBHOOK_SECRET") else None
     if webhook_secret:
-        import hmac
-        import hashlib
+
         signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")
         if not signature:
             return {"status": "error", "message": "Firma ausente"}

@@ -1,7 +1,9 @@
+import copy
+from datetime import date
 from typing import List, Optional
 from uuid import UUID
-from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, String, update
 from pydantic import BaseModel
@@ -451,8 +453,8 @@ async def create_program(
     """
     Crear un nuevo programa de entrenamiento.
     """
-    import copy
-    from datetime import date as date_type
+
+
 
     should_activate = data.client_id is not None and not data.is_template
 
@@ -470,12 +472,12 @@ async def create_program(
     parsed_end = None
     if data.start_date:
         try:
-            parsed_start = date_type.fromisoformat(data.start_date)
+            parsed_start = date.fromisoformat(data.start_date)
         except (ValueError, TypeError):
             pass
     if data.end_date:
         try:
-            parsed_end = date_type.fromisoformat(data.end_date)
+            parsed_end = date.fromisoformat(data.end_date)
         except (ValueError, TypeError):
             pass
 
@@ -551,21 +553,21 @@ async def update_program(
             detail="Programa no encontrado"
         )
     
-    from datetime import date as date_type
+
 
     for field, value in data.model_dump(exclude_unset=True).items():
         if value is None:
             continue
         if field in ("start_date", "end_date"):
             try:
-                setattr(program, field, date_type.fromisoformat(value) if value else None)
+                setattr(program, field, date.fromisoformat(value) if value else None)
             except (ValueError, TypeError):
                 pass
         else:
             setattr(program, field, value)
 
     if data.template is not None and program.client_id and not program.is_template:
-        import copy
+    
         program.executed_template = copy.deepcopy(data.template)
 
     await db.commit()
@@ -703,21 +705,21 @@ async def assign_program_to_client(
             detail="Cliente no encontrado en este workspace"
         )
 
-    from datetime import date as date_type
+
     parsed_start = None
     parsed_end = None
     if data.start_date:
         try:
-            parsed_start = date_type.fromisoformat(data.start_date)
+            parsed_start = date.fromisoformat(data.start_date)
         except (ValueError, TypeError):
             pass
     if data.end_date:
         try:
-            parsed_end = date_type.fromisoformat(data.end_date)
+            parsed_end = date.fromisoformat(data.end_date)
         except (ValueError, TypeError):
             pass
 
-    import copy
+
 
     await db.execute(
         update(WorkoutProgram)

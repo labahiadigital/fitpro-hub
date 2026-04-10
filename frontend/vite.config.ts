@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => ({
     drop: mode === "production" ? ["console", "debugger"] : [],
   },
   build: {
+    target: "es2022",
     reportCompressedSize: false,
     rollupOptions: {
       output: {
