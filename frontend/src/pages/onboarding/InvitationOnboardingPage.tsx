@@ -175,6 +175,13 @@ export function InvitationOnboardingPage() {
   const [sequraMerchant, setSequraMerchant] = useState("");
   const [sequraScriptUri, setSequraScriptUri] = useState("");
   const sequraFormRef = useRef<HTMLDivElement>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
 
   // Check if returning from payment
   const paymentParam = searchParams.get("payment");
@@ -199,22 +206,26 @@ export function InvitationOnboardingPage() {
         } else {
           // Might be pending IPN, poll a few times
           let attempts = 0;
-          const pollInterval = setInterval(async () => {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = setInterval(async () => {
             attempts++;
             try {
               const pollRes = await sequraApi.getOnboardingPaymentStatus(token);
               if (pollRes.data.payment_completed) {
-                clearInterval(pollInterval);
+                clearInterval(pollIntervalRef.current!);
+                pollIntervalRef.current = null;
                 setPaymentCompleted(true);
                 setPaymentRequired(false);
                 setCheckingPayment(false);
               } else if (attempts >= 10) {
-                clearInterval(pollInterval);
+                clearInterval(pollIntervalRef.current!);
+                pollIntervalRef.current = null;
                 setCheckingPayment(false);
               }
             } catch {
               if (attempts >= 10) {
-                clearInterval(pollInterval);
+                clearInterval(pollIntervalRef.current!);
+                pollIntervalRef.current = null;
                 setCheckingPayment(false);
               }
             }

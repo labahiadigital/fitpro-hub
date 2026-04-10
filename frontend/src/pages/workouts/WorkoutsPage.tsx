@@ -41,6 +41,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { openDangerConfirm } from "../../utils/confirmModal";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useMediaQuery } from "@mantine/hooks";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -692,14 +693,12 @@ export function WorkoutsPage() {
     }
   };
 
-  const handleDeleteProgram = async (programId: string) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este programa?")) {
-      try {
-        await deleteProgram.mutateAsync(programId);
-      } catch {
-        // Error handled
-      }
-    }
+  const handleDeleteProgram = (programId: string) => {
+    openDangerConfirm({
+      title: "Eliminar programa",
+      message: "¿Estás seguro de que quieres eliminar este programa?",
+      onConfirm: async () => { try { await deleteProgram.mutateAsync(programId); } catch { /* handled */ } },
+    });
   };
 
   const muscleGroups = [

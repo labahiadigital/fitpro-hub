@@ -53,6 +53,7 @@ import {
   IconUpload,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
+import { openDangerConfirm } from "../../utils/confirmModal";
 import { EmptyState } from "../../components/common/EmptyState";
 import { PageHeader } from "../../components/common/PageHeader";
 import { BottomSheet } from "../../components/common/BottomSheet";
@@ -362,24 +363,19 @@ export function FormsPage() {
     }
   };
 
-  const handleDeleteForm = async (formId: string, formName: string) => {
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar "${formName}"?`)) {
-      return;
-    }
-    try {
-      await deleteFormMutation.mutateAsync(formId);
-      notifications.show({
-        title: "Formulario eliminado",
-        message: `${formName} se ha eliminado correctamente`,
-        color: "green",
-      });
-    } catch (error) {
-      notifications.show({
-        title: "Error",
-        message: "No se pudo eliminar el formulario",
-        color: "red",
-      });
-    }
+  const handleDeleteForm = (formId: string, formName: string) => {
+    openDangerConfirm({
+      title: "Eliminar formulario",
+      message: `¿Estás seguro de que quieres eliminar "${formName}"?`,
+      onConfirm: async () => {
+        try {
+          await deleteFormMutation.mutateAsync(formId);
+          notifications.show({ title: "Formulario eliminado", message: `${formName} se ha eliminado correctamente`, color: "green" });
+        } catch {
+          notifications.show({ title: "Error", message: "No se pudo eliminar el formulario", color: "red" });
+        }
+      },
+    });
   };
 
   const getFormTypeColor = (type: FormTemplate["type"]) => {

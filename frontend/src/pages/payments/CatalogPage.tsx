@@ -45,6 +45,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
+import { openDangerConfirm } from "../../utils/confirmModal";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   useSubscriptions,
@@ -232,22 +233,25 @@ export function CatalogPage() {
     } catch { /* handled by mutation */ }
   }, [editingProduct, updateProduct, createProduct, closeProductModal, productForm]);
 
-  const handleDeleteProduct = useCallback(async (product: Product) => {
-    if (!window.confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?`)) return;
-    try {
-      await deleteProduct.mutateAsync(product.id);
-    } catch { /* handled by mutation */ }
+  const handleDeleteProduct = useCallback((product: Product) => {
+    openDangerConfirm({
+      title: "Eliminar producto",
+      message: `¿Estás seguro de que quieres eliminar "${product.name}"?`,
+      onConfirm: async () => { try { await deleteProduct.mutateAsync(product.id); } catch { /* handled */ } },
+    });
   }, [deleteProduct]);
 
   const handleToggleActive = useCallback((product: Product) => {
     toggleProductActive.mutate({ id: product.id, is_active: !product.is_active });
   }, [toggleProductActive]);
 
-  const handleCancelSubscription = useCallback(async (sub: Subscription) => {
-    if (!window.confirm(`¿Cancelar la suscripción "${sub.plan_name || sub.name}" de ${sub.client_name || "este cliente"}?`)) return;
-    try {
-      await cancelSubscription.mutateAsync(sub.id);
-    } catch { /* handled by mutation */ }
+  const handleCancelSubscription = useCallback((sub: Subscription) => {
+    openDangerConfirm({
+      title: "Cancelar suscripción",
+      message: `¿Cancelar la suscripción "${sub.plan_name || sub.name}" de ${sub.client_name || "este cliente"}?`,
+      confirmLabel: "Cancelar suscripción",
+      onConfirm: async () => { try { await cancelSubscription.mutateAsync(sub.id); } catch { /* handled */ } },
+    });
   }, [cancelSubscription]);
 
   const getPublicLink = useCallback((product: Product) => {

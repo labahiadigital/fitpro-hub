@@ -59,6 +59,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { openDangerConfirm } from "../../utils/confirmModal";
 import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
@@ -328,10 +329,13 @@ export function SettingsPage() {
     }
   };
 
-  const handleDisconnectWhatsApp = async () => {
-    if (window.confirm("¿Estás seguro de que quieres desconectar WhatsApp? Los mensajes existentes se conservarán.")) {
-      await disconnectWhatsApp.mutateAsync();
-    }
+  const handleDisconnectWhatsApp = () => {
+    openDangerConfirm({
+      title: "Desconectar WhatsApp",
+      message: "¿Estás seguro de que quieres desconectar WhatsApp? Los mensajes existentes se conservarán.",
+      confirmLabel: "Desconectar",
+      onConfirm: async () => { await disconnectWhatsApp.mutateAsync(); },
+    });
   };
 
   const handleConnectGoogleCalendar = async () => {
@@ -345,10 +349,13 @@ export function SettingsPage() {
     }
   };
 
-  const handleDisconnectGoogleCalendar = async () => {
-    if (window.confirm("¿Estás seguro de que quieres desconectar Google Calendar?")) {
-      await disconnectGoogleCalendar.mutateAsync();
-    }
+  const handleDisconnectGoogleCalendar = () => {
+    openDangerConfirm({
+      title: "Desconectar Google Calendar",
+      message: "¿Estás seguro de que quieres desconectar Google Calendar?",
+      confirmLabel: "Desconectar",
+      onConfirm: async () => { await disconnectGoogleCalendar.mutateAsync(); },
+    });
   };
 
   // ==================== WORKSPACE ====================

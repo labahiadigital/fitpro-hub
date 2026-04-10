@@ -43,6 +43,7 @@ import {
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { useState, useMemo } from "react";
+import { openDangerConfirm } from "../../utils/confirmModal";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   useBookings,
@@ -264,26 +265,31 @@ export function CalendarPage() {
     }
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    if (window.confirm("¿Estás seguro de que quieres cancelar esta sesión?")) {
-      try {
-        await cancelBooking.mutateAsync(bookingId);
-        setSelectedBooking(null);
-      } catch {
-        // Error handled by mutation
-      }
-    }
+  const handleCancelBooking = (bookingId: string) => {
+    openDangerConfirm({
+      title: "Cancelar sesión",
+      message: "¿Estás seguro de que quieres cancelar esta sesión?",
+      confirmLabel: "Cancelar sesión",
+      onConfirm: async () => {
+        try {
+          await cancelBooking.mutateAsync(bookingId);
+          setSelectedBooking(null);
+        } catch { /* handled */ }
+      },
+    });
   };
 
-  const handleDeleteBooking = async (bookingId: string) => {
-    if (window.confirm("¿Estás seguro de que quieres ELIMINAR esta sesión permanentemente? Esta acción no se puede deshacer.")) {
-      try {
-        await deleteBooking.mutateAsync(bookingId);
-        setSelectedBooking(null);
-      } catch {
-        // Error handled by mutation
-      }
-    }
+  const handleDeleteBooking = (bookingId: string) => {
+    openDangerConfirm({
+      title: "Eliminar sesión",
+      message: "¿Estás seguro de que quieres ELIMINAR esta sesión permanentemente? Esta acción no se puede deshacer.",
+      onConfirm: async () => {
+        try {
+          await deleteBooking.mutateAsync(bookingId);
+          setSelectedBooking(null);
+        } catch { /* handled */ }
+      },
+    });
   };
 
   const handleCompleteBooking = async (bookingId: string) => {

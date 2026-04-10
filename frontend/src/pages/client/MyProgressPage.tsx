@@ -41,6 +41,7 @@ import {
   IconUpload,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
+import { openDangerConfirm } from "../../utils/confirmModal";
 import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos, useDeleteProgressPhoto } from "../../hooks/useClientPortal";
 import { formatDecimal } from "../../utils/format";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
@@ -1121,9 +1122,11 @@ export function MyProgressPage() {
                             style={{ position: "absolute", top: 6, right: 6, zIndex: 2 }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (window.confirm("¿Eliminar esta foto?")) {
-                                deletePhotoMutation.mutate(photo.ref_url || photo.url);
-                              }
+                              openDangerConfirm({
+                                title: "Eliminar foto",
+                                message: "¿Eliminar esta foto?",
+                                onConfirm: () => deletePhotoMutation.mutate(photo.ref_url || photo.url),
+                              });
                             }}
                           >
                             <IconTrash size={14} />

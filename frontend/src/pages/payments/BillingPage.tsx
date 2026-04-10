@@ -56,6 +56,8 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useMemo, useState } from "react";
+import { notifications } from "@mantine/notifications";
+import { openConfirm, openDangerConfirm } from "../../utils/confirmModal";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   usePayments,
@@ -335,37 +337,60 @@ export function BillingPage() {
     openInvoicePreview();
   }, [openInvoicePreview]);
 
-  const handleFinalizeInvoice = useCallback(async (inv: Invoice) => {
-    if (!window.confirm(`¿Finalizar la factura ${inv.invoice_number}? Una vez emitida no se podrá editar.`)) return;
-    try { await finalizeInvoice.mutateAsync(inv.id); } catch { /* handled */ }
+  const handleFinalizeInvoice = useCallback((inv: Invoice) => {
+    openConfirm({
+      title: "Finalizar factura",
+      message: `¿Finalizar la factura ${inv.invoice_number}? Una vez emitida no se podrá editar.`,
+      confirmLabel: "Finalizar",
+      color: "blue",
+      onConfirm: async () => { try { await finalizeInvoice.mutateAsync(inv.id); } catch { /* handled */ } },
+    });
   }, [finalizeInvoice]);
 
-  const handleMarkInvoicePaid = useCallback(async (inv: Invoice) => {
-    if (!window.confirm(`¿Marcar como pagada la factura ${inv.invoice_number} (${formatDecimal(Number(inv.total), 2)} €)?`)) return;
-    try { await markInvoicePaid.mutateAsync({ id: inv.id }); } catch { /* handled */ }
+  const handleMarkInvoicePaid = useCallback((inv: Invoice) => {
+    openConfirm({
+      title: "Marcar como pagada",
+      message: `¿Marcar como pagada la factura ${inv.invoice_number} (${formatDecimal(Number(inv.total), 2)} €)?`,
+      confirmLabel: "Marcar pagada",
+      color: "green",
+      onConfirm: async () => { try { await markInvoicePaid.mutateAsync({ id: inv.id }); } catch { /* handled */ } },
+    });
   }, [markInvoicePaid]);
 
-  const handleDeleteInvoice = useCallback(async (inv: Invoice) => {
-    if (!window.confirm(`¿Eliminar la factura en borrador ${inv.invoice_number}?`)) return;
-    try { await deleteInvoice.mutateAsync(inv.id); } catch { /* handled */ }
+  const handleDeleteInvoice = useCallback((inv: Invoice) => {
+    openDangerConfirm({
+      title: "Eliminar factura",
+      message: `¿Eliminar la factura en borrador ${inv.invoice_number}?`,
+      onConfirm: async () => { try { await deleteInvoice.mutateAsync(inv.id); } catch { /* handled */ } },
+    });
   }, [deleteInvoice]);
 
   const handleDuplicateInvoice = useCallback(async (inv: Invoice) => {
     try { await duplicateInvoice.mutateAsync(inv.id); } catch { /* handled */ }
   }, [duplicateInvoice]);
 
-  const handleRectifyInvoice = useCallback(async (inv: Invoice) => {
-    if (!window.confirm(`¿Crear una factura rectificativa para ${inv.invoice_number}?`)) return;
-    try { await createRectificative.mutateAsync(inv.id); } catch { /* handled */ }
+  const handleRectifyInvoice = useCallback((inv: Invoice) => {
+    openConfirm({
+      title: "Factura rectificativa",
+      message: `¿Crear una factura rectificativa para ${inv.invoice_number}?`,
+      confirmLabel: "Crear rectificativa",
+      color: "orange",
+      onConfirm: async () => { try { await createRectificative.mutateAsync(inv.id); } catch { /* handled */ } },
+    });
   }, [createRectificative]);
 
   const handleSendInvoiceEmail = useCallback(async (inv: Invoice) => {
     if (!inv.client_email) {
-      window.alert("El cliente no tiene email configurado");
+      notifications.show({ title: "Sin email", message: "El cliente no tiene email configurado", color: "orange" });
       return;
     }
-    if (!window.confirm(`¿Enviar factura ${inv.invoice_number} a ${inv.client_email}?`)) return;
-    try { await sendInvoiceEmail.mutateAsync(inv.id); } catch { /* handled */ }
+    openConfirm({
+      title: "Enviar factura",
+      message: `¿Enviar factura ${inv.invoice_number} a ${inv.client_email}?`,
+      confirmLabel: "Enviar",
+      color: "blue",
+      onConfirm: async () => { try { await sendInvoiceEmail.mutateAsync(inv.id); } catch { /* handled */ } },
+    });
   }, [sendInvoiceEmail]);
 
   const handleDownloadPdf = useCallback((inv: Invoice) => {
@@ -450,14 +475,22 @@ export function BillingPage() {
     openPaymentDetail();
   }, [openPaymentDetail]);
 
-  const handleMarkPaid = useCallback(async (payment: Payment) => {
-    if (!window.confirm(`¿Marcar el cobro de €${formatDecimal(Number(payment.amount), 2)} como pagado?`)) return;
-    try { await markPaymentPaid.mutateAsync(payment.id); } catch { /* handled */ }
+  const handleMarkPaid = useCallback((payment: Payment) => {
+    openConfirm({
+      title: "Marcar como pagado",
+      message: `¿Marcar el cobro de €${formatDecimal(Number(payment.amount), 2)} como pagado?`,
+      confirmLabel: "Marcar pagado",
+      color: "green",
+      onConfirm: async () => { try { await markPaymentPaid.mutateAsync(payment.id); } catch { /* handled */ } },
+    });
   }, [markPaymentPaid]);
 
-  const handleDeletePaymentAction = useCallback(async (payment: Payment) => {
-    if (!window.confirm(`¿Eliminar este cobro de €${formatDecimal(Number(payment.amount), 2)}?`)) return;
-    try { await deletePayment.mutateAsync(payment.id); } catch { /* handled */ }
+  const handleDeletePaymentAction = useCallback((payment: Payment) => {
+    openDangerConfirm({
+      title: "Eliminar cobro",
+      message: `¿Eliminar este cobro de €${formatDecimal(Number(payment.amount), 2)}?`,
+      onConfirm: async () => { try { await deletePayment.mutateAsync(payment.id); } catch { /* handled */ } },
+    });
   }, [deletePayment]);
 
   const handleCreateCharge = useCallback(async (values: typeof chargeForm.values) => {

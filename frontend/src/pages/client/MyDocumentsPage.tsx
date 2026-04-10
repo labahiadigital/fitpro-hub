@@ -27,6 +27,7 @@ import {
 import { clientPortalApi } from "../../services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { openDangerConfirm } from "../../utils/confirmModal";
 import { notifications } from "@mantine/notifications";
 
 interface DocumentItem {
@@ -210,9 +211,11 @@ export function MyDocumentsPage() {
                           variant="light"
                           color="red"
                           onClick={() => {
-                            if (window.confirm("¿Eliminar este documento?")) {
-                              deleteMutation.mutate(doc.id);
-                            }
+                            openDangerConfirm({
+                              title: "Eliminar documento",
+                              message: "¿Eliminar este documento?",
+                              onConfirm: () => deleteMutation.mutate(doc.id),
+                            });
                           }}
                         >
                           <IconTrash size={16} />

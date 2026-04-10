@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, type ComponentType } from "react";
 import { Center, Loader, MantineProvider } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
+import { ModalsProvider } from "@mantine/modals";
 import { Notifications, notifications } from "@mantine/notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
@@ -211,6 +212,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <MantineProvider defaultColorScheme="light" theme={theme}>
         <DatesProvider settings={{ locale: "es" }}>
+          <ModalsProvider>
           <Notifications position="top-right" />
           <ErrorBoundary>
           <BrowserRouter>
@@ -309,6 +311,7 @@ export default function App() {
             </Suspense>
           </BrowserRouter>
           </ErrorBoundary>
+          </ModalsProvider>
         </DatesProvider>
       </MantineProvider>
     </QueryClientProvider>

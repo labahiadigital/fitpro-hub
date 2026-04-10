@@ -718,7 +718,7 @@ export function ClientDetailPage() {
 
   // Sync formula from saved client data when loaded
   useEffect(() => {
-    const saved = (fetchedClient as any)?.health_data?.formula_used;
+    const saved = fetchedClient?.health_data?.formula_used;
     if (saved === "harris" || saved === "mifflin") setSelectedFormula(saved);
   }, [fetchedClient]);
 
@@ -743,8 +743,8 @@ export function ClientDetailPage() {
     : 30;
 
   // Obtener datos de health_data o valores por defecto
-  const activityLevel = (client as any).health_data?.activity_level || "moderate";
-  const goalType = (client as any).health_data?.goal_type || "maintenance";
+  const activityLevel = client.health_data?.activity_level || "moderate";
+  const goalType = client.health_data?.goal_type || "maintenance";
 
   // Calcular BMR (Mifflin-St Jeor o Harris-Benedict según fórmula seleccionada)
   const clientBMR = (() => {
@@ -1305,7 +1305,7 @@ export function ClientDetailPage() {
 
   // Handler para abrir modal de lesiones
   const handleOpenInjuriesModal = () => {
-    const healthData = (client as any).health_data || {};
+    const healthData = client.health_data || {};
     const injuries = healthData.injuries || client.injuries || [];
     const formattedInjuries = injuries.map((injury: any) => ({
       name: typeof injury === 'string' ? injury : injury.name || '',
@@ -1354,7 +1354,7 @@ export function ClientDetailPage() {
 
   // Handler para abrir modal de actividad y objetivos
   const handleOpenActivityModal = () => {
-    const healthData = (client as any).health_data || {};
+    const healthData = client.health_data || {};
     setEditingActivityLevel(healthData.activity_level || '');
     setEditingFitnessGoal(healthData.fitness_goal || '');
     setEditingTrainingDays(healthData.training_days_per_week || '');
@@ -1388,7 +1388,7 @@ export function ClientDetailPage() {
 
   // Handler para abrir modal de información médica
   const handleOpenMedicalModal = () => {
-    const healthData = (client as any).health_data || {};
+    const healthData = client.health_data || {};
     setEditingMedicalConditions(healthData.medical_conditions || '');
     setEditingMedications(healthData.medications || '');
     openMedicalModal();
@@ -1416,7 +1416,7 @@ export function ClientDetailPage() {
 
   // Handler para abrir modal de PAR-Q
   const handleOpenParqModal = () => {
-    const parqResponses = (client as any).health_data?.parq_responses || {};
+    const parqResponses = client.health_data?.parq_responses || {};
     // Convertir valores string "true"/"false" a boolean
     const toBool = (val: any) => val === true || val === "true";
     setEditingParq({
@@ -1607,9 +1607,9 @@ export function ClientDetailPage() {
                       {
                         workspaceName: currentWorkspace?.name || "Trackfiz",
                         trainerName: user?.full_name || "Entrenador",
-                        branding: (currentWorkspace as any)?.branding,
-                        workspaceLogo: (currentWorkspace as any)?.logo_url,
-                        client: { first_name: client.first_name, last_name: client.last_name, email: client.email, phone: client.phone, birth_date: (client as any).birth_date, gender: client.gender, weight_kg: client.weight_kg, height_cm: client.height_cm, body_fat_pct: (client as any).body_fat_pct, activity_level: (client as any).activity_level, allergies: (client as any).health_data?.allergens || [], intolerances: (client as any).health_data?.intolerances || [], goals: client.goals, health_data: (client as any).health_data, avatar_url: (client as any).avatar_url },
+                        branding: currentWorkspace?.branding,
+                        workspaceLogo: currentWorkspace?.logo_url,
+                        client: { first_name: client.first_name, last_name: client.last_name, email: client.email, phone: client.phone, birth_date: client.birth_date, gender: client.gender, weight_kg: client.weight_kg, height_cm: client.height_cm, body_fat_pct: client.body_fat_pct, activity_level: client.activity_level, allergies: client.health_data?.allergens || [], intolerances: client.health_data?.intolerances || [], goals: client.goals, health_data: client.health_data, avatar_url: client.avatar_url },
                         progressData: {
                           currentWeight: clientMeasurements?.[0]?.weight_kg ?? clientProgressSummary?.current_stats?.weight ?? client.weight_kg ?? undefined,
                           startWeight: clientMeasurements?.length > 1 ? (clientMeasurements[clientMeasurements.length - 1]?.weight_kg ?? undefined) : (clientProgressSummary?.start_stats?.weight ?? undefined),
@@ -1625,11 +1625,11 @@ export function ClientDetailPage() {
                   }}>General</Menu.Item>
                   <Menu.Item leftSection={<IconSalad size={16} />} onClick={async () => {
                     const mp = clientMealPlans && clientMealPlans.length > 0 ? clientMealPlans.find((p: any) => p.is_active) || clientMealPlans[0] : null;
-                    if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                    if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any }); }
                   }}>Nutrición</Menu.Item>
                   <Menu.Item leftSection={<IconBarbell size={16} />} onClick={async () => {
                     const prog = clientWorkoutPrograms && clientWorkoutPrograms.length > 0 ? clientWorkoutPrograms[0] : null;
-                    if (prog) { await generateWorkoutProgramPDF(prog as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                    if (prog) { await generateWorkoutProgramPDF(prog as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any }); }
                   }}>Entrenamiento</Menu.Item>
                 </Menu.Dropdown>
               </Menu>
@@ -1855,11 +1855,11 @@ export function ClientDetailPage() {
 
               {(() => {
                 // Combinar alergias de ambas fuentes (allergens del modal y allergies del onboarding)
-                const allergens = (client as any).health_data?.allergens || [];
-                const allergiesOnboarding = (client as any).health_data?.allergies || [];
+                const allergens = client.health_data?.allergens || [];
+                const allergiesOnboarding = client.health_data?.allergies || [];
                 const allAllergies = [...new Set([...allergens, ...allergiesOnboarding])];
-                const intolerances = (client as any).health_data?.intolerances || [];
-                const injuries = (client as any).health_data?.injuries || client.injuries || [];
+                const intolerances = client.health_data?.intolerances || [];
+                const injuries = client.health_data?.injuries || client.injuries || [];
                 
                 const hasData = allAllergies.length > 0 || intolerances.length > 0 || injuries.length > 0;
                 
@@ -1977,10 +1977,10 @@ export function ClientDetailPage() {
               </Group>
 
               {(() => {
-                const allergens = (client as any).health_data?.allergens || [];
-                const allergiesOnboarding = (client as any).health_data?.allergies || [];
+                const allergens = client.health_data?.allergens || [];
+                const allergiesOnboarding = client.health_data?.allergies || [];
                 const allAllergies = [...new Set([...allergens, ...allergiesOnboarding])];
-                const intolerances = (client as any).health_data?.intolerances || [];
+                const intolerances = client.health_data?.intolerances || [];
                 
                 const hasData = allAllergies.length > 0 || intolerances.length > 0;
                 
@@ -2034,7 +2034,7 @@ export function ClientDetailPage() {
               </Group>
 
               {(() => {
-                const injuries = (client as any).health_data?.injuries || client.injuries || [];
+                const injuries = client.health_data?.injuries || client.injuries || [];
                 
                 if (injuries.length === 0) {
                   return <Text c="dimmed" size="sm">Sin lesiones registradas</Text>;
@@ -2108,7 +2108,7 @@ export function ClientDetailPage() {
               </Group>
 
               {(() => {
-                const healthData = (client as any).health_data || {};
+                const healthData = client.health_data || {};
                 
                 // Traducciones
                 const activityLevelMap: Record<string, string> = {
@@ -2215,7 +2215,7 @@ export function ClientDetailPage() {
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     Cuestionario PAR-Q
                   </Text>
-                  {(client as any).health_data?.parq_risk && (
+                  {client.health_data?.parq_risk && (
                     <Badge color="red" variant="filled" size="sm">⚠ Riesgo identificado</Badge>
                   )}
                 </Group>
@@ -2225,7 +2225,7 @@ export function ClientDetailPage() {
               </Group>
 
               {(() => {
-                const parqResponses = (client as any).health_data?.parq_responses;
+                const parqResponses = client.health_data?.parq_responses;
 
                 if (!parqResponses) {
                   return <Text c="dimmed" size="sm">Sin cuestionario PAR-Q completado</Text>;
@@ -2294,7 +2294,7 @@ export function ClientDetailPage() {
               </Group>
 
               {(() => {
-                const healthData = (client as any).health_data || {};
+                const healthData = client.health_data || {};
                 const hasData = healthData.medical_conditions || healthData.medications;
                 
                 if (!hasData) {
@@ -2365,8 +2365,8 @@ export function ClientDetailPage() {
                   activity_level: activityLevel as any,
                   body_tendency: "normal",
                   goal_type: goalType as any,
-                  allergies: (client as any).health_data?.allergens || [],
-                  intolerances: (client as any).health_data?.intolerances || [],
+                  allergies: client.health_data?.allergens || [],
+                  intolerances: client.health_data?.intolerances || [],
                 }}
                 onEdit={() => navigate(`/nutrition?edit=${viewingMealPlanId}&clientId=${id}&returnTo=/clients/${id}`)}
                 onExportPDF={async () => {
@@ -2443,16 +2443,16 @@ export function ClientDetailPage() {
                             last_name: client.last_name,
                             email: client.email,
                             phone: client.phone,
-                            birth_date: (client as any).birth_date,
+                            birth_date: client.birth_date,
                             gender: client.gender,
                             weight_kg: client.weight_kg,
                             height_cm: client.height_cm,
-                            activity_level: (client as any).activity_level,
-                            allergies: (client as any).health_data?.allergens || [],
-                            intolerances: (client as any).health_data?.intolerances || [],
+                            activity_level: client.activity_level,
+                            allergies: client.health_data?.allergens || [],
+                            intolerances: client.health_data?.intolerances || [],
                             goals: client.goals,
-                            health_data: (client as any).health_data,
-                            avatar_url: (client as any).avatar_url,
+                            health_data: client.health_data,
+                            avatar_url: client.avatar_url,
                           },
                           progressData: {
                             currentWeight: clientMeasurements?.[0]?.weight_kg ?? clientProgressSummary?.current_stats?.weight ?? client.weight_kg ?? undefined,
@@ -2659,7 +2659,7 @@ export function ClientDetailPage() {
                 </Box>
 
                 {/* Alergias e intolerancias */}
-                {((client as any).health_data?.allergens?.length > 0 || (client as any).health_data?.intolerances?.length > 0) && (
+                {(client.health_data?.allergens?.length > 0 || client.health_data?.intolerances?.length > 0) && (
                   <Box mt="md" p="md" style={{ background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
                     <Group gap="xs" mb="xs">
                       <IconAlertTriangle size={16} color="#EF4444" />
@@ -2667,8 +2667,8 @@ export function ClientDetailPage() {
                     </Group>
                     <Group gap="xs">
                       {[
-                        ...((client as any).health_data?.allergens || []),
-                        ...((client as any).health_data?.intolerances || [])
+                        ...(client.health_data?.allergens || []),
+                        ...(client.health_data?.intolerances || [])
                       ].map((item: string, idx: number) => (
                         <Badge key={idx} color="red" variant="light" size="sm">{item}</Badge>
                       ))}
@@ -2788,7 +2788,7 @@ export function ClientDetailPage() {
                                 leftSection={<IconDownload size={16} />}
                                 onClick={async () => {
                                   const mp = clientMealPlans?.find((p: any) => p.id === plan.id);
-                                  if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any }); }
+                                  if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any }); }
                                 }}
                               >
                                 Descargar PDF
@@ -3516,7 +3516,7 @@ export function ClientDetailPage() {
                           <Menu.Item 
                             leftSection={<IconDownload size={16} />}
                             onClick={async () => {
-                              await generateWorkoutProgramPDF(program as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: (currentWorkspace as any)?.branding, workspaceLogo: (currentWorkspace as any)?.logo_url, client: client as any });
+                              await generateWorkoutProgramPDF(program as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any });
                             }}
                           >
                             Descargar PDF
@@ -4228,16 +4228,16 @@ export function ClientDetailPage() {
                             last_name: client.last_name,
                             email: client.email,
                             phone: client.phone,
-                            birth_date: (client as any).birth_date,
+                            birth_date: client.birth_date,
                             gender: client.gender,
                             weight_kg: client.weight_kg,
                             height_cm: client.height_cm,
-                            activity_level: (client as any).activity_level,
-                            allergies: (client as any).health_data?.allergens || [],
-                            intolerances: (client as any).health_data?.intolerances || [],
+                            activity_level: client.activity_level,
+                            allergies: client.health_data?.allergens || [],
+                            intolerances: client.health_data?.intolerances || [],
                             goals: client.goals,
-                            health_data: (client as any).health_data,
-                            avatar_url: (client as any).avatar_url,
+                            health_data: client.health_data,
+                            avatar_url: client.avatar_url,
                           },
                           progressData: {
                             currentWeight: clientMeasurements?.[0]?.weight_kg ?? clientProgressSummary?.current_stats?.weight ?? client.weight_kg ?? undefined,

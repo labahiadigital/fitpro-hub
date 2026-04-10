@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Integer, ForeignKey, Boolean, Date, text
+from sqlalchemy import Column, Index, String, Text, Integer, ForeignKey, Boolean, Date, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
@@ -8,6 +8,9 @@ from app.models.base import BaseModel
 
 class WorkoutProgram(BaseModel):
     __tablename__ = "workout_programs"
+    __table_args__ = (
+        Index("ix_workout_programs_client_template_active", "client_id", "is_template", "is_active"),
+    )
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

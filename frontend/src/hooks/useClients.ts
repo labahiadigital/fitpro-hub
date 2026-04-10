@@ -3,6 +3,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientsApi, workoutsApi, nutritionApi } from "../services/api";
 import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 
+export interface ClientHealthData {
+  allergens?: string[];
+  allergies?: string[];
+  intolerances?: string[];
+  injuries?: Array<{ name: string; date?: string; notes?: string; status?: string }>;
+  formula_used?: string;
+  activity_level?: string;
+  goal_type?: string;
+  body_tendency?: string;
+  goal_weight_kg?: number;
+  parq_responses?: Record<string, boolean | string>;
+  parq_risk?: boolean;
+  medications?: string | string[];
+  medical_conditions?: string | string[];
+  diseases?: string[];
+  [key: string]: unknown;
+}
+
 interface Client {
   id: string;
   first_name: string;
@@ -44,7 +62,7 @@ export function useClients(filters: ClientFilters = {}) {
 }
 
 // Extended client data for detail view
-interface ClientDetail extends Client {
+export interface ClientDetail extends Client {
   birth_date?: string;
   gender?: string;
   height_cm?: number;
@@ -58,12 +76,10 @@ interface ClientDetail extends Client {
     health_data: boolean;
     consent_date: string;
   };
-  health_data?: {
-    allergies?: string[];
-    intolerances?: string[];
-    injuries?: Array<{ name: string; date?: string; notes?: string; status?: string }>;
-    [key: string]: unknown;
-  };
+  injuries?: Array<{ name: string; date?: string; notes?: string; status?: string }>;
+  body_fat_pct?: number;
+  activity_level?: string;
+  health_data?: ClientHealthData;
   tax_id?: string;
   billing_address?: string;
   billing_city?: string;

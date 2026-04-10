@@ -1,5 +1,5 @@
 """Nutrition and Food models."""
-from sqlalchemy import Column, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR, UniqueConstraint, Date
+from sqlalchemy import Column, Index, String, Text, ForeignKey, Float, Boolean, Numeric, Integer, CHAR, UniqueConstraint, Date
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.ext.mutable import MutableDict
@@ -150,6 +150,9 @@ class MealPlan(BaseModel):
     """Meal plan model - matches Supabase schema."""
     
     __tablename__ = "meal_plans"
+    __table_args__ = (
+        Index("ix_meal_plans_client_template_active", "client_id", "is_template", "is_active"),
+    )
     
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=True, index=True)

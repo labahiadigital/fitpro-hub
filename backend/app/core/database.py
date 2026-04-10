@@ -46,10 +46,11 @@ def _create_engine():
     return create_async_engine(
         database_url,
         echo=False,
-        pool_size=5,
-        max_overflow=10,
+        pool_size=20,
+        max_overflow=30,
         pool_pre_ping=True,
         pool_recycle=300,
+        pool_timeout=30,
         connect_args=connect_args,
     )
 
