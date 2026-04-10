@@ -46,6 +46,7 @@ import {
   IconBuildingStore,
   IconDownload,
   IconChecklist,
+  IconBox,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -87,6 +88,7 @@ const ALL_TRAINER_NAV_ITEMS = (unreadCount: number): NavItemWithPermission[] => 
   { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
   { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
   { icon: <IconPackage size={20} />, label: "Catálogo", to: "/catalog", requiredResource: "catalog" },
+  { icon: <IconBox size={20} />, label: "Stock", to: "/stock", requiredResource: "catalog" },
   { icon: <IconReceipt size={20} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
   { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community", requiredResource: "community" },
   { icon: <IconUsersGroup size={20} />, label: "Equipo", to: "/team", requiredResource: "team" },
@@ -537,6 +539,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/supplements": "Suplementos",
   "/forms": "Formularios",
   "/catalog": "Catálogo",
+  "/stock": "Stock",
   "/billing": "Facturación",
   "/community": "Comunidad",
   "/documents": "Documentos",

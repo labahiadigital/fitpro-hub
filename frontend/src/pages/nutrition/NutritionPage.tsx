@@ -316,6 +316,7 @@ export function NutritionPage() {
   }, [navigate, returnTo, clientId]);
 
   const [activeTab, setActiveTab] = useState<string | null>("templates");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [editFoodTab, setEditFoodTab] = useState<string | null>("general");
   const [foodDetailTab, setFoodDetailTab] = useState<string | null>("general");
@@ -715,26 +716,21 @@ export function NutritionPage() {
 
       <Tabs onChange={setActiveTab} value={activeTab}>
         {!isMobile && (
-          <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <Tabs.Tab leftSection={<IconTemplate size={14} />} value="templates" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Plantillas {templates.length > 0 && <Badge ml="xs" size="xs" radius="md" variant="light">{templates.length}</Badge>}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconUsers size={14} />} value="plans" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Planes de Clientes {clientPlans.length > 0 && <Badge ml="xs" size="xs" radius="md" variant="light">{clientPlans.length}</Badge>}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconToolsKitchen2 size={14} />} value="recipes" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Recetas {recipes.length > 0 && <Badge ml="xs" size="xs" radius="md" variant="light">{recipes.length}</Badge>}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconApple size={14} />} value="foods" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Alimentos {(totalFoodsCount ?? 0) > 0 && <Badge ml="xs" size="xs" radius="md" variant="light">{totalFoodsCount?.toLocaleString()}</Badge>}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconSalad size={14} />} value="food-groups" style={{ fontWeight: 600, fontSize: "13px" }}>Grupos</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconPill size={14} />} value="supplements" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Suplementos {supplements.length > 0 && <Badge ml="xs" size="xs" radius="md" variant="light">{supplements.length}</Badge>}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconGlass size={14} />} value="beverages" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Bebidas
-            </Tabs.Tab>
+          <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)", flexWrap: "nowrap" }}>
+            {([
+              { value: "templates", icon: <IconTemplate size={14} />, label: "Plantillas", count: templates.length },
+              { value: "plans", icon: <IconUsers size={14} />, label: "Planes de Clientes", count: clientPlans.length },
+              { value: "recipes", icon: <IconToolsKitchen2 size={14} />, label: "Recetas", count: recipes.length },
+              { value: "foods", icon: <IconApple size={14} />, label: "Alimentos", count: totalFoodsCount ?? 0 },
+              { value: "food-groups", icon: <IconSalad size={14} />, label: "Grupos", count: 0 },
+              { value: "supplements", icon: <IconPill size={14} />, label: "Suplementos", count: supplements.length },
+              { value: "beverages", icon: <IconGlass size={14} />, label: "Bebidas", count: 0 },
+            ] as const).map((t) => (
+              <Tabs.Tab key={t.value} leftSection={t.icon} value={t.value} style={{ fontWeight: 600, fontSize: "13px", flexDirection: "column", gap: 2, alignItems: "center", minWidth: 0 }}>
+                {t.count > 0 && <Badge size="xs" radius="md" variant="light">{t.count.toLocaleString()}</Badge>}
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.label}</span>
+              </Tabs.Tab>
+            ))}
           </Tabs.List>
         )}
 
@@ -764,6 +760,7 @@ export function NutritionPage() {
             onEdit={(food) => { const orig = paginatedFoods?.items?.find((f: any) => f.id === food.id); setEditingFood(orig || food); openEditFoodModal(); }}
             onView={(food) => { const orig = paginatedFoods?.items?.find((f: any) => f.id === food.id); setViewingFood(orig || food); openFoodDetailModal(); }}
             onDelete={handleDeleteFood} onNewFood={openFoodModal} togglePending={toggleFoodFavorite.isPending} foodsPerPage={FOODS_PER_PAGE}
+            viewMode={viewMode} onViewModeChange={setViewMode}
           />
         </Tabs.Panel>
 

@@ -18,8 +18,10 @@ import {
   IconStarFilled,
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
+import { Table } from "@mantine/core";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
+import { ViewModeToggle } from "../../../components/common/ViewModeToggle";
 
 interface CategoryConfig {
   category: string;
@@ -52,6 +54,8 @@ interface CategoryExercisesTabProps {
   onNewExercise: (category: string) => void;
   onToggleFavorite: (exerciseId: string, isFavorite: boolean) => void;
   onEnlargeImage: (image: { url: string; name: string }) => void;
+  viewMode?: "grid" | "list";
+  onViewModeChange?: (mode: "grid" | "list") => void;
 }
 
 export function CategoryExercisesTab({
@@ -73,6 +77,8 @@ export function CategoryExercisesTab({
   onNewExercise,
   onToggleFavorite,
   onEnlargeImage,
+  viewMode = "grid",
+  onViewModeChange,
 }: CategoryExercisesTabProps) {
   return (
     <>
@@ -123,9 +129,48 @@ export function CategoryExercisesTab({
             clearable
           />
         )}
+        {onViewModeChange && <ViewModeToggle value={viewMode} onChange={onViewModeChange} />}
       </Group>
 
       {items.length > 0 ? (
+        viewMode === "list" ? (
+          <Table striped highlightOnHover withTableBorder style={{ borderRadius: 8, overflow: "hidden" }}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Nombre</Table.Th>
+                <Table.Th>Músculos</Table.Th>
+                <Table.Th>Acciones</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {items.map((exercise: any) => (
+                <Table.Tr key={exercise.id} style={{ cursor: "pointer" }} onClick={() => onEditExercise(exercise)}>
+                  <Table.Td>
+                    <Group gap={6} wrap="nowrap">
+                      <Text size="sm" fw={500} lineClamp={1} style={{ minWidth: 0 }}>
+                        {exercise.name}{exercise.alias ? ` (${exercise.alias})` : ""}
+                      </Text>
+                      {exercise.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>S</Badge>}
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap={4}>
+                      {exercise.muscle_groups?.slice(0, 3).map((m: string) => (
+                        <Badge key={m} size="xs" variant="light" color={cfg.color}>{m}</Badge>
+                      ))}
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap={4}>
+                      {!exercise.is_global && <ActionIcon size="xs" variant="subtle" color={cfg.color} onClick={(e) => { e.stopPropagation(); onEditExercise(exercise); }}><IconEdit size={12} /></ActionIcon>}
+                      <RectificationButton entityType="exercise" entityId={exercise.id} entityName={exercise.name} size="xs" />
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        ) : (
         <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
           {items.map((exercise: any) => (
             <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => onEditExercise(exercise)}>
@@ -179,6 +224,7 @@ export function CategoryExercisesTab({
             </Box>
           ))}
         </SimpleGrid>
+        )
       ) : loadingExercises ? null : (
         <EmptyState
           actionLabel={cfg.emptyLabel}

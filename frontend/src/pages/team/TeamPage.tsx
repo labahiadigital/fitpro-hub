@@ -352,7 +352,7 @@ export function TeamPage() {
   });
 
   const editGroupForm = useForm({
-    initialValues: { name: "", description: "", color: "blue" },
+    initialValues: { name: "", description: "", color: "blue", custom_role_id: "" as string },
     validate: { name: (v: string) => (v.trim() ? null : "El nombre es obligatorio") },
   });
 

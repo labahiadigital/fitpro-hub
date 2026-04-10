@@ -28,6 +28,7 @@ class Task(BaseModel):
     status = Column(String(20), nullable=False, default=TaskStatus.TODO.value, index=True)
     priority = Column(String(10), nullable=False, default=TaskPriority.MEDIUM.value)
     assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    team_group_id = Column(UUID(as_uuid=True), ForeignKey("team_groups.id", ondelete="SET NULL"), nullable=True, index=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     due_date = Column(DateTime(timezone=True), nullable=True)
     archived_at = Column(DateTime(timezone=True), nullable=True)

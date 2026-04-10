@@ -26,6 +26,7 @@ class TaskCreate(PydanticModel):
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority = TaskPriority.MEDIUM
     assigned_to: Optional[UUID] = None
+    team_group_id: Optional[UUID] = None
     due_date: Optional[datetime] = None
 
 
@@ -35,6 +36,7 @@ class TaskUpdate(PydanticModel):
     status: Optional[TaskStatus] = None
     priority: Optional[TaskPriority] = None
     assigned_to: Optional[UUID] = None
+    team_group_id: Optional[UUID] = None
     due_date: Optional[datetime] = None
 
 
@@ -50,6 +52,7 @@ class TaskResponse(PydanticModel):
     status: str
     priority: str
     assigned_to: Optional[UUID]
+    team_group_id: Optional[UUID] = None
     created_by: Optional[UUID]
     due_date: Optional[datetime]
     archived_at: Optional[datetime]

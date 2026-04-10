@@ -14,6 +14,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assigned_to?: string;
+  team_group_id?: string;
   created_by?: string;
   due_date?: string;
   archived_at?: string;
@@ -36,6 +37,7 @@ export interface CreateTaskData {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigned_to?: string;
+  team_group_id?: string;
   due_date?: string;
 }
 
@@ -45,6 +47,7 @@ export interface UpdateTaskData {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigned_to?: string;
+  team_group_id?: string;
   due_date?: string;
 }
 

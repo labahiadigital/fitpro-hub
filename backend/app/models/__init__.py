@@ -32,6 +32,7 @@ from app.models.team_group import TeamGroup, TeamGroupMember
 from app.models.rectification import RectificationRequest
 from app.models.beverage import Beverage
 from app.models.custom_role import CustomRole
+from app.models.stock import StockCategory, StockItem, StockMovement
 
 __all__ = [
     "Base",
@@ -100,4 +101,7 @@ __all__ = [
     "RectificationRequest",
     "Beverage",
     "CustomRole",
+    "StockCategory",
+    "StockItem",
+    "StockMovement",
 ]

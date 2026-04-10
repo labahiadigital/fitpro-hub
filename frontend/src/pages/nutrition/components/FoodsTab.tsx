@@ -22,10 +22,12 @@ import {
   IconStarFilled,
   IconTrash,
 } from "@tabler/icons-react";
+import { Table } from "@mantine/core";
 import type { Food } from "../../../components/nutrition/MealPlanBuilder";
 import { formatDecimal } from "../../../utils/format";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
+import { ViewModeToggle } from "../../../components/common/ViewModeToggle";
 
 const FOOD_CATEGORIES = [
   { value: "", label: "Todas las categorías" },
@@ -66,6 +68,8 @@ interface FoodsTabProps {
   onNewFood: () => void;
   togglePending: boolean;
   foodsPerPage: number;
+  viewMode?: "grid" | "list";
+  onViewModeChange?: (mode: "grid" | "list") => void;
 }
 
 export function FoodsTab({
@@ -95,6 +99,8 @@ export function FoodsTab({
   onNewFood,
   togglePending,
   foodsPerPage,
+  viewMode = "grid",
+  onViewModeChange,
 }: FoodsTabProps) {
   return (
     <>
@@ -145,6 +151,7 @@ export function FoodsTab({
             styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
           />
         )}
+        {onViewModeChange && <ViewModeToggle value={viewMode} onChange={onViewModeChange} />}
       </Group>
 
       {isLoading ? (
@@ -159,6 +166,43 @@ export function FoodsTab({
             {isFetching && <Loader size="xs" />}
           </Group>
 
+          {viewMode === "list" ? (
+            <Table striped highlightOnHover withTableBorder withColumnBorders={false} style={{ borderRadius: 8, overflow: "hidden" }}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Nombre</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>Kcal</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>Prot.</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>Carbs</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>Grasas</Table.Th>
+                  <Table.Th>Acciones</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {paginatedFoodsList.map((food) => (
+                  <Table.Tr key={food.id}>
+                    <Table.Td>
+                      <Group gap={6} wrap="nowrap">
+                        <Text size="sm" fw={500} lineClamp={1} style={{ minWidth: 0 }}>{food.name}</Text>
+                        {food.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>Sistema</Badge>}
+                      </Group>
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: "right" }}><Text size="sm">{formatDecimal(Number(food.calories || 0), 0)}</Text></Table.Td>
+                    <Table.Td style={{ textAlign: "right" }}><Text size="sm" c="red">{formatDecimal(Number(food.protein || 0), 0)}g</Text></Table.Td>
+                    <Table.Td style={{ textAlign: "right" }}><Text size="sm" c="blue">{formatDecimal(Number(food.carbs || 0), 0)}g</Text></Table.Td>
+                    <Table.Td style={{ textAlign: "right" }}><Text size="sm" c="green">{formatDecimal(Number(food.fat || 0), 0)}g</Text></Table.Td>
+                    <Table.Td>
+                      <Group gap={4} wrap="nowrap">
+                        <ActionIcon color="gray" onClick={() => onView(food)} size="sm" variant="subtle"><IconEye size={14} /></ActionIcon>
+                        {!food.is_global && <ActionIcon color="gray" onClick={() => onEdit(food)} size="sm" variant="subtle"><IconEdit size={14} /></ActionIcon>}
+                        {!food.is_global && <ActionIcon color="red" onClick={() => onDelete(food.id, food.name)} size="sm" variant="subtle"><IconTrash size={14} /></ActionIcon>}
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          ) : (
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} spacing="md" className="stagger">
             {paginatedFoodsList.map((food) => {
               const CategoryIcon = getCategoryIcon(food.category);
@@ -251,6 +295,7 @@ export function FoodsTab({
               );
             })}
           </SimpleGrid>
+          )}
 
           {totalPages > 1 && (
             <Center mt="xl">

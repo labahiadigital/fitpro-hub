@@ -98,6 +98,7 @@ export function WorkoutsPage() {
   }, [navigate, returnTo, clientId]);
 
   const [activeTab, setActiveTab] = useState<string | null>("templates");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [exerciseModalOpened, { open: openExerciseModal, close: closeExerciseModal }] = useDisclosure(false);
   const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false);
@@ -700,43 +701,20 @@ export function WorkoutsPage() {
       )}
       <Tabs onChange={setActiveTab} value={activeTab}>
         {!isMobile && (
-          <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <Tabs.Tab leftSection={<IconTemplate size={14} />} value="templates" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Plantillas{" "}
-              {templates.length > 0 && (
-                <Badge ml="xs" size="xs" radius="md" variant="light">{templates.length}</Badge>
-              )}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconUsers size={14} />} value="client-programs" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Programas de Clientes{" "}
-              {clientPrograms.length > 0 && (
-                <Badge ml="xs" size="xs" radius="md" variant="light">{clientPrograms.length}</Badge>
-              )}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconBarbell size={14} />} value="exercises" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Ejercicios{" "}
-              {exerciseCounts.fuerza > 0 && (
-                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.fuerza}</Badge>
-              )}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconFlame size={14} />} value="warmup" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Calentamiento{" "}
-              {exerciseCounts.calentamiento > 0 && (
-                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.calentamiento}</Badge>
-              )}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconStretching size={14} />} value="stretching" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Estiramientos{" "}
-              {exerciseCounts.estiramiento > 0 && (
-                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.estiramiento}</Badge>
-              )}
-            </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconHeartbeat size={14} />} value="cardio" style={{ fontWeight: 600, fontSize: "13px" }}>
-              Cardio{" "}
-              {exerciseCounts.cardio > 0 && (
-                <Badge ml="xs" size="xs" radius="md" variant="light">{exerciseCounts.cardio}</Badge>
-              )}
-            </Tabs.Tab>
+          <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)", flexWrap: "nowrap" }}>
+            {([
+              { value: "templates", icon: <IconTemplate size={14} />, label: "Plantillas", count: templates.length },
+              { value: "client-programs", icon: <IconUsers size={14} />, label: "Programas de Clientes", count: clientPrograms.length },
+              { value: "exercises", icon: <IconBarbell size={14} />, label: "Ejercicios", count: exerciseCounts.fuerza },
+              { value: "warmup", icon: <IconFlame size={14} />, label: "Calentamiento", count: exerciseCounts.calentamiento },
+              { value: "stretching", icon: <IconStretching size={14} />, label: "Estiramientos", count: exerciseCounts.estiramiento },
+              { value: "cardio", icon: <IconHeartbeat size={14} />, label: "Cardio", count: exerciseCounts.cardio },
+            ] as const).map((t) => (
+              <Tabs.Tab key={t.value} leftSection={t.icon} value={t.value} style={{ fontWeight: 600, fontSize: "13px", flexDirection: "column", gap: 2, alignItems: "center", minWidth: 0 }}>
+                {t.count > 0 && <Badge size="xs" radius="md" variant="light">{t.count}</Badge>}
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.label}</span>
+              </Tabs.Tab>
+            ))}
           </Tabs.List>
         )}
 
@@ -786,6 +764,8 @@ export function WorkoutsPage() {
             onNewExercise={openNewExercise}
             onToggleFavorite={handleToggleExerciseFavorite}
             onEnlargeImage={setEnlargedImage}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
           />
         </Tabs.Panel>
 
@@ -813,6 +793,8 @@ export function WorkoutsPage() {
                 onNewExercise={openNewExercise}
                 onToggleFavorite={handleToggleExerciseFavorite}
                 onEnlargeImage={setEnlargedImage}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
               />
             </Tabs.Panel>
           );

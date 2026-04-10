@@ -33,6 +33,7 @@ import { useForm } from "@mantine/form";
 import {
   IconCamera,
   IconChartLine,
+  IconPhoto,
   IconPlus,
   IconRuler,
   IconTrendingUp,
@@ -658,6 +659,7 @@ export function MyProgressPage() {
             { value: "measurements", label: "Medidas" },
             { value: "history", label: "Historial" },
             { value: "photos", label: "Fotos" },
+            { value: "visual-evolution", label: "Evolución" },
           ]}
           size="sm"
           radius="md"
@@ -678,6 +680,9 @@ export function MyProgressPage() {
           </Tabs.Tab>
           <Tabs.Tab value="photos" leftSection={<IconCamera size={16} />}>
             Fotos
+          </Tabs.Tab>
+          <Tabs.Tab value="visual-evolution" leftSection={<IconPhoto size={16} />}>
+            Evolución visual
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -1174,6 +1179,78 @@ export function MyProgressPage() {
               </ThemeIcon>
               <Text size="sm" fw={500} mt="xs">Subir nueva foto</Text>
             </Paper>
+          </Card>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="visual-evolution">
+          <Card shadow="sm" padding="lg" radius="lg" withBorder>
+            <Text fw={600} size="lg" mb="md">Evolución visual</Text>
+            {photos.length > 0 ? (
+              <Stack gap="xl">
+                {[...photos]
+                  .sort((a, b) => {
+                    const da = a.measurement_date || a.uploaded_at || "";
+                    const db = b.measurement_date || b.uploaded_at || "";
+                    return db.localeCompare(da);
+                  })
+                  .map((photo, idx) => {
+                    const dateStr = photo.measurement_date || photo.uploaded_at || "";
+                    const dateLabel = dateStr
+                      ? new Date(dateStr).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+                      : "Sin fecha";
+                    const photoDate = dateStr.split("T")[0];
+                    const matchingMeasurement = measurements?.find((m: any) => {
+                      const mDate = (m.measured_at || m.created_at || "").split("T")[0];
+                      return mDate === photoDate;
+                    });
+                    return (
+                      <Paper key={idx} p="md" radius="md" withBorder>
+                        <Group align="flex-start" wrap="wrap" gap="lg">
+                          <Box style={{ flex: "0 0 auto", width: 200 }}>
+                            <Image
+                              src={photo.url}
+                              alt={`Foto ${dateLabel}`}
+                              radius="md"
+                              h={240}
+                              w={200}
+                              fit="cover"
+                              style={{ cursor: "pointer" }}
+                              onClick={() => setEnlargedPhoto({ url: photo.url, type: photo.type, date: dateStr })}
+                            />
+                            <Text size="xs" c="dimmed" mt={4} ta="center">{dateLabel}</Text>
+                            {photo.type && <Badge size="xs" variant="light" mt={4} style={{ display: "block", textAlign: "center" }}>{photo.type === "front" ? "Frontal" : photo.type === "side" ? "Lateral" : photo.type === "back" ? "Espalda" : photo.type}</Badge>}
+                          </Box>
+                          <Box style={{ flex: 1, minWidth: 200 }}>
+                            <Text fw={500} mb="sm">Medidas - {dateLabel}</Text>
+                            {matchingMeasurement ? (
+                              <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs">
+                                {matchingMeasurement.weight_kg && <Box><Text size="xs" c="dimmed">Peso</Text><Text fw={600}>{matchingMeasurement.weight_kg} kg</Text></Box>}
+                                {matchingMeasurement.body_fat_percentage && <Box><Text size="xs" c="dimmed">% Grasa</Text><Text fw={600}>{matchingMeasurement.body_fat_percentage}%</Text></Box>}
+                                {matchingMeasurement.muscle_mass_kg && <Box><Text size="xs" c="dimmed">Masa muscular</Text><Text fw={600}>{matchingMeasurement.muscle_mass_kg} kg</Text></Box>}
+                                {matchingMeasurement.measurements?.chest && <Box><Text size="xs" c="dimmed">Pecho</Text><Text fw={600}>{matchingMeasurement.measurements.chest} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.waist && <Box><Text size="xs" c="dimmed">Cintura</Text><Text fw={600}>{matchingMeasurement.measurements.waist} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.hips && <Box><Text size="xs" c="dimmed">Cadera</Text><Text fw={600}>{matchingMeasurement.measurements.hips} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.arms && <Box><Text size="xs" c="dimmed">Brazos</Text><Text fw={600}>{matchingMeasurement.measurements.arms} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.thighs && <Box><Text size="xs" c="dimmed">Muslos</Text><Text fw={600}>{matchingMeasurement.measurements.thighs} cm</Text></Box>}
+                              </SimpleGrid>
+                            ) : (
+                              <Text size="sm" c="dimmed">No hay medidas registradas para esta fecha</Text>
+                            )}
+                          </Box>
+                        </Group>
+                      </Paper>
+                    );
+                  })}
+              </Stack>
+            ) : (
+              <Center py="xl">
+                <Stack align="center" gap="sm">
+                  <ThemeIcon size="xl" color="gray" variant="light" radius="xl"><IconPhoto size={24} /></ThemeIcon>
+                  <Text c="dimmed" size="sm">Sube fotos de progreso para ver tu evolución visual</Text>
+                  <Button variant="light" leftSection={<IconCamera size={16} />} onClick={openPhotoModal}>Subir foto</Button>
+                </Stack>
+              </Center>
+            )}
           </Card>
         </Tabs.Panel>
       </Tabs>

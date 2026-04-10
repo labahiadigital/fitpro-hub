@@ -26,6 +26,7 @@ from app.schemas.client import (
 from app.schemas.base import PaginatedResponse, BaseSchema
 from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
 from app.services.notification_service import notify
+from app.tasks.notifications import send_email_task
 
 logger = logging.getLogger(__name__)
 
@@ -327,6 +328,36 @@ async def create_client(
         email_subject=f"Nuevo cliente: {client.first_name} {client.last_name}",
         email_html=f"<p>Se ha registrado un nuevo cliente: <strong>{client.first_name} {client.last_name}</strong> ({client.email}).</p>",
     )
+
+    try:
+        token = secrets.token_urlsafe(32)
+        invitation = ClientInvitation(
+            workspace_id=current_user.workspace_id,
+            invited_by=current_user.id,
+            email=client.email,
+            first_name=client.first_name,
+            last_name=client.last_name,
+            token=token,
+            status="pending",
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+            client_id=client.id,
+        )
+        db.add(invitation)
+        await db.commit()
+        workspace_result = await db.execute(select(Workspace).where(Workspace.id == current_user.workspace_id))
+        workspace = workspace_result.scalar_one_or_none()
+        invitation_url = f"{settings.FRONTEND_URL}/onboarding/invite/{token}"
+        client_name = f"{client.first_name or ''} {client.last_name or ''}".strip()
+        send_email_task.delay(
+            to_email=client.email,
+            subject=f"Invitación a {workspace.name if workspace else 'Trackfiz'}",
+            html_content=f"""<p>Hola {client_name},</p>
+<p>Has sido dado de alta como cliente. Para activar tu cuenta y acceder a tu portal, haz clic en el siguiente enlace:</p>
+<p><a href="{invitation_url}" style="display:inline-block;padding:12px 24px;background:#228be6;color:white;text-decoration:none;border-radius:8px;">Activar mi cuenta</a></p>
+<p>Este enlace expira en 7 días.</p>""",
+        )
+    except Exception as e:
+        logger.warning("Could not send validation email to new client %s: %s", client.email, e)
 
     return ClientResponse(
         id=client.id,
