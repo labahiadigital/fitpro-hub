@@ -32,6 +32,7 @@ interface Client {
   is_active: boolean;
   has_user_account?: boolean;
   tags: Array<{ id: string; name: string; color: string }>;
+  deleted_at?: string | null;
   created_at: string;
 }
 
@@ -170,8 +171,31 @@ export function usePermanentDeleteClient() {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       notifications.show({
         title: "Cliente eliminado",
-        message: "El cliente ha sido eliminado permanentemente",
+        message: "El cliente ha sido movido a Eliminados",
         color: "green",
+      });
+    },
+  });
+}
+
+export function useRestoreClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => clientsApi.restore(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      notifications.show({
+        title: "Cliente restaurado",
+        message: "El cliente ha sido restaurado correctamente",
+        color: "green",
+      });
+    },
+    onError: (error: unknown) => {
+      notifications.show({
+        title: "Error",
+        message: getApiErrorMessage(error),
+        color: "red",
       });
     },
   });

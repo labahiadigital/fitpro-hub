@@ -34,6 +34,7 @@ import {
   IconCalendarEvent,
   IconCheck,
   IconChevronRight,
+  IconEdit,
   IconClock,
   IconDownload,
   IconFilter,
@@ -227,6 +228,7 @@ interface ExerciseForLog {
   target_reps?: number;
   rest_seconds?: number;
   video_url?: string;
+  prefillSets?: Array<{ weight_kg?: number; reps_completed?: number; completed?: boolean }>;
 }
 
 interface SetLog {
@@ -608,6 +610,21 @@ function LogWorkoutModal({
           distance_km: s.distance_km,
           speed_kmh: s.speed_kmh,
           duration_minutes: s.duration_minutes,
+          completed: s.completed ?? false,
+        }));
+        while (initial[e.exercise_id].length < e.sets) {
+          initial[e.exercise_id].push({
+            set_number: initial[e.exercise_id].length + 1,
+            weight_kg: e.target_weight ?? undefined,
+            reps_completed: e.target_reps ?? parseRepsFromString(e.reps),
+            completed: true,
+          });
+        }
+      } else if (e.prefillSets && e.prefillSets.length > 0) {
+        initial[e.exercise_id] = e.prefillSets.map((s, i) => ({
+          set_number: i + 1,
+          weight_kg: s.weight_kg,
+          reps_completed: s.reps_completed,
           completed: s.completed ?? false,
         }));
         while (initial[e.exercise_id].length < e.sets) {
@@ -1870,22 +1887,32 @@ export function MyWorkoutsPage() {
                                   <IconPlayerPlay size={18} />
                                 </ActionIcon>
                               )}
-                              <Button
-                                variant="subtle"
-                                color="green"
-                                size="xs"
-                                radius="xl"
-                                onClick={() => handleOpenSingleExercise({
-                                  exercise_id: exercise.exercise_id || exercise.exercise?.id || "",
-                                  name: exName,
-                                  sets: exercise.sets || 3,
-                                  reps: exercise.reps || "10-12",
-                                  target_weight: exercise.target_weight,
-                                  target_reps: exercise.target_reps,
-                                })}
-                              >
-                                Registrar
-                              </Button>
+                              {(() => {
+                                const ld = todayLogs?.logs?.[0]?.log as Record<string, unknown> | undefined;
+                                const les = (ld?.exercises || []) as Array<{ exercise_id?: string; exercise_name?: string; sets?: Array<{ weight_kg?: number; reps_completed?: number; completed?: boolean }> }>;
+                                const existing = les.find(le => le.exercise_id === (exercise.exercise_id || exercise.exercise?.id) || le.exercise_name === exName);
+                                const isLogged = existing && (existing.sets || []).some(s => s.completed);
+                                return (
+                                  <Button
+                                    variant="subtle"
+                                    color={isLogged ? "blue" : "green"}
+                                    size="xs"
+                                    radius="xl"
+                                    leftSection={isLogged ? <IconEdit size={12} /> : undefined}
+                                    onClick={() => handleOpenSingleExercise({
+                                      exercise_id: exercise.exercise_id || exercise.exercise?.id || "",
+                                      name: exName,
+                                      sets: exercise.sets || 3,
+                                      reps: exercise.reps || "10-12",
+                                      target_weight: exercise.target_weight,
+                                      target_reps: exercise.target_reps,
+                                      ...(isLogged && existing?.sets ? { prefillSets: existing.sets } : {}),
+                                    })}
+                                  >
+                                    {isLogged ? "Editar" : "Registrar"}
+                                  </Button>
+                                );
+                              })()}
                               <Button
                                 variant="subtle"
                                 color="yellow"

@@ -55,6 +55,8 @@ const SupplementsPage = lazyRetry(() => import("./pages/supplements/SupplementsP
 const FormsPage = lazyRetry(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
 const CatalogPage = lazyRetry(() => import("./pages/payments/CatalogPage").then(m => ({ default: m.CatalogPage })));
 const StockPage = lazyRetry(() => import("./pages/stock/StockPage").then(m => ({ default: m.StockPage })));
+const BoxesPage = lazyRetry(() => import("./pages/boxes/BoxesPage"));
+const MachinesPage = lazyRetry(() => import("./pages/machines/MachinesPage"));
 const BillingPage = lazyRetry(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
 const SuggestionsPage = lazyRetry(() => import("./pages/suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
 const CommunityPage = lazyRetry(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
@@ -154,6 +156,8 @@ const ROUTE_RESOURCE_MAP: Record<string, string> = {
   "/forms": "forms",
   "/catalog": "catalog",
   "/stock": "catalog",
+  "/boxes": "catalog",
+  "/machines": "catalog",
   "/billing": "billing",
   "/community": "community",
   "/documents": "documents",
@@ -298,6 +302,8 @@ export default function App() {
                   <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
                   <Route element={<TrainerRoute><CatalogPage /></TrainerRoute>} path="/catalog" />
                   <Route element={<TrainerRoute><StockPage /></TrainerRoute>} path="/stock" />
+                  <Route element={<TrainerRoute><BoxesPage /></TrainerRoute>} path="/boxes" />
+                  <Route element={<TrainerRoute><MachinesPage /></TrainerRoute>} path="/machines" />
                   <Route element={<TrainerRoute><BillingPage /></TrainerRoute>} path="/billing" />
                   <Route element={<Navigate replace to="/billing" />} path="/payments" />
                   <Route element={<Navigate replace to="/catalog" />} path="/packages" />

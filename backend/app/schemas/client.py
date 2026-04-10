@@ -100,6 +100,7 @@ class ClientResponse(BaseSchema):
     billing_city: Optional[str] = None
     billing_postal_code: Optional[str] = None
     billing_country: Optional[str] = None
+    deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -115,6 +116,7 @@ class ClientListResponse(BaseSchema):
     is_active: bool
     has_user_account: bool = False
     tags: List[ClientTagResponse] = []
+    deleted_at: Optional[datetime] = None
     created_at: datetime
 
 

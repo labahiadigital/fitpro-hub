@@ -3,6 +3,7 @@ import {
   Badge,
   Box,
   Button,
+  Checkbox,
   Container,
   Divider,
   Group,
@@ -61,6 +62,7 @@ import {
   useGoogleCalendarEvents,
   type GoogleCalendarEvent,
 } from "../../hooks/useGoogleCalendar";
+import { useAppointments, type AppointmentData } from "../../hooks/useAppointments";
 import { useNavigate } from "react-router-dom";
 import "dayjs/locale/es";
 
@@ -87,10 +89,12 @@ interface CalendarEvent {
   title: string;
   start_time: string;
   end_time: string;
-  type: "booking" | "google";
+  type: "booking" | "google" | "appointment";
   color: string;
   booking?: Booking;
   googleEvent?: GoogleCalendarEvent;
+  appointment?: AppointmentData;
+  layer?: "staff" | "box" | "machine";
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -110,6 +114,7 @@ export function CalendarPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
+  const [layers, setLayers] = useState({ staff: true, boxes: true, machines: true });
 
   const startOfWeek = dayjs(currentDate).startOf("week");
   const endOfWeek = dayjs(currentDate).endOf("week");
@@ -146,6 +151,10 @@ export function CalendarPage() {
     enabled: gcalStatus?.connected ?? false,
   });
 
+  const { data: appointmentsData } = useAppointments({
+    start_date: dateParams.start_date,
+    end_date: dateParams.end_date,
+  });
   const { data: clientsData } = useClients({ page: 1 });
   const { data: teamMembers } = useTeamMembers();
 
@@ -190,9 +199,41 @@ export function CalendarPage() {
       start_time: e.start,
       end_time: e.end,
       type: "google",
-      color: "grape", // Color distintivo para eventos externos
+      color: "grape",
       googleEvent: e,
     })),
+    // Citas (appointments) como subcalendarios
+    ...(appointmentsData || []).flatMap((a): CalendarEvent[] => {
+      const events: CalendarEvent[] = [];
+      if (layers.staff && a.staff_id) {
+        events.push({
+          id: `appt-staff-${a.id}`,
+          title: `${a.service_name || "Cita"} — ${a.staff_name || ""}`,
+          start_time: a.start_time, end_time: a.end_time,
+          type: "appointment", color: a.service_color || "cyan",
+          appointment: a, layer: "staff",
+        });
+      }
+      if (layers.boxes && a.box_id) {
+        events.push({
+          id: `appt-box-${a.id}`,
+          title: `${a.box_name || "Box"}: ${a.service_name || "Cita"}`,
+          start_time: a.start_time, end_time: a.end_time,
+          type: "appointment", color: a.box_color || "blue",
+          appointment: a, layer: "box",
+        });
+      }
+      if (layers.machines && a.machine_ids.length > 0) {
+        events.push({
+          id: `appt-machine-${a.id}`,
+          title: `Máq: ${a.service_name || "Cita"}`,
+          start_time: a.start_time, end_time: a.end_time,
+          type: "appointment", color: "violet",
+          appointment: a, layer: "machine",
+        });
+      }
+      return events;
+    }),
   ];
 
   const createBooking = useCreateBooking();
@@ -477,6 +518,28 @@ export function CalendarPage() {
             </Button>
           </Group>
           <Group gap="sm">
+            <Group gap={6}>
+              <Checkbox
+                size="xs"
+                label="Personal"
+                checked={layers.staff}
+                onChange={(e) => setLayers(p => ({ ...p, staff: e.currentTarget.checked }))}
+              />
+              <Checkbox
+                size="xs"
+                label="Boxes"
+                checked={layers.boxes}
+                color="blue"
+                onChange={(e) => setLayers(p => ({ ...p, boxes: e.currentTarget.checked }))}
+              />
+              <Checkbox
+                size="xs"
+                label="Máquinas"
+                checked={layers.machines}
+                color="violet"
+                onChange={(e) => setLayers(p => ({ ...p, machines: e.currentTarget.checked }))}
+              />
+            </Group>
             {teamMemberOptions.length > 1 && (
               <Select
                 placeholder="Todos los miembros"

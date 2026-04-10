@@ -167,7 +167,7 @@ async def list_clients(
     base_where = Client.workspace_id == current_user.workspace_id
     query = select(Client).where(base_where)
     count_query = select(func.count(Client.id)).where(base_where)
-    
+
     # Search filter
     if search:
         search_filter = f"%{search}%"
@@ -178,20 +178,25 @@ async def list_clients(
         )
         query = query.where(search_cond)
         count_query = count_query.where(search_cond)
-    
-    # Status filter (new: supports 'pending' = active + no user account)
-    if status_filter == "active":
-        query = query.where(Client.is_active == True, Client.user_id != None)
-        count_query = count_query.where(Client.is_active == True, Client.user_id != None)
+
+    if status_filter == "deleted":
+        query = query.where(Client.deleted_at.isnot(None))
+        count_query = count_query.where(Client.deleted_at.isnot(None))
+    elif status_filter == "active":
+        query = query.where(Client.is_active == True, Client.user_id != None, Client.deleted_at.is_(None))
+        count_query = count_query.where(Client.is_active == True, Client.user_id != None, Client.deleted_at.is_(None))
     elif status_filter == "pending":
-        query = query.where(Client.is_active == True, Client.user_id == None)
-        count_query = count_query.where(Client.is_active == True, Client.user_id == None)
+        query = query.where(Client.is_active == True, Client.user_id == None, Client.deleted_at.is_(None))
+        count_query = count_query.where(Client.is_active == True, Client.user_id == None, Client.deleted_at.is_(None))
     elif status_filter == "inactive":
-        query = query.where(Client.is_active == False)
-        count_query = count_query.where(Client.is_active == False)
+        query = query.where(Client.is_active == False, Client.deleted_at.is_(None))
+        count_query = count_query.where(Client.is_active == False, Client.deleted_at.is_(None))
     elif is_active is not None:
-        query = query.where(Client.is_active == is_active)
-        count_query = count_query.where(Client.is_active == is_active)
+        query = query.where(Client.is_active == is_active, Client.deleted_at.is_(None))
+        count_query = count_query.where(Client.is_active == is_active, Client.deleted_at.is_(None))
+    else:
+        query = query.where(Client.deleted_at.is_(None))
+        count_query = count_query.where(Client.deleted_at.is_(None))
     
     # Get filtered count
     total_result = await db.execute(count_query)
@@ -199,15 +204,19 @@ async def list_clients(
     
     # Global stats (always unfiltered for KPI cards)
     stats_base = Client.workspace_id == current_user.workspace_id
-    total_all = await db.scalar(select(func.count(Client.id)).where(stats_base)) or 0
+    not_deleted = Client.deleted_at.is_(None)
+    total_all = await db.scalar(select(func.count(Client.id)).where(stats_base, not_deleted)) or 0
     total_active = await db.scalar(
-        select(func.count(Client.id)).where(stats_base, Client.is_active == True, Client.user_id != None)
+        select(func.count(Client.id)).where(stats_base, Client.is_active == True, Client.user_id != None, not_deleted)
     ) or 0
     total_pending = await db.scalar(
-        select(func.count(Client.id)).where(stats_base, Client.is_active == True, Client.user_id == None)
+        select(func.count(Client.id)).where(stats_base, Client.is_active == True, Client.user_id == None, not_deleted)
     ) or 0
     total_inactive = await db.scalar(
-        select(func.count(Client.id)).where(stats_base, Client.is_active == False)
+        select(func.count(Client.id)).where(stats_base, Client.is_active == False, not_deleted)
+    ) or 0
+    total_deleted = await db.scalar(
+        select(func.count(Client.id)).where(stats_base, Client.deleted_at.isnot(None))
     ) or 0
     
     now = func.now()
@@ -236,6 +245,7 @@ async def list_clients(
             is_active=c.is_active,
             has_user_account=c.user_id is not None,
             tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in c.tags],
+            deleted_at=c.deleted_at,
             created_at=c.created_at
         ))
     
@@ -248,6 +258,7 @@ async def list_clients(
             "active": total_active,
             "pending": total_pending,
             "inactive": total_inactive,
+            "deleted": total_deleted,
             "new_this_month": total_new_month,
         }
     }
@@ -576,7 +587,8 @@ async def delete_client_permanent(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Eliminar un cliente permanentemente (GDPR - derecho al olvido).
+    Mover un cliente a Eliminados (soft delete con deleted_at).
+    Los datos se conservan por legalidad.
     """
     result = await db.execute(
         select(Client).where(
@@ -592,9 +604,61 @@ async def delete_client_permanent(
             detail="Cliente no encontrado"
         )
     
-    # Hard delete
-    await db.delete(client)
+    client.is_active = False
+    client.deleted_at = datetime.now(timezone.utc)
     await db.commit()
+
+
+@router.post("/{client_id}/restore", response_model=ClientResponse)
+async def restore_client(
+    client_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Restaurar un cliente eliminado."""
+    result = await db.execute(
+        select(Client).options(selectinload(Client.tags)).where(
+            Client.id == client_id,
+            Client.workspace_id == current_user.workspace_id,
+            Client.deleted_at.isnot(None)
+        )
+    )
+    client = result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente eliminado no encontrado")
+
+    client.is_active = True
+    client.deleted_at = None
+    await db.commit()
+    await db.refresh(client)
+
+    return ClientResponse(
+        id=client.id,
+        workspace_id=client.workspace_id,
+        first_name=client.first_name,
+        last_name=client.last_name,
+        email=client.email,
+        phone=client.phone,
+        avatar_url=client.avatar_url,
+        tax_id=client.tax_id,
+        billing_address=client.billing_address,
+        billing_city=client.billing_city,
+        billing_postal_code=client.billing_postal_code,
+        billing_country=client.billing_country,
+        birth_date=client.birth_date,
+        gender=client.gender,
+        height_cm=client.height_cm,
+        weight_kg=client.weight_kg,
+        health_data=client.health_data,
+        goals=client.goals,
+        consents=client.consents,
+        is_active=client.is_active,
+        chat_enabled=getattr(client, 'chat_enabled', False) or False,
+        tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
+        created_at=client.created_at,
+        updated_at=client.updated_at
+    )
 
 
 # ============ ONBOARDING ============

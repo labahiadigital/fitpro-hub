@@ -33,6 +33,7 @@ from app.models.rectification import RectificationRequest
 from app.models.beverage import Beverage
 from app.models.custom_role import CustomRole
 from app.models.stock import StockCategory, StockItem, StockMovement
+from app.models.resource import Box, Machine, Service, ServiceStaff, ServiceStockConsumption, Appointment
 
 __all__ = [
     "Base",
@@ -104,4 +105,10 @@ __all__ = [
     "StockCategory",
     "StockItem",
     "StockMovement",
+    "Box",
+    "Machine",
+    "Service",
+    "ServiceStaff",
+    "ServiceStockConsumption",
+    "Appointment",
 ]

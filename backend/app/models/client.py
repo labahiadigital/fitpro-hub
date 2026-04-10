@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Boolean, ForeignKey, Table
+from sqlalchemy import Column, String, Text, Boolean, ForeignKey, Table, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
@@ -107,6 +107,7 @@ class Client(BaseModel):
 
     # Status
     is_active = Column(Boolean, default=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
     
     # Relationships - only to tables that exist in DB
     workspace = relationship("Workspace", back_populates="clients")

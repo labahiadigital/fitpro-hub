@@ -243,6 +243,7 @@ export const clientsApi = {
   update: (id: string, data: object) => api.put(`/clients/${id}`, data),
   delete: (id: string) => api.delete(`/clients/${id}`),
   deletePermanent: (id: string) => api.delete(`/clients/${id}/permanent`),
+  restore: (id: string) => api.post(`/clients/${id}/restore`),
   tags: () => api.get("/clients/tags"),
   createTag: (data: { name: string; color: string }) =>
     api.post("/clients/tags", data),
@@ -807,6 +808,46 @@ export const whatsappApi = {
 export const storageApi = {
   presign: (urls: string[]) =>
     api.post<{ urls: Record<string, string> }>("/storage/presign", { urls }),
+};
+
+// Boxes API
+export const boxesApi = {
+  list: () => api.get("/boxes"),
+  get: (id: string) => api.get(`/boxes/${id}`),
+  create: (data: object) => api.post("/boxes", data),
+  update: (id: string, data: object) => api.put(`/boxes/${id}`, data),
+  delete: (id: string) => api.delete(`/boxes/${id}`),
+  stats: (id: string) => api.get(`/boxes/${id}/stats`),
+};
+
+// Machines API
+export const machinesApi = {
+  list: () => api.get("/machines"),
+  get: (id: string) => api.get(`/machines/${id}`),
+  create: (data: object) => api.post("/machines", data),
+  update: (id: string, data: object) => api.put(`/machines/${id}`, data),
+  delete: (id: string) => api.delete(`/machines/${id}`),
+  stats: (id: string) => api.get(`/machines/${id}/stats`),
+};
+
+// Services API (enhanced)
+export const servicesApi = {
+  list: () => api.get("/services"),
+  get: (id: string) => api.get(`/services/${id}`),
+  create: (data: object) => api.post("/services", data),
+  update: (id: string, data: object) => api.put(`/services/${id}`, data),
+  delete: (id: string) => api.delete(`/services/${id}`),
+};
+
+// Appointments API
+export const appointmentsApi = {
+  list: (params?: object) => api.get("/appointments", { params }),
+  create: (data: object) => api.post("/appointments", data),
+  update: (id: string, data: object) => api.put(`/appointments/${id}`, data),
+  updateStatus: (id: string, status: string) => api.patch(`/appointments/${id}/status`, { status }),
+  delete: (id: string) => api.delete(`/appointments/${id}`),
+  checkAvailability: (data: object) => api.post("/appointments/check-availability", data),
+  stats: (resourceType: string, resourceId: string) => api.get(`/appointments/stats/${resourceType}/${resourceId}`),
 };
 
 export default api;

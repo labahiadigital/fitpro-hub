@@ -5,7 +5,8 @@ from app.api.v1.endpoints import (
     forms, messages, payments, automations, reports, products, exercises,
     foods, notifications, supplements, documents, pdf, roles, redsys, sequra, lms, erp, referrals,
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
-    whatsapp, google_calendar, storage, tasks, team_groups, rectifications, beverages, stock
+    whatsapp, google_calendar, storage, tasks, team_groups, rectifications, beverages, stock,
+    boxes, machines, services, appointments,
 )
 
 api_router = APIRouter()
@@ -132,3 +133,15 @@ api_router.include_router(beverages.router, prefix="/beverages", tags=["Bebidas"
 
 # Stock Management
 api_router.include_router(stock.router, prefix="/stock", tags=["Gestión de Stock"])
+
+# Boxes (Consultas/Espacios)
+api_router.include_router(boxes.router, prefix="/boxes", tags=["Boxes / Consultas"])
+
+# Machines (Maquinaria)
+api_router.include_router(machines.router, prefix="/machines", tags=["Maquinaria"])
+
+# Services (Catálogo mejorado)
+api_router.include_router(services.router, prefix="/services", tags=["Servicios"])
+
+# Appointments (Citas con triple-lock)
+api_router.include_router(appointments.router, prefix="/appointments", tags=["Citas / Reservas"])

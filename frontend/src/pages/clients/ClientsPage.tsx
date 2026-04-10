@@ -35,6 +35,8 @@ import {
   IconSend,
   IconCheck,
   IconUserCheck,
+  IconTrashX,
+  IconRestore,
 } from "@tabler/icons-react";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -53,6 +55,7 @@ import {
   useCreateClientTag,
   useDeleteClient,
   usePermanentDeleteClient,
+  useRestoreClient,
   useUpdateClient,
 } from "../../hooks/useClients";
 import { useCreateInvitation, useInvitations, useResendInvitation, useCancelInvitation } from "../../hooks/useInvitations";
@@ -194,7 +197,7 @@ export function ClientsPage() {
   const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const statusFilter = activeTab === "active" ? "active" : activeTab === "inactive" ? "inactive" : activeTab === "pending" ? "pending" : undefined;
+  const statusFilter = activeTab === "active" ? "active" : activeTab === "inactive" ? "inactive" : activeTab === "pending" ? "pending" : activeTab === "deleted" ? "deleted" : undefined;
   const { data: clientsData, isLoading, isError, refetch } = useClients({ page, search, status: statusFilter });
   useClientTags();
   const createClient = useCreateClient();
@@ -202,6 +205,7 @@ export function ClientsPage() {
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   const permanentDeleteClient = usePermanentDeleteClient();
+  const restoreClient = useRestoreClient();
   const createInvitation = useCreateInvitation();
   const { data: invitations } = useInvitations();
   const resendInvitation = useResendInvitation();
@@ -449,6 +453,15 @@ export function ClientsPage() {
     }
   };
 
+  const handleRestore = async (client: any) => {
+    if (!client || client.id.startsWith("demo-client-")) return;
+    try {
+      await restoreClient.mutateAsync(client.id);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
   const handleDelete = (client: any) => {
     if (client.is_active) {
       handleSoftDelete(client);
@@ -505,7 +518,22 @@ export function ClientsPage() {
       key: "actions_custom",
       title: "",
       render: (client: any) =>
-        !client.is_active ? (
+        client.deleted_at ? (
+          <Button
+            size="xs"
+            variant="light"
+            color="green"
+            radius="xl"
+            leftSection={<IconRestore size={14} />}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              handleRestore(client);
+            }}
+            styles={{ root: { fontSize: "11px" } }}
+          >
+            Restaurar
+          </Button>
+        ) : !client.is_active ? (
           <Group gap={4} wrap="nowrap">
             <Button
               size="xs"
@@ -517,11 +545,7 @@ export function ClientsPage() {
                 e.stopPropagation();
                 handleReactivate(client);
               }}
-              styles={{
-                root: {
-                  fontSize: "11px",
-                },
-              }}
+              styles={{ root: { fontSize: "11px" } }}
             >
               Reactivar
             </Button>
@@ -536,11 +560,7 @@ export function ClientsPage() {
                 setClientToDelete(client);
                 openDeleteConfirm();
               }}
-              styles={{
-                root: {
-                  fontSize: "11px",
-                },
-              }}
+              styles={{ root: { fontSize: "11px" } }}
             >
               Borrar
             </Button>
@@ -556,11 +576,7 @@ export function ClientsPage() {
               e.stopPropagation();
               handleSoftDelete(client);
             }}
-            styles={{
-              root: {
-                fontSize: "11px",
-              },
-            }}
+            styles={{ root: { fontSize: "11px" } }}
           >
             Desasignar
           </Button>
@@ -592,10 +608,11 @@ export function ClientsPage() {
         active: backendStats.active,
         pending: backendStats.pending,
         inactive: backendStats.inactive,
+        deleted: backendStats.deleted || 0,
         newThisMonth: backendStats.new_this_month,
       };
     }
-    return { total: 0, active: 0, pending: 0, inactive: 0, newThisMonth: 0 };
+    return { total: 0, active: 0, pending: 0, inactive: 0, deleted: 0, newThisMonth: 0 };
   }, [clientsData]);
 
   return (
@@ -665,6 +682,7 @@ export function ClientsPage() {
               { value: "active", label: `Activos (${stats.active})` },
               { value: "pending", label: `Pendientes (${stats.pending})` },
               { value: "inactive", label: `Inactivos (${stats.inactive})` },
+              ...(stats.deleted > 0 ? [{ value: "deleted", label: `Eliminados (${stats.deleted})` }] : []),
               { value: "tags", label: "Etiquetas" },
             ]}
             size="sm"
@@ -689,6 +707,16 @@ export function ClientsPage() {
               <Tabs.Tab value="inactive" style={{ fontWeight: 600, fontSize: "13px" }}>
                 Inactivos ({stats.inactive})
               </Tabs.Tab>
+              {stats.deleted > 0 && (
+                <Tabs.Tab
+                  leftSection={<IconTrashX size={14} />}
+                  value="deleted"
+                  style={{ fontWeight: 600, fontSize: "13px" }}
+                  color="red"
+                >
+                  Eliminados ({stats.deleted})
+                </Tabs.Tab>
+              )}
               <Tabs.Tab
                 leftSection={<IconTag size={14} />}
                 value="tags"
