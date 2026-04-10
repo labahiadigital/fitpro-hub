@@ -35,6 +35,7 @@ import {
   IconToolsKitchen2,
   IconUser,
   IconUsers,
+  IconGlass,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -94,6 +95,7 @@ import { ClientPlansTab } from "./components/ClientPlansTab";
 import { RecipesTab } from "./components/RecipesTab";
 import { FoodsTab } from "./components/FoodsTab";
 import { SupplementsTab } from "./components/SupplementsTab";
+import { BeveragesTab } from "./components/BeveragesTab";
 import { RectificationButton } from "../../components/common/RectificationButton";
 
 function mapCategory(dbCategory: string | null): string {
@@ -249,12 +251,13 @@ function FoodGroupsPanel() {
                 </Group>
               </Group>
               <Group gap={4}>
-                <Badge size="xs" variant="light" color="blue">{fg.calories || 0} kcal</Badge>
-                <Badge size="xs" variant="light" color="green">P:{fg.protein_g || 0}g</Badge>
-                <Badge size="xs" variant="light" color="orange">C:{fg.carbs_g || 0}g</Badge>
-                <Badge size="xs" variant="light" color="grape">G:{fg.fat_g || 0}g</Badge>
+                <Badge size="xs" variant="light" color="gray">100g</Badge>
+                <Badge size="xs" variant="light" color="blue">{Math.round(fg.calories || 0)} kcal</Badge>
+                <Badge size="xs" variant="light" color="green">P:{Math.round(fg.protein_g || 0)}g</Badge>
+                <Badge size="xs" variant="light" color="orange">C:{Math.round(fg.carbs_g || 0)}g</Badge>
+                <Badge size="xs" variant="light" color="grape">G:{Math.round(fg.fat_g || 0)}g</Badge>
               </Group>
-              {fg.quantity && <Text size="xs" c="dimmed" mt={4}>{fg.quantity}</Text>}
+              {fg.quantity && <Text size="xs" c="dimmed" mt={4}>Aprox. una ración de este producto son {fg.quantity}</Text>}
             </Box>
           ))}
         </SimpleGrid>
@@ -706,7 +709,7 @@ export function NutritionPage() {
       {isMobile && (
         <Select value={activeTab} onChange={setActiveTab} data={[
           { value: "templates", label: "Plantillas" }, { value: "plans", label: "Planes de Clientes" },
-          { value: "recipes", label: "Recetas" }, { value: "foods", label: "Alimentos" }, { value: "supplements", label: "Suplementos" },
+          { value: "recipes", label: "Recetas" }, { value: "foods", label: "Alimentos" }, { value: "supplements", label: "Suplementos" }, { value: "beverages", label: "Bebidas" },
         ]} size="sm" radius="md" mb="md" />
       )}
 
@@ -728,6 +731,9 @@ export function NutritionPage() {
             <Tabs.Tab leftSection={<IconSalad size={14} />} value="food-groups" style={{ fontWeight: 600, fontSize: "13px" }}>Grupos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconPill size={14} />} value="supplements" style={{ fontWeight: 600, fontSize: "13px" }}>
               Suplementos {supplements.length > 0 && <Badge ml="xs" size="xs" radius="md" variant="light">{supplements.length}</Badge>}
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconGlass size={14} />} value="beverages" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Bebidas
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -773,6 +779,10 @@ export function NutritionPage() {
             onView={(s) => { setViewingSupplement(s); openSupplementDetailModal(); }}
             onNew={openSupplementModal} togglePending={toggleSupplementFavorite.isPending}
           />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="beverages">
+          <BeveragesTab />
         </Tabs.Panel>
       </Tabs>
 

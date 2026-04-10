@@ -225,6 +225,8 @@ interface ExerciseForLog {
   reps: string;
   target_weight?: number;
   target_reps?: number;
+  rest_seconds?: number;
+  video_url?: string;
 }
 
 interface SetLog {
@@ -357,12 +359,38 @@ function ExerciseLogRow({
     <Box style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }} pb="sm">
       <Group justify="space-between" mb={4} px={4}>
         <Text fw={700} size="sm">{exercise.name}</Text>
-        {(exercise.target_weight != null || exercise.target_reps != null) && (
-          <Badge variant="light" color="yellow" size="xs">
-            Obj: {exercise.target_weight ?? "—"}kg x {exercise.target_reps ?? exercise.reps ?? "—"}
-          </Badge>
-        )}
+        <Group gap={4}>
+          {exercise.rest_seconds != null && exercise.rest_seconds > 0 && (
+            <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>
+              {exercise.rest_seconds >= 60 ? `${Math.floor(exercise.rest_seconds / 60)}:${String(exercise.rest_seconds % 60).padStart(2, "0")}` : `${exercise.rest_seconds}s`} descanso
+            </Badge>
+          )}
+          {(exercise.target_weight != null || exercise.target_reps != null) && (
+            <Badge variant="light" color="yellow" size="xs">
+              Obj: {exercise.target_weight ?? "—"}kg x {exercise.target_reps ?? exercise.reps ?? "—"}
+            </Badge>
+          )}
+        </Group>
       </Group>
+      {exercise.video_url && (
+        <Box px={4} mb="xs">
+          {exercise.video_url.includes("youtube.com") || exercise.video_url.includes("youtu.be") ? (
+            <iframe
+              src={exercise.video_url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")}
+              style={{ width: "100%", height: 180, borderRadius: 8, border: "none" }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={exercise.name}
+            />
+          ) : (
+            <video
+              src={exercise.video_url}
+              controls
+              style={{ width: "100%", maxHeight: 180, borderRadius: 8 }}
+            />
+          )}
+        </Box>
+      )}
       {lastSession && (
         <Box px={4} mb="xs">
           <Text size="xs" c="dimmed">
@@ -587,7 +615,7 @@ function LogWorkoutModal({
             set_number: initial[e.exercise_id].length + 1,
             weight_kg: e.target_weight ?? undefined,
             reps_completed: e.target_reps ?? parseRepsFromString(e.reps),
-            completed: false,
+            completed: true,
           });
         }
       } else {
@@ -596,7 +624,7 @@ function LogWorkoutModal({
           set_number: i + 1,
           weight_kg: e.target_weight ?? undefined,
           reps_completed: repsValue,
-          completed: false,
+          completed: true,
         }));
       }
     });
@@ -651,7 +679,7 @@ function LogWorkoutModal({
           set_number: i + 1,
           weight_kg: e.target_weight ?? undefined,
           reps_completed: repsValue,
-          completed: false,
+          completed: true,
         }));
       });
       return initial;
@@ -1360,6 +1388,8 @@ export function MyWorkoutsPage() {
       reps: ex.reps || "10-12",
       target_weight: ex.target_weight,
       target_reps: ex.target_reps,
+      rest_seconds: ex.rest_seconds,
+      video_url: ex.video_url || ex.exercise?.video_url,
     }))
   );
   
@@ -1921,6 +1951,14 @@ export function MyWorkoutsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
+          {!activeProgram ? (
+            <Box ta="center" py="xl">
+              <Text size="xl" mb="sm">📋</Text>
+              <Text fw={600} size="lg">No tienes ningún programa de entrenamiento activo</Text>
+              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un programa cuando esté listo.</Text>
+            </Box>
+          ) : (
+          <>
           <Stack gap="xs" mb="md">
             <Group gap="sm" wrap="wrap">
               <Select
@@ -2062,6 +2100,8 @@ export function MyWorkoutsPage() {
               ) : null
             }
           />
+          </>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="history">

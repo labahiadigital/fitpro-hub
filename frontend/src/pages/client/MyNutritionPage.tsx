@@ -1546,10 +1546,10 @@ export function MyNutritionPage() {
 
   // Objetivos del plan o valores por defecto
   const targets = useMemo(() => ({
-    calories: mealPlan?.target_calories || 2000,
-    protein: mealPlan?.target_protein || 140,
-    carbs: mealPlan?.target_carbs || 250,
-    fats: mealPlan?.target_fat || 70,
+    calories: Math.round(mealPlan?.target_calories || 2000),
+    protein: Math.round(mealPlan?.target_protein || 140),
+    carbs: Math.round(mealPlan?.target_carbs || 250),
+    fats: Math.round(mealPlan?.target_fat || 70),
   }), [mealPlan]);
 
   // Agrupar logs por tipo de comida
@@ -2513,6 +2513,14 @@ export function MyNutritionPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="week">
+          {!mealPlan ? (
+            <Box ta="center" py="xl">
+              <Text size="xl" mb="sm">🍽️</Text>
+              <Text fw={600} size="lg">No tienes ningún plan nutricional activo</Text>
+              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un plan cuando esté listo.</Text>
+            </Box>
+          ) : (
+          <>
           <Stack gap="xs" mb="md">
             <Group gap="sm" wrap="wrap">
               <Select
@@ -2941,6 +2949,8 @@ export function MyNutritionPage() {
               );
             })()}
           </Modal>
+          </>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="history">

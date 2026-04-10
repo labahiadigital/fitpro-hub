@@ -3,7 +3,7 @@
  * This file provides data hooks that communicate with the backend.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, clientsApi, nutritionApi, workoutsApi } from "../services/api";
+import { api, beveragesApi, clientsApi, nutritionApi, workoutsApi } from "../services/api";
 import { useAuthStore } from "../stores/auth";
 
 // Helper para obtener el workspace ID
@@ -810,6 +810,45 @@ export function useDeleteAssignedMealPlan() {
       queryClient.invalidateQueries({
         queryKey: ["meal-plans"],
       });
+    },
+  });
+}
+
+// ====== BEVERAGES ======
+
+export function useBeverages(search?: string, category?: string) {
+  return useQuery({
+    queryKey: ["beverages", search, category],
+    queryFn: async () => {
+      const response = await beveragesApi.list({ search, category: category || undefined });
+      return response.data || [];
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useCreateBeverage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: object) => {
+      const response = await beveragesApi.create(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["beverages"] });
+    },
+  });
+}
+
+export function useDeleteBeverage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await beveragesApi.delete(id);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["beverages"] });
     },
   });
 }

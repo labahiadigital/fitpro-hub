@@ -60,12 +60,12 @@ export function NutritionTemplatesTab({
             <Stack gap={4} mt="sm">
               <Group justify="space-between">
                 <Text c="dimmed" size="xs">Calorías</Text>
-                <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>{plan.target_calories} kcal</Text>
+                <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>{Math.round(plan.target_calories || 0)} kcal</Text>
               </Group>
               <Group gap={4}>
-                <Badge color="green" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>P:{plan.target_protein}g</Badge>
-                <Badge color="orange" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>C:{plan.target_carbs}g</Badge>
-                <Badge color="grape" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>G:{plan.target_fat}g</Badge>
+                <Badge color="green" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>P:{Math.round(plan.target_protein || 0)}g</Badge>
+                <Badge color="orange" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>C:{Math.round(plan.target_carbs || 0)}g</Badge>
+                <Badge color="grape" size="xs" variant="light" radius="md" styles={{ root: { padding: "2px 6px" } }}>G:{Math.round(plan.target_fat || 0)}g</Badge>
               </Group>
             </Stack>
             <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />

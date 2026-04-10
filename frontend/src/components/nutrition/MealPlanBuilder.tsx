@@ -45,6 +45,7 @@ import {
   IconStarFilled,
   IconTrash,
   IconCalendarOff,
+  IconBottle,
   IconX,
   IconChevronUp,
   IconChevronDown,
@@ -53,6 +54,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { nutritionApi } from "../../services/api";
+import { useBeverages, useFoodGroups } from "../../hooks/useSupabaseData";
 import { calculateMacroPercentages, gramsFromPercentages } from "../../utils/calories";
 import { BottomSheet } from "../common/BottomSheet";
 import { RecipeFormModal } from "../recipes/RecipeFormModal";
@@ -196,8 +198,13 @@ export function MealPlanBuilder({
   onWeekChange,
   onCopyWeek,
 }: MealPlanBuilderProps) {
+  void onCopyWeek;
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const [copyWeekTarget, setCopyWeekTarget] = useState<string | null>(null);
+  const [foodGroupSearch, setFoodGroupSearch] = useState("");
+  const { data: foodGroupsList = [] } = useFoodGroups(foodGroupSearch || undefined);
+  const [beverageSearch, setBeverageSearch] = useState("");
+  const { data: beveragesList = [] } = useBeverages(beverageSearch || undefined);
+  
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
@@ -932,38 +939,7 @@ export function MealPlanBuilder({
                 w={140}
               />
             </Group>
-            {onCopyWeek && (
-              <Group gap="xs">
-                <Select
-                  placeholder="Copiar a..."
-                  data={Array.from({ length: totalWeeks }, (_, i) => ({
-                    value: String(i + 1),
-                    label: `Semana ${i + 1}`,
-                  })).filter((w) => Number(w.value) !== currentWeek)}
-                  value={copyWeekTarget}
-                  onChange={setCopyWeekTarget}
-                  size="xs"
-                  radius="md"
-                  w={140}
-                  clearable
-                />
-                <Button
-                  size="xs"
-                  variant="light"
-                  radius="md"
-                  leftSection={<IconCopy size={14} />}
-                  disabled={!copyWeekTarget}
-                  onClick={() => {
-                    if (copyWeekTarget) {
-                      onCopyWeek(currentWeek, Number(copyWeekTarget));
-                      setCopyWeekTarget(null);
-                    }
-                  }}
-                >
-                  Copiar semana
-                </Button>
-              </Group>
-            )}
+            
           </Group>
         </Paper>
       )}
@@ -984,7 +960,7 @@ export function MealPlanBuilder({
                     setCopyToDayIds(days.filter((d) => d.id !== activeDay).map((d) => d.id));
                   }}
                 >
-                  Copiar día a...
+                  Copiar a semana
                 </Button>
               </Popover.Target>
               <Popover.Dropdown>
@@ -1034,7 +1010,7 @@ export function MealPlanBuilder({
                 Calorías
               </Text>
               <Text fw={500} size="xs">
-                {Math.round(dayMacros.calories)} / {targetCalories}
+                {Math.round(dayMacros.calories)} / {Math.round(targetCalories)}
               </Text>
             </Group>
             <Progress
@@ -1050,7 +1026,7 @@ export function MealPlanBuilder({
                 Proteína
               </Text>
               <Text fw={500} size="xs">
-                {Math.round(dayMacros.protein)}g ({dayMacroPcts.protein_pct}%) / {targetProtein}g
+                {Math.round(dayMacros.protein)}g ({dayMacroPcts.protein_pct}%) / {Math.round(targetProtein)}g
               </Text>
             </Group>
             <Progress
@@ -1066,7 +1042,7 @@ export function MealPlanBuilder({
                 Carbohidratos
               </Text>
               <Text fw={500} size="xs">
-                {Math.round(dayMacros.carbs)}g ({dayMacroPcts.carbs_pct}%) / {targetCarbs}g
+                {Math.round(dayMacros.carbs)}g ({dayMacroPcts.carbs_pct}%) / {Math.round(targetCarbs)}g
               </Text>
             </Group>
             <Progress
@@ -1082,7 +1058,7 @@ export function MealPlanBuilder({
                 Grasas
               </Text>
               <Text fw={500} size="xs">
-                {Math.round(dayMacros.fat)}g ({dayMacroPcts.fat_pct}%) / {targetFat}g
+                {Math.round(dayMacros.fat)}g ({dayMacroPcts.fat_pct}%) / {Math.round(targetFat)}g
               </Text>
             </Group>
             <Progress
@@ -1748,11 +1724,17 @@ export function MealPlanBuilder({
             <Tabs.Tab value="foods" leftSection={<IconApple size={14} />}>
               Alimentos
             </Tabs.Tab>
+            <Tabs.Tab value="food-groups" leftSection={<IconApple size={14} />}>
+              Grupos
+            </Tabs.Tab>
             <Tabs.Tab value="supplements" leftSection={<IconPill size={14} />}>
               Suplementos
             </Tabs.Tab>
             <Tabs.Tab value="recipes" leftSection={<IconStar size={14} />}>
               Recetas
+            </Tabs.Tab>
+            <Tabs.Tab value="beverages" leftSection={<IconBottle size={14} />}>
+              Bebidas
             </Tabs.Tab>
           </Tabs.List>
 
@@ -1856,7 +1838,7 @@ export function MealPlanBuilder({
                           </Box>
                           <Group gap="xs">
                             <Badge color="blue" variant="light">
-                              {food.calories} kcal
+                              {Math.round(food.calories || 0)} kcal
                             </Badge>
                             <Badge size="xs" variant="outline">
                               P: {food.protein}g
@@ -1909,6 +1891,61 @@ export function MealPlanBuilder({
                 />
               </Center>
             )}
+          </Tabs.Panel>
+
+          <Tabs.Panel value="food-groups">
+            <TextInput
+              leftSection={<IconSearch size={16} />}
+              onChange={(e) => setFoodGroupSearch(e.target.value)}
+              placeholder="Buscar grupos de alimentos..."
+              value={foodGroupSearch}
+              radius="md"
+              mb="md"
+            />
+            <ScrollArea h={400}>
+              {foodGroupsList.length > 0 ? (
+                <Stack gap="xs">
+                  {foodGroupsList.map((fg: any) => (
+                    <Paper
+                      key={fg.id}
+                      withBorder
+                      p="sm"
+                      radius="md"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        if (!selectedMealId) return;
+                        const fakeFood: Food = {
+                          id: fg.id,
+                          name: fg.subcategory || fg.name,
+                          calories: Number(fg.calories) || 0,
+                          protein: Number(fg.protein_g) || 0,
+                          carbs: Number(fg.carbs_g) || 0,
+                          fat: Number(fg.fat_g) || 0,
+                          serving_size: "100g",
+                          category: fg.name,
+                        };
+                        addFoodToMeal(fakeFood);
+                      }}
+                    >
+                      <Group justify="space-between">
+                        <Box>
+                          <Text fw={600} size="sm">{fg.subcategory || fg.name}</Text>
+                          <Badge size="xs" variant="light" color="yellow">{fg.name}</Badge>
+                        </Box>
+                        <Group gap={4}>
+                          <Badge size="xs" variant="light" color="blue">{Math.round(fg.calories || 0)} kcal</Badge>
+                          <Badge size="xs" variant="light" color="green">P:{Math.round(fg.protein_g || 0)}g</Badge>
+                          <Badge size="xs" variant="light" color="orange">C:{Math.round(fg.carbs_g || 0)}g</Badge>
+                          <Badge size="xs" variant="light" color="grape">G:{Math.round(fg.fat_g || 0)}g</Badge>
+                        </Group>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Center py="xl"><Text c="dimmed">No se encontraron grupos de alimentos</Text></Center>
+              )}
+            </ScrollArea>
           </Tabs.Panel>
 
           <Tabs.Panel value="supplements">
@@ -1975,7 +2012,7 @@ export function MealPlanBuilder({
                         <Group gap="xs">
                           {supplement.calories && (
                             <Badge color="blue" variant="light">
-                              {supplement.calories} kcal
+                              {Math.round(supplement.calories || 0)} kcal
                             </Badge>
                           )}
                           {supplement.protein && (
@@ -2102,6 +2139,62 @@ export function MealPlanBuilder({
                 <Center py="xl">
                   <Text c="dimmed" size="sm">No hay recetas. Crea recetas desde la pestaña &quot;Recetas&quot; en Nutrición.</Text>
                 </Center>
+              )}
+            </ScrollArea>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="beverages">
+            <TextInput
+              leftSection={<IconSearch size={16} />}
+              onChange={(e) => setBeverageSearch(e.target.value)}
+              placeholder="Buscar bebidas..."
+              value={beverageSearch}
+              radius="md"
+              mb="md"
+            />
+            <ScrollArea h={400}>
+              {beveragesList.length > 0 ? (
+                <Stack gap="xs">
+                  {beveragesList.map((bev: any) => (
+                    <Paper
+                      key={bev.id}
+                      withBorder
+                      p="sm"
+                      radius="md"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        if (!selectedMealId) return;
+                        const fakeFood: Food = {
+                          id: bev.id,
+                          name: bev.name,
+                          calories: Number(bev.calories) || 0,
+                          protein: Number(bev.protein) || 0,
+                          carbs: Number(bev.carbs) || 0,
+                          fat: Number(bev.fat) || 0,
+                          serving_size: `${Number(bev.serving_size_ml) || 250}ml`,
+                          category: bev.category || "Bebida",
+                        };
+                        addFoodToMeal(fakeFood);
+                      }}
+                    >
+                      <Group justify="space-between">
+                        <Box>
+                          <Text fw={600} size="sm">{bev.name}</Text>
+                          {bev.category && <Badge size="xs" variant="light" color="cyan">{bev.category}</Badge>}
+                        </Box>
+                        <Group gap={4}>
+                          <Badge size="xs" variant="light" color="gray">100 ml</Badge>
+                          <Badge size="xs" variant="light" color="blue">{Math.round(Number(bev.calories) || 0)} kcal</Badge>
+                          <Badge size="xs" variant="light" color="green">P:{Math.round(Number(bev.protein) || 0)}g</Badge>
+                          <Badge size="xs" variant="light" color="orange">C:{Math.round(Number(bev.carbs) || 0)}g</Badge>
+                          <Badge size="xs" variant="light" color="grape">G:{Math.round(Number(bev.fat) || 0)}g</Badge>
+                        </Group>
+                      </Group>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Center py="xl"><Text c="dimmed">No se encontraron bebidas.</Text></Center>
               )}
             </ScrollArea>
           </Tabs.Panel>

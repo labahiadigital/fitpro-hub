@@ -199,6 +199,7 @@ export function FoodsTab({
 
                   <Group justify="space-between" align="center">
                     <Box className="food-card-calories">
+                      <Badge size="xs" variant="light" color="gray" mr={4}>100g</Badge>
                       🔥 {formatDecimal(Number(food.calories || 0), 0)} kcal
                     </Box>
                     <Group gap={4}>
@@ -239,6 +240,11 @@ export function FoodsTab({
                       <Text className="food-card-macro-label">Grasas</Text>
                     </Box>
                   </Box>
+                  {food.serving_size && Number(food.serving_size) !== 100 && (
+                    <Text size="xs" c="dimmed" mt={4} px={4}>
+                      Aprox. una ración de este producto son {Math.round(Number(food.serving_size))}g
+                    </Text>
+                  )}
                 </Box>
               );
             })}

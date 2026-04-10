@@ -369,6 +369,13 @@ export const nutritionApi = {
   deleteFoodGroup: (id: string) => api.delete(`/nutrition/food-groups/${id}`),
 };
 
+// Beverages API
+export const beveragesApi = {
+  list: (params?: { search?: string; category?: string }) => api.get("/beverages", { params }),
+  create: (data: object) => api.post("/beverages", data),
+  delete: (id: string) => api.delete(`/beverages/${id}`),
+};
+
 // Forms API
 export const formsApi = {
   list: (params?: object) => api.get("/forms", { params }),

@@ -30,6 +30,7 @@ from app.models.google_calendar import GoogleCalendarToken, CalendarSyncMapping
 from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.team_group import TeamGroup, TeamGroupMember
 from app.models.rectification import RectificationRequest
+from app.models.beverage import Beverage
 
 __all__ = [
     "Base",
@@ -96,4 +97,5 @@ __all__ = [
     "TeamGroup",
     "TeamGroupMember",
     "RectificationRequest",
+    "Beverage",
 ]
