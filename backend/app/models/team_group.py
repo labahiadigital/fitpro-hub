@@ -14,8 +14,11 @@ class TeamGroup(BaseModel):
     description = Column(Text, nullable=True)
     color = Column(String(20), nullable=True, default="blue")
     permissions = Column(JSONB, nullable=False, default=dict, server_default="{}")
+    custom_role_id = Column(UUID(as_uuid=True), ForeignKey("custom_roles.id", ondelete="SET NULL"), nullable=True)
+    assigned_clients = Column(JSONB, nullable=True, default=list, server_default="[]")
 
     members = relationship("TeamGroupMember", back_populates="group", cascade="all, delete-orphan")
+    custom_role = relationship("CustomRole", foreign_keys=[custom_role_id])
 
     def __repr__(self):
         return f"<TeamGroup {self.name}>"

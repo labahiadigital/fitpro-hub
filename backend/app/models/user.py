@@ -176,9 +176,11 @@ class UserRole(BaseModel):
 
     permissions = Column(JSONB, nullable=False, default=dict, server_default="{}")
     assigned_clients = Column(JSONB, nullable=False, default=list, server_default="[]")
+    custom_role_id = Column(UUID(as_uuid=True), ForeignKey("custom_roles.id", ondelete="SET NULL"), nullable=True)
 
     user = relationship("User", back_populates="workspace_roles")
     workspace = relationship("Workspace", back_populates="users")
+    custom_role = relationship("CustomRole", foreign_keys=[custom_role_id])
 
     def get_permissions(self) -> dict:
         """Return effective permissions: custom overrides merged over role defaults.

@@ -34,6 +34,7 @@ import {
   IconEdit,
   IconMail,
   IconPlus,
+  IconShield,
   IconTrash,
   IconUserPlus,
   IconUsers,
@@ -62,6 +63,13 @@ import {
 } from "../../hooks/useTeamGroups";
 import { useAuthStore } from "../../stores/auth";
 import { useClients } from "../../hooks/useClients";
+import {
+  useCustomRoles,
+  useCreateCustomRole,
+  useUpdateCustomRole,
+  useDeleteCustomRole,
+  type CustomRole,
+} from "../../hooks/useCustomRoles";
 
 interface PermissionDef {
   resource: string;
@@ -247,6 +255,30 @@ export function TeamPage() {
   const removeMemberMutation = useRemoveTeamMember();
   const resendMutation = useResendInvitation();
 
+  // Roles
+  const [roleModalOpened, { open: openRoleModal, close: closeRoleModal }] = useDisclosure(false);
+  const [editRoleOpened, { open: openEditRole, close: closeEditRole }] = useDisclosure(false);
+  const [selectedRole, setSelectedRole] = useState<CustomRole | null>(null);
+  const { data: customRoles = [], isLoading: loadingRoles } = useCustomRoles();
+  const createRoleMutation = useCreateCustomRole();
+  const updateRoleMutation = useUpdateCustomRole();
+  const deleteRoleMutation = useDeleteCustomRole();
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>({});
+  const roleForm = useForm({
+    initialValues: { name: "", description: "", color: "blue" },
+    validate: { name: (v: string) => (v.trim() ? null : "El nombre es obligatorio") },
+  });
+  const editRoleForm = useForm({
+    initialValues: { name: "", description: "", color: "blue" },
+    validate: { name: (v: string) => (v.trim() ? null : "El nombre es obligatorio") },
+  });
+  const [editRolePermissions, setEditRolePermissions] = useState<Record<string, string[]>>({});
+
+  const roleOptions = useMemo(
+    () => customRoles.map((r) => ({ value: r.id, label: r.name })),
+    [customRoles]
+  );
+
   // Groups
   const { data: groups = [], isLoading: loadingGroups } = useTeamGroupsList();
   const createGroupMutation = useCreateGroup();
@@ -315,13 +347,13 @@ export function TeamPage() {
   });
 
   const groupForm = useForm({
-    initialValues: { name: "", description: "", color: "blue" },
-    validate: { name: (v) => (v.trim() ? null : "El nombre es obligatorio") },
+    initialValues: { name: "", description: "", color: "blue", custom_role_id: "" as string, assigned_clients: [] as string[] },
+    validate: { name: (v: string) => (v.trim() ? null : "El nombre es obligatorio") },
   });
 
   const editGroupForm = useForm({
     initialValues: { name: "", description: "", color: "blue" },
-    validate: { name: (v) => (v.trim() ? null : "El nombre es obligatorio") },
+    validate: { name: (v: string) => (v.trim() ? null : "El nombre es obligatorio") },
   });
 
   const [groupPermissions, setGroupPermissions] = useState<Record<string, string[]>>({});
@@ -357,10 +389,18 @@ export function TeamPage() {
           label: "Invitar Miembro",
           icon: <IconUserPlus size={16} />,
           onClick: openInviteModal,
-        } : {
+        } : activeTab === "groups" ? {
           label: "Nuevo Grupo",
           icon: <IconPlus size={16} />,
           onClick: openGroupModal,
+        } : {
+          label: "Nuevo Rol",
+          icon: <IconPlus size={16} />,
+          onClick: () => {
+            roleForm.reset();
+            setRolePermissions({ ...DEFAULT_COLLABORATOR_PERMISSIONS });
+            openRoleModal();
+          },
         }}
         description="Gestiona los miembros de tu equipo, grupos y permisos"
         title="Equipo"
@@ -373,6 +413,9 @@ export function TeamPage() {
           </Tabs.Tab>
           <Tabs.Tab value="groups" leftSection={<IconUsersGroup size={16} />}>
             Grupos
+          </Tabs.Tab>
+          <Tabs.Tab value="roles" leftSection={<IconShield size={16} />}>
+            Roles
           </Tabs.Tab>
         </Tabs.List>
 
@@ -628,6 +671,71 @@ export function TeamPage() {
             </Stack>
           )}
         </Tabs.Panel>
+
+        {/* ===== ROLES TAB ===== */}
+        <Tabs.Panel value="roles">
+          {loadingRoles ? (
+            <Box ta="center" py="xl"><Loader size="sm" /></Box>
+          ) : customRoles.length === 0 ? (
+            <Box ta="center" py="xl">
+              <ThemeIcon size="xl" radius="xl" variant="light" color="gray" mb="md">
+                <IconShield size={24} />
+              </ThemeIcon>
+              <Text fw={600} size="lg">No hay roles personalizados</Text>
+              <Text c="dimmed" size="sm" mt="xs" mb="md">Crea roles con permisos específicos para asignar a miembros y grupos</Text>
+              <Button leftSection={<IconPlus size={14} />} onClick={() => { roleForm.reset(); setRolePermissions({ ...DEFAULT_COLLABORATOR_PERMISSIONS }); openRoleModal(); }}>
+                Crear primer rol
+              </Button>
+            </Box>
+          ) : (
+            <Stack gap="md">
+              {customRoles.map((role) => {
+                const permCount = Object.values(role.permissions).flat().length;
+                return (
+                  <Paper key={role.id} withBorder radius="md" p="md" style={{ borderLeft: `4px solid var(--mantine-color-${role.color || "blue"}-5)` }}>
+                    <Group justify="space-between" align="flex-start">
+                      <Box>
+                        <Group gap="xs" mb={4}>
+                          <Text fw={600}>{role.name}</Text>
+                          {role.is_system && <Badge size="xs" variant="light" color="gray">Sistema</Badge>}
+                          <Badge size="xs" variant="light" color={role.color || "blue"}>{permCount} permisos</Badge>
+                        </Group>
+                        {role.description && <Text size="sm" c="dimmed">{role.description}</Text>}
+                        <Group gap={4} mt="xs" wrap="wrap">
+                          {PERMISSION_DEFS.filter((pd) => (role.permissions[pd.resource]?.length ?? 0) > 0).map((pd) => (
+                            <Tooltip key={pd.resource} label={`${pd.label}: ${(role.permissions[pd.resource] || []).map((a) => ACTION_LABELS[a] || a).join(", ")}`}>
+                              <Badge size="xs" variant="dot" color={role.color || "blue"}>{pd.label}</Badge>
+                            </Tooltip>
+                          ))}
+                        </Group>
+                      </Box>
+                      <Menu shadow="md" position="bottom-end">
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" color="gray"><IconDotsVertical size={16} /></ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => {
+                            setSelectedRole(role);
+                            editRoleForm.setValues({ name: role.name, description: role.description || "", color: role.color || "blue" });
+                            setEditRolePermissions({ ...role.permissions });
+                            openEditRole();
+                          }}>Editar</Menu.Item>
+                          {!role.is_system && (
+                            <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={() => {
+                              if (window.confirm(`¿Eliminar el rol "${role.name}"?`)) {
+                                deleteRoleMutation.mutate(role.id);
+                              }
+                            }}>Eliminar</Menu.Item>
+                          )}
+                        </Menu.Dropdown>
+                      </Menu>
+                    </Group>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          )}
+        </Tabs.Panel>
       </Tabs>
 
       {/* Invite Modal */}
@@ -676,6 +784,18 @@ export function TeamPage() {
               label="Rol base"
               description="Los permisos específicos se configuran abajo"
               {...inviteForm.getInputProps("role")}
+            />
+            <Select
+              label="Aplicar rol predefinido"
+              placeholder="Seleccionar rol para cargar permisos"
+              data={roleOptions}
+              clearable
+              onChange={(roleId) => {
+                if (roleId) {
+                  const role = customRoles.find((r) => r.id === roleId);
+                  if (role) inviteForm.setFieldValue("permissions", { ...role.permissions });
+                }
+              }}
             />
             <Divider label="Permisos detallados" labelPosition="center" />
             <PermissionsMatrix
@@ -784,7 +904,13 @@ export function TeamPage() {
       >
         <form
           onSubmit={groupForm.onSubmit((values) => {
-            createGroupMutation.mutate(values, {
+            createGroupMutation.mutate({
+              name: values.name,
+              description: values.description,
+              color: values.color,
+              custom_role_id: values.custom_role_id || undefined,
+              assigned_clients: values.assigned_clients,
+            }, {
               onSuccess: () => {
                 closeGroupModal();
                 groupForm.reset();
@@ -796,6 +922,8 @@ export function TeamPage() {
             <TextInput label="Nombre" placeholder="Ej: Equipo de Nutrición" required {...groupForm.getInputProps("name")} />
             <Textarea label="Descripción" placeholder="Descripción del grupo (opcional)" autosize minRows={2} {...groupForm.getInputProps("description")} />
             <Select label="Color" data={GROUP_COLORS} {...groupForm.getInputProps("color")} />
+            <Select label="Rol asignado" placeholder="Seleccionar rol (opcional)" data={roleOptions} clearable {...groupForm.getInputProps("custom_role_id")} />
+            <MultiSelect label="Clientes asignados" placeholder="Seleccionar clientes" data={clientOptions} searchable clearable {...groupForm.getInputProps("assigned_clients")} />
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeGroupModal}>Cancelar</Button>
               <Button type="submit" className="nv-button" loading={createGroupMutation.isPending}>Crear Grupo</Button>
@@ -933,6 +1061,70 @@ export function TeamPage() {
             </Button>
           </Group>
         </Stack>
+      </BottomSheet>
+      {/* Create Role Modal */}
+      <BottomSheet
+        centered
+        onClose={closeRoleModal}
+        opened={roleModalOpened}
+        title="Nuevo Rol"
+        size="xl"
+        styles={{
+          header: { borderBottom: "1px solid var(--nv-border)" },
+          title: { fontFamily: "var(--font-heading)", fontWeight: 600 },
+        }}
+      >
+        <form onSubmit={roleForm.onSubmit((values) => {
+          createRoleMutation.mutate(
+            { name: values.name, description: values.description, color: values.color, permissions: rolePermissions },
+            { onSuccess: () => { closeRoleModal(); roleForm.reset(); } }
+          );
+        })}>
+          <Stack>
+            <TextInput label="Nombre del rol" placeholder="Ej: Entrenador Senior" required {...roleForm.getInputProps("name")} />
+            <Textarea label="Descripción" placeholder="Descripción opcional" {...roleForm.getInputProps("description")} />
+            <Select label="Color" data={GROUP_COLORS} {...roleForm.getInputProps("color")} />
+            <Divider label="Permisos" labelPosition="left" />
+            <PermissionsMatrix permissions={rolePermissions} onChange={setRolePermissions} />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={closeRoleModal}>Cancelar</Button>
+              <Button type="submit" loading={createRoleMutation.isPending}>Crear Rol</Button>
+            </Group>
+          </Stack>
+        </form>
+      </BottomSheet>
+
+      {/* Edit Role Modal */}
+      <BottomSheet
+        centered
+        onClose={closeEditRole}
+        opened={editRoleOpened}
+        title={`Editar Rol: ${selectedRole?.name || ""}`}
+        size="xl"
+        styles={{
+          header: { borderBottom: "1px solid var(--nv-border)" },
+          title: { fontFamily: "var(--font-heading)", fontWeight: 600 },
+        }}
+      >
+        <form onSubmit={editRoleForm.onSubmit((values) => {
+          if (!selectedRole) return;
+          updateRoleMutation.mutate(
+            { id: selectedRole.id, name: values.name, description: values.description, color: values.color, permissions: editRolePermissions },
+            { onSuccess: () => { closeEditRole(); setSelectedRole(null); } }
+          );
+        })}>
+          <Stack>
+            <TextInput label="Nombre del rol" placeholder="Ej: Entrenador Senior" required {...editRoleForm.getInputProps("name")} />
+            <Textarea label="Descripción" placeholder="Descripción opcional" {...editRoleForm.getInputProps("description")} />
+            <Select label="Color" data={GROUP_COLORS} {...editRoleForm.getInputProps("color")} />
+            <Divider label="Permisos" labelPosition="left" />
+            <PermissionsMatrix permissions={editRolePermissions} onChange={setEditRolePermissions} />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={closeEditRole}>Cancelar</Button>
+              <Button type="submit" loading={updateRoleMutation.isPending}>Guardar Cambios</Button>
+            </Group>
+          </Stack>
+        </form>
       </BottomSheet>
     </Container>
   );

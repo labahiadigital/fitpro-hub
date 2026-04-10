@@ -199,7 +199,6 @@ export function FoodsTab({
 
                   <Group justify="space-between" align="center">
                     <Box className="food-card-calories">
-                      <Badge size="xs" variant="light" color="gray" mr={4}>100g</Badge>
                       🔥 {formatDecimal(Number(food.calories || 0), 0)} kcal
                     </Box>
                     <Group gap={4}>

@@ -1168,13 +1168,7 @@ async def get_my_meal_plan(
         if no_dates:
             return no_dates[0]
 
-    result = await db.execute(
-        select(MealPlan)
-        .where(MealPlan.client_id == client.id)
-        .order_by(desc(MealPlan.created_at))
-        .limit(1)
-    )
-    return result.scalar_one_or_none()
+    return None
 
 
 @router.get("/nutrition/plans", response_model=List[MealPlanClientResponse])

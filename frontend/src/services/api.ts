@@ -369,6 +369,14 @@ export const nutritionApi = {
   deleteFoodGroup: (id: string) => api.delete(`/nutrition/food-groups/${id}`),
 };
 
+// Custom Roles API
+export const customRolesApi = {
+  list: () => api.get("/roles"),
+  create: (data: object) => api.post("/roles", data),
+  update: (id: string, data: object) => api.put(`/roles/${id}`, data),
+  delete: (id: string) => api.delete(`/roles/${id}`),
+};
+
 // Beverages API
 export const beveragesApi = {
   list: (params?: { search?: string; category?: string }) => api.get("/beverages", { params }),

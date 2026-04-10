@@ -24,12 +24,16 @@ class GroupCreate(PydanticModel):
     name: str
     description: Optional[str] = None
     color: str = "blue"
+    custom_role_id: Optional[UUID] = None
+    assigned_clients: Optional[List[str]] = []
 
 
 class GroupUpdate(PydanticModel):
     name: Optional[str] = None
     description: Optional[str] = None
     color: Optional[str] = None
+    custom_role_id: Optional[UUID] = None
+    assigned_clients: Optional[List[str]] = None
 
 
 class GroupPermissionsUpdate(PydanticModel):
@@ -56,6 +60,8 @@ class GroupResponse(PydanticModel):
     description: Optional[str]
     color: Optional[str]
     permissions: dict
+    custom_role_id: Optional[UUID] = None
+    assigned_clients: Optional[List[str]] = []
     members: List[GroupMemberResponse] = []
     created_at: object
     updated_at: object

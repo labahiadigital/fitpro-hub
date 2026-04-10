@@ -15,6 +15,8 @@ export interface TeamGroup {
   description?: string;
   color?: string;
   permissions: Record<string, string[]>;
+  custom_role_id?: string;
+  assigned_clients?: string[];
   members: TeamGroupMember[];
   created_at: string;
   updated_at: string;
@@ -24,6 +26,8 @@ export interface CreateGroupData {
   name: string;
   description?: string;
   color?: string;
+  custom_role_id?: string;
+  assigned_clients?: string[];
 }
 
 export interface UpdateGroupData {

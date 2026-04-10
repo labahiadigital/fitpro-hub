@@ -31,6 +31,7 @@ from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.team_group import TeamGroup, TeamGroupMember
 from app.models.rectification import RectificationRequest
 from app.models.beverage import Beverage
+from app.models.custom_role import CustomRole
 
 __all__ = [
     "Base",
@@ -98,4 +99,5 @@ __all__ = [
     "TeamGroupMember",
     "RectificationRequest",
     "Beverage",
+    "CustomRole",
 ]

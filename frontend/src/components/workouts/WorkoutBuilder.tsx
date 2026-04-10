@@ -1428,7 +1428,7 @@ export function WorkoutBuilderWithDays({
             <Group gap="xs">
               <Popover position="bottom-end" opened={copyWeekPopoverOpened} onChange={setCopyWeekPopoverOpened}>
                 <Popover.Target>
-                  <Button variant="light" size="xs" leftSection={<IconCopy size={14} />} onClick={() => setCopyWeekPopoverOpened((o) => !o)}>Copiar a...</Button>
+                  <Button variant="light" size="xs" color="violet" leftSection={<IconCopy size={14} />} onClick={() => setCopyWeekPopoverOpened((o) => !o)}>Copiar a semana</Button>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
@@ -1443,17 +1443,6 @@ export function WorkoutBuilderWithDays({
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
-              <Button
-                variant="light"
-                size="xs"
-                leftSection={<IconCopy size={14} />}
-                onClick={() => {
-                  const target = currentWeek < totalWeeks ? currentWeek + 1 : 1;
-                  onCopyWeek?.(currentWeek, target);
-                }}
-              >
-                Copiar semana
-              </Button>
             </Group>
           </Group>
         </Paper>
@@ -1479,7 +1468,7 @@ export function WorkoutBuilderWithDays({
                   setCopyToDayIds(days.filter((d) => d.id !== activeDay).map((d) => d.id));
                 }}
               >
-                Copiar día a...
+                Copiar a días
               </Button>
             </Popover.Target>
             <Popover.Dropdown>

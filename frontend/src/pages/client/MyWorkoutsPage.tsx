@@ -1250,12 +1250,13 @@ export function MyWorkoutsPage() {
     if (!workouts || workouts.length === 0) return undefined;
     const todayStr = toLocalDateStr(new Date());
     const activeOnes = workouts.filter((p) => p.is_active);
+    if (activeOnes.length === 0) return undefined;
     const inWindow = activeOnes.find((p) => {
       if (p.start_date && todayStr < p.start_date) return false;
       if (p.end_date && todayStr > p.end_date) return false;
       return true;
     });
-    return inWindow || activeOnes[0] || workouts[0];
+    return inWindow || activeOnes[0];
   }, [workouts]);
 
   const todayJsDay = new Date().getDay();
@@ -1689,6 +1690,14 @@ export function MyWorkoutsPage() {
               </Text>
             </Group>
           </Card>
+
+          {!activeProgram && (
+            <Box ta="center" py="xl">
+              <Text size="xl" mb="sm">📋</Text>
+              <Text fw={600} size="lg">No tienes ningún programa de entrenamiento activo</Text>
+              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un programa cuando esté listo.</Text>
+            </Box>
+          )}
 
           {!isSelectedDateInRange && data.assignedProgram?.id && (
             <Box ta="center" py="xl">
