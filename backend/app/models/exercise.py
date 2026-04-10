@@ -19,10 +19,9 @@ class Exercise(BaseModel):
     
     __tablename__ = "exercises"
     
-    # DB columns: id, workspace_id, name, description, instructions, muscle_groups, equipment, 
-    #             difficulty, category, video_url, image_url, thumbnail_url, is_global, created_at, updated_at
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=True, index=True)
     name = Column(Text, nullable=False)
+    alias = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
     instructions = Column(Text, nullable=True)
     muscle_groups = Column(ARRAY(Text), default=[])

@@ -172,7 +172,6 @@ interface WorkoutBuilderWithDaysProps {
   days: WorkoutDay[];
   onChangeDays: (days: WorkoutDay[]) => void;
   availableExercises: Exercise[];
-  /** Selected client for reference (name, goals, injuries) */
   selectedClient?: { first_name?: string; last_name?: string; goals?: string; health_data?: { injuries?: Array<{ name: string; notes?: string; status?: string }> } } | null;
   exerciseFavorites?: string[];
   onToggleExerciseFavorite?: (exerciseId: string, isFavorite: boolean) => void;
@@ -184,6 +183,7 @@ interface WorkoutBuilderWithDaysProps {
     difficulty: string;
     description?: string;
   }) => Promise<Exercise>;
+  startDate?: string | Date | null;
   totalWeeks?: number;
   currentWeek?: number;
   onWeekChange?: (week: number) => void;
@@ -1288,6 +1288,15 @@ const WEEK_DAYS = [
   { id: "day-7", dayName: "Domingo", value: "day-7" },
 ];
 
+function getDayDate(startDate: string | Date | null | undefined, currentWeek: number, dayIndex: number): string | null {
+  if (!startDate) return null;
+  const d = new Date(startDate);
+  if (isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + (currentWeek - 1) * 7 + dayIndex);
+  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+
 export function WorkoutBuilderWithDays({
   days,
   onChangeDays,
@@ -1296,6 +1305,7 @@ export function WorkoutBuilderWithDays({
   exerciseFavorites = [],
   onToggleExerciseFavorite,
   onCreateExercise,
+  startDate,
   totalWeeks = 1,
   currentWeek = 1,
   onWeekChange,
@@ -1488,27 +1498,35 @@ export function WorkoutBuilderWithDays({
           />
         ) : (
           <SimpleGrid cols={7}>
-            {days.map((day) => (
-              <Paper
-                key={day.id}
-                p="xs"
-                radius="md"
-                withBorder
-                style={{
-                  borderColor: day.id === activeDay ? "var(--mantine-color-blue-5)" : undefined,
-                  backgroundColor: day.isRestDay ? "var(--mantine-color-gray-0)" : undefined,
-                  cursor: "pointer",
-                }}
-                onClick={() => setActiveDay(day.id)}
-              >
-                <Text ta="center" size="xs" fw={600}>
-                  {day.dayName.slice(0, 3)}
-                </Text>
-                <Text ta="center" size="xs" c={day.isRestDay ? "dimmed" : "blue"}>
-                  {day.isRestDay ? "Descanso" : `${getDayExerciseCount(day)} ej.`}
-                </Text>
-              </Paper>
-            ))}
+            {days.map((day, idx) => {
+              const dateStr = getDayDate(startDate, currentWeek, idx);
+              return (
+                <Paper
+                  key={day.id}
+                  p="xs"
+                  radius="md"
+                  withBorder
+                  style={{
+                    borderColor: day.id === activeDay ? "var(--mantine-color-blue-5)" : undefined,
+                    backgroundColor: day.isRestDay ? "var(--mantine-color-gray-0)" : undefined,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setActiveDay(day.id)}
+                >
+                  <Text ta="center" size="xs" fw={600}>
+                    {day.dayName.slice(0, 3)}
+                  </Text>
+                  {dateStr && (
+                    <Text ta="center" size="10px" c="dimmed">
+                      {dateStr}
+                    </Text>
+                  )}
+                  <Text ta="center" size="xs" c={day.isRestDay ? "dimmed" : "blue"}>
+                    {day.isRestDay ? "Descanso" : `${getDayExerciseCount(day)} ej.`}
+                  </Text>
+                </Paper>
+              );
+            })}
           </SimpleGrid>
         )}
       </Paper>
@@ -1518,10 +1536,13 @@ export function WorkoutBuilderWithDays({
         <Select
           value={activeDay}
           onChange={(v) => v && setActiveDay(v)}
-          data={days.map((day) => ({
-            value: day.id,
-            label: `${day.dayName}${day.isRestDay ? " (Descanso)" : ` (${getDayExerciseCount(day)} ej.)`}`,
-          }))}
+          data={days.map((day, idx) => {
+            const ds = getDayDate(startDate, currentWeek, idx);
+            return {
+              value: day.id,
+              label: `${day.dayName}${ds ? ` (${ds})` : ""}${day.isRestDay ? " — Descanso" : ` — ${getDayExerciseCount(day)} ej.`}`,
+            };
+          })}
           size="sm"
           radius="md"
           mb="md"
@@ -1530,7 +1551,9 @@ export function WorkoutBuilderWithDays({
       <Tabs value={activeDay} onChange={(v) => setActiveDay(v || days[0]?.id)}>
         {!isMobile && (
           <Tabs.List mb="md">
-            {days.map((day) => (
+            {days.map((day, idx) => {
+              const ds = getDayDate(startDate, currentWeek, idx);
+              return (
               <Tabs.Tab
                 key={day.id}
                 value={day.id}
@@ -1543,9 +1566,10 @@ export function WorkoutBuilderWithDays({
                   )
                 }
               >
-                {day.dayName}
+                {day.dayName}{ds ? ` (${ds})` : ""}
               </Tabs.Tab>
-            ))}
+              );
+            })}
           </Tabs.List>
         )}
 

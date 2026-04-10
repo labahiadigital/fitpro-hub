@@ -341,6 +341,21 @@ export function useActivateMealPlan() {
   });
 }
 
+export function useDeactivateMealPlan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await nutritionApi.deactivatePlan(id);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meal-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["client-meal-plans"] });
+    },
+  });
+}
+
 // Hook para obtener plantillas de planes nutricionales
 export function useMealPlanTemplates() {
   return useQuery({
@@ -437,6 +452,57 @@ export function useDeleteSupplement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["supplements"] });
+    },
+  });
+}
+
+// ============ FOOD GROUPS ============
+
+export function useFoodGroups(search?: string) {
+  return useQuery({
+    queryKey: ["food-groups", search],
+    queryFn: async () => {
+      const response = await nutritionApi.foodGroups({ search });
+      return response.data || [];
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useCreateFoodGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: object) => {
+      const response = await nutritionApi.createFoodGroup(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["food-groups"] });
+    },
+  });
+}
+
+export function useUpdateFoodGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: object }) => {
+      const response = await nutritionApi.updateFoodGroup(id, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["food-groups"] });
+    },
+  });
+}
+
+export function useDeleteFoodGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await nutritionApi.deleteFoodGroup(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["food-groups"] });
     },
   });
 }
@@ -644,6 +710,21 @@ export function useActivateWorkoutProgram() {
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await workoutsApi.activateProgram(id);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
+      queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
+    },
+  });
+}
+
+export function useDeactivateWorkoutProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await workoutsApi.deactivateProgram(id);
       return response.data;
     },
     onSuccess: () => {

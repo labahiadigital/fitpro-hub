@@ -405,6 +405,7 @@ export function WorkoutsPage() {
   const exerciseForm = useForm({
     initialValues: {
       name: "",
+      alias: "",
       description: "",
       instructions: "",
       muscle_groups: [] as string[],
@@ -417,11 +418,11 @@ export function WorkoutsPage() {
     },
   });
   
-  // Función para abrir modal de edición de ejercicio
   const openEditExercise = (exercise: any) => {
     setEditingExercise(exercise);
     exerciseForm.setValues({
       name: exercise.name || "",
+      alias: exercise.alias || "",
       description: exercise.description || "",
       instructions: exercise.instructions || "",
       muscle_groups: exercise.muscle_groups || [],
@@ -890,8 +891,8 @@ export function WorkoutsPage() {
                   <Group justify="space-between" mb="sm">
                     <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{program.name}</Text>
                     <Group gap={4}>
-                      <Badge color={showActive ? "green" : "gray"} variant="filled" radius="md" size="xs">
-                        {showActive ? "Activo" : "Inactivo"}
+                      <Badge color={showActive ? "green" : isExpired ? "red" : "gray"} variant="filled" radius="md" size="xs">
+                        {showActive ? "Activo" : isExpired ? "Expirado" : "Inactivo"}
                       </Badge>
                       <Badge color="blue" variant="light" radius="md" size="xs">
                         {program.duration_weeks}sem
@@ -1067,7 +1068,7 @@ export function WorkoutsPage() {
                   <Box p="xs">
                     <Group gap={4} wrap="nowrap">
                       <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>
-                        {exercise.name}
+                        {exercise.name}{exercise.alias ? ` (${exercise.alias})` : ""}
                       </Text>
                       {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
                     </Group>
@@ -1229,6 +1230,13 @@ export function WorkoutsPage() {
               required
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("name")}
+            />
+
+            <TextInput
+              label="Alias"
+              placeholder="Nombre alternativo (ej: Bench Press)"
+              disabled={editingExercise?.is_global}
+              {...exerciseForm.getInputProps("alias")}
             />
 
             <Textarea
@@ -1490,6 +1498,7 @@ export function WorkoutsPage() {
             exerciseFavorites={exerciseFavorites}
             onToggleExerciseFavorite={handleToggleExerciseFavorite}
             onCreateExercise={handleCreateExerciseFromBuilder}
+            startDate={programForm.values.start_date}
             totalWeeks={programForm.values.duration_weeks}
             currentWeek={currentWeek}
             onWeekChange={setCurrentWeek}

@@ -320,3 +320,23 @@ class Recipe(BaseModel):
     
     def __repr__(self):
         return f"<Recipe {self.name}>"
+
+
+class FoodGroup(BaseModel):
+    """Food group model for nutritional reference tables."""
+
+    __tablename__ = "food_groups"
+
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    name = Column(Text, nullable=False)
+    subcategory = Column(Text, nullable=True)
+    quantity = Column(Text, nullable=True)
+    calories = Column(Numeric, default=0)
+    protein_g = Column(Numeric, default=0)
+    carbs_g = Column(Numeric, default=0)
+    fat_g = Column(Numeric, default=0)
+    fiber_g = Column(Numeric, default=0)
+    is_global = Column(Boolean, default=False)
+
+    def __repr__(self):
+        return f"<FoodGroup {self.name}>"

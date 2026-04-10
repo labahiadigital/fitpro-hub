@@ -9,7 +9,7 @@ from sqlalchemy import select, or_, func, update
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models.nutrition import Food, MealPlan, FoodFavorite, Recipe
+from app.models.nutrition import Food, MealPlan, FoodFavorite, Recipe, FoodGroup
 from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
 
 router = APIRouter()
@@ -241,7 +241,18 @@ async def list_meal_plans(
         query = query.where(MealPlan.is_template == is_template)
     
     result = await db.execute(query.order_by(MealPlan.created_at.desc()))
-    return result.scalars().all()
+    plans = result.scalars().all()
+
+    today = date.today()
+    dirty = False
+    for p in plans:
+        if p.is_active and p.end_date and p.end_date < today:
+            p.is_active = False
+            dirty = True
+    if dirty:
+        await db.commit()
+
+    return plans
 
 
 @router.post("/meal-plans", response_model=MealPlanResponse, status_code=status.HTTP_201_CREATED)
@@ -431,6 +442,29 @@ async def activate_meal_plan(
     if plan.executed_plan is None and plan.plan:
         import copy
         plan.executed_plan = copy.deepcopy(plan.plan)
+    await db.commit()
+    await db.refresh(plan)
+    return plan
+
+
+@router.post("/meal-plans/{plan_id}/deactivate", response_model=MealPlanResponse)
+async def deactivate_meal_plan(
+    plan_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Mark a plan as inactive."""
+    result = await db.execute(
+        select(MealPlan).where(
+            MealPlan.id == plan_id,
+            MealPlan.workspace_id == current_user.workspace_id
+        )
+    )
+    plan = result.scalar_one_or_none()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan no encontrado")
+
+    plan.is_active = False
     await db.commit()
     await db.refresh(plan)
     return plan
@@ -1044,4 +1078,171 @@ async def delete_recipe(
     if not recipe:
         raise HTTPException(status_code=404, detail="Receta no encontrada")
     await db.delete(recipe)
+    await db.commit()
+
+
+# ============ AUTO-ACTIVATION ============
+
+@router.post("/auto-activate")
+async def auto_activate_plans(
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Auto-activate/deactivate meal plans based on start_date and end_date."""
+    today = date.today()
+
+    expired = await db.execute(
+        update(MealPlan)
+        .where(
+            MealPlan.workspace_id == current_user.workspace_id,
+            MealPlan.is_active == True,
+            MealPlan.end_date != None,
+            MealPlan.end_date < today,
+        )
+        .values(is_active=False)
+    )
+    deactivated_count = expired.rowcount
+
+    pending = await db.execute(
+        select(MealPlan).where(
+            MealPlan.workspace_id == current_user.workspace_id,
+            MealPlan.is_active == False,
+            MealPlan.client_id != None,
+            MealPlan.is_template == False,
+            MealPlan.start_date != None,
+            MealPlan.start_date <= today,
+            or_(MealPlan.end_date == None, MealPlan.end_date >= today),
+        )
+    )
+    to_activate = pending.scalars().all()
+
+    activated_count = 0
+    for plan in to_activate:
+        has_active = await db.scalar(
+            select(func.count()).select_from(MealPlan).where(
+                MealPlan.client_id == plan.client_id,
+                MealPlan.is_active == True,
+            )
+        )
+        if not has_active:
+            plan.is_active = True
+            if plan.executed_plan is None and plan.plan:
+                import copy
+                plan.executed_plan = copy.deepcopy(plan.plan)
+            activated_count += 1
+
+    await db.commit()
+    return {"activated": activated_count, "deactivated": deactivated_count}
+
+
+# ============ FOOD GROUPS ============
+
+class FoodGroupCreate(BaseModel):
+    name: str
+    subcategory: Optional[str] = None
+    quantity: Optional[str] = None
+    calories: float = 0
+    protein_g: float = 0
+    carbs_g: float = 0
+    fat_g: float = 0
+    fiber_g: float = 0
+
+
+class FoodGroupResponse(BaseModel):
+    id: UUID
+    workspace_id: Optional[UUID] = None
+    name: str
+    subcategory: Optional[str] = None
+    quantity: Optional[str] = None
+    calories: float = 0
+    protein_g: float = 0
+    carbs_g: float = 0
+    fat_g: float = 0
+    fiber_g: float = 0
+    is_global: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/food-groups", response_model=List[FoodGroupResponse])
+async def list_food_groups(
+    search: Optional[str] = None,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(FoodGroup).where(
+        or_(
+            FoodGroup.workspace_id == current_user.workspace_id,
+            FoodGroup.is_global == True,
+        )
+    )
+    if search:
+        query = query.where(FoodGroup.name.ilike(f"%{search}%"))
+    result = await db.execute(query.order_by(FoodGroup.name))
+    return result.scalars().all()
+
+
+@router.post("/food-groups", response_model=FoodGroupResponse, status_code=status.HTTP_201_CREATED)
+async def create_food_group(
+    data: FoodGroupCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    fg = FoodGroup(
+        workspace_id=current_user.workspace_id,
+        name=data.name,
+        subcategory=data.subcategory,
+        quantity=data.quantity,
+        calories=data.calories,
+        protein_g=data.protein_g,
+        carbs_g=data.carbs_g,
+        fat_g=data.fat_g,
+        fiber_g=data.fiber_g,
+    )
+    db.add(fg)
+    await db.commit()
+    await db.refresh(fg)
+    return fg
+
+
+@router.put("/food-groups/{fg_id}", response_model=FoodGroupResponse)
+async def update_food_group(
+    fg_id: UUID,
+    data: FoodGroupCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(FoodGroup).where(
+            FoodGroup.id == fg_id,
+            FoodGroup.workspace_id == current_user.workspace_id,
+        )
+    )
+    fg = result.scalar_one_or_none()
+    if not fg:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    for key, val in data.model_dump().items():
+        setattr(fg, key, val)
+    await db.commit()
+    await db.refresh(fg)
+    return fg
+
+
+@router.delete("/food-groups/{fg_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_food_group(
+    fg_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(FoodGroup).where(
+            FoodGroup.id == fg_id,
+            FoodGroup.workspace_id == current_user.workspace_id,
+        )
+    )
+    fg = result.scalar_one_or_none()
+    if not fg:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    await db.delete(fg)
     await db.commit()

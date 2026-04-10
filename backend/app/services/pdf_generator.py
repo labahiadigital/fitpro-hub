@@ -282,8 +282,8 @@ class PDFGeneratorService:
                 
                 for food in meal.get('foods', []):
                     food_name = food.get('name', '')
+                    food_type = food.get('type', 'food')
                     
-                    # Check if food contains allergens
                     food_allergens = food.get('allergens', [])
                     has_allergen = any(
                         allergen.lower() in [a.lower() for a in all_restrictions]
@@ -292,15 +292,45 @@ class PDFGeneratorService:
                     
                     if has_allergen:
                         food_name = f"⚠️ {food_name}"
-                    
-                    food_data.append([
-                        food_name,
-                        f"{food.get('quantity', 100)}g",
-                        f"{food.get('calories', 0):.0f}",
-                        f"{food.get('protein', 0):.1f}",
-                        f"{food.get('carbs', 0):.1f}",
-                        f"{food.get('fat', 0):.1f}",
-                    ])
+
+                    if food_type == 'recipe':
+                        items = food.get('items', [])
+                        total_grams = sum(float(it.get('quantity_grams', 0) or it.get('quantity', 0)) for it in items)
+                        food_data.append([
+                            food_name,
+                            f"{total_grams:.0f}g",
+                            f"{food.get('calories', 0):.0f}",
+                            f"{food.get('protein', 0):.1f}",
+                            f"{food.get('carbs', 0):.1f}",
+                            f"{food.get('fat', 0):.1f}",
+                        ])
+                        for idx, item in enumerate(items, 1):
+                            ingredient_label = rl['Paragraph'](
+                                f"Ingrediente {idx}",
+                                rl['ParagraphStyle'](
+                                    f'ingredient_{idx}',
+                                    parent=normal_style,
+                                    fontSize=8,
+                                    alignment=2,
+                                )
+                            )
+                            food_data.append([
+                                ingredient_label,
+                                f"{item.get('quantity_grams', item.get('quantity', 0))}g",
+                                f"{item.get('calories', 0):.0f}",
+                                f"{item.get('protein', 0):.1f}",
+                                f"{item.get('carbs', 0):.1f}",
+                                f"{item.get('fat', 0):.1f}",
+                            ])
+                    else:
+                        food_data.append([
+                            food_name,
+                            f"{food.get('quantity', 100)}g",
+                            f"{food.get('calories', 0):.0f}",
+                            f"{food.get('protein', 0):.1f}",
+                            f"{food.get('carbs', 0):.1f}",
+                            f"{food.get('fat', 0):.1f}",
+                        ])
                 
                 if len(food_data) > 1:
                     food_table = rl['Table'](

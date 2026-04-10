@@ -66,6 +66,7 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconPlayerPlay,
+  IconPlayerPause,
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -77,12 +78,14 @@ import {
   useMealPlanTemplates,
   useAssignWorkoutProgram,
   useActivateWorkoutProgram,
+  useDeactivateWorkoutProgram,
   useAssignMealPlan,
   useSupabaseMealPlan,
   useClientWorkoutAssignments,
   useDeleteAssignedProgram,
   useDeleteAssignedMealPlan,
   useActivateMealPlan,
+  useDeactivateMealPlan,
 } from "../../hooks/useSupabaseData";
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
@@ -618,8 +621,10 @@ export function ClientDetailPage() {
   // Hooks para asignaciones
   const assignWorkoutProgram = useAssignWorkoutProgram();
   const activateWorkoutProgram = useActivateWorkoutProgram();
+  const deactivateWorkoutProgram = useDeactivateWorkoutProgram();
   const assignMealPlan = useAssignMealPlan();
   const activateMealPlan = useActivateMealPlan();
+  const deactivateMealPlan = useDeactivateMealPlan();
   
   // Hooks para eliminar asignaciones
   const deleteAssignedProgram = useDeleteAssignedProgram();
@@ -2708,10 +2713,10 @@ export function ClientDetailPage() {
                               <Text fw={600} size="md">{plan.name}</Text>
                               <Badge 
                                 variant="filled"
-                                color={plan.status === "active" ? "green" : "gray"}
+                                color={plan.status === "active" ? "green" : (plan.end_date && new Date(plan.end_date) < new Date()) ? "red" : "gray"}
                                 size="sm"
                               >
-                                {plan.status === "active" ? "Activo" : "Inactivo"}
+                                {plan.status === "active" ? "Activo" : (plan.end_date && new Date(plan.end_date) < new Date()) ? "Expirado" : "Inactivo"}
                               </Badge>
                             </Group>
                             <Group gap="md" wrap="wrap">
@@ -2748,7 +2753,7 @@ export function ClientDetailPage() {
                               >
                                 Ver detalles
                               </Menu.Item>
-                              {plan.status !== "active" && (
+                              {plan.status !== "active" ? (
                                 <Menu.Item 
                                   leftSection={<IconPlayerPlay size={16} />}
                                   color="green"
@@ -2759,6 +2764,18 @@ export function ClientDetailPage() {
                                   }}
                                 >
                                   Activar plan
+                                </Menu.Item>
+                              ) : (
+                                <Menu.Item 
+                                  leftSection={<IconPlayerPause size={16} />}
+                                  color="orange"
+                                  onClick={async () => {
+                                    await deactivateMealPlan.mutateAsync(plan.id);
+                                    notifications.show({ title: "Plan desactivado", message: `"${plan.name}" ha sido desactivado`, color: "orange" });
+                                    refetch();
+                                  }}
+                                >
+                                  Desactivar plan
                                 </Menu.Item>
                               )}
                               <Menu.Item 
@@ -3412,8 +3429,8 @@ export function ClientDetailPage() {
                             <IconBarbell size={18} />
                           </ThemeIcon>
                           <Text fw={600} size="md">{program.name}</Text>
-                          <Badge variant="filled" color={showActive ? "green" : "gray"} size="sm">
-                            {showActive ? "Activo" : "Inactivo"}
+                          <Badge variant="filled" color={showActive ? "green" : isExpired ? "red" : "gray"} size="sm">
+                            {showActive ? "Activo" : isExpired ? "Expirado" : "Inactivo"}
                           </Badge>
                         </Group>
                         {program.description && (
@@ -3463,7 +3480,7 @@ export function ClientDetailPage() {
                           >
                             Ver detalles
                           </Menu.Item>
-                          {!showActive && (
+                          {!showActive ? (
                             <Menu.Item
                               leftSection={<IconPlayerPlay size={16} />}
                               color="green"
@@ -3474,6 +3491,18 @@ export function ClientDetailPage() {
                               }}
                             >
                               Activar programa
+                            </Menu.Item>
+                          ) : (
+                            <Menu.Item
+                              leftSection={<IconPlayerPause size={16} />}
+                              color="orange"
+                              onClick={async () => {
+                                await deactivateWorkoutProgram.mutateAsync(program.id);
+                                notifications.show({ title: "Programa desactivado", message: `"${program.name}" ha sido desactivado`, color: "orange" });
+                                refetch();
+                              }}
+                            >
+                              Desactivar programa
                             </Menu.Item>
                           )}
                           <Menu.Item 

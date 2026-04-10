@@ -20,6 +20,7 @@ router = APIRouter()
 
 class ExerciseCreate(BaseModel):
     name: str
+    alias: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None
     muscle_groups: List[str] = []
@@ -34,6 +35,7 @@ class ExerciseCreate(BaseModel):
 class ExerciseResponse(BaseModel):
     id: UUID
     name: str
+    alias: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None
     muscle_groups: Optional[List[str]] = []
@@ -138,6 +140,7 @@ async def list_exercises(
         query = query.where(
             or_(
                 Exercise.name.ilike(search_pattern),
+                Exercise.alias.ilike(search_pattern),
                 Exercise.muscle_groups.cast(String).ilike(search_pattern),
             )
         )
@@ -180,6 +183,7 @@ async def create_exercise(
     exercise = Exercise(
         workspace_id=current_user.workspace_id,
         name=data.name,
+        alias=data.alias,
         description=data.description,
         instructions=data.instructions,
         muscle_groups=data.muscle_groups,
@@ -423,7 +427,18 @@ async def list_programs(
         query = query.where(WorkoutProgram.client_id == client_id)
     
     result = await db.execute(query.order_by(WorkoutProgram.created_at.desc()))
-    return result.scalars().all()
+    programs = result.scalars().all()
+
+    today = date.today()
+    dirty = False
+    for p in programs:
+        if p.is_active and p.end_date and p.end_date < today:
+            p.is_active = False
+            dirty = True
+    if dirty:
+        await db.commit()
+
+    return programs
 
 
 @router.post("/programs", response_model=WorkoutProgramResponse, status_code=status.HTTP_201_CREATED)
@@ -618,6 +633,29 @@ async def activate_program(
     return program
 
 
+@router.post("/programs/{program_id}/deactivate", response_model=WorkoutProgramResponse)
+async def deactivate_program(
+    program_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Mark a program as inactive."""
+    result = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.id == program_id,
+            WorkoutProgram.workspace_id == current_user.workspace_id
+        )
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        raise HTTPException(status_code=404, detail="Programa no encontrado")
+
+    program.is_active = False
+    await db.commit()
+    await db.refresh(program)
+    return program
+
+
 # Schema for assign request
 class AssignProgramRequest(BaseModel):
     client_id: UUID
@@ -779,3 +817,54 @@ async def get_client_logs(
     
     result = await db.execute(query.order_by(WorkoutLog.created_at.desc()))
     return result.scalars().all()
+
+
+# ============ AUTO-ACTIVATION ============
+
+@router.post("/auto-activate")
+async def auto_activate_programs(
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """Auto-activate/deactivate programs based on start_date and end_date."""
+    today = date.today()
+
+    expired = await db.execute(
+        update(WorkoutProgram)
+        .where(
+            WorkoutProgram.workspace_id == current_user.workspace_id,
+            WorkoutProgram.is_active == True,
+            WorkoutProgram.end_date != None,
+            WorkoutProgram.end_date < today,
+        )
+        .values(is_active=False)
+    )
+    deactivated_count = expired.rowcount
+
+    pending = await db.execute(
+        select(WorkoutProgram).where(
+            WorkoutProgram.workspace_id == current_user.workspace_id,
+            WorkoutProgram.is_active == False,
+            WorkoutProgram.client_id != None,
+            WorkoutProgram.is_template == False,
+            WorkoutProgram.start_date != None,
+            WorkoutProgram.start_date <= today,
+            or_(WorkoutProgram.end_date == None, WorkoutProgram.end_date >= today),
+        )
+    )
+    to_activate = pending.scalars().all()
+
+    activated_count = 0
+    for program in to_activate:
+        has_active = await db.scalar(
+            select(func.count()).select_from(WorkoutProgram).where(
+                WorkoutProgram.client_id == program.client_id,
+                WorkoutProgram.is_active == True,
+            )
+        )
+        if not has_active:
+            program.is_active = True
+            activated_count += 1
+
+    await db.commit()
+    return {"activated": activated_count, "deactivated": deactivated_count}

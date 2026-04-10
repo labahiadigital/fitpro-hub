@@ -19,6 +19,7 @@ router = APIRouter()
 
 class ExerciseCreate(BaseModel):
     name: str
+    alias: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None
     muscle_groups: List[str] = []
@@ -34,6 +35,7 @@ class ExerciseResponse(BaseModel):
     id: UUID
     workspace_id: Optional[UUID] = None
     name: str
+    alias: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None
     muscle_groups: List[str] = []
@@ -84,6 +86,7 @@ async def list_exercises(
         query = query.where(
             or_(
                 func.unaccent(Exercise.name).ilike(func.unaccent(search_pattern)),
+                Exercise.alias.ilike(search_pattern),
                 Exercise.muscle_groups.cast(String).ilike(search_pattern),
             )
         )
@@ -141,6 +144,7 @@ async def create_exercise(
     exercise = Exercise(
         workspace_id=current_user.workspace_id,
         name=data.name,
+        alias=data.alias,
         description=data.description,
         instructions=data.instructions,
         muscle_groups=data.muscle_groups,

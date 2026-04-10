@@ -170,7 +170,7 @@ export function CatalogPage() {
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      price: (value) => (value <= 0 ? "Precio debe ser mayor a 0" : null),
+      price: (value) => (value < 0 ? "Precio no puede ser negativo" : null),
     },
   });
 
@@ -470,7 +470,7 @@ export function CatalogPage() {
                 <Group align="flex-end" justify="space-between">
                   <Box>
                     <Text fw={700} size="xl" style={{ color: "var(--nv-primary)" }}>
-                      €{product.price}
+                      {product.price === 0 ? "Gratuito" : `€${product.price}`}
                     </Text>
                     <Text c="dimmed" size="xs">
                       {product.type === "subscription" ? `/${
@@ -728,7 +728,7 @@ export function CatalogPage() {
                     <Divider mb="md" />
 
                     <Group justify="space-between">
-                      <Text c="teal" fw={700} size="lg">€{pkg.price}</Text>
+                      <Text c="teal" fw={700} size="lg">{pkg.price === 0 ? "Gratuito" : `€${pkg.price}`}</Text>
                       <Text c="dimmed" size="xs">€{formatDecimal(pkg.price / pkg.totalSessions, 2)}/sesión</Text>
                     </Group>
                   </Card>

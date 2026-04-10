@@ -158,10 +158,20 @@ interface MealPlanBuilderProps {
   onToggleFoodFavorite?: (foodId: string, isFavorite: boolean) => void;
   onToggleSupplementFavorite?: (supplementId: string, isFavorite: boolean) => void;
   recipes?: Array<{ id: string; name: string; items?: Array<{ food_id?: string; name: string; calories?: number; protein?: number; carbs?: number; fat?: number; quantity_grams?: number; type?: string }>; total_calories?: number; total_protein?: number; total_carbs?: number; total_fat?: number; category?: string; difficulty?: string; prep_time_minutes?: number; cook_time_minutes?: number; servings?: number }>;
+  startDate?: string | Date | null;
   totalWeeks?: number;
   currentWeek?: number;
   onWeekChange?: (week: number) => void;
   onCopyWeek?: (fromWeek: number, toWeek: number) => void;
+}
+
+function getNutritionDayDate(sd: string | Date | null | undefined, week: number, dayIndex: number): string | null {
+  if (!sd) return null;
+  const d = new Date(sd);
+  if (isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + (week - 1) * 7 + dayIndex);
+  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 export function MealPlanBuilder({
@@ -180,6 +190,7 @@ export function MealPlanBuilder({
   onToggleSupplementFavorite,
   onTargetMacrosChange,
   recipes = [],
+  startDate,
   totalWeeks = 1,
   currentWeek = 1,
   onWeekChange,
@@ -1156,14 +1167,17 @@ export function MealPlanBuilder({
 
       <Tabs onChange={(v) => setActiveDay(v || days[0]?.id)} value={activeDay}>
         <Tabs.List mb="md">
-          {days.map((day) => (
-            <Tabs.Tab key={day.id} value={day.id}>
-              <Group gap={4}>
-                {day.dayName}
-                {day.is_free_day && <Badge size="xs" color="teal" variant="light">Libre</Badge>}
-              </Group>
-            </Tabs.Tab>
-          ))}
+          {days.map((day, idx) => {
+            const ds = getNutritionDayDate(startDate, currentWeek, idx);
+            return (
+              <Tabs.Tab key={day.id} value={day.id}>
+                <Group gap={4}>
+                  {day.dayName}{ds ? ` (${ds})` : ""}
+                  {day.is_free_day && <Badge size="xs" color="teal" variant="light">Libre</Badge>}
+                </Group>
+              </Tabs.Tab>
+            );
+          })}
         </Tabs.List>
 
         {currentDay && (

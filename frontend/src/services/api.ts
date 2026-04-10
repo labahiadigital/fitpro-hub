@@ -318,6 +318,7 @@ export const workoutsApi = {
       notes: notes
     }),
   activateProgram: (id: string) => api.post(`/workouts/programs/${id}/activate`),
+  deactivateProgram: (id: string) => api.post(`/workouts/programs/${id}/deactivate`),
 
   // Logs
   logs: (clientId: string) => api.get(`/workouts/logs/${clientId}`),
@@ -339,6 +340,7 @@ export const nutritionApi = {
     api.put(`/nutrition/meal-plans/${id}`, data),
   deletePlan: (id: string) => api.delete(`/nutrition/meal-plans/${id}`),
   activatePlan: (id: string) => api.post(`/nutrition/meal-plans/${id}/activate`),
+  deactivatePlan: (id: string) => api.post(`/nutrition/meal-plans/${id}/deactivate`),
   assignPlan: (planId: string, clientId: string, startDate?: string, endDate?: string, notes?: string) =>
     api.post(`/nutrition/meal-plans/${planId}/assign`, { 
       client_id: clientId,
@@ -359,6 +361,12 @@ export const nutritionApi = {
   updateRecipe: (id: string, data: object) => api.put(`/nutrition/recipes/${id}`, data),
   duplicateRecipe: (id: string) => api.post(`/nutrition/recipes/${id}/duplicate`),
   deleteRecipe: (id: string) => api.delete(`/nutrition/recipes/${id}`),
+
+  // Food Groups
+  foodGroups: (params?: { search?: string }) => api.get("/nutrition/food-groups", { params }),
+  createFoodGroup: (data: object) => api.post("/nutrition/food-groups", data),
+  updateFoodGroup: (id: string, data: object) => api.put(`/nutrition/food-groups/${id}`, data),
+  deleteFoodGroup: (id: string) => api.delete(`/nutrition/food-groups/${id}`),
 };
 
 // Forms API

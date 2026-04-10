@@ -77,6 +77,10 @@ import {
   useUpdateFood,
   useUpdateMealPlan,
   useUpdateSupplement,
+  useFoodGroups,
+  useCreateFoodGroup,
+  useUpdateFoodGroup,
+  useDeleteFoodGroup,
 } from "../../hooks/useSupabaseData";
 import { 
   useFoodFavorites, 
@@ -199,6 +203,141 @@ function calculateAge(birthDate: string | null | undefined): number {
   const m = today.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
   return Math.max(1, age);
+}
+
+function FoodGroupsPanel() {
+  const [fgSearch, setFgSearch] = useState("");
+  const { data: foodGroups = [], isLoading } = useFoodGroups(fgSearch || undefined);
+  const createFoodGroup = useCreateFoodGroup();
+  const updateFoodGroup = useUpdateFoodGroup();
+  const deleteFoodGroup = useDeleteFoodGroup();
+  const [editingFg, setEditingFg] = useState<any>(null);
+  const [fgModalOpened, { open: openFgModal, close: closeFgModal }] = useDisclosure(false);
+
+  const fgForm = useForm({
+    initialValues: { name: "", subcategory: "", quantity: "", calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 },
+    validate: { name: (v) => (v.length < 2 ? "Nombre requerido" : null) },
+  });
+
+  const handleSaveFg = async (values: typeof fgForm.values) => {
+    if (editingFg) {
+      await updateFoodGroup.mutateAsync({ id: editingFg.id, data: values });
+      notifications.show({ title: "Grupo actualizado", message: values.name, color: "green" });
+    } else {
+      await createFoodGroup.mutateAsync(values);
+      notifications.show({ title: "Grupo creado", message: values.name, color: "green" });
+    }
+    closeFgModal();
+    fgForm.reset();
+    setEditingFg(null);
+  };
+
+  const openEditFg = (fg: any) => {
+    setEditingFg(fg);
+    fgForm.setValues({
+      name: fg.name || "",
+      subcategory: fg.subcategory || "",
+      quantity: fg.quantity || "",
+      calories: fg.calories || 0,
+      protein_g: fg.protein_g || 0,
+      carbs_g: fg.carbs_g || 0,
+      fat_g: fg.fat_g || 0,
+      fiber_g: fg.fiber_g || 0,
+    });
+    openFgModal();
+  };
+
+  return (
+    <>
+      <Group mb="md" gap="sm">
+        <TextInput
+          leftSection={<IconSearch size={14} />}
+          placeholder="Buscar grupos..."
+          value={fgSearch}
+          onChange={(e) => setFgSearch(e.currentTarget.value)}
+          style={{ flex: 1 }}
+          size="sm"
+        />
+        <Button leftSection={<IconSalad size={14} />} onClick={() => { setEditingFg(null); fgForm.reset(); openFgModal(); }} size="sm">
+          Nuevo Grupo
+        </Button>
+      </Group>
+
+      {isLoading ? (
+        <Center py="xl"><Loader size="sm" /></Center>
+      ) : foodGroups.length === 0 ? (
+        <Center py="xl">
+          <Stack align="center" gap="xs">
+            <IconSalad size={36} color="var(--nv-text-muted)" />
+            <Text c="dimmed" size="sm">No hay grupos de alimentos</Text>
+            <Button variant="light" size="xs" onClick={() => { setEditingFg(null); fgForm.reset(); openFgModal(); }}>
+              Crear grupo
+            </Button>
+          </Stack>
+        </Center>
+      ) : (
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing="sm">
+          {foodGroups.map((fg: any) => (
+            <Box key={fg.id} className="nv-card-compact" p="sm" style={{ cursor: "pointer" }} onClick={() => openEditFg(fg)}>
+              <Group justify="space-between" mb={4}>
+                <Text fw={600} size="sm" lineClamp={1}>{fg.name}</Text>
+                {fg.subcategory && <Badge size="xs" variant="light">{fg.subcategory}</Badge>}
+              </Group>
+              {fg.quantity && <Text size="xs" c="dimmed" mb={4}>{fg.quantity}</Text>}
+              <Group gap="xs">
+                <Badge size="xs" variant="light" color="orange">{fg.calories} kcal</Badge>
+                <Badge size="xs" variant="light" color="blue">{fg.protein_g}g P</Badge>
+                <Badge size="xs" variant="light" color="green">{fg.carbs_g}g C</Badge>
+                <Badge size="xs" variant="light" color="red">{fg.fat_g}g G</Badge>
+              </Group>
+            </Box>
+          ))}
+        </SimpleGrid>
+      )}
+
+      <BottomSheet opened={fgModalOpened} onClose={() => { closeFgModal(); setEditingFg(null); fgForm.reset(); }} title={editingFg ? "Editar Grupo" : "Nuevo Grupo"} desktopSize="md">
+        <form onSubmit={fgForm.onSubmit(handleSaveFg)}>
+          <Stack>
+            <TextInput label="Nombre" placeholder="Ej: Lácteos" required {...fgForm.getInputProps("name")} />
+            <TextInput label="Subcategoría" placeholder="Ej: Leche entera" {...fgForm.getInputProps("subcategory")} />
+            <TextInput label="Cantidad referencia" placeholder="Ej: 100ml, 1 vaso..." {...fgForm.getInputProps("quantity")} />
+            <Group grow>
+              <NumberInput label="Calorías" min={0} {...fgForm.getInputProps("calories")} />
+              <NumberInput label="Proteína (g)" min={0} decimalScale={1} {...fgForm.getInputProps("protein_g")} />
+            </Group>
+            <Group grow>
+              <NumberInput label="Carbohidratos (g)" min={0} decimalScale={1} {...fgForm.getInputProps("carbs_g")} />
+              <NumberInput label="Grasa (g)" min={0} decimalScale={1} {...fgForm.getInputProps("fat_g")} />
+            </Group>
+            <NumberInput label="Fibra (g)" min={0} decimalScale={1} {...fgForm.getInputProps("fiber_g")} />
+            <Group justify="flex-end" mt="md">
+              {editingFg && !editingFg.is_global && (
+                <Button
+                  color="red"
+                  variant="light"
+                  onClick={async () => {
+                    await deleteFoodGroup.mutateAsync(editingFg.id);
+                    notifications.show({ title: "Grupo eliminado", message: editingFg.name, color: "red" });
+                    closeFgModal();
+                    setEditingFg(null);
+                    fgForm.reset();
+                  }}
+                  loading={deleteFoodGroup.isPending}
+                >
+                  Eliminar
+                </Button>
+              )}
+              <Box style={{ flex: 1 }} />
+              <Button variant="default" onClick={() => { closeFgModal(); setEditingFg(null); fgForm.reset(); }}>Cancelar</Button>
+              <Button type="submit" loading={createFoodGroup.isPending || updateFoodGroup.isPending}>
+                {editingFg ? "Guardar" : "Crear"}
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </BottomSheet>
+    </>
+  );
 }
 
 export function NutritionPage() {
@@ -1016,6 +1155,9 @@ export function NutritionPage() {
                 </Badge>
               )}
             </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconSalad size={14} />} value="food-groups" style={{ fontWeight: 600, fontSize: "13px" }}>
+              Grupos
+            </Tabs.Tab>
             <Tabs.Tab leftSection={<IconPill size={14} />} value="supplements" style={{ fontWeight: 600, fontSize: "13px" }}>
               Suplementos{" "}
               {supplements.length > 0 && (
@@ -1415,7 +1557,7 @@ export function NutritionPage() {
                             <Text className="food-card-name">{food.name}</Text>
                             {food.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>Sistema</Badge>}
                           </Group>
-                          <Text className="food-card-serving">{food.serving_size}</Text>
+                          <Text className="food-card-serving">100g</Text>
                         </Box>
                         <Box className="food-card-actions">
                           <Tooltip label={isFoodFavorite(food.id) ? "Quitar de favoritos" : "Añadir a favoritos"}>
@@ -1437,7 +1579,6 @@ export function NutritionPage() {
                         </Box>
                       </Box>
 
-                      {/* Calorías destacadas */}
                       <Group justify="space-between" align="center">
                         <Box className="food-card-calories">
                           🔥 {formatDecimal(Number(food.calories || 0), 0)} kcal
@@ -1542,6 +1683,10 @@ export function NutritionPage() {
               title="No hay alimentos"
             />
           )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="food-groups">
+          <FoodGroupsPanel />
         </Tabs.Panel>
 
         <Tabs.Panel value="supplements">
@@ -1791,14 +1936,17 @@ export function NutritionPage() {
                 {...foodForm.getInputProps("category")}
               />
               <TextInput
-                label="Porción"
-                placeholder="100g"
+                label="Ración aproximada (gramos)"
+                placeholder="Ej: 100g, 250g..."
+                description="Aprox. una ración de este producto"
                 {...foodForm.getInputProps("serving_size")}
               />
             </Group>
 
+            <Text size="xs" c="dimmed" fw={500} mt="xs">Los valores nutricionales se introducen siempre por cada 100g</Text>
+
             <NumberInput
-              label="Calorías"
+              label="Calorías (por 100g)"
               min={0}
               placeholder="0"
               {...foodForm.getInputProps("calories")}
@@ -2196,12 +2344,12 @@ export function NutritionPage() {
                       <Text>{viewingFood.barcode || "-"}</Text>
                     </Box>
                     <Box>
-                      <Text size="xs" c="dimmed" fw={500}>Porción</Text>
-                      <Text>{viewingFood.serving_size} {viewingFood.serving_unit || "g"}</Text>
+                      <Text size="xs" c="dimmed" fw={500}>Valores nutricionales por</Text>
+                      <Text>100g</Text>
                     </Box>
                     <Box>
-                      <Text size="xs" c="dimmed" fw={500}>Cantidad</Text>
-                      <Text>{viewingFood.quantity || "-"}</Text>
+                      <Text size="xs" c="dimmed" fw={500}>Ración aproximada</Text>
+                      <Text>{viewingFood.quantity ? `Aprox. una ración son ${viewingFood.quantity}` : viewingFood.serving_size ? `Aprox. una ración son ${viewingFood.serving_size}g` : "-"}</Text>
                     </Box>
                     <Box>
                       <Text size="xs" c="dimmed" fw={500}>Envase</Text>
@@ -2283,7 +2431,7 @@ export function NutritionPage() {
 
               <Tabs.Panel value="macros">
                 <Stack gap="md">
-                  <Text fw={600} size="lg">Información Nutricional (por {viewingFood.serving_size || 100}g)</Text>
+                  <Text fw={600} size="lg">Información Nutricional (por 100g)</Text>
                   <SimpleGrid cols={{ base: 1, sm: 2 }}>
                     <Box className="nv-card-compact" p="sm">
                       <Text size="xs" c="dimmed">Energía</Text>
@@ -2350,7 +2498,7 @@ export function NutritionPage() {
 
               <Tabs.Panel value="vitamins">
                 <Stack gap="md">
-                  <Text fw={600} size="lg">Vitaminas (por {viewingFood.serving_size || 100}g)</Text>
+                  <Text fw={600} size="lg">Vitaminas (por 100g)</Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {viewingFood.vitamin_a_ug > 0 && (
                       <Box className="nv-card-compact" p="sm">
@@ -2433,7 +2581,7 @@ export function NutritionPage() {
 
               <Tabs.Panel value="minerals">
                 <Stack gap="md">
-                  <Text fw={600} size="lg">Minerales (por {viewingFood.serving_size || 100}g)</Text>
+                  <Text fw={600} size="lg">Minerales (por 100g)</Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {viewingFood.calcium_mg > 0 && (
                       <Box className="nv-card-compact" p="sm">
@@ -2853,6 +3001,7 @@ export function NutritionPage() {
             onToggleFoodFavorite={handleToggleFoodFavoriteForBuilder}
             onToggleSupplementFavorite={handleToggleSupplementFavoriteForBuilder}
             recipes={recipes}
+            startDate={planForm.values.start_date}
             totalWeeks={planForm.values.duration_weeks}
             currentWeek={currentWeek}
             onWeekChange={setCurrentWeek}
