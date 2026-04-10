@@ -13,6 +13,8 @@ export type MessageStatus =
   | "failed";
 export type MessageType = "text" | "image" | "voice" | "file" | "template";
 
+export type ChatScope = "client" | "internal";
+
 export interface Conversation {
   id: string;
   workspace_id: string;
@@ -31,6 +33,7 @@ export interface Conversation {
   created_at: string;
   client_name?: string;
   client_avatar_url?: string;
+  scope?: ChatScope;
 }
 
 export interface Message {
@@ -61,10 +64,11 @@ export interface SendMessageData {
 
 // Hooks
 
-export function useConversations() {
+export function useConversations(scope?: ChatScope) {
+  const qs = scope ? `?scope=${scope}` : "";
   return useQuery({
-    queryKey: ["conversations"],
-    queryFn: async () => api.get("/messages/conversations"),
+    queryKey: ["conversations", scope],
+    queryFn: async () => api.get(`/messages/conversations${qs}`),
     select: (response) => response.data as Conversation[],
     staleTime: 15 * 1000,
     refetchInterval: 15_000,
@@ -124,8 +128,13 @@ export function useCreateConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { client_id: string; name?: string }) =>
-      api.post("/messages/conversations", data),
+    mutationFn: async (data: {
+      client_id?: string;
+      name?: string;
+      scope?: ChatScope;
+      participant_ids?: string[];
+      conversation_type?: "direct" | "group" | "broadcast";
+    }) => api.post("/messages/conversations", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },

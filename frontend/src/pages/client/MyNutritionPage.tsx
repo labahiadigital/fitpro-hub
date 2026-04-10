@@ -23,6 +23,8 @@ import {
   ScrollArea,
   Tabs,
   Tooltip,
+  Checkbox,
+  Divider,
 } from "@mantine/core";
 import { useDisclosure, useMediaQuery, useDebouncedValue } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
@@ -48,6 +50,7 @@ import {
   IconMoodSad,
   IconMoodEmpty,
   IconDownload,
+  IconShoppingCart,
   IconX,
 } from "@tabler/icons-react";
 import { DateInput } from "@mantine/dates";
@@ -76,6 +79,31 @@ import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
 import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
+
+function mapFoodCategory(name: string): string {
+  const lower = name.toLowerCase();
+  if (["pollo", "ternera", "cerdo", "pavo", "salmón", "salmon", "atún", "atun", "merluza", "bacalao", "gambas", "langostino", "huevo", "claras", "jamón", "jamon", "lomo", "filete", "pechuga", "carne", "pescado", "marisco", "proteina", "protein", "whey", "caseina"].some(k => lower.includes(k))) return "Proteínas";
+  if (["arroz", "pasta", "pan ", "avena", "patata", "boniato", "quinoa", "cereal", "tortita", "tostada", "maíz", "maiz", "trigo", "harina", "cuscús", "cuscus"].some(k => lower.includes(k))) return "Carbohidratos";
+  if (["lechuga", "tomate", "brócoli", "brocoli", "espinaca", "zanahoria", "pepino", "calabacín", "calabacin", "cebolla", "pimiento", "judía", "judia", "berenjena", "espárrago", "esparrago", "champiñón", "champinon", "verdura", "ensalada", "coliflor", "alcachofa", "rúcula", "rucula", "canónigo", "canonigo", "guisante", "apio"].some(k => lower.includes(k))) return "Verduras";
+  if (["manzana", "plátano", "platano", "naranja", "fresa", "arándano", "arandano", "kiwi", "pera", "piña", "pina", "melocotón", "melocoton", "cereza", "sandía", "sandia", "melón", "melon", "uva", "mandarina", "fruta", "frambuesa", "mango", "aguacate"].some(k => lower.includes(k))) return "Frutas";
+  if (["leche", "yogur", "queso", "requesón", "requeson", "nata", "mantequilla", "cuajada", "kéfir", "kefir", "cottage", "skyr", "lácteo", "lacteo"].some(k => lower.includes(k))) return "Lácteos";
+  if (["aceite", "oliva", "manteca", "grasa", "mantequilla de"].some(k => lower.includes(k))) return "Grasas";
+  if (["almendra", "nuez", "anacardo", "pistacho", "avellana", "cacahuete", "semilla", "fruto seco", "chía", "chia", "lino", "sésamo", "sesamo"].some(k => lower.includes(k))) return "Frutos Secos";
+  return "Otros";
+}
+
+const FOOD_CATEGORY_COLORS: Record<string, string> = {
+  Proteínas: "red",
+  Carbohidratos: "orange",
+  Verduras: "green",
+  Frutas: "yellow",
+  Lácteos: "cyan",
+  Grasas: "grape",
+  "Frutos Secos": "brown",
+  Otros: "gray",
+};
+
+const FOOD_CATEGORY_ORDER = ["Proteínas", "Carbohidratos", "Verduras", "Frutas", "Lácteos", "Grasas", "Frutos Secos", "Otros"];
 
 // Tipos de comidas con sus iconos
 const MEAL_TYPES = [
@@ -1525,6 +1553,60 @@ export function MyNutritionPage() {
     return registered;
   }, [nutritionLogs]);
 
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+
+  const shoppingList = useMemo(() => {
+    if (!planDays || planDays.length === 0) return [];
+    const foodMap = new Map<string, { name: string; totalGrams: number; category: string }>();
+    for (const day of planDays) {
+      for (const meal of (day.meals || [])) {
+        for (const item of (meal.items || [])) {
+          if (item.type === "supplement") continue;
+          const foodName = item.food?.name;
+          if (!foodName) continue;
+          const grams = item.quantity_grams || 0;
+          const existing = foodMap.get(foodName);
+          if (existing) {
+            existing.totalGrams += grams;
+          } else {
+            foodMap.set(foodName, { name: foodName, totalGrams: grams, category: mapFoodCategory(foodName) });
+          }
+        }
+        for (const f of (meal.foods || [])) {
+          if (!f.name) continue;
+          const grams = f.quantity || 0;
+          const existing = foodMap.get(f.name);
+          if (existing) {
+            existing.totalGrams += grams;
+          } else {
+            foodMap.set(f.name, { name: f.name, totalGrams: grams, category: mapFoodCategory(f.name) });
+          }
+        }
+      }
+    }
+    const items = Array.from(foodMap.values());
+    const grouped: Record<string, typeof items> = {};
+    for (const item of items) {
+      if (!grouped[item.category]) grouped[item.category] = [];
+      grouped[item.category].push(item);
+    }
+    for (const cat of Object.keys(grouped)) {
+      grouped[cat].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return FOOD_CATEGORY_ORDER
+      .filter((cat) => grouped[cat] && grouped[cat].length > 0)
+      .map((cat) => ({ category: cat, items: grouped[cat] }));
+  }, [planDays]);
+
+  const toggleChecked = (foodName: string) => {
+    setCheckedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(foodName)) next.delete(foodName);
+      else next.add(foodName);
+      return next;
+    });
+  };
+
   const mealSatisfaction = useMemo(() => {
     const map: Record<string, number> = {};
     nutritionLogs?.forEach((log) => {
@@ -1861,6 +1943,7 @@ export function MyNutritionPage() {
             { value: "week", label: "Tu plan" },
             { value: "history", label: "Historial" },
             { value: "recipes", label: "Recetas" },
+            { value: "shopping", label: "Cesta de la compra" },
           ]}
           size="sm"
           radius="md"
@@ -1881,6 +1964,9 @@ export function MyNutritionPage() {
           </Tabs.Tab>
           <Tabs.Tab value="recipes" leftSection={<IconToolsKitchen2 size={16} />}>
             Recetas
+          </Tabs.Tab>
+          <Tabs.Tab value="shopping" leftSection={<IconShoppingCart size={16} />}>
+            Cesta de la compra
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -3008,6 +3094,106 @@ export function MyNutritionPage() {
 
         <Tabs.Panel value="recipes">
           <ClientRecipesTab />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="shopping">
+          {shoppingList.length === 0 ? (
+            <Paper p="xl" ta="center" radius="lg" withBorder>
+              <Text size="xl" mb="sm">🛒</Text>
+              <Title order={4} mb="xs">Cesta de la compra vacía</Title>
+              <Text c="dimmed" size="sm">
+                No hay alimentos en tu plan nutricional para esta semana. Consulta con tu entrenador.
+              </Text>
+            </Paper>
+          ) : (
+            <Stack gap="lg">
+              <Group justify="space-between">
+                <Box>
+                  <Title order={4}>Cesta de la compra</Title>
+                  <Text size="sm" c="dimmed">
+                    Semana {selectedWeekOverride || currentAutoWeek} — {shoppingList.reduce((sum, g) => sum + g.items.length, 0)} alimentos
+                  </Text>
+                </Box>
+                {checkedItems.size > 0 && (
+                  <Button variant="subtle" size="xs" onClick={() => setCheckedItems(new Set())}>
+                    Desmarcar todos
+                  </Button>
+                )}
+              </Group>
+
+              {shoppingList.map((group) => (
+                <Box key={group.category}>
+                  <Group gap="xs" mb="sm">
+                    <Badge
+                      color={FOOD_CATEGORY_COLORS[group.category] || "gray"}
+                      variant="light"
+                      size="lg"
+                    >
+                      {group.category}
+                    </Badge>
+                    <Text size="xs" c="dimmed">{group.items.length} alimentos</Text>
+                  </Group>
+                  <Stack gap={0}>
+                    {group.items.map((item) => {
+                      const isChecked = checkedItems.has(item.name);
+                      return (
+                        <Box
+                          key={item.name}
+                          px="md"
+                          py="sm"
+                          style={{
+                            borderBottom: "1px solid var(--mantine-color-gray-2)",
+                            opacity: isChecked ? 0.5 : 1,
+                            transition: "opacity 0.15s ease",
+                          }}
+                        >
+                          <Group justify="space-between" wrap="nowrap">
+                            <Group gap="sm" wrap="nowrap" style={{ flex: 1 }}>
+                              <Checkbox
+                                checked={isChecked}
+                                onChange={() => toggleChecked(item.name)}
+                                color="green"
+                                radius="xl"
+                              />
+                              <Text
+                                size="sm"
+                                fw={500}
+                                td={isChecked ? "line-through" : undefined}
+                              >
+                                {item.name}
+                              </Text>
+                            </Group>
+                            <Badge variant="light" color="gray" size="sm">
+                              {item.totalGrams >= 1000
+                                ? `${(item.totalGrams / 1000).toFixed(1)} kg`
+                                : `${Math.round(item.totalGrams)} g`}
+                            </Badge>
+                          </Group>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                  <Divider mt="sm" />
+                </Box>
+              ))}
+
+              <Paper p="sm" radius="md" withBorder>
+                <Group justify="space-between">
+                  <Text size="sm" c="dimmed">Progreso</Text>
+                  <Text size="sm" fw={600}>
+                    {checkedItems.size} / {shoppingList.reduce((sum, g) => sum + g.items.length, 0)} comprados
+                  </Text>
+                </Group>
+                <Progress
+                  value={(checkedItems.size / Math.max(1, shoppingList.reduce((sum, g) => sum + g.items.length, 0))) * 100}
+                  color="green"
+                  size="sm"
+                  radius="xl"
+                  mt="xs"
+                />
+              </Paper>
+            </Stack>
+          )}
         </Tabs.Panel>
       </Tabs>
 

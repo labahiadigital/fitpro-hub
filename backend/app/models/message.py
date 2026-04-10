@@ -104,6 +104,9 @@ class Conversation(BaseModel):
     # Unread counts
     unread_count = Column(Integer, default=0)
     
+    # Scope: "client" for client-facing chats, "internal" for staff chats
+    scope = Column(String(20), nullable=False, default="client", server_default="client")
+
     # Settings
     is_archived = Column(Boolean, default=False)
     

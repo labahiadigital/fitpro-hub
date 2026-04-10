@@ -54,7 +54,7 @@ import {
   IconInfoCircle,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
 import { useAlternativesCounts } from "../../hooks/useExercises";
 
@@ -1322,6 +1322,18 @@ export function WorkoutBuilderWithDays({
 
   const currentDay = days.find((d) => d.id === activeDay);
 
+  useEffect(() => {
+    const active = days.find((d) => d.id === activeDay);
+    if (!active || active.isRestDay || getDayExerciseCount(active) === 0) {
+      const firstTraining = days.find((d) => !d.isRestDay && getDayExerciseCount(d) > 0);
+      if (firstTraining) {
+        setActiveDay(firstTraining.id);
+      } else if (days.length > 0 && !days.find((d) => d.id === activeDay)) {
+        setActiveDay(days[0].id);
+      }
+    }
+  }, [currentWeek, days]);
+
   const handleBlocksChange = useCallback((newBlocks: WorkoutBlock[]) => {
     onChangeDays(
       days.map((d) =>
@@ -1409,7 +1421,7 @@ export function WorkoutBuilderWithDays({
                   label: `Semana ${i + 1}`,
                 }))}
                 value={String(currentWeek)}
-                onChange={(v) => { onWeekChange?.(Number(v) || 1); setActiveDay(days[0]?.id || "day-1"); }}
+                onChange={(v) => onWeekChange?.(Number(v) || 1)}
                 allowDeselect={false}
               />
             </Group>
@@ -1450,7 +1462,7 @@ export function WorkoutBuilderWithDays({
       {/* Resumen de la semana */}
       <Paper p="md" radius="lg" mb="md" withBorder>
         <Group justify="space-between" mb="md">
-          <Text fw={600}>Resumen Semanal</Text>
+          <Text fw={600}>Programa de entrenamiento</Text>
           <Popover
             opened={copyDaysPopoverOpened}
             onChange={setCopyDaysPopoverOpened}
@@ -1551,30 +1563,6 @@ export function WorkoutBuilderWithDays({
         />
       ) : null}
       <Tabs value={activeDay} onChange={(v) => setActiveDay(v || days[0]?.id)}>
-        {!isMobile && (
-          <Tabs.List mb="md">
-            {days.map((day, idx) => {
-              const ds = getDayDate(startDate, currentWeek, idx);
-              return (
-              <Tabs.Tab
-                key={day.id}
-                value={day.id}
-                color={day.isRestDay ? "gray" : "blue"}
-                leftSection={
-                  day.isRestDay ? undefined : (
-                    <Badge size="xs" variant="filled" color="blue">
-                      {getDayExerciseCount(day)}
-                    </Badge>
-                  )
-                }
-              >
-                {day.dayName}{ds ? ` (${ds})` : ""}
-              </Tabs.Tab>
-              );
-            })}
-          </Tabs.List>
-        )}
-
         {currentDay && (
           <Tabs.Panel key={currentDay.id} value={currentDay.id}>
             <Group mb="md" justify="space-between">

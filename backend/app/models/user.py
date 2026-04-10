@@ -32,6 +32,7 @@ ALL_PERMISSION_RESOURCES = [
     "community",
     "lms",
     "live_classes",
+    "tasks",
 ]
 
 DEFAULT_ROLE_PERMISSIONS = {
@@ -53,6 +54,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "community": ["create", "read", "update", "delete"],
         "lms": ["create", "read", "update", "delete"],
         "live_classes": ["create", "read", "update", "delete"],
+        "tasks": ["create", "read", "update", "delete"],
     },
     RoleType.collaborator: {
         "clients": ["create", "read", "update"],
@@ -72,6 +74,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "community": ["read"],
         "lms": ["read"],
         "live_classes": ["read"],
+        "tasks": ["create", "read", "update"],
     },
     RoleType.client: {
         "clients": [],
@@ -91,6 +94,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "community": ["read"],
         "lms": ["read"],
         "live_classes": ["read"],
+        "tasks": [],
     },
 }
 

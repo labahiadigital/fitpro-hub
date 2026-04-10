@@ -34,6 +34,7 @@ class ConversationCreate(BaseModel):
     participant_ids: List[UUID] = []
     client_id: Optional[UUID] = None
     whatsapp_phone: Optional[str] = None
+    scope: str = "client"
 
 
 class ConversationResponse(BaseModel):
@@ -109,12 +110,14 @@ class WhatsAppIncomingMessage(BaseModel):
 @router.get("/conversations", response_model=List[ConversationResponse])
 async def list_conversations(
     include_archived: bool = False,
+    scope: Optional[str] = Query(None, pattern="^(client|internal)$"),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Listar conversaciones del workspace.
     Incluye conversaciones de plataforma y WhatsApp unificadas.
+    Filtrar por scope: 'client' (chats con clientes) o 'internal' (chat equipo).
     """
     try:
         query = select(Conversation).where(
@@ -123,6 +126,9 @@ async def list_conversations(
         
         if not include_archived:
             query = query.where(Conversation.is_archived == False)
+
+        if scope:
+            query = query.where(Conversation.scope == scope)
         
         result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
         conversations = result.scalars().all()
@@ -219,7 +225,8 @@ async def create_conversation(
         conversation_type=data.conversation_type,
         participant_ids=participant_ids,
         whatsapp_phone=data.whatsapp_phone,
-        preferred_channel=MessageSource.WHATSAPP if data.whatsapp_phone else MessageSource.PLATFORM
+        preferred_channel=MessageSource.WHATSAPP if data.whatsapp_phone else MessageSource.PLATFORM,
+        scope=data.scope,
     )
     db.add(conversation)
     await db.commit()

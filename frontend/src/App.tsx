@@ -64,6 +64,7 @@ const ReportsPage = lazyRetry(() => import("./pages/reports/ReportsPage").then(m
 const SettingsPage = lazyRetry(() => import("./pages/settings/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LiveClassesPage = lazyRetry(() => import("./pages/live-classes/LiveClassesPage").then(m => ({ default: m.LiveClassesPage })));
 const ChatPage = lazyRetry(() => import("./pages/chat/ChatPage").then(m => ({ default: m.ChatPage })));
+const TasksPage = lazyRetry(() => import("./pages/tasks/TasksPage"));
 const LMSPage = lazyRetry(() => import("./pages/lms/LMSPage").then(m => ({ default: m.LMSPage })));
 
 const ClientDashboardPage = lazyRetry(() => import("./pages/client/ClientDashboardPage").then(m => ({ default: m.ClientDashboardPage })));
@@ -287,6 +288,7 @@ export default function App() {
                   <Route element={<TrainerRoute><ClientsPage /></TrainerRoute>} path="/clients" />
                   <Route element={<TrainerRoute><ClientDetailPage /></TrainerRoute>} path="/clients/:id" />
                   <Route element={<TrainerRoute><CalendarPage /></TrainerRoute>} path="/calendar" />
+                  <Route element={<TrainerRoute><TasksPage /></TrainerRoute>} path="/tasks" />
                   <Route element={<TrainerRoute><WorkoutsPage /></TrainerRoute>} path="/workouts" />
                   <Route element={<TrainerRoute><NutritionPage /></TrainerRoute>} path="/nutrition" />
                   <Route element={<TrainerRoute><MealPlanDetailPage /></TrainerRoute>} path="/nutrition/:id" />

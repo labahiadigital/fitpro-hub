@@ -27,6 +27,8 @@ from app.models.live_classes import (
 )
 from app.models.invitation import ClientInvitation, InvitationStatus
 from app.models.google_calendar import GoogleCalendarToken, CalendarSyncMapping
+from app.models.task import Task, TaskStatus, TaskPriority
+from app.models.team_group import TeamGroup, TeamGroupMember
 
 __all__ = [
     "Base",
@@ -87,4 +89,9 @@ __all__ = [
     "GoogleCalendarToken",
     "CalendarSyncMapping",
     "Document",
+    "Task",
+    "TaskStatus",
+    "TaskPriority",
+    "TeamGroup",
+    "TeamGroupMember",
 ]

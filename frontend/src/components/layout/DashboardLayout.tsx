@@ -45,6 +45,7 @@ import {
   IconCheck,
   IconBuildingStore,
   IconDownload,
+  IconChecklist,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -79,6 +80,7 @@ const ALL_TRAINER_NAV_ITEMS = (unreadCount: number): NavItemWithPermission[] => 
   { icon: <IconLayoutDashboard size={20} />, label: "Panel Principal", to: "/dashboard" },
   { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients", requiredResource: "clients" },
   { icon: <IconCalendarEvent size={20} />, label: "Calendario", to: "/calendar", requiredResource: "calendar" },
+  { icon: <IconChecklist size={20} />, label: "Tareas", to: "/tasks", requiredResource: "tasks" },
   { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
   { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
   { icon: <IconForms size={20} />, label: "Formularios", to: "/forms", requiredResource: "forms" },

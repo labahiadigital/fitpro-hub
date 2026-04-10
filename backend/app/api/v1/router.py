@@ -5,7 +5,7 @@ from app.api.v1.endpoints import (
     forms, messages, payments, automations, reports, products, exercises,
     foods, notifications, supplements, documents, pdf, roles, redsys, sequra, lms, erp, referrals,
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
-    whatsapp, google_calendar, storage
+    whatsapp, google_calendar, storage, tasks, team_groups
 )
 
 api_router = APIRouter()
@@ -117,3 +117,9 @@ api_router.include_router(google_calendar.router, prefix="/google-calendar", tag
 
 # Storage (presigned URLs)
 api_router.include_router(storage.router, prefix="/storage", tags=["Storage"])
+
+# Tasks (Kanban)
+api_router.include_router(tasks.router, prefix="/tasks", tags=["Tareas"])
+
+# Team Groups
+api_router.include_router(team_groups.router, prefix="/team/groups", tags=["Grupos de Equipo"])

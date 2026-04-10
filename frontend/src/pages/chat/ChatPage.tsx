@@ -53,6 +53,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
+  type ChatScope,
   type Conversation,
   type Message,
   type MessageSource,
@@ -63,6 +64,8 @@ import {
   useSendMessage,
 } from "../../hooks/useChat";
 import { useClients } from "../../hooks/useClients";
+import { useTeamMembers } from "../../hooks/useTeam";
+import { useTeamGroupsList } from "../../hooks/useTeamGroups";
 import { useWhatsAppStatus } from "../../hooks/useWhatsApp";
 import "dayjs/locale/es";
 import { BottomSheet } from "../../components/common/BottomSheet";
@@ -292,6 +295,10 @@ export function ChatPage() {
   const [attachMenuOpened, setAttachMenuOpened] = useState(false);
   const [urlInputOpened, setUrlInputOpened] = useState(false);
   const [urlValue, setUrlValue] = useState("");
+  const [chatScope, setChatScope] = useState<ChatScope>("client");
+  const [internalNewChatOpened, { open: openInternalNewChat, close: closeInternalNewChat }] = useDisclosure(false);
+  const [internalChatTarget, setInternalChatTarget] = useState<string | null>(null);
+  const [internalChatType, setInternalChatType] = useState<"member" | "group">("member");
 
   const isClientView = false;
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -300,9 +307,13 @@ export function ChatPage() {
   const { data: whatsappStatus } = useWhatsAppStatus();
   const isWhatsAppEnabled = whatsappStatus?.connected ?? false;
 
+  // Team data for internal chat
+  const { data: teamMembersData = [] } = useTeamMembers();
+  const { data: teamGroups = [] } = useTeamGroupsList();
+
   // Queries
   const { data: conversations = [], isLoading: loadingConversations } =
-    useConversations();
+    useConversations(chatScope);
   const { data: messages = [], isLoading: loadingMessages } = useMessages(
     selectedConversationId
   );
@@ -437,9 +448,25 @@ export function ChatPage() {
           description={
             isClientView
               ? "Comunícate con tu entrenador"
-              : "Comunícate con tus clientes"
+              : "Comunícate con tus clientes y equipo"
           }
           title="Chat"
+        />
+      )}
+
+      {!isClientView && !isMobile && (
+        <SegmentedControl
+          value={chatScope}
+          onChange={(v) => {
+            setChatScope(v as ChatScope);
+            setSelectedConversationId(null);
+          }}
+          data={[
+            { value: "client", label: "Clientes" },
+            { value: "internal", label: "Equipo" },
+          ]}
+          mb="md"
+          size="sm"
         />
       )}
 
@@ -464,6 +491,22 @@ export function ChatPage() {
               p="md"
               style={{ borderBottom: "1px solid var(--nv-border)" }}
             >
+              {!isClientView && isMobile && (
+                <SegmentedControl
+                  value={chatScope}
+                  onChange={(v) => {
+                    setChatScope(v as ChatScope);
+                    setSelectedConversationId(null);
+                  }}
+                  data={[
+                    { value: "client", label: "Clientes" },
+                    { value: "internal", label: "Equipo" },
+                  ]}
+                  fullWidth
+                  mb="xs"
+                  size="xs"
+                />
+              )}
               <Group gap="xs">
                 <TextInput
                   flex={1}
@@ -480,10 +523,10 @@ export function ChatPage() {
                   value={searchQuery}
                 />
                 {!isClientView && (
-                  <Tooltip label="Nueva conversación">
+                  <Tooltip label={chatScope === "internal" ? "Nueva conversación interna" : "Nueva conversación"}>
                     <ActionIcon
                       color="primary"
-                      onClick={openNewChat}
+                      onClick={chatScope === "internal" ? openInternalNewChat : openNewChat}
                       radius="xl"
                       size="lg"
                       variant="filled"
@@ -925,6 +968,97 @@ export function ChatPage() {
             disabled={!newChatClientId}
             loading={createConversationMutation.isPending}
             onClick={handleCreateConversation}
+            fullWidth
+          >
+            Iniciar conversación
+          </Button>
+        </Stack>
+      </BottomSheet>
+
+      {/* Internal chat: new conversation */}
+      <BottomSheet
+        opened={internalNewChatOpened}
+        onClose={closeInternalNewChat}
+        title="Nueva conversación interna"
+        radius="lg"
+      >
+        <Stack>
+          <SegmentedControl
+            value={internalChatType}
+            onChange={(v) => {
+              setInternalChatType(v as "member" | "group");
+              setInternalChatTarget(null);
+            }}
+            data={[
+              { value: "member", label: "Miembro" },
+              { value: "group", label: "Grupo" },
+            ]}
+            fullWidth
+          />
+          {internalChatType === "member" ? (
+            <Select
+              data={teamMembersData.map((m) => ({
+                value: m.user_id || m.id,
+                label: m.full_name || m.name || m.email,
+              }))}
+              label="Selecciona un miembro"
+              placeholder="Buscar miembro..."
+              searchable
+              value={internalChatTarget}
+              onChange={setInternalChatTarget}
+            />
+          ) : (
+            <Select
+              data={teamGroups.map((g) => ({
+                value: g.id,
+                label: g.name,
+              }))}
+              label="Selecciona un grupo"
+              placeholder="Buscar grupo..."
+              searchable
+              value={internalChatTarget}
+              onChange={setInternalChatTarget}
+            />
+          )}
+          <Button
+            disabled={!internalChatTarget}
+            loading={createConversationMutation.isPending}
+            onClick={() => {
+              if (!internalChatTarget) return;
+              if (internalChatType === "member") {
+                createConversationMutation.mutate(
+                  {
+                    participant_ids: [internalChatTarget],
+                    scope: "internal",
+                    conversation_type: "direct",
+                  },
+                  {
+                    onSuccess: (res) => {
+                      setSelectedConversationId(res.data.id);
+                      closeInternalNewChat();
+                      setInternalChatTarget(null);
+                    },
+                  }
+                );
+              } else {
+                const group = teamGroups.find((g) => g.id === internalChatTarget);
+                createConversationMutation.mutate(
+                  {
+                    participant_ids: group?.members.map((m) => m.user_id) || [],
+                    scope: "internal",
+                    conversation_type: "group",
+                    name: group?.name,
+                  },
+                  {
+                    onSuccess: (res) => {
+                      setSelectedConversationId(res.data.id);
+                      closeInternalNewChat();
+                      setInternalChatTarget(null);
+                    },
+                  }
+                );
+              }
+            }}
             fullWidth
           >
             Iniciar conversación
