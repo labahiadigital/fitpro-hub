@@ -103,6 +103,8 @@ export function WorkoutsPage() {
   const [builderOpened, { open: openBuilder, close: closeBuilder }] = useDisclosure(false);
   const [searchExercise, setSearchExercise] = useState("");
   const [exerciseSourceFilter, setExerciseSourceFilter] = useState("all");
+  const [muscleGroupFilter, setMuscleGroupFilter] = useState("");
+  const [equipmentFilter, setEquipmentFilter] = useState("");
   const [workoutWeeks, setWorkoutWeeks] = useState<{ week: number; days: WorkoutDay[] }[]>([{ week: 1, days: [...initialWorkoutDays] }]);
   const [currentWeek, setCurrentWeek] = useState(1);
   const currentWeekRef = useRef(currentWeek);
@@ -160,12 +162,14 @@ export function WorkoutsPage() {
   const getFilteredByCategory = useCallback(
     (category: string) => {
       const base = (sourceFilteredExercises || []).filter(
-        (e: any) =>
-          e.category?.toLowerCase() === category &&
-          (e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-            e.muscle_groups?.some((m: string) =>
-              m.toLowerCase().includes(searchExercise.toLowerCase())
-            ))
+        (e: any) => {
+          const matchesCategory = e.category?.toLowerCase() === category;
+          const matchesSearch = e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+            e.muscle_groups?.some((m: string) => m.toLowerCase().includes(searchExercise.toLowerCase()));
+          const matchesMuscle = !muscleGroupFilter || e.muscle_groups?.some((m: string) => m.toLowerCase() === muscleGroupFilter.toLowerCase());
+          const matchesEquip = !equipmentFilter || e.equipment?.some((eq: string) => eq.toLowerCase() === equipmentFilter.toLowerCase());
+          return matchesCategory && matchesSearch && matchesMuscle && matchesEquip;
+        }
       );
       return sortFavoritesFirst(base);
     },
@@ -381,6 +385,39 @@ export function WorkoutsPage() {
     }
   };
 
+  const handleCloneExercise = async (exercise: any) => {
+    try {
+      const cloneData = {
+        name: exercise.name,
+        alias: exercise.alias || "",
+        description: exercise.description || "",
+        instructions: exercise.instructions || "",
+        muscle_groups: exercise.muscle_groups || [],
+        equipment: exercise.equipment || [],
+        difficulty: exercise.difficulty || "intermediate",
+        category: exercise.category || "fuerza",
+      };
+      const res = await createExercise.mutateAsync(cloneData);
+      closeExerciseModal();
+      const newExercise = res.data;
+      setEditingExercise(newExercise);
+      exerciseForm.setValues({
+        name: newExercise.name || cloneData.name,
+        alias: newExercise.alias || cloneData.alias,
+        description: newExercise.description || cloneData.description,
+        instructions: newExercise.instructions || cloneData.instructions,
+        muscle_groups: newExercise.muscle_groups || cloneData.muscle_groups,
+        equipment: newExercise.equipment || cloneData.equipment,
+        difficulty: newExercise.difficulty || cloneData.difficulty,
+        category: newExercise.category || cloneData.category,
+      });
+      openExerciseModal();
+      notifications.show({ title: "Copia creada", message: `"${cloneData.name}" se ha clonado como ejercicio propio`, color: "green" });
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudo clonar el ejercicio", color: "red" });
+    }
+  };
+
   const openProgramBuilder = (program?: any) => {
     if (program) {
       setEditingProgram(program);
@@ -578,14 +615,16 @@ export function WorkoutsPage() {
 
   const filteredExercises = useMemo(() => {
     const base = (sourceFilteredExercises || []).filter(
-      (e: any) =>
-        e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
-        e.muscle_groups?.some((m: string) =>
-          m.toLowerCase().includes(searchExercise.toLowerCase())
-        )
+      (e: any) => {
+        const matchesSearch = e.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
+          e.muscle_groups?.some((m: string) => m.toLowerCase().includes(searchExercise.toLowerCase()));
+        const matchesMuscle = !muscleGroupFilter || e.muscle_groups?.some((m: string) => m.toLowerCase() === muscleGroupFilter.toLowerCase());
+        const matchesEquip = !equipmentFilter || e.equipment?.some((eq: string) => eq.toLowerCase() === equipmentFilter.toLowerCase());
+        return matchesSearch && matchesMuscle && matchesEquip;
+      }
     );
     return sortFavoritesFirst(base);
-  }, [sourceFilteredExercises, searchExercise, sortFavoritesFirst]);
+  }, [sourceFilteredExercises, searchExercise, muscleGroupFilter, equipmentFilter, sortFavoritesFirst]);
 
   const handleCloseExerciseModal = () => {
     closeExerciseModal();
@@ -735,8 +774,14 @@ export function WorkoutsPage() {
             favoritesSet={favoritesSet}
             searchExercise={searchExercise}
             exerciseSourceFilter={exerciseSourceFilter}
+            muscleGroupFilter={muscleGroupFilter}
+            equipmentFilter={equipmentFilter}
+            muscleGroups={muscleGroups}
+            equipmentOptions={equipmentOptions}
             onSearchChange={setSearchExercise}
             onSourceFilterChange={setExerciseSourceFilter}
+            onMuscleGroupFilterChange={(v) => setMuscleGroupFilter(v || "")}
+            onEquipmentFilterChange={(v) => setEquipmentFilter(v || "")}
             onEditExercise={openEditExercise}
             onNewExercise={openNewExercise}
             onToggleFavorite={handleToggleExerciseFavorite}
@@ -756,8 +801,14 @@ export function WorkoutsPage() {
                 favoritesSet={favoritesSet}
                 searchExercise={searchExercise}
                 exerciseSourceFilter={exerciseSourceFilter}
+                muscleGroupFilter={muscleGroupFilter}
+                equipmentFilter={equipmentFilter}
+                muscleGroups={muscleGroups}
+                equipmentOptions={equipmentOptions}
                 onSearchChange={setSearchExercise}
                 onSourceFilterChange={setExerciseSourceFilter}
+                onMuscleGroupFilterChange={(v) => setMuscleGroupFilter(v || "")}
+                onEquipmentFilterChange={(v) => setEquipmentFilter(v || "")}
                 onEditExercise={openEditExercise}
                 onNewExercise={openNewExercise}
                 onToggleFavorite={handleToggleExerciseFavorite}
@@ -778,6 +829,7 @@ export function WorkoutsPage() {
         equipmentOptions={equipmentOptions}
         onSubmit={handleCreateExercise}
         onDelete={handleDeleteExercise}
+        onCloneAsOwn={handleCloneExercise}
         createPending={createExercise.isPending}
         updatePending={updateExercise.isPending}
         deletePending={deleteExercise.isPending}

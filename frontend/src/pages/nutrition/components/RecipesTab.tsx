@@ -25,6 +25,7 @@ import {
 import type { Recipe } from "../../../types/recipe";
 import { RECIPE_CATEGORIES, RECIPE_DIFFICULTIES } from "../../../types/recipe";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { RectificationButton } from "../../../components/common/RectificationButton";
 
 interface RecipesTabProps {
   recipes: Recipe[];
@@ -224,6 +225,7 @@ export function RecipesTab({
                       </ActionIcon>
                     </Tooltip>
                   )}
+                  <RectificationButton entityType="recipe" entityId={recipe.id} entityName={recipe.name} size="sm" />
                 </Group>
               </Box>
             );

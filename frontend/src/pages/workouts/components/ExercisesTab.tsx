@@ -6,6 +6,7 @@ import {
   HoverCard,
   Image,
   SegmentedControl,
+  Select,
   SimpleGrid,
   Text,
   TextInput,
@@ -18,6 +19,7 @@ import {
   IconStarFilled,
 } from "@tabler/icons-react";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { RectificationButton } from "../../../components/common/RectificationButton";
 
 interface ExercisesTabProps {
   filteredExercises: any[];
@@ -25,8 +27,14 @@ interface ExercisesTabProps {
   favoritesSet: Set<string>;
   searchExercise: string;
   exerciseSourceFilter: string;
+  muscleGroupFilter?: string;
+  equipmentFilter?: string;
+  muscleGroups?: Array<{ value: string; label: string }>;
+  equipmentOptions?: Array<{ value: string; label: string }>;
   onSearchChange: (value: string) => void;
   onSourceFilterChange: (value: string) => void;
+  onMuscleGroupFilterChange?: (value: string | null) => void;
+  onEquipmentFilterChange?: (value: string | null) => void;
   onEditExercise: (exercise: any) => void;
   onNewExercise: (category?: string) => void;
   onToggleFavorite: (exerciseId: string, isFavorite: boolean) => void;
@@ -41,6 +49,12 @@ export function ExercisesTab({
   exerciseSourceFilter,
   onSearchChange,
   onSourceFilterChange,
+  muscleGroupFilter,
+  equipmentFilter,
+  muscleGroups,
+  equipmentOptions,
+  onMuscleGroupFilterChange,
+  onEquipmentFilterChange,
   onEditExercise,
   onNewExercise,
   onToggleFavorite,
@@ -76,6 +90,30 @@ export function ExercisesTab({
             { label: "Propios", value: "custom" },
           ]}
         />
+        {muscleGroups && onMuscleGroupFilterChange && (
+          <Select
+            value={muscleGroupFilter || null}
+            onChange={onMuscleGroupFilterChange}
+            data={muscleGroups}
+            placeholder="Grupo muscular"
+            size="xs"
+            radius="md"
+            w={160}
+            clearable
+          />
+        )}
+        {equipmentOptions && onEquipmentFilterChange && (
+          <Select
+            value={equipmentFilter || null}
+            onChange={onEquipmentFilterChange}
+            data={equipmentOptions}
+            placeholder="Equipamiento"
+            size="xs"
+            radius="md"
+            w={160}
+            clearable
+          />
+        )}
       </Group>
 
       {filteredExercises.length > 0 ? (
@@ -154,11 +192,14 @@ export function ExercisesTab({
                       </Badge>
                     ))}
                   </Group>
-                  {!exercise.is_global && (
-                    <ActionIcon size="xs" variant="subtle" onClick={(e) => { e.stopPropagation(); onEditExercise(exercise); }}>
-                      <IconEdit size={12} />
-                    </ActionIcon>
-                  )}
+                  <Group gap={2}>
+                    {!exercise.is_global && (
+                      <ActionIcon size="xs" variant="subtle" onClick={(e) => { e.stopPropagation(); onEditExercise(exercise); }}>
+                        <IconEdit size={12} />
+                      </ActionIcon>
+                    )}
+                    <RectificationButton entityType="exercise" entityId={exercise.id} entityName={exercise.name} size="xs" />
+                  </Group>
                 </Group>
               </Box>
             </Box>

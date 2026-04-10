@@ -19,6 +19,7 @@ import {
   IconStarFilled,
 } from "@tabler/icons-react";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { RectificationButton } from "../../../components/common/RectificationButton";
 
 interface SupplementsTabProps {
   filteredSupplements: any[];
@@ -169,6 +170,7 @@ export function SupplementsTab({
                         </ActionIcon>
                       </Tooltip>
                     )}
+                    <RectificationButton entityType="supplement" entityId={supp.id} entityName={supp.name} size="sm" />
                   </Group>
                 </Group>
 

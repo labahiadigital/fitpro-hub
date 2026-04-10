@@ -29,7 +29,7 @@ import {
   Modal,
   Tooltip,
 } from "@mantine/core";
-import { useDebouncedCallback, useDebouncedValue, useDisclosure } from "@mantine/hooks";
+import { useDebouncedCallback, useDebouncedValue, useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import {
   IconApple,
@@ -196,6 +196,7 @@ export function MealPlanBuilder({
   onWeekChange,
   onCopyWeek,
 }: MealPlanBuilderProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [copyWeekTarget, setCopyWeekTarget] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "");
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
@@ -969,7 +970,7 @@ export function MealPlanBuilder({
 
       <Paper mb="md" p="md" radius="lg" withBorder style={{ backgroundColor: "var(--nv-surface)" }}>
         <Group justify="space-between" mb="md">
-          <Text fw={600}>Resumen del Día</Text>
+          <Text fw={600}>Plan nutricional</Text>
           <Group gap="xs">
             <Popover opened={copyDayPopoverOpened} onChange={setCopyDayPopoverOpened} position="bottom-end">
               <Popover.Target>
@@ -1165,23 +1166,59 @@ export function MealPlanBuilder({
         )}
       </Paper>
 
-      <Tabs onChange={(v) => setActiveDay(v || days[0]?.id)} value={activeDay}>
-        <Tabs.List mb="md">
+      {isMobile ? (
+        <Select
+          value={activeDay}
+          onChange={(v) => v && setActiveDay(v)}
+          data={days.map((day, idx) => {
+            const ds = getNutritionDayDate(startDate, currentWeek, idx);
+            return {
+              value: day.id,
+              label: `${day.dayName}${ds ? ` (${ds})` : ""} — ${day.is_free_day ? "Libre" : `${day.meals?.length || 0} comidas`}`,
+            };
+          })}
+          size="sm"
+          radius="md"
+          mb="md"
+        />
+      ) : (
+        <SimpleGrid cols={7} mb="md">
           {days.map((day, idx) => {
             const ds = getNutritionDayDate(startDate, currentWeek, idx);
             return (
-              <Tabs.Tab key={day.id} value={day.id}>
-                <Group gap={4}>
-                  {day.dayName}{ds ? ` (${ds})` : ""}
-                  {day.is_free_day && <Badge size="xs" color="teal" variant="light">Libre</Badge>}
-                </Group>
-              </Tabs.Tab>
+              <Paper
+                key={day.id}
+                p="xs"
+                radius="md"
+                withBorder
+                style={{
+                  borderColor: day.id === activeDay ? "var(--mantine-color-blue-5)" : undefined,
+                  backgroundColor: day.is_free_day ? "var(--mantine-color-gray-0)" : undefined,
+                  cursor: "pointer",
+                }}
+                onClick={() => setActiveDay(day.id)}
+              >
+                <Text ta="center" size="xs" fw={600}>
+                  {day.dayName.slice(0, 3)}
+                </Text>
+                {ds && (
+                  <Text ta="center" size="10px" c="dimmed">
+                    {ds}
+                  </Text>
+                )}
+                <Text ta="center" size="xs" c={day.is_free_day ? "dimmed" : "blue"}>
+                  {day.is_free_day ? "Libre" : `${day.meals?.length || 0} comidas`}
+                </Text>
+              </Paper>
             );
           })}
-        </Tabs.List>
+        </SimpleGrid>
+      )}
+
+      <Box>
 
         {currentDay && (
-          <Tabs.Panel key={currentDay.id} value={currentDay.id}>
+          <Box key={currentDay.id}>
             <Group justify="flex-end" mb="sm">
               <Switch
                 label="Día Libre"
@@ -1694,9 +1731,9 @@ export function MealPlanBuilder({
               </SimpleGrid>
             </Stack>
             )}
-          </Tabs.Panel>
+          </Box>
         )}
-      </Tabs>
+      </Box>
 
       {/* Food/Supplement Selection Modal */}
       <BottomSheet

@@ -94,6 +94,7 @@ import { ClientPlansTab } from "./components/ClientPlansTab";
 import { RecipesTab } from "./components/RecipesTab";
 import { FoodsTab } from "./components/FoodsTab";
 import { SupplementsTab } from "./components/SupplementsTab";
+import { RectificationButton } from "../../components/common/RectificationButton";
 
 function mapCategory(dbCategory: string | null): string {
   if (!dbCategory) return "Otros";
@@ -159,12 +160,18 @@ function calculateAge(birthDate: string | null | undefined): number {
 
 function FoodGroupsPanel() {
   const [fgSearch, setFgSearch] = useState("");
-  const { data: foodGroups = [], isLoading } = useFoodGroups(fgSearch || undefined);
+  const [fgCategoryFilter, setFgCategoryFilter] = useState("");
+  const { data: foodGroups = [], isLoading } = useFoodGroups(fgSearch || undefined, fgCategoryFilter || undefined);
   const createFoodGroup = useCreateFoodGroup();
   const updateFoodGroup = useUpdateFoodGroup();
   const deleteFoodGroup = useDeleteFoodGroup();
   const [editingFg, setEditingFg] = useState<any>(null);
   const [fgModalOpened, { open: openFgModal, close: closeFgModal }] = useDisclosure(false);
+
+  const fgCategoryOptions = useMemo(() => {
+    const cats = new Set<string>(foodGroups.map((fg: any) => fg.name as string).filter(Boolean));
+    return [{ value: "", label: "Todas las categorías" }, ...Array.from(cats).sort().map((c: string) => ({ value: c, label: c }))];
+  }, [foodGroups]);
 
   const fgForm = useForm({
     initialValues: { name: "", subcategory: "", quantity: "", calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 },
@@ -212,6 +219,17 @@ function FoodGroupsPanel() {
           style={{ flex: 1 }}
           styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
         />
+        <Select
+          value={fgCategoryFilter}
+          onChange={(v) => setFgCategoryFilter(v || "")}
+          data={fgCategoryOptions}
+          size="xs"
+          radius="md"
+          w={200}
+          placeholder="Categoría"
+          clearable
+          styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
+        />
         <Button size="xs" radius="md" onClick={() => { setEditingFg(null); fgForm.reset(); openFgModal(); }}>
           Nuevo Grupo
         </Button>
@@ -224,8 +242,11 @@ function FoodGroupsPanel() {
           {foodGroups.map((fg: any) => (
             <Box key={fg.id} className="nv-card-compact" p="sm" style={{ cursor: "pointer" }} onClick={() => openEditFg(fg)}>
               <Group justify="space-between" mb={4}>
-                <Text fw={600} size="sm" lineClamp={1}>{fg.name}</Text>
-                {fg.subcategory && <Badge size="xs" variant="light">{fg.subcategory}</Badge>}
+                <Text fw={600} size="sm" lineClamp={1}>{fg.subcategory || fg.name}</Text>
+                <Group gap={4}>
+                  <Badge size="xs" variant="light" color="yellow">{fg.name}</Badge>
+                  <RectificationButton entityType="food_group" entityId={fg.id} entityName={fg.subcategory || fg.name} size="xs" />
+                </Group>
               </Group>
               <Group gap={4}>
                 <Badge size="xs" variant="light" color="blue">{fg.calories || 0} kcal</Badge>
@@ -314,6 +335,7 @@ export function NutritionPage() {
   const [editingPlan, setEditingPlan] = useState<any>(null);
   const [foodFilter, setFoodFilter] = useState<string>("all");
   const [foodSourceFilter, setFoodSourceFilter] = useState<string>("all");
+  const [foodCategoryFilter, setFoodCategoryFilter] = useState<string>("");
   const [supplementFilter, setSupplementFilter] = useState<string>("all");
   const [supplementSourceFilter, setSupplementSourceFilter] = useState<string>("all");
   const [editingFood, setEditingFood] = useState<any>(null);
@@ -353,7 +375,7 @@ export function NutritionPage() {
   useEffect(() => { setFoodDetailTab("general"); }, [viewingFood?.id]);
 
   const { data: supabaseFoods } = useSupabaseFoods(builderOpened);
-  const { data: paginatedFoods, isLoading: isLoadingPaginatedFoods, isFetching: isFetchingFoods } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch);
+  const { data: paginatedFoods, isLoading: isLoadingPaginatedFoods, isFetching: isFetchingFoods } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch, foodCategoryFilter);
   const { data: totalFoodsCount } = useSupabaseFoodsCount();
   const { data: supabaseMealPlans, isLoading: isLoadingPlans } = useSupabaseMealPlans(clientId ? {} : {});
   const { data: specificClientPlan } = useSupabaseMealPlan(editPlanId && clientId ? editPlanId : "");
@@ -726,9 +748,11 @@ export function NutritionPage() {
           <FoodsTab
             paginatedFoodsList={paginatedFoodsList} isLoading={isLoadingPaginatedFoods} isFetching={isFetchingFoods}
             searchFood={searchFood} debouncedSearch={debouncedSearch} foodFilter={foodFilter} foodSourceFilter={foodSourceFilter}
+            foodCategoryFilter={foodCategoryFilter}
             currentPage={currentPage} totalPages={paginatedFoods?.totalPages || 0} total={paginatedFoods?.total || 0}
             isFoodFavorite={isFoodFavorite} getCategoryIcon={getCategoryIcon} getCategoryColor={getCategoryColor}
             onSearchChange={handleSearchChange} onFilterChange={setFoodFilter} onSourceFilterChange={setFoodSourceFilter}
+            onCategoryFilterChange={(v) => { setFoodCategoryFilter(v || ""); setCurrentPage(1); }}
             onPageChange={setCurrentPage}
             onToggleFavorite={handleToggleFoodFavorite}
             onEdit={(food) => { const orig = paginatedFoods?.items?.find((f: any) => f.id === food.id); setEditingFood(orig || food); openEditFoodModal(); }}

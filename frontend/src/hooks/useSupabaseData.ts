@@ -122,15 +122,17 @@ export function useSupabaseFoods(enabled = true) {
 export function useSupabaseFoodsPaginated(
   page = 1,
   pageSize = 50,
-  search = ""
+  search = "",
+  category = ""
 ) {
   return useQuery({
-    queryKey: ["foods-paginated", page, pageSize, search],
+    queryKey: ["foods-paginated", page, pageSize, search, category],
     queryFn: async () => {
       const response = await nutritionApi.foods({
         page,
         limit: pageSize,
         search: search || undefined,
+        category: category || undefined,
       });
       const data = response.data;
       return {
@@ -458,11 +460,11 @@ export function useDeleteSupplement() {
 
 // ============ FOOD GROUPS ============
 
-export function useFoodGroups(search?: string) {
+export function useFoodGroups(search?: string, category?: string) {
   return useQuery({
-    queryKey: ["food-groups", search],
+    queryKey: ["food-groups", search, category],
     queryFn: async () => {
-      const response = await nutritionApi.foodGroups({ search });
+      const response = await nutritionApi.foodGroups({ search, category: category || undefined });
       return response.data || [];
     },
     staleTime: 60 * 1000,

@@ -16,6 +16,7 @@ import {
 import type { UseFormReturnType } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import {
+  IconCopy,
   IconExchange,
   IconPlus,
   IconSearch,
@@ -163,6 +164,7 @@ interface ExerciseFormModalProps {
   equipmentOptions: Array<{ value: string; label: string }>;
   onSubmit: (values: ExerciseFormValues) => void;
   onDelete: (exerciseId: string) => void;
+  onCloneAsOwn?: (exercise: any) => void;
   createPending: boolean;
   updatePending: boolean;
   deletePending: boolean;
@@ -178,6 +180,7 @@ export function ExerciseFormModal({
   equipmentOptions,
   onSubmit,
   onDelete,
+  onCloneAsOwn,
   createPending,
   updatePending,
   deletePending,
@@ -202,7 +205,20 @@ export function ExerciseFormModal({
         />
       )}
       {editingExercise?.is_global && (
-        <Badge color="gray" variant="light" size="sm" mb="sm">Dato del sistema — solo lectura</Badge>
+        <Group gap="sm" mb="sm">
+          <Badge color="gray" variant="light" size="sm">Dato del sistema — solo lectura</Badge>
+          {onCloneAsOwn && (
+            <Button
+              size="xs"
+              variant="light"
+              radius="md"
+              leftSection={<IconCopy size={14} />}
+              onClick={() => onCloneAsOwn(editingExercise)}
+            >
+              Crear copia propia
+            </Button>
+          )}
+        </Group>
       )}
       <form onSubmit={exerciseForm.onSubmit(onSubmit)}>
         <Stack>

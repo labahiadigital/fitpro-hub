@@ -363,7 +363,7 @@ export const nutritionApi = {
   deleteRecipe: (id: string) => api.delete(`/nutrition/recipes/${id}`),
 
   // Food Groups
-  foodGroups: (params?: { search?: string }) => api.get("/nutrition/food-groups", { params }),
+  foodGroups: (params?: { search?: string; category?: string }) => api.get("/nutrition/food-groups", { params }),
   createFoodGroup: (data: object) => api.post("/nutrition/food-groups", data),
   updateFoodGroup: (id: string, data: object) => api.put(`/nutrition/food-groups/${id}`, data),
   deleteFoodGroup: (id: string) => api.delete(`/nutrition/food-groups/${id}`),

@@ -29,6 +29,7 @@ from app.models.invitation import ClientInvitation, InvitationStatus
 from app.models.google_calendar import GoogleCalendarToken, CalendarSyncMapping
 from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.team_group import TeamGroup, TeamGroupMember
+from app.models.rectification import RectificationRequest
 
 __all__ = [
     "Base",
@@ -94,4 +95,5 @@ __all__ = [
     "TaskPriority",
     "TeamGroup",
     "TeamGroupMember",
+    "RectificationRequest",
 ]

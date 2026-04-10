@@ -1157,6 +1157,7 @@ class FoodGroupResponse(BaseModel):
 @router.get("/food-groups", response_model=List[FoodGroupResponse])
 async def list_food_groups(
     search: Optional[str] = None,
+    category: Optional[str] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1167,7 +1168,14 @@ async def list_food_groups(
         )
     )
     if search:
-        query = query.where(FoodGroup.name.ilike(f"%{search}%"))
+        query = query.where(
+            or_(
+                FoodGroup.name.ilike(f"%{search}%"),
+                FoodGroup.subcategory.ilike(f"%{search}%"),
+            )
+        )
+    if category:
+        query = query.where(FoodGroup.name.ilike(f"%{category}%"))
     result = await db.execute(query.order_by(FoodGroup.name))
     return result.scalars().all()
 

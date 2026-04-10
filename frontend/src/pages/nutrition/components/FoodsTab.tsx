@@ -7,6 +7,7 @@ import {
   Loader,
   Pagination,
   SegmentedControl,
+  Select,
   SimpleGrid,
   Text,
   TextInput,
@@ -24,6 +25,20 @@ import {
 import type { Food } from "../../../components/nutrition/MealPlanBuilder";
 import { formatDecimal } from "../../../utils/format";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { RectificationButton } from "../../../components/common/RectificationButton";
+
+const FOOD_CATEGORIES = [
+  { value: "", label: "Todas las categorías" },
+  { value: "Proteínas", label: "Proteínas" },
+  { value: "Carbohidratos", label: "Carbohidratos" },
+  { value: "Verduras", label: "Verduras" },
+  { value: "Frutas", label: "Frutas" },
+  { value: "Lácteos", label: "Lácteos" },
+  { value: "Grasas", label: "Grasas" },
+  { value: "Frutos Secos", label: "Frutos Secos" },
+  { value: "Otros", label: "Otros" },
+];
+
 interface FoodsTabProps {
   paginatedFoodsList: Food[];
   isLoading: boolean;
@@ -32,6 +47,7 @@ interface FoodsTabProps {
   debouncedSearch: string;
   foodFilter: string;
   foodSourceFilter: string;
+  foodCategoryFilter?: string;
   currentPage: number;
   totalPages: number;
   total: number;
@@ -41,6 +57,7 @@ interface FoodsTabProps {
   onSearchChange: (value: string) => void;
   onFilterChange: (value: string) => void;
   onSourceFilterChange: (value: string) => void;
+  onCategoryFilterChange?: (value: string | null) => void;
   onPageChange: (page: number) => void;
   onToggleFavorite: (foodId: string, e?: React.MouseEvent) => void;
   onEdit: (food: any) => void;
@@ -68,6 +85,8 @@ export function FoodsTab({
   onSearchChange,
   onFilterChange,
   onSourceFilterChange,
+  onCategoryFilterChange,
+  foodCategoryFilter,
   onPageChange,
   onToggleFavorite,
   onEdit,
@@ -113,6 +132,19 @@ export function FoodsTab({
           ]}
           styles={{ root: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
         />
+        {onCategoryFilterChange && (
+          <Select
+            value={foodCategoryFilter || ""}
+            onChange={onCategoryFilterChange}
+            data={FOOD_CATEGORIES}
+            size="xs"
+            radius="md"
+            w={180}
+            placeholder="Categoría"
+            clearable
+            styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
+          />
+        )}
       </Group>
 
       {isLoading ? (
@@ -189,6 +221,7 @@ export function FoodsTab({
                           </ActionIcon>
                         </Tooltip>
                       )}
+                      <RectificationButton entityType="food" entityId={food.id} entityName={food.name} size="sm" />
                     </Group>
                   </Group>
 
