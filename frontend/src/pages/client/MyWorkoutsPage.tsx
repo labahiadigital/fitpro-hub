@@ -1623,15 +1623,7 @@ export function MyWorkoutsPage() {
         </Group>
       </Box>
 
-      {!data.assignedProgram?.id && (
-        <Paper p="xl" radius="lg" mb="xl" withBorder style={{ textAlign: "center" }}>
-          <Text size="xl" mb="sm">🏋️</Text>
-          <Title order={3} mb="xs">No tienes ningún programa de entrenamiento activo</Title>
-          <Text c="dimmed" size="sm">
-            Tu entrenador aún no te ha asignado un programa. Cuando lo haga, podrás ver tus entrenamientos, registrar tu progreso y consultar tu historial aquí.
-          </Text>
-        </Paper>
-      )}
+      
 
       {data.assignedProgram?.id && isMobile && (
         <Select
@@ -1648,7 +1640,6 @@ export function MyWorkoutsPage() {
           mb="md"
         />
       )}
-      {data.assignedProgram?.id && (
       <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
         {!isMobile && (
         <Tabs.List mb="lg">
@@ -2244,7 +2235,6 @@ export function MyWorkoutsPage() {
           <AllMyExercisesTab templateDays={originalTemplateDays} />
         </Tabs.Panel>
       </Tabs>
-      )}
 
       {/* Modal para registrar entrenamiento completo */}
       <LogWorkoutModal

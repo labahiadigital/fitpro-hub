@@ -239,9 +239,12 @@ export function FoodsTab({
                       <Text className="food-card-macro-label">Grasas</Text>
                     </Box>
                   </Box>
-                  {food.serving_size && Number(food.serving_size) !== 100 && (
+                  {(() => {
+                    const sv = parseFloat(String(food.serving_size || ""));
+                    return !isNaN(sv) && sv > 0 && sv !== 100;
+                  })() && (
                     <Text size="xs" c="dimmed" mt={4} px={4}>
-                      Aprox. una ración de este producto son {Math.round(Number(food.serving_size))}g
+                      Aprox. una ración de este producto son {Math.round(parseFloat(String(food.serving_size)))}g
                     </Text>
                   )}
                 </Box>

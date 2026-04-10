@@ -2020,6 +2020,14 @@ export function MyNutritionPage() {
         )}
 
         <Tabs.Panel value="today">
+          {!mealPlan ? (
+            <Box ta="center" py="xl">
+              <Text size="xl" mb="sm">🍽️</Text>
+              <Text fw={600} size="lg">No tienes ningún plan nutricional activo</Text>
+              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un plan cuando esté listo.</Text>
+            </Box>
+          ) : (
+          <>
           <Card shadow="sm" padding="md" radius="lg" withBorder mb="lg">
             <Group gap="md" align="flex-end">
               <DateInput
@@ -2043,7 +2051,7 @@ export function MyNutritionPage() {
             </Group>
           </Card>
 
-          {!isSelectedDateInRange && mealPlan && (
+          {!isSelectedDateInRange && (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">📅</Text>
               <Text fw={700} size="lg">Fecha fuera del plan nutricional</Text>
@@ -2508,6 +2516,8 @@ export function MyNutritionPage() {
         })()}
       </Modal>
 
+          </>
+          )}
           </>
           )}
         </Tabs.Panel>
