@@ -236,9 +236,11 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
             fw={isActive ? 600 : 500} 
             style={{ 
               letterSpacing: "-0.01em",
-              flex: 1
+              flex: 1,
+              whiteSpace: "normal",
+              wordBreak: "break-word",
+              lineHeight: 1.3,
             }}
-            lineClamp={1}
           >
             {label}
           </Text>
@@ -282,11 +284,8 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
   );
 }
 
-function NavGroupItem({ icon, label, children, onNavigate }: NavGroupDef & { onNavigate?: () => void }) {
+function NavGroupItem({ icon, label, children, onNavigate, isOpen, onToggle }: NavGroupDef & { onNavigate?: () => void; isOpen: boolean; onToggle: () => void }) {
   const location = useLocation();
-  const [opened, setOpened] = useState(() =>
-    children.some((c) => location.pathname === c.to || (c.to !== "/dashboard" && location.pathname.startsWith(c.to)))
-  );
   const isChildActive = children.some(
     (c) => location.pathname === c.to || (c.to !== "/dashboard" && location.pathname.startsWith(c.to))
   );
@@ -296,7 +295,7 @@ function NavGroupItem({ icon, label, children, onNavigate }: NavGroupDef & { onN
       <UnstyledButton
         w="100%"
         p="10px"
-        onClick={() => setOpened((o) => !o)}
+        onClick={onToggle}
         style={{
           borderRadius: "12px",
           backgroundColor: isChildActive ? "rgba(255, 255, 255, 0.04)" : "transparent",
@@ -306,21 +305,22 @@ function NavGroupItem({ icon, label, children, onNavigate }: NavGroupDef & { onN
         className="nav-item"
       >
         <Group gap="sm" wrap="nowrap">
-          <Box style={{ opacity: isChildActive ? 1 : 0.8 }}>{icon}</Box>
-          <Text size="sm" fw={isChildActive ? 600 : 500} style={{ letterSpacing: "-0.01em", flex: 1 }} lineClamp={1}>
+          <Box style={{ opacity: isChildActive ? 1 : 0.8, flexShrink: 0 }}>{icon}</Box>
+          <Text size="sm" fw={isChildActive ? 600 : 500} style={{ letterSpacing: "-0.01em", flex: 1, whiteSpace: "normal", wordBreak: "break-word", lineHeight: 1.3 }}>
             {label}
           </Text>
           <IconChevronRight
             size={14}
             style={{
               opacity: 0.5,
-              transform: opened ? "rotate(90deg)" : "rotate(0deg)",
+              flexShrink: 0,
+              transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
               transition: "transform 0.2s",
             }}
           />
         </Group>
       </UnstyledButton>
-      <Collapse in={opened}>
+      <Collapse in={isOpen}>
         <Stack gap={0} pl={12} mt={2}>
           {children.map((child) => (
             <NavItem
@@ -566,8 +566,9 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
 // Sidebar Component
 function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { user, currentWorkspace } = useAuthStore();
-  
+  const location = useLocation();
   const isClient = user?.role === 'client';
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   
   const { data: unreadData } = useQuery({
     queryKey: ["unread-messages-count", isClient ? "client" : "trainer"],
@@ -651,7 +652,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
               ))
             : (navEntries as NavEntry[]).map((entry, idx) =>
                 isNavGroup(entry) ? (
-                  <NavGroupItem key={`g-${idx}`} {...entry} onNavigate={onNavigate} />
+                  <NavGroupItem
+                    key={`g-${idx}`}
+                    {...entry}
+                    onNavigate={onNavigate}
+                    isOpen={openGroup === entry.label || (openGroup === null && entry.children.some((c) => location.pathname === c.to || (c.to !== "/dashboard" && location.pathname.startsWith(c.to))))}
+                    onToggle={() => setOpenGroup((prev) => prev === entry.label ? null : entry.label)}
+                  />
                 ) : (
                   <NavItem key={entry.to} icon={entry.icon} label={entry.label} to={entry.to} badge={entry.badge} onNavigate={onNavigate} />
                 )

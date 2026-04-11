@@ -1588,10 +1588,19 @@ export function MyNutritionPage() {
     return registered;
   }, [nutritionLogs]);
 
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [checkedItemsByWeek, setCheckedItemsByWeek] = useState<Record<string, Set<string>>>({});
   const [shoppingWeek, setShoppingWeek] = useState<string | null>(null);
 
   const shoppingWeekNum = shoppingWeek ? parseInt(shoppingWeek, 10) : currentAutoWeek;
+  const weekKey = String(shoppingWeekNum);
+  const checkedItems = checkedItemsByWeek[weekKey] || new Set<string>();
+  const setCheckedItems = (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    setCheckedItemsByWeek((prev) => {
+      const current = prev[weekKey] || new Set<string>();
+      const next = typeof updater === "function" ? updater(current) : updater;
+      return { ...prev, [weekKey]: next };
+    });
+  };
   const shoppingPlanDays = useMemo(
     () => extractPlanDays(executedPlanSource, shoppingWeekNum),
     [executedPlanSource, shoppingWeekNum, currentAutoWeek]
@@ -1704,6 +1713,7 @@ export function MyNutritionPage() {
       const planMeals = dayPlan?.meals || [];
       
       if (isTodayDay) {
+        const loggedNames = new Set((nutritionLogs || []).map((l: { meal_name: string }) => l.meal_name));
         return {
           day: dayLabel,
           dayName: dayNames[i],
@@ -1714,6 +1724,7 @@ export function MyNutritionPage() {
           mealsLogged: nutritionLogs?.length || 0,
           planMeals: planMeals,
           planDayNum,
+          registeredMealNames: loggedNames,
           totals: {
             protein: dailyTotals.protein,
             carbs: dailyTotals.carbs,
@@ -1722,6 +1733,7 @@ export function MyNutritionPage() {
         };
       }
       
+      const histMealNames = new Set((dayHistory?.meals || []).map((m: { meal_name?: string; name?: string }) => m.meal_name || m.name || ""));
       return {
         day: dayLabel,
         dayName: dayNames[i],
@@ -1732,6 +1744,7 @@ export function MyNutritionPage() {
         mealsLogged: dayHistory?.meals?.length || 0,
         planMeals: planMeals,
         planDayNum,
+        registeredMealNames: histMealNames,
         totals: dayHistory?.totals || { protein: 0, carbs: 0, fat: 0 },
       };
     });
@@ -2772,6 +2785,9 @@ export function MyNutritionPage() {
                                     ) : (
                                       <Group gap={4} wrap="nowrap">
                                         <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
+                                        {planViewMode !== "original" && (activeWeekData[selectedWeekDayIndex] as any)?.registeredMealNames?.has(meal.name) && (
+                                          <Badge variant="light" color="green" size="xs">Registrada</Badge>
+                                        )}
                                         {planViewMode !== "original" && (
                                           <Tooltip label="Editar nombre">
                                             <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealName({ dayNum: currentPlanDayNum!, mealIndex, name: (meal as any).display_name || mealType?.label || meal.name })}>
@@ -3202,7 +3218,7 @@ export function MyNutritionPage() {
                 <Group gap="sm" wrap="wrap">
                   <Select
                     value={shoppingWeek || String(currentAutoWeek)}
-                    onChange={(v) => { setShoppingWeek(v); setCheckedItems(new Set()); }}
+                    onChange={(v) => setShoppingWeek(v)}
                     data={allPlanWeeks.map((w: { week: number }) => ({ value: String(w.week), label: `Semana ${w.week}` }))}
                     size="xs"
                     radius="md"
