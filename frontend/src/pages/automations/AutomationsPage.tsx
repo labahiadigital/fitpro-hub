@@ -170,7 +170,7 @@ const actionTypes = [
   },
 ];
 
-export function AutomationsPage() {
+export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
   // API hooks
   const { data: automationsData = [] } = useAutomations();
   const createAutomation = useCreateAutomation();
@@ -354,16 +354,29 @@ export function AutomationsPage() {
   const getActionInfo = (type: string) =>
     actionTypes.find((a) => a.value === type);
 
+  const Wrapper = embedded ? Box : Container;
+  const wrapperProps = embedded ? {} : { py: "xl", fluid: true, px: { base: "md", sm: "lg", lg: "xl", xl: 48 } };
+
   return (
-    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
-      <PageHeader
-        action={{
-          label: "Nueva Automatización",
-          onClick: () => openAutomationBuilder(),
-        }}
-        description="Configura workflows automáticos para tu negocio"
-        title="Automatizaciones"
-      />
+    <Wrapper {...wrapperProps}>
+      {!embedded && (
+        <PageHeader
+          action={{
+            label: "Nueva Automatización",
+            onClick: () => openAutomationBuilder(),
+          }}
+          description="Configura workflows automáticos para tu negocio"
+          title="Automatizaciones"
+        />
+      )}
+      {embedded && (
+        <Group justify="space-between" mb="lg">
+          <Text fw={700} size="lg">Automatizaciones</Text>
+          <Button leftSection={<IconBolt size={14} />} size="xs" radius="xl" onClick={() => openAutomationBuilder()}>
+            Nueva Automatización
+          </Button>
+        </Group>
+      )}
 
       {automations.length > 0 ? (
         <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
@@ -817,7 +830,7 @@ export function AutomationsPage() {
           </Group>
         </Group>
       </Drawer>
-    </Container>
+    </Wrapper>
   );
 }
 

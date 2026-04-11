@@ -333,7 +333,7 @@ export function useMyWorkout(id: string) {
 }
 
 export function useClientExercises(params?: { search?: string; category?: string; limit?: number }) {
-  return useQuery<Array<{ id: string; name: string; muscle_groups: string[]; equipment: string[]; category?: string; difficulty?: string }>>({
+  return useQuery<Array<{ id: string; name: string; muscle_groups: string[]; equipment: string[]; category?: string; difficulty?: string; image_url?: string; video_url?: string }>>({
     queryKey: ["client-exercises", params],
     queryFn: async () => {
       const response = await clientPortalApi.exercises(params);

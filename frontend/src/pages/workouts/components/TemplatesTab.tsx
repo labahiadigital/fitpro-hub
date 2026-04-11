@@ -44,10 +44,8 @@ export function TemplatesTab({
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
         {templates.map((program: any) => (
           <Box key={program.id} className="nv-card" p="md">
-            <Group justify="space-between" mb="sm">
-              <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{program.name}</Text>
-              <Badge color="teal" variant="light" radius="md" size="xs">Plantilla</Badge>
-            </Group>
+            <Text fw={600} size="sm" style={{ color: "var(--nv-dark)", wordBreak: "break-word" }} lineClamp={2} mb={4} title={program.name}>{program.name}</Text>
+            <Badge color="teal" variant="light" radius="md" size="xs" mb="xs">Plantilla</Badge>
 
             <Text c="dimmed" lineClamp={2} size="xs">
               {program.description || "Sin descripción"}

@@ -52,10 +52,8 @@ export function NutritionTemplatesTab({
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
         {templates.map((plan: any) => (
           <Box key={plan.id} className="nv-card" p="md">
-            <Group justify="space-between" mb="sm">
-              <Text fw={600} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>{plan.name}</Text>
-              <Badge color="teal" variant="light" radius="md" size="xs">Plantilla</Badge>
-            </Group>
+            <Text fw={600} size="sm" style={{ color: "var(--nv-dark)", wordBreak: "break-word" }} lineClamp={2} mb={4} title={plan.name}>{plan.name}</Text>
+            <Badge color="teal" variant="light" radius="md" size="xs" mb="xs">Plantilla</Badge>
             <Text c="dimmed" lineClamp={2} size="xs">{plan.description || "Sin descripción"}</Text>
             <Stack gap={4} mt="sm">
               <Group justify="space-between">

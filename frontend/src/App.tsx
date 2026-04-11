@@ -58,11 +58,9 @@ const StockPage = lazyRetry(() => import("./pages/stock/StockPage").then(m => ({
 const BoxesPage = lazyRetry(() => import("./pages/boxes/BoxesPage"));
 const MachinesPage = lazyRetry(() => import("./pages/machines/MachinesPage"));
 const BillingPage = lazyRetry(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
-const SuggestionsPage = lazyRetry(() => import("./pages/suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
 const CommunityPage = lazyRetry(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
 const DocumentsPage = lazyRetry(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
 const TeamPage = lazyRetry(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
-const AutomationsPage = lazyRetry(() => import("./pages/automations/AutomationsPage").then(m => ({ default: m.AutomationsPage })));
 const ReportsPage = lazyRetry(() => import("./pages/reports/ReportsPage").then(m => ({ default: m.ReportsPage })));
 const SettingsPage = lazyRetry(() => import("./pages/settings/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LiveClassesPage = lazyRetry(() => import("./pages/live-classes/LiveClassesPage").then(m => ({ default: m.LiveClassesPage })));
@@ -162,7 +160,6 @@ const ROUTE_RESOURCE_MAP: Record<string, string> = {
   "/community": "community",
   "/documents": "documents",
   "/team": "team",
-  "/automations": "automations",
   "/reports": "reports",
   "/settings": "settings",
   "/live-classes": "live_classes",
@@ -310,11 +307,11 @@ export default function App() {
                   <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
                   <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
                   <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
-                  <Route element={<TrainerRoute><AutomationsPage /></TrainerRoute>} path="/automations" />
+                  <Route element={<Navigate replace to="/settings?tab=automations" />} path="/automations" />
+                  <Route element={<Navigate replace to="/settings?tab=suggestions" />} path="/suggestions" />
                   <Route element={<TrainerRoute><ReportsPage /></TrainerRoute>} path="/reports" />
                   <Route element={<TrainerRoute><LiveClassesPage /></TrainerRoute>} path="/live-classes" />
                   <Route element={<TrainerRoute><SettingsPage /></TrainerRoute>} path="/settings" />
-                  <Route element={<SuggestionsPage />} path="/suggestions" />
                 </Route>
 
                 <Route element={<NotFoundPage />} path="*" />

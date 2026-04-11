@@ -111,7 +111,7 @@ const STATUS_CONFIG: Record<Suggestion["status"], { color: string; label: string
   completada: { color: "green", label: "Completada" },
 };
 
-export function SuggestionsPage() {
+export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>(INITIAL_SUGGESTIONS);
   const [showForm, setShowForm] = useState(false);
   const { user } = useAuthStore();
@@ -164,20 +164,33 @@ export function SuggestionsPage() {
   const publicSuggestions = suggestions.filter((s) => s.isPublic).length;
   const plannedOrDone = suggestions.filter((s) => s.status === "planificada" || s.status === "completada").length;
 
+  const Wrapper = embedded ? Box : Container;
+  const wrapperProps = embedded ? {} : { py: "xl", fluid: true, px: { base: "md", sm: "lg", lg: "xl", xl: 48 } };
+
   return (
-    <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
-      <PageHeader
-        action={
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setShowForm(!showForm)}
-          >
+    <Wrapper {...wrapperProps}>
+      {!embedded && (
+        <PageHeader
+          action={
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setShowForm(!showForm)}
+            >
+              Nueva Sugerencia
+            </Button>
+          }
+          description="Propón ideas y vota las sugerencias de la comunidad"
+          title="Buzón de Sugerencias"
+        />
+      )}
+      {embedded && (
+        <Group justify="space-between" mb="lg">
+          <Text fw={700} size="lg">Buzón de Sugerencias</Text>
+          <Button leftSection={<IconPlus size={14} />} size="xs" radius="xl" onClick={() => setShowForm(!showForm)}>
             Nueva Sugerencia
           </Button>
-        }
-        description="Propón ideas y vota las sugerencias de la comunidad"
-        title="Buzón de Sugerencias"
-      />
+        </Group>
+      )}
 
       {/* Stats */}
       <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl" spacing="md">
@@ -358,7 +371,7 @@ export function SuggestionsPage() {
           </Box>
         )}
       </Stack>
-    </Container>
+    </Wrapper>
   );
 }
 

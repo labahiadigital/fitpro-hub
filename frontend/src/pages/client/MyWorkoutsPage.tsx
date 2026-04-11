@@ -74,7 +74,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
   }, [templateDays]);
 
   const exercisesFromTemplate = useMemo(() => {
-    const list: Array<{ id: string; name: string; muscle_groups: string[]; equipment: string[]; category?: string; image_url?: string }> = [];
+    const list: Array<{ id: string; name: string; muscle_groups: string[]; equipment: string[]; category?: string; image_url?: string; video_url?: string }> = [];
     const seen = new Set<string>();
     templateDays.forEach((d) => {
       d.blocks?.forEach((b) => {
@@ -89,6 +89,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
               equipment: (ex as any).equipment || (ex.exercise as any)?.equipment || [],
               category: (ex as any).category || (ex.exercise as any)?.category,
               image_url: (ex.exercise as any)?.image_url,
+              video_url: (ex as any).video_url || (ex.exercise as any)?.video_url,
             });
           }
         });
@@ -188,21 +189,49 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
                 const prog = programSets[ex.id];
                 return (
                   <Paper key={ex.id} px="sm" py="xs" radius="sm" withBorder>
-                    <Group justify="space-between" wrap="nowrap">
-                      <Box>
-                        <Text size="sm" fw={500}>{ex.name}</Text>
-                        <Group gap={4}>
+                    <Group wrap="nowrap" gap="sm">
+                      {ex.image_url && (
+                        <Image
+                          src={ex.image_url}
+                          alt={ex.name}
+                          w={48}
+                          h={48}
+                          radius="md"
+                          fit="cover"
+                          style={{ flexShrink: 0 }}
+                        />
+                      )}
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <Group justify="space-between" wrap="nowrap" gap="xs">
+                          <Text size="sm" fw={500} lineClamp={1}>{ex.name}</Text>
+                          {prog && (
+                            <Badge variant="light" color="yellow" size="sm" style={{ flexShrink: 0 }}>
+                              {prog.sets} × {prog.reps}
+                            </Badge>
+                          )}
+                        </Group>
+                        <Group gap={4} mt={2}>
                           {ex.equipment?.map((eq) => (
                             <Badge key={eq} variant="outline" size="xs" color="gray">{eq}</Badge>
                           ))}
                           {ex.category && <Badge variant="light" size="xs" color="teal">{ex.category}</Badge>}
+                          {ex.video_url && (
+                            <Badge
+                              component="a"
+                              href={ex.video_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              variant="light"
+                              size="xs"
+                              color="blue"
+                              leftSection={<IconPlayerPlay size={10} />}
+                              style={{ cursor: "pointer" }}
+                            >
+                              Ver vídeo
+                            </Badge>
+                          )}
                         </Group>
                       </Box>
-                      {prog && (
-                        <Badge variant="light" color="yellow" size="sm">
-                          {prog.sets} × {prog.reps}
-                        </Badge>
-                      )}
                     </Group>
                   </Paper>
                 );

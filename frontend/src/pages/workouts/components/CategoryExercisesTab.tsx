@@ -171,7 +171,7 @@ export function CategoryExercisesTab({
             </Table.Tbody>
           </Table>
         ) : (
-        <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 7 }} spacing="sm" className="stagger">
+        <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5, xl: 6 }} spacing="sm" className="stagger">
           {items.map((exercise: any) => (
             <Box key={exercise.id} className="nv-card-compact" p={0} style={{ overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => onEditExercise(exercise)}>
               <ActionIcon
@@ -201,10 +201,8 @@ export function CategoryExercisesTab({
                 </Box>
               )}
               <Box p="xs">
-                <Group gap={4} wrap="nowrap">
-                  <Text fw={600} lineClamp={1} size="xs" style={{ color: "var(--nv-dark)" }}>{exercise.name}{exercise.alias ? ` (${exercise.alias})` : ""}</Text>
-                  {exercise.is_global && <Badge color="gray" variant="light" size="xs" styles={{ root: { padding: "1px 4px", fontSize: "8px", flexShrink: 0 } }}>S</Badge>}
-                </Group>
+                <Text fw={600} lineClamp={2} size="xs" style={{ color: "var(--nv-dark)", wordBreak: "break-word", lineHeight: 1.3 }} title={exercise.name}>{exercise.name}{exercise.alias ? ` (${exercise.alias})` : ""}</Text>
+                {exercise.is_global && <Badge color="gray" variant="light" size="xs" mt={2} styles={{ root: { padding: "1px 4px", fontSize: "8px" } }}>S</Badge>}
                 <Group gap={4} mt={4} justify="space-between">
                   <Group gap={4}>
                     {exercise.muscle_groups?.slice(0, 2).map((muscle: string) => (

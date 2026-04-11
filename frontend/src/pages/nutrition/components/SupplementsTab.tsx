@@ -124,11 +124,11 @@ export function SupplementsTab({
                     <IconPill size={20} />
                   </Box>
                   <Box className="food-card-info">
-                    <Group gap={4} wrap="nowrap">
-                      <Text className="food-card-name">{supp.name}</Text>
-                      {supp.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>Sistema</Badge>}
+                    <Text className="food-card-name" title={supp.name}>{supp.name}</Text>
+                    <Group gap={4}>
+                      {supp.is_global && <Badge color="gray" variant="light" size="xs">Sistema</Badge>}
+                      <Text className="food-card-serving">{supp.brand || supp.serving_size}</Text>
                     </Group>
-                    <Text className="food-card-serving">{supp.brand || supp.serving_size}</Text>
                   </Box>
                   <Box className="food-card-actions">
                     <Tooltip label={isSupplementFavorite(supp.id) ? "Quitar de favoritos" : "Añadir a favoritos"}>

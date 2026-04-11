@@ -116,20 +116,16 @@ export function RecipesTab({
                 style={{ cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s" }}
                 onClick={() => onView(recipe)}
               >
-                <Group justify="space-between" mb="xs" wrap="nowrap">
-                  <Box style={{ flex: 1, minWidth: 0 }}>
-                    <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }} lineClamp={1}>
-                      {recipe.name}
-                    </Text>
-                  </Box>
-                  <Group gap={4} wrap="nowrap">
-                    {recipe.is_global && (
-                      <Badge size="xs" variant="light" color="violet" radius="md">Sistema</Badge>
-                    )}
-                    {recipe.is_public && (
-                      <Badge size="xs" variant="light" color="cyan" radius="md">Público</Badge>
-                    )}
-                  </Group>
+                <Text fw={700} size="sm" style={{ color: "var(--nv-dark)", wordBreak: "break-word" }} lineClamp={2} mb={4} title={recipe.name}>
+                  {recipe.name}
+                </Text>
+                <Group gap={4} mb="xs">
+                  {recipe.is_global && (
+                    <Badge size="xs" variant="light" color="violet" radius="md">Sistema</Badge>
+                  )}
+                  {recipe.is_public && (
+                    <Badge size="xs" variant="light" color="cyan" radius="md">Público</Badge>
+                  )}
                 </Group>
 
                 <Group gap={6} mb="xs" wrap="wrap">

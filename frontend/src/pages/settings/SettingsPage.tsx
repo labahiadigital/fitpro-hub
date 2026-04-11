@@ -57,10 +57,15 @@ import {
   IconUpload,
   IconUser,
   IconUsers,
+  IconRobot,
+  IconBulb,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { openDangerConfirm } from "../../utils/confirmModal";
 import { useSearchParams } from "react-router-dom";
+
+const AutomationsPage = lazy(() => import("../automations/AutomationsPage").then(m => ({ default: m.AutomationsPage })));
+const SuggestionsPage = lazy(() => import("../suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
 import { PageHeader } from "../../components/common/PageHeader";
 import {
   useNotificationPreferences,
@@ -106,6 +111,8 @@ const SETTINGS_TAB_SELECT_DATA = [
   { value: "integrations", label: "Integraciones" },
   { value: "billing", label: "Facturación" },
   { value: "security", label: "Seguridad" },
+  { value: "automations", label: "Automatizaciones" },
+  { value: "suggestions", label: "Sugerencias" },
 ];
 
 const DAY_LABELS: Record<string, string> = {
@@ -694,6 +701,9 @@ export function SettingsPage() {
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing" style={{ fontWeight: 500 }}>Facturación</Tabs.Tab>
             <Tabs.Tab leftSection={<IconShield size={16} />} value="security" style={{ fontWeight: 500 }}>Seguridad</Tabs.Tab>
+            <Divider my="xs" color="var(--nv-border)" />
+            <Tabs.Tab leftSection={<IconRobot size={16} />} value="automations" style={{ fontWeight: 500 }}>Automatizaciones</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBulb size={16} />} value="suggestions" style={{ fontWeight: 500 }}>Sugerencias</Tabs.Tab>
           </Tabs.List>
         )}
 
@@ -1345,6 +1355,20 @@ export function SettingsPage() {
                 </Stack>
               </Box>
             </Stack>
+          </Tabs.Panel>
+
+          {/* ==================== AUTOMATIONS ==================== */}
+          <Tabs.Panel value="automations">
+            <Suspense fallback={<Loader size="md" mx="auto" mt="xl" />}>
+              <AutomationsPage embedded />
+            </Suspense>
+          </Tabs.Panel>
+
+          {/* ==================== SUGGESTIONS ==================== */}
+          <Tabs.Panel value="suggestions">
+            <Suspense fallback={<Loader size="md" mx="auto" mt="xl" />}>
+              <SuggestionsPage embedded />
+            </Suspense>
           </Tabs.Panel>
         </Box>
       </Tabs>

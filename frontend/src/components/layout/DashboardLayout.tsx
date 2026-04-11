@@ -1,7 +1,9 @@
+import { useState } from "react";
 import {
   ActionIcon,
   Avatar,
   Box,
+  Collapse,
   Group,
   Stack,
   Text,
@@ -35,13 +37,12 @@ import {
   IconReceipt,
   IconTrophy,
   IconUsersGroup,
-  IconRobot,
   IconChartBar,
   IconBook,
   IconVideo,
   IconChartLine,
-  IconBulb,
   IconChevronUp,
+  IconChevronRight,
   IconCheck,
   IconBuildingStore,
   IconDownload,
@@ -75,45 +76,100 @@ interface NavItemProps {
   onNavigate?: () => void;
 }
 
-interface NavItemWithPermission extends NavItemProps {
+interface NavItemDef {
+  icon: React.ReactNode;
+  label: string;
+  to: string;
+  badge?: number;
   requiredResource?: string;
 }
 
-const ALL_TRAINER_NAV_ITEMS = (unreadCount: number): NavItemWithPermission[] => [
+interface NavGroupDef {
+  icon: React.ReactNode;
+  label: string;
+  children: NavItemDef[];
+}
+
+type NavEntry = NavItemDef | NavGroupDef;
+
+function isNavGroup(entry: NavEntry): entry is NavGroupDef {
+  return "children" in entry;
+}
+
+const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Panel Principal", to: "/dashboard" },
+  {
+    icon: <IconCalendarEvent size={20} />,
+    label: "Calendario y Tareas",
+    children: [
+      { icon: <IconCalendarEvent size={18} />, label: "Calendario", to: "/calendar", requiredResource: "calendar" },
+      { icon: <IconChecklist size={18} />, label: "Tareas", to: "/tasks", requiredResource: "tasks" },
+    ],
+  },
   { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients", requiredResource: "clients" },
-  { icon: <IconCalendarEvent size={20} />, label: "Calendario", to: "/calendar", requiredResource: "calendar" },
-  { icon: <IconChecklist size={20} />, label: "Tareas", to: "/tasks", requiredResource: "tasks" },
+  {
+    icon: <IconReceipt size={20} />,
+    label: "Facturación y Reportes",
+    children: [
+      { icon: <IconReceipt size={18} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
+      { icon: <IconChartBar size={18} />, label: "Reportes", to: "/reports", requiredResource: "reports" },
+    ],
+  },
+  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
   { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
   { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
-  { icon: <IconForms size={20} />, label: "Formularios", to: "/forms", requiredResource: "forms" },
-  { icon: <IconFileText size={20} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
-  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
-  { icon: <IconPackage size={20} />, label: "Catálogo", to: "/catalog", requiredResource: "catalog" },
-  { icon: <IconBox size={20} />, label: "Stock", to: "/stock", requiredResource: "catalog" },
-  { icon: <IconBuilding size={20} />, label: "Boxes", to: "/boxes", requiredResource: "catalog" },
-  { icon: <IconTool size={20} />, label: "Maquinaria", to: "/machines", requiredResource: "catalog" },
-  { icon: <IconReceipt size={20} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
+  {
+    icon: <IconPackage size={20} />,
+    label: "Catálogo y Stock",
+    children: [
+      { icon: <IconPackage size={18} />, label: "Catálogo", to: "/catalog", requiredResource: "catalog" },
+      { icon: <IconBox size={18} />, label: "Stock", to: "/stock", requiredResource: "catalog" },
+    ],
+  },
+  {
+    icon: <IconBuilding size={20} />,
+    label: "Boxes y Maquinaria",
+    children: [
+      { icon: <IconBuilding size={18} />, label: "Boxes", to: "/boxes", requiredResource: "catalog" },
+      { icon: <IconTool size={18} />, label: "Maquinaria", to: "/machines", requiredResource: "catalog" },
+    ],
+  },
+  {
+    icon: <IconForms size={20} />,
+    label: "Formularios y Docs",
+    children: [
+      { icon: <IconForms size={18} />, label: "Formularios", to: "/forms", requiredResource: "forms" },
+      { icon: <IconFileText size={18} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
+    ],
+  },
+  { icon: <IconUsersGroup size={20} />, label: "Equipos", to: "/team", requiredResource: "team" },
   { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community", requiredResource: "community" },
-  { icon: <IconUsersGroup size={20} />, label: "Equipo", to: "/team", requiredResource: "team" },
-  { icon: <IconRobot size={20} />, label: "Automatizaciones", to: "/automations", requiredResource: "automations" },
-  { icon: <IconChartBar size={20} />, label: "Reportes", to: "/reports", requiredResource: "reports" },
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
   { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
-  { icon: <IconBulb size={20} />, label: "Sugerencias", to: "/suggestions" },
 ];
 
-function getTrainerNavItems(unreadCount: number, permissions?: Record<string, string[]>): NavItemProps[] {
-  const items = ALL_TRAINER_NAV_ITEMS(unreadCount);
-  if (!permissions || Object.keys(permissions).length === 0) {
-    return items;
-  }
-  return items.filter((item) => {
-    if (!item.requiredResource) return true;
-    const resourcePerms = permissions[item.requiredResource];
-    if (resourcePerms === undefined) return true;
-    return resourcePerms.length > 0;
-  });
+function hasPermission(requiredResource: string | undefined, permissions?: Record<string, string[]>): boolean {
+  if (!requiredResource) return true;
+  if (!permissions || Object.keys(permissions).length === 0) return true;
+  const resourcePerms = permissions[requiredResource];
+  if (resourcePerms === undefined) return true;
+  return resourcePerms.length > 0;
+}
+
+function filterNavEntries(entries: NavEntry[], permissions?: Record<string, string[]>): NavEntry[] {
+  return entries.reduce<NavEntry[]>((acc, entry) => {
+    if (isNavGroup(entry)) {
+      const filtered = entry.children.filter((c) => hasPermission(c.requiredResource, permissions));
+      if (filtered.length > 0) {
+        acc.push({ ...entry, children: filtered });
+      }
+    } else {
+      if (hasPermission(entry.requiredResource, permissions)) {
+        acc.push(entry);
+      }
+    }
+    return acc;
+  }, []);
 }
 
 const getClientNavItems = (unreadCount: number): NavItemProps[] => [
@@ -212,6 +268,62 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
         )}
       </UnstyledButton>
     </NavLink>
+  );
+}
+
+function NavGroupItem({ icon, label, children, onNavigate }: NavGroupDef & { onNavigate?: () => void }) {
+  const location = useLocation();
+  const [opened, setOpened] = useState(() =>
+    children.some((c) => location.pathname === c.to || (c.to !== "/dashboard" && location.pathname.startsWith(c.to)))
+  );
+  const isChildActive = children.some(
+    (c) => location.pathname === c.to || (c.to !== "/dashboard" && location.pathname.startsWith(c.to))
+  );
+
+  return (
+    <Box>
+      <UnstyledButton
+        w="100%"
+        p="10px"
+        onClick={() => setOpened((o) => !o)}
+        style={{
+          borderRadius: "12px",
+          backgroundColor: isChildActive ? "rgba(255, 255, 255, 0.04)" : "transparent",
+          color: isChildActive ? "#E7E247" : "rgba(255, 255, 255, 0.5)",
+          transition: "all 0.2s ease",
+        }}
+        className="nav-item"
+      >
+        <Group gap="sm" wrap="nowrap">
+          <Box style={{ opacity: isChildActive ? 1 : 0.8 }}>{icon}</Box>
+          <Text size="sm" fw={isChildActive ? 600 : 500} style={{ letterSpacing: "-0.01em", flex: 1 }} lineClamp={1}>
+            {label}
+          </Text>
+          <IconChevronRight
+            size={14}
+            style={{
+              opacity: 0.5,
+              transform: opened ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
+            }}
+          />
+        </Group>
+      </UnstyledButton>
+      <Collapse in={opened}>
+        <Stack gap={0} pl={12} mt={2}>
+          {children.map((child) => (
+            <NavItem
+              key={child.to}
+              icon={child.icon}
+              label={child.label}
+              to={child.to}
+              badge={child.badge}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </Stack>
+      </Collapse>
+    </Box>
   );
 }
 
@@ -462,7 +574,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   });
   
   const unreadCount = unreadData?.unread_count || 0;
-  const navItems = isClient ? getClientNavItems(unreadCount) : getTrainerNavItems(unreadCount, user?.permissions);
+  const navEntries = isClient
+    ? getClientNavItems(unreadCount)
+    : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount), user?.permissions);
   const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 
   return (
@@ -520,9 +634,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
           <Text c="dimmed" size="xs" fw={700} tt="uppercase" mb={4} style={{ letterSpacing: "0.1em", fontSize: "10px", paddingLeft: "10px" }}>
             {menuTitle}
           </Text>
-          {navItems.map((item) => (
-            <NavItem key={item.to} {...item} onNavigate={onNavigate} />
-          ))}
+          {isClient
+            ? (navEntries as NavItemProps[]).map((item) => (
+                <NavItem key={item.to} {...item} onNavigate={onNavigate} />
+              ))
+            : (navEntries as NavEntry[]).map((entry, idx) =>
+                isNavGroup(entry) ? (
+                  <NavGroupItem key={`g-${idx}`} {...entry} onNavigate={onNavigate} />
+                ) : (
+                  <NavItem key={entry.to} icon={entry.icon} label={entry.label} to={entry.to} badge={entry.badge} onNavigate={onNavigate} />
+                )
+              )
+          }
         </Stack>
       </ScrollArea>
 
@@ -550,13 +673,12 @@ const ROUTE_LABELS: Record<string, string> = {
   "/community": "Comunidad",
   "/documents": "Documentos",
   "/team": "Equipo",
-  "/automations": "Automatizaciones",
-  "/reports": "Informes",
+  "/reports": "Reportes",
   "/settings": "Configuración",
   "/live-classes": "Clases en Vivo",
   "/chat": "Chat",
   "/lms": "Academia",
-  "/suggestions": "Sugerencias",
+  "/tasks": "Tareas",
   "/my-workouts": "Mis Entrenamientos",
   "/my-nutrition": "Mi Nutrición",
   "/my-progress": "Mi Progreso",

@@ -133,10 +133,8 @@ export function BeveragesTab() {
                 background: "var(--mantine-color-body)",
               }}
             >
-              <Group justify="space-between" mb={4}>
-                <Text fw={600} size="sm" lineClamp={1}>{bev.name}</Text>
-                {bev.is_global && <Badge color="gray" variant="light" size="xs">Sistema</Badge>}
-              </Group>
+              <Text fw={600} size="sm" lineClamp={2} style={{ wordBreak: "break-word" }} title={bev.name} mb={2}>{bev.name}</Text>
+              {bev.is_global && <Badge color="gray" variant="light" size="xs" mb={4}>Sistema</Badge>}
               <Group gap={4} mb={6}>
                 {bev.category && <Badge size="xs" variant="light" color="cyan">{bev.category}</Badge>}
                 {bev.serving_size_ml && Number(bev.serving_size_ml) !== 100 && (
