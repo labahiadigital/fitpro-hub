@@ -694,8 +694,19 @@ function LogPlanMealModal({
       setFoods(existingLog.foods);
       setNotes(existingLog.notes || "");
       setSatisfactionRating(existingLog.satisfaction_rating ?? null);
+    } else if (meal.foods && meal.foods.length > 0) {
+      const initial: FoodItem[] = meal.foods.map((f) => ({
+        name: f.name,
+        calories: Number(f.calories) || 0,
+        protein: Number(f.protein_g) || 0,
+        carbs: Number(f.carbs_g) || 0,
+        fat: Number(f.fat_g) || 0,
+        quantity: Number(f.quantity) || 100,
+        recipe_group: f.recipe_group,
+      }));
+      setFoods(initial);
     } else {
-      const initial: FoodItem[] = meal.items.map((item) => {
+      const initial: FoodItem[] = (meal.items || []).map((item) => {
         const food = item.food || item.supplement;
         const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
         const factor = item.quantity_grams / servingSize;
@@ -1560,12 +1571,10 @@ export function MyNutritionPage() {
     });
     
     nutritionLogs?.forEach((log) => {
-      if (grouped[log.meal_name]) {
-        grouped[log.meal_name]?.push(log);
-      } else {
-        // Si es un tipo de comida no reconocido, añadir a Snack
-        grouped["Snack"]?.push(log);
+      if (!grouped[log.meal_name]) {
+        grouped[log.meal_name] = [];
       }
+      grouped[log.meal_name]!.push(log);
     });
     
     return grouped;

@@ -627,49 +627,50 @@ function LogWorkoutModal({
       }>;
     }>;
     exercises.forEach((e) => {
+      const defaultWeight = e.target_weight ?? undefined;
+      const defaultReps = e.target_reps ?? parseRepsFromString(e.reps);
       const existingEx = existingExercises.find(
         (ee) => ee.exercise_id === e.exercise_id || ee.exercise_name === e.name
       );
       if (existingEx?.sets && existingEx.sets.length > 0) {
         initial[e.exercise_id] = existingEx.sets.map((s, i) => ({
           set_number: s.set_number ?? i + 1,
-          weight_kg: s.weight_kg,
-          reps_completed: s.reps_completed,
+          weight_kg: s.weight_kg ?? defaultWeight,
+          reps_completed: s.reps_completed ?? defaultReps,
           duration_seconds: s.duration_seconds,
           distance_km: s.distance_km,
           speed_kmh: s.speed_kmh,
           duration_minutes: s.duration_minutes,
-          completed: s.completed ?? false,
+          completed: s.completed ?? true,
         }));
         while (initial[e.exercise_id].length < e.sets) {
           initial[e.exercise_id].push({
             set_number: initial[e.exercise_id].length + 1,
-            weight_kg: e.target_weight ?? undefined,
-            reps_completed: e.target_reps ?? parseRepsFromString(e.reps),
+            weight_kg: defaultWeight,
+            reps_completed: defaultReps,
             completed: true,
           });
         }
       } else if (e.prefillSets && e.prefillSets.length > 0) {
         initial[e.exercise_id] = e.prefillSets.map((s, i) => ({
           set_number: i + 1,
-          weight_kg: s.weight_kg,
-          reps_completed: s.reps_completed,
-          completed: s.completed ?? false,
+          weight_kg: s.weight_kg ?? defaultWeight,
+          reps_completed: s.reps_completed ?? defaultReps,
+          completed: s.completed ?? true,
         }));
         while (initial[e.exercise_id].length < e.sets) {
           initial[e.exercise_id].push({
             set_number: initial[e.exercise_id].length + 1,
-            weight_kg: e.target_weight ?? undefined,
-            reps_completed: e.target_reps ?? parseRepsFromString(e.reps),
+            weight_kg: defaultWeight,
+            reps_completed: defaultReps,
             completed: true,
           });
         }
       } else {
-        const repsValue = e.target_reps ?? parseRepsFromString(e.reps);
         initial[e.exercise_id] = Array.from({ length: e.sets }, (_, i) => ({
           set_number: i + 1,
-          weight_kg: e.target_weight ?? undefined,
-          reps_completed: repsValue,
+          weight_kg: defaultWeight,
+          reps_completed: defaultReps,
           completed: true,
         }));
       }
@@ -799,7 +800,7 @@ function LogWorkoutModal({
       radius="xl"
       styles={{ root: { height: 48, fontWeight: 700 } }}
     >
-      Completar Entrenamiento
+      Registrar Entrenamiento
     </Button>
   );
 
@@ -1855,6 +1856,7 @@ export function MyWorkoutsPage() {
                     const exAlias2 = exercise.exercise?.alias;
                     const exName = exAlias2 ? `${baseExName2} (${exAlias2})` : baseExName2;
                     const exImage = exercise.exercise?.image_url;
+                    const videoUrl = exercise.video_url || exercise.exercise?.video_url;
                     return (
                       <Box
                         key={exIndex}
@@ -1880,8 +1882,12 @@ export function MyWorkoutsPage() {
                               {exercise.target_weight && (
                                 <Badge variant="light" color="yellow" size="xs">{exercise.target_weight}kg</Badge>
                               )}
-                              {exercise.rest_seconds && (
-                                <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds}s</Badge>
+                              {exercise.rest_seconds != null && exercise.rest_seconds > 0 && (
+                                <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>
+                                  {exercise.rest_seconds >= 60
+                                    ? `${Math.floor(exercise.rest_seconds / 60)}:${String(exercise.rest_seconds % 60).padStart(2, "0")} descanso`
+                                    : `${exercise.rest_seconds}s descanso`}
+                                </Badge>
                               )}
                             </Group>
                             {exercise.notes && <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{exercise.notes}</Text>}
@@ -1902,20 +1908,6 @@ export function MyWorkoutsPage() {
                               );
                             })()}
                             <Group gap={4}>
-                              {(exercise.video_url || exercise.exercise?.video_url) && (
-                                <ActionIcon
-                                  component="a"
-                                  href={exercise.video_url || exercise.exercise?.video_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  variant="light"
-                                  color="red"
-                                  size="lg"
-                                  radius="xl"
-                                >
-                                  <IconPlayerPlay size={18} />
-                                </ActionIcon>
-                              )}
                               {(() => {
                                 const ld = todayLogs?.logs?.[0]?.log as Record<string, unknown> | undefined;
                                 const les = (ld?.exercises || []) as Array<{ exercise_id?: string; exercise_name?: string; sets?: Array<{ weight_kg?: number; reps_completed?: number; completed?: boolean }> }>;
@@ -1935,6 +1927,8 @@ export function MyWorkoutsPage() {
                                       reps: exercise.reps || "10-12",
                                       target_weight: exercise.target_weight,
                                       target_reps: exercise.target_reps,
+                                      rest_seconds: exercise.rest_seconds,
+                                      video_url: videoUrl,
                                       ...(isLogged && existing?.sets ? { prefillSets: existing.sets } : {}),
                                     })}
                                   >
@@ -1961,6 +1955,26 @@ export function MyWorkoutsPage() {
                             </Group>
                           </Stack>
                         </Group>
+                        {videoUrl && (
+                          <Box mt="xs" px={4}>
+                            {videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") ? (
+                              <iframe
+                                src={videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").split("&")[0]}
+                                style={{ width: "100%", height: 180, borderRadius: 8, border: "none" }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title={exName}
+                              />
+                            ) : (
+                              <video
+                                src={videoUrl}
+                                controls
+                                preload="metadata"
+                                style={{ width: "100%", maxHeight: 180, borderRadius: 8 }}
+                              />
+                            )}
+                          </Box>
+                        )}
                       </Box>
                     );
                   })}
