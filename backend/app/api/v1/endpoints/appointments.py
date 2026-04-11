@@ -18,7 +18,7 @@ from app.models.resource import (
 )
 from app.models.stock import StockItem, StockMovement
 from app.models.client import Client
-from app.api.deps import require_staff, CurrentUser
+from app.middleware.auth import require_staff, CurrentUser
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

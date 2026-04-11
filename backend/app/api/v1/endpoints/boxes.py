@@ -10,7 +10,7 @@ from pydantic import BaseModel as BaseSchema
 
 from app.core.database import get_db
 from app.models.resource import Box, Appointment
-from app.api.deps import require_staff, CurrentUser
+from app.middleware.auth import require_staff, CurrentUser
 
 router = APIRouter()
 
