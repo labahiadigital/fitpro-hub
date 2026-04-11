@@ -7,6 +7,7 @@ import {
   Drawer,
   Group,
   Loader,
+  Paper,
   Progress,
   RingProgress,
   SimpleGrid,
@@ -18,12 +19,14 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure, useLocalStorage } from "@mantine/hooks";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   IconArrowRight,
   IconCalendarEvent,
   IconChartLine,
   IconClock,
+  IconClockPlay,
+  IconClockStop,
   IconFlame,
   IconHeartbeat,
   IconMessage,
@@ -47,6 +50,7 @@ import {
 } from "../../hooks/useDashboard";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
+import { useClockStatus, useClockIn, useClockOut } from "../../hooks/useTimeClock";
 
 // --- Dashboard configuration ---
 interface DashboardConfig {
@@ -654,6 +658,56 @@ function ClientMetricsWidget({
   );
 }
 
+// --- Clock Widget for Dashboard ---
+function ClockWidget() {
+  const { data: status } = useClockStatus();
+  const clockIn = useClockIn();
+  const clockOut = useClockOut();
+  const navigate = useNavigate();
+
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const isClockedIn = status?.is_clocked_in ?? false;
+
+  return (
+    <Paper shadow="xs" radius="lg" p="sm" mt="sm" withBorder style={{ maxWidth: 380 }}>
+      <Group gap="md" wrap="nowrap">
+        <ThemeIcon variant="light" color={isClockedIn ? "green" : "gray"} size={40} radius="xl">
+          <IconClock size={22} />
+        </ThemeIcon>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Text ff="monospace" fw={700} size="lg" lh={1}>
+            {now.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {isClockedIn
+              ? `Fichado desde ${new Date(status!.clock_in!).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
+              : "Sin fichar"}
+          </Text>
+        </Box>
+        <Group gap={4}>
+          {!isClockedIn ? (
+            <Button size="xs" color="green" leftSection={<IconClockPlay size={14} />} loading={clockIn.isPending} onClick={() => clockIn.mutate({})} radius="xl">
+              Entrada
+            </Button>
+          ) : (
+            <Button size="xs" color="red" leftSection={<IconClockStop size={14} />} loading={clockOut.isPending} onClick={() => clockOut.mutate({})} radius="xl">
+              Salida
+            </Button>
+          )}
+        </Group>
+      </Group>
+      <UnstyledButton mt={6} onClick={() => navigate("/time-clock")}>
+        <Text size="xs" c="blue" fw={500}>Ver control horario →</Text>
+      </UnstyledButton>
+    </Paper>
+  );
+}
+
 // --- MAIN PAGE ---
 export function DashboardPage() {
   const { user } = useAuthStore();
@@ -772,6 +826,7 @@ export function DashboardPage() {
               </>
             )}
           </Text>
+          <ClockWidget />
         </Box>
         <Group gap="sm">
           <ActionIcon

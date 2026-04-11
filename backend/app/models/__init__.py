@@ -34,6 +34,7 @@ from app.models.beverage import Beverage
 from app.models.custom_role import CustomRole
 from app.models.stock import StockCategory, StockItem, StockMovement
 from app.models.resource import Box, Machine, Service, ServiceStaff, ServiceStockConsumption, Appointment
+from app.models.time_clock import TimeRecord, LeaveRequest, PublicHoliday
 
 __all__ = [
     "Base",
@@ -111,4 +112,7 @@ __all__ = [
     "ServiceStaff",
     "ServiceStockConsumption",
     "Appointment",
+    "TimeRecord",
+    "LeaveRequest",
+    "PublicHoliday",
 ]

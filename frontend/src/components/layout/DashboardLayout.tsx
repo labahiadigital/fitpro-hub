@@ -50,6 +50,8 @@ import {
   IconBox,
   IconBuilding,
   IconTool,
+  IconShield,
+  IconClock,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -142,7 +144,16 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
       { icon: <IconFileText size={18} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
     ],
   },
-  { icon: <IconUsersGroup size={20} />, label: "Equipos", to: "/team", requiredResource: "team" },
+  {
+    icon: <IconUsersGroup size={20} />,
+    label: "Miembros y equipo",
+    children: [
+      { icon: <IconUsers size={18} />, label: "Miembros", to: "/team/members", requiredResource: "team" },
+      { icon: <IconUsersGroup size={18} />, label: "Grupos", to: "/team/groups", requiredResource: "team" },
+      { icon: <IconShield size={18} />, label: "Roles", to: "/team/roles", requiredResource: "team" },
+      { icon: <IconClock size={18} />, label: "Control Horario", to: "/time-clock", requiredResource: "team" },
+    ],
+  },
   { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community", requiredResource: "community" },
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
   { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
@@ -673,6 +684,10 @@ const ROUTE_LABELS: Record<string, string> = {
   "/community": "Comunidad",
   "/documents": "Documentos",
   "/team": "Equipo",
+  "/team/members": "Miembros",
+  "/team/groups": "Grupos",
+  "/team/roles": "Roles",
+  "/time-clock": "Control Horario",
   "/reports": "Reportes",
   "/settings": "Configuración",
   "/live-classes": "Clases en Vivo",

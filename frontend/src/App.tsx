@@ -61,6 +61,7 @@ const BillingPage = lazyRetry(() => import("./pages/payments/BillingPage").then(
 const CommunityPage = lazyRetry(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
 const DocumentsPage = lazyRetry(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
 const TeamPage = lazyRetry(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
+const TimeClockPage = lazyRetry(() => import("./pages/team/TimeClockPage"));
 const ReportsPage = lazyRetry(() => import("./pages/reports/ReportsPage").then(m => ({ default: m.ReportsPage })));
 const SettingsPage = lazyRetry(() => import("./pages/settings/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LiveClassesPage = lazyRetry(() => import("./pages/live-classes/LiveClassesPage").then(m => ({ default: m.LiveClassesPage })));
@@ -160,6 +161,7 @@ const ROUTE_RESOURCE_MAP: Record<string, string> = {
   "/community": "community",
   "/documents": "documents",
   "/team": "team",
+  "/time-clock": "team",
   "/reports": "reports",
   "/settings": "settings",
   "/live-classes": "live_classes",
@@ -307,6 +309,10 @@ export default function App() {
                   <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
                   <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
                   <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
+                  <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team/members" />
+                  <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team/groups" />
+                  <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team/roles" />
+                  <Route element={<TrainerRoute><TimeClockPage /></TrainerRoute>} path="/time-clock" />
                   <Route element={<Navigate replace to="/settings?tab=automations" />} path="/automations" />
                   <Route element={<Navigate replace to="/settings?tab=suggestions" />} path="/suggestions" />
                   <Route element={<TrainerRoute><ReportsPage /></TrainerRoute>} path="/reports" />

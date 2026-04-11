@@ -41,7 +41,8 @@ import {
   IconUsersGroup,
   IconX,
 } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import {
@@ -231,7 +232,21 @@ const GROUP_COLORS = [
 ];
 
 export function TeamPage() {
-  const [activeTab, setActiveTab] = useState<string>("members");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tabFromUrl = location.pathname.split("/").pop();
+  const resolvedTab = (tabFromUrl === "groups" || tabFromUrl === "roles") ? tabFromUrl : "members";
+  const [activeTab, setActiveTab] = useState<string>(resolvedTab);
+
+  useEffect(() => {
+    setActiveTab(resolvedTab);
+  }, [resolvedTab]);
+
+  const handleTabChange = (value: string | null) => {
+    const tab = value || "members";
+    setActiveTab(tab);
+    navigate(`/team/${tab}`, { replace: true });
+  };
   const [inviteModalOpened, { open: openInviteModal, close: closeInviteModal }] = useDisclosure(false);
   const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
@@ -403,10 +418,10 @@ export function TeamPage() {
           },
         }}
         description="Gestiona los miembros de tu equipo, grupos y permisos"
-        title="Equipo"
+        title="Miembros y equipo"
       />
 
-      <Tabs value={activeTab} onChange={(v) => setActiveTab(v || "members")} mb="xl">
+      <Tabs value={activeTab} onChange={handleTabChange} mb="xl">
         <Tabs.List mb="lg">
           <Tabs.Tab value="members" leftSection={<IconUsers size={16} />}>
             Miembros
