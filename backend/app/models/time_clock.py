@@ -2,7 +2,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 
 from app.models.base import BaseModel
@@ -18,6 +18,10 @@ class TimeRecord(BaseModel):
     pauses = Column(JSON, default=list)
     net_minutes = Column(Integer, nullable=True)
     notes = Column(Text, nullable=True)
+    justification = Column(Text, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    address = Column(String(500), nullable=True)
     status = Column(
         Enum("active", "completed", "edited", name="time_record_status"),
         nullable=False,

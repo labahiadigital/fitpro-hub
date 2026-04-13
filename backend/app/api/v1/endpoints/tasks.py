@@ -1,6 +1,6 @@
 """Task management endpoints - Kanban board API."""
 import logging
-from datetime import datetime
+from datetime import datetime, time
 from typing import List, Optional
 from uuid import UUID
 
@@ -27,7 +27,11 @@ class TaskCreate(PydanticModel):
     priority: TaskPriority = TaskPriority.MEDIUM
     assigned_to: Optional[UUID] = None
     team_group_id: Optional[UUID] = None
+    client_id: Optional[UUID] = None
     due_date: Optional[datetime] = None
+    due_time: Optional[time] = None
+    source: str = "manual"
+    source_ref: Optional[str] = None
 
 
 class TaskUpdate(PydanticModel):
@@ -37,7 +41,9 @@ class TaskUpdate(PydanticModel):
     priority: Optional[TaskPriority] = None
     assigned_to: Optional[UUID] = None
     team_group_id: Optional[UUID] = None
+    client_id: Optional[UUID] = None
     due_date: Optional[datetime] = None
+    due_time: Optional[time] = None
 
 
 class TaskStatusUpdate(PydanticModel):
@@ -53,8 +59,12 @@ class TaskResponse(PydanticModel):
     priority: str
     assigned_to: Optional[UUID]
     team_group_id: Optional[UUID] = None
+    client_id: Optional[UUID] = None
     created_by: Optional[UUID]
     due_date: Optional[datetime]
+    due_time: Optional[time] = None
+    source: str = "manual"
+    source_ref: Optional[str] = None
     archived_at: Optional[datetime]
     deleted_at: Optional[datetime]
     created_at: datetime
@@ -70,9 +80,12 @@ class TaskResponse(PydanticModel):
 async def list_tasks(
     task_status: Optional[TaskStatus] = Query(None, alias="status"),
     assigned_to: Optional[UUID] = None,
+    client_id: Optional[UUID] = None,
     priority: Optional[TaskPriority] = None,
     state: str = Query("created", pattern="^(created|archived|deleted)$"),
     search: Optional[str] = None,
+    due_from: Optional[datetime] = None,
+    due_to: Optional[datetime] = None,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
@@ -90,10 +103,16 @@ async def list_tasks(
             query = query.where(Task.status == task_status.value)
         if assigned_to:
             query = query.where(Task.assigned_to == assigned_to)
+        if client_id:
+            query = query.where(Task.client_id == client_id)
         if priority:
             query = query.where(Task.priority == priority.value)
         if search:
             query = query.where(Task.title.ilike(f"%{search}%"))
+        if due_from:
+            query = query.where(Task.due_date >= due_from)
+        if due_to:
+            query = query.where(Task.due_date <= due_to)
 
         query = query.order_by(Task.created_at.desc())
         result = await db.execute(query)
@@ -117,8 +136,12 @@ async def create_task(
             status=data.status.value,
             priority=data.priority.value,
             assigned_to=data.assigned_to,
+            client_id=data.client_id,
             created_by=current_user.id,
             due_date=data.due_date,
+            due_time=data.due_time,
+            source=data.source,
+            source_ref=data.source_ref,
         )
         db.add(task)
         await db.commit()
@@ -247,3 +270,45 @@ async def delete_task(
         await db.rollback()
         logger.exception("Error deleting task: %s", e)
         raise HTTPException(status_code=500, detail="Error al eliminar tarea")
+
+
+# ============ AUTO-TASK GENERATION UTILITY ============
+
+async def create_auto_task(
+    db: AsyncSession,
+    workspace_id: UUID,
+    created_by: UUID,
+    title: str,
+    due_date: datetime,
+    source: str,
+    source_ref: str,
+    client_id: UUID | None = None,
+    assigned_to: UUID | None = None,
+):
+    """Create an automatic task. Avoids duplicates by checking source_ref."""
+    existing = await db.execute(
+        select(Task).where(
+            and_(
+                Task.workspace_id == workspace_id,
+                Task.source_ref == source_ref,
+                Task.deleted_at.is_(None),
+            )
+        )
+    )
+    if existing.scalar_one_or_none():
+        return None
+
+    task = Task(
+        workspace_id=workspace_id,
+        title=title,
+        status="todo",
+        priority="medium",
+        assigned_to=assigned_to or created_by,
+        client_id=client_id,
+        created_by=created_by,
+        due_date=due_date,
+        source=source,
+        source_ref=source_ref,
+    )
+    db.add(task)
+    return task

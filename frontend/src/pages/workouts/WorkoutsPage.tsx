@@ -338,6 +338,7 @@ export function WorkoutsPage() {
       client_id: null as string | null,
       start_date: "",
       end_date: "",
+      review_interval_days: null as number | null,
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),

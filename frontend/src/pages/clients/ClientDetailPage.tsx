@@ -66,12 +66,16 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconPlayerPlay,
-  IconPlayerPause,
+    IconPlayerPause,
+    IconChecklist,
+    IconCalendar,
 } from "@tabler/icons-react";
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useClient, useUpdateClient, useDeleteClient, useClientMeasurements, useClientPhotos, useClientProgressSummary, useClientWorkoutLogs, useClientNutritionLogs } from "../../hooks/useClients";
+import { useTasksList, useDeleteTask, type Task as TaskType } from "../../hooks/useTasks";
+import { useTeamMembers } from "../../hooks/useTeam";
 import { 
   useClientMealPlans,
   useWorkoutProgramTemplates,
@@ -124,6 +128,9 @@ const CLIENT_DETAIL_TABS_SELECT_DATA = [
   { value: "health", label: "Salud" },
   { value: "progress", label: "Progreso" },
   { value: "sessions", label: "Sesiones" },
+  { value: "tasks", label: "Tareas" },
+  { value: "history", label: "Historial" },
+  { value: "client-calendar", label: "Calendario" },
   { value: "photos", label: "Fotos" },
   { value: "documents", label: "Documentos" },
   { value: "payments", label: "Pagos" },
@@ -549,13 +556,26 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentWorkspace, user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<string | null>("overview");
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<string | null>(tabFromUrl || "overview");
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const { data: fetchedClient, isLoading, isError, error, refetch } = useClient(id || "");
   const { data: clientMealPlans } = useClientMealPlans(id || "");
   const { data: clientWorkoutPrograms = [] } = useClientWorkoutAssignments(id || "");
+  const { data: clientTasks = [] } = useTasksList({ client_id: id || "" });
+  const { data: teamMembersData = [] } = useTeamMembers();
+  const deleteTask = useDeleteTask();
+
+  const memberMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const member of teamMembersData) {
+      m.set(member.user_id || member.id, member.full_name || member.name || member.email);
+    }
+    return m;
+  }, [teamMembersData]);
   const { data: clientMeasurements = [] } = useClientMeasurements(id || "");
   const { data: clientPhotos = [] } = useClientPhotos(id || "");
   const { data: clientProgressSummary } = useClientProgressSummary(id || "");
@@ -1650,10 +1670,10 @@ export function ClientDetailPage() {
                   <Menu.Item leftSection={<IconEdit size={16} />} onClick={handleOpenEditClientModal}>
                     Editar cliente
                   </Menu.Item>
-                  <Menu.Item leftSection={<IconBarbell size={16} />} onClick={() => navigate(`/workouts?action=new&clientId=${id}&returnTo=/clients/${id}`)}>
+                  <Menu.Item leftSection={<IconBarbell size={16} />} onClick={() => navigate(`/workouts?action=new&clientId=${id}&returnTo=/clients/${id}?tab=programs`)}>
                     Crear programa
                   </Menu.Item>
-                  <Menu.Item leftSection={<IconSalad size={16} />} onClick={() => navigate(`/nutrition?edit=new&clientId=${id}&returnTo=/clients/${id}`)}>
+                  <Menu.Item leftSection={<IconSalad size={16} />} onClick={() => navigate(`/nutrition?edit=new&clientId=${id}&returnTo=/clients/${id}?tab=nutrition`)}>
                     Crear plan nutricional
                   </Menu.Item>
                   <Menu.Divider />
@@ -1754,6 +1774,9 @@ export function ClientDetailPage() {
             <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">Salud</Tabs.Tab>
             <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">Progreso</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">Sesiones</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconChecklist size={16} />} value="tasks">Tareas</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconHistory size={16} />} value="history">Historial</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCalendar size={16} />} value="client-calendar">Calendario</Tabs.Tab>
             <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
@@ -2368,7 +2391,7 @@ export function ClientDetailPage() {
                   allergies: client.health_data?.allergens || [],
                   intolerances: client.health_data?.intolerances || [],
                 }}
-                onEdit={() => navigate(`/nutrition?edit=${viewingMealPlanId}&clientId=${id}&returnTo=/clients/${id}`)}
+                onEdit={() => navigate(`/nutrition?edit=${viewingMealPlanId}&clientId=${id}&returnTo=/clients/${id}?tab=nutrition`)}
                 onExportPDF={async () => {
                   if (viewingMealPlan) {
                     notifications.show({
@@ -2780,7 +2803,7 @@ export function ClientDetailPage() {
                               )}
                               <Menu.Item 
                                 leftSection={<IconEdit size={16} />}
-                                onClick={() => navigate(`/nutrition?edit=${plan.id}&clientId=${id}&returnTo=/clients/${id}`)}
+                                onClick={() => navigate(`/nutrition?edit=${plan.id}&clientId=${id}&returnTo=/clients/${id}?tab=nutrition`)}
                               >
                                 Editar plan
                               </Menu.Item>
@@ -3508,7 +3531,7 @@ export function ClientDetailPage() {
                           <Menu.Item 
                             leftSection={<IconEdit size={16} />}
                             onClick={() => {
-                              navigate(`/workouts?edit=${program.id}&clientId=${id}&returnTo=/clients/${id}`);
+                              navigate(`/workouts?edit=${program.id}&clientId=${id}&returnTo=/clients/${id}?tab=programs`);
                             }}
                           >
                             Editar programa
@@ -3568,6 +3591,177 @@ export function ClientDetailPage() {
         {/* Pagos */}
         <Tabs.Panel value="payments">
           <ClientPaymentsTab clientId={id || ""} />
+        </Tabs.Panel>
+
+        {/* Tasks Tab */}
+        <Tabs.Panel value="tasks">
+          <Stack gap="md">
+            <Group justify="space-between" mb="sm">
+              <Text fw={600} size="lg">Tareas vinculadas</Text>
+              <Button size="xs" leftSection={<IconPlus size={14} />} onClick={() => navigate(`/tasks`)} radius="xl" variant="light">
+                Ir a Tareas
+              </Button>
+            </Group>
+            {clientTasks.length === 0 ? (
+              <Paper p="xl" withBorder radius="md" ta="center">
+                <Text c="dimmed" size="sm">No hay tareas vinculadas a este cliente</Text>
+              </Paper>
+            ) : (
+              <Table striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Título</Table.Th>
+                    <Table.Th>Fecha</Table.Th>
+                    <Table.Th>Estado</Table.Th>
+                    <Table.Th>Asignado a</Table.Th>
+                    <Table.Th>Prioridad</Table.Th>
+                    <Table.Th w={80}>Acciones</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {clientTasks.map((task: TaskType) => (
+                    <Table.Tr key={task.id}>
+                      <Table.Td style={{ maxWidth: 200 }}>
+                        <Text size="sm" truncate="end">{task.title}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" c="dimmed">
+                          {task.due_date ? new Date(task.due_date).toLocaleDateString("es-ES") : "—"}
+                          {task.due_time ? ` ${task.due_time}` : ""}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge
+                          size="sm"
+                          color={task.status === "done" ? "green" : task.status === "in_progress" ? "blue" : "gray"}
+                        >
+                          {task.status === "done" ? "Completada" : task.status === "in_progress" ? "En progreso" : "Por hacer"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs">{task.assigned_to ? memberMap.get(task.assigned_to) || "—" : "—"}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge size="xs" color={task.priority === "high" ? "red" : task.priority === "medium" ? "yellow" : "blue"}>
+                          {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Media" : "Baja"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap={4}>
+                          <ActionIcon size="sm" variant="subtle" onClick={() => navigate(`/tasks`)}>
+                            <IconEdit size={14} />
+                          </ActionIcon>
+                          <ActionIcon size="sm" variant="subtle" color="red" onClick={() => deleteTask.mutate(task.id)}>
+                            <IconTrash size={14} />
+                          </ActionIcon>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            )}
+          </Stack>
+        </Tabs.Panel>
+
+        {/* History Tab */}
+        <Tabs.Panel value="history">
+          <Stack gap="md">
+            <Text fw={600} size="lg">Historial del cliente</Text>
+            <Timeline active={-1} bulletSize={24} lineWidth={2}>
+              {[
+                ...clientWorkoutLogs.map((log: any) => ({
+                  date: log.created_at || log.date,
+                  type: "workout" as const,
+                  title: "Entrenamiento registrado",
+                  desc: log.program_name || "Sesión de entrenamiento",
+                })),
+                ...(clientNutritionLogs?.logs || []).flatMap((day: any) =>
+                  (day.meals || []).map((meal: any) => ({
+                    date: day.date || meal.logged_at,
+                    type: "nutrition" as const,
+                    title: "Registro nutricional",
+                    desc: meal.meal_name || "Comida registrada",
+                  }))
+                ),
+                ...clientMeasurements.map((m: any) => ({
+                  date: m.created_at || m.date,
+                  type: "measurement" as const,
+                  title: "Medición registrada",
+                  desc: m.weight_kg ? `Peso: ${m.weight_kg} kg` : "Medición corporal",
+                })),
+              ]
+                .filter(e => e.date)
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 50)
+                .map((entry, i) => (
+                  <Timeline.Item
+                    key={i}
+                    title={entry.title}
+                    bullet={
+                      entry.type === "workout" ? <IconBarbell size={12} /> :
+                      entry.type === "nutrition" ? <IconSalad size={12} /> :
+                      <IconTrendingUp size={12} />
+                    }
+                  >
+                    <Text size="xs" c="dimmed">{entry.desc}</Text>
+                    <Text size="xs" c="dimmed" mt={4}>
+                      {new Date(entry.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                    </Text>
+                  </Timeline.Item>
+                ))}
+              {clientWorkoutLogs.length === 0 && (clientNutritionLogs?.logs || []).length === 0 && clientMeasurements.length === 0 && (
+                <Paper p="xl" withBorder radius="md" ta="center">
+                  <Text c="dimmed" size="sm">No hay actividad registrada para este cliente</Text>
+                </Paper>
+              )}
+            </Timeline>
+          </Stack>
+        </Tabs.Panel>
+
+        {/* Calendar Tab */}
+        <Tabs.Panel value="client-calendar">
+          <Stack gap="md">
+            <Text fw={600} size="lg">Calendario del cliente</Text>
+            <Paper p="md" withBorder radius="md">
+              <Stack gap="xs">
+                {[
+                  ...(clientWorkoutPrograms || []).flatMap((p: any) => {
+                    const items = [];
+                    if (p.start_date) items.push({ date: p.start_date, label: `Inicio programa: ${p.name}`, color: "blue" });
+                    if (p.end_date) items.push({ date: p.end_date, label: `Fin programa: ${p.name}`, color: "red" });
+                    if (p.next_review_date) items.push({ date: p.next_review_date, label: `Revisión programa: ${p.name}`, color: "orange" });
+                    return items;
+                  }),
+                  ...(clientMealPlans || []).flatMap((p: any) => {
+                    const items = [];
+                    if (p.start_date) items.push({ date: p.start_date, label: `Inicio plan: ${p.name}`, color: "green" });
+                    if (p.end_date) items.push({ date: p.end_date, label: `Fin plan: ${p.name}`, color: "red" });
+                    if (p.next_review_date) items.push({ date: p.next_review_date, label: `Revisión plan: ${p.name}`, color: "orange" });
+                    return items;
+                  }),
+                  ...clientTasks.filter((t: TaskType) => t.due_date).map((t: TaskType) => ({
+                    date: t.due_date!,
+                    label: `Tarea: ${t.title}`,
+                    color: t.status === "done" ? "green" : "yellow",
+                  })),
+                ]
+                  .filter(e => e.date)
+                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                  .map((entry, i) => (
+                    <Group key={i} gap="sm" p="xs" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+                      <Badge size="xs" color={entry.color} variant="dot">
+                        {new Date(entry.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                      </Badge>
+                      <Text size="sm">{entry.label}</Text>
+                    </Group>
+                  ))}
+                {(clientWorkoutPrograms || []).length === 0 && (clientMealPlans || []).length === 0 && clientTasks.length === 0 && (
+                  <Text c="dimmed" size="sm" ta="center" py="xl">No hay eventos en el calendario</Text>
+                )}
+              </Stack>
+            </Paper>
+          </Stack>
         </Tabs.Panel>
       </Tabs>
 
@@ -4290,7 +4484,7 @@ export function ClientDetailPage() {
                 leftSection={<IconEdit size={16} />}
                 onClick={() => {
                   closeViewProgramModal();
-                  navigate(`/workouts?edit=${selectedProgramForView.id}&clientId=${id}&returnTo=/clients/${id}`);
+                  navigate(`/workouts?edit=${selectedProgramForView.id}&clientId=${id}&returnTo=/clients/${id}?tab=programs`);
                 }}
               >
                 Editar programa

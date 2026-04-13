@@ -419,6 +419,7 @@ export async function generateClientPlanPDF(
   // ================================================================
   if (mealPlan) {
     renderNutritionSection(doc, mealPlan, brandColors);
+    renderShoppingListPage(doc, mealPlan, brandColors);
   }
 
   // ================================================================
@@ -1352,6 +1353,108 @@ function renderNutritionSection(doc: jsPDF, mealPlan: MealPlanData, brandColors?
     const noteLines = doc.splitTextToSize(mealPlan.nutritional_advice || mealPlan.notes || "", cW);
     doc.text(noteLines, MARGIN_P, ny);
   }
+}
+
+// ================================================================
+//  SHOPPING LIST PAGE
+// ================================================================
+
+function renderShoppingListPage(doc: jsPDF, mealPlan: MealPlanData, colors?: typeof C) {
+  const cc = colors || C;
+  const days = mealPlan.plan?.days || [];
+  if (days.length === 0) return;
+
+  const foodMap = new Map<string, { name: string; totalGrams: number }>();
+
+  for (const day of days) {
+    for (const meal of day.meals || []) {
+      const items = meal.items || [];
+      const legacyFoods = meal.foods || [];
+
+      for (const item of items) {
+        const data = item.type === "supplement" ? item.supplement : item.food;
+        if (!data) continue;
+        const key = data.name?.toLowerCase().trim() || "";
+        if (!key) continue;
+        const existing = foodMap.get(key);
+        if (existing) {
+          existing.totalGrams += item.quantity_grams || 0;
+        } else {
+          foodMap.set(key, { name: data.name, totalGrams: item.quantity_grams || 0 });
+        }
+      }
+
+      for (const food of legacyFoods) {
+        const key = food.name?.toLowerCase().trim() || "";
+        if (!key) continue;
+        const existing = foodMap.get(key);
+        const qty = typeof food.quantity === "number" ? food.quantity : 100;
+        if (existing) {
+          existing.totalGrams += qty;
+        } else {
+          foodMap.set(key, { name: food.name, totalGrams: qty });
+        }
+      }
+    }
+  }
+
+  if (foodMap.size === 0) return;
+
+  const sortedFoods = [...foodMap.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
+
+  doc.addPage("a4", "portrait");
+  drawTopBar(doc, cc);
+  const pw = doc.internal.pageSize.getWidth();
+  const contentW = pw - MARGIN_P * 2;
+  let y = 12;
+
+  doc.setFontSize(12);
+  doc.setTextColor(...cc.primary);
+  doc.setFont("helvetica", "bold");
+  doc.text("LISTA DE LA COMPRA SEMANAL", MARGIN_P, y);
+  y += 3;
+
+  doc.setFontSize(7);
+  doc.setTextColor(...cc.textMuted);
+  doc.setFont("helvetica", "normal");
+  doc.text("Cantidades totales aproximadas para una semana de plan nutricional", MARGIN_P, y + 3);
+  y += 8;
+
+  const bodyRows = sortedFoods.map((f, i) => [
+    (i + 1).toString(),
+    f.name,
+    `${Math.round(f.totalGrams)} g`,
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [["#", "Alimento", "Cantidad total"]],
+    body: bodyRows,
+    theme: "grid",
+    tableWidth: contentW,
+    margin: { left: MARGIN_P },
+    headStyles: {
+      fillColor: cc.headerBg,
+      textColor: cc.text,
+      fontSize: 7,
+      fontStyle: "bold",
+      lineColor: cc.border,
+      lineWidth: 0.2,
+    },
+    styles: {
+      fontSize: 6.5,
+      cellPadding: 2,
+      textColor: cc.text,
+      lineColor: cc.border,
+      lineWidth: 0.15,
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: contentW - 10 - 28 },
+      2: { cellWidth: 28, halign: "center" },
+    },
+    alternateRowStyles: { fillColor: cc.headerBg },
+  });
 }
 
 // ================================================================

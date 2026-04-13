@@ -21,6 +21,7 @@ interface ProgramFormValues {
   client_id: string | null;
   start_date: string;
   end_date: string;
+  review_interval_days: number | null;
 }
 
 interface ProgramBuilderSidebarProps {
@@ -138,23 +139,35 @@ export function ProgramBuilderSidebar({
       />
 
       {(selectedClientId || clientId) && (
-        <Group grow>
-          <TextInput
-            label="Fecha de inicio"
-            type="date"
+        <>
+          <Group grow>
+            <TextInput
+              label="Fecha de inicio"
+              type="date"
+              radius="md"
+              size="sm"
+              {...programForm.getInputProps("start_date")}
+            />
+            <TextInput
+              label="Fecha de fin (opcional)"
+              description="Si no se indica, las semanas se repiten indefinidamente"
+              type="date"
+              radius="md"
+              size="sm"
+              {...programForm.getInputProps("end_date")}
+            />
+          </Group>
+          <NumberInput
+            label="Intervalo de revisión (días)"
+            description="Genera recordatorios automáticos para revisar el programa"
+            placeholder="Ej: 15"
+            min={1}
+            max={365}
             radius="md"
             size="sm"
-            {...programForm.getInputProps("start_date")}
+            {...programForm.getInputProps("review_interval_days")}
           />
-          <TextInput
-            label="Fecha de fin (opcional)"
-            description="Si no se indica, las semanas se repiten indefinidamente"
-            type="date"
-            radius="md"
-            size="sm"
-            {...programForm.getInputProps("end_date")}
-          />
-        </Group>
+        </>
       )}
     </Stack>
   );

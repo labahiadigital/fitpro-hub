@@ -12,9 +12,14 @@ export interface TimeRecord {
   pauses?: Array<{ start: string; end?: string | null }>;
   net_minutes?: number | null;
   notes?: string | null;
+  justification?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  address?: string | null;
   status: "active" | "completed" | "edited";
   created_at: string;
   updated_at: string;
+  server_time?: string | null;
 }
 
 export interface ClockStatus {
@@ -24,6 +29,7 @@ export interface ClockStatus {
   is_paused: boolean;
   pause_start?: string | null;
   net_minutes_today: number;
+  server_time?: string | null;
 }
 
 export interface LeaveRequestItem {

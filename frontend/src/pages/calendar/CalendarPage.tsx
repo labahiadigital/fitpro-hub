@@ -63,6 +63,7 @@ import {
   type GoogleCalendarEvent,
 } from "../../hooks/useGoogleCalendar";
 import { useAppointments, type AppointmentData } from "../../hooks/useAppointments";
+import { useTasksList } from "../../hooks/useTasks";
 import { useNavigate } from "react-router-dom";
 import "dayjs/locale/es";
 
@@ -89,7 +90,7 @@ interface CalendarEvent {
   title: string;
   start_time: string;
   end_time: string;
-  type: "booking" | "google" | "appointment";
+  type: "booking" | "google" | "appointment" | "task";
   color: string;
   booking?: Booking;
   googleEvent?: GoogleCalendarEvent;
@@ -115,6 +116,7 @@ export function CalendarPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
   const [layers, setLayers] = useState({ staff: true, boxes: true, machines: true });
+  const [eventFilters, setEventFilters] = useState({ bookings: true, tasks: true, appointments: true, google: true });
 
   const startOfWeek = dayjs(currentDate).startOf("week");
   const endOfWeek = dayjs(currentDate).endOf("week");
@@ -155,6 +157,10 @@ export function CalendarPage() {
     start_date: dateParams.start_date,
     end_date: dateParams.end_date,
   });
+  const { data: tasksData } = useTasksList({
+    due_from: dateParams.start_date,
+    due_to: dateParams.end_date,
+  });
   const { data: clientsData } = useClients({ page: 1 });
   const { data: teamMembers } = useTeamMembers();
 
@@ -181,7 +187,7 @@ export function CalendarPage() {
   // Combinar bookings con eventos de Google Calendar
   const allEvents: CalendarEvent[] = [
     // Bookings de Trackfiz
-    ...bookings.map((b): CalendarEvent => ({
+    ...(eventFilters.bookings ? bookings.map((b): CalendarEvent => ({
       id: b.id,
       title: b.title,
       start_time: b.start_time,
@@ -191,9 +197,9 @@ export function CalendarPage() {
              b.status === "completed" ? "green" :
              b.modality === "online" ? "blue" : "teal",
       booking: b,
-    })),
+    })) : []),
     // Eventos de Google Calendar (externos)
-    ...(googleEvents || []).map((e): CalendarEvent => ({
+    ...(eventFilters.google ? (googleEvents || []).map((e): CalendarEvent => ({
       id: `gcal-${e.id}`,
       title: `📅 ${e.title}`,
       start_time: e.start,
@@ -201,9 +207,9 @@ export function CalendarPage() {
       type: "google",
       color: "grape",
       googleEvent: e,
-    })),
+    })) : []),
     // Citas (appointments) como subcalendarios
-    ...(appointmentsData || []).flatMap((a): CalendarEvent[] => {
+    ...(eventFilters.appointments ? (appointmentsData || []).flatMap((a): CalendarEvent[] => {
       const events: CalendarEvent[] = [];
       if (layers.staff && a.staff_id) {
         events.push({
@@ -233,7 +239,25 @@ export function CalendarPage() {
         });
       }
       return events;
-    }),
+    }) : []),
+    // Tareas con fecha
+    ...(eventFilters.tasks ? (tasksData || []).filter(t => t.due_date).map((t): CalendarEvent => {
+      const dueDate = dayjs(t.due_date);
+      const startTime = t.due_time
+        ? dueDate.format("YYYY-MM-DD") + "T" + t.due_time
+        : dueDate.startOf("day").toISOString();
+      const endTime = t.due_time
+        ? dayjs(startTime).add(30, "minute").toISOString()
+        : dueDate.endOf("day").toISOString();
+      return {
+        id: `task-${t.id}`,
+        title: `✓ ${t.title}`,
+        start_time: startTime,
+        end_time: endTime,
+        type: "task",
+        color: t.status === "done" ? "green" : t.priority === "high" ? "red" : "orange",
+      };
+    }) : []),
   ];
 
   const createBooking = useCreateBooking();
@@ -518,6 +542,37 @@ export function CalendarPage() {
             </Button>
           </Group>
           <Group gap="sm">
+            <Group gap={6}>
+              <Checkbox
+                size="xs"
+                label="Sesiones"
+                checked={eventFilters.bookings}
+                color="teal"
+                onChange={(e) => setEventFilters(p => ({ ...p, bookings: e.currentTarget.checked }))}
+              />
+              <Checkbox
+                size="xs"
+                label="Citas"
+                checked={eventFilters.appointments}
+                color="cyan"
+                onChange={(e) => setEventFilters(p => ({ ...p, appointments: e.currentTarget.checked }))}
+              />
+              <Checkbox
+                size="xs"
+                label="Tareas"
+                checked={eventFilters.tasks}
+                color="orange"
+                onChange={(e) => setEventFilters(p => ({ ...p, tasks: e.currentTarget.checked }))}
+              />
+              <Checkbox
+                size="xs"
+                label="Google Cal"
+                checked={eventFilters.google}
+                color="grape"
+                onChange={(e) => setEventFilters(p => ({ ...p, google: e.currentTarget.checked }))}
+              />
+            </Group>
+            <Divider orientation="vertical" />
             <Group gap={6}>
               <Checkbox
                 size="xs"

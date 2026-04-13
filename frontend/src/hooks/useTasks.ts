@@ -15,8 +15,12 @@ export interface Task {
   priority: TaskPriority;
   assigned_to?: string;
   team_group_id?: string;
+  client_id?: string;
   created_by?: string;
   due_date?: string;
+  due_time?: string;
+  source?: string;
+  source_ref?: string;
   archived_at?: string;
   deleted_at?: string;
   created_at: string;
@@ -26,9 +30,12 @@ export interface Task {
 export interface TaskFilters {
   status?: TaskStatus;
   assigned_to?: string;
+  client_id?: string;
   priority?: TaskPriority;
   state?: TaskState;
   search?: string;
+  due_from?: string;
+  due_to?: string;
 }
 
 export interface CreateTaskData {
@@ -38,7 +45,9 @@ export interface CreateTaskData {
   priority?: TaskPriority;
   assigned_to?: string;
   team_group_id?: string;
+  client_id?: string;
   due_date?: string;
+  due_time?: string;
 }
 
 export interface UpdateTaskData {
@@ -48,16 +57,21 @@ export interface UpdateTaskData {
   priority?: TaskPriority;
   assigned_to?: string;
   team_group_id?: string;
+  client_id?: string;
   due_date?: string;
+  due_time?: string;
 }
 
 export function useTasksList(filters: TaskFilters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
   if (filters.assigned_to) params.set("assigned_to", filters.assigned_to);
+  if (filters.client_id) params.set("client_id", filters.client_id);
   if (filters.priority) params.set("priority", filters.priority);
   if (filters.state) params.set("state", filters.state);
   if (filters.search) params.set("search", filters.search);
+  if (filters.due_from) params.set("due_from", filters.due_from);
+  if (filters.due_to) params.set("due_to", filters.due_to);
 
   const qs = params.toString();
   return useQuery({

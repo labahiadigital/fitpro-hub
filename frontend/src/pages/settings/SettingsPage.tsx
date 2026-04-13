@@ -963,29 +963,36 @@ export function SettingsPage() {
           {/* ==================== NOTIFICATIONS ==================== */}
           <Tabs.Panel value="notifications">
             <Box className="nv-card" p="lg">
-              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
+              <Text fw={600} mb="xs" size="lg" style={{ color: "var(--nv-text-primary)" }}>
                 Preferencias de Notificaciones
               </Text>
               <Text c="dimmed" size="sm" mb="lg">
                 Elige cómo quieres recibir cada tipo de notificación. Puedes activar el correo electrónico,
-                las notificaciones in-app (campanita), ambos, o ninguno.
+                las notificaciones in-app (campanita), ambos, o ninguno. Para notificaciones de tipo recordatorio
+                puedes configurar los días de antelación.
               </Text>
 
-              <Stack gap="md">
+              <Group justify="space-between" mb="sm" px="md">
+                <Text fw={600} size="sm" style={{ flex: 1 }}>Tipo de notificación</Text>
+                <Group gap="lg" wrap="nowrap">
+                  <Group gap={4}><IconMail size={14} /><Text fw={600} size="xs">Email</Text></Group>
+                  <Group gap={4}><IconBell size={14} /><Text fw={600} size="xs">App/Web</Text></Group>
+                </Group>
+              </Group>
+
+              <Divider mb="md" />
+
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Reservas y pagos</Text>
+              <Stack gap="sm" mb="lg">
                 {[
                   { key: "booking_created", label: "Nuevas reservas", desc: "Cuando un cliente hace una reserva" },
                   { key: "booking_cancelled", label: "Cancelaciones", desc: "Cuando se cancela una reserva" },
                   { key: "payment_received", label: "Pagos recibidos", desc: "Cuando se procesa un pago" },
                   { key: "payment_failed", label: "Pagos fallidos", desc: "Cuando falla un cobro" },
-                  { key: "new_message", label: "Nuevos mensajes", desc: "Cuando un cliente te envía un mensaje" },
-                  { key: "new_client", label: "Nuevos clientes", desc: "Cuando se registra un nuevo cliente" },
-                  { key: "form_submitted", label: "Formularios completados", desc: "Cuando un cliente completa un formulario" },
-                  { key: "progress_milestone", label: "Hitos de progreso", desc: "Cuando un cliente alcanza un hito" },
                 ].map((item) => {
                   const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
                   const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
                   const inAppOn = typeof prefs === "object" && prefs !== null ? (prefs as { in_app?: boolean }).in_app ?? true : true;
-
                   return (
                     <Paper key={item.key} p="md" withBorder radius="md">
                       <Group justify="space-between" wrap="nowrap" align="flex-start">
@@ -994,22 +1001,91 @@ export function SettingsPage() {
                           <Text c="dimmed" size="xs">{item.desc}</Text>
                         </Box>
                         <Group gap="lg" wrap="nowrap">
-                          <Tooltip label="Email">
-                            <Switch
-                              size="sm"
-                              checked={emailOn}
-                              onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)}
-                              thumbIcon={<IconMail size={10} />}
-                            />
-                          </Tooltip>
-                          <Tooltip label="Notificaciones in-app">
-                            <Switch
-                              size="sm"
-                              checked={inAppOn}
-                              onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)}
-                              thumbIcon={<IconBell size={10} />}
-                            />
-                          </Tooltip>
+                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
+                        </Group>
+                      </Group>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Clientes y comunicación</Text>
+              <Stack gap="sm" mb="lg">
+                {[
+                  { key: "new_message", label: "Nuevos mensajes", desc: "Cuando un cliente te envía un mensaje" },
+                  { key: "new_client", label: "Nuevos clientes", desc: "Cuando se registra un nuevo cliente" },
+                  { key: "form_submitted", label: "Formularios completados", desc: "Cuando un cliente completa un formulario" },
+                  { key: "progress_milestone", label: "Hitos de progreso", desc: "Cuando un cliente alcanza un hito" },
+                ].map((item) => {
+                  const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
+                  const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
+                  const inAppOn = typeof prefs === "object" && prefs !== null ? (prefs as { in_app?: boolean }).in_app ?? true : true;
+                  return (
+                    <Paper key={item.key} p="md" withBorder radius="md">
+                      <Group justify="space-between" wrap="nowrap" align="flex-start">
+                        <Box style={{ flex: 1 }}>
+                          <Text fw={500} size="sm">{item.label}</Text>
+                          <Text c="dimmed" size="xs">{item.desc}</Text>
+                        </Box>
+                        <Group gap="lg" wrap="nowrap">
+                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
+                        </Group>
+                      </Group>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Tareas y automatizaciones</Text>
+              <Stack gap="sm" mb="lg">
+                {[
+                  { key: "task_assigned", label: "Tareas asignadas", desc: "Cuando se te asigna una nueva tarea" },
+                  { key: "task_due", label: "Tareas por vencer", desc: "Recordatorio de tareas próximas a su fecha límite" },
+                  { key: "low_stock", label: "Stock bajo", desc: "Cuando un producto tiene cantidades bajas en inventario" },
+                  { key: "automation_completed", label: "Automatizaciones completadas", desc: "Cuando una automatización finaliza su ejecución" },
+                ].map((item) => {
+                  const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
+                  const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
+                  const inAppOn = typeof prefs === "object" && prefs !== null ? (prefs as { in_app?: boolean }).in_app ?? true : true;
+                  return (
+                    <Paper key={item.key} p="md" withBorder radius="md">
+                      <Group justify="space-between" wrap="nowrap" align="flex-start">
+                        <Box style={{ flex: 1 }}>
+                          <Text fw={500} size="sm">{item.label}</Text>
+                          <Text c="dimmed" size="xs">{item.desc}</Text>
+                        </Box>
+                        <Group gap="lg" wrap="nowrap">
+                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
+                        </Group>
+                      </Group>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Control horario</Text>
+              <Stack gap="sm" mb="lg">
+                {[
+                  { key: "clock_in_reminder", label: "Recordatorio de fichaje", desc: "Aviso para recordarte que debes fichar tu entrada" },
+                  { key: "clock_event", label: "Evento de fichaje", desc: "Notificación cuando se realiza un fichaje (dentro/fuera de horario)" },
+                  { key: "clock_missed", label: "Fichaje no realizado", desc: "Aviso cuando no se ha fichado y debería haberse hecho" },
+                ].map((item) => {
+                  const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
+                  const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
+                  const inAppOn = typeof prefs === "object" && prefs !== null ? (prefs as { in_app?: boolean }).in_app ?? true : true;
+                  return (
+                    <Paper key={item.key} p="md" withBorder radius="md">
+                      <Group justify="space-between" wrap="nowrap" align="flex-start">
+                        <Box style={{ flex: 1 }}>
+                          <Text fw={500} size="sm">{item.label}</Text>
+                          <Text c="dimmed" size="xs">{item.desc}</Text>
+                        </Box>
+                        <Group gap="lg" wrap="nowrap">
+                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
                         </Group>
                       </Group>
                     </Paper>
@@ -1019,9 +1095,45 @@ export function SettingsPage() {
 
               <Divider my="lg" />
 
+              <Text fw={600} size="sm" mb="sm" style={{ color: "var(--nv-text-primary)" }}>Anticipación de notificaciones</Text>
+              <Text c="dimmed" size="xs" mb="md">
+                Configura con cuántos días de antelación quieres recibir recordatorios para tareas, revisiones y eventos próximos.
+                Puedes configurar hasta dos recordatorios con días de antelación distintos.
+              </Text>
+              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
+                <Paper p="md" withBorder radius="md">
+                  <Text fw={500} size="sm" mb="xs">Primer recordatorio</Text>
+                  <NumberInput
+                    size="sm"
+                    radius="md"
+                    label="Días de antelación"
+                    placeholder="Ej: 3"
+                    min={1}
+                    max={30}
+                    value={(notifPrefs as Record<string, unknown>)?.advance_days_1 as number ?? 3}
+                    onChange={(v) => updatePrefs.mutate({ advance_days_1: { email: true, in_app: true, value: Number(v) || 3 } } as never)}
+                  />
+                </Paper>
+                <Paper p="md" withBorder radius="md">
+                  <Text fw={500} size="sm" mb="xs">Segundo recordatorio (opcional)</Text>
+                  <NumberInput
+                    size="sm"
+                    radius="md"
+                    label="Días de antelación"
+                    placeholder="Ej: 1"
+                    min={1}
+                    max={30}
+                    value={(notifPrefs as Record<string, unknown>)?.advance_days_2 as number ?? undefined}
+                    onChange={(v) => updatePrefs.mutate({ advance_days_2: { email: true, in_app: true, value: v ? Number(v) : null } } as never)}
+                  />
+                </Paper>
+              </SimpleGrid>
+
+              <Divider my="lg" />
+
               <Group justify="center" gap="xl">
-                <Group gap="xs"><IconMail size={14} color="var(--mantine-color-dimmed)" /><Text size="xs" c="dimmed">= Email</Text></Group>
-                <Group gap="xs"><IconBell size={14} color="var(--mantine-color-dimmed)" /><Text size="xs" c="dimmed">= Notificaciones in-app</Text></Group>
+                <Group gap="xs"><IconMail size={14} color="var(--mantine-color-dimmed)" /><Text size="xs" c="dimmed">= Notifica por email</Text></Group>
+                <Group gap="xs"><IconBell size={14} color="var(--mantine-color-dimmed)" /><Text size="xs" c="dimmed">= Notifica en app/web</Text></Group>
               </Group>
             </Box>
           </Tabs.Panel>

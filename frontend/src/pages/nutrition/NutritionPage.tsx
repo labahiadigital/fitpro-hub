@@ -530,6 +530,7 @@ export function NutritionPage() {
       name: "", description: "", duration_weeks: 1, target_calories: 2000,
       target_protein: 150, target_carbs: 200, target_fat: 70,
       dietary_tags: [] as string[], client_id: null as string | null, start_date: "", end_date: "",
+      review_interval_days: null as number | null,
     },
     validate: { name: (value) => (value.length < 2 ? "Nombre requerido" : null) },
   });
@@ -614,6 +615,7 @@ export function NutritionPage() {
         duration_weeks: values.duration_weeks, target_calories: values.target_calories,
         target_protein: values.target_protein, target_carbs: values.target_carbs,
         target_fat: values.target_fat, dietary_tags: values.dietary_tags, plan: { weeks: mealPlanWeeks },
+        review_interval_days: values.review_interval_days || undefined,
       };
       if (editingPlan) {
         await updateMealPlan.mutateAsync({ id: editingPlan.id, ...basePlanData, ...cleanDates, client_id: planClientId || undefined, is_template: editingPlan.is_template ?? !hasClient });
@@ -1007,6 +1009,7 @@ export function NutritionPage() {
               <NumberInput label="Programación (semanal)" max={12} min={1} radius="md" size="sm" {...planForm.getInputProps("duration_weeks")} onChange={(v) => { const weeks = Number(v) || 1; planForm.setFieldValue("duration_weeks", weeks); setMealPlanWeeks((prev) => { if (weeks > prev.length) { const nw = [...prev]; for (let i = prev.length; i < weeks; i++) nw.push({ week: i + 1, days: initialDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.day}`, meals: [] })) }); return nw; } return prev.slice(0, weeks); }); }} />
             </Group>
             {(selectedClientId || clientId) && <Group grow><TextInput label="Fecha de inicio" type="date" radius="md" size="sm" {...planForm.getInputProps("start_date")} /><TextInput label="Fecha de fin (opcional)" description="Si no se indica, las semanas se repiten indefinidamente" type="date" radius="md" size="sm" {...planForm.getInputProps("end_date")} /></Group>}
+            {(selectedClientId || clientId) && <NumberInput label="Intervalo de revisión (días)" description="Genera recordatorios automáticos para revisar el plan" placeholder="Ej: 15" min={1} max={365} radius="md" size="sm" {...planForm.getInputProps("review_interval_days")} />}
             <Divider label="Objetivos nutricionales" labelPosition="center" styles={{ label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } }} />
             <NumberInput label="Calorías objetivo" max={5000} min={1000} step={50} radius="md" size="sm" value={planForm.values.target_calories} onChange={(v) => { const cal = Number(v) || 1000; planForm.setFieldValue("target_calories", cal); const curP = planForm.values.target_protein; const curC = planForm.values.target_carbs; const curF = planForm.values.target_fat; const curCal = (curP * 4) + (curC * 4) + (curF * 9); if (curCal > 0) { const pPct = (curP * 4 / curCal) * 100; const cPct = (curC * 4 / curCal) * 100; const fPct = (curF * 9 / curCal) * 100; const g = gramsFromPercentages(cal, pPct, cPct, fPct); planForm.setFieldValue("target_protein", g.protein_g); planForm.setFieldValue("target_carbs", g.carbs_g); planForm.setFieldValue("target_fat", g.fat_g); } }} error={planForm.errors.target_calories} />
             <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xs">

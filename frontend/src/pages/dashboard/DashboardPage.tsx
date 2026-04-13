@@ -674,36 +674,34 @@ function ClockWidget() {
   const isClockedIn = status?.is_clocked_in ?? false;
 
   return (
-    <Paper shadow="xs" radius="lg" p="sm" mt="sm" withBorder style={{ maxWidth: 380 }}>
-      <Group gap="md" wrap="nowrap">
-        <ThemeIcon variant="light" color={isClockedIn ? "green" : "gray"} size={40} radius="xl">
-          <IconClock size={22} />
+    <Paper shadow="xs" radius="xl" px="md" py="xs" withBorder>
+      <Group gap="sm" wrap="nowrap">
+        <ThemeIcon variant="light" color={isClockedIn ? "green" : "gray"} size={36} radius="xl">
+          <IconClock size={18} />
         </ThemeIcon>
-        <Box style={{ flex: 1, minWidth: 0 }}>
-          <Text ff="monospace" fw={700} size="lg" lh={1}>
+        <Box>
+          <Text ff="monospace" fw={700} size="md" lh={1}>
             {now.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
           </Text>
-          <Text size="xs" c="dimmed">
+          <Text size="xs" c="dimmed" lh={1.2} mt={2}>
             {isClockedIn
-              ? `Fichado desde ${new Date(status!.clock_in!).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
+              ? `Fichado ${new Date(status!.clock_in!).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
               : "Sin fichar"}
           </Text>
         </Box>
-        <Group gap={4}>
-          {!isClockedIn ? (
-            <Button size="xs" color="green" leftSection={<IconClockPlay size={14} />} loading={clockIn.isPending} onClick={() => clockIn.mutate({})} radius="xl">
-              Entrada
-            </Button>
-          ) : (
-            <Button size="xs" color="red" leftSection={<IconClockStop size={14} />} loading={clockOut.isPending} onClick={() => clockOut.mutate({})} radius="xl">
-              Salida
-            </Button>
-          )}
-        </Group>
+        {!isClockedIn ? (
+          <Button size="xs" color="green" leftSection={<IconClockPlay size={14} />} loading={clockIn.isPending} onClick={() => clockIn.mutate({})} radius="xl">
+            Entrada
+          </Button>
+        ) : (
+          <Button size="xs" color="red" leftSection={<IconClockStop size={14} />} loading={clockOut.isPending} onClick={() => clockOut.mutate({})} radius="xl">
+            Salida
+          </Button>
+        )}
+        <UnstyledButton onClick={() => navigate("/time-clock")}>
+          <Text size="xs" c="blue" fw={500}>Ver control horario →</Text>
+        </UnstyledButton>
       </Group>
-      <UnstyledButton mt={6} onClick={() => navigate("/time-clock")}>
-        <Text size="xs" c="blue" fw={500}>Ver control horario →</Text>
-      </UnstyledButton>
     </Paper>
   );
 }
@@ -826,8 +824,8 @@ export function DashboardPage() {
               </>
             )}
           </Text>
-          <ClockWidget />
         </Box>
+        <ClockWidget />
         <Group gap="sm">
           <ActionIcon
             variant="light"

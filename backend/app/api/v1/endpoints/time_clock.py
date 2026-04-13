@@ -24,10 +24,15 @@ router = APIRouter()
 class ClockInRequest(BaseSchema):
     user_id: Optional[UUID] = None
     notes: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
+    justification: Optional[str] = None
 
 class ClockOutRequest(BaseSchema):
     user_id: Optional[UUID] = None
     notes: Optional[str] = None
+    justification: Optional[str] = None
 
 class PauseRequest(BaseSchema):
     user_id: Optional[UUID] = None
@@ -47,9 +52,14 @@ class TimeRecordResponse(BaseSchema):
     pauses: Optional[list] = None
     net_minutes: Optional[int] = None
     notes: Optional[str] = None
+    justification: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
     status: str
     created_at: datetime
     updated_at: datetime
+    server_time: Optional[datetime] = None
     model_config = {"from_attributes": True}
 
 class ClockStatusResponse(BaseSchema):
@@ -59,6 +69,7 @@ class ClockStatusResponse(BaseSchema):
     is_paused: bool = False
     pause_start: Optional[datetime] = None
     net_minutes_today: int = 0
+    server_time: Optional[datetime] = None
 
 class LeaveRequestCreate(BaseSchema):
     leave_type: str
@@ -139,7 +150,7 @@ async def clock_status(
     )
     record = result.scalar_one_or_none()
     if not record:
-        return ClockStatusResponse(is_clocked_in=False, net_minutes_today=0)
+        return ClockStatusResponse(is_clocked_in=False, net_minutes_today=0, server_time=datetime.now(timezone.utc))
 
     pauses = record.pauses or []
     is_paused = len(pauses) > 0 and pauses[-1].get("end") is None
@@ -155,6 +166,7 @@ async def clock_status(
         is_paused=is_paused,
         pause_start=pause_start,
         net_minutes_today=_compute_net_minutes(record),
+        server_time=datetime.now(timezone.utc),
     )
 
 
@@ -182,12 +194,17 @@ async def clock_in(
         pauses=[],
         status="active",
         notes=data.notes,
+        justification=data.justification,
+        latitude=data.latitude,
+        longitude=data.longitude,
+        address=data.address,
     )
     db.add(record)
     await db.commit()
     await db.refresh(record)
     resp = TimeRecordResponse.model_validate(record)
     resp.user_name = await _user_name(db, uid)
+    resp.server_time = datetime.now(timezone.utc)
     return resp
 
 

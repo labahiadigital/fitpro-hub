@@ -55,6 +55,7 @@ import {
 } from "../../hooks/useTasks";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { useTeamGroupsList } from "../../hooks/useTeamGroups";
+import { useClients } from "../../hooks/useClients";
 
 const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string }> = {
   high: { label: "Alta", color: "red" },
@@ -214,6 +215,15 @@ export function TasksPage() {
   const { data: tasks = [], isLoading } = useTasksList(filters);
   const { data: members = [] } = useTeamMembers();
   const { data: groups = [] } = useTeamGroupsList();
+  const { data: clientsData } = useClients({ page: 1, search: "", page_size: 200 });
+  const clientOptions = useMemo(
+    () =>
+      (clientsData?.items || []).map((c: any) => ({
+        value: c.id,
+        label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email,
+      })),
+    [clientsData]
+  );
   const createMutation = useCreateTask();
   const updateMutation = useUpdateTask();
   const statusMutation = useUpdateTaskStatus();
@@ -260,7 +270,9 @@ export function TasksPage() {
       priority: "medium" as TaskPriority,
       assigned_to: null as string | null,
       team_group_id: null as string | null,
+      client_id: null as string | null,
       due_date: null as Date | null,
+      due_time: "" as string,
     },
     validate: {
       title: (v) => (v.trim() ? null : "El título es obligatorio"),
@@ -274,7 +286,9 @@ export function TasksPage() {
       priority: "medium" as TaskPriority,
       assigned_to: null as string | null,
       team_group_id: null as string | null,
+      client_id: null as string | null,
       due_date: null as Date | null,
+      due_time: "" as string,
     },
     validate: {
       title: (v) => (v.trim() ? null : "El título es obligatorio"),
@@ -294,7 +308,9 @@ export function TasksPage() {
         priority: values.priority,
         assigned_to: values.assigned_to || undefined,
         team_group_id: values.team_group_id || undefined,
+        client_id: values.client_id || undefined,
         due_date: values.due_date?.toISOString(),
+        due_time: values.due_time || undefined,
       },
       {
         onSuccess: () => {
@@ -315,7 +331,9 @@ export function TasksPage() {
         priority: values.priority,
         assigned_to: values.assigned_to || undefined,
         team_group_id: values.team_group_id || undefined,
+        client_id: values.client_id || undefined,
         due_date: values.due_date?.toISOString(),
+        due_time: values.due_time || undefined,
       },
       {
         onSuccess: () => {
@@ -335,7 +353,9 @@ export function TasksPage() {
         priority: task.priority,
         assigned_to: task.assigned_to || null,
         team_group_id: (task as any).team_group_id || null,
+        client_id: task.client_id || null,
         due_date: task.due_date ? new Date(task.due_date) : null,
+        due_time: task.due_time || "",
       });
       openEdit();
     },
@@ -551,23 +571,41 @@ export function TasksPage() {
                 {...createForm.getInputProps("assigned_to")}
               />
             </Group>
-            <Select
-              label="Asignar a equipo"
-              placeholder="Sin equipo"
-              clearable
-              searchable
-              data={groupOptions}
-              {...createForm.getInputProps("team_group_id")}
-            />
-            <DatePickerInput
-              label="Fecha límite"
-              placeholder="Sin fecha límite"
-              clearable
-              valueFormat="DD MMM YYYY"
-              locale="es"
-              leftSection={<IconCalendar size={14} />}
-              {...createForm.getInputProps("due_date")}
-            />
+            <Group grow>
+              <Select
+                label="Asignar a equipo"
+                placeholder="Sin equipo"
+                clearable
+                searchable
+                data={groupOptions}
+                {...createForm.getInputProps("team_group_id")}
+              />
+              <Select
+                label="Vincular a cliente"
+                placeholder="Sin cliente"
+                clearable
+                searchable
+                data={clientOptions}
+                {...createForm.getInputProps("client_id")}
+              />
+            </Group>
+            <Group grow>
+              <DatePickerInput
+                label="Fecha límite"
+                placeholder="Sin fecha límite"
+                clearable
+                valueFormat="DD MMM YYYY"
+                locale="es"
+                leftSection={<IconCalendar size={14} />}
+                {...createForm.getInputProps("due_date")}
+              />
+              <TextInput
+                label="Hora"
+                placeholder="HH:MM"
+                type="time"
+                {...createForm.getInputProps("due_time")}
+              />
+            </Group>
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeCreate}>
                 Cancelar
@@ -635,23 +673,41 @@ export function TasksPage() {
                 {...editForm.getInputProps("assigned_to")}
               />
             </Group>
-            <Select
-              label="Asignar a equipo"
-              placeholder="Sin equipo"
-              clearable
-              searchable
-              data={groupOptions}
-              {...editForm.getInputProps("team_group_id")}
-            />
-            <DatePickerInput
-              label="Fecha límite"
-              placeholder="Sin fecha límite"
-              clearable
-              valueFormat="DD MMM YYYY"
-              locale="es"
-              leftSection={<IconCalendar size={14} />}
-              {...editForm.getInputProps("due_date")}
-            />
+            <Group grow>
+              <Select
+                label="Asignar a equipo"
+                placeholder="Sin equipo"
+                clearable
+                searchable
+                data={groupOptions}
+                {...editForm.getInputProps("team_group_id")}
+              />
+              <Select
+                label="Vincular a cliente"
+                placeholder="Sin cliente"
+                clearable
+                searchable
+                data={clientOptions}
+                {...editForm.getInputProps("client_id")}
+              />
+            </Group>
+            <Group grow>
+              <DatePickerInput
+                label="Fecha límite"
+                placeholder="Sin fecha límite"
+                clearable
+                valueFormat="DD MMM YYYY"
+                locale="es"
+                leftSection={<IconCalendar size={14} />}
+                {...editForm.getInputProps("due_date")}
+              />
+              <TextInput
+                label="Hora"
+                placeholder="HH:MM"
+                type="time"
+                {...editForm.getInputProps("due_time")}
+              />
+            </Group>
             <Group justify="flex-end" mt="md">
               <Button
                 variant="default"

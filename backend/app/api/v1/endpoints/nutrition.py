@@ -16,6 +16,7 @@ from app.core.database import get_db
 from app.middleware.auth import CurrentUser, get_current_user, require_staff, require_workspace
 from app.models.client import Client
 from app.models.nutrition import Food, FoodFavorite, FoodGroup, MealPlan, Recipe
+from app.api.v1.endpoints.tasks import create_auto_task
 
 router = APIRouter()
 
@@ -63,6 +64,7 @@ class MealPlanCreate(BaseModel):
     is_template: bool = True
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    review_interval_days: Optional[int] = None
 
 
 class MealPlanUpdate(BaseModel):
@@ -80,6 +82,7 @@ class MealPlanUpdate(BaseModel):
     is_template: Optional[bool] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    review_interval_days: Optional[int] = None
 
 
 class MealPlanResponse(BaseModel):
@@ -100,6 +103,8 @@ class MealPlanResponse(BaseModel):
     is_active: Optional[bool] = False
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    review_interval_days: Optional[int] = None
+    next_review_date: Optional[date] = None
 
     class Config:
         from_attributes = True
@@ -294,6 +299,11 @@ async def create_meal_plan(
         except (ValueError, TypeError):
             pass
 
+    review_interval = data.review_interval_days
+    next_review = None
+    if review_interval and review_interval > 0 and parsed_start:
+        next_review = parsed_start + timedelta(days=review_interval)
+
     meal_plan = MealPlan(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -313,8 +323,36 @@ async def create_meal_plan(
         is_active=should_activate,
         start_date=parsed_start,
         end_date=parsed_end,
+        review_interval_days=review_interval,
+        next_review_date=next_review,
     )
     db.add(meal_plan)
+    await db.flush()
+
+    if parsed_end and data.client_id:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Fin de plan nutricional: {data.name}",
+            due_date=datetime.combine(parsed_end, datetime.min.time()),
+            source="auto",
+            source_ref=f"meal_plan_end:{meal_plan.id}",
+            client_id=data.client_id,
+        )
+
+    if next_review and data.client_id:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Revisión plan nutricional: {data.name}",
+            due_date=datetime.combine(next_review, datetime.min.time()),
+            source="auto",
+            source_ref=f"meal_plan_review:{meal_plan.id}",
+            client_id=data.client_id,
+        )
+
     await db.commit()
     await db.refresh(meal_plan)
     return meal_plan

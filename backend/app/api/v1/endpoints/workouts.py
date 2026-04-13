@@ -1,5 +1,5 @@
 import copy
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 from uuid import UUID
 
@@ -14,6 +14,7 @@ from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
+from app.api.v1.endpoints.tasks import create_auto_task
 
 router = APIRouter()
 
@@ -65,6 +66,7 @@ class WorkoutProgramCreate(BaseModel):
     is_template: bool = True
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    review_interval_days: Optional[int] = None
 
 
 class WorkoutProgramUpdate(BaseModel):
@@ -78,6 +80,7 @@ class WorkoutProgramUpdate(BaseModel):
     is_template: Optional[bool] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    review_interval_days: Optional[int] = None
 
 
 class WorkoutProgramResponse(BaseModel):
@@ -94,6 +97,8 @@ class WorkoutProgramResponse(BaseModel):
     is_active: Optional[bool] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    review_interval_days: Optional[int] = None
+    next_review_date: Optional[date] = None
 
     class Config:
         from_attributes = True
@@ -481,6 +486,11 @@ async def create_program(
         except (ValueError, TypeError):
             pass
 
+    review_interval = data.review_interval_days
+    next_review = None
+    if review_interval and review_interval > 0 and parsed_start:
+        next_review = parsed_start + timedelta(days=review_interval)
+
     program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -496,8 +506,36 @@ async def create_program(
         is_active=should_activate,
         start_date=parsed_start,
         end_date=parsed_end,
+        review_interval_days=review_interval,
+        next_review_date=next_review,
     )
     db.add(program)
+    await db.flush()
+
+    if parsed_end and data.client_id:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Fin de programa: {data.name}",
+            due_date=datetime.combine(parsed_end, datetime.min.time()),
+            source="auto",
+            source_ref=f"workout_program_end:{program.id}",
+            client_id=data.client_id,
+        )
+
+    if next_review and data.client_id:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Revisión programa: {data.name}",
+            due_date=datetime.combine(next_review, datetime.min.time()),
+            source="auto",
+            source_ref=f"workout_program_review:{program.id}",
+            client_id=data.client_id,
+        )
+
     await db.commit()
     await db.refresh(program)
     return program

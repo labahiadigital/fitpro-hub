@@ -33,6 +33,10 @@ class WorkoutProgram(BaseModel):
     # Assignment dates
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
+
+    # Review scheduling
+    review_interval_days = Column(Integer, nullable=True)
+    next_review_date = Column(Date, nullable=True)
     
     # Tags for categorization
     tags = Column(ARRAY(String), default=[])

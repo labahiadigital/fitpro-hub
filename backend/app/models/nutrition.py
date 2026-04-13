@@ -203,6 +203,10 @@ class MealPlan(BaseModel):
     # Assignment dates
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
+
+    # Review scheduling
+    review_interval_days = Column(Integer, nullable=True)
+    next_review_date = Column(Date, nullable=True)
     
     # Relationships
     workspace = relationship("Workspace", back_populates="meal_plans")

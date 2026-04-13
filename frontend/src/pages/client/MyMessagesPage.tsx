@@ -157,7 +157,8 @@ export function MyMessagesPage() {
       await clientPortalApi.markMessagesRead();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["client-unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-messages-count"] });
+      queryClient.invalidateQueries({ queryKey: ["client-conversations"] });
     },
   });
 

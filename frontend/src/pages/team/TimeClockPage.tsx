@@ -124,9 +124,15 @@ function LiveClock({ size = "xl" }: { size?: string }) {
 
 function ClockTab() {
   const { data: status, isLoading } = useClockStatus();
+  const { user } = useAuthStore();
   const clockIn = useClockIn();
   const clockOut = useClockOut();
   const togglePause = useTogglePause();
+  const { data: todayRecords = [] } = useTimeRecords({ start_date: new Date().toISOString().split("T")[0], end_date: new Date().toISOString().split("T")[0] });
+
+  const [justification, setJustification] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -150,19 +156,100 @@ function ClockTab() {
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }, [elapsed]);
 
+  const WORK_DAY_HOURS = 8;
+  const remaining = useMemo(() => {
+    const totalMin = WORK_DAY_HOURS * 60;
+    const worked = status?.net_minutes_today ?? 0;
+    const rem = Math.max(0, totalMin - worked);
+    return formatMinutes(rem);
+  }, [status?.net_minutes_today]);
+
+  const handleClockAction = useCallback((action: "in" | "out" | "pause" | "resume") => {
+    const getGeoAndAct = () => {
+      if (action === "in" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clockIn.mutate({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              justification: justification || undefined,
+            } as Record<string, unknown>, {
+              onSuccess: () => {
+                const name = user?.full_name || user?.email?.split("@")[0] || "usuario";
+                setSuccessMessage(`¡Fichaje realizado, ${name}!`);
+                setShowSuccess(true);
+                setJustification("");
+                setTimeout(() => setShowSuccess(false), 4000);
+              },
+            });
+          },
+          () => {
+            clockIn.mutate({ justification: justification || undefined } as Record<string, unknown>, {
+              onSuccess: () => {
+                const name = user?.full_name || user?.email?.split("@")[0] || "usuario";
+                setSuccessMessage(`¡Fichaje realizado, ${name}!`);
+                setShowSuccess(true);
+                setJustification("");
+                setTimeout(() => setShowSuccess(false), 4000);
+              },
+            });
+          },
+          { timeout: 5000 }
+        );
+      } else if (action === "out") {
+        clockOut.mutate({ justification: justification || undefined } as Record<string, unknown>, {
+          onSuccess: () => {
+            setSuccessMessage("¡Salida registrada correctamente!");
+            setShowSuccess(true);
+            setJustification("");
+            setTimeout(() => setShowSuccess(false), 4000);
+          },
+        });
+      } else {
+        togglePause.mutate({}, {
+          onSuccess: () => {
+            setSuccessMessage(action === "pause" ? "Pausa registrada" : "Retorno de pausa registrado");
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 3000);
+          },
+        });
+      }
+    };
+    getGeoAndAct();
+  }, [clockIn, clockOut, togglePause, justification, user]);
+
   if (isLoading) return <Loader mx="auto" mt="xl" />;
 
   const isClockedIn = status?.is_clocked_in ?? false;
   const isPaused = status?.is_paused ?? false;
 
+  const myRecordsToday = todayRecords.filter((r: any) => r.user_id === user?.id).slice(0, 5);
+
   return (
     <Stack align="center" gap="xl" py="xl">
+      {showSuccess && (
+        <Paper shadow="md" radius="lg" p="lg" w="100%" maw={440} withBorder style={{ background: "var(--mantine-color-green-0)", border: "2px solid var(--mantine-color-green-5)" }}>
+          <Stack align="center" gap="xs">
+            <ThemeIcon variant="filled" color="green" size={48} radius="xl">
+              <IconCheck size={28} />
+            </ThemeIcon>
+            <Text fw={700} size="lg" c="green">{successMessage}</Text>
+            {status?.server_time && (
+              <Text size="xs" c="dimmed">Hora servidor: {formatTime(status.server_time as unknown as string)}</Text>
+            )}
+          </Stack>
+        </Paper>
+      )}
+
       <Paper shadow="sm" radius="lg" p="xl" w="100%" maw={440} withBorder>
         <Stack align="center" gap="md">
           <LiveClock size="2.4rem" />
           <Text c="dimmed" size="sm">
             {new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </Text>
+          {status?.server_time && (
+            <Text size="xs" c="dimmed">Hora del servidor: {formatTime(status.server_time as unknown as string)}</Text>
+          )}
           <Divider w="100%" />
 
           {!isClockedIn ? (
@@ -171,15 +258,23 @@ function ClockTab() {
                 <IconClock size={32} />
               </ThemeIcon>
               <Text fw={600} size="lg">Sin fichar</Text>
+              <TextInput
+                placeholder="Justificación (opcional)"
+                size="sm"
+                radius="md"
+                w="100%"
+                value={justification}
+                onChange={(e) => setJustification(e.currentTarget.value)}
+              />
               <Button
                 size="lg"
                 leftSection={<IconClockPlay size={20} />}
                 color="green"
                 fullWidth
                 loading={clockIn.isPending}
-                onClick={() => clockIn.mutate({})}
+                onClick={() => handleClockAction("in")}
               >
-                Fichar Entrada
+                Entrada jornada
               </Button>
             </>
           ) : (
@@ -193,34 +288,64 @@ function ClockTab() {
               <Text ff="monospace" fw={700} size="xl" c={isPaused ? "yellow" : "green"}>
                 {elapsedStr}
               </Text>
-              <Text size="sm" c="dimmed">
-                Neto: {formatMinutes(status?.net_minutes_today ?? 0)}
-              </Text>
-              <Group w="100%">
+              <Group gap="lg" justify="center">
+                <Box ta="center">
+                  <Text size="xs" c="dimmed">Neto trabajado</Text>
+                  <Text fw={600} size="sm">{formatMinutes(status?.net_minutes_today ?? 0)}</Text>
+                </Box>
+                <Box ta="center">
+                  <Text size="xs" c="dimmed">Restante jornada</Text>
+                  <Text fw={600} size="sm">{remaining}</Text>
+                </Box>
+              </Group>
+              <TextInput
+                placeholder="Justificación (opcional)"
+                size="sm"
+                radius="md"
+                w="100%"
+                value={justification}
+                onChange={(e) => setJustification(e.currentTarget.value)}
+              />
+              <SimpleGrid cols={2} w="100%">
                 <Button
-                  flex={1}
                   variant="light"
                   color={isPaused ? "blue" : "yellow"}
-                  leftSection={isPaused ? <IconPlayerPlay size={18} /> : <IconPlayerPause size={18} />}
+                  leftSection={isPaused ? <IconPlayerPlay size={16} /> : <IconPlayerPause size={16} />}
                   loading={togglePause.isPending}
-                  onClick={() => togglePause.mutate({})}
+                  onClick={() => handleClockAction(isPaused ? "resume" : "pause")}
                 >
-                  {isPaused ? "Reanudar" : "Pausar"}
+                  {isPaused ? "Retorno de pausa" : "Pausa"}
                 </Button>
                 <Button
-                  flex={1}
                   color="red"
-                  leftSection={<IconClockStop size={18} />}
+                  leftSection={<IconClockStop size={16} />}
                   loading={clockOut.isPending}
-                  onClick={() => clockOut.mutate({})}
+                  onClick={() => handleClockAction("out")}
                 >
-                  Fichar Salida
+                  Salida jornada
                 </Button>
-              </Group>
+              </SimpleGrid>
             </>
           )}
         </Stack>
       </Paper>
+
+      {myRecordsToday.length > 0 && (
+        <Paper shadow="xs" radius="lg" p="md" w="100%" maw={440} withBorder>
+          <Text fw={600} size="sm" mb="xs">Fichajes de hoy</Text>
+          <Stack gap={4}>
+            {myRecordsToday.map((r: any) => (
+              <Group key={r.id} gap="xs" justify="space-between">
+                <Text size="xs">Entrada: {formatTime(r.clock_in)}</Text>
+                <Text size="xs">{r.clock_out ? `Salida: ${formatTime(r.clock_out)}` : "En curso"}</Text>
+                {r.pauses && r.pauses.length > 0 && (
+                  <Badge size="xs" variant="light">{r.pauses.length} pausa(s)</Badge>
+                )}
+              </Group>
+            ))}
+          </Stack>
+        </Paper>
+      )}
     </Stack>
   );
 }
