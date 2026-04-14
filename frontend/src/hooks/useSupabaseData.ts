@@ -685,13 +685,15 @@ export function useAssignWorkoutProgram() {
       startDate: string;
       endDate?: string;
       notes?: string;
+      reviewIntervalDays?: number;
     }) => {
       const response = await workoutsApi.assignProgram(
         data.programId, 
         data.clientId,
         data.startDate,
         data.endDate,
-        data.notes
+        data.notes,
+        data.reviewIntervalDays
       );
       return response.data;
     },

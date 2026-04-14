@@ -478,6 +478,7 @@ export function NutritionPage() {
       dietary_tags: plan.dietary_tags || [], plan: plan.plan || { weeks: [{ week: 1, days: [] }] },
       client_id: plan.client_id, is_template: plan.is_template ?? true,
       is_active: plan.is_active ?? false, start_date: plan.start_date, end_date: plan.end_date,
+      review_interval_days: plan.review_interval_days || null,
       client_name: plan.client_id ? (clientsMap.get(plan.client_id) || null) : null,
     }));
   }, [supabaseMealPlans, clientsMap]);
@@ -514,6 +515,7 @@ export function NutritionPage() {
       target_calories: plan.target_calories, target_protein: plan.target_protein,
       target_carbs: plan.target_carbs, target_fat: plan.target_fat,
       dietary_tags: plan.dietary_tags || [], client_id: planClientId, start_date: plan.start_date || "", end_date: plan.end_date || "",
+      review_interval_days: plan.review_interval_days || null,
     });
     setMealPlanWeeks(extractWeeksFromPlan(plan.plan));
     setCurrentWeek(1);
@@ -595,6 +597,7 @@ export function NutritionPage() {
         target_calories: plan.target_calories, target_protein: plan.target_protein,
         target_carbs: plan.target_carbs, target_fat: plan.target_fat,
         dietary_tags: plan.dietary_tags || [], client_id: planClientId, start_date: plan.start_date || "", end_date: plan.end_date || "",
+        review_interval_days: plan.review_interval_days || null,
       });
       setMealPlanWeeks(extractWeeksFromPlan(plan.plan));
       setCurrentWeek(1);

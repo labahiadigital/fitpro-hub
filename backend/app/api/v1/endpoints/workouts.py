@@ -522,6 +522,8 @@ async def create_program(
             source="auto",
             source_ref=f"workout_program_end:{program.id}",
             client_id=data.client_id,
+            description=f"El programa de entrenamiento '{data.name}' finaliza en esta fecha.",
+            notification_link="/workouts",
         )
 
     if next_review and data.client_id:
@@ -534,6 +536,8 @@ async def create_program(
             source="auto",
             source_ref=f"workout_program_review:{program.id}",
             client_id=data.client_id,
+            description=f"Revisar progreso del programa '{data.name}'. Intervalo: cada {review_interval} días.",
+            notification_link="/workouts",
         )
 
     await db.commit()
@@ -605,8 +609,40 @@ async def update_program(
             setattr(program, field, value)
 
     if data.template is not None and program.client_id and not program.is_template:
-    
         program.executed_template = copy.deepcopy(data.template)
+
+    if data.review_interval_days is not None and program.start_date:
+        if data.review_interval_days > 0:
+            program.next_review_date = program.start_date + timedelta(days=data.review_interval_days)
+            if program.client_id:
+                await create_auto_task(
+                    db=db,
+                    workspace_id=current_user.workspace_id,
+                    created_by=current_user.id,
+                    title=f"Revisión programa: {program.name}",
+                    due_date=datetime.combine(program.next_review_date, datetime.min.time()),
+                    source="auto",
+                    source_ref=f"workout_program_review:{program.id}",
+                    client_id=program.client_id,
+                    description=f"Revisar progreso del programa '{program.name}'. Intervalo: cada {data.review_interval_days} días.",
+                    notification_link="/workouts",
+                )
+        else:
+            program.next_review_date = None
+
+    if program.end_date and program.client_id:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Fin de programa: {program.name}",
+            due_date=datetime.combine(program.end_date, datetime.min.time()),
+            source="auto",
+            source_ref=f"workout_program_end:{program.id}",
+            client_id=program.client_id,
+            description=f"El programa de entrenamiento '{program.name}' finaliza en esta fecha.",
+            notification_link="/workouts",
+        )
 
     await db.commit()
     await db.refresh(program)
@@ -703,6 +739,7 @@ class AssignProgramRequest(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     notes: Optional[str] = None
+    review_interval_days: Optional[int] = None
 
 
 @router.post("/programs/{program_id}/assign", response_model=WorkoutProgramResponse, status_code=status.HTTP_201_CREATED)
@@ -768,6 +805,11 @@ async def assign_program_to_client(
         .values(is_active=False)
     )
 
+    review_interval = data.review_interval_days
+    next_review = None
+    if review_interval and review_interval > 0 and parsed_start:
+        next_review = parsed_start + timedelta(days=review_interval)
+
     assigned_program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -783,9 +825,58 @@ async def assign_program_to_client(
         is_active=True,
         start_date=parsed_start,
         end_date=parsed_end,
+        review_interval_days=review_interval,
+        next_review_date=next_review,
     )
 
     db.add(assigned_program)
+    await db.flush()
+
+    if parsed_end:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Fin de programa: {template.name}",
+            due_date=datetime.combine(parsed_end, datetime.min.time()),
+            source="auto",
+            source_ref=f"workout_program_end:{assigned_program.id}",
+            client_id=data.client_id,
+            description=f"El programa de entrenamiento '{template.name}' finaliza en esta fecha.",
+            notification_link="/workouts",
+        )
+
+    if next_review:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Revisión programa: {template.name}",
+            due_date=datetime.combine(next_review, datetime.min.time()),
+            source="auto",
+            source_ref=f"workout_program_review:{assigned_program.id}",
+            client_id=data.client_id,
+            description=f"Revisar progreso del programa '{template.name}'. Intervalo: cada {review_interval} días.",
+            notification_link="/workouts",
+        )
+
+    client_user_result = await db.execute(
+        select(Client.user_id).where(Client.id == data.client_id)
+    )
+    client_user_id = client_user_result.scalar_one_or_none()
+    if client_user_id:
+        from app.services.notification_service import notify
+        await notify(
+            db=db,
+            event="program_assigned",
+            user_id=client_user_id,
+            workspace_id=current_user.workspace_id,
+            title="Nuevo programa de entrenamiento asignado",
+            body=f"Se te ha asignado el programa '{template.name}'.",
+            notification_type="info",
+            link="/my-workouts",
+        )
+
     await db.commit()
     await db.refresh(assigned_program)
     return assigned_program

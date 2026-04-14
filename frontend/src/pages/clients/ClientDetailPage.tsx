@@ -1048,15 +1048,17 @@ export function ClientDetailPage() {
     setAssignStartDate(new Date().toISOString().split('T')[0]);
     setAssignEndDate("");
     setAssignNotes("");
+    setAssignReviewInterval("");
     openAssignProgramModal();
   };
-  
+
   // Handler para asignar plan nutricional
   const handleAssignNutritionPlan = () => {
     setSelectedMealPlanForAssign(null);
     setAssignStartDate(new Date().toISOString().split('T')[0]);
     setAssignEndDate("");
     setAssignNotes("");
+    setAssignReviewInterval("");
     openAssignMealPlanModal();
   };
   
@@ -1088,6 +1090,7 @@ export function ClientDetailPage() {
         startDate: assignStartDate,
         endDate: assignEndDate || undefined,
         notes: assignNotes || undefined,
+        reviewIntervalDays: assignReviewInterval ? Number(assignReviewInterval) : undefined,
       });
       notifications.show({
         title: "Programa asignado",
@@ -4086,6 +4089,15 @@ export function ClientDetailPage() {
             value={assignNotes}
             onChange={(e) => setAssignNotes(e.currentTarget.value)}
             rows={3}
+          />
+          <NumberInput
+            label="Intervalo de revisión (días)"
+            description="Genera recordatorios automáticos para revisar el programa"
+            placeholder="Ej: 15"
+            min={1}
+            max={365}
+            value={assignReviewInterval}
+            onChange={setAssignReviewInterval}
           />
           
           {workoutTemplates.length === 0 && (

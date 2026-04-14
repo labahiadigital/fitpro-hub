@@ -280,12 +280,15 @@ async def create_auto_task(
     created_by: UUID,
     title: str,
     due_date: datetime,
-    source: str,
-    source_ref: str,
+    source: str = "auto",
+    source_ref: str = "",
     client_id: UUID | None = None,
     assigned_to: UUID | None = None,
+    description: str | None = None,
+    notify_user: bool = True,
+    notification_link: str | None = None,
 ):
-    """Create an automatic task. Avoids duplicates by checking source_ref."""
+    """Create an automatic task and optionally notify the assignee."""
     existing = await db.execute(
         select(Task).where(
             and_(
@@ -298,12 +301,14 @@ async def create_auto_task(
     if existing.scalar_one_or_none():
         return None
 
+    target_user = assigned_to or created_by
     task = Task(
         workspace_id=workspace_id,
         title=title,
+        description=description,
         status="todo",
         priority="medium",
-        assigned_to=assigned_to or created_by,
+        assigned_to=target_user,
         client_id=client_id,
         created_by=created_by,
         due_date=due_date,
@@ -311,4 +316,19 @@ async def create_auto_task(
         source_ref=source_ref,
     )
     db.add(task)
+    await db.flush()
+
+    if notify_user:
+        from app.services.notification_service import notify
+        await notify(
+            db=db,
+            event="task_created",
+            user_id=target_user,
+            workspace_id=workspace_id,
+            title=f"Nueva tarea: {title}",
+            body=description or title,
+            notification_type="reminder",
+            link=notification_link or "/tasks",
+        )
+
     return task

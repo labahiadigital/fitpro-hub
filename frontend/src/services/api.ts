@@ -311,12 +311,13 @@ export const workoutsApi = {
   updateProgram: (id: string, data: object) =>
     api.put(`/workouts/programs/${id}`, data),
   deleteProgram: (id: string) => api.delete(`/workouts/programs/${id}`),
-  assignProgram: (programId: string, clientId: string, startDate?: string, endDate?: string, notes?: string) =>
+  assignProgram: (programId: string, clientId: string, startDate?: string, endDate?: string, notes?: string, reviewIntervalDays?: number) =>
     api.post(`/workouts/programs/${programId}/assign`, { 
       client_id: clientId,
       start_date: startDate,
       end_date: endDate,
-      notes: notes
+      notes: notes,
+      review_interval_days: reviewIntervalDays,
     }),
   activateProgram: (id: string) => api.post(`/workouts/programs/${id}/activate`),
   deactivateProgram: (id: string) => api.post(`/workouts/programs/${id}/deactivate`),

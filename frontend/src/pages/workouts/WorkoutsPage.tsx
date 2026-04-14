@@ -270,6 +270,7 @@ export function WorkoutsPage() {
       client_id: planClientId,
       start_date: program.start_date || "",
       end_date: program.end_date || "",
+      review_interval_days: program.review_interval_days || null,
     });
     setCurrentWeek(1);
     openBuilder();
@@ -442,6 +443,7 @@ export function WorkoutsPage() {
         client_id: planClientId,
         start_date: program.start_date || "",
         end_date: program.end_date || "",
+        review_interval_days: program.review_interval_days || null,
       });
       setCurrentWeek(1);
     } else {

@@ -339,6 +339,8 @@ async def create_meal_plan(
             source="auto",
             source_ref=f"meal_plan_end:{meal_plan.id}",
             client_id=data.client_id,
+            description=f"El plan nutricional '{data.name}' finaliza en esta fecha.",
+            notification_link="/nutrition",
         )
 
     if next_review and data.client_id:
@@ -351,6 +353,8 @@ async def create_meal_plan(
             source="auto",
             source_ref=f"meal_plan_review:{meal_plan.id}",
             client_id=data.client_id,
+            description=f"Revisar progreso del plan nutricional '{data.name}'. Intervalo: cada {review_interval} días.",
+            notification_link="/nutrition",
         )
 
     await db.commit()
@@ -420,8 +424,35 @@ async def update_meal_plan(
     if data.review_interval_days is not None and plan.start_date:
         if data.review_interval_days > 0:
             plan.next_review_date = plan.start_date + timedelta(days=data.review_interval_days)
+            if plan.client_id:
+                await create_auto_task(
+                    db=db,
+                    workspace_id=current_user.workspace_id,
+                    created_by=current_user.id,
+                    title=f"Revisión plan nutricional: {plan.name}",
+                    due_date=datetime.combine(plan.next_review_date, datetime.min.time()),
+                    source="auto",
+                    source_ref=f"meal_plan_review:{plan.id}",
+                    client_id=plan.client_id,
+                    description=f"Revisar progreso del plan nutricional '{plan.name}'. Intervalo: cada {data.review_interval_days} días.",
+                    notification_link="/nutrition",
+                )
         else:
             plan.next_review_date = None
+
+    if plan.end_date and plan.client_id:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Fin de plan nutricional: {plan.name}",
+            due_date=datetime.combine(plan.end_date, datetime.min.time()),
+            source="auto",
+            source_ref=f"meal_plan_end:{plan.id}",
+            client_id=plan.client_id,
+            description=f"El plan nutricional '{plan.name}' finaliza en esta fecha.",
+            notification_link="/nutrition",
+        )
 
     await db.commit()
     await db.refresh(plan)
@@ -610,9 +641,11 @@ async def assign_meal_plan_to_client(
             created_by=current_user.id,
             title=f"Fin de plan nutricional: {template.name}",
             due_date=datetime.combine(parsed_end, datetime.min.time()),
-            description=f"El plan nutricional '{template.name}' finaliza en esta fecha.",
+            source="auto",
             source_ref=f"meal_plan_end:{assigned_plan.id}",
             client_id=data.client_id,
+            description=f"El plan nutricional '{template.name}' finaliza en esta fecha.",
+            notification_link="/nutrition",
         )
 
     if next_review:
@@ -622,9 +655,28 @@ async def assign_meal_plan_to_client(
             created_by=current_user.id,
             title=f"Revisión plan nutricional: {template.name}",
             due_date=datetime.combine(next_review, datetime.min.time()),
-            description=f"Revisar progreso del plan nutricional '{template.name}'. Intervalo: cada {review_interval} días.",
+            source="auto",
             source_ref=f"meal_plan_review:{assigned_plan.id}",
             client_id=data.client_id,
+            description=f"Revisar progreso del plan nutricional '{template.name}'. Intervalo: cada {review_interval} días.",
+            notification_link="/nutrition",
+        )
+
+    client_user_result = await db.execute(
+        select(Client.user_id).where(Client.id == data.client_id)
+    )
+    client_user_id = client_user_result.scalar_one_or_none()
+    if client_user_id:
+        from app.services.notification_service import notify
+        await notify(
+            db=db,
+            event="plan_assigned",
+            user_id=client_user_id,
+            workspace_id=current_user.workspace_id,
+            title="Nuevo plan nutricional asignado",
+            body=f"Se te ha asignado el plan '{template.name}'.",
+            notification_type="info",
+            link="/my-nutrition",
         )
 
     await db.commit()
