@@ -289,46 +289,54 @@ async def create_auto_task(
     notification_link: str | None = None,
 ):
     """Create an automatic task and optionally notify the assignee."""
-    existing = await db.execute(
-        select(Task).where(
-            and_(
-                Task.workspace_id == workspace_id,
-                Task.source_ref == source_ref,
-                Task.deleted_at.is_(None),
+    try:
+        if source_ref:
+            existing = await db.execute(
+                select(Task).where(
+                    and_(
+                        Task.workspace_id == workspace_id,
+                        Task.source_ref == source_ref,
+                        Task.deleted_at.is_(None),
+                    )
+                )
             )
-        )
-    )
-    if existing.scalar_one_or_none():
-        return None
+            if existing.scalar_one_or_none():
+                return None
 
-    target_user = assigned_to or created_by
-    task = Task(
-        workspace_id=workspace_id,
-        title=title,
-        description=description,
-        status="todo",
-        priority="medium",
-        assigned_to=target_user,
-        client_id=client_id,
-        created_by=created_by,
-        due_date=due_date,
-        source=source,
-        source_ref=source_ref,
-    )
-    db.add(task)
-    await db.flush()
-
-    if notify_user:
-        from app.services.notification_service import notify
-        await notify(
-            db=db,
-            event="task_created",
-            user_id=target_user,
+        target_user = assigned_to or created_by
+        task = Task(
             workspace_id=workspace_id,
-            title=f"Nueva tarea: {title}",
-            body=description or title,
-            notification_type="reminder",
-            link=notification_link or "/tasks",
+            title=title,
+            description=description,
+            status="todo",
+            priority="medium",
+            assigned_to=target_user,
+            client_id=client_id,
+            created_by=created_by,
+            due_date=due_date,
+            source=source,
+            source_ref=source_ref,
         )
+        db.add(task)
+        await db.flush()
 
-    return task
+        if notify_user:
+            try:
+                from app.services.notification_service import notify
+                await notify(
+                    db=db,
+                    event="task_created",
+                    user_id=target_user,
+                    workspace_id=workspace_id,
+                    title=f"Nueva tarea: {title}",
+                    body=description or title,
+                    notification_type="reminder",
+                    link=notification_link or "/tasks",
+                )
+            except Exception:
+                logger.exception("Failed to send notification for auto-task: %s", title)
+
+        return task
+    except Exception:
+        logger.exception("Failed to create auto-task: %s", title)
+        return None
