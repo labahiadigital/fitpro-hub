@@ -17,9 +17,8 @@ Usage from any endpoint / service:
     )
 
 The function reads the user's notification preferences and dispatches
-via the active channels (email, in_app, or both).  It is safe to call
-after a commit – internally it performs its own commit so the
-Notification row is always persisted.
+via the active channels (email, in_app, or both).  It uses its own
+database session so the caller's transaction is never affected.
 """
 
 import logging
@@ -70,36 +69,40 @@ async def notify(
 ):
     """Create an in-app notification (and optionally enqueue an email).
 
-    The function is **safe to call after a commit** – it performs its own
-    ``flush`` + ``commit`` so the Notification row is always persisted.
+    Uses its own session so the caller's transaction is never affected.
     Any internal error is caught and logged; the caller is never blocked.
     """
+    from app.core.database import AsyncSessionLocal
+
     try:
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        if not user:
-            logger.warning("notify: user %s not found", user_id)
-            return
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            if not user:
+                logger.warning("notify: user %s not found", user_id)
+                return
 
-        prefs = _get_channel_prefs(user, event)
+            prefs = _get_channel_prefs(user, event)
+            email_addr = email_to or user.email
 
-        if prefs.get("in_app"):
-            notif = Notification(
-                workspace_id=workspace_id,
-                user_id=user_id,
-                title=title,
-                body=body,
-                type=notification_type,
-                link=link,
-            )
-            db.add(notif)
-            await db.commit()
+            if prefs.get("in_app"):
+                notif = Notification(
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    title=title,
+                    body=body,
+                    type=notification_type,
+                    link=link,
+                )
+                session.add(notif)
+                await session.commit()
+                logger.info("notify: in_app created event=%s user=%s", event, user_id)
 
         if prefs.get("email") and email_html:
             try:
                 from app.tasks.notifications import send_email_task
                 send_email_task.delay(
-                    to_email=email_to or user.email,
+                    to_email=email_addr,
                     subject=email_subject or title,
                     html_content=email_html,
                 )
@@ -107,7 +110,3 @@ async def notify(
                 logger.exception("notify: failed to enqueue email for user %s", user_id)
     except Exception:
         logger.exception("notify: failed to dispatch notification event=%s user=%s", event, user_id)
-        try:
-            await db.rollback()
-        except Exception:
-            pass

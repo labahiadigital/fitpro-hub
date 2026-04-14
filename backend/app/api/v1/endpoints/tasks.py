@@ -287,61 +287,72 @@ async def create_auto_task(
     description: str | None = None,
     notify_user: bool = True,
     notification_link: str | None = None,
+    replace_existing: bool = False,
 ):
     """Create an automatic task and optionally notify the assignee.
 
-    Safe to call after a commit – creates the task in its own transaction.
+    Safe to call after a commit – uses its own session so the caller's
+    transaction is never affected.
     Returns the Task or None on error / duplicate.
+
+    When *replace_existing* is True and a task with the same source_ref
+    already exists, the old task is soft-deleted and a new one is created.
     """
+    from app.core.database import AsyncSessionLocal
+
     try:
-        if source_ref:
-            existing = await db.execute(
-                select(Task).where(
-                    and_(
-                        Task.workspace_id == workspace_id,
-                        Task.source_ref == source_ref,
-                        Task.deleted_at.is_(None),
+        async with AsyncSessionLocal() as session:
+            if source_ref:
+                existing_result = await session.execute(
+                    select(Task).where(
+                        and_(
+                            Task.workspace_id == workspace_id,
+                            Task.source_ref == source_ref,
+                            Task.deleted_at.is_(None),
+                        )
                     )
                 )
-            )
-            if existing.scalar_one_or_none():
-                return None
+                existing = existing_result.scalar_one_or_none()
+                if existing:
+                    if not replace_existing:
+                        return None
+                    existing.deleted_at = datetime.utcnow()
 
-        target_user = assigned_to or created_by
-        task = Task(
-            workspace_id=workspace_id,
-            title=title,
-            description=description,
-            status="todo",
-            priority="medium",
-            assigned_to=target_user,
-            client_id=client_id,
-            created_by=created_by,
-            due_date=due_date,
-            source=source,
-            source_ref=source_ref,
-        )
-        db.add(task)
-        await db.commit()
+            target_user = assigned_to or created_by
+            task = Task(
+                workspace_id=workspace_id,
+                title=title,
+                description=description,
+                status="todo",
+                priority="medium",
+                assigned_to=target_user,
+                client_id=client_id,
+                created_by=created_by,
+                due_date=due_date,
+                source=source,
+                source_ref=source_ref,
+            )
+            session.add(task)
+            await session.commit()
+            await session.refresh(task)
 
         if notify_user:
-            from app.services.notification_service import notify
-            await notify(
-                db=db,
-                event="task_created",
-                user_id=target_user,
-                workspace_id=workspace_id,
-                title=f"Nueva tarea: {title}",
-                body=description or title,
-                notification_type="reminder",
-                link=notification_link or "/tasks",
-            )
+            try:
+                from app.services.notification_service import notify
+                await notify(
+                    db=db,
+                    event="task_created",
+                    user_id=target_user,
+                    workspace_id=workspace_id,
+                    title=f"Nueva tarea: {title}",
+                    body=description or title,
+                    notification_type="reminder",
+                    link=notification_link or "/tasks",
+                )
+            except Exception:
+                logger.exception("Failed to notify for auto-task: %s", title)
 
         return task
     except Exception:
         logger.exception("Failed to create auto-task: %s", title)
-        try:
-            await db.rollback()
-        except Exception:
-            pass
         return None

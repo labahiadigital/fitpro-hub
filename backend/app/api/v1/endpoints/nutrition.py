@@ -442,6 +442,7 @@ async def update_meal_plan(
                 client_id=plan.client_id,
                 description=f"Revisar progreso del plan nutricional '{plan.name}'. Intervalo: cada {plan.review_interval_days} días.",
                 notification_link="/nutrition",
+                replace_existing=True,
             )
         if plan.end_date:
             await create_auto_task(
@@ -455,6 +456,7 @@ async def update_meal_plan(
                 client_id=plan.client_id,
                 description=f"El plan nutricional '{plan.name}' finaliza en esta fecha.",
                 notification_link="/nutrition",
+                replace_existing=True,
             )
 
     return plan

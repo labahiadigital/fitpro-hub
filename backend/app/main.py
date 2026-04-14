@@ -18,8 +18,10 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
+    force=True,
 )
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +115,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Workspace-ID"],
     expose_headers=["X-Total-Count"],
+    max_age=600,
 )
 
 
@@ -134,10 +137,20 @@ access_logger = logging.getLogger("api.access")
 @app.middleware("http")
 async def access_log_middleware(request: Request, call_next):
     start = time.perf_counter()
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.error(
+            "UNHANDLED %s %s %.0fms – %s",
+            request.method, request.url.path, elapsed_ms, exc,
+            exc_info=True,
+        )
+        raise
     elapsed_ms = (time.perf_counter() - start) * 1000
     if request.url.path not in ("/health", "/"):
-        access_logger.info(
+        log_fn = access_logger.warning if response.status_code >= 400 else access_logger.info
+        log_fn(
             "%s %s %s %.0fms",
             request.method,
             request.url.path,

@@ -632,6 +632,7 @@ async def update_program(
                 client_id=program.client_id,
                 description=f"Revisar progreso del programa '{program.name}'. Intervalo: cada {program.review_interval_days} días.",
                 notification_link="/workouts",
+                replace_existing=True,
             )
         if program.end_date:
             await create_auto_task(
@@ -643,8 +644,9 @@ async def update_program(
                 source="auto",
                 source_ref=f"workout_program_end:{program.id}",
                 client_id=program.client_id,
-                description=f"El programa de entrenamiento '{program.name}'. Finaliza en esta fecha.",
+                description=f"El programa de entrenamiento '{program.name}' finaliza en esta fecha.",
                 notification_link="/workouts",
+                replace_existing=True,
             )
 
     return program
