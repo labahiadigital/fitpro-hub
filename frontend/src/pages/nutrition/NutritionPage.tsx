@@ -305,6 +305,14 @@ export function NutritionPage() {
 
   const { data: clientData } = useClient(clientId || "");
   const { data: clientsData } = useClients({ page: 1, search: "", page_size: 100 });
+  const clientsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (clientsData?.items || []).forEach((c: { id: string; first_name?: string; last_name?: string }) => {
+      map.set(c.id, `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre");
+    });
+    return map;
+  }, [clientsData]);
+
   const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
     value: c.id,
     label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
@@ -470,9 +478,9 @@ export function NutritionPage() {
       dietary_tags: plan.dietary_tags || [], plan: plan.plan || { weeks: [{ week: 1, days: [] }] },
       client_id: plan.client_id, is_template: plan.is_template ?? true,
       is_active: plan.is_active ?? false, start_date: plan.start_date, end_date: plan.end_date,
-      client_name: plan.clients ? `${plan.clients.first_name} ${plan.clients.last_name}` : null,
+      client_name: plan.client_id ? (clientsMap.get(plan.client_id) || null) : null,
     }));
-  }, [supabaseMealPlans]);
+  }, [supabaseMealPlans, clientsMap]);
 
   const templates = useMemo(() => mealPlans.filter((p: any) => p.is_template), [mealPlans]);
   const clientPlans = useMemo(() => mealPlans.filter((p: any) => !p.is_template), [mealPlans]);
