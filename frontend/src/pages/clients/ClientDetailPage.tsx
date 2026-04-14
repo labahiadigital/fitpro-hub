@@ -661,6 +661,7 @@ export function ClientDetailPage() {
   const [assignStartDate, setAssignStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [assignEndDate, setAssignEndDate] = useState<string>("");
   const [assignNotes, setAssignNotes] = useState("");
+  const [assignReviewInterval, setAssignReviewInterval] = useState<number | string>("");
   
   // Estado para ver plan nutricional detallado
   const [viewingMealPlanId, setViewingMealPlanId] = useState<string | null>(null);
@@ -1132,6 +1133,7 @@ export function ClientDetailPage() {
         startDate: assignStartDate,
         endDate: assignEndDate || undefined,
         notes: assignNotes || undefined,
+        reviewIntervalDays: assignReviewInterval ? Number(assignReviewInterval) : undefined,
       });
       notifications.show({
         title: "Plan asignado",
@@ -4161,6 +4163,16 @@ export function ClientDetailPage() {
             value={assignNotes}
             onChange={(e) => setAssignNotes(e.currentTarget.value)}
             rows={3}
+          />
+
+          <NumberInput
+            label="Intervalo de revisión (días)"
+            description="Genera recordatorios automáticos para revisar el plan"
+            placeholder="Ej: 15"
+            min={1}
+            max={365}
+            value={assignReviewInterval}
+            onChange={setAssignReviewInterval}
           />
           
           {mealPlanTemplates.length === 0 && (

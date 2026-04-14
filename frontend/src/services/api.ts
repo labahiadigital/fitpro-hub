@@ -342,12 +342,13 @@ export const nutritionApi = {
   deletePlan: (id: string) => api.delete(`/nutrition/meal-plans/${id}`),
   activatePlan: (id: string) => api.post(`/nutrition/meal-plans/${id}/activate`),
   deactivatePlan: (id: string) => api.post(`/nutrition/meal-plans/${id}/deactivate`),
-  assignPlan: (planId: string, clientId: string, startDate?: string, endDate?: string, notes?: string) =>
+  assignPlan: (planId: string, clientId: string, startDate?: string, endDate?: string, notes?: string, reviewIntervalDays?: number) =>
     api.post(`/nutrition/meal-plans/${planId}/assign`, { 
       client_id: clientId,
       start_date: startDate,
       end_date: endDate,
-      notes: notes
+      notes: notes,
+      review_interval_days: reviewIntervalDays,
     }),
 
   // Client logs (for trainers)

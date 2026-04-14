@@ -747,13 +747,15 @@ export function useAssignMealPlan() {
       startDate: string;
       endDate?: string;
       notes?: string;
+      reviewIntervalDays?: number;
     }) => {
       const response = await nutritionApi.assignPlan(
-        data.mealPlanId, 
+        data.mealPlanId,
         data.clientId,
         data.startDate,
         data.endDate,
-        data.notes
+        data.notes,
+        data.reviewIntervalDays
       );
       return response.data;
     },

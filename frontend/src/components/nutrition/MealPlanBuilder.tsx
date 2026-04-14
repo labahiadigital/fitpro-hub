@@ -418,6 +418,21 @@ export function MealPlanBuilder({
     };
   }, []);
 
+  const calculatePer100g = useCallback((item: MealItem) => {
+    const itemData = item.type === "food" ? item.food : item.supplement;
+    if (!itemData) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+    const servingSizeGrams = parseFloat(itemData.serving_size) || 100;
+    const factor = 100 / servingSizeGrams;
+
+    return {
+      calories: Math.round((itemData.calories || 0) * factor),
+      protein: Math.round((itemData.protein || 0) * factor * 10) / 10,
+      carbs: Math.round((itemData.carbs || 0) * factor * 10) / 10,
+      fat: Math.round((itemData.fat || 0) * factor * 10) / 10,
+    };
+  }, []);
+
   const calculateDayMacros = useCallback((day: DayPlan) => {
     let calories = 0, protein = 0, carbs = 0, fat = 0;
     day.meals.forEach((meal) => {
@@ -1407,11 +1422,21 @@ export function MealPlanBuilder({
                                 {items.map((item) => {
                                   renderedIds.add(item.id);
                                   const itemData = item.type === "food" ? item.food : item.supplement;
+                                  const p100 = calculatePer100g(item);
                                   return (
-                                    <Group key={item.id} justify="space-between" px="xs">
-                                      <Text size="xs">{itemData?.name} — {item.quantity_grams}g</Text>
-                                      <Text size="xs" c="dimmed">{Math.round(calculateItemMacros(item).calories)} kcal</Text>
-                                    </Group>
+                                    <Box key={item.id} px="xs">
+                                      <Group justify="space-between">
+                                        <Text size="xs" fw={500}>{itemData?.name}</Text>
+                                        <Group gap={3}>
+                                          <Badge size="xs" variant="light" color="blue">{p100.calories} kcal</Badge>
+                                          <Badge size="xs" variant="light" color="green">P:{p100.protein}g</Badge>
+                                          <Badge size="xs" variant="light" color="orange">C:{p100.carbs}g</Badge>
+                                          <Badge size="xs" variant="light" color="grape">G:{p100.fat}g</Badge>
+                                          <Text size="xs" fw={600} c="dimmed">/ 100g</Text>
+                                        </Group>
+                                      </Group>
+                                      <Text size="xs" c="dimmed" mt={1}>Ración: {item.quantity_grams}g — {Math.round(calculateItemMacros(item).calories)} kcal</Text>
+                                    </Box>
                                   );
                                 })}
                               </Stack>
@@ -1436,6 +1461,7 @@ export function MealPlanBuilder({
                       })()}
                       {meal.items.filter((i) => !i.recipe_group).map((item) => {
                         const itemMacros = calculateItemMacros(item);
+                        const per100g = calculatePer100g(item);
                         const itemData =
                           item.type === "food" ? item.food : item.supplement;
                         const isGroupingThisMeal = groupingMealId === meal.id;
@@ -1509,20 +1535,26 @@ export function MealPlanBuilder({
                                       </Badge>
                                     )}
                                 </Box>
-                                <Group gap={4}>
-                                  <Badge size="xs" color="blue" variant="light" radius="sm">
-                                    {Math.round(itemMacros.calories)} kcal
-                                  </Badge>
-                                  <Badge size="xs" color="green" variant="light" radius="sm">
-                                    P: {Math.round(itemMacros.protein)}g
-                                  </Badge>
-                                  <Badge size="xs" color="orange" variant="light" radius="sm">
-                                    C: {Math.round(itemMacros.carbs)}g
-                                  </Badge>
-                                  <Badge size="xs" color="grape" variant="light" radius="sm">
-                                    G: {Math.round(itemMacros.fat)}g
-                                  </Badge>
-                                </Group>
+                                <Box>
+                                  <Group gap={4}>
+                                    <Badge size="xs" color="blue" variant="light" radius="sm">
+                                      {per100g.calories} kcal
+                                    </Badge>
+                                    <Badge size="xs" color="green" variant="light" radius="sm">
+                                      P: {per100g.protein}g
+                                    </Badge>
+                                    <Badge size="xs" color="orange" variant="light" radius="sm">
+                                      C: {per100g.carbs}g
+                                    </Badge>
+                                    <Badge size="xs" color="grape" variant="light" radius="sm">
+                                      G: {per100g.fat}g
+                                    </Badge>
+                                    <Text size="xs" fw={600} c="dimmed">/ 100g</Text>
+                                  </Group>
+                                  <Text size="xs" c="dimmed" mt={2}>
+                                    Ración: {item.quantity_grams}g — {Math.round(itemMacros.calories)} kcal
+                                  </Text>
+                                </Box>
                               </Group>
                               <Group gap="xs" wrap="nowrap">
                                 <NumberInput
@@ -1858,24 +1890,30 @@ export function MealPlanBuilder({
                               <Badge size="xs" variant="light">
                                 {food.category}
                               </Badge>
-                              <Text c="dimmed" size="xs">
-                                {food.serving_size}
-                              </Text>
                             </Group>
                           </Box>
                           <Group gap="xs">
-                            <Badge color="blue" variant="light">
-                              {Math.round(food.calories || 0)} kcal
-                            </Badge>
-                            <Badge size="xs" variant="outline">
-                              P: {food.protein}g
-                            </Badge>
-                            <Badge size="xs" variant="outline">
-                              C: {food.carbs}g
-                            </Badge>
-                            <Badge size="xs" variant="outline">
-                              G: {food.fat}g
-                            </Badge>
+                            {(() => {
+                              const ss = parseFloat(food.serving_size) || 100;
+                              const f100 = 100 / ss;
+                              return (
+                                <>
+                                  <Badge color="blue" variant="light">
+                                    {Math.round((food.calories || 0) * f100)} kcal
+                                  </Badge>
+                                  <Badge size="xs" variant="outline">
+                                    P: {Math.round((food.protein || 0) * f100)}g
+                                  </Badge>
+                                  <Badge size="xs" variant="outline">
+                                    C: {Math.round((food.carbs || 0) * f100)}g
+                                  </Badge>
+                                  <Badge size="xs" variant="outline">
+                                    G: {Math.round((food.fat || 0) * f100)}g
+                                  </Badge>
+                                  <Text size="xs" fw={600} c="dimmed">/ 100g</Text>
+                                </>
+                              );
+                            })()}
                             {onToggleFoodFavorite && (
                               <ActionIcon
                                 variant={isFav ? "filled" : "subtle"}

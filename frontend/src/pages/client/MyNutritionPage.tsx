@@ -617,6 +617,10 @@ interface PlanMealFoodItem {
   quantity: number;
   unit: string;
   recipe_group?: string;
+  calories_per_100g?: number;
+  protein_per_100g?: number;
+  carbs_per_100g?: number;
+  fat_per_100g?: number;
 }
 
 interface SupplementData {
@@ -1166,11 +1170,12 @@ function NutritionDayDetail({
           <Stack gap="sm">
             {[...planMeals].sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00")).map((meal: PlanMeal, mealIndex: number) => {
               const mealType = MEAL_TYPES.find(m => m.value === meal.name);
-              const mealFoods = meal.foods || meal.items?.map(item => {
+              const mealFoods = (meal.foods || meal.items?.map(item => {
                 const food = item.food || item.supplement;
                 const ss = parseFloat(String(food?.serving_size || "100")) || 100;
                 const qty = item.quantity_grams || 0;
                 const factor = qty / ss;
+                const per100 = 100 / ss;
                 return {
                   name: food?.name || "Alimento",
                   calories: Math.round(Number(food?.calories || 0) * factor),
@@ -1180,8 +1185,12 @@ function NutritionDayDetail({
                   quantity: qty,
                   unit: "g",
                   recipe_group: item.recipe_group,
+                  calories_per_100g: Math.round(Number(food?.calories || 0) * per100),
+                  protein_per_100g: Math.round(Number(food?.protein || 0) * per100 * 10) / 10,
+                  carbs_per_100g: Math.round(Number(food?.carbs || 0) * per100 * 10) / 10,
+                  fat_per_100g: Math.round(Number(food?.fat || 0) * per100 * 10) / 10,
                 };
-              }) || [];
+              }) || []) as PlanMealFoodItem[];
               const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
               const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.protein_g) || 0), 0);
               const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.carbs_g) || 0), 0);
@@ -1319,12 +1328,21 @@ function NutritionDayDetail({
                                 <Text size="sm" fw={700} c="teal">🍳 {recipeName}</Text>
                                 <Badge size="xs" variant="light" color="yellow">{rCal} kcal</Badge>
                               </Group>
-                              <Stack gap={2} ml="sm">
+                              <Stack gap={4} ml="sm">
                                 {items.map((f, i) => (
-                                  <Group key={i} justify="space-between">
-                                    <Text size="xs">{f.name}</Text>
-                                    <Text size="xs" c="dimmed">{f.quantity}{f.unit} - {f.calories} kcal</Text>
-                                  </Group>
+                                  <Box key={i}>
+                                    <Group justify="space-between">
+                                      <Text size="xs" fw={500}>{f.name}</Text>
+                                      <Group gap={4}>
+                                        <Badge size="xs" variant="light" color="blue">{f.calories_per_100g ?? f.calories} kcal</Badge>
+                                        <Badge size="xs" variant="light" color="green">P:{f.protein_per_100g ?? f.protein_g}g</Badge>
+                                        <Badge size="xs" variant="light" color="orange">C:{f.carbs_per_100g ?? f.carbs_g}g</Badge>
+                                        <Badge size="xs" variant="light" color="grape">G:{f.fat_per_100g ?? f.fat_g}g</Badge>
+                                        <Text size="xs" fw={600} c="dimmed">/ 100g</Text>
+                                      </Group>
+                                    </Group>
+                                    <Text size="xs" c="dimmed" mt={1}>Ración: {f.quantity}{f.unit} — {f.calories} kcal</Text>
+                                  </Box>
                                 ))}
                               </Stack>
                             </Paper>
@@ -1332,10 +1350,19 @@ function NutritionDayDetail({
                         });
                         ungrouped.forEach((food, i) => {
                           elements.push(
-                            <Group key={`u-${i}`} justify="space-between">
-                              <Text size="sm">{food.name}</Text>
-                              <Text size="xs" c="dimmed">{food.quantity}{food.unit} - {food.calories} kcal</Text>
-                            </Group>
+                            <Box key={`u-${i}`}>
+                              <Group justify="space-between">
+                                <Text size="sm" fw={500}>{food.name}</Text>
+                                <Group gap={4}>
+                                  <Badge size="xs" variant="light" color="blue">{food.calories_per_100g ?? food.calories} kcal</Badge>
+                                  <Badge size="xs" variant="light" color="green">P:{food.protein_per_100g ?? food.protein_g}g</Badge>
+                                  <Badge size="xs" variant="light" color="orange">C:{food.carbs_per_100g ?? food.carbs_g}g</Badge>
+                                  <Badge size="xs" variant="light" color="grape">G:{food.fat_per_100g ?? food.fat_g}g</Badge>
+                                  <Text size="xs" fw={600} c="dimmed">/ 100g</Text>
+                                </Group>
+                              </Group>
+                              <Text size="xs" c="dimmed" mt={1}>Ración: {food.quantity}{food.unit} — {food.calories} kcal</Text>
+                            </Box>
                           );
                         });
                         return elements;
@@ -1457,6 +1484,11 @@ function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function parseDateLocal(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export function MyNutritionPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isMdUp = useMediaQuery("(min-width: 1024px)");
@@ -1499,9 +1531,11 @@ export function MyNutritionPage() {
     const durationWeeks = (mealPlan as unknown as { duration_weeks?: number })?.duration_weeks || plan.weeks.length;
     if (!durationWeeks || durationWeeks <= 1) return 1;
     const startDateStr = (mealPlan as any)?.start_date;
-    const startDate = startDateStr ? new Date(startDateStr) : new Date(mealPlan?.created_at || Date.now());
+    const startDate = startDateStr ? parseDateLocal(startDateStr) : new Date(mealPlan?.created_at || Date.now());
     if (isNaN(startDate.getTime())) return 1;
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0);
     const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     return (Math.floor(Math.max(0, daysDiff) / 7) % durationWeeks) + 1;
   }, [mealPlan]);
@@ -1609,7 +1643,7 @@ export function MyNutritionPage() {
   const shoppingWeekDateRange = useMemo(() => {
     const startStr = (mealPlan as any)?.start_date;
     if (!startStr) return null;
-    const programStart = new Date(startStr);
+    const programStart = parseDateLocal(startStr);
     if (isNaN(programStart.getTime())) return null;
     const weekStart = new Date(programStart);
     weekStart.setDate(weekStart.getDate() + (shoppingWeekNum - 1) * 7);
@@ -1870,14 +1904,14 @@ export function MyNutritionPage() {
   const nutritionWeekDateRange = useMemo(() => {
     const startStr = (mealPlan as any)?.start_date;
     if (!startStr) return null;
-    const programStart = new Date(startStr);
+    const programStart = parseDateLocal(startStr);
     if (isNaN(programStart.getTime())) return null;
     const weekStart = new Date(programStart);
     weekStart.setDate(weekStart.getDate() + (activeNutritionWeekNum - 1) * 7);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     const endStr = (mealPlan as any)?.end_date;
-    const cap = endStr ? new Date(endStr) : null;
+    const cap = endStr ? parseDateLocal(endStr) : null;
     const effectiveEnd = cap && !isNaN(cap.getTime()) && weekEnd > cap ? cap : weekEnd;
     return {
       start: weekStart,
@@ -1898,8 +1932,8 @@ export function MyNutritionPage() {
     const startStr = (mealPlan as any)?.start_date;
     const endStr = (mealPlan as any)?.end_date;
     if (!startStr) return null;
-    const start = new Date(startStr);
-    const end = endStr ? new Date(endStr) : null;
+    const start = parseDateLocal(startStr);
+    const end = endStr ? parseDateLocal(endStr) : null;
     if (isNaN(start.getTime())) return null;
     return {
       start,
@@ -2577,10 +2611,22 @@ export function MyNutritionPage() {
                 <Select
                   value={selectedWeekOverride || String(currentAutoWeek)}
                   onChange={(v) => setSelectedWeekOverride(v)}
-                  data={allPlanWeeks.map((w: { week: number }) => ({ value: String(w.week), label: `Semana ${w.week}` }))}
+                  data={allPlanWeeks.map((w: { week: number }) => {
+                    const startStr = (mealPlan as any)?.start_date;
+                    if (startStr) {
+                      const ps = parseDateLocal(startStr);
+                      const ws = new Date(ps);
+                      ws.setDate(ws.getDate() + (w.week - 1) * 7);
+                      const we = new Date(ws);
+                      we.setDate(we.getDate() + 6);
+                      const fmt = (d: Date) => d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+                      return { value: String(w.week), label: `Semana ${w.week} (${fmt(ws)} – ${fmt(we)})` };
+                    }
+                    return { value: String(w.week), label: `Semana ${w.week}` };
+                  })}
                   size="xs"
                   radius="md"
-                  w={150}
+                  w={280}
                   allowDeselect={false}
                 />
                 {nutritionWeekDateRange && (
@@ -2722,11 +2768,12 @@ export function MyNutritionPage() {
                     <Stack gap="sm">
                       {[...activeWeekData[selectedWeekDayIndex].planMeals].sort((a: PlanMeal, b: PlanMeal) => (a.time || "00:00").localeCompare(b.time || "00:00")).map((meal: PlanMeal, mealIndex: number) => {
                         const mealType = MEAL_TYPES.find(m => m.value === meal.name);
-                        const mealFoods = meal.foods || meal.items?.map(item => {
+                        const mealFoods = (meal.foods || meal.items?.map(item => {
                           const food = item.food || item.supplement;
                           const ss = parseFloat(String(food?.serving_size || "100")) || 100;
                           const qty = item.quantity_grams || 0;
                           const factor = qty / ss;
+                          const per100 = 100 / ss;
                           return {
                             name: food?.name || "Alimento",
                             calories: Math.round(Number(food?.calories || 0) * factor),
@@ -2735,8 +2782,12 @@ export function MyNutritionPage() {
                             fat_g: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
                             quantity: qty,
                             unit: "g",
+                            calories_per_100g: Math.round(Number(food?.calories || 0) * per100),
+                            protein_per_100g: Math.round(Number(food?.protein || 0) * per100 * 10) / 10,
+                            carbs_per_100g: Math.round(Number(food?.carbs || 0) * per100 * 10) / 10,
+                            fat_per_100g: Math.round(Number(food?.fat || 0) * per100 * 10) / 10,
                           };
-                        }) || [];
+                        }) || []) as PlanMealFoodItem[];
                         
                         const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
                         const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.protein_g) || 0), 0);
@@ -2851,14 +2902,21 @@ export function MyNutritionPage() {
                               </Group>
                             </Group>
                             {mealFoods.length > 0 && (
-                              <Stack gap="xs" mt="sm" ml={54}>
+                              <Stack gap={6} mt="sm" ml={54}>
                                 {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
-                                  <Group key={foodIndex} justify="space-between">
-                                    <Text size="sm">{food.name}</Text>
-                                    <Text size="xs" c="dimmed">
-                                      {food.quantity}{food.unit} - {food.calories} kcal
-                                    </Text>
-                                  </Group>
+                                  <Box key={foodIndex}>
+                                    <Group justify="space-between">
+                                      <Text size="sm" fw={500}>{food.name}</Text>
+                                      <Group gap={4}>
+                                        <Badge size="xs" variant="light" color="blue">{food.calories_per_100g ?? food.calories} kcal</Badge>
+                                        <Badge size="xs" variant="light" color="green">P:{food.protein_per_100g ?? food.protein_g}g</Badge>
+                                        <Badge size="xs" variant="light" color="orange">C:{food.carbs_per_100g ?? food.carbs_g}g</Badge>
+                                        <Badge size="xs" variant="light" color="grape">G:{food.fat_per_100g ?? food.fat_g}g</Badge>
+                                        <Text size="xs" fw={600} c="dimmed">/ 100g</Text>
+                                      </Group>
+                                    </Group>
+                                    <Text size="xs" c="dimmed" mt={1}>Ración: {food.quantity}{food.unit} — {food.calories} kcal</Text>
+                                  </Box>
                                 ))}
                               </Stack>
                             )}

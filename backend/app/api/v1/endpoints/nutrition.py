@@ -416,7 +416,13 @@ async def update_meal_plan(
                 except (ValueError, TypeError):
                     value = None
             setattr(plan, field, value)
-    
+
+    if data.review_interval_days is not None and plan.start_date:
+        if data.review_interval_days > 0:
+            plan.next_review_date = plan.start_date + timedelta(days=data.review_interval_days)
+        else:
+            plan.next_review_date = None
+
     await db.commit()
     await db.refresh(plan)
     return plan
@@ -513,6 +519,7 @@ class AssignMealPlanRequest(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     notes: Optional[str] = None
+    review_interval_days: Optional[int] = None
 
 
 @router.post("/meal-plans/{plan_id}/assign", response_model=MealPlanResponse, status_code=status.HTTP_201_CREATED)
@@ -564,6 +571,11 @@ async def assign_meal_plan_to_client(
         except (ValueError, TypeError):
             pass
 
+    review_interval = data.review_interval_days
+    next_review = None
+    if review_interval and review_interval > 0 and parsed_start:
+        next_review = parsed_start + timedelta(days=review_interval)
+
     assigned_plan = MealPlan(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -584,9 +596,37 @@ async def assign_meal_plan_to_client(
         is_active=True,
         start_date=parsed_start,
         end_date=parsed_end,
+        review_interval_days=review_interval,
+        next_review_date=next_review,
     )
     
     db.add(assigned_plan)
+    await db.flush()
+
+    if parsed_end:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Fin de plan nutricional: {template.name}",
+            due_date=datetime.combine(parsed_end, datetime.min.time()),
+            description=f"El plan nutricional '{template.name}' finaliza en esta fecha.",
+            source_ref=f"meal_plan_end:{assigned_plan.id}",
+            client_id=data.client_id,
+        )
+
+    if next_review:
+        await create_auto_task(
+            db=db,
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            title=f"Revisión plan nutricional: {template.name}",
+            due_date=datetime.combine(next_review, datetime.min.time()),
+            description=f"Revisar progreso del plan nutricional '{template.name}'. Intervalo: cada {review_interval} días.",
+            source_ref=f"meal_plan_review:{assigned_plan.id}",
+            client_id=data.client_id,
+        )
+
     await db.commit()
     await db.refresh(assigned_plan)
     return assigned_plan
@@ -780,11 +820,16 @@ async def get_client_nutrition_logs(
             icb = round(_safe_float(fd.get("carbs")) * factor, 1)
             ift = round(_safe_float(fd.get("fat")) * factor, 1)
             cal += ic; prot += ip; carb += icb; fat_v += ift
+            per100 = 100 / ss
             plan_foods.append({
                 "name": fd.get("name", ""),
                 "calories": ic, "protein": ip, "carbs": icb, "fat": ift,
                 "quantity": qty,
                 "recipe_group": item.get("recipe_group"),
+                "calories_per_100g": round(_safe_float(fd.get("calories")) * per100),
+                "protein_per_100g": round(_safe_float(fd.get("protein")) * per100, 1),
+                "carbs_per_100g": round(_safe_float(fd.get("carbs")) * per100, 1),
+                "fat_per_100g": round(_safe_float(fd.get("fat")) * per100, 1),
             })
         return {"calories": int(cal), "protein": round(prot, 1), "carbs": round(carb, 1), "fat": round(fat_v, 1), "foods": plan_foods}
     
