@@ -6,7 +6,7 @@ from app.api.v1.endpoints import (
     foods, notifications, supplements, documents, pdf, roles, redsys, sequra, lms, erp, referrals,
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
     whatsapp, google_calendar, storage, tasks, team_groups, rectifications, beverages, stock,
-    boxes, machines, services, appointments, time_clock,
+    boxes, machines, services, appointments, time_clock, schedules,
 )
 
 api_router = APIRouter()
@@ -148,3 +148,6 @@ api_router.include_router(appointments.router, prefix="/appointments", tags=["Ci
 
 # Time Clock (Control Horario)
 api_router.include_router(time_clock.router, prefix="/time-clock", tags=["Control Horario"])
+
+# Schedules (Horarios de personal, máquinas y boxes)
+api_router.include_router(schedules.router, prefix="/schedules", tags=["Horarios"])

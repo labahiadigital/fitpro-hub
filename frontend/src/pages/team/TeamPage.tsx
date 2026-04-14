@@ -22,6 +22,7 @@ import {
   TextInput,
   Textarea,
   ThemeIcon,
+  SegmentedControl,
   Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -64,6 +65,8 @@ import {
 } from "../../hooks/useTeamGroups";
 import { useAuthStore } from "../../stores/auth";
 import { useClients } from "../../hooks/useClients";
+import { useStaffSchedule, useUpdateStaffSchedule, defaultWeekSlots, type ScheduleSlot } from "../../hooks/useSchedules";
+import { WeeklyScheduleGrid } from "../../components/common/WeeklyScheduleGrid";
 import {
   useCustomRoles,
   useCreateCustomRole,
@@ -374,12 +377,31 @@ export function TeamPage() {
   const [groupPermissions, setGroupPermissions] = useState<Record<string, string[]>>({});
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
+  const [memberStatusFilter, setMemberStatusFilter] = useState("all");
+
+  const filteredMembers = useMemo(() => {
+    if (memberStatusFilter === "all") return teamMembers;
+    if (memberStatusFilter === "active") return teamMembers.filter((m) => m.status === "active");
+    if (memberStatusFilter === "pending") return teamMembers.filter((m) => m.status === "pending");
+    return teamMembers;
+  }, [teamMembers, memberStatusFilter]);
+
   const totalMembers = teamMembers.length;
   const activeMembers = teamMembers.filter((m) => m.status === "active").length;
+  const pendingMembers = teamMembers.filter((m) => m.status === "pending").length;
   const totalRevenue = teamMembers.reduce((sum, m) => sum + m.stats.revenue, 0);
 
   const [editPermissions, setEditPermissions] = useState<Record<string, string[]>>({});
   const [editAssignedClients, setEditAssignedClients] = useState<string[]>([]);
+  const [editScheduleSlots, setEditScheduleSlots] = useState<ScheduleSlot[]>(defaultWeekSlots());
+  const { data: staffScheduleData } = useStaffSchedule(selectedMember?.user_id);
+  const updateStaffSchedule = useUpdateStaffSchedule();
+
+  useEffect(() => {
+    if (staffScheduleData && staffScheduleData.length > 0) {
+      setEditScheduleSlots(staffScheduleData);
+    }
+  }, [staffScheduleData]);
 
   const handleEditMember = (member: TeamMember) => {
     setSelectedMember(member);
@@ -475,8 +497,21 @@ export function TeamPage() {
             </Box>
           </SimpleGrid>
 
+          <Group mb="md">
+            <SegmentedControl
+              data={[
+                { label: `Todos (${totalMembers})`, value: "all" },
+                { label: `Activos (${activeMembers})`, value: "active" },
+                { label: `Pendientes (${pendingMembers})`, value: "pending" },
+              ]}
+              value={memberStatusFilter}
+              onChange={setMemberStatusFilter}
+              size="sm"
+            />
+          </Group>
+
           <Stack gap="md">
-            {teamMembers.map((member) => {
+            {filteredMembers.map((member) => {
               const summary = quickPermissionsSummary(member.permissions);
               const memberGroups = memberGroupMap.get(member.user_id) || [];
               return (
@@ -880,13 +915,21 @@ export function TeamPage() {
                 />
               </>
             )}
+            <Divider label="Horario semanal" labelPosition="center" />
+            <WeeklyScheduleGrid
+              slots={editScheduleSlots}
+              onChange={setEditScheduleSlots}
+            />
             <Group justify="flex-end" mt="md">
               <Button onClick={closeEditModal} variant="default">Cancelar</Button>
-              {selectedMember.role !== "owner" && (
-                <Button
-                  className="nv-button"
-                  loading={updatePermissionsMutation.isPending}
-                  onClick={() => {
+              <Button
+                className="nv-button"
+                loading={updatePermissionsMutation.isPending || updateStaffSchedule.isPending}
+                onClick={() => {
+                  if (selectedMember.user_id) {
+                    updateStaffSchedule.mutate({ userId: selectedMember.user_id, slots: editScheduleSlots });
+                  }
+                  if (selectedMember.role !== "owner") {
                     updatePermissionsMutation.mutate(
                       {
                         userId: selectedMember.user_id,
@@ -895,11 +938,13 @@ export function TeamPage() {
                       },
                       { onSuccess: () => closeEditModal() }
                     );
-                  }}
-                >
-                  Guardar Cambios
-                </Button>
-              )}
+                  } else {
+                    closeEditModal();
+                  }
+                }}
+              >
+                Guardar Cambios
+              </Button>
             </Group>
           </Stack>
         )}

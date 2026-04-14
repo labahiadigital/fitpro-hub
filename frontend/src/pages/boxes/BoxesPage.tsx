@@ -23,11 +23,14 @@ import {
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Divider } from "@mantine/core";
 import { PageHeader } from "../../components/common/PageHeader";
 import { EmptyState } from "../../components/common/EmptyState";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { useBoxes, useCreateBox, useUpdateBox, useDeleteBox, useBoxStats, type BoxData } from "../../hooks/useBoxes";
+import { useBoxSchedule, useUpdateBoxSchedule, defaultWeekSlots, type ScheduleSlot } from "../../hooks/useSchedules";
+import { WeeklyScheduleGrid } from "../../components/common/WeeklyScheduleGrid";
 
 function BoxStatCard({ boxId }: { boxId: string }) {
   const { data: stats } = useBoxStats(boxId);
@@ -61,6 +64,17 @@ export default function BoxesPage() {
   const deleteBox = useDeleteBox();
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [editingBox, setEditingBox] = useState<BoxData | null>(null);
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>(defaultWeekSlots());
+  const { data: boxScheduleData } = useBoxSchedule(editingBox?.id);
+  const updateBoxSchedule = useUpdateBoxSchedule();
+
+  useEffect(() => {
+    if (boxScheduleData && boxScheduleData.length > 0) {
+      setScheduleSlots(boxScheduleData);
+    } else {
+      setScheduleSlots(defaultWeekSlots());
+    }
+  }, [boxScheduleData]);
 
   const form = useForm({
     initialValues: {
@@ -92,8 +106,13 @@ export default function BoxesPage() {
   const handleSubmit = async (values: typeof form.values) => {
     if (editingBox) {
       await updateBox.mutateAsync({ id: editingBox.id, data: values });
+      updateBoxSchedule.mutate({ boxId: editingBox.id, slots: scheduleSlots });
     } else {
-      await createBox.mutateAsync(values);
+      const created = await createBox.mutateAsync(values);
+      const createdId = (created as unknown as { id?: string })?.id || (created as unknown as { data?: { id?: string } })?.data?.id;
+      if (createdId) {
+        updateBoxSchedule.mutate({ boxId: createdId, slots: scheduleSlots });
+      }
     }
     closeModal();
     form.reset();
@@ -160,6 +179,8 @@ export default function BoxesPage() {
             <ColorInput label="Color" {...form.getInputProps("color_hex")} radius="md" />
             <NumberInput label="Orden" {...form.getInputProps("sort_order")} radius="md" />
             <Switch label="Activo" {...form.getInputProps("is_active", { type: "checkbox" })} />
+            <Divider label="Horario de disponibilidad" labelPosition="center" />
+            <WeeklyScheduleGrid slots={scheduleSlots} onChange={setScheduleSlots} compact />
             <Group justify="flex-end">
               <Button variant="default" onClick={closeModal} radius="xl">Cancelar</Button>
               <Button type="submit" radius="xl" loading={createBox.isPending || updateBox.isPending}>

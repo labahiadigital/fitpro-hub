@@ -190,16 +190,20 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
                 return (
                   <Paper key={ex.id} px="sm" py="xs" radius="sm" withBorder>
                     <Group wrap="nowrap" gap="sm">
-                      {ex.image_url && (
+                      {ex.image_url ? (
                         <Image
                           src={ex.image_url}
                           alt={ex.name}
-                          w={48}
-                          h={48}
+                          w={56}
+                          h={56}
                           radius="md"
                           fit="cover"
                           style={{ flexShrink: 0 }}
                         />
+                      ) : (
+                        <ThemeIcon variant="light" color="gray" size={56} radius="md" style={{ flexShrink: 0 }}>
+                          <IconBarbell size={24} />
+                        </ThemeIcon>
                       )}
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Group justify="space-between" wrap="nowrap" gap="xs">

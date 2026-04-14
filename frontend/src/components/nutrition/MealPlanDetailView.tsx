@@ -224,13 +224,35 @@ export function MealPlanDetailView({
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [editingClient, setEditingClient] = useState(false);
   const [selectedFormula, setSelectedFormula] = useState<FormulaType>("mifflin");
+  const [selectedWeek, setSelectedWeek] = useState(0);
   const isMobile = useMediaQuery("(max-width: 768px)");
+
+  const planWeeks = useMemo(() => {
+    const p = mealPlan.plan as { weeks?: { week: number; days: DayPlan[] }[]; days?: DayPlan[] } | undefined;
+    if (p?.weeks && p.weeks.length > 0) return p.weeks;
+    if (p?.days && p.days.length > 7) {
+      const weeks: { week: number; days: DayPlan[] }[] = [];
+      for (let i = 0; i < p.days.length; i += 7) {
+        weeks.push({ week: weeks.length + 1, days: p.days.slice(i, i + 7) });
+      }
+      return weeks;
+    }
+    return null;
+  }, [mealPlan.plan]);
+
+  const weekOptions = useMemo(() => {
+    if (!planWeeks || planWeeks.length <= 1) return [];
+    return planWeeks.map((w, i) => ({ value: String(i), label: `Semana ${w.week || i + 1}` }));
+  }, [planWeeks]);
 
   const planDays = useMemo(() => {
     const p = mealPlan.plan as { weeks?: { week: number; days: DayPlan[] }[]; days?: DayPlan[] } | undefined;
-    if (p?.weeks && p.weeks.length > 0) return p.weeks.flatMap(w => w.days);
+    if (planWeeks && planWeeks.length > 0) {
+      const safeIdx = Math.min(selectedWeek, planWeeks.length - 1);
+      return planWeeks[safeIdx]?.days || [];
+    }
     return p?.days || [];
-  }, [mealPlan.plan]);
+  }, [mealPlan.plan, planWeeks, selectedWeek]);
 
   // Form for client data (for calculations)
   const clientForm = useForm({
@@ -847,8 +869,19 @@ export function MealPlanDetailView({
 
         {/* Meals Tab */}
         <Tabs.Panel value="meals">
-          <MealPlanDaysView 
-            days={planDays} 
+          {weekOptions.length > 0 && (
+            <Select
+              data={weekOptions}
+              value={String(selectedWeek)}
+              onChange={(v) => setSelectedWeek(Number(v) || 0)}
+              mb="md"
+              size="sm"
+              w={200}
+              label="Semana"
+            />
+          )}
+          <MealPlanDaysView
+            days={planDays}
             clientAllergens={[...(client?.allergies || []), ...(client?.intolerances || [])]}
           />
         </Tabs.Panel>

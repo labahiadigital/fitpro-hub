@@ -18,6 +18,8 @@ import {
   Switch,
   Text,
   Textarea,
+  ScrollArea,
+  Table,
   TextInput,
   ThemeIcon,
   Tooltip,
@@ -64,6 +66,8 @@ import {
 } from "../../hooks/useGoogleCalendar";
 import { useAppointments, type AppointmentData } from "../../hooks/useAppointments";
 import { useTasksList } from "../../hooks/useTasks";
+import { useBoxes } from "../../hooks/useBoxes";
+import { useMachines } from "../../hooks/useMachines";
 import { useNavigate } from "react-router-dom";
 import "dayjs/locale/es";
 
@@ -109,7 +113,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 export function CalendarPage() {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<"month" | "week" | "day">("week");
+  const [view, setView] = useState<"month" | "week" | "day" | "list">("week");
+  const [organizeBy, setOrganizeBy] = useState<"none" | "staff" | "box" | "machine">("none");
   const [modalOpened, { open: openModal, close: closeModal }] =
     useDisclosure(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -126,13 +131,13 @@ export function CalendarPage() {
   // Calcular fechas para las queries
   const dateParams = {
     start_date:
-      view === "month"
+      view === "month" || view === "list"
         ? startOfMonth.toISOString()
         : view === "week"
           ? startOfWeek.toISOString()
           : dayjs(currentDate).startOf("day").toISOString(),
     end_date:
-      view === "month"
+      view === "month" || view === "list"
         ? endOfMonth.toISOString()
         : view === "week"
           ? endOfWeek.toISOString()
@@ -163,6 +168,8 @@ export function CalendarPage() {
   });
   const { data: clientsData } = useClients({ page: 1 });
   const { data: teamMembers } = useTeamMembers();
+  const { data: boxesData } = useBoxes();
+  const { data: machinesData } = useMachines();
 
   const teamMemberOptions = useMemo(() => {
     if (!teamMembers) return [];
@@ -411,7 +418,7 @@ export function CalendarPage() {
   };
 
   const navigateDate = (direction: "prev" | "next") => {
-    const unit = view === "month" ? "month" : view === "week" ? "week" : "day";
+    const unit = view === "month" || view === "list" ? "month" : view === "week" ? "week" : "day";
     setCurrentDate((current) =>
       direction === "prev"
         ? dayjs(current).subtract(1, unit).toDate()
@@ -430,6 +437,44 @@ export function CalendarPage() {
   // Incluye también eventos de Google Calendar
   const getEventsForDay = (day: dayjs.Dayjs) =>
     allEvents.filter((event) => dayjs(event.start_time).isSame(day, "day"));
+
+  const resourceColumns = useMemo(() => {
+    if (organizeBy === "staff") {
+      return (teamMembers || [])
+        .filter((m) => m.role !== "client" && m.is_active)
+        .map((m) => ({ id: m.user_id, label: m.full_name || m.name || m.email }));
+    }
+    if (organizeBy === "box") {
+      return (boxesData || []).map((b: { id: string; name: string }) => ({ id: b.id, label: b.name }));
+    }
+    if (organizeBy === "machine") {
+      return (machinesData || []).map((m: { id: string; name: string }) => ({ id: m.id, label: m.name }));
+    }
+    return [];
+  }, [organizeBy, teamMembers, boxesData, machinesData]);
+
+  const getEventResourceId = (event: CalendarEvent): string | null => {
+    if (organizeBy === "staff") {
+      return event.appointment?.staff_id || (event.booking as unknown as Record<string, string>)?.organizer_id || null;
+    }
+    if (organizeBy === "box") {
+      return event.appointment?.box_id || null;
+    }
+    if (organizeBy === "machine") {
+      const ids = event.appointment?.machine_ids;
+      return ids && ids.length > 0 ? ids[0] : null;
+    }
+    return null;
+  };
+
+  const getEventStyle = (event: CalendarEvent) => {
+    const startHour = dayjs(event.start_time).hour();
+    const startMinute = dayjs(event.start_time).minute();
+    const duration = dayjs(event.end_time).diff(dayjs(event.start_time), "minute");
+    const top = ((startHour - 7) * 60 + startMinute) * (60 / 60);
+    const height = Math.max(duration * (60 / 60), 25);
+    return { top: `${top}px`, height: `${height}px` };
+  };
 
   const getBookingStyle = (booking: Booking) => {
     const startHour = dayjs(booking.start_time).hour();
@@ -520,7 +565,7 @@ export function CalendarPage() {
               size="lg"
               style={{ minWidth: 200, textAlign: "center" }}
             >
-              {view === "month"
+              {view === "month" || view === "list"
                 ? dayjs(currentDate).format("MMMM YYYY")
                 : view === "week"
                   ? `${startOfWeek.format("D MMM")} - ${endOfWeek.format("D MMM YYYY")}`
@@ -611,10 +656,27 @@ export function CalendarPage() {
                 { label: "Mes", value: "month" },
                 { label: "Semana", value: "week" },
                 { label: "Día", value: "day" },
+                { label: "Lista", value: "list" },
               ]}
-              onChange={(v) => setView(v as "month" | "week" | "day")}
+              onChange={(v) => setView(v as "month" | "week" | "day" | "list")}
               value={view}
             />
+            {(view === "day" || view === "week") && (
+              <Select
+                placeholder="Organizar por"
+                data={[
+                  { value: "none", label: "Sin agrupar" },
+                  { value: "staff", label: "Por miembro" },
+                  { value: "box", label: "Por box/sala" },
+                  { value: "machine", label: "Por máquina" },
+                ]}
+                value={organizeBy}
+                onChange={(v) => setOrganizeBy((v || "none") as "none" | "staff" | "box" | "machine")}
+                size="sm"
+                w={160}
+                clearable={false}
+              />
+            )}
             <Tooltip label="Configurar calendario">
               <ActionIcon variant="light" size="lg" onClick={() => navigate("/settings")}>
                 <IconSettings size={18} />
@@ -857,9 +919,158 @@ export function CalendarPage() {
             })}
           </Box>
         </Paper>
+      ) : view === "list" ? (
+        <Paper radius="lg" p="md" withBorder>
+          <ScrollArea>
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Hora</Table.Th>
+                  <Table.Th>Título</Table.Th>
+                  <Table.Th>Tipo</Table.Th>
+                  <Table.Th>Recurso</Table.Th>
+                  <Table.Th>Estado</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {[...allEvents]
+                  .sort((a, b) => dayjs(a.start_time).valueOf() - dayjs(b.start_time).valueOf())
+                  .map((ev) => {
+                    const resourceLabel = ev.appointment
+                      ? ev.appointment.staff_name || ev.appointment.box_name || ""
+                      : ev.booking?.client_name || "";
+                    const typeLabel = ev.type === "booking" ? "Sesión" : ev.type === "appointment" ? "Cita" : ev.type === "task" ? "Tarea" : "Google";
+                    const statusLabel = ev.booking ? (STATUS_LABELS[ev.booking.status]?.label || ev.booking.status) : ev.type === "task" ? "Tarea" : "";
+                    return (
+                      <Table.Tr
+                        key={ev.id}
+                        style={{ cursor: ev.booking ? "pointer" : undefined }}
+                        onClick={() => ev.booking && setSelectedBooking(ev.booking)}
+                      >
+                        <Table.Td>
+                          <Text size="sm">{dayjs(ev.start_time).format("ddd DD/MM HH:mm")}</Text>
+                        </Table.Td>
+                        <Table.Td><Text size="sm" fw={500}>{ev.title}</Text></Table.Td>
+                        <Table.Td><Badge size="sm" variant="light" color={ev.color}>{typeLabel}</Badge></Table.Td>
+                        <Table.Td><Text size="sm">{resourceLabel}</Text></Table.Td>
+                        <Table.Td>{statusLabel && <Badge size="sm" variant="light">{statusLabel}</Badge>}</Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
+                {allEvents.length === 0 && (
+                  <Table.Tr><Table.Td colSpan={5}><Text ta="center" c="dimmed" py="lg">No hay eventos en este periodo</Text></Table.Td></Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
+        </Paper>
       ) : (
         <Paper radius="lg" style={{ overflow: "hidden" }} withBorder>
           {/* Week/Day Header */}
+          {organizeBy !== "none" && resourceColumns.length > 0 ? (
+            /* Resource-column view */
+            <>
+              <Box style={{
+                display: "grid",
+                gridTemplateColumns: view === "week"
+                  ? `60px repeat(7, 1fr)`
+                  : `60px repeat(${resourceColumns.length}, 1fr)`,
+                borderBottom: "1px solid var(--mantine-color-gray-2)",
+                backgroundColor: "var(--mantine-color-gray-0)",
+              }}>
+                <Box p="sm" />
+                {view === "day" ? (
+                  resourceColumns.map((rc) => (
+                    <Box key={rc.id} p="sm" ta="center" style={{ borderLeft: "1px solid var(--mantine-color-gray-2)" }}>
+                      <Text size="xs" c="dimmed" tt="uppercase">{dayjs(currentDate).format("ddd D")}</Text>
+                      <Text size="sm" fw={600} lineClamp={1}>{rc.label}</Text>
+                    </Box>
+                  ))
+                ) : (
+                  weekDays.map((day) => (
+                    <Box key={day.format("YYYY-MM-DD")} p="xs" ta="center" style={{
+                      borderLeft: "1px solid var(--mantine-color-gray-2)",
+                      backgroundColor: day.isSame(dayjs(), "day") ? "var(--mantine-color-primary-0)" : undefined,
+                    }}>
+                      <Text c="dimmed" size="xs" tt="uppercase">{day.format("ddd D")}</Text>
+                    </Box>
+                  ))
+                )}
+              </Box>
+              <Box style={{ display: "flex", maxHeight: "600px", overflowY: "auto" }}>
+                <Box style={{ width: 60, flexShrink: 0 }}>
+                  {hours.map((hour) => (
+                    <Box h={60} key={hour} style={{
+                      borderBottom: "1px solid var(--mantine-color-gray-2)",
+                      display: "flex", alignItems: "flex-start", justifyContent: "flex-end",
+                      paddingRight: 8, paddingTop: 4,
+                    }}>
+                      <Text c="dimmed" size="xs">{hour}:00</Text>
+                    </Box>
+                  ))}
+                </Box>
+                <Box style={{
+                  display: "grid",
+                  gridTemplateColumns: view === "day"
+                    ? `repeat(${resourceColumns.length}, 1fr)`
+                    : "repeat(7, 1fr)",
+                  flex: 1,
+                }}>
+                  {view === "day" ? (
+                    resourceColumns.map((rc) => {
+                      const dayEvents = getEventsForDay(dayjs(currentDate)).filter((ev) => getEventResourceId(ev) === rc.id);
+                      return (
+                        <Box key={rc.id} style={{ borderLeft: "1px solid var(--mantine-color-gray-2)", position: "relative" }}>
+                          {hours.map((hour) => (
+                            <Box h={60} key={hour} style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }} />
+                          ))}
+                          {dayEvents.map((ev) => (
+                            <Box key={ev.id} style={{
+                              position: "absolute", left: 2, right: 2,
+                              ...getEventStyle(ev),
+                              backgroundColor: `var(--mantine-color-${ev.color}-1)`,
+                              borderLeft: `3px solid var(--mantine-color-${ev.color}-6)`,
+                              borderRadius: 4, padding: 4, overflow: "hidden",
+                            }}>
+                              <Text fw={600} size="xs" truncate>{ev.title}</Text>
+                              <Text c="dimmed" size="xs">{dayjs(ev.start_time).format("HH:mm")}</Text>
+                            </Box>
+                          ))}
+                        </Box>
+                      );
+                    })
+                  ) : (
+                    weekDays.map((day) => {
+                      const dayEvents = getEventsForDay(day);
+                      return (
+                        <Box key={day.format("YYYY-MM-DD")} style={{ borderLeft: "1px solid var(--mantine-color-gray-2)", position: "relative" }}>
+                          {hours.map((hour) => (
+                            <Box h={60} key={hour} style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }} />
+                          ))}
+                          {resourceColumns.map((rc) => {
+                            const rcEvents = dayEvents.filter((ev) => getEventResourceId(ev) === rc.id);
+                            return rcEvents.map((ev) => (
+                              <Box key={ev.id} style={{
+                                position: "absolute", left: 2, right: 2,
+                                ...getEventStyle(ev),
+                                backgroundColor: `var(--mantine-color-${ev.color}-1)`,
+                                borderLeft: `3px solid var(--mantine-color-${ev.color}-6)`,
+                                borderRadius: 4, padding: 4, overflow: "hidden",
+                              }}>
+                                <Text fw={600} size="xs" truncate>{rc.label}: {ev.title}</Text>
+                                <Text c="dimmed" size="xs">{dayjs(ev.start_time).format("HH:mm")}</Text>
+                              </Box>
+                            ));
+                          })}
+                        </Box>
+                      );
+                    })
+                  )}
+                </Box>
+              </Box>
+            </>
+          ) : (
+          <>
           <Box
             style={{
               display: "grid",
@@ -1064,6 +1275,8 @@ export function CalendarPage() {
               )}
             </Box>
           </Box>
+          </>
+          )}
         </Paper>
       )}
 

@@ -201,13 +201,45 @@ async def delete_notification(
 from pydantic import BaseModel as _BaseModel
 
 NOTIFICATION_EVENTS = [
+    # Reservas y citas
     "booking_created",
     "booking_cancelled",
+    "booking_modified",
+    "booking_reminder",
+    # Seguimiento y progreso
+    "progress_registered",
+    "milestone_reached",
+    "weekly_comparison",
+    # Entrenamientos y nutricion
+    "meal_reminder",
+    "workout_reminder",
+    "supplement_alert",
+    "plan_updated",
+    # Pagos y facturas
     "payment_received",
     "payment_failed",
+    "payment_invoice",
+    # Comunicaciones
     "new_message",
     "new_client",
+    "promotion",
+    # Documentos y formularios
+    "form_pending",
+    "consent_pending",
+    "survey_pending",
     "form_submitted",
+    # Tareas
+    "task_assigned",
+    "task_due",
+    # Stock
+    "low_stock",
+    # Automatizaciones
+    "automation_completed",
+    # Fichaje
+    "clock_in_reminder",
+    "clock_event",
+    "clock_missed",
+    # Legacy
     "progress_milestone",
 ]
 
@@ -226,11 +258,32 @@ class ChannelPreference(_BaseModel):
 class NotificationPreferencesUpdate(_BaseModel):
     booking_created: Optional[ChannelPreference] = None
     booking_cancelled: Optional[ChannelPreference] = None
+    booking_modified: Optional[ChannelPreference] = None
+    booking_reminder: Optional[ChannelPreference] = None
+    progress_registered: Optional[ChannelPreference] = None
+    milestone_reached: Optional[ChannelPreference] = None
+    weekly_comparison: Optional[ChannelPreference] = None
+    meal_reminder: Optional[ChannelPreference] = None
+    workout_reminder: Optional[ChannelPreference] = None
+    supplement_alert: Optional[ChannelPreference] = None
+    plan_updated: Optional[ChannelPreference] = None
     payment_received: Optional[ChannelPreference] = None
     payment_failed: Optional[ChannelPreference] = None
+    payment_invoice: Optional[ChannelPreference] = None
     new_message: Optional[ChannelPreference] = None
     new_client: Optional[ChannelPreference] = None
+    promotion: Optional[ChannelPreference] = None
+    form_pending: Optional[ChannelPreference] = None
+    consent_pending: Optional[ChannelPreference] = None
+    survey_pending: Optional[ChannelPreference] = None
     form_submitted: Optional[ChannelPreference] = None
+    task_assigned: Optional[ChannelPreference] = None
+    task_due: Optional[ChannelPreference] = None
+    low_stock: Optional[ChannelPreference] = None
+    automation_completed: Optional[ChannelPreference] = None
+    clock_in_reminder: Optional[ChannelPreference] = None
+    clock_event: Optional[ChannelPreference] = None
+    clock_missed: Optional[ChannelPreference] = None
     progress_milestone: Optional[ChannelPreference] = None
 
 

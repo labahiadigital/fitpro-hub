@@ -23,12 +23,15 @@ import {
   IconSettings,
   IconTrash,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Divider } from "@mantine/core";
 import { PageHeader } from "../../components/common/PageHeader";
 import { EmptyState } from "../../components/common/EmptyState";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { useMachines, useCreateMachine, useUpdateMachine, useDeleteMachine, useMachineStats, type MachineData } from "../../hooks/useMachines";
 import { useBoxes } from "../../hooks/useBoxes";
+import { useMachineSchedule, useUpdateMachineSchedule, defaultWeekSlots, type ScheduleSlot } from "../../hooks/useSchedules";
+import { WeeklyScheduleGrid } from "../../components/common/WeeklyScheduleGrid";
 
 function MachineStatCard({ machineId }: { machineId: string }) {
   const { data: stats } = useMachineStats(machineId);
@@ -63,6 +66,17 @@ export default function MachinesPage() {
   const deleteMachine = useDeleteMachine();
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [editing, setEditing] = useState<MachineData | null>(null);
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>(defaultWeekSlots());
+  const { data: machineScheduleData } = useMachineSchedule(editing?.id);
+  const updateMachineSchedule = useUpdateMachineSchedule();
+
+  useEffect(() => {
+    if (machineScheduleData && machineScheduleData.length > 0) {
+      setScheduleSlots(machineScheduleData);
+    } else {
+      setScheduleSlots(defaultWeekSlots());
+    }
+  }, [machineScheduleData]);
 
   const boxOptions = (boxes || []).map((b) => ({ value: b.id, label: b.name }));
 
@@ -97,8 +111,13 @@ export default function MachinesPage() {
     const payload = { ...values, fixed_box_id: values.fixed_box_id || undefined };
     if (editing) {
       await updateMachine.mutateAsync({ id: editing.id, data: payload });
+      updateMachineSchedule.mutate({ machineId: editing.id, slots: scheduleSlots });
     } else {
-      await createMachine.mutateAsync(payload);
+      const created = await createMachine.mutateAsync(payload);
+      const createdId = (created as unknown as { id?: string })?.id || (created as unknown as { data?: { id?: string } })?.data?.id;
+      if (createdId) {
+        updateMachineSchedule.mutate({ machineId: createdId, slots: scheduleSlots });
+      }
     }
     closeModal();
     form.reset();
@@ -172,6 +191,8 @@ export default function MachinesPage() {
               radius="md"
             />
             <Switch label="Activa" {...form.getInputProps("is_active", { type: "checkbox" })} />
+            <Divider label="Horario de disponibilidad" labelPosition="center" />
+            <WeeklyScheduleGrid slots={scheduleSlots} onChange={setScheduleSlots} compact />
             <Group justify="flex-end">
               <Button variant="default" onClick={closeModal} radius="xl">Cancelar</Button>
               <Button type="submit" radius="xl" loading={createMachine.isPending || updateMachine.isPending}>

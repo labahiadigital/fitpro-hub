@@ -327,18 +327,65 @@ function SubscriptionSection() {
   );
 }
 
-interface NotificationPrefs {
-  email_booking_created: boolean;
-  email_booking_cancelled: boolean;
-  email_payment_received: boolean;
-  email_payment_failed: boolean;
-  email_new_message: boolean;
-  email_new_client: boolean;
-  email_form_submitted: boolean;
-  push_enabled: boolean;
-}
+type ChannelPref = { email: boolean; in_app: boolean };
+type NotificationPrefs = Record<string, ChannelPref>;
+
+const NOTIF_CATEGORIES: Array<{
+  title: string;
+  items: Array<{ key: string; label: string; desc: string }>;
+}> = [
+  {
+    title: "Reservas y citas",
+    items: [
+      { key: "booking_created", label: "Nuevas citas", desc: "Cuando se te agenda una nueva sesión" },
+      { key: "booking_cancelled", label: "Cancelaciones", desc: "Cuando se cancela una de tus citas" },
+      { key: "booking_modified", label: "Modificaciones", desc: "Cuando se modifica una cita existente" },
+      { key: "booking_reminder", label: "Recordatorios", desc: "Recordatorio antes de tus citas" },
+    ],
+  },
+  {
+    title: "Seguimiento y progreso",
+    items: [
+      { key: "progress_registered", label: "Registro de progreso", desc: "Confirmación al registrar tu progreso" },
+      { key: "milestone_reached", label: "Hitos alcanzados", desc: "Cuando alcances un objetivo importante" },
+      { key: "weekly_comparison", label: "Comparativa semanal", desc: "Resumen comparativo entre semanas" },
+    ],
+  },
+  {
+    title: "Entrenamientos y nutrición",
+    items: [
+      { key: "meal_reminder", label: "Recordatorio de comidas", desc: "Recuerda registrar tus comidas" },
+      { key: "workout_reminder", label: "Recordatorio de entreno", desc: "Recuerda realizar tu entrenamiento" },
+      { key: "supplement_alert", label: "Alerta de suplementos", desc: "Alertas sobre comidas o suplementos" },
+      { key: "plan_updated", label: "Cambios en tu plan", desc: "Cuando se actualiza tu rutina o plan" },
+    ],
+  },
+  {
+    title: "Pagos y facturas",
+    items: [
+      { key: "payment_received", label: "Pagos recibidos", desc: "Confirmación al procesarse un pago" },
+      { key: "payment_invoice", label: "Facturas", desc: "Cuando se genera una factura" },
+    ],
+  },
+  {
+    title: "Comunicaciones",
+    items: [
+      { key: "new_message", label: "Mensajes", desc: "Cuando tu entrenador te envía un mensaje" },
+      { key: "promotion", label: "Promociones", desc: "Ofertas y promociones de tu centro" },
+    ],
+  },
+  {
+    title: "Documentos",
+    items: [
+      { key: "form_pending", label: "Formularios pendientes", desc: "Formularios que debes completar" },
+      { key: "consent_pending", label: "Consentimientos", desc: "Consentimientos legales pendientes" },
+      { key: "survey_pending", label: "Encuestas", desc: "Encuestas de satisfacción pendientes" },
+    ],
+  },
+];
 
 function NotificationsSection() {
+  const queryClient = useQueryClient();
   const { data: prefs, isLoading } = useQuery<NotificationPrefs>({
     queryKey: ["notification-preferences"],
     queryFn: async () => {
@@ -348,14 +395,10 @@ function NotificationsSection() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Record<string, boolean>) =>
+    mutationFn: (data: Record<string, unknown>) =>
       notificationsApi.updatePreferences(data),
     onSuccess: () => {
-      notifications.show({
-        title: "Guardado",
-        message: "Preferencias de notificaciones actualizadas",
-        color: "green",
-      });
+      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
     },
     onError: () => {
       notifications.show({
@@ -366,8 +409,8 @@ function NotificationsSection() {
     },
   });
 
-  const handleToggle = (key: string, value: boolean) => {
-    updateMutation.mutate({ [key]: value });
+  const handleToggle = (key: string, channel: "email" | "in_app", value: boolean) => {
+    updateMutation.mutate({ [key]: { [channel]: value } });
   };
 
   if (isLoading) {
@@ -378,38 +421,55 @@ function NotificationsSection() {
     );
   }
 
-  const notifSettings = [
-    { key: "email_booking_created", label: "Nuevas citas", desc: "Cuando se te agenda una nueva sesión" },
-    { key: "email_booking_cancelled", label: "Cancelaciones", desc: "Cuando se cancela una de tus citas" },
-    { key: "email_booking_reminder", label: "Recordatorios de sesión", desc: "Recibe un recordatorio antes de tus citas" },
-    { key: "email_new_message", label: "Mensajes", desc: "Cuando tu entrenador te envía un mensaje" },
-    { key: "email_payment_received", label: "Pagos recibidos", desc: "Confirmación cuando se procese un pago" },
-    { key: "email_plan_updated", label: "Cambios en tu plan", desc: "Cuando se actualiza tu rutina o plan nutricional" },
-    { key: "email_progress_milestone", label: "Hitos de progreso", desc: "Cuando alcances un objetivo importante" },
-    { key: "push_enabled", label: "Notificaciones push", desc: "Notificaciones en el navegador" },
-  ];
-
   return (
     <Card shadow="sm" padding="lg" radius="lg" withBorder>
-      <Group mb="md">
+      <Group mb="lg">
         <IconBell size={20} />
         <Text fw={600}>Notificaciones</Text>
       </Group>
-      <Stack gap="md">
-        {notifSettings.map((item, idx) => (
-          <Box key={item.key}>
-            {idx > 0 && <Divider mb="md" />}
-            <Group justify="space-between">
-              <Box>
-                <Text size="sm" fw={500}>{item.label}</Text>
-                <Text size="xs" c="dimmed">{item.desc}</Text>
-              </Box>
-              <Switch
-                checked={prefs?.[item.key as keyof NotificationPrefs] ?? true}
-                onChange={(e) => handleToggle(item.key, e.currentTarget.checked)}
-                color="yellow"
-              />
-            </Group>
+
+      <Group justify="flex-end" mb="sm" gap="lg" pr={4}>
+        <Group gap={4}>
+          <IconMail size={14} />
+          <Text size="xs" fw={600} c="dimmed">Email</Text>
+        </Group>
+        <Group gap={4}>
+          <IconBell size={14} />
+          <Text size="xs" fw={600} c="dimmed">App</Text>
+        </Group>
+      </Group>
+
+      <Stack gap="lg">
+        {NOTIF_CATEGORIES.map((cat) => (
+          <Box key={cat.title}>
+            <Text size="xs" fw={700} tt="uppercase" c="dimmed" mb="xs">{cat.title}</Text>
+            <Stack gap={6}>
+              {cat.items.map((item) => {
+                const pref = prefs?.[item.key] as ChannelPref | undefined;
+                return (
+                  <Group key={item.key} justify="space-between" wrap="nowrap" gap="xs">
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text size="sm" fw={500} lineClamp={1}>{item.label}</Text>
+                      <Text size="xs" c="dimmed" lineClamp={1}>{item.desc}</Text>
+                    </Box>
+                    <Group gap="lg" wrap="nowrap" style={{ flexShrink: 0 }}>
+                      <Switch
+                        size="xs"
+                        color="yellow"
+                        checked={pref?.email ?? true}
+                        onChange={(e) => handleToggle(item.key, "email", e.currentTarget.checked)}
+                      />
+                      <Switch
+                        size="xs"
+                        color="yellow"
+                        checked={pref?.in_app ?? true}
+                        onChange={(e) => handleToggle(item.key, "in_app", e.currentTarget.checked)}
+                      />
+                    </Group>
+                  </Group>
+                );
+              })}
+            </Stack>
           </Box>
         ))}
       </Stack>
