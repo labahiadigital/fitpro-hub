@@ -315,8 +315,10 @@ async def create_auto_task(
                 existing = existing_result.scalar_one_or_none()
                 if existing:
                     if not replace_existing:
+                        logger.info("auto-task: duplicate skipped ref=%s", source_ref)
                         return None
                     existing.deleted_at = datetime.utcnow()
+                    logger.info("auto-task: soft-deleted old id=%s ref=%s", existing.id, source_ref)
 
             target_user = assigned_to or created_by
             task = Task(
@@ -335,6 +337,7 @@ async def create_auto_task(
             session.add(task)
             await session.commit()
             await session.refresh(task)
+            logger.info("auto-task: created id=%s ref=%s due=%s", task.id, source_ref, due_date)
 
         if notify_user:
             try:
@@ -349,6 +352,7 @@ async def create_auto_task(
                     notification_type="reminder",
                     link=notification_link or "/tasks",
                 )
+                logger.info("auto-task: notification sent for ref=%s", source_ref)
             except Exception:
                 logger.exception("Failed to notify for auto-task: %s", title)
 
