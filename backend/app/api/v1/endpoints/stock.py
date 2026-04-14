@@ -322,10 +322,19 @@ async def get_summary(user=CurrentUser, db: AsyncSession = Depends(get_db)):
 @router.get("/items/{item_id}/linked-products")
 async def get_linked_products(item_id: UUID, user=CurrentUser, db: AsyncSession = Depends(get_db)):
     """Get products and services linked to a stock item via consumption tables."""
+    item_check = await db.execute(
+        select(StockItem.id).where(StockItem.id == item_id, StockItem.workspace_id == user.workspace_id)
+    )
+    if not item_check.scalar_one_or_none():
+        raise HTTPException(404, "Item not found")
+
     product_links = await db.execute(
         select(ProductStockConsumption, Product.name)
         .join(Product, Product.id == ProductStockConsumption.product_id)
-        .where(ProductStockConsumption.stock_item_id == item_id)
+        .where(
+            ProductStockConsumption.stock_item_id == item_id,
+            Product.workspace_id == user.workspace_id,
+        )
     )
     products = [
         {
@@ -340,7 +349,10 @@ async def get_linked_products(item_id: UUID, user=CurrentUser, db: AsyncSession 
     service_links = await db.execute(
         select(ServiceStockConsumption, Service.name)
         .join(Service, Service.id == ServiceStockConsumption.service_id)
-        .where(ServiceStockConsumption.stock_item_id == item_id)
+        .where(
+            ServiceStockConsumption.stock_item_id == item_id,
+            Service.workspace_id == user.workspace_id,
+        )
     )
     services = [
         {
@@ -360,11 +372,8 @@ async def get_linked_products(item_id: UUID, user=CurrentUser, db: AsyncSession 
 @router.get("/export")
 async def export_stock_excel(user=CurrentUser, db: AsyncSession = Depends(get_db)):
     """Export all stock items to an Excel file."""
-    try:
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    except ImportError:
-        raise HTTPException(500, "openpyxl not installed")
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
     q = (
         select(StockItem)

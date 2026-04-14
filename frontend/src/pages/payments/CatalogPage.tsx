@@ -278,10 +278,10 @@ export function CatalogPage() {
         await updateResources.mutateAsync({
           productId,
           data: {
-            stock_consumption: stockConsumption.map((s) => ({ stock_item_id: s.stock_item_id, quantity: s.quantity })),
-            staff: staffAssignments,
-            machine_ids: machineBindings,
-            box_ids: boxBindings,
+            stock_consumption: stockConsumption.filter((s) => s.stock_item_id).map((s) => ({ stock_item_id: s.stock_item_id, quantity: s.quantity })),
+            staff: staffAssignments.filter((s) => s.user_id),
+            machine_ids: machineBindings.filter((m) => m.id),
+            box_ids: boxBindings.filter((b) => b.id),
           },
         });
       }

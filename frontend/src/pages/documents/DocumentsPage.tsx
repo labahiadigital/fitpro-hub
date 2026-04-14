@@ -40,6 +40,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import api from "../../services/api";
 import { PageHeader } from "../../components/common/PageHeader";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -462,7 +463,6 @@ export function DocumentsPage() {
                 <Button size="sm" variant="light" color="green" fullWidth leftSection={<IconDownload size={14} />}
                   onClick={async () => {
                     try {
-                      const { default: api } = await import("../../services/api");
                       const response = await api.get("/stock/export", { responseType: "blob" });
                       const url = window.URL.createObjectURL(new Blob([response.data]));
                       const link = document.createElement("a");

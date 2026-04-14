@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel as BaseSchema
+from pydantic import BaseModel as BaseSchema, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete as sa_delete
 from sqlalchemy.orm import selectinload
@@ -33,6 +33,13 @@ router = APIRouter()
 class StockConsumptionSlot(BaseSchema):
     stock_item_id: UUID
     quantity: float = 1.0
+
+    @field_validator("quantity")
+    @classmethod
+    def quantity_must_be_positive(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("La cantidad debe ser mayor a 0")
+        return v
 
 class StaffSlot(BaseSchema):
     user_id: UUID
@@ -462,6 +469,8 @@ async def update_product_resources(
     current_user: User = Depends(require_roles(["owner", "collaborator"])),
 ):
     """Update all resource bindings for a product (replace strategy)."""
+    from app.models.stock import StockItem
+
     result = await db.execute(
         select(Product).where(
             Product.id == product_id,
@@ -472,7 +481,15 @@ async def update_product_resources(
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
+    ws = current_user.workspace_id
+
     if data.stock_consumption is not None:
+        if data.stock_consumption:
+            ids = [sc.stock_item_id for sc in data.stock_consumption]
+            valid = await db.execute(select(StockItem.id).where(StockItem.id.in_(ids), StockItem.workspace_id == ws))
+            valid_ids = {r[0] for r in valid}
+            if len(valid_ids) != len(ids):
+                raise HTTPException(400, "Uno o más artículos de stock no pertenecen a este workspace")
         await db.execute(sa_delete(ProductStockConsumption).where(ProductStockConsumption.product_id == product_id))
         for sc in data.stock_consumption:
             db.add(ProductStockConsumption(
@@ -485,11 +502,23 @@ async def update_product_resources(
             db.add(ProductStaff(product_id=product_id, user_id=s.user_id, is_primary=s.is_primary))
 
     if data.machine_ids is not None:
+        if data.machine_ids:
+            ids = [m.id for m in data.machine_ids]
+            valid = await db.execute(select(Machine.id).where(Machine.id.in_(ids), Machine.workspace_id == ws))
+            valid_ids = {r[0] for r in valid}
+            if len(valid_ids) != len(ids):
+                raise HTTPException(400, "Una o más máquinas no pertenecen a este workspace")
         await db.execute(sa_delete(product_machines).where(product_machines.c.product_id == product_id))
         for m in data.machine_ids:
             await db.execute(product_machines.insert().values(product_id=product_id, machine_id=m.id, is_primary=m.is_primary))
 
     if data.box_ids is not None:
+        if data.box_ids:
+            ids = [b.id for b in data.box_ids]
+            valid = await db.execute(select(Box.id).where(Box.id.in_(ids), Box.workspace_id == ws))
+            valid_ids = {r[0] for r in valid}
+            if len(valid_ids) != len(ids):
+                raise HTTPException(400, "Uno o más boxes no pertenecen a este workspace")
         await db.execute(sa_delete(product_boxes).where(product_boxes.c.product_id == product_id))
         for b in data.box_ids:
             await db.execute(product_boxes.insert().values(product_id=product_id, box_id=b.id, is_primary=b.is_primary))

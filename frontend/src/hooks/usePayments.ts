@@ -311,10 +311,17 @@ export function useProductResources(productId: string | undefined) {
   });
 }
 
+export interface ProductResourcesPayload {
+  stock_consumption?: { stock_item_id: string; quantity: number }[];
+  staff?: { user_id: string; is_primary: boolean }[];
+  machine_ids?: { id: string; is_primary: boolean }[];
+  box_ids?: { id: string; is_primary: boolean }[];
+}
+
 export function useUpdateProductResources() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ productId, data }: { productId: string; data: Partial<ProductResources & { machine_ids?: { id: string; is_primary: boolean }[]; box_ids?: { id: string; is_primary: boolean }[] }> }) => {
+    mutationFn: async ({ productId, data }: { productId: string; data: ProductResourcesPayload }) => {
       return productsApi.updateResources(productId, data);
     },
     onSuccess: (_data, variables) => {
