@@ -44,7 +44,7 @@ import {
   IconUsers,
   IconX,
 } from "@tabler/icons-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useMemo } from "react";
 import { openDangerConfirm } from "../../utils/confirmModal";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
@@ -55,6 +55,8 @@ import {
   useDeleteProduct,
   useToggleProductActive,
   useCancelSubscription,
+  useProductResources,
+  useUpdateProductResources,
   type Product,
   type Subscription,
 } from "../../hooks/usePayments";
@@ -66,6 +68,10 @@ import {
   type SessionPackage as SessionPackageType,
   type ClientPackage as ClientPackageType,
 } from "../../hooks/usePackages";
+import { useStockItems } from "../../hooks/useStock";
+import { useBoxes } from "../../hooks/useBoxes";
+import { useMachines } from "../../hooks/useMachines";
+import { useTeamMembers } from "../../hooks/useTeam";
 import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
@@ -134,6 +140,39 @@ export function CatalogPage() {
   const createPackage = useCreateSessionPackage();
   const updatePackage = useUpdateSessionPackage();
 
+  // Resource binding data
+  const { data: stockItems = [] } = useStockItems();
+  const { data: boxes = [] } = useBoxes();
+  const { data: machines = [] } = useMachines();
+  const { data: teamMembers = [] } = useTeamMembers();
+  const { data: productResources } = useProductResources(editingProduct?.id);
+  const updateResources = useUpdateProductResources();
+
+  // Resource state for product form
+  const [stockConsumption, setStockConsumption] = useState<{ stock_item_id: string; quantity: number }[]>([]);
+  const [staffAssignments, setStaffAssignments] = useState<{ user_id: string; is_primary: boolean }[]>([]);
+  const [machineBindings, setMachineBindings] = useState<{ id: string; is_primary: boolean }[]>([]);
+  const [boxBindings, setBoxBindings] = useState<{ id: string; is_primary: boolean }[]>([]);
+
+  useEffect(() => {
+    if (productResources) {
+      setStockConsumption(productResources.stock_consumption.map((s) => ({ stock_item_id: s.stock_item_id, quantity: s.quantity })));
+      setStaffAssignments(productResources.staff.map((s) => ({ user_id: s.user_id, is_primary: s.is_primary })));
+      setMachineBindings(productResources.machines.map((m) => ({ id: m.machine_id, is_primary: m.is_primary })));
+      setBoxBindings(productResources.boxes.map((b) => ({ id: b.box_id, is_primary: b.is_primary })));
+    } else if (!editingProduct) {
+      setStockConsumption([]);
+      setStaffAssignments([]);
+      setMachineBindings([]);
+      setBoxBindings([]);
+    }
+  }, [productResources, editingProduct?.id]);
+
+  const stockOptions = useMemo(() => stockItems.map((s) => ({ value: s.id, label: `${s.name} (${s.current_stock} ${s.unit})` })), [stockItems]);
+  const memberOptions = useMemo(() => teamMembers.filter((m) => m.role !== "client").map((m) => ({ value: m.user_id, label: m.full_name || m.name || m.email })), [teamMembers]);
+  const machineOptions = useMemo(() => (machines ?? []).map((m) => ({ value: m.id, label: m.name })), [machines]);
+  const boxOptions = useMemo(() => (boxes ?? []).map((b) => ({ value: b.id, label: b.name })), [boxes]);
+
   // Map package API data to UI format
   const packages: SessionPackage[] = packagesData.map((p: SessionPackageType) => ({
     id: p.id,
@@ -197,6 +236,10 @@ export function CatalogPage() {
   const handleOpenNewProduct = useCallback(() => {
     setEditingProduct(null);
     productForm.reset();
+    setStockConsumption([]);
+    setStaffAssignments([]);
+    setMachineBindings([]);
+    setBoxBindings([]);
     openProductModal();
   }, [productForm, openProductModal]);
 
@@ -222,16 +265,31 @@ export function CatalogPage() {
       interval: values.type === "subscription" ? values.interval : undefined,
     };
     try {
+      let productId: string | undefined;
       if (editingProduct) {
         await updateProduct.mutateAsync({ id: editingProduct.id, data });
+        productId = editingProduct.id;
       } else {
-        await createProduct.mutateAsync(data);
+        const created = await createProduct.mutateAsync(data);
+        const raw = (created as any)?.data;
+        productId = raw?.id || (created as any)?.id;
+      }
+      if (productId) {
+        await updateResources.mutateAsync({
+          productId,
+          data: {
+            stock_consumption: stockConsumption.map((s) => ({ stock_item_id: s.stock_item_id, quantity: s.quantity })),
+            staff: staffAssignments,
+            machine_ids: machineBindings,
+            box_ids: boxBindings,
+          },
+        });
       }
       closeProductModal();
       productForm.reset();
       setEditingProduct(null);
     } catch { /* handled by mutation */ }
-  }, [editingProduct, updateProduct, createProduct, closeProductModal, productForm]);
+  }, [editingProduct, updateProduct, createProduct, closeProductModal, productForm, updateResources, stockConsumption, staffAssignments, machineBindings, boxBindings]);
 
   const handleDeleteProduct = useCallback((product: Product) => {
     openDangerConfirm({
@@ -813,7 +871,7 @@ export function CatalogPage() {
       <BottomSheet
         onClose={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }}
         opened={productModalOpened}
-        size="md"
+        size="lg"
         title={editingProduct ? "Editar Producto" : "Nuevo Producto"}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
@@ -851,6 +909,163 @@ export function CatalogPage() {
             {productForm.values.type === "package" && (
               <NumberInput label="Sesiones incluidas" min={1} placeholder="0" {...productForm.getInputProps("sessions_included")} />
             )}
+
+            <Divider label="Stock vinculado" labelPosition="center" />
+            <Text size="xs" c="dimmed">Añade productos de stock que se consumen con cada venta de este producto.</Text>
+            {stockConsumption.map((sc, idx) => (
+              <Group key={idx} gap="xs">
+                <Select
+                  data={stockOptions}
+                  value={sc.stock_item_id}
+                  onChange={(val) => {
+                    if (val) {
+                      const next = [...stockConsumption];
+                      next[idx] = { ...next[idx], stock_item_id: val };
+                      setStockConsumption(next);
+                    }
+                  }}
+                  placeholder="Seleccionar artículo"
+                  searchable
+                  style={{ flex: 1 }}
+                  size="sm"
+                />
+                <NumberInput
+                  value={sc.quantity}
+                  onChange={(val) => {
+                    const next = [...stockConsumption];
+                    next[idx] = { ...next[idx], quantity: Number(val) || 1 };
+                    setStockConsumption(next);
+                  }}
+                  min={0.01}
+                  step={0.5}
+                  decimalScale={2}
+                  label="Uds."
+                  w={80}
+                  size="sm"
+                />
+                <ActionIcon color="red" variant="light" size="sm" mt={24} onClick={() => setStockConsumption(stockConsumption.filter((_, i) => i !== idx))}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+            ))}
+            <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setStockConsumption([...stockConsumption, { stock_item_id: "", quantity: 1 }])}>
+              Añadir stock
+            </Button>
+
+            <Divider label="Recursos vinculados" labelPosition="center" />
+            <Text size="xs" c="dimmed">Vincula boxes, máquinas y miembros del equipo a este producto para gestionar disponibilidad.</Text>
+
+            <Text size="sm" fw={500}>Boxes</Text>
+            {boxBindings.map((b, idx) => (
+              <Group key={idx} gap="xs">
+                <Select
+                  data={boxOptions}
+                  value={b.id}
+                  onChange={(val) => {
+                    if (val) {
+                      const next = [...boxBindings];
+                      next[idx] = { ...next[idx], id: val };
+                      setBoxBindings(next);
+                    }
+                  }}
+                  placeholder="Seleccionar box"
+                  searchable
+                  style={{ flex: 1 }}
+                  size="sm"
+                />
+                <Switch
+                  checked={b.is_primary}
+                  onChange={(e) => {
+                    const next = [...boxBindings];
+                    next[idx] = { ...next[idx], is_primary: e.currentTarget.checked };
+                    setBoxBindings(next);
+                  }}
+                  label={b.is_primary ? "Primario" : "Secundario"}
+                  size="xs"
+                />
+                <ActionIcon color="red" variant="light" size="sm" onClick={() => setBoxBindings(boxBindings.filter((_, i) => i !== idx))}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+            ))}
+            <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setBoxBindings([...boxBindings, { id: "", is_primary: true }])}>
+              Añadir box
+            </Button>
+
+            <Text size="sm" fw={500}>Máquinas</Text>
+            {machineBindings.map((m, idx) => (
+              <Group key={idx} gap="xs">
+                <Select
+                  data={machineOptions}
+                  value={m.id}
+                  onChange={(val) => {
+                    if (val) {
+                      const next = [...machineBindings];
+                      next[idx] = { ...next[idx], id: val };
+                      setMachineBindings(next);
+                    }
+                  }}
+                  placeholder="Seleccionar máquina"
+                  searchable
+                  style={{ flex: 1 }}
+                  size="sm"
+                />
+                <Switch
+                  checked={m.is_primary}
+                  onChange={(e) => {
+                    const next = [...machineBindings];
+                    next[idx] = { ...next[idx], is_primary: e.currentTarget.checked };
+                    setMachineBindings(next);
+                  }}
+                  label={m.is_primary ? "Primario" : "Secundario"}
+                  size="xs"
+                />
+                <ActionIcon color="red" variant="light" size="sm" onClick={() => setMachineBindings(machineBindings.filter((_, i) => i !== idx))}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+            ))}
+            <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setMachineBindings([...machineBindings, { id: "", is_primary: true }])}>
+              Añadir máquina
+            </Button>
+
+            <Text size="sm" fw={500}>Miembros del equipo</Text>
+            {staffAssignments.map((s, idx) => (
+              <Group key={idx} gap="xs">
+                <Select
+                  data={memberOptions}
+                  value={s.user_id}
+                  onChange={(val) => {
+                    if (val) {
+                      const next = [...staffAssignments];
+                      next[idx] = { ...next[idx], user_id: val };
+                      setStaffAssignments(next);
+                    }
+                  }}
+                  placeholder="Seleccionar miembro"
+                  searchable
+                  style={{ flex: 1 }}
+                  size="sm"
+                />
+                <Switch
+                  checked={s.is_primary}
+                  onChange={(e) => {
+                    const next = [...staffAssignments];
+                    next[idx] = { ...next[idx], is_primary: e.currentTarget.checked };
+                    setStaffAssignments(next);
+                  }}
+                  label={s.is_primary ? "Primario" : "Secundario"}
+                  size="xs"
+                />
+                <ActionIcon color="red" variant="light" size="sm" onClick={() => setStaffAssignments(staffAssignments.filter((_, i) => i !== idx))}>
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+            ))}
+            <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setStaffAssignments([...staffAssignments, { user_id: "", is_primary: false }])}>
+              Añadir miembro
+            </Button>
+
             <Group justify="flex-end" mt="md">
               <Button onClick={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }} variant="default">Cancelar</Button>
               <Button type="submit" loading={createProduct.isPending || updateProduct.isPending}>

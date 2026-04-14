@@ -138,3 +138,34 @@ export function useCreateStockCategory() {
     },
   });
 }
+
+export interface LinkedProduct {
+  type: "product" | "service";
+  id: string;
+  name: string;
+  quantity_per_sale: number;
+}
+
+export function useLinkedProducts(itemId?: string) {
+  return useQuery<LinkedProduct[]>({
+    queryKey: ["stock-linked-products", itemId],
+    queryFn: async () => (await api.get(`/stock/items/${itemId}/linked-products`)).data,
+    enabled: !!itemId,
+  });
+}
+
+export function useExportStock() {
+  return {
+    exportToExcel: async () => {
+      const response = await api.get("/stock/export", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `stock_${new Date().toISOString().split("T")[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    },
+  };
+}

@@ -221,6 +221,7 @@ export function DocumentsPage() {
             { value: "documents", label: "Documentos" },
             { value: "folders", label: "Carpetas" },
             { value: "templates", label: "Plantillas" },
+            { value: "exports", label: "Exportaciones" },
           ]}
           size="sm"
           radius="md"
@@ -238,6 +239,9 @@ export function DocumentsPage() {
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconSignature size={16} />} value="templates">
             Plantillas
+          </Tabs.Tab>
+          <Tabs.Tab leftSection={<IconDownload size={16} />} value="exports">
+            Exportaciones
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -437,6 +441,113 @@ export function DocumentsPage() {
               </Card>
             ))}
           </SimpleGrid>
+        </Tabs.Panel>
+        {/* Exports Tab */}
+        <Tabs.Panel value="exports">
+          <Stack gap="lg">
+            <Text c="dimmed" size="sm">
+              Descarga los datos generados por el sistema en diferentes apartados. Selecciona el tipo de exportación que necesitas.
+            </Text>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              <Card p="lg" radius="md" withBorder>
+                <Group mb="sm">
+                  <ThemeIcon size="lg" color="green" variant="light" radius="md">
+                    <IconDownload size={20} />
+                  </ThemeIcon>
+                  <div>
+                    <Text fw={600} size="sm">Stock / Inventario</Text>
+                    <Text size="xs" c="dimmed">Exporta todo el inventario actual</Text>
+                  </div>
+                </Group>
+                <Button size="sm" variant="light" color="green" fullWidth leftSection={<IconDownload size={14} />}
+                  onClick={async () => {
+                    try {
+                      const { default: api } = await import("../../services/api");
+                      const response = await api.get("/stock/export", { responseType: "blob" });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.setAttribute("download", `stock_${new Date().toISOString().split("T")[0]}.xlsx`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                    } catch { /* ignore */ }
+                  }}
+                >
+                  Descargar Excel
+                </Button>
+              </Card>
+
+              <Card p="lg" radius="md" withBorder>
+                <Group mb="sm">
+                  <ThemeIcon size="lg" color="blue" variant="light" radius="md">
+                    <IconUsers size={20} />
+                  </ThemeIcon>
+                  <div>
+                    <Text fw={600} size="sm">Clientes</Text>
+                    <Text size="xs" c="dimmed">Exporta el listado de clientes</Text>
+                  </div>
+                </Group>
+                <Tooltip label="Próximamente">
+                  <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
+                    Descargar Excel
+                  </Button>
+                </Tooltip>
+              </Card>
+
+              <Card p="lg" radius="md" withBorder>
+                <Group mb="sm">
+                  <ThemeIcon size="lg" color="orange" variant="light" radius="md">
+                    <IconFileText size={20} />
+                  </ThemeIcon>
+                  <div>
+                    <Text fw={600} size="sm">Facturas</Text>
+                    <Text size="xs" c="dimmed">Exporta el registro de facturas</Text>
+                  </div>
+                </Group>
+                <Tooltip label="Próximamente">
+                  <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
+                    Descargar Excel
+                  </Button>
+                </Tooltip>
+              </Card>
+
+              <Card p="lg" radius="md" withBorder>
+                <Group mb="sm">
+                  <ThemeIcon size="lg" color="violet" variant="light" radius="md">
+                    <IconClock size={20} />
+                  </ThemeIcon>
+                  <div>
+                    <Text fw={600} size="sm">Registro Horario</Text>
+                    <Text size="xs" c="dimmed">Exporta fichajes del equipo</Text>
+                  </div>
+                </Group>
+                <Tooltip label="Próximamente">
+                  <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
+                    Descargar Excel
+                  </Button>
+                </Tooltip>
+              </Card>
+
+              <Card p="lg" radius="md" withBorder>
+                <Group mb="sm">
+                  <ThemeIcon size="lg" color="teal" variant="light" radius="md">
+                    <IconFileText size={20} />
+                  </ThemeIcon>
+                  <div>
+                    <Text fw={600} size="sm">PDFs generados</Text>
+                    <Text size="xs" c="dimmed">Historial de PDFs del sistema</Text>
+                  </div>
+                </Group>
+                <Tooltip label="Próximamente">
+                  <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
+                    Ver historial
+                  </Button>
+                </Tooltip>
+              </Card>
+            </SimpleGrid>
+          </Stack>
         </Tabs.Panel>
       </Tabs>
 

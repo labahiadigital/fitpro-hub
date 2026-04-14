@@ -436,6 +436,8 @@ export const productsApi = {
   update: (id: string, data: object) => api.patch(`/products/${id}`, data),
   delete: (id: string) => api.delete(`/products/${id}`),
   activeSubscribers: (id: string) => api.get(`/products/${id}/active-subscribers`),
+  getResources: (id: string) => api.get(`/products/${id}/resources`),
+  updateResources: (id: string, data: object) => api.put(`/products/${id}/resources`, data),
 };
 
 // Redsys API

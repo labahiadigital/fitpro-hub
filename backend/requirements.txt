@@ -50,6 +50,9 @@ bcrypt==4.2.1
 python-dotenv==1.0.1
 slowapi==0.1.9
 
+# Excel Export
+openpyxl==3.1.5
+
 # Utilities
 orjson==3.10.18
 python-dateutil==2.9.0

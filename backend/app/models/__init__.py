@@ -11,7 +11,7 @@ from app.models.message import Message, Conversation
 from app.models.payment import StripeAccount, Subscription, Payment
 from app.models.automation import Automation, AutomationLog
 from app.models.audit import AuditLog
-from app.models.product import Product, SessionPackage, ClientPackage, Coupon
+from app.models.product import Product, SessionPackage, ClientPackage, Coupon, ProductStockConsumption, ProductStaff, product_machines, product_boxes
 from app.models.notification import Notification, EmailTemplate, ReminderSetting
 from app.models.supplement import Supplement, SupplementFavorite
 from app.models.feedback import ClientFeedback, ClientWorkoutFeedback, ClientDietFeedback, ClientEmotion
@@ -119,4 +119,8 @@ __all__ = [
     "StaffSchedule",
     "MachineSchedule",
     "BoxSchedule",
+    "ProductStockConsumption",
+    "ProductStaff",
+    "product_machines",
+    "product_boxes",
 ]

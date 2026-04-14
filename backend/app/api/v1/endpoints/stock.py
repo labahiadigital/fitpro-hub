@@ -1,4 +1,5 @@
 """Stock management API endpoints."""
+import io
 import logging
 from datetime import date
 from decimal import Decimal
@@ -6,6 +7,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticModel
 from sqlalchemy import select, func, and_, cast, Date
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,8 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.middleware.auth import require_workspace
 from app.models.stock import StockCategory, StockItem, StockMovement
+from app.models.product import ProductStockConsumption, Product
+from app.models.resource import ServiceStockConsumption, Service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -311,3 +315,117 @@ async def get_summary(user=CurrentUser, db: AsyncSession = Depends(get_db)):
         "total_value": float(row.value or 0),
         "movements_today": movements_today,
     }
+
+
+# --- Linked Products for a stock item ---
+
+@router.get("/items/{item_id}/linked-products")
+async def get_linked_products(item_id: UUID, user=CurrentUser, db: AsyncSession = Depends(get_db)):
+    """Get products and services linked to a stock item via consumption tables."""
+    product_links = await db.execute(
+        select(ProductStockConsumption, Product.name)
+        .join(Product, Product.id == ProductStockConsumption.product_id)
+        .where(ProductStockConsumption.stock_item_id == item_id)
+    )
+    products = [
+        {
+            "type": "product",
+            "id": str(row[0].product_id),
+            "name": row[1],
+            "quantity_per_sale": float(row[0].quantity),
+        }
+        for row in product_links
+    ]
+
+    service_links = await db.execute(
+        select(ServiceStockConsumption, Service.name)
+        .join(Service, Service.id == ServiceStockConsumption.service_id)
+        .where(ServiceStockConsumption.stock_item_id == item_id)
+    )
+    services = [
+        {
+            "type": "service",
+            "id": str(row[0].service_id),
+            "name": row[1],
+            "quantity_per_sale": float(row[0].quantity),
+        }
+        for row in service_links
+    ]
+
+    return products + services
+
+
+# --- Export stock to Excel ---
+
+@router.get("/export")
+async def export_stock_excel(user=CurrentUser, db: AsyncSession = Depends(get_db)):
+    """Export all stock items to an Excel file."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        raise HTTPException(500, "openpyxl not installed")
+
+    q = (
+        select(StockItem)
+        .options(selectinload(StockItem.category))
+        .where(StockItem.workspace_id == user.workspace_id, StockItem.is_active.is_(True))
+        .order_by(StockItem.name)
+    )
+    result = await db.execute(q)
+    items = result.scalars().all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Inventario"
+
+    headers = ["Nombre", "Categoría", "Descripción", "Unidad", "Stock Actual", "Stock Mín.", "Stock Máx.", "Precio (€)", "Valor Total (€)", "Ubicación", "IVA %", "IRPF %", "Estado"]
+    header_fill = PatternFill(start_color="3B82F6", end_color="3B82F6", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    thin_border = Border(
+        left=Side(style="thin"), right=Side(style="thin"),
+        top=Side(style="thin"), bottom=Side(style="thin"),
+    )
+
+    for col_idx, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = thin_border
+
+    for row_idx, item in enumerate(items, 2):
+        stock = float(item.current_stock)
+        price = float(item.price)
+        values = [
+            item.name,
+            item.category.name if item.category else "",
+            item.description or "",
+            item.unit,
+            stock,
+            float(item.min_stock),
+            float(item.max_stock),
+            price,
+            round(stock * price, 2),
+            item.location or "",
+            float(item.tax_rate),
+            float(item.irpf_rate),
+            "Bajo" if stock <= float(item.min_stock) else "Normal",
+        ]
+        for col_idx, v in enumerate(values, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=v)
+            cell.border = thin_border
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=stock_{date.today().isoformat()}.xlsx"},
+    )

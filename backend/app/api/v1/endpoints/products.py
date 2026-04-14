@@ -1,13 +1,20 @@
 """Products and session packages endpoints."""
 from typing import List, Optional
 from uuid import UUID
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel as BaseSchema
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete as sa_delete
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.middleware.auth import get_current_user, require_roles
-from app.models.product import Product, SessionPackage, ClientPackage, Coupon
+from app.models.product import (
+    Product, SessionPackage, ClientPackage, Coupon,
+    ProductStockConsumption, ProductStaff, product_machines, product_boxes,
+)
+from app.models.resource import Machine, Box
 from app.models.payment import Subscription, SubscriptionStatus
 from app.models.user import User
 from app.schemas.product import (
@@ -19,6 +26,53 @@ from app.schemas.product import (
 )
 
 router = APIRouter()
+
+
+# --- Resource binding schemas ---
+
+class StockConsumptionSlot(BaseSchema):
+    stock_item_id: UUID
+    quantity: float = 1.0
+
+class StaffSlot(BaseSchema):
+    user_id: UUID
+    is_primary: bool = False
+
+class ResourceSlot(BaseSchema):
+    id: UUID
+    is_primary: bool = True
+
+class ProductResourcesUpdate(BaseSchema):
+    stock_consumption: Optional[List[StockConsumptionSlot]] = None
+    staff: Optional[List[StaffSlot]] = None
+    machine_ids: Optional[List[ResourceSlot]] = None
+    box_ids: Optional[List[ResourceSlot]] = None
+
+class StockConsumptionResponse(BaseSchema):
+    stock_item_id: UUID
+    stock_item_name: Optional[str] = None
+    quantity: float
+
+class StaffResponse(BaseSchema):
+    user_id: UUID
+    user_name: Optional[str] = None
+    is_primary: bool
+
+class MachineResponse(BaseSchema):
+    machine_id: UUID
+    machine_name: Optional[str] = None
+    is_primary: bool
+
+class BoxResponse(BaseSchema):
+    box_id: UUID
+    box_name: Optional[str] = None
+    is_primary: bool
+
+class ProductResourcesResponse(BaseSchema):
+    stock_consumption: List[StockConsumptionResponse] = []
+    staff: List[StaffResponse] = []
+    machines: List[MachineResponse] = []
+    boxes: List[BoxResponse] = []
 
 
 # ==================== Products ====================
@@ -336,6 +390,112 @@ async def use_session(
     await db.commit()
     await db.refresh(package)
     return ClientPackageResponse.model_validate(package)
+
+
+# ==================== Product Resources ====================
+
+@router.get("/{product_id}/resources", response_model=ProductResourcesResponse)
+async def get_product_resources(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all resource bindings for a product."""
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == current_user.workspace_id,
+        ).options(selectinload(Product.stock_consumption), selectinload(Product.staff_assignments))
+    )
+    product = result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    stock = [
+        StockConsumptionResponse(
+            stock_item_id=sc.stock_item_id,
+            stock_item_name=sc.stock_item.name if sc.stock_item else None,
+            quantity=float(sc.quantity),
+        )
+        for sc in product.stock_consumption
+    ]
+
+    staff = [
+        StaffResponse(
+            user_id=sa.user_id,
+            user_name=f"{sa.user.first_name or ''} {sa.user.last_name or ''}".strip() if sa.user else None,
+            is_primary=sa.is_primary,
+        )
+        for sa in product.staff_assignments
+    ]
+
+    machines_q = await db.execute(
+        select(product_machines.c.machine_id, product_machines.c.is_primary, Machine.name)
+        .join(Machine, Machine.id == product_machines.c.machine_id)
+        .where(product_machines.c.product_id == product_id)
+    )
+    machines_list = [
+        MachineResponse(machine_id=r[0], machine_name=r[2], is_primary=r[1])
+        for r in machines_q
+    ]
+
+    boxes_q = await db.execute(
+        select(product_boxes.c.box_id, product_boxes.c.is_primary, Box.name)
+        .join(Box, Box.id == product_boxes.c.box_id)
+        .where(product_boxes.c.product_id == product_id)
+    )
+    boxes_list = [
+        BoxResponse(box_id=r[0], box_name=r[2], is_primary=r[1])
+        for r in boxes_q
+    ]
+
+    return ProductResourcesResponse(
+        stock_consumption=stock, staff=staff, machines=machines_list, boxes=boxes_list,
+    )
+
+
+@router.put("/{product_id}/resources", response_model=ProductResourcesResponse)
+async def update_product_resources(
+    product_id: UUID,
+    data: ProductResourcesUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(["owner", "collaborator"])),
+):
+    """Update all resource bindings for a product (replace strategy)."""
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == current_user.workspace_id,
+        )
+    )
+    product = result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    if data.stock_consumption is not None:
+        await db.execute(sa_delete(ProductStockConsumption).where(ProductStockConsumption.product_id == product_id))
+        for sc in data.stock_consumption:
+            db.add(ProductStockConsumption(
+                product_id=product_id, stock_item_id=sc.stock_item_id, quantity=Decimal(str(sc.quantity)),
+            ))
+
+    if data.staff is not None:
+        await db.execute(sa_delete(ProductStaff).where(ProductStaff.product_id == product_id))
+        for s in data.staff:
+            db.add(ProductStaff(product_id=product_id, user_id=s.user_id, is_primary=s.is_primary))
+
+    if data.machine_ids is not None:
+        await db.execute(sa_delete(product_machines).where(product_machines.c.product_id == product_id))
+        for m in data.machine_ids:
+            await db.execute(product_machines.insert().values(product_id=product_id, machine_id=m.id, is_primary=m.is_primary))
+
+    if data.box_ids is not None:
+        await db.execute(sa_delete(product_boxes).where(product_boxes.c.product_id == product_id))
+        for b in data.box_ids:
+            await db.execute(product_boxes.insert().values(product_id=product_id, box_id=b.id, is_primary=b.is_primary))
+
+    await db.commit()
+    return await get_product_resources(product_id, db, current_user)
 
 
 # ==================== Coupons ====================

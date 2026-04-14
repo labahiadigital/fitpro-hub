@@ -31,7 +31,9 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconBox,
+  IconDownload,
   IconEdit,
+  IconLink,
   IconPackage,
   IconPlus,
   IconSearch,
@@ -52,6 +54,8 @@ import {
   useRegisterMovement,
   useCreateStockCategory,
   useItemMovements,
+  useLinkedProducts,
+  useExportStock,
 } from "../../hooks/useStock";
 
 const UNITS = [
@@ -86,15 +90,25 @@ export function StockPage() {
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [movementItem, setMovementItem] = useState<StockItem | null>(null);
 
+  const [detailItem, setDetailItem] = useState<StockItem | null>(null);
+  const [detailModalOpened, { open: openDetailModal, close: closeDetailModal }] = useDisclosure(false);
+
   const { data: items = [], isLoading } = useStockItems(debouncedSearch, categoryFilter || undefined, lowStockOnly);
   const { data: categories = [] } = useStockCategories();
   const { data: summary } = useStockSummary();
   const { data: movements = [] } = useItemMovements(movementItem?.id);
+  const { data: linkedProducts = [] } = useLinkedProducts(detailItem?.id);
+  const { exportToExcel } = useExportStock();
   const createItem = useCreateStockItem();
   const updateItem = useUpdateStockItem();
   const deleteItem = useDeleteStockItem();
   const registerMovement = useRegisterMovement();
   const createCategory = useCreateStockCategory();
+
+  const handleOpenDetail = (item: StockItem) => {
+    setDetailItem(item);
+    openDetailModal();
+  };
 
   const categoryOptions = useMemo(
     () => categories.map((c) => ({ value: c.id, label: c.name })),
@@ -273,6 +287,11 @@ export function StockPage() {
         <Button leftSection={<IconPlus size={14} />} onClick={handleOpenCreate} radius="md" size="sm">
           Añadir Elemento
         </Button>
+        <Tooltip label="Exportar a Excel">
+          <Button leftSection={<IconDownload size={14} />} variant="light" color="green" radius="md" size="sm" onClick={exportToExcel}>
+            Exportar
+          </Button>
+        </Tooltip>
       </Group>
 
       {/* Items Table */}
@@ -296,7 +315,7 @@ export function StockPage() {
               {items.map((item) => (
                 <Table.Tr key={item.id}>
                   <Table.Td>
-                    <Text size="sm" fw={500}>{item.name}</Text>
+                    <Text size="sm" fw={500} style={{ cursor: "pointer" }} c="blue" onClick={() => handleOpenDetail(item)}>{item.name}</Text>
                     {item.description && <Text size="xs" c="dimmed" lineClamp={1}>{item.description}</Text>}
                   </Table.Td>
                   <Table.Td>
@@ -417,6 +436,86 @@ export function StockPage() {
             </Group>
           </Stack>
         </form>
+      </Modal>
+
+      {/* Stock Detail / Linked Products Modal */}
+      <Modal
+        opened={detailModalOpened}
+        onClose={closeDetailModal}
+        title={detailItem?.name || "Detalle de stock"}
+        size="md"
+        radius="lg"
+      >
+        {detailItem && (
+          <Stack>
+            <Paper p="sm" radius="md" bg="var(--mantine-color-blue-light)">
+              <Group justify="space-between">
+                <Text fw={600}>{detailItem.name}</Text>
+                <Badge size="lg" variant="filled">Stock: {detailItem.current_stock} {detailItem.unit}</Badge>
+              </Group>
+            </Paper>
+
+            {detailItem.description && <Text size="sm" c="dimmed">{detailItem.description}</Text>}
+
+            <Group grow>
+              <Paper p="xs" radius="md" withBorder>
+                <Text size="xs" c="dimmed">Precio unitario</Text>
+                <Text fw={600}>{detailItem.price.toFixed(2)} €</Text>
+              </Paper>
+              <Paper p="xs" radius="md" withBorder>
+                <Text size="xs" c="dimmed">Valor total</Text>
+                <Text fw={600}>{(detailItem.current_stock * detailItem.price).toFixed(2)} €</Text>
+              </Paper>
+              <Paper p="xs" radius="md" withBorder>
+                <Text size="xs" c="dimmed">Ubicación</Text>
+                <Text fw={600}>{detailItem.location || "—"}</Text>
+              </Paper>
+            </Group>
+
+            <Divider label="Productos / Servicios vinculados" labelPosition="center" />
+
+            {linkedProducts.length === 0 ? (
+              <Text size="sm" c="dimmed" ta="center" py="md">
+                Este elemento de stock no está vinculado a ningún producto o servicio.
+              </Text>
+            ) : (
+              <Table striped withTableBorder style={{ fontSize: 13 }}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Tipo</Table.Th>
+                    <Table.Th>Nombre</Table.Th>
+                    <Table.Th style={{ textAlign: "right" }}>Uds. por venta</Table.Th>
+                    <Table.Th>Impacto</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {linkedProducts.map((lp) => (
+                    <Table.Tr key={`${lp.type}-${lp.id}`}>
+                      <Table.Td>
+                        <Badge size="xs" color={lp.type === "product" ? "blue" : "green"} variant="light">
+                          {lp.type === "product" ? "Producto" : "Servicio"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td><Text size="sm" fw={500}>{lp.name}</Text></Table.Td>
+                      <Table.Td style={{ textAlign: "right" }}>
+                        <Text size="sm" fw={600}>{lp.quantity_per_sale} {detailItem.unit}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge size="xs" color="orange" variant="light">
+                          <IconLink size={10} /> Reduce stock
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            )}
+
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={closeDetailModal}>Cerrar</Button>
+            </Group>
+          </Stack>
+        )}
       </Modal>
 
       {/* Register Movement Modal */}

@@ -1,7 +1,38 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, paymentsApi, productsApi } from "../services/api";
+import api, { paymentsApi, productsApi } from "../services/api";
 import { useAuthStore } from "../stores/auth";
 import { notifications } from "@mantine/notifications";
+
+export interface ProductStockConsumption {
+  stock_item_id: string;
+  stock_item_name?: string;
+  quantity: number;
+}
+
+export interface ProductStaffAssignment {
+  user_id: string;
+  user_name?: string;
+  is_primary: boolean;
+}
+
+export interface ProductMachineBinding {
+  machine_id: string;
+  machine_name?: string;
+  is_primary: boolean;
+}
+
+export interface ProductBoxBinding {
+  box_id: string;
+  box_name?: string;
+  is_primary: boolean;
+}
+
+export interface ProductResources {
+  stock_consumption: ProductStockConsumption[];
+  staff: ProductStaffAssignment[];
+  machines: ProductMachineBinding[];
+  boxes: ProductBoxBinding[];
+}
 
 export interface Payment {
   id: string;
@@ -268,6 +299,30 @@ export function useCancelSubscription() {
     },
     onError: (error: any) => {
       notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al cancelar suscripción", color: "red" });
+    },
+  });
+}
+
+export function useProductResources(productId: string | undefined) {
+  return useQuery<ProductResources>({
+    queryKey: ["product-resources", productId],
+    queryFn: async () => (await productsApi.getResources(productId!)).data,
+    enabled: !!productId,
+  });
+}
+
+export function useUpdateProductResources() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ productId, data }: { productId: string; data: Partial<ProductResources & { machine_ids?: { id: string; is_primary: boolean }[]; box_ids?: { id: string; is_primary: boolean }[] }> }) => {
+      return productsApi.updateResources(productId, data);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["product-resources", variables.productId] });
+      notifications.show({ title: "Recursos actualizados", message: "Los recursos del producto se han guardado", color: "green" });
+    },
+    onError: (error: any) => {
+      notifications.show({ title: "Error", message: error?.response?.data?.detail || "Error al guardar recursos", color: "red" });
     },
   });
 }
