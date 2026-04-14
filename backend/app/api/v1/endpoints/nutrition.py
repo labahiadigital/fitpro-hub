@@ -327,7 +327,8 @@ async def create_meal_plan(
         next_review_date=next_review,
     )
     db.add(meal_plan)
-    await db.flush()
+    await db.commit()
+    await db.refresh(meal_plan)
 
     if parsed_end and data.client_id:
         await create_auto_task(
@@ -357,8 +358,6 @@ async def create_meal_plan(
             notification_link="/nutrition",
         )
 
-    await db.commit()
-    await db.refresh(meal_plan)
     return meal_plan
 
 
@@ -457,7 +456,6 @@ async def update_meal_plan(
                 description=f"El plan nutricional '{plan.name}' finaliza en esta fecha.",
                 notification_link="/nutrition",
             )
-        await db.commit()
 
     return plan
 
@@ -635,7 +633,8 @@ async def assign_meal_plan_to_client(
     )
     
     db.add(assigned_plan)
-    await db.flush()
+    await db.commit()
+    await db.refresh(assigned_plan)
 
     if parsed_end:
         await create_auto_task(
@@ -686,8 +685,6 @@ async def assign_meal_plan_to_client(
         import logging
         logging.getLogger(__name__).exception("Failed to notify client for plan assignment")
 
-    await db.commit()
-    await db.refresh(assigned_plan)
     return assigned_plan
 
 

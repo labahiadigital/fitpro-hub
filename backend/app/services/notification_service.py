@@ -17,7 +17,9 @@ Usage from any endpoint / service:
     )
 
 The function reads the user's notification preferences and dispatches
-via the active channels (email, in_app, or both).
+via the active channels (email, in_app, or both).  It is safe to call
+after a commit – internally it performs its own commit so the
+Notification row is always persisted.
 """
 
 import logging
@@ -36,6 +38,11 @@ _DEFAULT_CHANNELS = {"email": True, "in_app": True}
 
 
 def _get_channel_prefs(user: User, event: str) -> dict:
+    """Return {"email": bool, "in_app": bool} for the given event.
+
+    Reads from ``user.preferences["notifications"][event]``.  Falls back
+    to defaults (both enabled) when no specific config exists.
+    """
     stored = (user.preferences or {}).get("notifications", {})
     if isinstance(stored, dict):
         channels = stored.get(event)
@@ -44,8 +51,6 @@ def _get_channel_prefs(user: User, event: str) -> dict:
                 "email": channels.get("email", True),
                 "in_app": channels.get("in_app", True),
             }
-        if event.startswith("email_"):
-            return _DEFAULT_CHANNELS.copy()
     return _DEFAULT_CHANNELS.copy()
 
 
@@ -63,33 +68,46 @@ async def notify(
     email_html: Optional[str] = None,
     email_to: Optional[str] = None,
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        logger.warning("notify: user %s not found", user_id)
-        return
+    """Create an in-app notification (and optionally enqueue an email).
 
-    prefs = _get_channel_prefs(user, event)
+    The function is **safe to call after a commit** – it performs its own
+    ``flush`` + ``commit`` so the Notification row is always persisted.
+    Any internal error is caught and logged; the caller is never blocked.
+    """
+    try:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            logger.warning("notify: user %s not found", user_id)
+            return
 
-    if prefs.get("in_app"):
-        notif = Notification(
-            workspace_id=workspace_id,
-            user_id=user_id,
-            title=title,
-            body=body,
-            type=notification_type,
-            link=link,
-        )
-        db.add(notif)
-        await db.flush()
+        prefs = _get_channel_prefs(user, event)
 
-    if prefs.get("email") and email_html:
-        try:
-            from app.tasks.notifications import send_email_task
-            send_email_task.delay(
-                to_email=email_to or user.email,
-                subject=email_subject or title,
-                html_content=email_html,
+        if prefs.get("in_app"):
+            notif = Notification(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                title=title,
+                body=body,
+                type=notification_type,
+                link=link,
             )
+            db.add(notif)
+            await db.commit()
+
+        if prefs.get("email") and email_html:
+            try:
+                from app.tasks.notifications import send_email_task
+                send_email_task.delay(
+                    to_email=email_to or user.email,
+                    subject=email_subject or title,
+                    html_content=email_html,
+                )
+            except Exception:
+                logger.exception("notify: failed to enqueue email for user %s", user_id)
+    except Exception:
+        logger.exception("notify: failed to dispatch notification event=%s user=%s", event, user_id)
+        try:
+            await db.rollback()
         except Exception:
-            logger.exception("notify: failed to enqueue email for user %s", user_id)
+            pass

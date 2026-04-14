@@ -510,7 +510,8 @@ async def create_program(
         next_review_date=next_review,
     )
     db.add(program)
-    await db.flush()
+    await db.commit()
+    await db.refresh(program)
 
     if parsed_end and data.client_id:
         await create_auto_task(
@@ -540,8 +541,6 @@ async def create_program(
             notification_link="/workouts",
         )
 
-    await db.commit()
-    await db.refresh(program)
     return program
 
 
@@ -644,10 +643,9 @@ async def update_program(
                 source="auto",
                 source_ref=f"workout_program_end:{program.id}",
                 client_id=program.client_id,
-                description=f"El programa de entrenamiento '{program.name}' finaliza en esta fecha.",
+                description=f"El programa de entrenamiento '{program.name}'. Finaliza en esta fecha.",
                 notification_link="/workouts",
             )
-        await db.commit()
 
     return program
 
@@ -833,7 +831,8 @@ async def assign_program_to_client(
     )
 
     db.add(assigned_program)
-    await db.flush()
+    await db.commit()
+    await db.refresh(assigned_program)
 
     if parsed_end:
         await create_auto_task(
@@ -884,8 +883,6 @@ async def assign_program_to_client(
         import logging
         logging.getLogger(__name__).exception("Failed to notify client for program assignment")
 
-    await db.commit()
-    await db.refresh(assigned_program)
     return assigned_program
 
 

@@ -530,6 +530,8 @@ async def mark_payment_paid(
         user_name=getattr(getattr(current_user, "user", current_user), "full_name", None),
     )
 
+    await db.commit()
+
     await notify(
         db=db,
         event="payment_received",
@@ -542,8 +544,6 @@ async def mark_payment_paid(
         email_subject=f"Pago recibido: {float(payment.amount):.2f} EUR",
         email_html=f"<p>Se ha registrado un pago de <strong>{float(payment.amount):.2f} EUR</strong> — {payment.description}.</p>",
     )
-
-    await db.commit()
     return {
         "status": "ok",
         "message": "Pago marcado como completado",

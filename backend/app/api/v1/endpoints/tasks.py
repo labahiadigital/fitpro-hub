@@ -288,7 +288,11 @@ async def create_auto_task(
     notify_user: bool = True,
     notification_link: str | None = None,
 ):
-    """Create an automatic task and optionally notify the assignee."""
+    """Create an automatic task and optionally notify the assignee.
+
+    Safe to call after a commit – creates the task in its own transaction.
+    Returns the Task or None on error / duplicate.
+    """
     try:
         if source_ref:
             existing = await db.execute(
@@ -318,25 +322,26 @@ async def create_auto_task(
             source_ref=source_ref,
         )
         db.add(task)
-        await db.flush()
+        await db.commit()
 
         if notify_user:
-            try:
-                from app.services.notification_service import notify
-                await notify(
-                    db=db,
-                    event="task_created",
-                    user_id=target_user,
-                    workspace_id=workspace_id,
-                    title=f"Nueva tarea: {title}",
-                    body=description or title,
-                    notification_type="reminder",
-                    link=notification_link or "/tasks",
-                )
-            except Exception:
-                logger.exception("Failed to send notification for auto-task: %s", title)
+            from app.services.notification_service import notify
+            await notify(
+                db=db,
+                event="task_created",
+                user_id=target_user,
+                workspace_id=workspace_id,
+                title=f"Nueva tarea: {title}",
+                body=description or title,
+                notification_type="reminder",
+                link=notification_link or "/tasks",
+            )
 
         return task
     except Exception:
         logger.exception("Failed to create auto-task: %s", title)
+        try:
+            await db.rollback()
+        except Exception:
+            pass
         return None

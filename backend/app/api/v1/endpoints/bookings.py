@@ -178,7 +178,11 @@ async def _notify_booking_parties(
     client_body: str,
     link: str = "/calendar",
 ):
-    """Send in-app notifications to both trainer and client for a booking event."""
+    """Send in-app notifications to both trainer and client for a booking event.
+
+    Each call to ``notify`` is self-contained (own commit + try/except),
+    so failures never propagate to the caller.
+    """
     start_str = booking.start_time.strftime("%d/%m/%Y %H:%M") if booking.start_time else ""
 
     if booking.organizer_id:
