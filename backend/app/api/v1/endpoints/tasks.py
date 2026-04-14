@@ -288,6 +288,8 @@ async def create_auto_task(
     notify_user: bool = True,
     notification_link: str | None = None,
     replace_existing: bool = False,
+    also_notify_client: bool = False,
+    client_notification_link: str | None = None,
 ):
     """Create an automatic task and optionally notify the assignee.
 
@@ -297,8 +299,12 @@ async def create_auto_task(
 
     When *replace_existing* is True and a task with the same source_ref
     already exists, the old task is soft-deleted and a new one is created.
+
+    When *also_notify_client* is True and *client_id* is set, an additional
+    notification is sent to the client's linked user account.
     """
     from app.core.database import AsyncSessionLocal
+    from app.models.client import Client
 
     try:
         async with AsyncSessionLocal() as session:
@@ -352,9 +358,32 @@ async def create_auto_task(
                     notification_type="reminder",
                     link=notification_link or "/tasks",
                 )
-                logger.info("auto-task: notification sent for ref=%s", source_ref)
+                logger.info("auto-task: notification sent for ref=%s to user=%s", source_ref, target_user)
             except Exception:
                 logger.exception("Failed to notify for auto-task: %s", title)
+
+        if also_notify_client and client_id:
+            try:
+                async with AsyncSessionLocal() as session:
+                    result = await session.execute(
+                        select(Client.user_id).where(Client.id == client_id)
+                    )
+                    client_user_id = result.scalar_one_or_none()
+                if client_user_id and client_user_id != target_user:
+                    from app.services.notification_service import notify
+                    await notify(
+                        db=db,
+                        event="task_assigned",
+                        user_id=client_user_id,
+                        workspace_id=workspace_id,
+                        title=title,
+                        body=description or title,
+                        notification_type="info",
+                        link=client_notification_link or notification_link or "/my-workouts",
+                    )
+                    logger.info("auto-task: client notification sent ref=%s client_user=%s", source_ref, client_user_id)
+            except Exception:
+                logger.exception("Failed to notify client for auto-task: %s", title)
 
         return task
     except Exception:

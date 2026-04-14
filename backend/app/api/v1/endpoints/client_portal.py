@@ -2783,8 +2783,7 @@ async def mark_client_messages_read(
 ):
     """Mark all messages in client's conversation as read."""
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    
-    # Get conversation
+
     result = await db.execute(
         select(Conversation).where(
             and_(
@@ -2794,19 +2793,31 @@ async def mark_client_messages_read(
         )
     )
     conversation = result.scalar_one_or_none()
-    
+
     if not conversation:
         return {"success": True, "marked_count": 0}
-    
-    # For client, we reset unread_count to 0 (messages from trainer are now read)
-    # Note: This is simplified - in a real app you'd track read status per-user
-    # For now, we'll just reset the count as the client views the chat
-    old_count = conversation.unread_count or 0
+
     conversation.unread_count = 0
-    
+
+    unread_msgs_result = await db.execute(
+        select(Message).where(
+            and_(
+                Message.conversation_id == conversation.id,
+                Message.direction == MessageDirection.OUTBOUND,
+                Message.is_deleted.is_(False),
+                ~Message.read_by.contains([current_user.id]),
+            )
+        )
+    )
+    unread_msgs = unread_msgs_result.scalars().all()
+    for msg in unread_msgs:
+        current_read_by = list(msg.read_by or [])
+        current_read_by.append(current_user.id)
+        msg.read_by = current_read_by
+
     await db.commit()
-    
-    return {"success": True, "marked_count": old_count}
+
+    return {"success": True, "marked_count": len(unread_msgs)}
 
 
 @router.get("/messages/unread-count")

@@ -33,7 +33,7 @@ import {
   IconCalendar,
   IconPhone,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
 import { api } from "../../services/api";
@@ -241,18 +241,41 @@ export function OnboardingPage() {
     }
   };
 
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleInputFocus = useCallback((e: FocusEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target || !["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    el.addEventListener("focusin", handleInputFocus);
+    return () => el.removeEventListener("focusin", handleInputFocus);
+  }, [handleInputFocus]);
+
   return (
     <Box
+      ref={contentRef}
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "center",
-        padding: "20px",
+        paddingTop: "max(20px, env(safe-area-inset-top))",
+        paddingBottom: "max(20px, env(safe-area-inset-bottom))",
+        paddingLeft: 20,
+        paddingRight: 20,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }}
     >
-      <Container size="md" w="100%">
+      <Container size="md" w="100%" my="auto">
         <Paper
           radius="xl"
           p={{ base: "md", sm: "xl", lg: 40 }}

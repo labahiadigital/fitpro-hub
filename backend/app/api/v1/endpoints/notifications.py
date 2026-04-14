@@ -139,7 +139,7 @@ async def mark_notifications_read(
             Notification.id.in_(data.notification_ids),
             Notification.user_id == current_user.id,
         )
-        .values(is_read=True, read_at=datetime.utcnow().isoformat())
+        .values(is_read=True, read_at=datetime.utcnow())
     )
     await db.commit()
     return {"message": "Notificaciones marcadas como leídas"}
@@ -158,7 +158,7 @@ async def mark_all_notifications_read(
             Notification.user_id == current_user.id,
             Notification.is_read == False,
         )
-        .values(is_read=True, read_at=datetime.utcnow().isoformat())
+        .values(is_read=True, read_at=datetime.utcnow())
     )
     
     if data.type:

@@ -525,6 +525,8 @@ async def create_program(
             client_id=data.client_id,
             description=f"El programa de entrenamiento '{data.name}' finaliza en esta fecha.",
             notification_link="/workouts",
+            also_notify_client=True,
+            client_notification_link="/my-workouts",
         )
 
     if next_review and data.client_id:
@@ -539,6 +541,8 @@ async def create_program(
             client_id=data.client_id,
             description=f"Revisar progreso del programa '{data.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/workouts",
+            also_notify_client=True,
+            client_notification_link="/my-workouts",
         )
 
     return program
@@ -633,6 +637,8 @@ async def update_program(
                 description=f"Revisar progreso del programa '{program.name}'. Intervalo: cada {program.review_interval_days} días.",
                 notification_link="/workouts",
                 replace_existing=True,
+                also_notify_client=True,
+                client_notification_link="/my-workouts",
             )
         if program.end_date:
             await create_auto_task(
@@ -647,6 +653,8 @@ async def update_program(
                 description=f"El programa de entrenamiento '{program.name}' finaliza en esta fecha.",
                 notification_link="/workouts",
                 replace_existing=True,
+                also_notify_client=True,
+                client_notification_link="/my-workouts",
             )
 
     return program
@@ -848,6 +856,8 @@ async def assign_program_to_client(
             client_id=data.client_id,
             description=f"El programa de entrenamiento '{template.name}' finaliza en esta fecha.",
             notification_link="/workouts",
+            also_notify_client=True,
+            client_notification_link="/my-workouts",
         )
 
     if next_review:
@@ -862,6 +872,8 @@ async def assign_program_to_client(
             client_id=data.client_id,
             description=f"Revisar progreso del programa '{template.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/workouts",
+            also_notify_client=True,
+            client_notification_link="/my-workouts",
         )
 
     try:

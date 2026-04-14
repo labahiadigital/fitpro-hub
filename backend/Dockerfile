@@ -33,4 +33,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=10s --start-period=60s --retries=10 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["gunicorn", "app.main:app", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--timeout", "120", "--graceful-timeout", "30", "--preload", "--access-logfile", "-", "--access-logformat", "%(h)s %(m)s %(U)s %(s)s %(D)sμs", "--log-level", "info"]
+CMD ["gunicorn", "app.main:app", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--timeout", "120", "--graceful-timeout", "30", "--preload", "--access-logfile", "-", "--error-logfile", "-", "--access-logformat", "%(h)s %(m)s %(U)s %(s)s %(D)sμs", "--log-level", "info"]

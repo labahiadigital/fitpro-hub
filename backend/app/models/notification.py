@@ -1,5 +1,5 @@
 """Notification models."""
-from sqlalchemy import Column, String, Text, Boolean, ForeignKey, Integer
+from sqlalchemy import Column, String, Text, Boolean, ForeignKey, Integer, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
@@ -21,7 +21,7 @@ class Notification(BaseModel):
     type = Column(Text, nullable=True)  # info, success, warning, error, reminder
     link = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False)
-    read_at = Column(String, nullable=True)
+    read_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="notifications")

@@ -1,10 +1,13 @@
 import {
   ActionIcon,
   Badge,
+  Box,
   Button,
   Card,
   Group,
+  HoverCard,
   Image,
+  Modal,
   MultiSelect,
   ScrollArea,
   Select,
@@ -23,6 +26,7 @@ import {
   IconPlayerPlay,
   IconPlus,
   IconSearch,
+  IconX,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
@@ -103,6 +107,7 @@ export function ExerciseLibrary({
   const [videoModalExercise, setVideoModalExercise] = useState<Exercise | null>(
     null
   );
+  const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);
 
   const filteredExercises = exercises.filter((exercise) => {
     const matchesSearch =
@@ -218,7 +223,6 @@ export function ExerciseLibrary({
                     style={{ cursor: "pointer" }}
                     withBorder
                   >
-                    {/* Thumbnail */}
                     <Card.Section>
                       <div
                         style={{
@@ -228,11 +232,43 @@ export function ExerciseLibrary({
                         }}
                       >
                         {exercise.thumbnailUrl ? (
-                          <Image
-                            alt={exercise.name}
-                            height={120}
-                            src={exercise.thumbnailUrl}
-                          />
+                          <HoverCard width={320} shadow="lg" position="right" withArrow openDelay={200} closeDelay={100}>
+                            <HoverCard.Target>
+                              <Box
+                                style={{ cursor: "zoom-in", height: 120 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewExercise(exercise);
+                                }}
+                              >
+                                <Image
+                                  alt={exercise.name}
+                                  height={120}
+                                  src={exercise.thumbnailUrl}
+                                />
+                              </Box>
+                            </HoverCard.Target>
+                            <HoverCard.Dropdown p={0} style={{ overflow: "hidden", borderRadius: 12 }}>
+                              <Image
+                                alt={exercise.name}
+                                src={exercise.thumbnailUrl}
+                                height={240}
+                                fit="cover"
+                              />
+                              <Box p="xs">
+                                <Text fw={600} size="sm">{exercise.name}</Text>
+                                {exercise.muscleGroups.length > 0 && (
+                                  <Group gap={4} mt={4}>
+                                    {exercise.muscleGroups.map((m) => (
+                                      <Badge key={m} size="xs" variant="outline">
+                                        {muscleGroupOptions.find((o) => o.value === m)?.label || m}
+                                      </Badge>
+                                    ))}
+                                  </Group>
+                                )}
+                              </Box>
+                            </HoverCard.Dropdown>
+                          </HoverCard>
                         ) : (
                           <div
                             style={{
@@ -368,6 +404,56 @@ export function ExerciseLibrary({
           </Stack>
         )}
       </BottomSheet>
+
+      {/* Image Preview Modal */}
+      <Modal
+        opened={!!previewExercise}
+        onClose={() => setPreviewExercise(null)}
+        size="lg"
+        padding={0}
+        withCloseButton={false}
+        centered
+        radius="lg"
+        styles={{ body: { padding: 0 }, content: { overflow: "hidden" } }}
+      >
+        {previewExercise && (
+          <Box pos="relative">
+            <Image
+              alt={previewExercise.name}
+              src={previewExercise.thumbnailUrl}
+              fit="contain"
+              mah="70vh"
+              style={{ background: "#000" }}
+            />
+            <ActionIcon
+              variant="filled"
+              color="dark"
+              radius="xl"
+              size="lg"
+              onClick={() => setPreviewExercise(null)}
+              style={{ position: "absolute", top: 12, right: 12 }}
+            >
+              <IconX size={18} />
+            </ActionIcon>
+            <Box p="md">
+              <Text fw={700} size="lg">{previewExercise.name}</Text>
+              <Group gap={6} mt={4}>
+                <Badge color={difficultyColors[previewExercise.difficulty]} size="sm">
+                  {difficultyLabels[previewExercise.difficulty]}
+                </Badge>
+                {previewExercise.muscleGroups.map((m) => (
+                  <Badge key={m} size="sm" variant="outline">
+                    {muscleGroupOptions.find((o) => o.value === m)?.label || m}
+                  </Badge>
+                ))}
+              </Group>
+              {previewExercise.description && (
+                <Text size="sm" c="dimmed" mt="xs">{previewExercise.description}</Text>
+              )}
+            </Box>
+          </Box>
+        )}
+      </Modal>
     </>
   );
 }

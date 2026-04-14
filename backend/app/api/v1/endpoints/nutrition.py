@@ -342,6 +342,8 @@ async def create_meal_plan(
             client_id=data.client_id,
             description=f"El plan nutricional '{data.name}' finaliza en esta fecha.",
             notification_link="/nutrition",
+            also_notify_client=True,
+            client_notification_link="/my-nutrition",
         )
 
     if next_review and data.client_id:
@@ -356,6 +358,8 @@ async def create_meal_plan(
             client_id=data.client_id,
             description=f"Revisar progreso del plan nutricional '{data.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/nutrition",
+            also_notify_client=True,
+            client_notification_link="/my-nutrition",
         )
 
     return meal_plan
@@ -443,6 +447,8 @@ async def update_meal_plan(
                 description=f"Revisar progreso del plan nutricional '{plan.name}'. Intervalo: cada {plan.review_interval_days} días.",
                 notification_link="/nutrition",
                 replace_existing=True,
+                also_notify_client=True,
+                client_notification_link="/my-nutrition",
             )
         if plan.end_date:
             await create_auto_task(
@@ -457,6 +463,8 @@ async def update_meal_plan(
                 description=f"El plan nutricional '{plan.name}' finaliza en esta fecha.",
                 notification_link="/nutrition",
                 replace_existing=True,
+                also_notify_client=True,
+                client_notification_link="/my-nutrition",
             )
 
     return plan
@@ -650,6 +658,8 @@ async def assign_meal_plan_to_client(
             client_id=data.client_id,
             description=f"El plan nutricional '{template.name}' finaliza en esta fecha.",
             notification_link="/nutrition",
+            also_notify_client=True,
+            client_notification_link="/my-nutrition",
         )
 
     if next_review:
@@ -664,6 +674,8 @@ async def assign_meal_plan_to_client(
             client_id=data.client_id,
             description=f"Revisar progreso del plan nutricional '{template.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/nutrition",
+            also_notify_client=True,
+            client_notification_link="/my-nutrition",
         )
 
     try:

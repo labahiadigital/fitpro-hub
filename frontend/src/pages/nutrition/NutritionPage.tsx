@@ -426,7 +426,7 @@ export function NutritionPage() {
     return supabaseFoods.map((food: any) => ({
       id: food.id, name: food.name || "Sin nombre", calories: food.calories || 0,
       protein: food.protein_g || 0, carbs: food.carbs_g || 0, fat: food.fat_g || 0,
-      serving_size: food.quantity || "100g", category: mapCategory(food.category),
+      serving_size: "100", category: mapCategory(food.category),
     }));
   }, [supabaseFoods]);
 
@@ -687,7 +687,7 @@ export function NutritionPage() {
     let foodsList = paginatedFoods.items.map((food: any) => ({
       id: food.id, name: food.name || "Sin nombre", calories: food.calories || 0,
       protein: food.protein_g || 0, carbs: food.carbs_g || 0, fat: food.fat_g || 0,
-      serving_size: food.serving_size || 100, category: mapCategory(food.category), is_global: food.is_global ?? false,
+      serving_size: "100", category: mapCategory(food.category), is_global: food.is_global ?? false,
     }));
     if (foodSourceFilter === "system") foodsList = foodsList.filter((f: Food) => f.is_global);
     else if (foodSourceFilter === "custom") foodsList = foodsList.filter((f: Food) => !f.is_global);

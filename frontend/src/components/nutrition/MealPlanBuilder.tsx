@@ -384,7 +384,7 @@ export function MealPlanBuilder({
           protein: food.protein_g || 0,
           carbs: food.carbs_g || 0,
           fat: food.fat_g || 0,
-          serving_size: food.quantity || `${food.serving_size || 100}g`,
+          serving_size: "100",
           category: food.category || "Otros",
         })),
         total: data?.total || 0,
@@ -780,7 +780,7 @@ export function MealPlanBuilder({
         protein: Number(created.protein_g ?? values.protein_g) || 0,
         carbs: Number(created.carbs_g ?? values.carbs_g) || 0,
         fat: Number(created.fat_g ?? values.fat_g) || 0,
-        serving_size: `${created.serving_size ?? values.serving_size ?? 100}${created.serving_unit ?? values.serving_unit ?? "g"}`,
+        serving_size: "100",
         category: created.category || values.category || "Otros",
       };
       closeCreateFoodModal();
