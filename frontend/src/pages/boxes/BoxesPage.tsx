@@ -74,7 +74,7 @@ export default function BoxesPage() {
     } else {
       setScheduleSlots(defaultWeekSlots());
     }
-  }, [boxScheduleData]);
+  }, [boxScheduleData, editingBox?.id]);
 
   const form = useForm({
     initialValues: {

@@ -400,8 +400,10 @@ export function TeamPage() {
   useEffect(() => {
     if (staffScheduleData && staffScheduleData.length > 0) {
       setEditScheduleSlots(staffScheduleData);
+    } else if (selectedMember) {
+      setEditScheduleSlots(defaultWeekSlots());
     }
-  }, [staffScheduleData]);
+  }, [staffScheduleData, selectedMember?.user_id]);
 
   const handleEditMember = (member: TeamMember) => {
     setSelectedMember(member);

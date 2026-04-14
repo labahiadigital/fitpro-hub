@@ -76,7 +76,7 @@ export default function MachinesPage() {
     } else {
       setScheduleSlots(defaultWeekSlots());
     }
-  }, [machineScheduleData]);
+  }, [machineScheduleData, editing?.id]);
 
   const boxOptions = (boxes || []).map((b) => ({ value: b.id, label: b.name }));
 

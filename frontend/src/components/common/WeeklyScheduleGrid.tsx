@@ -1,7 +1,5 @@
 import { Group, Switch, Text, TextInput, Stack } from "@mantine/core";
-import type { ScheduleSlot } from "../../hooks/useSchedules";
-
-const DAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+import { DAY_LABELS, type ScheduleSlot } from "../../hooks/useSchedules";
 
 interface WeeklyScheduleGridProps {
   slots: ScheduleSlot[];

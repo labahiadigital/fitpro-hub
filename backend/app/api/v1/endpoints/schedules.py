@@ -1,10 +1,11 @@
 """Schedule CRUD for staff, machines, and boxes."""
+import re
 from datetime import time
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel as BaseSchema
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel as BaseSchema, field_validator
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +16,12 @@ from app.models.schedule import StaffSchedule, MachineSchedule, BoxSchedule
 router = APIRouter()
 
 DAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+_TIME_RE = re.compile(r"^\d{2}:\d{2}$")
+
+
+def _parse_time(value: str) -> time:
+    parts = value.split(":")
+    return time(int(parts[0]), int(parts[1]))
 
 
 class ScheduleSlot(BaseSchema):
@@ -22,6 +29,20 @@ class ScheduleSlot(BaseSchema):
     start_time: str
     end_time: str
     is_available: bool = True
+
+    @field_validator("day_of_week")
+    @classmethod
+    def validate_day(cls, v: int) -> int:
+        if not 0 <= v <= 6:
+            raise ValueError("day_of_week must be between 0 and 6")
+        return v
+
+    @field_validator("start_time", "end_time")
+    @classmethod
+    def validate_time_format(cls, v: str) -> str:
+        if not _TIME_RE.match(v):
+            raise ValueError("Time must be in HH:MM format")
+        return v
 
 
 class ScheduleSlotResponse(BaseSchema):
@@ -82,14 +103,12 @@ async def upsert_staff_schedule(
         )
     )
     for slot in data.slots:
-        parts_start = slot.start_time.split(":")
-        parts_end = slot.end_time.split(":")
         db.add(StaffSchedule(
             workspace_id=current_user.workspace_id,
             user_id=user_id,
             day_of_week=slot.day_of_week,
-            start_time=time(int(parts_start[0]), int(parts_start[1])),
-            end_time=time(int(parts_end[0]), int(parts_end[1])),
+            start_time=_parse_time(slot.start_time),
+            end_time=_parse_time(slot.end_time),
             is_available=slot.is_available,
         ))
     await db.commit()
@@ -127,14 +146,12 @@ async def upsert_machine_schedule(
         )
     )
     for slot in data.slots:
-        parts_start = slot.start_time.split(":")
-        parts_end = slot.end_time.split(":")
         db.add(MachineSchedule(
             workspace_id=current_user.workspace_id,
             machine_id=machine_id,
             day_of_week=slot.day_of_week,
-            start_time=time(int(parts_start[0]), int(parts_start[1])),
-            end_time=time(int(parts_end[0]), int(parts_end[1])),
+            start_time=_parse_time(slot.start_time),
+            end_time=_parse_time(slot.end_time),
             is_available=slot.is_available,
         ))
     await db.commit()
@@ -172,14 +189,12 @@ async def upsert_box_schedule(
         )
     )
     for slot in data.slots:
-        parts_start = slot.start_time.split(":")
-        parts_end = slot.end_time.split(":")
         db.add(BoxSchedule(
             workspace_id=current_user.workspace_id,
             box_id=box_id,
             day_of_week=slot.day_of_week,
-            start_time=time(int(parts_start[0]), int(parts_start[1])),
-            end_time=time(int(parts_end[0]), int(parts_end[1])),
+            start_time=_parse_time(slot.start_time),
+            end_time=_parse_time(slot.end_time),
             is_available=slot.is_available,
         ))
     await db.commit()
