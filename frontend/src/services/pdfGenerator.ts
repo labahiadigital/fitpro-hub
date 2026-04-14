@@ -252,8 +252,7 @@ function toNum(value: unknown, def = 0): number {
 function getItemMacros(item: MealItem) {
   const data = item.type === "food" ? item.food : item.supplement;
   if (!data) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  const serving = parseFloat(data.serving_size || "100") || 100;
-  const f = item.quantity_grams / serving;
+  const f = item.quantity_grams / 100;
   return {
     calories: toNum(data.calories) * f,
     protein: toNum(data.protein) * f,

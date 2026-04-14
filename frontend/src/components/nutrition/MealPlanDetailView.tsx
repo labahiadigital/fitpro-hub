@@ -190,9 +190,7 @@ function getMealFoods(meal: Meal): MealFood[] {
         };
       }
       
-      // Calculate macros based on quantity
-      const servingSize = parseFloat(data.serving_size || "100") || 100;
-      const factor = item.quantity_grams / servingSize;
+      const factor = item.quantity_grams / 100;
       
       return {
         id: item.id,

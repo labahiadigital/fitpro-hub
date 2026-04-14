@@ -2805,19 +2805,23 @@ async def mark_client_messages_read(
                 Message.conversation_id == conversation.id,
                 Message.direction == MessageDirection.OUTBOUND,
                 Message.is_deleted.is_(False),
-                ~Message.read_by.contains([current_user.id]),
             )
         )
     )
     unread_msgs = unread_msgs_result.scalars().all()
+    marked = 0
+    uid = current_user.id
     for msg in unread_msgs:
-        current_read_by = list(msg.read_by or [])
-        current_read_by.append(current_user.id)
-        msg.read_by = current_read_by
+        existing = list(msg.read_by or [])
+        if uid not in existing:
+            existing.append(uid)
+            msg.read_by = existing
+            flag_modified(msg, "read_by")
+            marked += 1
 
     await db.commit()
 
-    return {"success": True, "marked_count": len(unread_msgs)}
+    return {"success": True, "marked_count": marked}
 
 
 @router.get("/messages/unread-count")

@@ -167,13 +167,14 @@ interface MealPlanBuilderProps {
   onCopyWeek?: (fromWeek: number, toWeek: number) => void;
 }
 
-function getNutritionDayDate(sd: string | Date | null | undefined, week: number, dayIndex: number): string | null {
+function getNutritionDayInfo(sd: string | Date | null | undefined, week: number, dayIndex: number): { date: string; dayName: string } | null {
   if (!sd) return null;
   const d = new Date(sd);
   if (isNaN(d.getTime())) return null;
   d.setDate(d.getDate() + (week - 1) * 7 + dayIndex);
   const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-  return `${d.getDate()} ${months[d.getMonth()]}`;
+  const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  return { date: `${d.getDate()} ${months[d.getMonth()]}`, dayName: dayNames[d.getDay()] };
 }
 
 export function MealPlanBuilder({
@@ -260,8 +261,7 @@ export function MealPlanBuilder({
       .filter((i) => selectedForGrouping.has(i.id))
       .map((i) => {
         const data = i.type === "food" ? i.food : i.supplement;
-        const servingSizeGrams = parseFloat(data?.serving_size || "100") || 100;
-        const factor = i.quantity_grams / servingSizeGrams;
+        const factor = i.quantity_grams / 100;
         return {
           food_id: i.food_id || i.supplement_id || "",
           name: data?.name || "",
@@ -407,8 +407,7 @@ export function MealPlanBuilder({
     const itemData = item.type === "food" ? item.food : item.supplement;
     if (!itemData) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
-    const servingSizeGrams = parseFloat(itemData.serving_size) || 100;
-    const factor = item.quantity_grams / servingSizeGrams;
+    const factor = item.quantity_grams / 100;
 
     return {
       calories: (itemData.calories || 0) * factor,
@@ -422,14 +421,11 @@ export function MealPlanBuilder({
     const itemData = item.type === "food" ? item.food : item.supplement;
     if (!itemData) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
-    const servingSizeGrams = parseFloat(itemData.serving_size) || 100;
-    const factor = 100 / servingSizeGrams;
-
     return {
-      calories: Math.round((itemData.calories || 0) * factor),
-      protein: Math.round((itemData.protein || 0) * factor * 10) / 10,
-      carbs: Math.round((itemData.carbs || 0) * factor * 10) / 10,
-      fat: Math.round((itemData.fat || 0) * factor * 10) / 10,
+      calories: Math.round(itemData.calories || 0),
+      protein: Math.round((itemData.protein || 0) * 10) / 10,
+      carbs: Math.round((itemData.carbs || 0) * 10) / 10,
+      fat: Math.round((itemData.fat || 0) * 10) / 10,
     };
   }, []);
 
@@ -439,8 +435,7 @@ export function MealPlanBuilder({
       meal.items.forEach((item) => {
         const itemData = item.type === "food" ? item.food : item.supplement;
         if (!itemData) return;
-        const servingSizeGrams = parseFloat(itemData.serving_size) || 100;
-        const factor = item.quantity_grams / servingSizeGrams;
+        const factor = item.quantity_grams / 100;
         calories += (itemData.calories || 0) * factor;
         protein += (itemData.protein || 0) * factor;
         carbs += (itemData.carbs || 0) * factor;
@@ -455,8 +450,7 @@ export function MealPlanBuilder({
     meal.items.forEach((item) => {
       const itemData = item.type === "food" ? item.food : item.supplement;
       if (!itemData) return;
-      const servingSizeGrams = parseFloat(itemData.serving_size) || 100;
-      const factor = item.quantity_grams / servingSizeGrams;
+      const factor = item.quantity_grams / 100;
       calories += (itemData.calories || 0) * factor;
       protein += (itemData.protein || 0) * factor;
       carbs += (itemData.carbs || 0) * factor;
@@ -1189,10 +1183,12 @@ export function MealPlanBuilder({
           value={activeDay}
           onChange={(v) => v && setActiveDay(v)}
           data={days.map((day, idx) => {
-            const ds = getNutritionDayDate(startDate, currentWeek, idx);
+            const info = getNutritionDayInfo(startDate, currentWeek, idx);
+            const label = info ? info.dayName : day.dayName.slice(0, 3);
+            const dateStr = info ? ` (${info.date})` : "";
             return {
               value: day.id,
-              label: `${day.dayName}${ds ? ` (${ds})` : ""} — ${day.is_free_day ? "Libre" : `${day.meals?.length || 0} comidas`}`,
+              label: `${label}${dateStr} — ${day.is_free_day ? "Libre" : `${day.meals?.length || 0} comidas`}`,
             };
           })}
           size="sm"
@@ -1202,7 +1198,7 @@ export function MealPlanBuilder({
       ) : (
         <SimpleGrid cols={7} mb="md">
           {days.map((day, idx) => {
-            const ds = getNutritionDayDate(startDate, currentWeek, idx);
+            const info = getNutritionDayInfo(startDate, currentWeek, idx);
             return (
               <Paper
                 key={day.id}
@@ -1217,11 +1213,11 @@ export function MealPlanBuilder({
                 onClick={() => setActiveDay(day.id)}
               >
                 <Text ta="center" size="xs" fw={600}>
-                  {day.dayName.slice(0, 3)}
+                  {info ? info.dayName : day.dayName.slice(0, 3)}
                 </Text>
-                {ds && (
+                {info && (
                   <Text ta="center" size="10px" c="dimmed">
-                    {ds}
+                    {info.date}
                   </Text>
                 )}
                 <Text ta="center" size="xs" c={day.is_free_day ? "dimmed" : "blue"}>
@@ -1894,21 +1890,19 @@ export function MealPlanBuilder({
                           </Box>
                           <Group gap="xs">
                             {(() => {
-                              const ss = parseFloat(food.serving_size) || 100;
-                              const f100 = 100 / ss;
                               return (
                                 <>
                                   <Badge color="blue" variant="light">
-                                    {Math.round((food.calories || 0) * f100)} kcal
+                                    {Math.round(food.calories || 0)} kcal
                                   </Badge>
                                   <Badge size="xs" variant="outline">
-                                    P: {Math.round((food.protein || 0) * f100)}g
+                                    P: {Math.round(food.protein || 0)}g
                                   </Badge>
                                   <Badge size="xs" variant="outline">
-                                    C: {Math.round((food.carbs || 0) * f100)}g
+                                    C: {Math.round(food.carbs || 0)}g
                                   </Badge>
                                   <Badge size="xs" variant="outline">
-                                    G: {Math.round((food.fat || 0) * f100)}g
+                                    G: {Math.round(food.fat || 0)}g
                                   </Badge>
                                   <Text size="xs" fw={600} c="dimmed">/ 100g</Text>
                                 </>

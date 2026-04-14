@@ -323,8 +323,7 @@ function LogMealModal({
   });
 
   const addFoodFromSearch = (food: SearchableFoodResult, grams: number) => {
-    const servingSize = food.serving_size || 100;
-    const factor = grams / servingSize;
+    const factor = grams / 100;
     setFoods((prev) => [
       ...prev,
       {
@@ -712,8 +711,7 @@ function LogPlanMealModal({
     } else {
       const initial: FoodItem[] = (meal.items || []).map((item) => {
         const food = item.food || item.supplement;
-        const servingSize = parseFloat(String(food?.serving_size || "100")) || 100;
-        const factor = item.quantity_grams / servingSize;
+        const factor = item.quantity_grams / 100;
         return {
           name: food?.name || "Alimento",
           calories: Math.round(Number(food?.calories || 0) * factor),
@@ -764,8 +762,7 @@ function LogPlanMealModal({
   };
 
   const addFoodFromSearch = (food: SearchableFoodResult, grams: number) => {
-    const servingSize = food.serving_size || 100;
-    const factor = grams / servingSize;
+    const factor = grams / 100;
     setFoods((prev) => [
       ...prev,
       {
@@ -1172,10 +1169,8 @@ function NutritionDayDetail({
               const mealType = MEAL_TYPES.find(m => m.value === meal.name);
               const mealFoods = (meal.foods || meal.items?.map(item => {
                 const food = item.food || item.supplement;
-                const ss = parseFloat(String(food?.serving_size || "100")) || 100;
                 const qty = item.quantity_grams || 0;
-                const factor = qty / ss;
-                const per100 = 100 / ss;
+                const factor = qty / 100;
                 return {
                   name: food?.name || "Alimento",
                   calories: Math.round(Number(food?.calories || 0) * factor),
@@ -1185,10 +1180,10 @@ function NutritionDayDetail({
                   quantity: qty,
                   unit: "g",
                   recipe_group: item.recipe_group,
-                  calories_per_100g: Math.round(Number(food?.calories || 0) * per100),
-                  protein_per_100g: Math.round(Number(food?.protein || 0) * per100 * 10) / 10,
-                  carbs_per_100g: Math.round(Number(food?.carbs || 0) * per100 * 10) / 10,
-                  fat_per_100g: Math.round(Number(food?.fat || 0) * per100 * 10) / 10,
+                  calories_per_100g: Math.round(Number(food?.calories || 0)),
+                  protein_per_100g: Math.round(Number(food?.protein || 0) * 10) / 10,
+                  carbs_per_100g: Math.round(Number(food?.carbs || 0) * 10) / 10,
+                  fat_per_100g: Math.round(Number(food?.fat || 0) * 10) / 10,
                 };
               }) || []) as PlanMealFoodItem[];
               const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
@@ -1807,8 +1802,7 @@ export function MyNutritionPage() {
         for (const meal of meals) {
           const foods = meal.foods || meal.items?.map(item => {
             const fd = item.food || item.supplement;
-            const ss = parseFloat(String(fd?.serving_size || "100")) || 100;
-            const factor = (item.quantity_grams || 0) / ss;
+            const factor = (item.quantity_grams || 0) / 100;
             return {
               calories: Math.round(Number(fd?.calories || 0) * factor),
               protein: Math.round(Number(fd?.protein || 0) * factor * 10) / 10,
@@ -2244,9 +2238,8 @@ export function MyNutritionPage() {
                   }
                   return (meal.items || []).reduce((sum, item) => {
                     const food = item.food || item.supplement;
-                    const ss = parseFloat(String(food?.serving_size || "100")) || 100;
                     const qty = Number(item.quantity_grams) || 0;
-                    return sum + Math.round(Number(food?.calories || 0) * qty / ss);
+                    return sum + Math.round(Number(food?.calories || 0) * qty / 100);
                   }, 0);
                 })();
             const mealType = MEAL_TYPES.find(m => m.value === meal.name);
@@ -2770,10 +2763,8 @@ export function MyNutritionPage() {
                         const mealType = MEAL_TYPES.find(m => m.value === meal.name);
                         const mealFoods = (meal.foods || meal.items?.map(item => {
                           const food = item.food || item.supplement;
-                          const ss = parseFloat(String(food?.serving_size || "100")) || 100;
                           const qty = item.quantity_grams || 0;
-                          const factor = qty / ss;
-                          const per100 = 100 / ss;
+                          const factor = qty / 100;
                           return {
                             name: food?.name || "Alimento",
                             calories: Math.round(Number(food?.calories || 0) * factor),
@@ -2782,10 +2773,10 @@ export function MyNutritionPage() {
                             fat_g: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
                             quantity: qty,
                             unit: "g",
-                            calories_per_100g: Math.round(Number(food?.calories || 0) * per100),
-                            protein_per_100g: Math.round(Number(food?.protein || 0) * per100 * 10) / 10,
-                            carbs_per_100g: Math.round(Number(food?.carbs || 0) * per100 * 10) / 10,
-                            fat_per_100g: Math.round(Number(food?.fat || 0) * per100 * 10) / 10,
+                            calories_per_100g: Math.round(Number(food?.calories || 0)),
+                            protein_per_100g: Math.round(Number(food?.protein || 0) * 10) / 10,
+                            carbs_per_100g: Math.round(Number(food?.carbs || 0) * 10) / 10,
+                            fat_per_100g: Math.round(Number(food?.fat || 0) * 10) / 10,
                           };
                         }) || []) as PlanMealFoodItem[];
                         

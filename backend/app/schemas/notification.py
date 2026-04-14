@@ -32,7 +32,7 @@ class NotificationResponse(BaseSchema):
     type: Optional[str] = None
     link: Optional[str] = None
     is_read: bool = False
-    read_at: Optional[str] = None
+    read_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
 
