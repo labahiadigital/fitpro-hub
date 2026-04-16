@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
 from app.middleware.auth import CurrentUser, get_current_user, require_staff, require_workspace
@@ -424,17 +425,9 @@ async def update_meal_plan(
                     value = None
             setattr(plan, field, value)
 
-    if plan.client_id and not plan.is_template:
-        await db.execute(
-            update(MealPlan)
-            .where(
-                MealPlan.client_id == plan.client_id,
-                MealPlan.workspace_id == current_user.workspace_id,
-                MealPlan.id != plan.id,
-            )
-            .values(is_active=False)
-        )
-        plan.is_active = True
+    if data.plan is not None:
+        plan.executed_plan = copy.deepcopy(data.plan)
+        flag_modified(plan, "executed_plan")
 
     if data.review_interval_days is not None and plan.start_date:
         if data.review_interval_days > 0:
