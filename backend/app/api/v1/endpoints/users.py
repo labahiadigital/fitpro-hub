@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 import secrets
 import logging
 
+from app.core import ttl_cache
 from app.core.database import get_db
 from app.core.storage import resolve_url
 from app.core.config import settings
@@ -336,7 +337,11 @@ async def update_user(
     
     await db.commit()
     await db.refresh(user)
-    
+
+    # /me is cached per (user, workspace); evict so the updated profile shows up
+    # on the very next request instead of waiting for the 15 s TTL.
+    ttl_cache.invalidate_prefix(f"auth:me:{user.id}:")
+
     return user
 
 

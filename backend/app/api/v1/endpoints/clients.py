@@ -13,6 +13,7 @@ from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.parallel_db import parallel_queries
 from app.core.storage import resolve_url
 from app.models.client import Client, ClientTag
 from app.models.exercise import ClientMeasurement
@@ -233,20 +234,25 @@ async def list_clients(
         .order_by(Client.created_at.desc())
     )
 
-    # Sequential reads: AsyncSession disallows concurrent ops on the same session.
-    # The aggregate + count are cheap and return a single row each.
-    total_result = await db.execute(count_query)
-    stats_result = await db.execute(stats_query)
-    items_result = await db.execute(items_query)
-    total = total_result.scalar() or 0
-    stats_row = stats_result.one()
+    # Parallel reads across the pool: each query gets its own short-lived session.
+    # The items query is the slowest (has selectinload), so pipelining it with the
+    # aggregate + count collapses ~3 round-trips into ~1 wall-clock round-trip.
+    async def _count(s):
+        return (await s.execute(count_query)).scalar() or 0
+
+    async def _stats(s):
+        return (await s.execute(stats_query)).one()
+
+    async def _items(s):
+        return (await s.execute(items_query)).scalars().all()
+
+    total, stats_row, clients = await parallel_queries(_count, _stats, _items)
     total_all = int(stats_row.total or 0)
     total_active = int(stats_row.active or 0)
     total_pending = int(stats_row.pending or 0)
     total_inactive = int(stats_row.inactive or 0)
     total_deleted = int(stats_row.deleted or 0)
     total_new_month = int(stats_row.new_month or 0)
-    clients = items_result.scalars().all()
     
     # Resolve all avatar presigns concurrently instead of sequentially.
     resolved_avatars = await asyncio.gather(

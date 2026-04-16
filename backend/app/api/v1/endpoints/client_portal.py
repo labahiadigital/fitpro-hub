@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
+from app.core.parallel_db import parallel_queries
 from app.core import ttl_cache
 from app.core.storage import (
     delete_workspace_file,
@@ -281,48 +282,49 @@ async def get_client_dashboard(
     Get dashboard data for the authenticated client.
     """
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    
-    # Get upcoming bookings
-    upcoming_bookings_result = await db.execute(
+
+    # These four SELECTs only depend on client.id and are independent from each
+    # other. Running them in parallel against the pool cuts the dashboard RT
+    # from ~5 network round-trips to ~1.
+    week_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    client_id = client.id
+
+    bookings_q = (
         select(Booking)
         .where(
-            Booking.client_id == client.id,
-            Booking.status.in_(["confirmed", "pending"])
+            Booking.client_id == client_id,
+            Booking.status.in_(["confirmed", "pending"]),
         )
         .order_by(Booking.start_time)
         .limit(5)
     )
-    upcoming_bookings = upcoming_bookings_result.scalars().all()
-    
-    # Get workout logs for this week
-    week_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    logs_result = await db.execute(
-        select(WorkoutLog)
-        .where(
-            WorkoutLog.client_id == client.id,
-            WorkoutLog.created_at >= week_start
-        )
+    logs_q = select(WorkoutLog).where(
+        WorkoutLog.client_id == client_id,
+        WorkoutLog.created_at >= week_start,
     )
-    week_logs = logs_result.scalars().all()
-    
-    # Get assigned programs count
-    programs_result = await db.execute(
-        select(WorkoutProgram)
-        .where(
-            WorkoutProgram.client_id == client.id,
-            WorkoutProgram.is_template.is_(False)
-        )
+    programs_q = select(WorkoutProgram).where(
+        WorkoutProgram.client_id == client_id,
+        WorkoutProgram.is_template.is_(False),
     )
-    assigned_programs = programs_result.scalars().all()
-    
-    # Get active meal plan
-    meal_plan_result = await db.execute(
+    meal_plan_q = (
         select(MealPlan)
-        .where(MealPlan.client_id == client.id)
+        .where(MealPlan.client_id == client_id)
         .order_by(desc(MealPlan.created_at))
         .limit(1)
     )
-    active_meal_plan = meal_plan_result.scalar_one_or_none()
+
+    async def _scalars(session, q):
+        return (await session.execute(q)).scalars().all()
+
+    async def _one(session, q):
+        return (await session.execute(q)).scalar_one_or_none()
+
+    upcoming_bookings, week_logs, assigned_programs, active_meal_plan = await parallel_queries(
+        lambda s: _scalars(s, bookings_q),
+        lambda s: _scalars(s, logs_q),
+        lambda s: _scalars(s, programs_q),
+        lambda s: _one(s, meal_plan_q),
+    )
     
     # Calculate nutrition totals from adherence logs
     today = date.today().isoformat()
@@ -465,6 +467,8 @@ async def upload_client_avatar(
         user.avatar_url = public_url
 
     await db.commit()
+    # /me is memoised per user+workspace; drop stale avatar immediately.
+    ttl_cache.invalidate_prefix(f"auth:me:{current_user.id}:")
     presigned = await resolve_url(public_url)
     return {"avatar_url": presigned}
 
@@ -2836,31 +2840,19 @@ async def get_client_unread_count(
     if cached is not None:
         return {"unread_count": cached}
 
-    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-
+    # Single round-trip: JOIN messages -> conversations -> clients so we don't
+    # pay 3 sequential SELECTs on every cache miss.
     result = await db.execute(
-        select(Conversation).where(
-            and_(
-                Conversation.client_id == client.id,
-                Conversation.workspace_id == client.workspace_id
-            )
-        )
-    )
-    conversation = result.scalar_one_or_none()
-
-    if not conversation:
-        ttl_cache.set(cache_key, 0, ttl=20.0)
-        return {"unread_count": 0}
-
-    # Count outbound (trainer) messages this client hasn't marked as read.
-    result = await db.execute(
-        select(func.count(Message.id)).where(
-            and_(
-                Message.conversation_id == conversation.id,
-                Message.direction == MessageDirection.OUTBOUND,
-                Message.is_deleted.is_(False),
-                ~Message.read_by.contains([current_user.id])
-            )
+        select(func.count(Message.id))
+        .select_from(Message)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .join(Client, Client.id == Conversation.client_id)
+        .where(
+            Client.user_id == current_user.id,
+            Client.workspace_id == current_user.workspace_id,
+            Message.direction == MessageDirection.OUTBOUND,
+            Message.is_deleted.is_(False),
+            ~Message.read_by.contains([current_user.id]),
         )
     )
     count = int(result.scalar() or 0)

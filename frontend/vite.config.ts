@@ -30,7 +30,18 @@ export default defineConfig(({ mode }) => {
   return {
     plugins,
     server: {
+      host: "127.0.0.1",
       port: 5173,
+      // Fail fast if 5173 is taken instead of silently jumping to 5174.
+      // Prevents HMR WebSocket mismatch (browser on :5174 trying to reach :5173).
+      strictPort: true,
+      // Explicit HMR config so the injected client connects to the same port
+      // that Vite is actually listening on.
+      hmr: {
+        host: "127.0.0.1",
+        port: 5173,
+        protocol: "ws",
+      },
       proxy: {
         "/api": {
           target: "http://127.0.0.1:8000",

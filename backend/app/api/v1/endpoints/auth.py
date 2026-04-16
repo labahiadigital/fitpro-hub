@@ -15,6 +15,7 @@ from app.core.limiter import limiter
 
 from app.core.config import settings
 from app.core.cookies import set_refresh_cookie, clear_refresh_cookie, read_refresh_cookie
+from app.core import ttl_cache
 from app.core.database import get_db
 from app.core.storage import resolve_url
 from app.core.security import (
@@ -304,8 +305,17 @@ async def get_me(
 ):
     """
     Get current user information with role and all available workspaces.
+
+    Response is memoised for 15 s per (user, workspace) pair. ``/me`` is hit on
+    every page load and workspace-switch so shaving the DB round-trip + S3
+    presign off that path noticeably smoothes the UX without risking stale
+    role/permission data (TTL is short enough).
     """
     user = current_user.user
+    cache_key = f"auth:me:{user.id}:{current_user.workspace_id}"
+    cached = ttl_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     result = await db.execute(
         select(UserRole, Workspace)
@@ -322,7 +332,7 @@ async def get_me(
             "role": ur.role.value,
         })
 
-    return {
+    payload = {
         "id": str(user.id),
         "email": user.email,
         "full_name": user.full_name,
@@ -339,6 +349,8 @@ async def get_me(
         "created_at": user.created_at.isoformat(),
         "updated_at": user.updated_at.isoformat(),
     }
+    ttl_cache.set(cache_key, payload, ttl=15.0)
+    return payload
 
 
 # ===== SWITCH WORKSPACE =====
