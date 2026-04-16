@@ -1,28 +1,71 @@
-# ---- Build stage: compile C extensions (psycopg2, asyncpg, etc.) ----
-FROM python:3.11-slim AS builder
+# syntax=docker/dockerfile:1.7
+# -----------------------------------------------------------------------------
+# Celery worker — shares the same build pattern as the main backend image.
+# Kept as a separate Dockerfile so Coolify can scale workers independently.
+# -----------------------------------------------------------------------------
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+ARG PYTHON_VERSION=3.11-slim
+
+############################
+# 1) Builder
+############################
+FROM python:${PYTHON_VERSION} AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev
 
 WORKDIR /build
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# ---- Runtime stage: slim image without compilers ----
-FROM python:3.11-slim
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    pip install --prefix=/install --compile -r requirements.txt
+
+############################
+# 2) Runtime
+############################
+FROM python:${PYTHON_VERSION} AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app \
+    ASYNCPG_NO_IPV6=1 \
+    # Celery is much happier restarting gracefully on SIGTERM via tini.
+    C_FORCE_ROOT=0
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 \
+        curl \
+        tini && \
+    echo 'precedence ::ffff:0:0/96 100' >> /etc/gai.conf
 
 COPY --from=builder /install /usr/local
 
-COPY . .
+RUN groupadd --system --gid 1001 app && \
+    useradd --system --uid 1001 --gid app --home /app --shell /sbin/nologin app
+COPY --chown=app:app . .
+
+USER app
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
     CMD celery -A app.celery_app inspect ping -d celery@$HOSTNAME || exit 1
 
-CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2", "-Q", "celery,notifications,automations,reports,payments"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["celery", "-A", "app.celery_app", "worker", \
+     "--loglevel=info", \
+     "--concurrency=2", \
+     "-Q", "celery,notifications,automations,reports,payments"]

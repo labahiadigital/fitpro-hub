@@ -86,24 +86,44 @@ export default defineConfig(({ mode }) => {
             if (!id.includes("node_modules")) return undefined;
 
             // React runtime + router together — always needed early
-            if (/[\\/](react|react-dom|react-router|react-router-dom)[\\/]/.test(id)) {
+            if (/[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
               return "vendor-react";
             }
-            if (id.includes("@mantine/charts") || id.includes("recharts")) {
+            // d3 micro-packages pull ~300 KB through recharts — isolate them
+            // so charts pages load them lazily without re-downloading on
+            // every route change.
+            if (/[\\/](d3-|internmap|victory-vendor)/.test(id)) {
+              return "vendor-d3";
+            }
+            if (id.includes("recharts") || id.includes("@mantine/charts")) {
               return "vendor-charts";
             }
+            // Split Mantine datepicker (~120 KB) away from the core so
+            // pages without forms don't pay for it.
+            if (id.includes("@mantine/dates")) return "vendor-mantine-dates";
             if (id.includes("@mantine")) return "vendor-mantine";
-            if (id.includes("@tanstack")) return "vendor-query";
+            if (id.includes("@tanstack/react-query")) return "vendor-query";
+            if (id.includes("@tanstack/react-table")) return "vendor-table";
             if (id.includes("@tabler/icons-react")) return "vendor-icons";
             if (id.includes("@hello-pangea/dnd")) return "vendor-dnd";
-            if (id.includes("jspdf") || id.includes("jspdf-autotable")) {
+            if (
+              id.includes("jspdf") ||
+              id.includes("html2canvas") ||
+              id.includes("canvg") ||
+              id.includes("dompurify") ||
+              id.includes("fflate")
+            ) {
               return "vendor-pdf";
             }
             if (id.includes("dayjs")) return "vendor-dayjs";
             if (id.includes("zustand") || id.includes("axios")) {
               return "vendor-core";
             }
-            return "vendor";
+            // Floating-ui + small UI utils cluster pulled by Mantine
+            if (/[\\/](@floating-ui|react-remove-scroll|react-style-singleton|use-sidecar)[\\/]/.test(id)) {
+              return "vendor-ui-utils";
+            }
+            return "vendor-misc";
           },
         },
       },
