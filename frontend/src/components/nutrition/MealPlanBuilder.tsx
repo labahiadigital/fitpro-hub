@@ -171,7 +171,9 @@ function getNutritionDayInfo(sd: string | Date | null | undefined, week: number,
   if (!sd) return null;
   const d = new Date(sd);
   if (isNaN(d.getTime())) return null;
-  d.setDate(d.getDate() + (week - 1) * 7 + dayIndex);
+  const dow = d.getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + mondayOffset + (week - 1) * 7 + dayIndex);
   const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
   const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
   return { date: `${d.getDate()} ${months[d.getMonth()]}`, dayName: dayNames[d.getDay()] };

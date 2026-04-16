@@ -487,7 +487,7 @@ class ExerciseListClientResponse(BaseModel):
 async def get_my_exercises(
     search: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
-    limit: int = Query(100, le=200),
+    limit: int = Query(100, le=500),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

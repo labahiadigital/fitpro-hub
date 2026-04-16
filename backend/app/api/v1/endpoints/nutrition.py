@@ -424,6 +424,18 @@ async def update_meal_plan(
                     value = None
             setattr(plan, field, value)
 
+    if plan.client_id and not plan.is_template:
+        await db.execute(
+            update(MealPlan)
+            .where(
+                MealPlan.client_id == plan.client_id,
+                MealPlan.workspace_id == current_user.workspace_id,
+                MealPlan.id != plan.id,
+            )
+            .values(is_active=False)
+        )
+        plan.is_active = True
+
     if data.review_interval_days is not None and plan.start_date:
         if data.review_interval_days > 0:
             plan.next_review_date = plan.start_date + timedelta(days=data.review_interval_days)
