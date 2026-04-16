@@ -1,13 +1,15 @@
-# syntax=docker/dockerfile:1.7
 # -----------------------------------------------------------------------------
-# Backend (FastAPI + Gunicorn/Uvicorn) — multi-stage image for Coolify/BuildKit.
+# Backend (FastAPI + Gunicorn/Uvicorn) — multi-stage image for Coolify.
 # -----------------------------------------------------------------------------
-# Design choices:
-#   * BuildKit cache mounts for apt + pip so rebuilds on Coolify reuse caches
-#     between deploys instead of re-downloading 400 MB every push.
-#   * Single pip install (gunicorn already pinned in requirements.txt).
-#   * Runtime stage has no compilers → ~400 MB smaller, smaller attack surface.
-#   * Runs as an unprivileged user in the runtime stage.
+# Design notes:
+#   * Multi-stage keeps the runtime image ~400 MB smaller (no compilers shipped).
+#   * Layer ordering is optimised so Docker's built-in layer cache is reused
+#     whenever requirements.txt hasn't changed — no BuildKit cache mounts
+#     needed. Cache mounts with sharing=locked cross-serialised the four
+#     services Coolify builds in parallel (backend/celery-beat/celery-worker/
+#     frontend), which was WORSE than no cache mounts at all.
+#   * Runs as an unprivileged user. We don't chown the app tree (slow on big
+#     trees) — Python just needs read access, which is the default (mode 755).
 # -----------------------------------------------------------------------------
 
 ARG PYTHON_VERSION=3.11-slim
@@ -20,24 +22,17 @@ FROM python:${PYTHON_VERSION} AS builder
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
     PIP_ROOT_USER_ACTION=ignore
 
-# Cached apt layer — BuildKit persists /var/cache/apt and /var/lib/apt
-# across builds, so re-runs skip re-downloading build-essential/libpq-dev.
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    rm -f /etc/apt/apt.conf.d/docker-clean && \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
-        libpq-dev
+        libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 COPY requirements.txt .
-
-# Cached pip layer. `--compile` writes .pyc once at build time so cold-start
-# in the runtime container is noticeably faster (no per-import compilation).
-RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
-    pip install --prefix=/install --compile -r requirements.txt
+RUN pip install --prefix=/install -r requirements.txt
 
 ############################
 # 2) Runtime (slim)
@@ -48,30 +43,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=/app \
-    # Force IPv4 DNS (fix for Supabase pooler connectivity on hosts w/ IPv6)
-    ASYNCPG_NO_IPV6=1 \
-    # Drop FastAPI/Uvicorn access logs at stderr level; gunicorn handles access log
-    UVICORN_LOG_LEVEL=info
+    ASYNCPG_NO_IPV6=1
 
 WORKDIR /app
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    rm -f /etc/apt/apt.conf.d/docker-clean && \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
-        tini && \
-    echo 'precedence ::ffff:0:0/96 100' >> /etc/gai.conf
+    && rm -rf /var/lib/apt/lists/* \
+    && echo 'precedence ::ffff:0:0/96 100' >> /etc/gai.conf \
+    && groupadd --system --gid 1001 app \
+    && useradd --system --uid 1001 --gid app --home /app --shell /sbin/nologin app
 
-# Copy pre-built site-packages from builder — no compilers shipped.
 COPY --from=builder /install /usr/local
-
-# Create non-root user and copy app with correct ownership in one pass
-# so we don't double the image size with an intermediate chown layer.
-RUN groupadd --system --gid 1001 app && \
-    useradd --system --uid 1001 --gid app --home /app --shell /sbin/nologin app
-COPY --chown=app:app . .
+COPY . .
 
 USER app
 
@@ -80,8 +65,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=10s --start-period=60s --retries=10 \
     CMD curl -fsS http://localhost:8000/health || exit 1
 
-# tini as PID 1 handles signals cleanly so Coolify's stop events don't time out.
-ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["gunicorn", "app.main:app", \
      "-w", "1", \
      "-k", "uvicorn.workers.UvicornWorker", \

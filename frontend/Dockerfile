@@ -1,17 +1,18 @@
-# syntax=docker/dockerfile:1.7
 # -----------------------------------------------------------------------------
 # Frontend (Vite 8 + React 19) — builder + nginx runtime.
 # -----------------------------------------------------------------------------
-# Key optimisations vs. the previous version:
-#   * Corepack activates the exact pnpm pinned in package.json → no
-#     "npm install -g pnpm" download on every build.
-#   * BuildKit pnpm-store cache mount means warm builds skip re-downloading
-#     packages (~200 MB) between Coolify deploys.
-#   * Script approval is handled declaratively via package.json > pnpm >
-#     onlyBuiltDependencies instead of the interactive `pnpm approve-builds`
-#     command (which is a no-op in CI).
-#   * Only public VITE_* build args are declared — everything else must come
-#     in as runtime env on nginx (no secrets baked into the image layer).
+# Notes:
+#   * No BuildKit cache mounts. With Coolify building 4 services in parallel
+#     the cache-mount lock serialised them and made deploys 3-4× slower
+#     than the previous (uncached) version. Docker's native layer cache is
+#     enough for this project.
+#   * Corepack activates the pinned pnpm from package.json so we don't pay
+#     for `npm install -g pnpm` on every build.
+#   * Script approval for esbuild/core-js/biome is declared statically in
+#     package.json > pnpm.onlyBuiltDependencies (the previous runtime
+#     `pnpm approve-builds` command was a no-op in CI).
+#   * Only the two PUBLIC VITE_* args are declared. Server secrets must never
+#     be passed in here — they end up baked into the bundle.
 # -----------------------------------------------------------------------------
 
 ARG NODE_VERSION=20-alpine
@@ -29,23 +30,15 @@ ENV NODE_OPTIONS="--max-old-space-size=4096" \
 
 WORKDIR /app
 
-# Enable corepack (ships with Node >=16) so pnpm version is pinned by
-# package.json#packageManager. No extra download, no version drift.
 RUN corepack enable && corepack prepare pnpm@10.26.0 --activate
 
-# Manifest layer — only copy what pnpm needs to resolve the graph so that
-# unrelated source changes don't bust the install cache.
+# Manifest layer is copied first so unrelated source changes don't invalidate
+# the expensive `pnpm install` layer.
 COPY package.json pnpm-lock.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile --prefer-offline
 
-# Cache mount keeps the pnpm store warm across Coolify rebuilds.
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prefer-offline
-
-# Application source (second layer — changes most often).
 COPY . .
 
-# Public build-time env. Only safe-to-expose values belong here.
-# DO NOT add server secrets — they will end up in the bundle.
 ARG VITE_API_URL
 ARG VITE_STRIPE_PUBLISHABLE_KEY
 ENV VITE_API_URL=$VITE_API_URL \
@@ -58,9 +51,7 @@ RUN pnpm run build
 ############################
 FROM nginx:${NGINX_VERSION} AS runtime
 
-# curl is needed for the HEALTHCHECK below.
 RUN apk add --no-cache curl && \
-    # nginx:alpine ships with a default server block — our config replaces it.
     rm -f /etc/nginx/conf.d/default.conf
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
