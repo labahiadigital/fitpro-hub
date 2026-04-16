@@ -10,6 +10,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
 from app.core import ttl_cache
+from app.core.parallel_db import parallel_queries
 from app.middleware.auth import get_current_user, require_workspace, CurrentUser
 from app.models.notification import Notification
 from app.models.user import User
@@ -88,9 +89,10 @@ async def list_notifications(
     if is_read is not None:
         base_filters.append(Notification.is_read == is_read)
 
-    # OPTIMIZATION: paginate items + run total/unread aggregates in parallel.
-    # total & unread use a single SUM(CASE ...) row instead of 2 COUNT() queries
-    # to halve the round-trips to Supabase.
+    # Pipeline all three reads concurrently on short-lived sessions so
+    # Supabase serves them in parallel instead of 3 sequential round-trips.
+    # `total` respects the current filters; `unread` is always the global
+    # unread count for the bell badge, matching the previous behaviour.
     items_query = (
         select(Notification)
         .where(*base_filters)
@@ -104,14 +106,21 @@ async def list_notifications(
         Notification.is_read == False,
     )
 
-    # NOTE: sequential because AsyncSession forbids concurrent ops (SQLAlchemy 2.0.46+).
-    items_result = await db.execute(items_query)
-    total = await db.scalar(total_query)
-    unread_count = await db.scalar(unread_query)
-    notifications = items_result.scalars().all()
-    total = total or 0
-    unread_count = unread_count or 0
-    ttl_cache.set(_unread_cache_key(current_user.id), int(unread_count), ttl=20.0)
+    async def _items(s):
+        return (await s.execute(items_query)).scalars().all()
+
+    async def _total(s):
+        return (await s.scalar(total_query)) or 0
+
+    async def _unread(s):
+        return (await s.scalar(unread_query)) or 0
+
+    notifications, total, unread_count = await parallel_queries(
+        _items, _total, _unread
+    )
+    total = int(total)
+    unread_count = int(unread_count)
+    ttl_cache.set(_unread_cache_key(current_user.id), unread_count, ttl=20.0)
 
     return NotificationList(
         items=[NotificationResponse.model_validate(n) for n in notifications],

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 import os
 import time
@@ -248,14 +249,39 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """Lightweight liveness probe — only checks the DB round-trip.
+
+    Coolify hits this every 10s; anything heavier (Celery RPC, Redis ping) was
+    turning the probe into a 5-second blocker whenever the workers were slow,
+    so those moved to /health/deep for on-demand inspection.
+    """
     from sqlalchemy import text
     from app.core.database import AsyncSessionLocal
-    import redis as redis_lib
+
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected"}
+    except Exception as exc:
+        logger.error("Health check - database failed: %s", exc)
+        return JSONResponse(
+            status_code=200,  # 200 on purpose: Coolify keeps traffic flowing while we alert.
+            content={"status": "degraded", "database": "disconnected"},
+        )
+
+
+@app.get("/health/deep")
+async def health_check_deep():
+    """Full dependency probe — DB + Redis + Celery. Use for manual inspection
+    or a separate monitoring job; too expensive for a per-10s liveness check.
+    """
+    from sqlalchemy import text
+    from app.core.database import AsyncSessionLocal
+    import redis.asyncio as async_redis
 
     checks: dict = {"status": "healthy"}
     is_unhealthy = False
 
-    # Database check
     try:
         async with AsyncSessionLocal() as session:
             await session.execute(text("SELECT 1"))
@@ -265,45 +291,44 @@ async def health_check():
         checks["database"] = "disconnected"
         is_unhealthy = True
 
-    # Redis check (informational — does not block deploy)
     redis_target = _mask_url(settings.REDIS_URL)
+    checks["redis_host"] = redis_target
     r = None
     try:
-        r = redis_lib.from_url(settings.REDIS_URL, socket_connect_timeout=3)
-        r.ping()
+        r = async_redis.from_url(settings.REDIS_URL, socket_connect_timeout=2)
+        await r.ping()
         checks["redis"] = "connected"
-        checks["redis_host"] = redis_target
     except Exception as exc:
         logger.warning("Health check - redis failed (target=%s): %s", redis_target, exc)
         checks["redis"] = "disconnected"
-        checks["redis_host"] = redis_target
     finally:
-        if r:
+        if r is not None:
             try:
-                r.close()
+                await r.aclose()
             except Exception:
                 pass
 
-    # Celery workers check — use a lightweight Celery instance to avoid
-    # importing heavy task modules that can fail inside the API process.
+    # Celery inspect is intrinsically blocking; push it to a worker thread so
+    # a slow/down broker doesn't stall the event loop.
     try:
         from celery import Celery as _CeleryClass
-        _probe = _CeleryClass("probe", broker=settings.celery_broker)
-        inspector = _probe.control.inspect(timeout=5)
-        ping_result = inspector.ping()
-        if ping_result:
-            worker_count = len(ping_result)
-            checks["celery_workers"] = f"{worker_count} online"
-        else:
-            checks["celery_workers"] = "none responding"
+
+        def _probe_workers() -> int:
+            probe = _CeleryClass("probe", broker=settings.celery_broker)
+            inspector = probe.control.inspect(timeout=1.5)
+            pong = inspector.ping()
+            return len(pong) if pong else 0
+
+        worker_count = await asyncio.to_thread(_probe_workers)
+        checks["celery_workers"] = (
+            f"{worker_count} online" if worker_count else "none responding"
+        )
     except Exception as exc:
         logger.warning("Health check - celery inspect failed: %s", exc)
         checks["celery_workers"] = "unavailable"
 
     if is_unhealthy:
         checks["status"] = "degraded"
-        return JSONResponse(status_code=200, content=checks)
-
     return checks
 
 
