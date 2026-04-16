@@ -2,7 +2,7 @@
 Authentication endpoints using FastAPI Security with JWT tokens.
 This replaces Supabase Auth with a self-managed authentication system.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Body, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone, timedelta
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from app.core.limiter import limiter
 
 from app.core.config import settings
+from app.core.cookies import set_refresh_cookie, clear_refresh_cookie, read_refresh_cookie
 from app.core.database import get_db
 from app.core.storage import resolve_url
 from app.core.security import (
@@ -43,7 +44,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from uuid import UUID
 from app.schemas.user import UserResponse
-from app.middleware.auth import get_current_user, CurrentUser
+from app.middleware.auth import get_current_user, oauth2_scheme, CurrentUser
 from app.services.email import email_service, EmailTemplates
 
 router = APIRouter()
@@ -165,6 +166,7 @@ async def register(
 @limiter.limit("10/minute")
 async def login(
     request: Request,
+    response: Response,
     data: LoginRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -244,7 +246,12 @@ async def login(
             workspace_id=workspace_id,
             role=role
         )
-        
+
+        # SECURITY: Refresh token travels in an httpOnly cookie going forward.
+        # The body field is kept populated for backwards-compatibility with
+        # older clients but new clients should stop persisting it.
+        set_refresh_cookie(response, refresh_token)
+
         return Token(
             access_token=access_token,
             token_type="bearer",
@@ -268,15 +275,23 @@ async def login(
 
 @router.post("/logout")
 async def logout(
-    current_user: CurrentUser = Depends(get_current_user)
+    response: Response,
+    token: str = Depends(oauth2_scheme),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
+    """Logout current user and invalidate the httpOnly refresh cookie.
+
+    With stateless JWT we cannot revoke the access token without a blacklist,
+    but clearing the refresh cookie guarantees the client cannot renew. We
+    also drop the in-process CurrentUser cache so any in-flight request
+    after logout refetches fresh auth state.
     """
-    Logout current user.
-    Note: With JWT, we can't truly invalidate tokens server-side without a blacklist.
-    The client should delete the tokens locally.
-    """
-    # In a production system, you might want to add the token to a blacklist
-    # For now, we just return success and let the client clear the tokens
+    clear_refresh_cookie(response)
+    try:
+        from app.middleware.auth import invalidate_auth_cache
+        invalidate_auth_cache(token)
+    except Exception:  # best-effort
+        pass
     return {"message": "Sesión cerrada correctamente"}
 
 
@@ -333,6 +348,7 @@ class SwitchWorkspaceRequest(BaseModel):
 
 @router.post("/switch-workspace", response_model=Token)
 async def switch_workspace(
+    response: Response,
     data: SwitchWorkspaceRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -367,6 +383,8 @@ async def switch_workspace(
         role=user_role.role.value,
     )
 
+    set_refresh_cookie(response, refresh_token)
+
     return Token(
         access_token=access_token,
         token_type="bearer",
@@ -379,28 +397,43 @@ async def switch_workspace(
 # ===== REFRESH TOKEN =====
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
     workspace_id: Optional[str] = None
 
 
 @router.post("/refresh", response_model=Token)
+@limiter.limit("30/minute")
 async def refresh_token(
-    data: RefreshTokenRequest,
-    db: AsyncSession = Depends(get_db)
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    data: Optional[RefreshTokenRequest] = Body(default=None),
 ):
     """
     Refresh access token using refresh token.
-    Optionally accepts workspace_id to preserve workspace context across refreshes.
+
+    Accepts the refresh token from either the httpOnly cookie (preferred) or the
+    request body (legacy path kept for backwards-compatibility).  Optionally
+    takes a workspace_id to preserve workspace context across refreshes.
     """
     token_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Token de refresco inválido o expirado",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
+    # Prefer cookie-based refresh; fall back to body for legacy SPA builds.
+    cookie_token = read_refresh_cookie(request)
+    body_token = data.refresh_token if data else None
+    refresh_value = cookie_token or body_token
+    workspace_from_body = data.workspace_id if data else None
+
+    if not refresh_value:
+        raise token_exception
+
     try:
-        payload = decode_refresh_token(data.refresh_token)
-        
+        payload = decode_refresh_token(refresh_value)
+
         if not payload:
             raise token_exception
         
@@ -421,9 +454,9 @@ async def refresh_token(
         role = None
 
         # Try to preserve the workspace from the request
-        if data.workspace_id:
+        if workspace_from_body:
             try:
-                requested_ws = UUID(data.workspace_id)
+                requested_ws = UUID(workspace_from_body)
                 result = await db.execute(
                     select(UserRole).where(
                         UserRole.user_id == user.id,
@@ -465,7 +498,10 @@ async def refresh_token(
             workspace_id=workspace_id,
             role=role
         )
-        
+
+        # Rotate the refresh cookie as well
+        set_refresh_cookie(response, new_refresh_token)
+
         return Token(
             access_token=access_token,
             token_type="bearer",
@@ -546,7 +582,9 @@ async def verify_email(
 
 
 @router.post("/resend-verification", response_model=AuthResponse)
+@limiter.limit("3/minute")
 async def resend_verification(
+    request: Request,
     data: ResendVerificationRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -618,7 +656,9 @@ async def resend_verification(
 # ===== PASSWORD RESET =====
 
 @router.post("/forgot-password", response_model=AuthResponse)
+@limiter.limit("3/minute")
 async def forgot_password(
+    request: Request,
     data: PasswordResetRequest,
     db: AsyncSession = Depends(get_db)
 ):
@@ -682,7 +722,9 @@ async def forgot_password(
 
 
 @router.post("/reset-password", response_model=AuthResponse)
+@limiter.limit("5/minute")
 async def reset_password(
+    request: Request,
     data: PasswordResetConfirm,
     db: AsyncSession = Depends(get_db)
 ):
@@ -787,7 +829,9 @@ async def change_email(
 # ===== CHANGE PASSWORD (authenticated) =====
 
 @router.post("/change-password", response_model=AuthResponse)
+@limiter.limit("5/minute")
 async def change_password(
+    request: Request,
     data: ChangePasswordRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -845,7 +889,9 @@ class ClientRegisterRequest(BaseModel):
 
 
 @router.post("/register-client", response_model=Token)
+@limiter.limit("5/minute")
 async def register_client(
+    request: Request,
     data: ClientRegisterRequest,
     db: AsyncSession = Depends(get_db)
 ):

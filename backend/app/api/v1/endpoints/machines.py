@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case, and_
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel as BaseSchema
 
@@ -163,9 +163,29 @@ async def machine_stats(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
+    """OPTIMIZATION: 4 COUNTs secuenciales -> 1 query agregada."""
     now = datetime.now(timezone.utc)
-    base = (
-        select(func.count(Appointment.id))
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    agg = (
+        select(
+            func.count(
+                case(
+                    (Appointment.start_time.between(today_start, today_end), Appointment.id)
+                )
+            ).label("today"),
+            func.count(
+                case(
+                    (
+                        and_(Appointment.start_time > now, Appointment.status != "cancelled"),
+                        Appointment.id,
+                    )
+                )
+            ).label("upcoming"),
+            func.count(Appointment.id).label("total"),
+            func.count(case((Appointment.status == "cancelled", Appointment.id))).label("cancelled"),
+        )
         .select_from(Appointment)
         .join(appointment_machines, appointment_machines.c.appointment_id == Appointment.id)
         .where(
@@ -173,11 +193,13 @@ async def machine_stats(
             Appointment.workspace_id == current_user.workspace_id,
         )
     )
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-    today_count = await db.scalar(base.where(Appointment.start_time.between(today_start, today_end))) or 0
-    upcoming = await db.scalar(base.where(Appointment.start_time > now, Appointment.status != "cancelled")) or 0
-    total = await db.scalar(base) or 0
-    cancelled = await db.scalar(base.where(Appointment.status == "cancelled")) or 0
+    row = (await db.execute(agg)).one()
+    total = int(row.total or 0)
+    cancelled = int(row.cancelled or 0)
     cancel_rate = round((cancelled / total * 100), 1) if total > 0 else 0
-    return {"today": today_count, "upcoming": upcoming, "total": total, "cancel_rate": cancel_rate}
+    return {
+        "today": int(row.today or 0),
+        "upcoming": int(row.upcoming or 0),
+        "total": total,
+        "cancel_rate": cancel_rate,
+    }

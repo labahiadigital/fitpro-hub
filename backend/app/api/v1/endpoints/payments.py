@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
@@ -6,7 +7,7 @@ import stripe
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -189,79 +190,93 @@ async def get_payment_kpis(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
+    """Obtener KPIs de pagos del workspace.
+
+    OPTIMIZATION: 6 queries secuenciales -> 2 queries paralelas con agregados.
     """
-    Obtener KPIs de pagos del workspace.
-    """
-    
-    
+    ws = current_user.workspace_id
     now = datetime.utcnow()
     first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     first_of_last_month = first_of_month - relativedelta(months=1)
-    
-    # MRR - Monthly Recurring Revenue from active subscriptions
-    mrr_result = await db.execute(
-        select(func.coalesce(func.sum(Subscription.amount), 0)).where(
-            Subscription.workspace_id == current_user.workspace_id,
-            Subscription.status == SubscriptionStatus.active
+
+    sub_active = Subscription.status == SubscriptionStatus.active
+    sub_agg = (
+        select(
+            func.coalesce(
+                func.sum(case((sub_active, Subscription.amount), else_=0)), 0
+            ).label("mrr"),
+            func.count(case((sub_active, Subscription.id))).label("active"),
+            func.count(
+                case(
+                    (and_(sub_active, Subscription.created_at >= first_of_month), Subscription.id)
+                )
+            ).label("new_this_month"),
         )
+        .where(Subscription.workspace_id == ws)
     )
-    mrr = float(mrr_result.scalar() or 0)
-    
-    # Active subscriptions count
-    active_subs_result = await db.execute(
-        select(func.count()).where(
-            Subscription.workspace_id == current_user.workspace_id,
-            Subscription.status == SubscriptionStatus.active
+
+    pay_agg = (
+        select(
+            func.count(
+                case((Payment.status == PaymentStatus.pending, Payment.id))
+            ).label("pending_count"),
+            func.coalesce(
+                func.sum(case((Payment.status == PaymentStatus.pending, Payment.amount), else_=0)), 0
+            ).label("pending_amount"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                Payment.status == PaymentStatus.succeeded,
+                                Payment.created_at >= first_of_month,
+                            ),
+                            Payment.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("this_month"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                Payment.status == PaymentStatus.succeeded,
+                                Payment.created_at >= first_of_last_month,
+                                Payment.created_at < first_of_month,
+                            ),
+                            Payment.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("last_month"),
         )
+        .where(Payment.workspace_id == ws)
     )
-    active_subscriptions = active_subs_result.scalar() or 0
-    
-    # Pending payments
-    pending_result = await db.execute(
-        select(func.count(), func.coalesce(func.sum(Payment.amount), 0)).where(
-            Payment.workspace_id == current_user.workspace_id,
-            Payment.status == PaymentStatus.pending
-        )
-    )
-    pending_row = pending_result.one()
-    pending_payments = pending_row[0] or 0
-    pending_amount = float(pending_row[1] or 0)
-    
-    # This month revenue
-    revenue_this_month_result = await db.execute(
-        select(func.coalesce(func.sum(Payment.amount), 0)).where(
-            Payment.workspace_id == current_user.workspace_id,
-            Payment.status == PaymentStatus.succeeded,
-            Payment.created_at >= first_of_month
-        )
-    )
-    this_month_revenue = float(revenue_this_month_result.scalar() or 0)
-    
-    # Last month revenue (for comparison)
-    revenue_last_month_result = await db.execute(
-        select(func.coalesce(func.sum(Payment.amount), 0)).where(
-            Payment.workspace_id == current_user.workspace_id,
-            Payment.status == PaymentStatus.succeeded,
-            Payment.created_at >= first_of_last_month,
-            Payment.created_at < first_of_month
-        )
-    )
-    last_month_revenue = float(revenue_last_month_result.scalar() or 0)
-    
-    # Calculate change percentage
-    revenue_change = 0
+
+    # NOTE: sequential because AsyncSession forbids concurrent ops (SQLAlchemy 2.0.46+).
+    sub_res = await db.execute(sub_agg)
+    pay_res = await db.execute(pay_agg)
+    sub_row = sub_res.one()
+    pay_row = pay_res.one()
+
+    mrr = float(sub_row.mrr or 0)
+    active_subscriptions = int(sub_row.active or 0)
+    new_subs_this_month = int(sub_row.new_this_month or 0)
+    pending_payments = int(pay_row.pending_count or 0)
+    pending_amount = float(pay_row.pending_amount or 0)
+    this_month_revenue = float(pay_row.this_month or 0)
+    last_month_revenue = float(pay_row.last_month or 0)
+
+    revenue_change = 0.0
     if last_month_revenue > 0:
-        revenue_change = round(((this_month_revenue - last_month_revenue) / last_month_revenue) * 100, 1)
-    
-    # New subscriptions this month
-    new_subs_result = await db.execute(
-        select(func.count()).where(
-            Subscription.workspace_id == current_user.workspace_id,
-            Subscription.status == SubscriptionStatus.active,
-            Subscription.created_at >= first_of_month
+        revenue_change = round(
+            ((this_month_revenue - last_month_revenue) / last_month_revenue) * 100, 1
         )
-    )
-    new_subs_this_month = new_subs_result.scalar() or 0
 
     return {
         "mrr": mrr,
@@ -271,7 +286,7 @@ async def get_payment_kpis(
         "pending_payments": pending_payments,
         "pending_amount": pending_amount,
         "this_month_revenue": this_month_revenue,
-        "revenue_change": revenue_change
+        "revenue_change": revenue_change,
     }
 
 

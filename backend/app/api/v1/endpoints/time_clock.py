@@ -290,8 +290,8 @@ async def toggle_pause(
 
 @router.get("/records", response_model=List[TimeRecordResponse])
 async def list_records(
-    start_date: Optional[str] = Query(None),
-    end_date: Optional[str] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     user_id: Optional[UUID] = Query(None),
     limit: int = Query(100, le=500),
     current_user: CurrentUser = Depends(require_staff),
@@ -367,8 +367,8 @@ async def delete_record(
 
 @router.get("/records/export")
 async def export_records_csv(
-    start_date: Optional[str] = Query(None),
-    end_date: Optional[str] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     user_id: Optional[UUID] = Query(None),
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),

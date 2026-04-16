@@ -41,6 +41,8 @@ export function useTeamMembers() {
       }
     },
     select: (response) => response.data as TeamMember[],
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 

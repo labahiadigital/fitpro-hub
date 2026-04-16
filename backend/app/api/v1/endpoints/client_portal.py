@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
+from app.core import ttl_cache
 from app.core.storage import (
     delete_workspace_file,
     generate_filename,
@@ -2829,10 +2830,14 @@ async def get_client_unread_count(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get unread message count for the client."""
+    """Get unread message count for the client (cached 5s to tame polling)."""
+    cache_key = f"msg:unread:client:{current_user.id}"
+    cached = ttl_cache.get(cache_key)
+    if cached is not None:
+        return {"unread_count": cached}
+
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    
-    # Get conversation
+
     result = await db.execute(
         select(Conversation).where(
             and_(
@@ -2842,27 +2847,24 @@ async def get_client_unread_count(
         )
     )
     conversation = result.scalar_one_or_none()
-    
-    # Count unread messages (messages from trainer that client hasn't read)
-    # For simplicity, we track unread at conversation level
-    # In this context, unread for client = messages from trainer not yet viewed
+
     if not conversation:
+        ttl_cache.set(cache_key, 0, ttl=20.0)
         return {"unread_count": 0}
-    
-    # The unread_count in conversation tracks trainer's perspective
-    # For client, we need to count outbound messages not read by client
+
+    # Count outbound (trainer) messages this client hasn't marked as read.
     result = await db.execute(
         select(func.count(Message.id)).where(
             and_(
                 Message.conversation_id == conversation.id,
-                Message.direction == MessageDirection.OUTBOUND,  # From trainer
+                Message.direction == MessageDirection.OUTBOUND,
                 Message.is_deleted.is_(False),
-                ~Message.read_by.contains([current_user.id])  # Not read by this user
+                ~Message.read_by.contains([current_user.id])
             )
         )
     )
-    count = result.scalar() or 0
-    
+    count = int(result.scalar() or 0)
+    ttl_cache.set(cache_key, count, ttl=20.0)
     return {"unread_count": count}
 
 

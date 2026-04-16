@@ -2,6 +2,7 @@
 Endpoints de la API para el módulo ERP (Facturación profesional con VeriFactu)
 """
 
+import asyncio
 import base64
 import logging
 import time
@@ -12,11 +13,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, and_
+from sqlalchemy import case, func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core import ttl_cache
 from app.middleware.auth import require_owner, require_staff, require_workspace
 from app.models.erp import (
     Expense,
@@ -383,6 +385,45 @@ async def _get_settings(db: AsyncSession, workspace_id: UUID) -> Optional[Invoic
     return result.scalar_one_or_none()
 
 
+def _settings_cache_key(workspace_id: UUID) -> str:
+    return f"erp:settings:{workspace_id}"
+
+
+def _invalidate_settings_cache(workspace_id: UUID) -> None:
+    ttl_cache.invalidate(_settings_cache_key(workspace_id))
+
+
+async def _get_settings_cached(db: AsyncSession, workspace_id: UUID) -> Optional[dict]:
+    """Return InvoiceSettings as a dict, cached 60s in-process.
+
+    InvoiceSettings change very rarely (once per tax period); caching avoids
+    a Supabase round-trip on every /invoices, /certificate/status and
+    /invoice-stats call.
+    """
+    cache_key = _settings_cache_key(workspace_id)
+    cached = ttl_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    settings = await _get_settings(db, workspace_id)
+    if settings is None:
+        ttl_cache.set(cache_key, {}, ttl=60.0)
+        return None
+    snapshot = {
+        "invoice_prefix": settings.invoice_prefix,
+        "invoice_next_number": settings.invoice_next_number,
+        "rectificative_prefix": settings.rectificative_prefix,
+        "rectificative_next_number": settings.rectificative_next_number,
+        "certificate_pem_present": bool(settings.certificate_pem),
+        "certificate_subject": settings.certificate_subject,
+        "certificate_serial_number": settings.certificate_serial_number,
+        "certificate_nif": settings.certificate_nif,
+        "certificate_expires_at": settings.certificate_expires_at,
+        "certificate_uploaded_at": settings.certificate_uploaded_at,
+    }
+    ttl_cache.set(cache_key, snapshot, ttl=60.0)
+    return snapshot
+
+
 async def _log_audit(
     db: AsyncSession,
     invoice_id: UUID,
@@ -511,6 +552,7 @@ async def create_or_update_settings(
 
     await db.commit()
     await db.refresh(settings)
+    _invalidate_settings_cache(current_user.workspace_id)
     return settings
 
 
@@ -524,14 +566,17 @@ async def get_next_invoice_number(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Preview the next invoice number for a given series."""
-    settings = await _get_settings(db, current_user.workspace_id)
+    """Preview the next invoice number for a given series.
+
+    Reads from the 60s in-process settings cache to avoid a DB hit per call.
+    """
+    snap = await _get_settings_cached(db, current_user.workspace_id)
     if series == "R":
-        prefix = settings.rectificative_prefix if settings else "R"
-        next_num = settings.rectificative_next_number if settings else 1
+        prefix = (snap or {}).get("rectificative_prefix", "R")
+        next_num = (snap or {}).get("rectificative_next_number", 1)
     else:
-        prefix = settings.invoice_prefix if settings else "F"
-        next_num = settings.invoice_next_number if settings else 1
+        prefix = (snap or {}).get("invoice_prefix", "F")
+        next_num = (snap or {}).get("invoice_next_number", 1)
 
     year = date.today().year
     return {"next_number": generate_invoice_number(prefix, year, next_num), "series": series}
@@ -544,60 +589,68 @@ async def get_invoice_stats(
     from_date: date = Query(default_factory=lambda: date(date.today().year, 1, 1)),
     to_date: date = Query(default_factory=date.today),
 ):
-    """Get invoice KPI stats for the dashboard."""
+    """Get invoice KPI stats for the dashboard.
+
+    OPTIMIZATION: replaces 5 sequential queries with 1 aggregate query using
+    SUM(CASE WHEN ...) to compute all totals in a single round-trip to Supabase.
+    """
     ws = current_user.workspace_id
-    base_filter = and_(
+    today = date.today()
+    month_start = date(today.year, today.month, 1)
+
+    in_period = and_(
         Invoice.workspace_id == ws,
         Invoice.issue_date >= from_date,
         Invoice.issue_date <= to_date,
         Invoice.status != "cancelled",
     )
 
-    total_result = await db.execute(
+    agg = (
         select(
-            func.count(Invoice.id).label("count"),
-            func.coalesce(func.sum(Invoice.total), 0).label("total"),
-        ).where(base_filter)
-    )
-    total_data = total_result.first()
-
-    paid_result = await db.execute(
-        select(func.coalesce(func.sum(Invoice.total), 0))
-        .where(base_filter)
-        .where(Invoice.status == "paid")
-    )
-    total_paid = float(paid_result.scalar() or 0)
-
-    pending_result = await db.execute(
-        select(func.coalesce(func.sum(Invoice.total), 0))
-        .where(base_filter)
-        .where(Invoice.status.in_(["finalized", "sent"]))
-    )
-    total_pending = float(pending_result.scalar() or 0)
-
-    overdue_result = await db.execute(
-        select(func.coalesce(func.sum(Invoice.total), 0))
+            func.count(case((in_period, Invoice.id))).label("count"),
+            func.coalesce(func.sum(case((in_period, Invoice.total), else_=0)), 0).label("total"),
+            func.coalesce(
+                func.sum(case((and_(in_period, Invoice.status == "paid"), Invoice.total), else_=0)), 0
+            ).label("paid"),
+            func.coalesce(
+                func.sum(
+                    case((and_(in_period, Invoice.status.in_(["finalized", "sent"])), Invoice.total), else_=0)
+                ),
+                0,
+            ).label("pending"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (and_(Invoice.workspace_id == ws, Invoice.status == "overdue"), Invoice.total),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("overdue"),
+            func.count(
+                case(
+                    (
+                        and_(
+                            Invoice.workspace_id == ws,
+                            Invoice.issue_date >= month_start,
+                            Invoice.status != "cancelled",
+                        ),
+                        Invoice.id,
+                    )
+                )
+            ).label("month_count"),
+        )
         .where(Invoice.workspace_id == ws)
-        .where(Invoice.status == "overdue")
     )
-    total_overdue = float(overdue_result.scalar() or 0)
-
-    month_start = date(date.today().year, date.today().month, 1)
-    month_result = await db.execute(
-        select(func.count(Invoice.id))
-        .where(Invoice.workspace_id == ws)
-        .where(Invoice.issue_date >= month_start)
-        .where(Invoice.status != "cancelled")
-    )
-    invoices_this_month = month_result.scalar() or 0
+    row = (await db.execute(agg)).one()
 
     return InvoiceStatsResponse(
-        total_invoiced=float(total_data.total or 0),
-        total_paid=total_paid,
-        total_pending=total_pending,
-        total_overdue=total_overdue,
-        invoices_count=total_data.count or 0,
-        invoices_this_month=invoices_this_month,
+        total_invoiced=float(row.total or 0),
+        total_paid=float(row.paid or 0),
+        total_pending=float(row.pending or 0),
+        total_overdue=float(row.overdue or 0),
+        invoices_count=row.count or 0,
+        invoices_this_month=row.month_count or 0,
         period_start=from_date,
         period_end=to_date,
     )
@@ -710,6 +763,7 @@ async def create_invoice(
 
     await db.commit()
     await db.refresh(invoice)
+    _invalidate_settings_cache(current_user.workspace_id)
     return invoice
 
 
@@ -1033,6 +1087,7 @@ async def rectify_invoice(
 
     await db.commit()
     await db.refresh(rectificative)
+    _invalidate_settings_cache(current_user.workspace_id)
     return rectificative
 
 
@@ -1124,6 +1179,7 @@ async def duplicate_invoice(
 
     await db.commit()
     await db.refresh(new_invoice)
+    _invalidate_settings_cache(current_user.workspace_id)
     return new_invoice
 
 
@@ -1518,21 +1574,21 @@ async def get_certificate_status(
     current_user: Any = Depends(require_owner),
     db: AsyncSession = Depends(get_db),
 ):
-    settings = await _get_settings(db, current_user.workspace_id)
-    if not settings or not settings.certificate_pem:
+    """Read from cached settings snapshot (60s TTL) to avoid DB hit per call."""
+    snap = await _get_settings_cached(db, current_user.workspace_id)
+    if not snap or not snap.get("certificate_pem_present"):
         return CertificateStatusResponse(has_certificate=False)
 
-    is_expired = False
-    if settings.certificate_expires_at:
-        is_expired = settings.certificate_expires_at < datetime.now(timezone.utc)
+    expires_at = snap.get("certificate_expires_at")
+    is_expired = bool(expires_at and expires_at < datetime.now(timezone.utc))
 
     return CertificateStatusResponse(
         has_certificate=True,
-        subject=settings.certificate_subject,
-        serial_number=settings.certificate_serial_number,
-        nif=settings.certificate_nif,
-        expires_at=settings.certificate_expires_at,
-        uploaded_at=settings.certificate_uploaded_at,
+        subject=snap.get("certificate_subject"),
+        serial_number=snap.get("certificate_serial_number"),
+        nif=snap.get("certificate_nif"),
+        expires_at=expires_at,
+        uploaded_at=snap.get("certificate_uploaded_at"),
         is_expired=is_expired,
     )
 
@@ -1594,6 +1650,7 @@ async def upload_certificate(
     settings.certificate_uploaded_at = cert_info.uploaded_at
 
     await db.commit()
+    _invalidate_settings_cache(current_user.workspace_id)
 
     client_ip = request.client.host if request.client else "unknown"
     logger.info(
@@ -1643,6 +1700,7 @@ async def revoke_certificate(
     settings.certificate_uploaded_at = None
 
     await db.commit()
+    _invalidate_settings_cache(current_user.workspace_id)
 
     client_ip = request.client.host if request.client else "unknown"
     logger.info(

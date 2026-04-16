@@ -28,7 +28,8 @@ export function useMachines() {
     queryKey: ["machines"],
     queryFn: async () => machinesApi.list(),
     select: (res) => res.data as MachineData[],
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 
@@ -38,7 +39,8 @@ export function useMachineStats(machineId: string) {
     queryFn: async () => machinesApi.stats(machineId),
     select: (res) => res.data as MachineStats,
     enabled: !!machineId,
-    staleTime: 30_000,
+    staleTime: 2 * 60_000,
+    gcTime: 5 * 60_000,
   });
 }
 

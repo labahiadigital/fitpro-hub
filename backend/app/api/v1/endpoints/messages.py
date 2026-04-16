@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core import ttl_cache
 from app.models.message import (
     Conversation, Message, ConversationType, MessageType,
     MessageSource, MessageDirection, MessageStatus
@@ -683,8 +684,13 @@ async def get_total_unread_count(
 ):
     """
     Get total unread message count across all conversations for staff.
-    Used to display badge in sidebar.
+    Used to display badge in sidebar. Cached 5s to tame sidebar polling.
     """
+    cache_key = f"msg:unread:ws:{current_user.workspace_id}"
+    cached = ttl_cache.get(cache_key)
+    if cached is not None:
+        return {"unread_count": cached}
+
     result = await db.execute(
         select(func.coalesce(func.sum(Conversation.unread_count), 0)).where(
             and_(
@@ -693,7 +699,7 @@ async def get_total_unread_count(
             )
         )
     )
-    total = result.scalar() or 0
-    
-    return {"unread_count": int(total)}
+    total = int(result.scalar() or 0)
+    ttl_cache.set(cache_key, total, ttl=20.0)
+    return {"unread_count": total}
 

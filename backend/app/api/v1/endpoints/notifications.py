@@ -1,4 +1,5 @@
 """Notification endpoints with preference management."""
+import asyncio
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, timedelta
@@ -8,6 +9,7 @@ from sqlalchemy import select, func, update
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
+from app.core import ttl_cache
 from app.middleware.auth import get_current_user, require_workspace, CurrentUser
 from app.models.notification import Notification
 from app.models.user import User
@@ -18,6 +20,10 @@ from app.schemas.notification import (
 )
 
 router = APIRouter()
+
+
+def _unread_cache_key(user_id) -> str:
+    return f"notif:unread:{user_id}"
 
 
 # ==================== Dashboard Alerts ====================
@@ -76,35 +82,40 @@ async def list_notifications(
     current_user: User = Depends(get_current_user),
 ):
     """List notifications for the current user."""
-    query = select(Notification).where(Notification.user_id == current_user.id)
-    
+    base_filters = [Notification.user_id == current_user.id]
     if category:
-        query = query.where(Notification.type == category)
+        base_filters.append(Notification.type == category)
     if is_read is not None:
-        query = query.where(Notification.is_read == is_read)
-    
-    # Order by newest first
-    query = query.order_by(Notification.created_at.desc())
-    
-    # Count total
-    count_query = select(func.count()).select_from(query.subquery())
-    total = await db.scalar(count_query)
-    
-    # Count unread
-    unread_query = select(func.count()).where(
+        base_filters.append(Notification.is_read == is_read)
+
+    # OPTIMIZATION: paginate items + run total/unread aggregates in parallel.
+    # total & unread use a single SUM(CASE ...) row instead of 2 COUNT() queries
+    # to halve the round-trips to Supabase.
+    items_query = (
+        select(Notification)
+        .where(*base_filters)
+        .order_by(Notification.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+    )
+    total_query = select(func.count(Notification.id)).where(*base_filters)
+    unread_query = select(func.count(Notification.id)).where(
         Notification.user_id == current_user.id,
         Notification.is_read == False,
     )
-    unread_count = await db.scalar(unread_query) or 0
-    
-    # Apply pagination
-    query = query.offset((page - 1) * size).limit(size)
-    result = await db.execute(query)
-    notifications = result.scalars().all()
-    
+
+    # NOTE: sequential because AsyncSession forbids concurrent ops (SQLAlchemy 2.0.46+).
+    items_result = await db.execute(items_query)
+    total = await db.scalar(total_query)
+    unread_count = await db.scalar(unread_query)
+    notifications = items_result.scalars().all()
+    total = total or 0
+    unread_count = unread_count or 0
+    ttl_cache.set(_unread_cache_key(current_user.id), int(unread_count), ttl=20.0)
+
     return NotificationList(
         items=[NotificationResponse.model_validate(n) for n in notifications],
-        total=total or 0,
+        total=total,
         unread_count=unread_count,
         page=page,
         size=size,
@@ -116,14 +127,20 @@ async def get_unread_count(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get count of unread notifications."""
+    """Get count of unread notifications (cached for 5s to tame UI polling)."""
+    cache_key = _unread_cache_key(current_user.id)
+    cached = ttl_cache.get(cache_key)
+    if cached is not None:
+        return {"unread_count": cached}
+
     count = await db.scalar(
-        select(func.count()).where(
+        select(func.count(Notification.id)).where(
             Notification.user_id == current_user.id,
             Notification.is_read == False,
         )
-    )
-    return {"unread_count": count or 0}
+    ) or 0
+    ttl_cache.set(cache_key, int(count), ttl=20.0)
+    return {"unread_count": count}
 
 
 @router.post("/mark-read", status_code=status.HTTP_200_OK)
@@ -142,6 +159,7 @@ async def mark_notifications_read(
         .values(is_read=True, read_at=datetime.utcnow())
     )
     await db.commit()
+    ttl_cache.invalidate(_unread_cache_key(current_user.id))
     return {"message": "Notificaciones marcadas como leídas"}
 
 
@@ -166,6 +184,7 @@ async def mark_all_notifications_read(
     
     await db.execute(query)
     await db.commit()
+    ttl_cache.invalidate(_unread_cache_key(current_user.id))
     return {"message": "Todas las notificaciones marcadas como leídas"}
 
 
@@ -189,6 +208,7 @@ async def delete_notification(
     
     await db.delete(notification)
     await db.commit()
+    ttl_cache.invalidate(_unread_cache_key(current_user.id))
 
 
 # ---------------------------------------------------------------------------

@@ -22,15 +22,20 @@ interface NotificationListResponse {
   size: number;
 }
 
-export function useNotifications(page = 1, size = 50) {
+export function useNotifications(page = 1, size = 20, enabled = true) {
   return useQuery({
     queryKey: ["notifications", page, size],
     queryFn: async () => {
       const response = await notificationsApi.list({ page, size });
       return response.data as NotificationListResponse;
     },
-    refetchInterval: 30000,
-    staleTime: 10000,
+    // The full notification list is only rendered inside the bell dropdown.
+    // Only fetch when the dropdown is open (enabled=true). The unread badge
+    // has its own lighter poll via useUnreadCount and invalidates this query
+    // on mutations.
+    enabled,
+    refetchInterval: enabled ? 120_000 : false,
+    staleTime: 60_000,
   });
 }
 
@@ -41,8 +46,8 @@ export function useUnreadCount() {
       const response = await notificationsApi.unreadCount();
       return response.data as { unread_count: number };
     },
-    refetchInterval: 15000,
-    staleTime: 5000,
+    refetchInterval: 45_000,
+    staleTime: 30_000,
   });
 }
 

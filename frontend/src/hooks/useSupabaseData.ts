@@ -554,6 +554,8 @@ export function useSupabaseCourses() {
         return [];
       }
     },
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 
@@ -569,6 +571,8 @@ export function useSupabaseChallenges() {
         return [];
       }
     },
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 
@@ -584,6 +588,8 @@ export function useSupabaseCourseEnrollments() {
         return [];
       }
     },
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 
@@ -599,6 +605,8 @@ export function useSupabaseCertificates() {
         return [];
       }
     },
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 
@@ -614,6 +622,8 @@ export function useSupabaseInstructors() {
         return [];
       }
     },
+    staleTime: 10 * 60_000,
+    gcTime: 20 * 60_000,
   });
 }
 

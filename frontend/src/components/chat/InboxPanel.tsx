@@ -156,7 +156,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
       </Box>
 
       {/* Messages list */}
-      <Collapse in={opened}>
+      <Collapse expanded={opened}>
         <Divider />
         <ScrollArea h={maxHeight}>
           {messages.length > 0 ? (

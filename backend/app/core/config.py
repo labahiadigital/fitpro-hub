@@ -5,6 +5,11 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
+# SECRET_KEY must have at least this much entropy to be accepted in production.
+# 32 bytes == 256 bits, which is the minimum recommended for HMAC-SHA256 (HS256 JWT).
+_MIN_SECRET_KEY_LENGTH = 32
+
+
 class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Trackfiz"
@@ -15,25 +20,54 @@ class Settings(BaseSettings):
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
+        import os
+        import warnings
+
+        is_prod = os.getenv("APP_ENV", "development") == "production"
+
         if v == "change-me-in-production":
-            import os
-            if os.getenv("APP_ENV", "development") == "production":
+            if is_prod:
                 raise ValueError(
                     "SECRET_KEY usa el valor por defecto inseguro en producción. "
-                    "Configura un SECRET_KEY fuerte y aleatorio en tu .env"
+                    "Genera uno con: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
                 )
-            import warnings
             warnings.warn(
-                "SECRET_KEY is using the insecure default value. "
-                "Set a strong random SECRET_KEY in your .env file.",
+                "SECRET_KEY is using the insecure default value. Generate a strong one with "
+                "`python -c 'import secrets; print(secrets.token_urlsafe(64))'`.",
                 stacklevel=2,
             )
+            return v
+
+        if is_prod and len(v) < _MIN_SECRET_KEY_LENGTH:
+            raise ValueError(
+                f"SECRET_KEY debe tener al menos {_MIN_SECRET_KEY_LENGTH} caracteres en producción "
+                "(256 bits recomendado). Regenera con secrets.token_urlsafe(64)."
+            )
+
+        if is_prod and len(set(v)) < 16:
+            raise ValueError(
+                "SECRET_KEY tiene muy poca entropía (demasiados caracteres repetidos). "
+                "Usa una clave aleatoria generada con secrets.token_urlsafe(64)."
+            )
         return v
+
     API_V1_PREFIX: str = "/api/v1"
     
     # Database
     DATABASE_URL: str = ""
     DATABASE_SSL: bool = True
+    DATABASE_SSL_VERIFY: bool = False  # Enforces CERT_REQUIRED + hostname check (auto-on in production)
+    DATABASE_SSL_CA: str = ""  # Optional path to a CA bundle file for self-hosted Postgres
+    DATABASE_STATEMENT_TIMEOUT_MS: int = 15000  # 15s per-statement hard stop
+    # Pool tuning.
+    # Supabase's Session Pooler (port 5432) caps every client session at
+    # `pool_size` connections (default 15). We must stay BELOW this per-worker
+    # value or asyncpg will blow up with EMAXCONNSESSION under load.
+    # With uvicorn running N workers, total upstream = N * (size + max_overflow)
+    # must be <= 15 (or we switch to the Transaction Pooler on :6543).
+    DATABASE_POOL_SIZE: int = 10
+    DATABASE_POOL_MAX_OVERFLOW: int = 10
+    DATABASE_POOL_RECYCLE_SECONDS: int = 1800  # 30m — matches Supabase PgBouncer idle
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -75,7 +109,14 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     
     # CORS (comma-separated list of allowed origins)
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://app.trackfiz.com"
+    # In production this MUST be overridden in .env — the default only contains dev origins.
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+
+    # Auth cookies for refresh tokens (hardened httpOnly cookie flow)
+    AUTH_COOKIE_NAME: str = "tf_refresh"
+    AUTH_COOKIE_DOMAIN: str = ""  # Leave empty for host-only cookie (recommended for single origin)
+    AUTH_COOKIE_SECURE: bool = True  # Always true in production; auto-relaxed in dev via property
+    AUTH_COOKIE_SAMESITE: str = "lax"  # "lax" | "strict" | "none". "none" requires Secure+HTTPS
     
     # Cloudflare R2 (S3-compatible object storage)
     R2_ACCOUNT_ID: str = ""
@@ -104,7 +145,22 @@ class Settings(BaseSettings):
     
     @property
     def cors_origins_list(self) -> List[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        # Hard-block "*" in production to avoid accidental wide-open CORS.
+        if self.APP_ENV == "production":
+            origins = [o for o in origins if o != "*" and not o.startswith("http://localhost")]
+        return origins
+
+    @property
+    def auth_cookie_secure(self) -> bool:
+        """Force Secure in production regardless of env value."""
+        if self.APP_ENV == "production":
+            return True
+        return self.AUTH_COOKIE_SECURE
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV == "production"
     
     class Config:
         env_file = ".env"

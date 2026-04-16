@@ -27,7 +27,8 @@ export function useBoxes() {
     queryKey: ["boxes"],
     queryFn: async () => boxesApi.list(),
     select: (res) => res.data as BoxData[],
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 
@@ -37,7 +38,8 @@ export function useBoxStats(boxId: string) {
     queryFn: async () => boxesApi.stats(boxId),
     select: (res) => res.data as BoxStats,
     enabled: !!boxId,
-    staleTime: 30_000,
+    staleTime: 2 * 60_000,
+    gcTime: 5 * 60_000,
   });
 }
 

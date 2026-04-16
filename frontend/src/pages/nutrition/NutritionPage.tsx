@@ -59,7 +59,6 @@ import {
   useDeleteMealPlan,
   useDeleteSupplement,
   useSupabaseFoods,
-  useSupabaseFoodsCount,
   useSupabaseFoodsPaginated,
   useSupabaseMealPlans,
   useSupabaseMealPlan,
@@ -388,7 +387,8 @@ export function NutritionPage() {
 
   const { data: supabaseFoods } = useSupabaseFoods(builderOpened);
   const { data: paginatedFoods, isLoading: isLoadingPaginatedFoods, isFetching: isFetchingFoods } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch, foodCategoryFilter);
-  const { data: totalFoodsCount } = useSupabaseFoodsCount();
+  // Total is already returned by the paginated endpoint; avoid a second request.
+  const totalFoodsCount = paginatedFoods?.total ?? 0;
   const { data: supabaseMealPlans, isLoading: isLoadingPlans } = useSupabaseMealPlans(clientId ? {} : {});
   const { data: specificClientPlan } = useSupabaseMealPlan(editPlanId && clientId ? editPlanId : "");
   const { data: supabaseSupplements } = useSupplements();

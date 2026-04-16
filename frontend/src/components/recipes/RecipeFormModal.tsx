@@ -300,7 +300,7 @@ export function RecipeFormModal({
             }
           />
 
-          <Collapse in={showIngredients}>
+          <Collapse expanded={showIngredients}>
             <Stack gap="xs">
               {form.values.items.length > 0 && (
                 <Stack gap={4}>

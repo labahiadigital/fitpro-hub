@@ -76,7 +76,7 @@ class Course(Base):
     reviews_count = Column(Integer, default=0)
 
     # Metadatos
-    course_metadata = Column(JSONB, default=lambda: {})
+    course_metadata = Column("metadata", JSONB, default=lambda: {})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

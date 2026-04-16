@@ -187,7 +187,7 @@ export function ClientDashboardPage() {
         </Paper>
       )}
 
-      <Grid gutter="lg">
+      <Grid gap="lg">
         {/* Left Column - Stats & Progress */}
         <Grid.Col span={{ base: 12, md: 8 }}>
           {/* Weekly Stats */}

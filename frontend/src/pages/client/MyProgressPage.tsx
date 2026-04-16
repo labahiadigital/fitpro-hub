@@ -714,7 +714,7 @@ export function MyProgressPage() {
             />
           </SimpleGrid>
 
-          <Grid gutter="lg">
+          <Grid gap="lg">
             {/* Multi-line Chart */}
             <Grid.Col span={{ base: 12, md: 8 }}>
               <Card shadow="sm" padding="lg" radius="lg" withBorder>

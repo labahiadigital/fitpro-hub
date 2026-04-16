@@ -38,7 +38,7 @@ import {
   IconTrashX,
   IconRestore,
 } from "@tabler/icons-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClientCell,
@@ -59,6 +59,7 @@ import {
   useUpdateClient,
 } from "../../hooks/useClients";
 import { useCreateInvitation, useInvitations, useResendInvitation, useCancelInvitation } from "../../hooks/useInvitations";
+import { useQuery } from "@tanstack/react-query";
 import { productsApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
@@ -223,22 +224,24 @@ export function ClientsPage() {
   const [deleteConfirmOpened, { open: openDeleteConfirm, close: closeDeleteConfirm }] = useDisclosure(false);
   const [clientToDelete, setClientToDelete] = useState<any>(null);
   
-  // Products for invite selector
+  // Products for invite selector (cached & deduped via React Query so it
+  // doesn't re-fetch on every StrictMode remount / route re-entry).
   const { currentWorkspace } = useAuthStore();
-  const [productOptions, setProductOptions] = useState<{ value: string; label: string }[]>([]);
-  useEffect(() => {
-    if (currentWorkspace?.id) {
-      productsApi.list(currentWorkspace.id).then((res) => {
-        const opts = (res.data?.items || res.data || [])
-          .filter((p: any) => p.is_active)
-          .map((p: any) => ({
-            value: p.id,
-            label: `${p.name} - ${formatDecimal(Number(p.price), 2)}€/${p.interval || "mes"}`,
-          }));
-        setProductOptions(opts);
-      }).catch(() => {});
-    }
-  }, [currentWorkspace]);
+  const { data: productOptions = [] } = useQuery({
+    queryKey: ["products-invite-options", currentWorkspace?.id],
+    queryFn: async () => {
+      if (!currentWorkspace?.id) return [];
+      const res = await productsApi.list(currentWorkspace.id);
+      return (res.data?.items || res.data || [])
+        .filter((p: any) => p.is_active)
+        .map((p: any) => ({
+          value: p.id,
+          label: `${p.name} - ${formatDecimal(Number(p.price), 2)}€/${p.interval || "mes"}`,
+        })) as { value: string; label: string }[];
+    },
+    enabled: !!currentWorkspace?.id,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const clientForm = useForm({
     initialValues: {

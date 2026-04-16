@@ -54,6 +54,11 @@ interface Workspace {
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  /**
+   * Kept in-memory only for backwards compatibility during the cookie-based
+   * refresh-token rollout. It is never persisted to localStorage — the browser
+   * cookie is the source of truth for long-lived auth material.
+   */
   refreshToken: string | null;
   currentWorkspace: Workspace | null;
   isAuthenticated: boolean;
@@ -79,7 +84,11 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user, isAuthenticated: !!user }),
 
       setTokens: (accessToken, refreshToken) =>
-        set({ accessToken, refreshToken, isAuthenticated: !!accessToken }),
+        set({
+          accessToken,
+          refreshToken: refreshToken ?? null,
+          isAuthenticated: !!accessToken,
+        }),
 
       setWorkspace: (currentWorkspace) => set({ currentWorkspace }),
 
@@ -96,12 +105,26 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "trackfiz-auth",
+      version: 2,
+      // SECURITY: refreshToken is deliberately NOT persisted. It now lives in
+      // an httpOnly cookie set by the backend at /api/v1/auth/*.
       partialize: (state) => ({
         accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         user: state.user,
         currentWorkspace: state.currentWorkspace,
       }),
+      migrate: (persistedState, version) => {
+        // v1 → v2 migration: strip the old refresh_token blob that we used to
+        // persist to localStorage.
+        if (persistedState && typeof persistedState === "object") {
+          const s = persistedState as Record<string, unknown>;
+          if ("refreshToken" in s) {
+            delete s.refreshToken;
+          }
+        }
+        void version;
+        return persistedState as AuthState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           const hasValidToken =

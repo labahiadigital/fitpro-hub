@@ -640,7 +640,7 @@ export function WorkoutBuilder({
                       </Group>
 
                       {/* Block Content */}
-                      <Collapse in={expandedBlocks.has(block.id)}>
+                      <Collapse expanded={expandedBlocks.has(block.id)}>
                         <Box p="md">
                           {/* Block Settings */}
                           {(block.type === "circuit" ||

@@ -11,6 +11,11 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  // SECURITY: required so the browser sends the httpOnly refresh cookie on
+  // /auth/refresh, /auth/logout and /auth/login. Works as long as the API is
+  // served under the same eTLD+1 as the SPA (Coolify + single dominio).
+  withCredentials: true,
+  timeout: 30_000,
 });
 
 let isRefreshing = false;
@@ -83,59 +88,50 @@ api.interceptors.response.use(
       }
       
       originalRequest._retry = true;
-      
-      const refreshToken = useAuthStore.getState().refreshToken;
-      
-      if (refreshToken) {
-        isRefreshing = true;
-        refreshTimeout = setTimeout(() => {
-          isRefreshing = false;
-          processQueue(new Error("Token refresh timeout"), null);
-        }, 15000);
-        
-        try {
-          const currentWs = useAuthStore.getState().currentWorkspace;
-          const response = await axios.post<{ access_token: string; refresh_token: string }>(
-            `${API_URL}/auth/refresh`,
-            {
-              refresh_token: refreshToken,
-              workspace_id: currentWs?.id || undefined,
-            },
-          );
 
-          const { access_token, refresh_token } = response.data;
-          useAuthStore.getState().setTokens(access_token, refresh_token);
-          
-          if (refreshTimeout) clearTimeout(refreshTimeout);
-          processQueue(null, access_token);
-          isRefreshing = false;
-          
-          // Retry the original request with new token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          }
-          return api(originalRequest);
-        } catch (refreshError) {
-          if (refreshTimeout) clearTimeout(refreshTimeout);
-          processQueue(refreshError, null);
-          isRefreshing = false;
-          // Refresh failed, logout user
-          useAuthStore.getState().logout();
-          // Only redirect if not already on login page
-          if (!window.location.pathname.includes("/login")) {
-            window.location.href = "/login";
-          }
-          return Promise.reject(refreshError);
+      // Refresh is driven by the httpOnly cookie set by the backend.
+      // A legacy refresh_token in memory is still forwarded so clients that
+      // haven't received a fresh cookie yet keep working during rollout.
+      const legacyRefresh = useAuthStore.getState().refreshToken;
+
+      isRefreshing = true;
+      refreshTimeout = setTimeout(() => {
+        isRefreshing = false;
+        processQueue(new Error("Token refresh timeout"), null);
+      }, 15000);
+
+      try {
+        const currentWs = useAuthStore.getState().currentWorkspace;
+        const body: Record<string, string> = {};
+        if (legacyRefresh) body.refresh_token = legacyRefresh;
+        if (currentWs?.id) body.workspace_id = currentWs.id;
+
+        const response = await axios.post<{ access_token: string; refresh_token?: string }>(
+          `${API_URL}/auth/refresh`,
+          body,
+          { withCredentials: true },
+        );
+
+        const { access_token, refresh_token } = response.data;
+        useAuthStore.getState().setTokens(access_token, refresh_token);
+
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        processQueue(null, access_token);
+        isRefreshing = false;
+
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
         }
-      } else {
-        // No refresh token, logout only if we were supposed to be authenticated
-        const hasHydrated = useAuthStore.getState()._hasHydrated;
-        if (hasHydrated) {
-          useAuthStore.getState().logout();
-          if (!window.location.pathname.includes("/login")) {
-            window.location.href = "/login";
-          }
+        return api(originalRequest);
+      } catch (refreshError) {
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        useAuthStore.getState().logout();
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
         }
+        return Promise.reject(refreshError);
       }
     }
     

@@ -1,4 +1,5 @@
 """Nutrition endpoints - simplified to match actual DB schema."""
+import asyncio
 import copy
 import re
 from collections import defaultdict
@@ -140,17 +141,16 @@ async def list_foods(
     if category:
         query = query.where(Food.category == category)
     
-    # Count total
+    # Count total + items in parallel
     count_query = select(func.count()).select_from(query.subquery())
-    total = await db.scalar(count_query) or 0
-    
-    # Apply pagination
     offset = (page - 1) * page_size
-    query = query.order_by(Food.name).offset(offset).limit(page_size)
-    
-    result = await db.execute(query)
-    foods = result.scalars().all()
-    
+    items_query = query.order_by(Food.name).offset(offset).limit(page_size)
+
+    # NOTE: sequential because AsyncSession forbids concurrent ops (SQLAlchemy 2.0.46+).
+    total = (await db.scalar(count_query)) or 0
+    items_result = await db.execute(items_query)
+    foods = items_result.scalars().all()
+
     return FoodListResponse(
         items=[FoodResponse.model_validate(f) for f in foods],
         total=total,

@@ -320,7 +320,7 @@ function NavGroupItem({ icon, label, children, onNavigate, isOpen, onToggle }: N
           />
         </Group>
       </UnstyledButton>
-      <Collapse in={isOpen}>
+      <Collapse expanded={isOpen}>
         <Stack gap={0} pl={12} mt={2}>
           {children.map((child) => (
             <NavItem
@@ -581,8 +581,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
         return response.data;
       }
     },
-    refetchInterval: 30000,
-    staleTime: 10000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
   
   const unreadCount = unreadData?.unread_count || 0;
@@ -724,7 +724,7 @@ export function DashboardLayout() {
   const { user: layoutUser } = useAuthStore();
   const isClientLayout = layoutUser?.role === "client";
 
-  const { data: notifData } = useNotifications();
+  const { data: notifData } = useNotifications(1, 20, notifOpen);
   const { data: unreadData } = useUnreadCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllRead();

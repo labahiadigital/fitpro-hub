@@ -344,7 +344,7 @@ function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
         <Text size="xs" c="dimmed" mt="xs" fs="italic">"{log.log.notes}"</Text>
       ) : null}
       {exercises.length > 0 && (
-        <Collapse in={opened}>
+        <Collapse expanded={opened}>
           <Divider my="sm" />
           <Stack gap={4}>
             {exercises.map((ex: any, i: number) => {
@@ -452,7 +452,7 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
         </Group>
       </Group>
       {meals.length > 0 && (
-        <Collapse in={opened}>
+        <Collapse expanded={opened}>
           <Divider my="sm" />
           <Stack gap="xs">
             {meals.map((meal: any, mi: number) => {

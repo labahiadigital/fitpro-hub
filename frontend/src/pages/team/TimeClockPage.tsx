@@ -777,7 +777,7 @@ function CalendarTab() {
   const isToday = (day: number) => today.getFullYear() === month.year && today.getMonth() === month.month && today.getDate() === day;
 
   return (
-    <Grid gutter="md">
+    <Grid gap="md">
       <Grid.Col span={{ base: 12, md: 9 }}>
         <Stack gap="md">
           <Group justify="space-between">

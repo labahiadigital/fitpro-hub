@@ -229,8 +229,8 @@ async def check_availability(
 
 @router.get("")
 async def list_appointments(
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
     staff_id: Optional[UUID] = None,
     box_id: Optional[UUID] = None,
     status_filter: Optional[str] = None,

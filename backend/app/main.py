@@ -1,12 +1,16 @@
 from contextlib import asynccontextmanager
 import logging
+import os
 import time
+import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
@@ -40,10 +44,14 @@ def _mask_url(url: str) -> str:
 
 
 def _run_alembic_upgrade():
-    """Apply pending Alembic migrations (sync, runs before the async loop)."""
+    """Apply pending Alembic migrations (sync, runs before the async loop).
+
+    Guarded by RUN_MIGRATIONS_ON_STARTUP env var. When running multiple replicas
+    behind a load balancer, leave it unset (or "false") on every replica and run
+    migrations as a separate one-shot job to avoid concurrent upgrade races.
+    """
     from alembic.config import Config
     from alembic import command
-    import os
 
     alembic_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic")
     ini_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic.ini")
@@ -69,10 +77,18 @@ def _run_alembic_upgrade():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting %s...", settings.APP_NAME)
-    logger.info("REDIS_URL target → %s", _mask_url(settings.REDIS_URL))
-    logger.info("DATABASE_URL target → %s", _mask_url(settings.DATABASE_URL) if settings.DATABASE_URL else "(empty)")
-    _run_alembic_upgrade()
+    logger.info("Starting %s (env=%s)...", settings.APP_NAME, settings.APP_ENV)
+    logger.info("REDIS_URL target -> %s", _mask_url(settings.REDIS_URL))
+    logger.info("DATABASE_URL target -> %s", _mask_url(settings.DATABASE_URL) if settings.DATABASE_URL else "(empty)")
+
+    # Only run migrations on startup when explicitly opted-in. In multi-replica deploys
+    # you should run `alembic upgrade head` as a dedicated job step instead.
+    should_run_migrations = os.getenv("RUN_MIGRATIONS_ON_STARTUP", "true").lower() in ("1", "true", "yes")
+    if should_run_migrations:
+        _run_alembic_upgrade()
+    else:
+        logger.info("RUN_MIGRATIONS_ON_STARTUP=false -> skipping migrations on boot")
+
     yield
     logger.info("Shutting down %s...", settings.APP_NAME)
 
@@ -112,24 +128,76 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Workspace-ID"],
-    expose_headers=["X-Total-Count"],
-    max_age=600,
-)
+# NOTE: Starlette runs middleware in reverse registration order. We register the
+# outermost layers (security headers, request IDs, gzip) first so they wrap
+# everything, then CORS, then auth/rate-limit stuff closer to the route.
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Attach hardened security headers to every API response.
+
+    Nginx already sets these for the static frontend, but API responses don't
+    transit through nginx (they go straight through the app), so we replicate
+    the relevant ones here.
+    """
+
+    _HSTS = "max-age=63072000; includeSubDomains; preload"
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        headers = response.headers
+        headers.setdefault("X-Content-Type-Options", "nosniff")
+        headers.setdefault("X-Frame-Options", "DENY")
+        headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+        headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+        # Lock down API responses — they should never be interpreted as HTML.
+        headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none';")
+        if settings.is_production:
+            headers.setdefault("Strict-Transport-Security", self._HSTS)
+        return response
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Attach a stable request id for log correlation and troubleshooting."""
+
+    async def dispatch(self, request: Request, call_next):
+        rid = request.headers.get("x-request-id") or uuid.uuid4().hex
+        request.state.request_id = rid
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = rid
+        return response
 
 
 class ProxySchemeMiddleware(BaseHTTPMiddleware):
     """Force HTTPS scheme when behind a reverse proxy (Coolify/Traefik)."""
+
     async def dispatch(self, request: Request, call_next):
         if request.headers.get("x-forwarded-proto") == "https":
             request.scope["scheme"] = "https"
         return await call_next(request)
 
+
+# GZip response bodies to cut bandwidth on JSON endpoints. minimum_size avoids
+# wasting CPU on already-tiny payloads.
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Workspace-ID", "X-Request-ID"],
+    expose_headers=["X-Total-Count", "X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
+    max_age=600,
+)
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestIDMiddleware)
+
+# Enforce application-wide rate limits so endpoints without an explicit
+# @limiter.limit decorator still get protection.
+app.add_middleware(SlowAPIMiddleware)
 
 if settings.APP_ENV == "production":
     app.add_middleware(ProxySchemeMiddleware)
@@ -145,17 +213,20 @@ async def access_log_middleware(request: Request, call_next):
         response = await call_next(request)
     except Exception as exc:
         elapsed_ms = (time.perf_counter() - start) * 1000
+        rid = getattr(request.state, "request_id", "-")
         logger.error(
-            "UNHANDLED %s %s %.0fms – %s",
-            request.method, request.url.path, elapsed_ms, exc,
+            "UNHANDLED rid=%s %s %s %.0fms – %s",
+            rid, request.method, request.url.path, elapsed_ms, exc,
             exc_info=True,
         )
         raise
     elapsed_ms = (time.perf_counter() - start) * 1000
     if request.url.path not in ("/health", "/"):
         log_fn = access_logger.warning if response.status_code >= 400 else access_logger.info
+        rid = getattr(request.state, "request_id", "-")
         log_fn(
-            "%s %s %s %.0fms",
+            "rid=%s %s %s %s %.0fms",
+            rid,
             request.method,
             request.url.path,
             response.status_code,

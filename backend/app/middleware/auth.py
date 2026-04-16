@@ -1,3 +1,5 @@
+import asyncio
+import hashlib
 from typing import Optional, List
 from uuid import UUID
 from fastapi import Depends, HTTPException, Request, status
@@ -7,8 +9,19 @@ from sqlalchemy import select
 import logging
 
 from app.core.database import get_db
+from app.core import ttl_cache
 from app.core.security import decode_access_token
 from app.models.user import User, UserRole, RoleType
+
+
+def _token_cache_key(token: str) -> str:
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()[:24]
+    return f"auth:ctx:{digest}"
+
+
+def invalidate_auth_cache(token: str) -> None:
+    """Invalidate cached CurrentUser for a given token (on logout / role change)."""
+    ttl_cache.invalidate(_token_cache_key(token))
 
 logger = logging.getLogger(__name__)
 
@@ -143,22 +156,22 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> CurrentUser:
-    """Validate JWT token and return current user with workspace context."""
+    """Validate JWT token and return current user with workspace context.
+
+    OPTIMIZATION: this dependency is invoked on every authenticated request,
+    and previously executed 2 serial queries (User + UserRole) against
+    Supabase (~150ms per request on EU latency). We cache the resolved
+    CurrentUser for 30s keyed by a hash of the token so repeated requests
+    within a short window skip the DB round-trip entirely. The cached
+    objects are transient and tied to the token itself, so logout or token
+    rotation naturally invalidates them.
+    """
+    cache_key = _token_cache_key(token)
+    cached = ttl_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     payload = decode_access_token(token)
-    user = None
-    
-    if payload:
-        user_id_str = payload.sub
-        if user_id_str:
-            try:
-                user_id = UUID(user_id_str)
-                result = await db.execute(
-                    select(User).where(User.id == user_id)
-                )
-                user = result.scalar_one_or_none()
-            except (ValueError, TypeError):
-                pass
-    
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -166,72 +179,100 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    user_id_str = payload.sub
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try:
+        user_id = UUID(user_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token_workspace_id = None
+    if hasattr(payload, "workspace_id"):
+        token_workspace_id = payload.workspace_id
+
+    parsed_ws: Optional[UUID] = None
+    if token_workspace_id:
+        try:
+            parsed_ws = (
+                UUID(token_workspace_id)
+                if isinstance(token_workspace_id, str)
+                else token_workspace_id
+            )
+        except (ValueError, TypeError):
+            parsed_ws = None
+
+    # NOTE: we used to run these two queries with asyncio.gather against the
+    # shared AsyncSession, but SQLAlchemy 2.0.46+ strictly forbids concurrent
+    # ops on the same session. The 30s CurrentUser cache below absorbs the
+    # repeated-request cost, so running them sequentially is fine.
+    user_q = select(User).where(User.id == user_id)
+    if parsed_ws is not None:
+        role_q = select(UserRole).where(
+            UserRole.user_id == user_id,
+            UserRole.workspace_id == parsed_ws,
+        )
+    else:
+        role_q = (
+            select(UserRole)
+            .where(UserRole.user_id == user_id, UserRole.is_default.is_(True))
+        )
+
+    user_res = await db.execute(user_q)
+    role_res = await db.execute(role_q)
+    user = user_res.scalar_one_or_none()
+    resolved_user_role = role_res.scalar_one_or_none()
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario no encontrado",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuario desactivado",
         )
-    
-    workspace_id = None
-    role = None
-    resolved_user_role = None
 
-    token_workspace_id = None
-    if hasattr(payload, 'workspace_id'):
-        token_workspace_id = payload.workspace_id
+    workspace_id = parsed_ws
+    role = resolved_user_role.role if resolved_user_role else None
 
-    if token_workspace_id:
-        try:
-            workspace_id = UUID(token_workspace_id) if isinstance(token_workspace_id, str) else token_workspace_id
-            result = await db.execute(
-                select(UserRole).where(
-                    UserRole.user_id == user.id,
-                    UserRole.workspace_id == workspace_id
-                )
-            )
-            resolved_user_role = result.scalar_one_or_none()
-            if resolved_user_role:
-                role = resolved_user_role.role
-        except (ValueError, TypeError):
-            pass
-
-    if not workspace_id:
+    # Fallback: no default role + no ws in token -> first UserRole.
+    if not resolved_user_role and parsed_ws is None:
         result = await db.execute(
-            select(UserRole).where(
-                UserRole.user_id == user.id,
-                UserRole.is_default.is_(True)
-            )
+            select(UserRole).where(UserRole.user_id == user_id).limit(1)
         )
         resolved_user_role = result.scalar_one_or_none()
-
         if resolved_user_role:
             workspace_id = resolved_user_role.workspace_id
             role = resolved_user_role.role
-        else:
-            result = await db.execute(
-                select(UserRole).where(UserRole.user_id == user.id).limit(1)
-            )
-            resolved_user_role = result.scalar_one_or_none()
-            if resolved_user_role:
-                workspace_id = resolved_user_role.workspace_id
-                role = resolved_user_role.role
+    elif resolved_user_role and workspace_id is None:
+        workspace_id = resolved_user_role.workspace_id
 
-    payload_dict = payload.model_dump() if hasattr(payload, 'model_dump') else (payload if isinstance(payload, dict) else {})
+    payload_dict = payload.model_dump() if hasattr(payload, "model_dump") else (
+        payload if isinstance(payload, dict) else {}
+    )
 
-    return CurrentUser(
+    ctx = CurrentUser(
         user=user,
         workspace_id=workspace_id,
         role=role,
         token_payload=payload_dict,
         user_role=resolved_user_role,
     )
+    # 30s TTL is a good compromise: short enough that role changes/deactivations
+    # propagate quickly, long enough to collapse a navigation burst into 1 lookup.
+    ttl_cache.set(cache_key, ctx, ttl=30.0)
+    return ctx
 
 
 async def get_current_active_user(
