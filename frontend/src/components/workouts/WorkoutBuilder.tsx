@@ -1492,10 +1492,17 @@ export function WorkoutBuilderWithDays({
           <Select
             value={activeDay}
             onChange={(v) => v && setActiveDay(v)}
-            data={days.map((day) => ({
-              value: day.id,
-              label: `${day.dayName} — ${day.isRestDay ? "Descanso" : `${getDayExerciseCount(day)} ejercicios`}`,
-            }))}
+            data={days.map((day, idx) => {
+              const ds = getDayDate(startDate, currentWeek, idx);
+              const count = getDayExerciseCount(day);
+              const suffix = day.isRestDay
+                ? "Descanso"
+                : `${count} ${count === 1 ? "ejercicio" : "ejercicios"}`;
+              return {
+                value: day.id,
+                label: `${day.dayName}${ds ? ` (${ds})` : ""} — ${suffix}`,
+              };
+            })}
             size="sm"
             radius="md"
           />
@@ -1534,23 +1541,7 @@ export function WorkoutBuilderWithDays({
         )}
       </Paper>
 
-      {/* Tabs por día */}
-      {isMobile ? (
-        <Select
-          value={activeDay}
-          onChange={(v) => v && setActiveDay(v)}
-          data={days.map((day, idx) => {
-            const ds = getDayDate(startDate, currentWeek, idx);
-            return {
-              value: day.id,
-              label: `${day.dayName}${ds ? ` (${ds})` : ""}${day.isRestDay ? " — Descanso" : ` — ${getDayExerciseCount(day)} ej.`}`,
-            };
-          })}
-          size="sm"
-          radius="md"
-          mb="md"
-        />
-      ) : null}
+      {/* Tabs por día (solo escritorio; en mobile usamos el Select del header) */}
       <Tabs value={activeDay} onChange={(v) => setActiveDay(v || days[0]?.id)}>
         {currentDay && (
           <Tabs.Panel key={currentDay.id} value={currentDay.id}>

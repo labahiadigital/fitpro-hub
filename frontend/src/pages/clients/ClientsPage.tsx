@@ -506,6 +506,7 @@ export function ClientsPage() {
     {
       key: "phone",
       title: "Teléfono",
+      hideOnMobile: true,
       render: (client: { phone?: string }) => (
         <Text size="sm" fw={500} style={{ color: client.phone ? "var(--nv-dark)" : "var(--nv-slate-light)" }}>
           {client.phone || "—"}
@@ -517,6 +518,7 @@ export function ClientsPage() {
           {
             key: "tags",
             title: "Etiquetas",
+            hideOnMobile: true,
             render: (client: { tags?: Array<{ name: string; color: string }> }) =>
               client.tags && client.tags.length > 0 ? (
                 <TagsList tags={client.tags} />
@@ -583,6 +585,7 @@ export function ClientsPage() {
     {
       key: "created_at",
       title: "Registro",
+      hideOnMobile: true,
       render: (client: { created_at: string }) => (
         <Group gap="xs">
           <IconCalendar size={14} color="var(--nv-slate-light)" />
@@ -862,13 +865,13 @@ export function ClientsPage() {
               }}
             >
               <ScrollArea type="auto">
-              <Table verticalSpacing="sm" horizontalSpacing="md" style={{ minWidth: 520 }}>
+              <Table verticalSpacing="sm" horizontalSpacing="md">
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Email</Text></Table.Th>
-                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Nombre</Text></Table.Th>
+                    <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Nombre</Text></Table.Th>
                     <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Estado</Text></Table.Th>
-                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Expira</Text></Table.Th>
+                    <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Expira</Text></Table.Th>
                     <Table.Th />
                   </Table.Tr>
                 </Table.Thead>
@@ -883,9 +886,9 @@ export function ClientsPage() {
                     return (
                       <Table.Tr key={inv.id}>
                         <Table.Td>
-                          <Text size="sm" fw={500}>{inv.email}</Text>
+                          <Text size="sm" fw={500} truncate>{inv.email}</Text>
                         </Table.Td>
-                        <Table.Td>
+                        <Table.Td visibleFrom="sm">
                           <Text size="sm">{inv.first_name || ""} {inv.last_name || ""}</Text>
                         </Table.Td>
                         <Table.Td>
@@ -898,7 +901,7 @@ export function ClientsPage() {
                             {inv.status === "pending" ? "Pendiente" : "Expirada"}
                           </Badge>
                         </Table.Td>
-                        <Table.Td>
+                        <Table.Td visibleFrom="sm">
                           <Text size="sm" c={isExpired ? "red.6" : "dimmed"}>
                             {new Date(inv.expires_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                           </Text>

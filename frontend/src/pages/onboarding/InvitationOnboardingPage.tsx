@@ -26,6 +26,7 @@ import {
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
+import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
@@ -150,6 +151,7 @@ export function InvitationOnboardingPage() {
   const [searchParams] = useSearchParams();
   const { setUser, setTokens } = useAuthStore();
   const [active, setActive] = useState(0);
+  const isMobile = useMediaQuery("(max-width: 48em)");
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
@@ -1037,12 +1039,31 @@ export function InvitationOnboardingPage() {
         )}
       </Box>
 
-      <Progress mb="xl" radius="xl" size="sm" value={(active / 4) * 100} />
+      <Progress mb={isMobile ? "sm" : "xl"} radius="xl" size="sm" value={(active / 4) * 100} />
+      {isMobile && (
+        <Text size="xs" c="dimmed" ta="center" mb="md" fw={500}>
+          Paso {active + 1} de 5 · {[
+            "Datos Personales",
+            "Objetivos",
+            "Salud",
+            "PAR-Q",
+            "Consentimiento",
+          ][active]}
+        </Text>
+      )}
 
       <Stepper
         active={active}
         allowNextStepsSelect={false}
         onStepClick={setActive}
+        size={isMobile ? "xs" : "sm"}
+        iconSize={isMobile ? 28 : undefined}
+        orientation="horizontal"
+        styles={isMobile ? {
+          steps: { flexWrap: "nowrap", gap: 4 },
+          stepBody: { display: "none" },
+          separator: { marginLeft: 4, marginRight: 4, minWidth: 0 },
+        } : undefined}
       >
         {/* Step 1: Personal Info */}
         <Stepper.Step

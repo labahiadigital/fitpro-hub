@@ -21,6 +21,7 @@ import {
   IconTrash,
   IconFilter,
 } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
 import { useState } from "react";
 
 interface Column<T> {
@@ -29,6 +30,8 @@ interface Column<T> {
   render?: (item: T) => React.ReactNode;
   sortable?: boolean;
   width?: number;
+  // Oculta la columna en pantallas móviles (ancho < 48em)
+  hideOnMobile?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -56,7 +59,7 @@ interface DataTableProps<T> {
 
 export function DataTable<T extends { id: string }>({
   data,
-  columns,
+  columns: allColumns,
   loading = false,
   selectable = false,
   searchable = false,
@@ -71,6 +74,10 @@ export function DataTable<T extends { id: string }>({
   pagination,
   emptyMessage = "No hay datos disponibles",
 }: DataTableProps<T>) {
+  const isMobile = useMediaQuery("(max-width: 48em)");
+  const columns = isMobile
+    ? allColumns.filter((c) => !c.hideOnMobile)
+    : allColumns;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -158,7 +165,7 @@ export function DataTable<T extends { id: string }>({
         </Box>
       )}
 
-      <Table.ScrollContainer minWidth={600}>
+      <Table.ScrollContainer minWidth={isMobile ? 340 : 600}>
         <Table 
           verticalSpacing="sm" 
           horizontalSpacing="md"

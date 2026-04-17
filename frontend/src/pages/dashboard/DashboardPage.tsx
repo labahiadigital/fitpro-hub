@@ -18,7 +18,7 @@ import {
   ThemeIcon,
   UnstyledButton,
 } from "@mantine/core";
-import { useDisclosure, useLocalStorage } from "@mantine/hooks";
+import { useDisclosure, useLocalStorage, useMediaQuery } from "@mantine/hooks";
 import { useEffect, useMemo, useState } from "react";
 import {
   IconArrowRight,
@@ -664,6 +664,7 @@ function ClockWidget() {
   const clockIn = useClockIn();
   const clockOut = useClockOut();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery("(max-width: 48em)");
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -675,32 +676,68 @@ function ClockWidget() {
 
   return (
     <Paper shadow="xs" radius="xl" px="md" py="xs" withBorder>
-      <Group gap="sm" wrap="nowrap">
-        <ThemeIcon variant="light" color={isClockedIn ? "green" : "gray"} size={36} radius="xl">
-          <IconClock size={18} />
-        </ThemeIcon>
-        <Box>
-          <Text ff="monospace" fw={700} size="md" lh={1}>
-            {now.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-          </Text>
-          <Text size="xs" c="dimmed" lh={1.2} mt={2}>
-            {isClockedIn
-              ? `Fichado ${new Date(status!.clock_in!).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
-              : "Sin fichar"}
-          </Text>
-        </Box>
-        {!isClockedIn ? (
-          <Button size="xs" color="green" leftSection={<IconClockPlay size={14} />} loading={clockIn.isPending} onClick={() => clockIn.mutate({})} radius="xl">
-            Entrada
-          </Button>
-        ) : (
-          <Button size="xs" color="red" leftSection={<IconClockStop size={14} />} loading={clockOut.isPending} onClick={() => clockOut.mutate({})} radius="xl">
-            Salida
-          </Button>
-        )}
-        <UnstyledButton onClick={() => navigate("/time-clock")}>
-          <Text size="xs" c="blue" fw={500}>Ver control horario →</Text>
-        </UnstyledButton>
+      <Group gap="sm" wrap="nowrap" justify="space-between">
+        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
+          <ThemeIcon variant="light" color={isClockedIn ? "green" : "gray"} size={36} radius="xl">
+            <IconClock size={18} />
+          </ThemeIcon>
+          <Box style={{ minWidth: 0 }}>
+            <Text ff="monospace" fw={700} size="md" lh={1}>
+              {now.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </Text>
+            <Text size="xs" c="dimmed" lh={1.2} mt={2} truncate>
+              {isClockedIn
+                ? `Fichado ${new Date(status!.clock_in!).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
+                : "Sin fichar"}
+            </Text>
+          </Box>
+        </Group>
+        <Group gap={6} wrap="nowrap">
+          {!isClockedIn ? (
+            isMobile ? (
+              <ActionIcon
+                size="lg"
+                color="green"
+                variant="filled"
+                radius="xl"
+                loading={clockIn.isPending}
+                onClick={() => clockIn.mutate({})}
+                aria-label="Fichar entrada"
+              >
+                <IconClockPlay size={16} />
+              </ActionIcon>
+            ) : (
+              <Button size="xs" color="green" leftSection={<IconClockPlay size={14} />} loading={clockIn.isPending} onClick={() => clockIn.mutate({})} radius="xl">
+                Entrada
+              </Button>
+            )
+          ) : (
+            isMobile ? (
+              <ActionIcon
+                size="lg"
+                color="red"
+                variant="filled"
+                radius="xl"
+                loading={clockOut.isPending}
+                onClick={() => clockOut.mutate({})}
+                aria-label="Fichar salida"
+              >
+                <IconClockStop size={16} />
+              </ActionIcon>
+            ) : (
+              <Button size="xs" color="red" leftSection={<IconClockStop size={14} />} loading={clockOut.isPending} onClick={() => clockOut.mutate({})} radius="xl">
+                Salida
+              </Button>
+            )
+          )}
+          {!isMobile && (
+            <UnstyledButton onClick={() => navigate("/time-clock")}>
+              <Text size="xs" c="blue" fw={500} style={{ whiteSpace: "nowrap" }}>
+                Ver control horario →
+              </Text>
+            </UnstyledButton>
+          )}
+        </Group>
       </Group>
     </Paper>
   );
