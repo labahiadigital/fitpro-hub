@@ -1,0 +1,499 @@
+﻿viewport: 1912x1080
+page: 1912x2401
+scroll: (0, 0)
+[1637]<div id=root />
+	[1890]<div />
+	Trackfiz
+	Virtual Gym
+	Men├║ Principal
+	[1640]<a />
+		[1901]<button />
+			Panel Principal
+	[1641]<button />
+		Calendario y Tareas
+	[1947]<button />
+		Clientes
+	[1645]<button />
+		Facturaci├│n y Reportes
+	[1648]<a />
+		[1986]<button />
+			Chat
+	[1649]<a />
+		[1995]<button />
+			Entrenamientos
+	[1650]<a />
+		[2008]<button />
+			Nutrici├│n
+	[1651]<button />
+		Cat├ílogo y Stock
+	[1654]<button />
+		Boxes y Maquinaria
+	[1657]<button />
+		Formularios y Docs
+	[1660]<button />
+		Miembros y equipo
+	[1665]<a />
+		[2186]<button />
+			Comunidad
+	[1666]<a />
+		[2198]<button />
+			Academia / LMS
+	[1667]<a />
+		[2209]<button />
+			Clases en Vivo
+	[1668]<button id=mantine-29fb9omcb expanded=false />
+		Toni Tortonda
+		tonitortonda@labahia.digital
+	[2233]<p />
+		App
+	Clientes
+	[1622]<button aria-label=Abrir paleta de comandos (ÔîÿK) />
+		Buscar...
+	[1623]<div />
+		[1624]<button aria-label=Notificaciones />
+	Clientes
+	Gestiona tu cartera de clientes y su informaci├│n
+	[1670]<button />
+		Crear Manual
+	[1671]<button />
+		Invitar Cliente
+	Total Clientes
+	En tu cartera
+	Activos
+	Con plan activo
+	Pendientes
+	Sin cuenta creada
+	Inactivos
+	Sin actividad
+	Nuevos
+	Este mes
+	[1672]<button role=tab id=mantine-npl3g5gvb-tab-all selected=true />
+		Todos (
+	[1673]<button role=tab id=mantine-npl3g5gvb-tab-active selected=false />
+		Activos (
+	[1627]<button role=tab id=mantine-npl3g5gvb-tab-pending selected=false />
+		Pendientes (
+	[1629]<button role=tab id=mantine-npl3g5gvb-tab-inactive selected=false />
+		Inactivos (
+	[1630]<button role=tab id=mantine-npl3g5gvb-tab-tags selected=false />
+		Etiquetas
+	[2357]<div />
+		[2358]<svg /> <!-- SVG content collapsed -->
+	|SHADOW(open)|[1635]<input placeholder=Buscar por nombre, email o tel├®fono... id=mantine-twptpvak4 />
+	[1674]<button aria-label=Filtros avanzados />
+	[2368]<tr />
+		Cliente
+		Tel├®fono
+		Etiquetas
+		Estado
+		Registro
+	[1677]<tr role=button />
+		[2387]<td />
+			[2388]<div />
+				[2389]<div />
+					[2390]<span />
+				[2392]<div />
+					[2393]<p />
+						CARLOS HERNANDEZ
+					[2395]<p />
+						VIGOTILLOS@hotmail.com
+		[2397]<td />
+			[2398]<p />
+		[2400]<td />
+			[2401]<p />
+		[2403]<td />
+			Pendiente
+		[2407]<td />
+			[1678]<button />
+				Desasignar
+		[2418]<td />
+			[2419]<div />
+				[2420]<svg /> <!-- SVG content collapsed -->
+				[2427]<p />
+					10 abr 2026
+		[1679]<td />
+			[1680]<button aria-label=Acciones id=mantine-y8rt40pwh expanded=false />
+	[1681]<tr role=button />
+		[2434]<td />
+			[2435]<div />
+				[2436]<div />
+					[2437]<span />
+				[2439]<div />
+					[2440]<p />
+						PEPE DASDFAS
+					[2442]<p />
+						SFASFAS@gmail.com
+		[2444]<td />
+			[2445]<p />
+		[2447]<td />
+			[2448]<p />
+		[2450]<td />
+			Pendiente
+		[2454]<td />
+			[1682]<button />
+				Desasignar
+		[2465]<td />
+			[2466]<div />
+				[2467]<svg /> <!-- SVG content collapsed -->
+				[2474]<p />
+					10 abr 2026
+		[1683]<td />
+			[1684]<button aria-label=Acciones id=mantine-fx4ah22a7 expanded=false />
+	[1685]<tr role=button />
+		[2481]<td />
+			[2482]<div />
+				[2483]<div />
+					[2484]<span />
+				[2486]<div />
+					[2487]<p />
+						Pepito Garcio
+					[2489]<p />
+						geantonito92@gmail.com
+		[2491]<td />
+			[2492]<p />
+				681955474
+		[2494]<td />
+			[2495]<p />
+		[2497]<td />
+			[2499]<span />
+				Activo
+		[2501]<td />
+			[1686]<button />
+				Desasignar
+		[2512]<td />
+			[2513]<div />
+				[2514]<svg /> <!-- SVG content collapsed -->
+				[2521]<p />
+					2 feb 2026
+		[1687]<td />
+			[1688]<button aria-label=Acciones id=mantine-bzd5px7z1 expanded=false />
+	[1633]<svg /> <!-- SVG content collapsed -->
+	Invitaciones pendientes (
+	26
+	[2539]<tr />
+		Email
+		Nombre
+		Estado
+		Expira
+	[2554]<tr />
+		[2555]<td />
+			carlos.hernandez.estelles@gmail.com
+		[2558]<td />
+			carlos
+			hernandez
+		[2563]<td />
+			[2565]<span />
+				Pendiente
+		[2567]<td />
+			17 abr
+		[2570]<td />
+			[1690]<button />
+				Reenviar
+			[1691]<button title=Eliminar invitaci├│n />
+	[2586]<tr />
+		[2587]<td />
+			asd@asd.com
+		[1776]<td />
+			asd
+		[2593]<td />
+			[2595]<span />
+				Pendiente
+		[2597]<td />
+			17 abr
+		[2600]<td />
+			[1692]<button />
+				Reenviar
+			[1693]<button title=Eliminar invitaci├│n />
+	[2616]<tr />
+		[2617]<td />
+			carlos.hernandez.estelles@gmail.com
+		[2620]<td />
+			carlos
+			hern
+		[2625]<td />
+			[2627]<span />
+				Expirada
+		[2629]<td />
+			16 abr
+		[2632]<td />
+			[1694]<button />
+				Reenviar
+			[1695]<button title=Eliminar invitaci├│n />
+	[2648]<tr />
+		[2649]<td />
+			carlos.hernandez.estelles@gmail.com
+		[2652]<td />
+			carlos
+			hernandez
+		[2657]<td />
+			[2659]<span />
+				Expirada
+		[2661]<td />
+			16 abr
+		[2664]<td />
+			[1696]<button />
+				Reenviar
+			[1697]<button title=Eliminar invitaci├│n />
+	[2680]<tr />
+		[2681]<td />
+			vigotillos@hotmail.com
+		[2684]<td />
+		[2687]<td />
+			[2689]<span />
+				Expirada
+		[2691]<td />
+			16 abr
+		[2694]<td />
+			[1698]<button />
+				Reenviar
+			[1699]<button title=Eliminar invitaci├│n />
+	[2710]<tr />
+		[2711]<td />
+			integrations-03@sequra.es
+		[2714]<td />
+			Noenviar
+			Noenviar
+		[2719]<td />
+			[2721]<span />
+				Expirada
+		[2723]<td />
+			13 abr
+		[2726]<td />
+			[1700]<button />
+				Reenviar
+			[1701]<button title=Eliminar invitaci├│n />
+	[2742]<tr />
+		[2743]<td />
+			integrations-01@sequra.es
+		[2746]<td />
+			Noenviar
+			Noenviar
+		[2751]<td />
+			[2753]<span />
+				Expirada
+		[2755]<td />
+			9 abr
+		[2758]<td />
+			[1702]<button />
+				Reenviar
+			[1703]<button title=Eliminar invitaci├│n />
+	[2774]<tr />
+		[2775]<td />
+			integrations-11@sequra.es
+		[2778]<td />
+			Noenviar
+			Noenviar
+		[2783]<td />
+			[2785]<span />
+				Expirada
+		[2787]<td />
+			9 abr
+		[2790]<td />
+			[1704]<button />
+				Reenviar
+			[1705]<button title=Eliminar invitaci├│n />
+	[2806]<tr />
+		[2807]<td />
+			integrations-10@sequra.es
+		[2810]<td />
+			Noenviar
+			Noenviar
+		[2815]<td />
+			[2817]<span />
+				Expirada
+		[2819]<td />
+			7 abr
+		[2822]<td />
+			[1706]<button />
+				Reenviar
+			[1707]<button title=Eliminar invitaci├│n />
+	[2838]<tr />
+		[2839]<td />
+			integrations-7@sequra.es
+		[2842]<td />
+			Noenviar
+			Noenviar
+		[2847]<td />
+			[2849]<span />
+				Expirada
+		[2851]<td />
+			2 abr
+		[2854]<td />
+			[1708]<button />
+				Reenviar
+			[1709]<button title=Eliminar invitaci├│n />
+	[2870]<tr />
+		[2871]<td />
+			geantonito92@gmai.com
+		[2874]<td />
+			test
+		[2878]<td />
+			[2880]<span />
+				Expirada
+		[2882]<td />
+			1 abr
+		[2885]<td />
+			[1710]<button />
+				Reenviar
+			[1711]<button title=Eliminar invitaci├│n />
+	[2901]<tr />
+		[2902]<td />
+			test.sequra@mailinator.com
+		[2905]<td />
+			Test
+			SeQura
+		[2910]<td />
+			[2912]<span />
+				Expirada
+		[2914]<td />
+			1 abr
+		[2917]<td />
+			[1712]<button />
+				Reenviar
+			[1713]<button title=Eliminar invitaci├│n />
+	[2933]<tr />
+		[2934]<td />
+			asd@asd.com
+		[2937]<td />
+			asd
+		[2941]<td />
+			[2943]<span />
+				Expirada
+		[2945]<td />
+			1 abr
+		[2948]<td />
+			[1714]<button />
+				Reenviar
+			[1715]<button title=Eliminar invitaci├│n />
+	[2964]<tr />
+		[2965]<td />
+			integrations-3@sequra.es
+		[2968]<td />
+			Noenviar
+			Noenviar
+		[2973]<td />
+			[2975]<span />
+				Expirada
+		[2977]<td />
+			31 mar
+		[2980]<td />
+			[1716]<button />
+				Reenviar
+			[1717]<button title=Eliminar invitaci├│n />
+	[2996]<tr />
+		[2997]<td />
+			integrations-2@sequra.es
+		[3000]<td />
+			Noenviar
+			Noenviar
+		[3005]<td />
+			[3007]<span />
+				Expirada
+		[3009]<td />
+			31 mar
+		[3012]<td />
+			[1718]<button />
+				Reenviar
+			[1719]<button title=Eliminar invitaci├│n />
+	[3028]<tr />
+		[3029]<td />
+			integrations-1@sequra.es
+		[3032]<td />
+			Noenviar
+			Noenviar
+		[3037]<td />
+			[3039]<span />
+				Expirada
+		[3041]<td />
+			31 mar
+		[3044]<td />
+			[1720]<button />
+				Reenviar
+			[1721]<button title=Eliminar invitaci├│n />
+	[3060]<tr />
+		[3061]<td />
+			asd@asd.com
+		[3064]<td />
+			toni
+			tortonda
+		[3069]<td />
+			[3071]<span />
+				Expirada
+		[3073]<td />
+			26 feb
+		[3076]<td />
+			[1722]<button />
+				Reenviar
+			[1723]<button title=Eliminar invitaci├│n />
+	[3092]<tr />
+		[3093]<td />
+			test@gmail.com
+		[3096]<td />
+			toni
+			test
+		[3101]<td />
+			[3103]<span />
+				Expirada
+		[3105]<td />
+			26 feb
+		[3108]<td />
+			[1724]<button />
+				Reenviar
+			[1725]<button title=Eliminar invitaci├│n />
+	[3124]<tr />
+		[3125]<td />
+			test@test.com
+		[3128]<td />
+			toni
+		[3132]<td />
+			[3134]<span />
+				Expirada
+		[3136]<td />
+			25 feb
+		[3139]<td />
+			[1726]<button />
+				Reenviar
+			[1727]<button title=Eliminar invitaci├│n />
+	[3155]<tr />
+		[3156]<td />
+			test@gmail.com
+		[3159]<td />
+			test
+		[3163]<td />
+			[3165]<span />
+				Expirada
+		[3167]<td />
+			25 feb
+		[3170]<td />
+			[1728]<button />
+				Reenviar
+			[1729]<button title=Eliminar invitaci├│n />
+	[3186]<tr />
+		[3187]<td />
+			test@test.com
+		[3190]<td />
+			test
+			123
+		[3195]<td />
+			[3197]<span />
+				Expirada
+		[3199]<td />
+			25 feb
+		[3202]<td />
+			[1730]<button />
+				Reenviar
+			[1731]<button title=Eliminar invitaci├│n />
+	[3218]<tr />
+		[3219]<td />
+			test@test.com
+		[3222]<td />
+			test
+		[3226]<td />
+			[3228]<span />
+				Expirada
+		[3230]<td />
+			25 feb
+		[3233]<td />
+			[1732]<button />
+				Reenviar
+			[1733]<button title=Eliminar invitaci├│n />

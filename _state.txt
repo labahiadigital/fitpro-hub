@@ -1,0 +1,42 @@
+﻿viewport: 2560x1440
+page: 2560x1440
+scroll: (0, 0)
+[18]<div id=root />
+	[100]<p />
+	Trackfiz
+	CRM/ERP/LMS todo-en-uno para profesionales del fitness y bienestar
+	Inicia sesi├│n
+	Accede a tu cuenta de Trackfiz
+	*[228]<div />
+		*[225]<svg /> <!-- SVG content collapsed -->
+	timeout of 30000ms exceeded
+	Email
+	[116]<span />
+	[119]<div />
+		[120]<svg /> <!-- SVG content collapsed -->
+	|SHADOW(open)|[12]<input placeholder=tu@email.com id=mantine-lkd5zuxzp value=tonitortonda@labahia.digital required=true />
+	Contrase├▒a
+	[126]<span />
+	[129]<div />
+		[130]<svg /> <!-- SVG content collapsed -->
+	|SHADOW(open)|[13]<input id=mantine-idxai738f placeholder=Tu contrase├▒a autocomplete=off type=password required=true />
+	[135]<div />
+		[15]<button aria-label=Toggle password visibility pressed=false />
+	[144]<div />
+		[14]<input id=mantine-cp96duihh type=checkbox checked=true />
+		<svg /> <!-- SVG content collapsed -->
+	Recordarme
+	[19]<a />
+		┬┐Olvidaste tu contrase├▒a?
+	*[16]<button type=submit />
+		Iniciar Sesi├│n
+	┬┐No tienes cuenta?
+	[20]<a />
+		Reg├¡strate
+	[164]<svg /> <!-- SVG content collapsed -->
+	[167]<p />
+		iOS App
+	[170]<svg /> <!-- SVG content collapsed -->
+	Android App
+	┬® 2026 Trackfiz. Todos los derechos reservados.
+[21]<div />

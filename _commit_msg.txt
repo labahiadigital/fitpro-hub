@@ -1,0 +1,14 @@
+fix(mobile): responsive fixes en builder, dashboard, clientes y onboarding
+
+- Workout Builder: elimina el Select duplicado de dia en mobile, unifica el
+  formato ("Lunes (15/4) - 3 ejercicios") y maneja singular/plural.
+- Dashboard entrenador: el widget de fichaje usa ActionIcon compacto en
+  mobile para evitar el texto "Entrada/Salida" truncado, y oculta el link
+  "Ver control horario -> " cuando no hay espacio.
+- DataTable: soporta hideOnMobile por columna y reduce el minWidth del
+  ScrollContainer en mobile (340) para no forzar scroll horizontal.
+- ClientsPage: oculta columnas secundarias (Telefono, Etiquetas, Registro)
+  en mobile y colapsa la tabla de Invitaciones a Email + Estado + acciones.
+- Onboarding (Client + Invitation): el Stepper vertical se convierte en
+  horizontal muy compacto en mobile (solo puntos de progreso) mas un
+  indicador "Paso X de 5" para no consumir el viewport antes del formulario.

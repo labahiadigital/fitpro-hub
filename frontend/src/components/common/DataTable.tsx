@@ -444,8 +444,13 @@ export function StatusBadge({ status }: { status: string }) {
           fontWeight: 600,
           textTransform: "capitalize",
           padding: "3px 8px",
-          fontSize: "10px"
-        }
+          fontSize: "10px",
+        },
+        label: {
+          overflow: "visible",
+          textOverflow: "clip",
+          whiteSpace: "nowrap",
+        },
       }}
     >
       {cfg.label}
