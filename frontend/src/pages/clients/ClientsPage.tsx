@@ -224,8 +224,9 @@ export function ClientsPage() {
   const [deleteConfirmOpened, { open: openDeleteConfirm, close: closeDeleteConfirm }] = useDisclosure(false);
   const [clientToDelete, setClientToDelete] = useState<any>(null);
   
-  // Products for invite selector (cached & deduped via React Query so it
-  // doesn't re-fetch on every StrictMode remount / route re-entry).
+  // Products for invite selector. Sólo se usa dentro del modal de "Invitar
+  // cliente", así que lo cargamos de forma perezosa y mantenemos un staleTime
+  // alto para no re-pedirlo entre aperturas sucesivas del modal.
   const { currentWorkspace } = useAuthStore();
   const { data: productOptions = [] } = useQuery({
     queryKey: ["products-invite-options", currentWorkspace?.id],
@@ -239,7 +240,7 @@ export function ClientsPage() {
           label: `${p.name} - ${formatDecimal(Number(p.price), 2)}€/${p.interval || "mes"}`,
         })) as { value: string; label: string }[];
     },
-    enabled: !!currentWorkspace?.id,
+    enabled: !!currentWorkspace?.id && inviteModalOpened,
     staleTime: 5 * 60 * 1000,
   });
 

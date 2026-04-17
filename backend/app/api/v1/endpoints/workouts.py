@@ -1,3 +1,4 @@
+import asyncio
 import copy
 from datetime import date, datetime, timedelta
 from typing import List, Optional
@@ -170,11 +171,20 @@ async def list_exercises(
     result = await db.execute(query.order_by(Exercise.name))
     exercises = result.scalars().all()
 
-    items = []
+    # Resuelve todas las URLs (image + thumbnail) en paralelo en lugar de
+    # secuencial: con 100+ ejercicios esto recorta fácilmente >500ms ya que
+    # cada presign R2 hace un run_in_executor individual.
+    urls_to_resolve = []
     for e in exercises:
+        urls_to_resolve.append(e.image_url)
+        urls_to_resolve.append(e.thumbnail_url)
+    resolved = await asyncio.gather(*(resolve_url(u) for u in urls_to_resolve))
+
+    items = []
+    for idx, e in enumerate(exercises):
         resp = ExerciseResponse.model_validate(e)
-        resp.image_url = await resolve_url(resp.image_url)
-        resp.thumbnail_url = await resolve_url(resp.thumbnail_url)
+        resp.image_url = resolved[idx * 2]
+        resp.thumbnail_url = resolved[idx * 2 + 1]
         items.append(resp)
     return items
 

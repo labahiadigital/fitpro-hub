@@ -23,6 +23,7 @@ trackfiz-workspaces  (R2_WORKSPACES_BUCKET)
     w/{workspace_id}/lms/{file}
 """
 import asyncio
+import time
 import uuid as _uuid
 import logging
 from functools import partial
@@ -39,6 +40,14 @@ _s3_client = None
 
 PLATFORM_PRESIGN_TTL = 3600      # 1 hour for system assets (cached by browser)
 WORKSPACE_PRESIGN_TTL = 900      # 15 min for user-generated content
+
+# Cache en memoria de URLs firmadas. Las respuestas de un endpoint que devuelve
+# 100 ejercicios hacían 200 presigns; ahora con cache reusamos la URL durante
+# la mitad del TTL (margen de seguridad frente a drift) y evitamos el
+# `run_in_executor` por entrada. Mapa: (bucket, key) -> (url, expires_epoch).
+_PRESIGN_CACHE: dict[tuple[str, str], tuple[str, float]] = {}
+_PRESIGN_CACHE_MAX = 4096
+_PRESIGN_CACHE_RATIO = 0.5       # reutilizamos la URL como mucho TTL * ratio
 
 
 def _get_s3():
@@ -115,22 +124,59 @@ def workspace_key_from_url(url: str) -> Optional[str]:
 # Presigned URL generation  (the primary read-path)
 # ---------------------------------------------------------------------------
 
+def _cache_get(bucket: str, key: str) -> Optional[str]:
+    entry = _PRESIGN_CACHE.get((bucket, key))
+    if entry is None:
+        return None
+    url, expires = entry
+    if expires <= time.monotonic():
+        _PRESIGN_CACHE.pop((bucket, key), None)
+        return None
+    return url
+
+
+def _cache_set(bucket: str, key: str, url: str, ttl: int) -> None:
+    if len(_PRESIGN_CACHE) >= _PRESIGN_CACHE_MAX:
+        # Eviction simple: borra el 25% más antiguo.
+        now = time.monotonic()
+        stale = [k for k, (_, exp) in _PRESIGN_CACHE.items() if exp <= now]
+        for k in stale:
+            _PRESIGN_CACHE.pop(k, None)
+        if len(_PRESIGN_CACHE) >= _PRESIGN_CACHE_MAX:
+            victims = sorted(_PRESIGN_CACHE.items(), key=lambda kv: kv[1][1])[: _PRESIGN_CACHE_MAX // 4]
+            for k, _ in victims:
+                _PRESIGN_CACHE.pop(k, None)
+    _PRESIGN_CACHE[(bucket, key)] = (url, time.monotonic() + ttl * _PRESIGN_CACHE_RATIO)
+
+
 async def presign_platform_url(key: str) -> str:
     """Generate a time-limited presigned URL for a platform asset."""
+    bucket = settings.R2_PLATFORM_BUCKET
+    cached = _cache_get(bucket, key)
+    if cached is not None:
+        return cached
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
+    url = await loop.run_in_executor(
         None,
-        partial(_sync_presign, settings.R2_PLATFORM_BUCKET, key, PLATFORM_PRESIGN_TTL),
+        partial(_sync_presign, bucket, key, PLATFORM_PRESIGN_TTL),
     )
+    _cache_set(bucket, key, url, PLATFORM_PRESIGN_TTL)
+    return url
 
 
 async def presign_workspace_url(key: str) -> str:
     """Generate a time-limited presigned URL for a workspace asset."""
+    bucket = settings.R2_WORKSPACES_BUCKET
+    cached = _cache_get(bucket, key)
+    if cached is not None:
+        return cached
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
+    url = await loop.run_in_executor(
         None,
-        partial(_sync_presign, settings.R2_WORKSPACES_BUCKET, key, WORKSPACE_PRESIGN_TTL),
+        partial(_sync_presign, bucket, key, WORKSPACE_PRESIGN_TTL),
     )
+    _cache_set(bucket, key, url, WORKSPACE_PRESIGN_TTL)
+    return url
 
 
 def platform_url(key: str) -> str:
