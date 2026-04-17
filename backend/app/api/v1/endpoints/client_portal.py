@@ -568,20 +568,37 @@ async def get_exercise_alternatives_for_client(
 
 @router.get("/workouts", response_model=List[WorkoutProgramClientResponse])
 async def get_my_workouts(
+    active_only: bool = Query(
+        False,
+        description=(
+            "When true, return only programs with is_active=True. Use this from the "
+            "client dashboard / 'Mis Entrenamientos' view to avoid shipping the full "
+            "JSON template of every historical program (can easily reach 400-500 KB)."
+        ),
+    ),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get all workout programs assigned to the client."""
+    """Get workout programs assigned to the client.
+
+    The WorkoutProgram row contains a ``template`` JSON blob with every day,
+    block and exercise — historical programs bloat this endpoint quickly, so
+    clients that only render the current plan should pass ``?active_only=true``.
+    """
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
-    
-    result = await db.execute(
+
+    stmt = (
         select(WorkoutProgram)
         .where(
             WorkoutProgram.client_id == client.id,
-            WorkoutProgram.is_template.is_(False)
+            WorkoutProgram.is_template.is_(False),
         )
         .order_by(desc(WorkoutProgram.created_at))
     )
+    if active_only:
+        stmt = stmt.where(WorkoutProgram.is_active.is_(True))
+
+    result = await db.execute(stmt)
     return result.scalars().all()
 
 

@@ -94,10 +94,32 @@ def _extract_resource_and_action(path: str, method: str):
     return resource, action
 
 
+def _populate_identity(request: Request) -> None:
+    """Best-effort: attach user_id/workspace_id/role to request.state.
+
+    Runs on every request that has a Bearer token so downstream middleware
+    (notably the rate limiter's key_func) can bucket by user id instead of
+    IP. Decoding is ~50µs HMAC; cheap enough to do unconditionally.
+    """
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return
+    payload = decode_access_token(auth_header[7:])
+    if payload is None:
+        return
+    request.state.user_id = payload.sub
+    request.state.workspace_id = payload.workspace_id
+    request.state.role = payload.role
+
+
 class PermissionsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         method = request.method.upper()
+
+        # Populate identity first so the rate limiter (and anything else
+        # looking at request.state) can bucket authenticated traffic by user.
+        _populate_identity(request)
 
         if method == "OPTIONS":
             return await call_next(request)

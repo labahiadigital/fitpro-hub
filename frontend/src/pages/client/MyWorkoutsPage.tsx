@@ -1261,7 +1261,7 @@ export function MyWorkoutsPage() {
   const isMdUp = useMediaQuery("(min-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("today");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const { data: workouts, isLoading: isLoadingWorkouts } = useMyWorkouts();
+  const { data: workouts, isLoading: isLoadingWorkouts } = useMyWorkouts({ activeOnly: true });
   const { data: history } = useWorkoutHistory(10);
   const { data: todayLogs } = useTodayWorkoutLogs();
   const logWorkoutMutation = useLogWorkoutDetailed();

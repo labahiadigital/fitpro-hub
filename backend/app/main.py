@@ -189,7 +189,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Workspace-ID", "X-Request-ID"],
-    expose_headers=["X-Total-Count", "X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
+    expose_headers=[
+        "Content-Disposition",  # Filename in CSV/XLSX/PDF downloads.
+        "X-Total-Count",
+        "X-Request-ID",
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+        "Retry-After",
+    ],
     max_age=600,
 )
 
@@ -240,10 +248,16 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 @app.get("/")
 async def root():
+    # In production we deliberately avoid leaking app name / version / status
+    # strings. These are trivial reconnaissance hints for automated scanners.
+    # In dev the extra context is useful when poking the API by hand.
+    if settings.is_production:
+        return {"status": "ok"}
     return {
         "name": settings.APP_NAME,
         "version": "1.0.0",
         "status": "running",
+        "env": settings.APP_ENV,
     }
 
 

@@ -592,7 +592,7 @@ export const clientPortalApi = {
     }),
   
   // Workouts
-  workouts: () => api.get("/my/workouts"),
+  workouts: (params?: { active_only?: boolean }) => api.get("/my/workouts", { params }),
   getWorkout: (id: string) => api.get(`/my/workouts/${id}`),
   updateProgramExercise: (
     programId: string,

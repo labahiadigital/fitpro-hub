@@ -309,11 +309,12 @@ export function useUpdateClientProfile() {
 
 // ============ WORKOUTS ============
 
-export function useMyWorkouts() {
+export function useMyWorkouts(options?: { activeOnly?: boolean }) {
+  const activeOnly = options?.activeOnly ?? false;
   return useQuery<WorkoutProgram[]>({
-    queryKey: ["my-workouts"],
+    queryKey: ["my-workouts", { activeOnly }],
     queryFn: async () => {
-      const response = await clientPortalApi.workouts();
+      const response = await clientPortalApi.workouts({ active_only: activeOnly });
       return response.data;
     },
     staleTime: 60 * 1000,

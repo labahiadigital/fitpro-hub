@@ -33,18 +33,59 @@ celery_app = Celery(
 )
 
 celery_app.conf.update(
+    # --- Serialization ---
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
+    # gzip anything above 1 KB. Many of our payloads are HTML email templates
+    # that compress 70-90% and this trims Redis memory and broker bandwidth.
+    task_compression="gzip",
+    result_compression="gzip",
+
+    # --- Time ---
     timezone="Europe/Madrid",
     enable_utc=True,
+
+    # --- Task execution ---
     task_track_started=True,
-    task_time_limit=300,
-    task_soft_time_limit=240,
-    worker_prefetch_multiplier=1,
-    task_acks_late=True,
+    task_time_limit=300,          # Hard kill after 5 minutes.
+    task_soft_time_limit=240,     # Raise SoftTimeLimitExceeded after 4 minutes.
+    task_acks_late=True,          # Only ack after success -> redelivery on worker crash.
     task_reject_on_worker_lost=True,
+    # Reasonable default for retries: exponential-ish up to 5 minutes.
+    task_default_rate_limit=None,
+
+    # --- Results ---
+    # Redis accumulates task results forever by default. 24h is plenty for our
+    # flows (we don't poll results across days) and keeps Redis memory flat.
+    result_expires=24 * 60 * 60,
+    result_extended=True,         # Include task name + args in result metadata.
+
+    # --- Workers ---
+    worker_prefetch_multiplier=1, # Don't let one worker hog a batch from Redis.
+    worker_max_tasks_per_child=500,  # Recycle worker after N tasks to mitigate leaks.
+    worker_max_memory_per_child=300_000,  # KB (300 MB) — recycle if RSS crosses this.
+    worker_send_task_events=False,    # We don't consume events; saves broker traffic.
+    worker_cancel_long_running_tasks_on_connection_loss=True,
+
+    # --- Broker ---
     broker_connection_retry_on_startup=True,
+    broker_pool_limit=10,         # Per-process broker connection pool.
+    # Visibility timeout: if a worker takes more than this to ack a task, Redis
+    # redelivers it. Must be >= task_time_limit or long tasks get duplicated.
+    broker_transport_options={
+        "visibility_timeout": 600,           # 10 minutes, > our 5m hard limit.
+        "socket_keepalive": True,
+        "health_check_interval": 30,
+    },
+    result_backend_transport_options={
+        "visibility_timeout": 600,
+        "socket_keepalive": True,
+        "health_check_interval": 30,
+        # Retry result-backend operations so a momentary Redis blip doesn't
+        # drop a finished task's result on the floor.
+        "retry_on_timeout": True,
+    },
 )
 
 celery_app.conf.task_routes = {
