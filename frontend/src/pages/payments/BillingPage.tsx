@@ -114,18 +114,30 @@ export function BillingPage() {
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string | null>(null);
 
-  // Fetch real data
+  // Fetch real data — split by active tab so the first paint doesn't fire
+  // the full 13-query avalanche we measured in production. The invoices tab
+  // alone accounted for 7 of them (>1 s each against Supabase).
+  const invoicesTabActive = activeTab === "invoices";
+  const paymentsTabActive = activeTab === "payments" || activeTab === "overview";
+  const productsNeeded = chargeModalOpened || paymentsTabActive;
+
   const { data: payments = [] } = usePayments();
   const { data: subscriptions = [] } = useSubscriptions();
-  const { data: products = [] } = useProducts();
+  const { data: products = [] } = useProducts({ enabled: productsNeeded });
   const { data: kpisData } = usePaymentKPIs();
   useStripeStatus();
   const { data: clientsData } = useClients({ page: 1 });
 
-  // Invoice data
-  const { data: invoices = [] } = useInvoices(invoiceStatusFilter ? { status: invoiceStatusFilter } : undefined);
-  const { data: invoiceStatsData } = useInvoiceStats();
-  const { data: invoiceSettingsData } = useInvoiceSettings();
+  // Invoice data — only fetched when the user lands on the invoices tab or
+  // opens the invoice/settings modals.
+  const { data: invoices = [] } = useInvoices(
+    invoiceStatusFilter ? { status: invoiceStatusFilter } : undefined,
+    { enabled: invoicesTabActive },
+  );
+  const { data: invoiceStatsData } = useInvoiceStats({ enabled: invoicesTabActive });
+  const { data: invoiceSettingsData } = useInvoiceSettings({
+    enabled: invoicesTabActive || settingsModalOpened || invoiceModalOpened,
+  });
   const { data: auditLog = [] } = useInvoiceAuditLog(previewInvoice?.id || null);
 
   // Invoice mutations
@@ -141,8 +153,11 @@ export function BillingPage() {
   const testVerifactu = useTestVerifactu();
   const [verifactuTestResult, setVerifactuTestResult] = useState<VeriFactuTestResult | null>(null);
 
-  // Certificate
-  const { data: certStatus } = useCertificateStatus();
+  // Certificate status — only meaningful on the invoices tab (VeriFactu gate)
+  // and while settings modal is open.
+  const { data: certStatus } = useCertificateStatus({
+    enabled: invoicesTabActive || settingsModalOpened,
+  });
   const uploadCertificate = useUploadCertificate();
   const revokeCertificate = useRevokeCertificate();
   const [certFile, setCertFile] = useState<File | null>(null);
@@ -196,7 +211,10 @@ export function BillingPage() {
     },
   });
 
-  const { data: nextNumberData } = useNextInvoiceNumber(invoiceForm.values.invoice_series);
+  // Next invoice number is only needed inside the invoice modal.
+  const { data: nextNumberData } = useNextInvoiceNumber(invoiceForm.values.invoice_series, {
+    enabled: invoiceModalOpened,
+  });
 
   const settingsForm = useForm({
     initialValues: {

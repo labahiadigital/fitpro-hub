@@ -168,8 +168,11 @@ export function CalendarPage() {
   });
   const { data: clientsData } = useClients({ page: 1 });
   const { data: teamMembers } = useTeamMembers();
-  const { data: boxesData } = useBoxes();
-  const { data: machinesData } = useMachines();
+  // Boxes / machines lists are only consumed when the user groups the
+  // calendar by those axes. Defer both queries until that happens — saves
+  // ~600 ms of blocking Supabase round-trips on the default "none" view.
+  const { data: boxesData } = useBoxes({ enabled: organizeBy === "box" });
+  const { data: machinesData } = useMachines({ enabled: organizeBy === "machine" });
 
   const teamMemberOptions = useMemo(() => {
     if (!teamMembers) return [];

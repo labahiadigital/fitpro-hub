@@ -22,11 +22,12 @@ export interface BoxStats {
   cancel_rate: number;
 }
 
-export function useBoxes() {
+export function useBoxes(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["boxes"],
     queryFn: async () => boxesApi.list(),
     select: (res) => res.data as BoxData[],
+    enabled: options?.enabled ?? true,
     staleTime: 10 * 60_000,
     gcTime: 15 * 60_000,
   });

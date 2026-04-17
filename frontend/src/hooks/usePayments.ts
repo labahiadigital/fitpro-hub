@@ -101,13 +101,14 @@ export function useSubscriptions(params?: { status?: string }) {
   });
 }
 
-export function useProducts() {
+export function useProducts(options?: { enabled?: boolean }) {
   const { currentWorkspace } = useAuthStore();
   const workspaceId = currentWorkspace?.id || "";
+  const extraEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ["products", workspaceId],
     queryFn: async () => productsApi.list(workspaceId),
-    enabled: !!workspaceId,
+    enabled: !!workspaceId && extraEnabled,
     select: (response) => {
       const raw = response.data;
       const items = raw?.items || raw || [];

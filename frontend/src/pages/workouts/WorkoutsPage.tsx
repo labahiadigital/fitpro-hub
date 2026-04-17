@@ -83,11 +83,6 @@ export function WorkoutsPage() {
   const returnTo = searchParams.get("returnTo");
 
   const { data: clientData } = useClient(clientId || "");
-  const { data: clientsData } = useClients({ page: 1, search: "", page_size: 100 });
-  const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
-    value: c.id,
-    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
-  }));
 
   const goBack = useCallback(() => {
     if (returnTo) {
@@ -123,6 +118,18 @@ export function WorkoutsPage() {
   const [isTemplateModeOn, setIsTemplateModeOn] = useState(false);
   const [viewingProgram, setViewingProgram] = useState<any>(null);
   const [viewProgramOpened, { open: openViewProgram, close: closeViewProgram }] = useDisclosure(false);
+
+  // Client picker inside the builder sidebar. We only need it once the
+  // trainer actually opens the builder — saves a ~1.5 s `/clients?page_size=100`
+  // round-trip on every mount of /workouts.
+  const { data: clientsData } = useClients(
+    { page: 1, search: "", page_size: 100 },
+    { enabled: builderOpened, staleTime: 5 * 60 * 1000 },
+  );
+  const clientOptions = (clientsData?.items || []).map((c: { id: string; first_name?: string; last_name?: string }) => ({
+    value: c.id,
+    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
+  }));
 
   const { data: exercises = [], isLoading: loadingExercises } = useExercises({ search: searchExercise });
 

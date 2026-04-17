@@ -23,11 +23,12 @@ export interface MachineStats {
   cancel_rate: number;
 }
 
-export function useMachines() {
+export function useMachines(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["machines"],
     queryFn: async () => machinesApi.list(),
     select: (res) => res.data as MachineData[],
+    enabled: options?.enabled ?? true,
     staleTime: 10 * 60_000,
     gcTime: 15 * 60_000,
   });

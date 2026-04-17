@@ -130,11 +130,16 @@ export interface AuditLogEntry {
 
 // ── Queries ──
 
-export function useInvoices(params?: { status?: string; client_id?: string; series?: string; from_date?: string; to_date?: string }) {
+export function useInvoices(
+  params?: { status?: string; client_id?: string; series?: string; from_date?: string; to_date?: string },
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ["invoices", params],
     queryFn: async () => erpApi.listInvoices(params),
     select: (res) => res.data as Invoice[],
+    enabled: options?.enabled ?? true,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -147,27 +152,36 @@ export function useInvoice(id: string | null) {
   });
 }
 
-export function useInvoiceSettings() {
+export function useInvoiceSettings(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["invoice-settings"],
     queryFn: async () => erpApi.getSettings(),
     select: (res) => res.data as InvoiceSettings | null,
+    enabled: options?.enabled ?? true,
+    // Settings rarely change — keep them fresh for 5 minutes so tab switches
+    // and modal opens don't re-hit the backend.
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useInvoiceStats() {
+export function useInvoiceStats(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["invoice-stats"],
     queryFn: async () => erpApi.getInvoiceStats(),
     select: (res) => res.data as InvoiceStats,
+    enabled: options?.enabled ?? true,
+    staleTime: 60 * 1000,
   });
 }
 
-export function useNextInvoiceNumber(series?: string) {
+export function useNextInvoiceNumber(series?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["next-invoice-number", series],
     queryFn: async () => erpApi.getNextNumber(series),
     select: (res) => res.data as { next_number: string; series: string },
+    // Only meaningful while the invoice modal is open; don't pre-fetch it.
+    enabled: options?.enabled ?? true,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -350,11 +364,14 @@ export function useUpdateInvoiceSettings() {
 
 // ── Certificate ──
 
-export function useCertificateStatus() {
+export function useCertificateStatus(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["certificate-status"],
     queryFn: async () => erpApi.getCertificateStatus(),
     select: (res) => res.data as CertificateStatus,
+    enabled: options?.enabled ?? true,
+    // Certificate status changes only when the user uploads/revokes a cert.
+    staleTime: 5 * 60 * 1000,
   });
 }
 

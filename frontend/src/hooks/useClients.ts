@@ -53,12 +53,16 @@ interface ClientFilters {
   tag_id?: string;
 }
 
-export function useClients(filters: ClientFilters = {}) {
+export function useClients(
+  filters: ClientFilters = {},
+  options?: { enabled?: boolean; staleTime?: number },
+) {
   return useQuery({
     queryKey: ["clients", filters],
     queryFn: async () => clientsApi.list(filters),
     select: (response) => response.data as ClientsResponse,
-    staleTime: 30 * 1000, // 30 segundos - reduce refetches
+    enabled: options?.enabled ?? true,
+    staleTime: options?.staleTime ?? 30 * 1000,
   });
 }
 
