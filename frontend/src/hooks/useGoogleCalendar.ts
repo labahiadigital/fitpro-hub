@@ -27,13 +27,14 @@ export interface GoogleCalendarSyncResponse {
 /**
  * Hook para obtener el estado de conexión de Google Calendar
  */
-export function useGoogleCalendarStatus() {
+export function useGoogleCalendarStatus(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["google-calendar", "status"],
     queryFn: async () => {
       const response = await api.get("/google-calendar/status");
       return response.data as GoogleCalendarStatus;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 30000, // 30 segundos
   });
 }

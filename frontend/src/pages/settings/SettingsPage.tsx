@@ -261,17 +261,26 @@ export function SettingsPage() {
   }, [searchParams]);
 
   const { user, currentWorkspace, setUser, setWorkspace } = useAuthStore();
-  const { data: notifPrefs } = useNotificationPreferences();
+  // Cargas pesadas por pestaña: evitamos pegar a /whatsapp/status,
+  // /google-calendar/status, /notifications/preferences, /workspaces/members
+  // y /payments/connect/status salvo cuando la pestaña correspondiente está
+  // activa. Así /settings deja ~2-3 requests al abrir por defecto en vez de 7.
+  const isTab = (name: string) => activeTab === name;
+  const { data: notifPrefs } = useNotificationPreferences({ enabled: isTab("notifications") });
   const updatePrefs = useUpdateNotificationPreferences();
 
   // WhatsApp integration
-  const { data: whatsappStatus, isLoading: loadingWhatsApp } = useWhatsAppStatus();
+  const { data: whatsappStatus, isLoading: loadingWhatsApp } = useWhatsAppStatus({
+    enabled: isTab("integrations"),
+  });
   const connectWhatsApp = useConnectWhatsApp();
   const disconnectWhatsApp = useDisconnectWhatsApp();
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Google Calendar integration
-  const { data: googleCalendarStatus, isLoading: loadingGoogleCalendar } = useGoogleCalendarStatus();
+  const { data: googleCalendarStatus, isLoading: loadingGoogleCalendar } = useGoogleCalendarStatus({
+    enabled: isTab("integrations"),
+  });
   const googleCalendarAuthUrl = useGoogleCalendarAuthUrl();
   const disconnectGoogleCalendar = useDisconnectGoogleCalendar();
   const syncGoogleCalendar = useSyncGoogleCalendar();
@@ -468,7 +477,9 @@ export function SettingsPage() {
   });
 
   // ==================== TEAM ====================
-  const { data: fetchedTeamMembers = [] } = useTeamMembers();
+  const { data: fetchedTeamMembers = [] } = useTeamMembers({
+    enabled: isTab("team") || inviteModalOpen,
+  });
   const teamMembers = fetchedTeamMembers.length > 0
     ? fetchedTeamMembers.map((m: any) => ({
         id: m.id || m.user_id,
@@ -639,6 +650,8 @@ export function SettingsPage() {
   });
 
   // ==================== BILLING (read from API if available) ====================
+  // Solo lo pedimos cuando el usuario entra a la pestaña de facturación, para
+  // no disparar /payments/connect/status en cada visita a /settings.
   const { data: billingData } = useQuery({
     queryKey: ["billing-status"],
     queryFn: async () => {
@@ -649,6 +662,7 @@ export function SettingsPage() {
         return null;
       }
     },
+    enabled: isTab("billing"),
     staleTime: 60_000,
     retry: false,
   });

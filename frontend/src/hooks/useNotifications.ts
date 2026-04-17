@@ -97,13 +97,14 @@ export interface ChannelPref {
 
 export type NotificationPrefsMap = Record<string, ChannelPref>;
 
-export function useNotificationPreferences() {
+export function useNotificationPreferences(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["notification-preferences"],
     queryFn: async () => {
       const response = await notificationsApi.getPreferences();
       return response.data as NotificationPrefsMap;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 60000,
   });
 }

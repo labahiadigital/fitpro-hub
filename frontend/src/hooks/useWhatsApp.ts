@@ -22,15 +22,18 @@ export interface WhatsAppSetupResponse {
 /**
  * Hook para obtener el estado de conexión de WhatsApp
  */
-export function useWhatsAppStatus() {
+export function useWhatsAppStatus(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ["whatsapp", "status"],
     queryFn: async () => {
       const response = await api.get("/whatsapp/status");
       return response.data as WhatsAppStatus;
     },
+    enabled,
     staleTime: 30000, // 30 segundos
     refetchInterval: (query) => {
+      if (!enabled) return false;
       // Si no está conectado, hacer polling cada 5 segundos para detectar conexión
       const data = query.state.data as WhatsAppStatus | undefined;
       if (data && !data.connected && data.kapso_customer_id) {
