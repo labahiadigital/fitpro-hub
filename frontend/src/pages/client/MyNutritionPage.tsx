@@ -1513,8 +1513,16 @@ export function MyNutritionPage() {
   const [editingMealName, setEditingMealName] = useState<{ dayNum: number; mealIndex: number; name: string } | null>(null);
   const [registerSwapState, setRegisterSwapState] = useState<{ sourceMealIndex: number; step: "day" | "meal"; targetDay?: number } | null>(null);
   const [planSwapState, setPlanSwapState] = useState<{ sourceMealIndex: number; sourceDayNum: number; step: "day" | "meal"; targetDay?: number } | null>(null);
-  const { data: measurementsData } = useMeasurements(100);
-  const { data: progressPhotosData } = useProgressPhotos(50);
+  // Measurements + progress photos are only consumed by the "Exportar PDF"
+  // button below — don't fetch them on mount (saves 2 blocking API calls and
+  // ~300 ms on every page load). They are refetched on-demand when the user
+  // clicks the export action.
+  const { data: measurementsData, refetch: refetchMeasurements } = useMeasurements(100, {
+    enabled: false,
+  });
+  const { data: progressPhotosData, refetch: refetchProgressPhotos } = useProgressPhotos(50, {
+    enabled: false,
+  });
 
   const dayMapping = [7, 1, 2, 3, 4, 5, 6]; // Domingo=7, Lunes=1, etc.
   const selectedPlanDay = dayMapping[selectedDate.getDay()];
@@ -1980,7 +1988,13 @@ export function MyNutritionPage() {
               size="sm"
               onClick={async () => {
                 const ws = useAuthStore.getState().currentWorkspace;
-                const measurements = (measurementsData || []).map((m: any) => ({
+                const [{ data: freshMeasurements }, { data: freshPhotos }] = await Promise.all([
+                  refetchMeasurements(),
+                  refetchProgressPhotos(),
+                ]);
+                const measurementsSource = freshMeasurements ?? measurementsData ?? [];
+                const photosSource = freshPhotos ?? progressPhotosData ?? [];
+                const measurements = measurementsSource.map((m: any) => ({
                   date: m.measured_at || m.date,
                   weight_kg: m.weight_kg,
                   body_fat_percentage: m.body_fat_percentage,
@@ -1999,7 +2013,7 @@ export function MyNutritionPage() {
                     body_fat: m.body_fat_percentage || 0,
                     muscle_mass: m.muscle_mass_kg || 0,
                   }));
-                const photos = (progressPhotosData || []).map((p: any) => ({
+                const photos = photosSource.map((p: any) => ({
                   url: p.url || p.ref_url,
                   type: p.type,
                   date: p.measurement_date || p.uploaded_at,

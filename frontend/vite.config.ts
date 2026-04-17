@@ -76,6 +76,23 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 900,
       // Tiny assets → base64 inlined (cuts a few extra HTTP requests)
       assetsInlineLimit: 4096,
+      // Vite preloads every dependency of a lazy chunk reachable from the entry.
+      // That's why `vendor-pdf` (~200 KB br) and `vendor-charts` (~100 KB br) end
+      // up in modulepreload on `/login`, even though they are only needed when the
+      // user clicks "Exportar PDF" or lands on a chart-heavy page. Strip those
+      // heavy, feature-specific chunks from preload so the initial HTML only
+      // warms the caches we actually use on first paint.
+      modulePreload: {
+        resolveDependencies: (_filename, deps) =>
+          deps.filter(
+            (dep) =>
+              !dep.includes("vendor-pdf") &&
+              !dep.includes("vendor-charts") &&
+              !dep.includes("vendor-d3") &&
+              !dep.includes("vendor-dnd") &&
+              !dep.includes("vendor-mantine-dates"),
+          ),
+      },
       rollupOptions: {
         output: {
           // Hash-stable chunk naming so HTTP caching works properly

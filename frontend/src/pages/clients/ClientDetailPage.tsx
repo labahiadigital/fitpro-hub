@@ -577,10 +577,21 @@ export function ClientDetailPage() {
     return m;
   }, [teamMembersData]);
   const { data: clientMeasurements = [] } = useClientMeasurements(id || "");
-  const { data: clientPhotos = [] } = useClientPhotos(id || "");
+  // Heavy endpoints — only fetched when the user lands on (or pre-selects via
+  // the URL) a tab that actually renders the data. Reduces the greedy burst of
+  // 7-10 concurrent queries that used to hit the backend on every mount.
+  const photosEnabled = activeTab === "photos" || activeTab === "progress";
+  const { data: clientPhotos = [] } = useClientPhotos(id || "", 50, { enabled: photosEnabled });
   const { data: clientProgressSummary } = useClientProgressSummary(id || "");
-  const { data: clientWorkoutLogs = [] } = useClientWorkoutLogs(id || "");
-  const { data: clientNutritionLogs } = useClientNutritionLogs(id || "", 30);
+  const workoutLogsEnabled =
+    activeTab === "sessions" || activeTab === "history" || activeTab === "progress";
+  const { data: clientWorkoutLogs = [] } = useClientWorkoutLogs(id || "", undefined, {
+    enabled: workoutLogsEnabled,
+  });
+  const nutritionLogsEnabled = activeTab === "nutrition" || activeTab === "progress";
+  const { data: clientNutritionLogs } = useClientNutritionLogs(id || "", 30, {
+    enabled: nutritionLogsEnabled,
+  });
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
   
@@ -634,9 +645,14 @@ export function ClientDetailPage() {
   const [assignProgramModalOpened, { open: openAssignProgramModal, close: closeAssignProgramModal }] = useDisclosure(false);
   const [assignMealPlanModalOpened, { open: openAssignMealPlanModal, close: closeAssignMealPlanModal }] = useDisclosure(false);
   
-  // Hooks para obtener templates
-  const { data: workoutTemplates = [] } = useWorkoutProgramTemplates();
-  const { data: mealPlanTemplates = [] } = useMealPlanTemplates();
+  // Templates are only needed when the trainer opens the "Asignar programa" /
+  // "Asignar plan" modals. Defer these 1.5 s queries until then.
+  const { data: workoutTemplates = [] } = useWorkoutProgramTemplates({
+    enabled: assignProgramModalOpened,
+  });
+  const { data: mealPlanTemplates = [] } = useMealPlanTemplates({
+    enabled: assignMealPlanModalOpened,
+  });
   
   // Hooks para asignaciones
   const assignWorkoutProgram = useAssignWorkoutProgram();

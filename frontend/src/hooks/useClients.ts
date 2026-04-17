@@ -303,12 +303,17 @@ export function useClientMeasurements(clientId: string, limit = 50) {
   });
 }
 
-export function useClientPhotos(clientId: string, limit = 50) {
+export function useClientPhotos(
+  clientId: string,
+  limit = 50,
+  options?: { enabled?: boolean },
+) {
+  const extraEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ["client-photos", clientId, limit],
     queryFn: async () => clientsApi.getPhotos(clientId, limit),
     select: (response) => response.data as ClientPhoto[],
-    enabled: !!clientId && !clientId.startsWith("demo-"),
+    enabled: !!clientId && !clientId.startsWith("demo-") && extraEnabled,
     staleTime: 60 * 1000,
   });
 }
@@ -343,12 +348,17 @@ interface WorkoutLogEntry {
   created_at: string;
 }
 
-export function useClientWorkoutLogs(clientId: string, programId?: string) {
+export function useClientWorkoutLogs(
+  clientId: string,
+  programId?: string,
+  options?: { enabled?: boolean },
+) {
+  const extraEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ["client-workout-logs", clientId, programId],
     queryFn: async () => workoutsApi.logs(clientId),
     select: (response) => response.data as WorkoutLogEntry[],
-    enabled: !!clientId && !clientId.startsWith("demo-"),
+    enabled: !!clientId && !clientId.startsWith("demo-") && extraEnabled,
     staleTime: 60 * 1000,
   });
 }
@@ -389,12 +399,17 @@ interface ClientNutritionLogs {
   };
 }
 
-export function useClientNutritionLogs(clientId: string, days = 30) {
+export function useClientNutritionLogs(
+  clientId: string,
+  days = 30,
+  options?: { enabled?: boolean },
+) {
+  const extraEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ["client-nutrition-logs", clientId, days],
     queryFn: async () => nutritionApi.clientLogs(clientId, days),
     select: (response) => response.data as ClientNutritionLogs,
-    enabled: !!clientId && !clientId.startsWith("demo-"),
+    enabled: !!clientId && !clientId.startsWith("demo-") && extraEnabled,
     staleTime: 60 * 1000,
   });
 }

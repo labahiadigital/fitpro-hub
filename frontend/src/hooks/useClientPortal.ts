@@ -837,13 +837,14 @@ export function useNutritionHistory(days?: number) {
 
 // ============ PROGRESS ============
 
-export function useMeasurements(limit?: number) {
+export function useMeasurements(limit?: number, options?: { enabled?: boolean }) {
   return useQuery<Measurement[]>({
     queryKey: ["my-measurements", limit],
     queryFn: async () => {
       const response = await clientPortalApi.measurements(limit);
       return response.data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 60 * 1000,
   });
 }
@@ -910,13 +911,14 @@ export interface ProgressPhoto {
   measurement_date?: string;
 }
 
-export function useProgressPhotos(limit = 50) {
+export function useProgressPhotos(limit = 50, options?: { enabled?: boolean }) {
   return useQuery<ProgressPhoto[]>({
     queryKey: ["progress-photos", limit],
     queryFn: async () => {
       const response = await clientPortalApi.getPhotos(limit);
       return response.data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 60 * 1000,
   });
 }

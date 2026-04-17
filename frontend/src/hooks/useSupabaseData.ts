@@ -230,14 +230,15 @@ export function useSupabaseWorkoutPrograms() {
 }
 
 // Hook para obtener programas de entrenamiento como plantillas
-export function useWorkoutProgramTemplates() {
+export function useWorkoutProgramTemplates(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["workout-program-templates"],
     queryFn: async () => {
       const response = await workoutsApi.programs({ is_template: true });
       return response.data || [];
     },
-    staleTime: 60 * 1000,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -359,14 +360,15 @@ export function useDeactivateMealPlan() {
 }
 
 // Hook para obtener plantillas de planes nutricionales
-export function useMealPlanTemplates() {
+export function useMealPlanTemplates(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["meal-plan-templates"],
     queryFn: async () => {
       const response = await nutritionApi.plans({ is_template: true });
       return response.data || [];
     },
-    staleTime: 60 * 1000,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
