@@ -118,8 +118,8 @@ export function BillingPage() {
   // the full 13-query avalanche we measured in production. The invoices tab
   // alone accounted for 7 of them (>1 s each against Supabase).
   const invoicesTabActive = activeTab === "invoices";
-  const paymentsTabActive = activeTab === "payments" || activeTab === "overview";
-  const productsNeeded = chargeModalOpened || paymentsTabActive;
+  // Products are only referenced inside the "Registrar cobro" modal.
+  const productsNeeded = chargeModalOpened;
 
   const { data: payments = [] } = usePayments();
   const { data: subscriptions = [] } = useSubscriptions();
