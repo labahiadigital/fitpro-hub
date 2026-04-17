@@ -213,9 +213,16 @@ export function TasksPage() {
   );
 
   const { data: tasks = [], isLoading } = useTasksList(filters);
+  // Miembros se usan también en el filtro superior, así que siempre se cargan.
   const { data: members = [] } = useTeamMembers();
-  const { data: groups = [] } = useTeamGroupsList();
-  const { data: clientsData } = useClients({ page: 1, search: "", page_size: 200 });
+  // Groups y clientes sólo se usan dentro del modal de crear/editar tarea;
+  // los cargamos de forma perezosa para aligerar la carga inicial.
+  const modalOpen = createOpened || editOpened;
+  const { data: groups = [] } = useTeamGroupsList({ enabled: modalOpen });
+  const { data: clientsData } = useClients(
+    { page: 1, search: "", page_size: 200 },
+    { enabled: modalOpen, staleTime: 5 * 60 * 1000 },
+  );
   const clientOptions = useMemo(
     () =>
       (clientsData?.items || []).map((c: any) => ({

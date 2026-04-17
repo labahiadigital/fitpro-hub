@@ -8,6 +8,7 @@ from sqlalchemy import select, func, case
 from pydantic import BaseModel
 
 from app.core.database import get_db
+from app.core.parallel_db import parallel_queries
 from app.models.client import Client
 from app.models.booking import Booking, BookingStatus
 from app.models.payment import Subscription, Payment, SubscriptionStatus, PaymentStatus
@@ -124,17 +125,23 @@ async def get_kpis(
         Payment.paid_at >= start_of_last_month,
     )
 
-    # NOTE: sequential because AsyncSession forbids concurrent ops (SQLAlchemy 2.0.46+).
-    # Each query is a single-row aggregate so total latency is bounded.
-    clients_row = await db.execute(clients_agg)
-    bookings_row = await db.execute(bookings_agg)
-    money_row = await db.execute(money_agg)
-    payments_row = await db.execute(payments_agg)
+    # Las 4 agregaciones tocan tablas distintas y son independientes. En vez de
+    # ejecutarlas secuencialmente en la sesión del request, las repartimos por
+    # sesiones efímeras del pool con ``parallel_queries``. PgBouncer (transaction
+    # mode) colapsa los round-trips, así que la latencia total baja a ~max(4q).
+    async def _clients(s):
+        return (await s.execute(clients_agg)).one()
 
-    c = clients_row.one()
-    b = bookings_row.one()
-    m = money_row.one()
-    p = payments_row.one()
+    async def _bookings(s):
+        return (await s.execute(bookings_agg)).one()
+
+    async def _money(s):
+        return (await s.execute(money_agg)).one()
+
+    async def _payments(s):
+        return (await s.execute(payments_agg)).one()
+
+    c, b, m, p = await parallel_queries(_clients, _bookings, _money, _payments)
 
     active_clients = int(c.active or 0)
     total_clients = int(c.total or 0)

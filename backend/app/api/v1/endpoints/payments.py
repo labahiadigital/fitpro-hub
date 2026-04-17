@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.parallel_db import parallel_queries
 from app.models.payment import StripeAccount, Subscription, Payment, SubscriptionStatus, PaymentStatus
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
@@ -258,11 +259,16 @@ async def get_payment_kpis(
         .where(Payment.workspace_id == ws)
     )
 
-    # NOTE: sequential because AsyncSession forbids concurrent ops (SQLAlchemy 2.0.46+).
-    sub_res = await db.execute(sub_agg)
-    pay_res = await db.execute(pay_agg)
-    sub_row = sub_res.one()
-    pay_row = pay_res.one()
+    # Ambas consultas son independientes, así que las ejecutamos en paralelo
+    # usando sesiones cortas del pool (PgBouncer Transaction mode colapsa los
+    # viajes) en lugar de hacerlo secuencial.
+    async def _sub(s):
+        return (await s.execute(sub_agg)).one()
+
+    async def _pay(s):
+        return (await s.execute(pay_agg)).one()
+
+    sub_row, pay_row = await parallel_queries(_sub, _pay)
 
     mrr = float(sub_row.mrr or 0)
     active_subscriptions = int(sub_row.active or 0)

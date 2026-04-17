@@ -30,7 +30,7 @@ function extractErrorMessage(error: unknown, fallback: string): string {
   return typeof detail === "string" ? detail : fallback;
 }
 
-export function useTeamMembers() {
+export function useTeamMembers(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["team-members"],
     queryFn: async () => {
@@ -41,6 +41,7 @@ export function useTeamMembers() {
       }
     },
     select: (response) => response.data as TeamMember[],
+    enabled: options?.enabled ?? true,
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
   });

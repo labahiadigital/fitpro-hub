@@ -308,10 +308,12 @@ export function ChatPage() {
   const { data: whatsappStatus } = useWhatsAppStatus();
   const isWhatsAppEnabled = whatsappStatus?.connected ?? false;
 
-  // Team data for internal chat
+  // Team data for internal chat - solo se cargan al abrir el modal interno o
+  // cuando estamos en vista interna (los selectores las usan como source).
   const { user: currentUser } = useAuthStore();
-  const { data: teamMembersData = [] } = useTeamMembers();
-  const { data: teamGroups = [] } = useTeamGroupsList();
+  const teamDataNeeded = chatScope === "internal" || internalNewChatOpened;
+  const { data: teamMembersData = [] } = useTeamMembers({ enabled: teamDataNeeded });
+  const { data: teamGroups = [] } = useTeamGroupsList({ enabled: teamDataNeeded });
 
   // Queries
   const { data: conversations = [], isLoading: loadingConversations } =
@@ -322,7 +324,11 @@ export function ChatPage() {
   const sendMessageMutation = useSendMessage();
   const markReadMutation = useMarkConversationRead();
   const createConversationMutation = useCreateConversation();
-  const { data: clientsData } = useClients({ page: 1, page_size: 100 });
+  // Clientes solo se cargan cuando se abre el modal de "Nuevo chat" con cliente.
+  const { data: clientsData } = useClients(
+    { page: 1, page_size: 100 },
+    { enabled: newChatOpened, staleTime: 5 * 60 * 1000 },
+  );
 
   const selectedConversation = conversations.find(
     (c) => c.id === selectedConversationId

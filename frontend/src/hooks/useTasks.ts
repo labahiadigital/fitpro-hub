@@ -62,7 +62,10 @@ export interface UpdateTaskData {
   due_time?: string;
 }
 
-export function useTasksList(filters: TaskFilters = {}) {
+export function useTasksList(
+  filters: TaskFilters = {},
+  options?: { enabled?: boolean },
+) {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
   if (filters.assigned_to) params.set("assigned_to", filters.assigned_to);
@@ -78,7 +81,8 @@ export function useTasksList(filters: TaskFilters = {}) {
     queryKey: ["tasks", filters],
     queryFn: async () => api.get(`/tasks${qs ? `?${qs}` : ""}`),
     select: (response) => response.data as Task[],
-    staleTime: 10_000,
+    enabled: options?.enabled ?? true,
+    staleTime: 30_000,
   });
 }
 

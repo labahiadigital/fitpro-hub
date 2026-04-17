@@ -126,7 +126,13 @@ export function BillingPage() {
   const { data: products = [] } = useProducts({ enabled: productsNeeded });
   const { data: kpisData } = usePaymentKPIs();
   useStripeStatus();
-  const { data: clientsData } = useClients({ page: 1 });
+  // Los clientes se usan en toda la página (tabla de pagos, modales de cobro y
+  // factura). Los mantenemos siempre cargados pero con un staleTime alto para
+  // que React Query no dispare refetches agresivos entre re-renders o focos.
+  const { data: clientsData } = useClients(
+    { page: 1 },
+    { staleTime: 5 * 60 * 1000 },
+  );
 
   // Invoice data — only fetched when the user lands on the invoices tab or
   // opens the invoice/settings modals.

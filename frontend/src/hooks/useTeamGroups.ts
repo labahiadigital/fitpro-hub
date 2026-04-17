@@ -36,12 +36,13 @@ export interface UpdateGroupData {
   color?: string;
 }
 
-export function useTeamGroupsList() {
+export function useTeamGroupsList(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["team-groups"],
     queryFn: async () => api.get("/team/groups"),
     select: (response) => response.data as TeamGroup[],
-    staleTime: 30_000,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60_000,
   });
 }
 

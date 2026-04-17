@@ -565,8 +565,14 @@ export function ClientDetailPage() {
   const { data: fetchedClient, isLoading, isError, error, refetch } = useClient(id || "");
   const { data: clientMealPlans } = useClientMealPlans(id || "");
   const { data: clientWorkoutPrograms = [] } = useClientWorkoutAssignments(id || "");
-  const { data: clientTasks = [] } = useTasksList({ client_id: id || "" });
-  const { data: teamMembersData = [] } = useTeamMembers();
+  const tasksTabActive = activeTab === "tasks";
+  const { data: clientTasks = [] } = useTasksList(
+    { client_id: id || "" },
+    { enabled: tasksTabActive },
+  );
+  // teamMembers solo se necesitan para mostrar el nombre del responsable en la
+  // pestaña de tareas. Evitamos el fetch en las demás pestañas.
+  const { data: teamMembersData = [] } = useTeamMembers({ enabled: tasksTabActive });
   const deleteTask = useDeleteTask();
 
   const memberMap = useMemo(() => {

@@ -263,7 +263,13 @@ export function TeamPage() {
 
   const { data: teamMembersData = [] } = useTeamMembers();
   const { user } = useAuthStore();
-  const { data: clientsData } = useClients({ page_size: 100 });
+  // Lista de clientes se usa SOLO dentro de los modales (invitar / editar
+  // miembro / grupo) para asignarlos. Evitamos el fetch en la carga inicial.
+  const clientsNeeded = inviteModalOpened || editModalOpened || groupModalOpened || editGroupOpened || groupMembersOpened;
+  const { data: clientsData } = useClients(
+    { page_size: 100 },
+    { enabled: clientsNeeded, staleTime: 5 * 60 * 1000 },
+  );
   const clientOptions = (clientsData?.items || []).map((c) => ({
     value: c.id,
     label: c.full_name || `${c.first_name} ${c.last_name}`,
