@@ -139,6 +139,7 @@ export function useCreateWorkoutProgram() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
+      queryClient.invalidateQueries({ queryKey: ["workout-program-templates"] });
       queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
       notifications.show({
         title: "Programa creado",
@@ -164,6 +165,7 @@ export function useUpdateWorkoutProgram() {
       workoutsApi.updateProgram(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["workout-programs"] });
+      queryClient.invalidateQueries({ queryKey: ["workout-program-templates"] });
       queryClient.invalidateQueries({ queryKey: ["client-workout-assignments"] });
       queryClient.invalidateQueries({
         queryKey: ["workout-program", variables.id],

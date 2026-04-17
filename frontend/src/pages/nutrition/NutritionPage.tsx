@@ -666,6 +666,43 @@ export function NutritionPage() {
   };
 
   const canSavePlan = !!(selectedClientId || planForm.values.client_id || clientId || isTemplateModeOn);
+  // En edición de un plan ya asignado a cliente, en vez del Switch aparece un
+  // botón explícito "Crear como plantilla" que duplica el plan como plantilla
+  // reutilizable sin alterar el plan del cliente.
+  const isEditingClientPlan = !!(
+    editingPlan && editingPlan.client_id && !editingPlan.is_template
+  );
+
+  const handleSaveAsPlanTemplateFromEdit = async () => {
+    const values = planForm.values;
+    if (!values.name) return;
+    try {
+      await createMealPlan.mutateAsync({
+        name: `${values.name} (Plantilla)`,
+        description: values.description,
+        duration_days: values.duration_weeks * 7,
+        duration_weeks: values.duration_weeks,
+        target_calories: values.target_calories,
+        target_protein: values.target_protein,
+        target_carbs: values.target_carbs,
+        target_fat: values.target_fat,
+        dietary_tags: values.dietary_tags,
+        plan: { weeks: mealPlanWeeks },
+        client_id: undefined,
+        is_template: true,
+        start_date: undefined,
+        end_date: undefined,
+      });
+      notifications.show({
+        title: "Plantilla creada",
+        message: "Se guardó una copia reutilizable del plan",
+        color: "teal",
+        icon: <IconTemplate size={16} />,
+      });
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudo crear la plantilla", color: "red" });
+    }
+  };
 
   const handleSavePlan = async () => {
     const values = planForm.values;
@@ -1065,8 +1102,23 @@ export function NutritionPage() {
           <Stack gap="md">
             <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>Configuración</Text>
             <Select label="Asignar a cliente" placeholder="Buscar cliente..." data={clientOptions} searchable clearable radius="md" size="sm" leftSection={<IconUser size={14} />} value={selectedClientId} disabled={!!clientId} onChange={(value) => { setSelectedClientId(value); if (value) loadClientData(value); else { setSelectedClient(null); planForm.setFieldValue("client_id", null); } }} />
-            <Switch label="Crear como plantilla" description={selectedClientId || clientId ? "Guarda una copia reutilizable además del plan del cliente" : "Guarda como plantilla reutilizable"} checked={isTemplateModeOn} onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)} size="sm" color="teal" />
-            {!canSavePlan && <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>}
+            {isEditingClientPlan ? (
+              <Button
+                variant="light"
+                color="teal"
+                size="sm"
+                radius="md"
+                leftSection={<IconTemplate size={16} />}
+                loading={createMealPlan.isPending}
+                disabled={!planForm.values.name}
+                onClick={handleSaveAsPlanTemplateFromEdit}
+              >
+                Crear como plantilla
+              </Button>
+            ) : (
+              <Switch label="Crear como plantilla" description={selectedClientId || clientId ? "Guarda una copia reutilizable además del plan del cliente" : "Guarda como plantilla reutilizable"} checked={isTemplateModeOn} onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)} size="sm" color="teal" />
+            )}
+            {!canSavePlan && !isEditingClientPlan && <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>}
             <TextInput label="Nombre del plan" placeholder="Plan de Pérdida de Peso" required radius="md" size="sm" {...planForm.getInputProps("name")} />
             <Textarea label="Descripción" minRows={2} placeholder="Describe el plan..." radius="md" size="sm" {...planForm.getInputProps("description")} />
             <Group grow>

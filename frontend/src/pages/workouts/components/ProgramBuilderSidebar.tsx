@@ -1,4 +1,5 @@
 import {
+  Button,
   Group,
   MultiSelect,
   NumberInput,
@@ -10,7 +11,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import type { UseFormReturnType } from "@mantine/form";
-import { IconUser } from "@tabler/icons-react";
+import { IconTemplate, IconUser } from "@tabler/icons-react";
 
 interface ProgramFormValues {
   name: string;
@@ -31,9 +32,12 @@ interface ProgramBuilderSidebarProps {
   isTemplateModeOn: boolean;
   clientId: string | null;
   canSaveProgram: boolean;
+  isEditingClientProgram?: boolean;
+  isSavingTemplate?: boolean;
   onClientChange: (value: string | null) => void;
   onTemplateModeChange: (checked: boolean) => void;
   onDurationChange: (value: number) => void;
+  onSaveAsTemplate?: () => void;
 }
 
 export function ProgramBuilderSidebar({
@@ -43,9 +47,12 @@ export function ProgramBuilderSidebar({
   isTemplateModeOn,
   clientId,
   canSaveProgram,
+  isEditingClientProgram = false,
+  isSavingTemplate = false,
   onClientChange,
   onTemplateModeChange,
   onDurationChange,
+  onSaveAsTemplate,
 }: ProgramBuilderSidebarProps) {
   return (
     <Stack gap="md">
@@ -66,18 +73,33 @@ export function ProgramBuilderSidebar({
         onChange={onClientChange}
       />
 
-      <Switch
-        label="Crear como plantilla"
-        description={selectedClientId || clientId
-          ? "Guarda una copia reutilizable además del programa del cliente"
-          : "Guarda como plantilla reutilizable"}
-        checked={isTemplateModeOn}
-        onChange={(e) => onTemplateModeChange(e.currentTarget.checked)}
-        size="sm"
-        color="teal"
-      />
+      {isEditingClientProgram ? (
+        <Button
+          variant="light"
+          color="teal"
+          size="sm"
+          radius="md"
+          leftSection={<IconTemplate size={16} />}
+          loading={isSavingTemplate}
+          disabled={!programForm.values.name}
+          onClick={onSaveAsTemplate}
+        >
+          Crear como plantilla
+        </Button>
+      ) : (
+        <Switch
+          label="Crear como plantilla"
+          description={selectedClientId || clientId
+            ? "Guarda una copia reutilizable además del programa del cliente"
+            : "Guarda como plantilla reutilizable"}
+          checked={isTemplateModeOn}
+          onChange={(e) => onTemplateModeChange(e.currentTarget.checked)}
+          size="sm"
+          color="teal"
+        />
+      )}
 
-      {!canSaveProgram && (
+      {!canSaveProgram && !isEditingClientProgram && (
         <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>
       )}
 

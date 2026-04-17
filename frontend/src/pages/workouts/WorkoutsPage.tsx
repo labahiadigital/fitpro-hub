@@ -470,71 +470,105 @@ export function WorkoutsPage() {
   };
 
   const canSaveProgram = !!(selectedClientId || programForm.values.client_id || clientId || isTemplateModeOn);
+  // Cuando editamos un programa YA asignado a un cliente (no una plantilla),
+  // el flujo para crear una plantilla reutilizable es un botón explícito en vez
+  // del Switch: evita el patrón confuso de "marca el switch y guarda el plan".
+  const isEditingClientProgram = !!(
+    editingProgram && editingProgram.client_id && !editingProgram.is_template
+  );
+
+  const serializeWorkoutDays = (days: WorkoutDay[]) =>
+    days.map((day) => ({
+      id: day.id,
+      day: day.day,
+      dayName: day.dayName,
+      isRestDay: day.isRestDay,
+      notes: day.notes,
+      blocks: day.blocks.map((block) => ({
+        id: block.id,
+        name: block.name,
+        type: block.type,
+        rest_between_sets: block.rest_between_sets,
+        rounds: block.rounds,
+        exercises: block.exercises?.map((ex: any) => ({
+          id: ex.id,
+          exercise_id: ex.exercise_id || ex.exercise?.id,
+          exercise: ex.exercise,
+          sets: ex.sets,
+          reps: ex.reps,
+          rest_seconds: ex.rest_seconds,
+          duration_type: ex.duration_type ?? "reps",
+          notes: ex.notes,
+          order: ex.order,
+          target_weight: ex.target_weight,
+          target_reps: ex.target_reps,
+        })) || [],
+      })),
+    }));
+
+  const buildTemplatePayload = () => ({
+    weeks: workoutWeeks.map((w) => ({
+      week: w.week,
+      days: serializeWorkoutDays(w.days),
+    })),
+    days: serializeWorkoutDays(workoutDays),
+    blocks: workoutDays.flatMap((day) =>
+      day.blocks.map((block) => ({
+        id: block.id,
+        name: block.name,
+        type: block.type,
+        rest_between_sets: block.rest_between_sets,
+        rounds: block.rounds,
+        exercises: block.exercises?.map((ex: any) => ({
+          id: ex.id,
+          exercise_id: ex.exercise_id || ex.exercise?.id,
+          exercise: ex.exercise,
+          sets: ex.sets,
+          reps: ex.reps,
+          rest_seconds: ex.rest_seconds,
+          duration_type: ex.duration_type ?? "reps",
+          notes: ex.notes,
+          order: ex.order,
+          target_weight: ex.target_weight,
+          target_reps: ex.target_reps,
+        })) || [],
+      }))
+    ),
+  });
+
+  const handleSaveAsTemplateFromEdit = async () => {
+    const values = programForm.values;
+    if (!values.name) return;
+    try {
+      await createProgram.mutateAsync({
+        name: `${values.name} (Plantilla)`,
+        description: values.description,
+        duration_weeks: values.duration_weeks,
+        difficulty: values.difficulty,
+        tags: values.tags,
+        template: buildTemplatePayload(),
+        client_id: undefined,
+        is_template: true,
+        start_date: undefined,
+        end_date: undefined,
+      } as any);
+      notifications.show({
+        title: "Plantilla creada",
+        message: "Se guardó una copia reutilizable del programa",
+        color: "teal",
+        icon: <IconTemplate size={16} />,
+      });
+    } catch {
+      // El mutation ya muestra el error
+    }
+  };
 
   const handleSaveProgram = async () => {
     const values = programForm.values;
     if (!values.name || !canSaveProgram) return;
 
     const planClientId = selectedClientId || values.client_id || clientId || null;
-
-    const serializeDays = (days: WorkoutDay[]) =>
-      days.map((day) => ({
-        id: day.id,
-        day: day.day,
-        dayName: day.dayName,
-        isRestDay: day.isRestDay,
-        notes: day.notes,
-        blocks: day.blocks.map((block) => ({
-          id: block.id,
-          name: block.name,
-          type: block.type,
-          rest_between_sets: block.rest_between_sets,
-          rounds: block.rounds,
-          exercises: block.exercises?.map((ex: any) => ({
-            id: ex.id,
-            exercise_id: ex.exercise_id || ex.exercise?.id,
-            exercise: ex.exercise,
-            sets: ex.sets,
-            reps: ex.reps,
-            rest_seconds: ex.rest_seconds,
-            duration_type: ex.duration_type ?? "reps",
-            notes: ex.notes,
-            order: ex.order,
-            target_weight: ex.target_weight,
-            target_reps: ex.target_reps,
-          })) || [],
-        })),
-      }));
-
-    const templatePayload = {
-      weeks: workoutWeeks.map((w) => ({
-        week: w.week,
-        days: serializeDays(w.days),
-      })),
-      days: serializeDays(workoutDays),
-      blocks: workoutDays.flatMap((day) =>
-        day.blocks.map((block) => ({
-          id: block.id,
-          name: block.name,
-          type: block.type,
-          rest_between_sets: block.rest_between_sets,
-          rounds: block.rounds,
-          exercises: block.exercises?.map((ex: any) => ({
-            id: ex.id,
-            exercise_id: ex.exercise_id || ex.exercise?.id,
-            exercise: ex.exercise,
-            sets: ex.sets,
-            reps: ex.reps,
-            rest_seconds: ex.rest_seconds,
-            duration_type: ex.duration_type ?? "reps",
-            notes: ex.notes,
-            order: ex.order,
-            target_weight: ex.target_weight,
-            target_reps: ex.target_reps,
-          })) || [],
-        }))
-      ),
-    };
+    const templatePayload = buildTemplatePayload();
 
     try {
       const cleanDates = {
@@ -845,9 +879,12 @@ export function WorkoutsPage() {
             isTemplateModeOn={isTemplateModeOn}
             clientId={clientId}
             canSaveProgram={canSaveProgram}
+            isEditingClientProgram={isEditingClientProgram}
+            isSavingTemplate={createProgram.isPending}
             onClientChange={handleClientChange}
             onTemplateModeChange={setIsTemplateModeOn}
             onDurationChange={handleDurationChange}
+            onSaveAsTemplate={handleSaveAsTemplateFromEdit}
           />
         }
         mainContent={
