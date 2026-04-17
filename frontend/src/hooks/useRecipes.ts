@@ -5,13 +5,18 @@ import type { Recipe, RecipeFilters } from "../types/recipe";
 
 const RECIPES_KEY = "recipes";
 
-export function useRecipes(filters?: RecipeFilters) {
+export function useRecipes(
+  filters?: RecipeFilters,
+  options?: { enabled?: boolean },
+) {
   return useQuery<Recipe[]>({
     queryKey: [RECIPES_KEY, filters],
     queryFn: async () => {
       const res = await nutritionApi.recipes(filters);
       return res.data;
     },
+    enabled: options?.enabled ?? true,
+    staleTime: 60 * 1000,
   });
 }
 

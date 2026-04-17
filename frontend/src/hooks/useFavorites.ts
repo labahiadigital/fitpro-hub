@@ -13,8 +13,9 @@ function useUserId() {
 
 // ============ FOOD FAVORITES ============
 
-export function useFoodFavorites() {
+export function useFoodFavorites(options?: { enabled?: boolean }) {
   const userId = useUserId();
+  const extraEnabled = options?.enabled ?? true;
 
   return useQuery({
     queryKey: ['food-favorites', userId],
@@ -28,7 +29,8 @@ export function useFoodFavorites() {
         return [];
       }
     },
-    enabled: !!userId,
+    enabled: !!userId && extraEnabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -69,8 +71,9 @@ export function useToggleFoodFavorite() {
 
 // ============ SUPPLEMENT FAVORITES ============
 
-export function useSupplementFavorites() {
+export function useSupplementFavorites(options?: { enabled?: boolean }) {
   const userId = useUserId();
+  const extraEnabled = options?.enabled ?? true;
 
   return useQuery({
     queryKey: ['supplement-favorites', userId],
@@ -84,7 +87,8 @@ export function useSupplementFavorites() {
         return [];
       }
     },
-    enabled: !!userId,
+    enabled: !!userId && extraEnabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

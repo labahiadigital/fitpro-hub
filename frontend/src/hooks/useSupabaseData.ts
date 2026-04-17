@@ -29,19 +29,10 @@ export function useSupabaseClients() {
   });
 }
 
-// Hook para obtener un cliente individual
-export function useClient(id: string) {
-  return useQuery({
-    queryKey: ["client", id],
-    queryFn: async () => {
-      if (!id) return null;
-      const response = await clientsApi.get(id);
-      return response.data;
-    },
-    enabled: !!id,
-    staleTime: 30 * 1000,
-  });
-}
+// Re-exportamos `useClient` desde `useClients.ts` para garantizar que
+// solo existe UNA implementación con el mismo queryKey y config (evita
+// sutilezas de staleTime/refetchOnMount desincronizados entre módulos).
+export { useClient } from "./useClients";
 
 // Hook para crear un cliente
 export function useCreateSupabaseClient() {
@@ -123,7 +114,8 @@ export function useSupabaseFoodsPaginated(
   page = 1,
   pageSize = 50,
   search = "",
-  category = ""
+  category = "",
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: ["foods-paginated", page, pageSize, search, category],
@@ -144,6 +136,8 @@ export function useSupabaseFoodsPaginated(
       };
     },
     placeholderData: (previousData) => previousData,
+    enabled: options?.enabled ?? true,
+    staleTime: 60 * 1000,
   });
 }
 
@@ -245,13 +239,17 @@ export function useWorkoutProgramTemplates(options?: { enabled?: boolean }) {
 // ============ MEAL PLANS ============
 
 // Hook para obtener planes nutricionales
-export function useSupabaseMealPlans(options?: { is_template?: boolean }) {
+export function useSupabaseMealPlans(
+  options?: { is_template?: boolean },
+  queryOptions?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ["meal-plans", options],
     queryFn: async () => {
       const response = await nutritionApi.plans(options);
       return response.data || [];
     },
+    enabled: queryOptions?.enabled ?? true,
     staleTime: 60 * 1000,
   });
 }
@@ -393,13 +391,15 @@ export function useClientMealPlans(clientId: string) {
 // ============ SUPPLEMENTS ============
 
 // Hook para obtener suplementos
-export function useSupplements() {
+export function useSupplements(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["supplements"],
     queryFn: async () => {
       const response = await api.get("/supplements");
       return response.data || [];
     },
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -462,13 +462,18 @@ export function useDeleteSupplement() {
 
 // ============ FOOD GROUPS ============
 
-export function useFoodGroups(search?: string, category?: string) {
+export function useFoodGroups(
+  search?: string,
+  category?: string,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ["food-groups", search, category],
     queryFn: async () => {
       const response = await nutritionApi.foodGroups({ search, category: category || undefined });
       return response.data || [];
     },
+    enabled: options?.enabled ?? true,
     staleTime: 60 * 1000,
   });
 }

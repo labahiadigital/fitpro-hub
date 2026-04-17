@@ -98,7 +98,13 @@ export function useClient(clientId: string) {
     queryFn: async () => clientsApi.get(clientId),
     select: (response) => response.data,
     enabled: !!clientId,
-    staleTime: 30 * 1000, // 30 segundos - reduce refetches
+    // El detalle del cliente cambia muy poco (sólo al editar desde la UI, y
+    // en esos casos `useUpdateClient` invalida explícitamente la query).
+    // Subimos el staleTime a 2 min y desactivamos `refetchOnMount` para
+    // evitar dobles fetch cuando el árbol se re-monta por hidratación de
+    // Zustand u Outlet.
+    staleTime: 2 * 60 * 1000,
+    refetchOnMount: false,
   });
 }
 
@@ -303,7 +309,8 @@ export function useClientMeasurements(clientId: string, limit = 50) {
     queryFn: async () => clientsApi.getMeasurements(clientId, limit),
     select: (response) => response.data as ClientMeasurement[],
     enabled: !!clientId && !clientId.startsWith("demo-"),
-    staleTime: 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    refetchOnMount: false,
   });
 }
 
@@ -328,7 +335,8 @@ export function useClientProgressSummary(clientId: string) {
     queryFn: async () => clientsApi.getProgressSummary(clientId),
     select: (response) => response.data as ClientProgressSummary,
     enabled: !!clientId && !clientId.startsWith("demo-"),
-    staleTime: 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    refetchOnMount: false,
   });
 }
 

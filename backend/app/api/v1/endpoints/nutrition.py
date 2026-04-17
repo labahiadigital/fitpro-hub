@@ -243,27 +243,43 @@ async def list_meal_plans(
     """
     Listar planes nutricionales.
     """
-    query = select(MealPlan).where(MealPlan.workspace_id == current_user.workspace_id)
-    
-    if client_id:
-        query = query.where(MealPlan.client_id == client_id)
-    
-    if is_template is not None:
-        query = query.where(MealPlan.is_template == is_template)
-    
-    result = await db.execute(query.order_by(MealPlan.created_at.desc()))
-    plans = result.scalars().all()
-
+    # Expira los planes vencidos en un único UPDATE SQL (en lugar de iterar en
+    # Python y hacer un commit por plan). Solo escribe si existe al menos un
+    # vencido; el SELECT posterior ya verá los valores actualizados.
     today = date.today()
-    dirty = False
-    for p in plans:
-        if p.is_active and p.end_date and p.end_date < today:
-            p.is_active = False
-            dirty = True
-    if dirty:
+    expired_exists = await db.scalar(
+        select(MealPlan.id)
+        .where(
+            MealPlan.workspace_id == current_user.workspace_id,
+            MealPlan.is_active.is_(True),
+            MealPlan.end_date.is_not(None),
+            MealPlan.end_date < today,
+        )
+        .limit(1)
+    )
+    if expired_exists:
+        await db.execute(
+            update(MealPlan)
+            .where(
+                MealPlan.workspace_id == current_user.workspace_id,
+                MealPlan.is_active.is_(True),
+                MealPlan.end_date.is_not(None),
+                MealPlan.end_date < today,
+            )
+            .values(is_active=False)
+        )
         await db.commit()
 
-    return plans
+    query = select(MealPlan).where(MealPlan.workspace_id == current_user.workspace_id)
+
+    if client_id:
+        query = query.where(MealPlan.client_id == client_id)
+
+    if is_template is not None:
+        query = query.where(MealPlan.is_template == is_template)
+
+    result = await db.execute(query.order_by(MealPlan.created_at.desc()))
+    return result.scalars().all()
 
 
 @router.post("/meal-plans", response_model=MealPlanResponse, status_code=status.HTTP_201_CREATED)

@@ -423,30 +423,49 @@ async def list_programs(
 ):
     """
     Listar programas de entrenamiento.
+
+    Como esta ruta se llama con frecuencia desde el portal de entrenador,
+    reemplazamos el bucle Python que iteraba programa a programa para expirar
+    los vencidos por un único UPDATE en SQL. Solo ejecuta la escritura si
+    existe al menos un programa vencido (chequeo barato), evitando locks y
+    escrituras superfluas en PgBouncer Transaction mode.
     """
+    today = date.today()
+    expired_exists = await db.scalar(
+        select(WorkoutProgram.id)
+        .where(
+            WorkoutProgram.workspace_id == current_user.workspace_id,
+            WorkoutProgram.is_active.is_(True),
+            WorkoutProgram.end_date.is_not(None),
+            WorkoutProgram.end_date < today,
+        )
+        .limit(1)
+    )
+    if expired_exists:
+        await db.execute(
+            update(WorkoutProgram)
+            .where(
+                WorkoutProgram.workspace_id == current_user.workspace_id,
+                WorkoutProgram.is_active.is_(True),
+                WorkoutProgram.end_date.is_not(None),
+                WorkoutProgram.end_date < today,
+            )
+            .values(is_active=False)
+        )
+        await db.commit()
+
     query = select(WorkoutProgram).where(
         WorkoutProgram.workspace_id == current_user.workspace_id
     )
-    
+
     if is_template is not None:
         query = query.where(WorkoutProgram.is_template == is_template)
-    
+
     if client_id:
         query = query.where(WorkoutProgram.client_id == client_id)
-    
+
     result = await db.execute(query.order_by(WorkoutProgram.created_at.desc()))
-    programs = result.scalars().all()
-
-    today = date.today()
-    dirty = False
-    for p in programs:
-        if p.is_active and p.end_date and p.end_date < today:
-            p.is_active = False
-            dirty = True
-    if dirty:
-        await db.commit()
-
-    return programs
+    return result.scalars().all()
 
 
 @router.post("/programs", response_model=WorkoutProgramResponse, status_code=status.HTTP_201_CREATED)

@@ -303,7 +303,19 @@ export function NutritionPage() {
   const returnTo = searchParams.get("returnTo");
 
   const { data: clientData } = useClient(clientId || "");
-  const { data: clientsData } = useClients({ page: 1, search: "", page_size: 100 });
+  // La lista de clientes solo se necesita en el builder (para asignar plan a un
+  // cliente) y para el mapeo de nombre en las tarjetas. Deferimos la carga a
+  // cuando el builder está abierto o ya hay supabaseMealPlans cargados con
+  // client_id (resuelto vía el .then en clientsMap). Mantenemos staleTime alto.
+  const [clientsListLoaded, setClientsListLoaded] = useState(false);
+  const { data: clientsData } = useClients(
+    { page: 1, search: "", page_size: 100 },
+    { enabled: clientsListLoaded, staleTime: 5 * 60 * 1000 },
+  );
+  // Marcadores de uso:
+  //  - builderOpened: el usuario abre el builder → elegirá cliente.
+  //  - supabaseMealPlans cargado con client_id: necesitamos el mapeo para
+  //    mostrar nombre en las tarjetas. Lo resolvemos tras las primeras planes.
   const clientsMap = useMemo(() => {
     const map = new Map<string, string>();
     (clientsData?.items || []).forEach((c: { id: string; first_name?: string; last_name?: string }) => {
@@ -371,7 +383,11 @@ export function NutritionPage() {
     category: recipeCategoryFilter || undefined,
     difficulty: recipeDifficultyFilter || undefined,
   }), [debouncedRecipeSearch, recipeCategoryFilter, recipeDifficultyFilter]);
-  const { data: recipes = [], isLoading: isLoadingRecipes } = useRecipes(recipeFilters);
+  // Recetas solo se renderizan en la pestaña "recipes" o dentro del builder.
+  const recipesNeeded = activeTab === "recipes" || builderOpened;
+  const { data: recipes = [], isLoading: isLoadingRecipes } = useRecipes(recipeFilters, {
+    enabled: recipesNeeded,
+  });
   const createRecipeMutation = useCreateRecipe();
   const updateRecipeMutation = useUpdateRecipe();
   const deleteRecipeMutation = useDeleteRecipe();
@@ -385,18 +401,55 @@ export function NutritionPage() {
   useEffect(() => { setEditFoodTab("general"); }, [editingFood?.id]);
   useEffect(() => { setFoodDetailTab("general"); }, [viewingFood?.id]);
 
+  // Pestañas y dependencias:
+  // - "foods"       → catálogo de alimentos + favoritos de alimentos
+  // - "supplements" → catálogo de suplementos + favoritos de suplementos
+  // - "templates"   → planes nutricionales
+  // - "recipes"     → recetas
+  // El builder abierto necesita foods + supplements + favoritos.
+  const foodsNeeded = activeTab === "foods" || builderOpened;
+  const supplementsNeeded = activeTab === "supplements" || builderOpened;
+  const plansNeeded = activeTab === "templates" || !!editPlanId;
+
   const { data: supabaseFoods } = useSupabaseFoods(builderOpened);
-  const { data: paginatedFoods, isLoading: isLoadingPaginatedFoods, isFetching: isFetchingFoods } = useSupabaseFoodsPaginated(currentPage, FOODS_PER_PAGE, debouncedSearch, foodCategoryFilter);
+  const { data: paginatedFoods, isLoading: isLoadingPaginatedFoods, isFetching: isFetchingFoods } = useSupabaseFoodsPaginated(
+    currentPage,
+    FOODS_PER_PAGE,
+    debouncedSearch,
+    foodCategoryFilter,
+    { enabled: foodsNeeded },
+  );
   // Total is already returned by the paginated endpoint; avoid a second request.
   const totalFoodsCount = paginatedFoods?.total ?? 0;
-  const { data: supabaseMealPlans, isLoading: isLoadingPlans } = useSupabaseMealPlans(clientId ? {} : {});
+  const { data: supabaseMealPlans, isLoading: isLoadingPlans } = useSupabaseMealPlans(
+    clientId ? {} : {},
+    { enabled: plansNeeded },
+  );
   const { data: specificClientPlan } = useSupabaseMealPlan(editPlanId && clientId ? editPlanId : "");
-  const { data: supabaseSupplements } = useSupplements();
+  const { data: supabaseSupplements } = useSupplements({ enabled: supplementsNeeded });
 
-  const { data: foodFavorites = [] } = useFoodFavorites();
+  const { data: foodFavorites = [] } = useFoodFavorites({ enabled: foodsNeeded });
   const toggleFoodFavorite = useToggleFoodFavorite();
-  const { data: supplementFavorites = [] } = useSupplementFavorites();
+  const { data: supplementFavorites = [] } = useSupplementFavorites({ enabled: supplementsNeeded });
   const toggleSupplementFavorite = useToggleSupplementFavorite();
+
+  // Activamos la carga de la lista de clientes cuando el usuario abra el
+  // builder, o cuando haya planes con `client_id` que necesiten mapeo de
+  // nombre en las tarjetas. Así la pestaña "templates" con planes genéricos
+  // (sin cliente asignado) no dispara la petición de 100 clientes al montar.
+  useEffect(() => {
+    if (clientsListLoaded) return;
+    if (builderOpened) {
+      setClientsListLoaded(true);
+      return;
+    }
+    if (
+      Array.isArray(supabaseMealPlans) &&
+      supabaseMealPlans.some((p: { client_id?: string | null }) => !!p.client_id)
+    ) {
+      setClientsListLoaded(true);
+    }
+  }, [clientsListLoaded, builderOpened, supabaseMealPlans]);
 
   const handleToggleFoodFavoriteForBuilder = useCallback((foodId: string, isFavorite: boolean) => {
     toggleFoodFavorite.mutate({ foodId, isFavorite });
