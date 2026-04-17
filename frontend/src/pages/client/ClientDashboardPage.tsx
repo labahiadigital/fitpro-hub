@@ -91,9 +91,13 @@ function NutrientProgress({
 export function ClientDashboardPage() {
   const { data: dashboardData, isLoading } = useClientDashboard();
   const navigate = useNavigate();
-  
-  // Fallback data while loading or if no data
-  const firstName = dashboardData?.full_name?.split(" ")[0] || "Cliente";
+  const { user } = useAuthStore();
+
+  // Prefer the client's own name from the dashboard; fall back to the logged
+  // user's name so the greeting never shows the generic "Cliente" label
+  // while the /client/dashboard request is cached or if it returns empty.
+  const rawName = dashboardData?.full_name?.trim() || user?.full_name?.trim() || "";
+  const firstName = rawName ? rawName.split(" ")[0] : "";
   
   if (isLoading) {
     return (
@@ -125,7 +129,7 @@ export function ClientDashboardPage() {
         <Group justify="space-between" align="flex-start">
           <Box>
             <Title order={2} mb={4}>
-              ¡Hola, {firstName}! 👋
+              {firstName ? `¡Hola, ${firstName}! 👋` : "¡Hola! 👋"}
             </Title>
             <Text c="dimmed" size="lg">
               {data.weekProgress.workouts_completed > 0 
@@ -209,8 +213,8 @@ export function ClientDashboardPage() {
             <StatCard
               icon={IconTarget}
               label="Objetivo"
-              value={`${data.goals.progress}%`}
-              subvalue={data.goals.primary}
+              value={data.goals.target_weight > 0 ? `${data.goals.progress}%` : "—"}
+              subvalue={data.goals.target_weight > 0 ? data.goals.primary : "Configura tu objetivo"}
               color="green"
             />
           </SimpleGrid>
@@ -273,39 +277,82 @@ export function ClientDashboardPage() {
                 <Text fw={600} size="lg">Mi Progreso</Text>
                 <Text size="sm" c="dimmed">{data.goals.primary}</Text>
               </Box>
-              <Badge color="green" variant="light" size="lg">
-                <Group gap={4}>
-                  <IconTrendingUp size={14} />
-                  {data.goals.current_weight - data.goals.start_weight > 0 ? "+" : ""}{formatDecimal(data.goals.current_weight - data.goals.start_weight, 1)}kg
+              {data.goals.current_weight > 0 && data.goals.start_weight > 0 && (
+                <Badge
+                  color={data.goals.current_weight - data.goals.start_weight === 0 ? "gray" : "green"}
+                  variant="light"
+                  size="lg"
+                >
+                  <Group gap={4}>
+                    <IconTrendingUp size={14} />
+                    {data.goals.current_weight - data.goals.start_weight > 0 ? "+" : ""}
+                    {formatDecimal(data.goals.current_weight - data.goals.start_weight, 1)}kg
+                  </Group>
+                </Badge>
+              )}
+            </Group>
+
+            {data.goals.current_weight > 0 ? (
+              <>
+                <Group justify="space-between" mb="sm">
+                  <Box>
+                    <Text size="xs" c="dimmed">Inicio</Text>
+                    <Text fw={600}>{formatDecimal(data.goals.start_weight, 1)}kg</Text>
+                  </Box>
+                  <Box ta="center">
+                    <Text size="xs" c="dimmed">Actual</Text>
+                    <Text fw={700} size="xl" c="yellow.6">{formatDecimal(data.goals.current_weight, 1)}kg</Text>
+                  </Box>
+                  <Box ta="right">
+                    <Text size="xs" c="dimmed">Objetivo</Text>
+                    <Text fw={600}>
+                      {data.goals.target_weight > 0 ? `${formatDecimal(data.goals.target_weight, 1)}kg` : "—"}
+                    </Text>
+                  </Box>
                 </Group>
-              </Badge>
-            </Group>
 
-            <Group justify="space-between" mb="sm">
-              <Box>
-                <Text size="xs" c="dimmed">Inicio</Text>
-                <Text fw={600}>{data.goals.start_weight}kg</Text>
-              </Box>
-              <Box ta="center">
-                <Text size="xs" c="dimmed">Actual</Text>
-                <Text fw={700} size="xl" c="yellow.6">{data.goals.current_weight}kg</Text>
-              </Box>
-              <Box ta="right">
-                <Text size="xs" c="dimmed">Objetivo</Text>
-                <Text fw={600}>{data.goals.target_weight}kg</Text>
-              </Box>
-            </Group>
-
-            <Progress 
-              value={data.goals.progress} 
-              size="lg" 
-              radius="xl" 
-              color="yellow"
-              mb="xs"
-            />
-            <Text size="xs" c="dimmed" ta="center">
-              {data.goals.progress}% completado - ¡Vas muy bien!
-            </Text>
+                {data.goals.target_weight > 0 ? (
+                  <>
+                    <Progress
+                      value={data.goals.progress}
+                      size="lg"
+                      radius="xl"
+                      color="yellow"
+                      mb="xs"
+                    />
+                    <Text size="xs" c="dimmed" ta="center">
+                      {data.goals.progress}% completado · {data.goals.progress >= 80 ? "¡Casi lo tienes!" : "¡Vas muy bien!"}
+                    </Text>
+                  </>
+                ) : (
+                  <Group justify="center" mt="sm">
+                    <Button
+                      variant="light"
+                      color="yellow"
+                      size="xs"
+                      onClick={() => navigate("/my-progress")}
+                    >
+                      Define tu objetivo
+                    </Button>
+                  </Group>
+                )}
+              </>
+            ) : (
+              <Stack align="center" gap="xs" py="sm">
+                <Text size="sm" c="dimmed" ta="center">
+                  Aún no has registrado tu peso inicial.
+                </Text>
+                <Button
+                  variant="light"
+                  color="yellow"
+                  size="sm"
+                  leftSection={<IconChartLine size={14} />}
+                  onClick={() => navigate("/my-progress")}
+                >
+                  Registrar primera medición
+                </Button>
+              </Stack>
+            )}
           </Card>
         </Grid.Col>
 

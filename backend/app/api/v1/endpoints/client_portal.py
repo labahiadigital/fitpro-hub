@@ -273,6 +273,69 @@ class BookingClientResponse(BaseModel):
 
 # ============ DASHBOARD ============
 
+def _safe_float(value) -> float:
+    """Convert numeric-ish value to float safely, returns 0 on failure."""
+    if value is None:
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _build_goals_payload(client: Client, latest_measurement, first_measurement) -> dict:
+    """Build the goals payload using real measurement history when available.
+
+    - ``start_weight``: weight from the first measurement (fallback: profile weight).
+    - ``current_weight``: weight from the latest measurement (fallback: profile weight).
+    - ``target_weight``: goal weight from ``health_data``.
+    - ``progress``: percentage towards target, computed in both directions
+      (losing or gaining weight) and clamped to 0-100.
+    """
+    health = client.health_data or {}
+    target_weight = _safe_float(health.get("goal_weight_kg", 0))
+
+    profile_weight = _safe_float(client.weight_kg)
+
+    start_w = _safe_float(first_measurement.weight_kg) if first_measurement and first_measurement.weight_kg else profile_weight
+    current_w = _safe_float(latest_measurement.weight_kg) if latest_measurement and latest_measurement.weight_kg else profile_weight or start_w
+
+    progress = 0
+    if target_weight and start_w and target_weight != start_w:
+        total_delta = target_weight - start_w
+        achieved_delta = current_w - start_w
+        # Same direction: progress advances; otherwise it stays 0.
+        if (total_delta > 0 and achieved_delta >= 0) or (total_delta < 0 and achieved_delta <= 0):
+            pct = (achieved_delta / total_delta) * 100
+            progress = max(0, min(100, int(round(pct))))
+
+    return {
+        "primary": client.goals or "Sin objetivo definido",
+        "progress": progress,
+        "start_weight": round(start_w, 1),
+        "current_weight": round(current_w, 1),
+        "target_weight": round(target_weight, 1),
+    }
+
+
+def _build_recent_activity(week_logs, upcoming_bookings) -> list[dict]:
+    """Compose a concise timeline of recent workout logs + next bookings."""
+    items: list[dict] = []
+    for log in (week_logs or [])[:3]:
+        when = getattr(log, "created_at", None)
+        items.append({
+            "title": "Entrenamiento completado",
+            "time": when.strftime("%d/%m %H:%M") if when else "Reciente",
+        })
+    for booking in (upcoming_bookings or [])[:2]:
+        when = getattr(booking, "start_time", None)
+        items.append({
+            "title": f"Próxima sesión: {booking.title}",
+            "time": when.strftime("%d/%m %H:%M") if when else "Programada",
+        })
+    return items[:5]
+
+
 @router.get("/dashboard", response_model=ClientDashboardResponse)
 async def get_client_dashboard(
     current_user: CurrentUser = Depends(get_current_user),
@@ -312,6 +375,20 @@ async def get_client_dashboard(
         .order_by(desc(MealPlan.created_at))
         .limit(1)
     )
+    # Latest measurement (for current weight on the dashboard)
+    latest_meas_q = (
+        select(ClientMeasurement)
+        .where(ClientMeasurement.client_id == client_id)
+        .order_by(desc(ClientMeasurement.measured_at), desc(ClientMeasurement.created_at))
+        .limit(1)
+    )
+    # First measurement (baseline for progress calculation)
+    first_meas_q = (
+        select(ClientMeasurement)
+        .where(ClientMeasurement.client_id == client_id)
+        .order_by(ClientMeasurement.measured_at.asc().nulls_last(), ClientMeasurement.created_at.asc())
+        .limit(1)
+    )
 
     async def _scalars(session, q):
         return (await session.execute(q)).scalars().all()
@@ -319,11 +396,20 @@ async def get_client_dashboard(
     async def _one(session, q):
         return (await session.execute(q)).scalar_one_or_none()
 
-    upcoming_bookings, week_logs, assigned_programs, active_meal_plan = await parallel_queries(
+    (
+        upcoming_bookings,
+        week_logs,
+        assigned_programs,
+        active_meal_plan,
+        latest_measurement,
+        first_measurement,
+    ) = await parallel_queries(
         lambda s: _scalars(s, bookings_q),
         lambda s: _scalars(s, logs_q),
         lambda s: _scalars(s, programs_q),
         lambda s: _one(s, meal_plan_q),
+        lambda s: _one(s, latest_meas_q),
+        lambda s: _one(s, first_meas_q),
     )
     
     # Calculate nutrition totals from adherence logs
@@ -381,14 +467,8 @@ async def get_client_dashboard(
             "calories_burned": sum(log.log.get("calories_burned", 0) for log in week_logs if log.log),
         },
         nutrition_today=nutrition_totals,
-        goals={
-            "primary": client.goals or "Sin objetivo definido",
-            "progress": 35,  # TODO: Calculate from measurements
-            "start_weight": float(client.weight_kg) if client.weight_kg else 0,
-            "current_weight": float(client.weight_kg) if client.weight_kg else 0,
-            "target_weight": client.health_data.get("goal_weight_kg", 0) if client.health_data else 0,
-        },
-        recent_activity=[],  # TODO: Implement activity feed
+        goals=_build_goals_payload(client, latest_measurement, first_measurement),
+        recent_activity=_build_recent_activity(week_logs, upcoming_bookings),
         upcoming_sessions=upcoming_sessions,
     )
 

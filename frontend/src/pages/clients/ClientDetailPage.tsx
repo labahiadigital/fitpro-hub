@@ -147,20 +147,28 @@ const COMMON_INTOLERANCES = [
 ];
 
 // KPI Card Component - Compact version
-function StatCard({ icon, label, value, color, trend }: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string | number; 
+function StatCard({ icon, label, value, color, trend, hint, onClick }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
   color: string;
   trend?: { value: number; positive: boolean };
+  hint?: string;
+  onClick?: () => void;
 }) {
+  const isEmpty = value === "-" || value === "—" || value === 0 || value === "0" || value === "€0" || value === "0%";
   return (
-    <Box className="nv-card-compact" p="md">
+    <Box
+      className="nv-card-compact"
+      p="md"
+      onClick={onClick}
+      style={onClick ? { cursor: "pointer" } : undefined}
+    >
       <Group gap="xs" mb={4}>
         <Text className="text-label" style={{ fontSize: "10px" }}>{label}</Text>
         {trend && (
-          <Badge 
-            size="xs" 
+          <Badge
+            size="xs"
             variant="light"
             color={trend.positive ? "green" : "red"}
             radius="xl"
@@ -171,17 +179,17 @@ function StatCard({ icon, label, value, color, trend }: {
         )}
       </Group>
       <Group justify="space-between" align="center" gap="xs">
-        <Text 
-          className="text-display" 
-          style={{ fontSize: "1.25rem", color, lineHeight: 1 }}
+        <Text
+          className="text-display"
+          style={{ fontSize: "1.25rem", color: isEmpty ? "var(--nv-slate-light)" : color, lineHeight: 1 }}
         >
           {value}
         </Text>
-        <ThemeIcon 
-          size={32} 
-          radius="md" 
+        <ThemeIcon
+          size={32}
+          radius="md"
           variant="light"
-          style={{ 
+          style={{
             backgroundColor: `${color}12`,
             color: color
           }}
@@ -189,6 +197,11 @@ function StatCard({ icon, label, value, color, trend }: {
           {icon}
         </ThemeIcon>
       </Group>
+      {isEmpty && hint && (
+        <Text size="xs" c="dimmed" mt={4} style={{ fontSize: "10px" }}>
+          {hint}
+        </Text>
+      )}
     </Box>
   );
 }
@@ -1743,39 +1756,48 @@ export function ClientDetailPage() {
 
       {/* KPIs del cliente */}
       <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 6, xl: 8 }} mb="xl" spacing="md" className="stagger">
-        <StatCard 
-          icon={<IconCalendarEvent size={24} />} 
-          label="Sesiones Totales" 
+        <StatCard
+          icon={<IconCalendarEvent size={24} />}
+          label="Sesiones Totales"
           value={stats.total_sessions || "-"}
           color="var(--nv-primary)"
+          hint="Agenda la primera"
+          onClick={() => setActiveTab("sessions")}
         />
-        <StatCard 
-          icon={<IconActivity size={24} />} 
-          label="Este Mes" 
+        <StatCard
+          icon={<IconActivity size={24} />}
+          label="Este Mes"
           value={stats.sessions_this_month || "-"}
           color="var(--nv-success)"
+          hint="Sin sesiones este mes"
+          onClick={() => setActiveTab("sessions")}
         />
-        <StatCard 
-          icon={<IconTarget size={24} />} 
-          label="Adherencia" 
+        <StatCard
+          icon={<IconTarget size={24} />}
+          label="Adherencia"
           value={stats.adherence > 0 ? `${stats.adherence}%` : "-"}
           color="var(--nv-success)"
+          hint="Se calcula tras 7 días"
         />
-        <StatCard 
-          icon={<IconCreditCard size={24} />} 
-          label="MRR" 
+        <StatCard
+          icon={<IconCreditCard size={24} />}
+          label="MRR"
           value={stats.mrr > 0 ? `€${stats.mrr}` : "-"}
           color="var(--nv-warning)"
+          hint="Sin suscripción activa"
+          onClick={() => setActiveTab("payments")}
         />
-        <StatCard 
-          icon={<IconHeart size={24} />} 
-          label="LTV" 
+        <StatCard
+          icon={<IconHeart size={24} />}
+          label="LTV"
           value={stats.lifetime_value > 0 ? `€${stats.lifetime_value}` : "-"}
           color="#8B5CF6"
+          hint="Sin pagos registrados"
+          onClick={() => setActiveTab("payments")}
         />
-        <StatCard 
-          icon={<IconHistory size={24} />} 
-          label="Días como cliente" 
+        <StatCard
+          icon={<IconHistory size={24} />}
+          label="Días como cliente"
           value={stats.days_as_client}
           color="var(--nv-slate)"
         />
@@ -1854,34 +1876,66 @@ export function ClientDetailPage() {
                 Actividad Reciente
               </Text>
 
-              <Timeline active={activities.length} bulletSize={28} lineWidth={2}>
-                {activities.map((activity) => (
-                  <Timeline.Item
-                    bullet={
-                      <ThemeIcon
-                        size={28}
-                        radius="xl"
-                        variant="light"
-                        style={{ 
-                          backgroundColor: `${getActivityColor(activity.type)}15`,
-                          color: getActivityColor(activity.type)
-                        }}
-                      >
-                        {getActivityIcon(activity.type)}
-                      </ThemeIcon>
-                    }
-                    key={activity.id}
-                    title={<Text fw={600} size="sm">{activity.title}</Text>}
-                  >
-                    <Text c="dimmed" size="xs">{activity.description}</Text>
-                    <Text c="dimmed" mt={4} size="xs">
-                      {activity.date && !isNaN(new Date(activity.date).getTime())
-                        ? new Date(activity.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-                        : "—"}
-                    </Text>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
+              {activities.length > 0 ? (
+                <Timeline active={activities.length} bulletSize={28} lineWidth={2}>
+                  {activities.map((activity) => (
+                    <Timeline.Item
+                      bullet={
+                        <ThemeIcon
+                          size={28}
+                          radius="xl"
+                          variant="light"
+                          style={{
+                            backgroundColor: `${getActivityColor(activity.type)}15`,
+                            color: getActivityColor(activity.type)
+                          }}
+                        >
+                          {getActivityIcon(activity.type)}
+                        </ThemeIcon>
+                      }
+                      key={activity.id}
+                      title={<Text fw={600} size="sm">{activity.title}</Text>}
+                    >
+                      <Text c="dimmed" size="xs">{activity.description}</Text>
+                      <Text c="dimmed" mt={4} size="xs">
+                        {activity.date && !isNaN(new Date(activity.date).getTime())
+                          ? new Date(activity.date).toLocaleDateString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                          : "—"}
+                      </Text>
+                    </Timeline.Item>
+                  ))}
+                </Timeline>
+              ) : (
+                <Stack align="center" gap="sm" py="lg">
+                  <ThemeIcon size={48} radius="xl" variant="light" color="gray">
+                    <IconActivity size={24} />
+                  </ThemeIcon>
+                  <Text size="sm" c="dimmed" ta="center">
+                    Sin actividad registrada todavía.
+                  </Text>
+                  <Group gap="xs">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      radius="xl"
+                      leftSection={<IconBarbell size={14} />}
+                      onClick={() => setActiveTab("programs")}
+                    >
+                      Asignar programa
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="green"
+                      radius="xl"
+                      leftSection={<IconCalendarEvent size={14} />}
+                      onClick={() => setActiveTab("sessions")}
+                    >
+                      Agendar sesión
+                    </Button>
+                  </Group>
+                </Stack>
+              )}
             </Box>
 
             {/* Alergias e Intolerancias - Resumen simplificado */}

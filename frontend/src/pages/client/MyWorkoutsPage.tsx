@@ -28,6 +28,7 @@ import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { DateInput } from "@mantine/dates";
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   IconArrowsExchange,
   IconBarbell,
@@ -1260,6 +1261,7 @@ export function MyWorkoutsPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isMdUp = useMediaQuery("(min-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("today");
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { data: workouts, isLoading: isLoadingWorkouts } = useMyWorkouts({ activeOnly: true });
   const { data: history } = useWorkoutHistory(10);
@@ -2018,9 +2020,32 @@ export function MyWorkoutsPage() {
           )}
           
           {isSelectedDateInRange && !data.isTodayRestDay && !data.todayWorkout && data.assignedProgram?.id && (
-            <Box ta="center" py="xl">
-              <Text c="dimmed">No hay entrenamiento asignado para hoy.</Text>
-            </Box>
+            <Stack align="center" gap="sm" py="xl">
+              <Text size="2xl">🛌</Text>
+              <Text fw={600} size="lg">No hay entrenamiento asignado para hoy</Text>
+              <Text c="dimmed" size="sm" ta="center" maw={420}>
+                Aprovecha para descansar o revisar tu semana. Si aún tienes energía, puedes registrar un entrenamiento libre.
+              </Text>
+              <Group gap="xs" mt="xs">
+                <Button
+                  size="xs"
+                  variant="light"
+                  radius="xl"
+                  onClick={() => setActiveTab("week")}
+                >
+                  Ver programa semanal
+                </Button>
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  radius="xl"
+                  onClick={() => navigate("/my-progress")}
+                >
+                  Registrar progreso
+                </Button>
+              </Group>
+            </Stack>
           )}
         </Tabs.Panel>
 

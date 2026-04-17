@@ -43,6 +43,8 @@ interface DataTableProps<T> {
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   onView?: (item: T) => void;
+  getDeleteLabel?: (item: T) => string;
+  getDeleteIcon?: (item: T) => React.ReactNode;
   pagination?: {
     page: number;
     pageSize: number;
@@ -64,6 +66,8 @@ export function DataTable<T extends { id: string }>({
   onEdit,
   onDelete,
   onView,
+  getDeleteLabel,
+  getDeleteIcon,
   pagination,
   emptyMessage = "No hay datos disponibles",
 }: DataTableProps<T>) {
@@ -314,10 +318,10 @@ export function DataTable<T extends { id: string }>({
                               <Menu.Divider />
                               <Menu.Item
                                 color="red"
-                                leftSection={<IconTrash size={16} />}
+                                leftSection={getDeleteIcon ? getDeleteIcon(item) : <IconTrash size={16} />}
                                 onClick={() => onDelete(item)}
                               >
-                                Eliminar
+                                {getDeleteLabel ? getDeleteLabel(item) : "Eliminar"}
                               </Menu.Item>
                             </>
                           )}

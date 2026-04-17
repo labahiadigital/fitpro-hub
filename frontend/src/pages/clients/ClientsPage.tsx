@@ -17,6 +17,8 @@ import {
   ActionIcon,
   Menu,
   Table,
+  SegmentedControl,
+  Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
@@ -37,6 +39,7 @@ import {
   IconUserCheck,
   IconTrashX,
   IconRestore,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -191,6 +194,7 @@ export function ClientsPage() {
   const [search, setSearch] = useState("");
   const [viewMode] = useState<"table" | "grid">("table");
   const [activeTab, setActiveTab] = useState<string | null>("all");
+  const [invitationsFilter, setInvitationsFilter] = useState<string>("all");
   const [
     clientModalOpened,
     { open: openClientModal, close: closeClientModal },
@@ -475,6 +479,13 @@ export function ClientsPage() {
     }
   };
 
+  // Hide the Etiquetas column entirely if no visible client has tags: otherwise
+  // it looks like dead real-estate full of dashes.
+  const hasAnyTags = useMemo(
+    () => (clientsData?.items || []).some((c: any) => Array.isArray(c.tags) && c.tags.length > 0),
+    [clientsData]
+  );
+
   const columns = [
     {
       key: "name",
@@ -501,16 +512,20 @@ export function ClientsPage() {
         </Text>
       ),
     },
-    {
-      key: "tags",
-      title: "Etiquetas",
-      render: (client: { tags?: Array<{ name: string; color: string }> }) =>
-        client.tags && client.tags.length > 0 ? (
-          <TagsList tags={client.tags} />
-        ) : (
-          <Text c="dimmed" size="sm">—</Text>
-        ),
-    },
+    ...(hasAnyTags
+      ? [
+          {
+            key: "tags",
+            title: "Etiquetas",
+            render: (client: { tags?: Array<{ name: string; color: string }> }) =>
+              client.tags && client.tags.length > 0 ? (
+                <TagsList tags={client.tags} />
+              ) : (
+                <Text c="dimmed" size="sm">—</Text>
+              ),
+          },
+        ]
+      : []),
     {
       key: "is_active",
       title: "Estado",
@@ -521,24 +536,31 @@ export function ClientsPage() {
     {
       key: "actions_custom",
       title: "",
-      render: (client: any) =>
-        client.deleted_at ? (
-          <Button
-            size="xs"
-            variant="light"
-            color="green"
-            radius="xl"
-            leftSection={<IconRestore size={14} />}
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              handleRestore(client);
-            }}
-            styles={{ root: { fontSize: "11px" } }}
-          >
-            Restaurar
-          </Button>
-        ) : !client.is_active ? (
-          <Group gap={4} wrap="nowrap">
+      render: (client: any) => {
+        // Destructive actions (Desasignar) live inside the row menu (⋮) so the
+        // table doesn't feel like a wall of red buttons. We only surface
+        // recovery actions (Restaurar/Reactivar) directly because they're
+        // positive and quick.
+        if (client.deleted_at) {
+          return (
+            <Button
+              size="xs"
+              variant="light"
+              color="green"
+              radius="xl"
+              leftSection={<IconRestore size={14} />}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                handleRestore(client);
+              }}
+              styles={{ root: { fontSize: "11px" } }}
+            >
+              Restaurar
+            </Button>
+          );
+        }
+        if (!client.is_active) {
+          return (
             <Button
               size="xs"
               variant="light"
@@ -553,38 +575,10 @@ export function ClientsPage() {
             >
               Reactivar
             </Button>
-            <Button
-              size="xs"
-              variant="light"
-              color="red"
-              radius="xl"
-              leftSection={<IconTrash size={14} />}
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                setClientToDelete(client);
-                openDeleteConfirm();
-              }}
-              styles={{ root: { fontSize: "11px" } }}
-            >
-              Borrar
-            </Button>
-          </Group>
-        ) : (
-          <Button
-            size="xs"
-            variant="light"
-            color="orange"
-            radius="xl"
-            leftSection={<IconTrash size={14} />}
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              handleSoftDelete(client);
-            }}
-            styles={{ root: { fontSize: "11px" } }}
-          >
-            Desasignar
-          </Button>
-        ),
+          );
+        }
+        return null;
+      },
     },
     {
       key: "created_at",
@@ -746,6 +740,13 @@ export function ClientsPage() {
             onSearch={setSearch}
             onView={(client: { id: string }) => navigate(`/clients/${client.id}`)}
             onRowClick={(client: { id: string }) => navigate(`/clients/${client.id}`)}
+            getDeleteLabel={(client: any) =>
+              client.deleted_at
+                ? "Eliminar definitivamente"
+                : client.is_active
+                ? "Desasignar"
+                : "Borrar permanentemente"
+            }
             pagination={{
               page,
               pageSize: 10,
@@ -796,17 +797,63 @@ export function ClientsPage() {
 
       {/* Invitaciones pendientes - se muestran en Pendientes, Inactivos y Todos */}
       {(activeTab === "pending" || activeTab === "inactive" || activeTab === "all") && (() => {
-        const pendingInvitations = (invitations || []).filter(
+        const allInvitations = (invitations || []).filter(
           (inv: any) => inv.status === "pending" || inv.status === "expired"
         );
-        if (pendingInvitations.length === 0) return null;
+        if (allInvitations.length === 0) return null;
+
+        const pendingCount = allInvitations.filter((i: any) => i.status === "pending").length;
+        const expiredCount = allInvitations.filter((i: any) => i.status === "expired").length;
+
+        const filteredInvitations = invitationsFilter === "all"
+          ? allInvitations
+          : allInvitations.filter((i: any) => i.status === invitationsFilter);
+
+        const expiredInvitations = allInvitations.filter((i: any) => i.status === "expired");
+
+        const handleDeleteAllExpired = async () => {
+          if (expiredInvitations.length === 0) return;
+          if (!window.confirm(`¿Eliminar las ${expiredInvitations.length} invitaciones expiradas? Esta acción no se puede deshacer.`)) return;
+          await Promise.allSettled(
+            expiredInvitations.map((inv: any) => cancelInvitation.mutateAsync(inv.id))
+          );
+        };
+
         return (
           <Box mt="lg">
-            <Group gap="xs" mb="sm">
-              <IconMail size={16} color="var(--nv-slate)" />
-              <Text fw={600} size="sm" style={{ color: "var(--nv-slate)" }}>
-                Invitaciones pendientes ({pendingInvitations.length})
-              </Text>
+            <Group gap="sm" mb="sm" wrap="wrap" justify="space-between">
+              <Group gap="xs">
+                <IconMail size={16} color="var(--nv-slate)" />
+                <Text fw={600} size="sm" style={{ color: "var(--nv-slate)" }}>
+                  Invitaciones ({allInvitations.length})
+                </Text>
+              </Group>
+              <Group gap="xs" wrap="wrap">
+                <SegmentedControl
+                  size="xs"
+                  radius="xl"
+                  value={invitationsFilter}
+                  onChange={setInvitationsFilter}
+                  data={[
+                    { label: `Todas (${allInvitations.length})`, value: "all" },
+                    { label: `Pendientes (${pendingCount})`, value: "pending" },
+                    { label: `Expiradas (${expiredCount})`, value: "expired" },
+                  ]}
+                />
+                {expiredCount > 0 && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="red"
+                    radius="xl"
+                    leftSection={<IconTrashX size={14} />}
+                    onClick={handleDeleteAllExpired}
+                    loading={cancelInvitation.isPending}
+                  >
+                    Limpiar expiradas
+                  </Button>
+                )}
+              </Group>
             </Group>
             <Box
               className="nv-card"
@@ -826,56 +873,67 @@ export function ClientsPage() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {pendingInvitations.map((inv: any) => (
-                    <Table.Tr key={inv.id}>
-                      <Table.Td>
-                        <Text size="sm" fw={500}>{inv.email}</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm">{inv.first_name || ""} {inv.last_name || ""}</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge
-                          size="xs"
-                          variant="light"
-                          color={inv.status === "pending" ? "yellow" : "red"}
-                          radius="md"
-                        >
-                          {inv.status === "pending" ? "Pendiente" : "Expirada"}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm" c="dimmed">
-                          {new Date(inv.expires_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                        </Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap="xs">
-                          <Button
+                  {filteredInvitations.map((inv: any) => {
+                    const isExpired = inv.status === "expired";
+                    const actionLabel = isExpired ? "Enviar de nuevo" : "Reenviar";
+                    const actionIcon = isExpired ? <IconRefresh size={14} /> : <IconSend size={14} />;
+                    const tooltip = isExpired
+                      ? "La invitación caducó. Se generará y enviará una nueva."
+                      : "Volver a enviar el correo de invitación.";
+                    return (
+                      <Table.Tr key={inv.id}>
+                        <Table.Td>
+                          <Text size="sm" fw={500}>{inv.email}</Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm">{inv.first_name || ""} {inv.last_name || ""}</Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge
                             size="xs"
                             variant="light"
-                            radius="xl"
-                            leftSection={<IconSend size={14} />}
-                            onClick={() => resendInvitation.mutateAsync(inv.id)}
-                            loading={resendInvitation.isPending}
-                            styles={{ root: { fontSize: "11px" } }}
+                            color={inv.status === "pending" ? "yellow" : "red"}
+                            radius="md"
                           >
-                            Reenviar
-                          </Button>
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            color="red"
-                            onClick={() => cancelInvitation.mutateAsync(inv.id)}
-                            loading={cancelInvitation.isPending}
-                            title="Eliminar invitación"
-                          >
-                            <IconTrash size={14} />
-                          </ActionIcon>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
+                            {inv.status === "pending" ? "Pendiente" : "Expirada"}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm" c={isExpired ? "red.6" : "dimmed"}>
+                            {new Date(inv.expires_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap="xs">
+                            <Tooltip label={tooltip} withArrow>
+                              <Button
+                                size="xs"
+                                variant="light"
+                                color={isExpired ? "orange" : "yellow"}
+                                radius="xl"
+                                leftSection={actionIcon}
+                                onClick={() => resendInvitation.mutateAsync(inv.id)}
+                                loading={resendInvitation.isPending}
+                                styles={{ root: { fontSize: "11px" } }}
+                              >
+                                {actionLabel}
+                              </Button>
+                            </Tooltip>
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="red"
+                              onClick={() => cancelInvitation.mutateAsync(inv.id)}
+                              loading={cancelInvitation.isPending}
+                              title="Eliminar invitación"
+                            >
+                              <IconTrash size={14} />
+                            </ActionIcon>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
                 </Table.Tbody>
               </Table>
               </ScrollArea>
