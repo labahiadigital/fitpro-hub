@@ -665,7 +665,15 @@ export function NutritionPage() {
     openBuilder();
   };
 
-  const canSavePlan = !!(selectedClientId || planForm.values.client_id || clientId || isTemplateModeOn);
+  // Al editar una plantilla existente, el guardado es siempre como plantilla.
+  const isEditingPlanTemplate = !!(editingPlan && editingPlan.is_template);
+  const canSavePlan = !!(
+    selectedClientId ||
+    planForm.values.client_id ||
+    clientId ||
+    isTemplateModeOn ||
+    isEditingPlanTemplate
+  );
   // En edición de un plan ya asignado a cliente, en vez del Switch aparece un
   // botón explícito "Crear como plantilla" que duplica el plan como plantilla
   // reutilizable sin alterar el plan del cliente.
@@ -1101,8 +1109,15 @@ export function NutritionPage() {
         sidebarContent={
           <Stack gap="md">
             <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>Configuración</Text>
-            <Select label="Asignar a cliente" placeholder="Buscar cliente..." data={clientOptions} searchable clearable radius="md" size="sm" leftSection={<IconUser size={14} />} value={selectedClientId} disabled={!!clientId} onChange={(value) => { setSelectedClientId(value); if (value) loadClientData(value); else { setSelectedClient(null); planForm.setFieldValue("client_id", null); } }} />
-            {isEditingClientPlan ? (
+            {isEditingPlanTemplate ? (
+              <Group gap="xs" align="center" wrap="nowrap">
+                <IconTemplate size={16} color="var(--mantine-color-teal-6)" />
+                <Text size="sm" fw={600} c="teal">Editando plantilla reutilizable</Text>
+              </Group>
+            ) : (
+              <Select label="Asignar a cliente" placeholder="Buscar cliente..." data={clientOptions} searchable clearable radius="md" size="sm" leftSection={<IconUser size={14} />} value={selectedClientId} disabled={!!clientId} onChange={(value) => { setSelectedClientId(value); if (value) loadClientData(value); else { setSelectedClient(null); planForm.setFieldValue("client_id", null); } }} />
+            )}
+            {!isEditingPlanTemplate && (isEditingClientPlan ? (
               <Button
                 variant="light"
                 color="teal"
@@ -1117,15 +1132,15 @@ export function NutritionPage() {
               </Button>
             ) : (
               <Switch label="Crear como plantilla" description={selectedClientId || clientId ? "Guarda una copia reutilizable además del plan del cliente" : "Guarda como plantilla reutilizable"} checked={isTemplateModeOn} onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)} size="sm" color="teal" />
-            )}
-            {!canSavePlan && !isEditingClientPlan && <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>}
+            ))}
+            {!canSavePlan && !isEditingClientPlan && !isEditingPlanTemplate && <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>}
             <TextInput label="Nombre del plan" placeholder="Plan de Pérdida de Peso" required radius="md" size="sm" {...planForm.getInputProps("name")} />
             <Textarea label="Descripción" minRows={2} placeholder="Describe el plan..." radius="md" size="sm" {...planForm.getInputProps("description")} />
             <Group grow>
               <NumberInput label="Programación (semanal)" max={12} min={1} radius="md" size="sm" {...planForm.getInputProps("duration_weeks")} onChange={(v) => { const weeks = Number(v) || 1; planForm.setFieldValue("duration_weeks", weeks); setMealPlanWeeks((prev) => { if (weeks > prev.length) { const nw = [...prev]; for (let i = prev.length; i < weeks; i++) nw.push({ week: i + 1, days: initialDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.day}`, meals: [] })) }); return nw; } return prev.slice(0, weeks); }); }} />
             </Group>
-            {(selectedClientId || clientId) && <Group grow><TextInput label="Fecha de inicio" type="date" radius="md" size="sm" {...planForm.getInputProps("start_date")} /><TextInput label="Fecha de fin (opcional)" description="Si no se indica, las semanas se repiten indefinidamente" type="date" radius="md" size="sm" {...planForm.getInputProps("end_date")} /></Group>}
-            {(selectedClientId || clientId) && <NumberInput label="Intervalo de revisión (días)" description="Genera recordatorios automáticos para revisar el plan" placeholder="Ej: 15" min={1} max={365} radius="md" size="sm" {...planForm.getInputProps("review_interval_days")} />}
+            {(selectedClientId || clientId) && !isEditingPlanTemplate && <Group grow><TextInput label="Fecha de inicio" type="date" radius="md" size="sm" {...planForm.getInputProps("start_date")} /><TextInput label="Fecha de fin (opcional)" description="Si no se indica, las semanas se repiten indefinidamente" type="date" radius="md" size="sm" {...planForm.getInputProps("end_date")} /></Group>}
+            {(selectedClientId || clientId) && !isEditingPlanTemplate && <NumberInput label="Intervalo de revisión (días)" description="Genera recordatorios automáticos para revisar el plan" placeholder="Ej: 15" min={1} max={365} radius="md" size="sm" {...planForm.getInputProps("review_interval_days")} />}
             <Divider label="Objetivos nutricionales" labelPosition="center" styles={{ label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } }} />
             <NumberInput label="Calorías objetivo" max={5000} min={1000} step={50} radius="md" size="sm" value={planForm.values.target_calories} onChange={(v) => { const cal = Number(v) || 1000; planForm.setFieldValue("target_calories", cal); const curP = planForm.values.target_protein; const curC = planForm.values.target_carbs; const curF = planForm.values.target_fat; const curCal = (curP * 4) + (curC * 4) + (curF * 9); if (curCal > 0) { const pPct = (curP * 4 / curCal) * 100; const cPct = (curC * 4 / curCal) * 100; const fPct = (curF * 9 / curCal) * 100; const g = gramsFromPercentages(cal, pPct, cPct, fPct); planForm.setFieldValue("target_protein", g.protein_g); planForm.setFieldValue("target_carbs", g.carbs_g); planForm.setFieldValue("target_fat", g.fat_g); } }} error={planForm.errors.target_calories} />
             <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xs">

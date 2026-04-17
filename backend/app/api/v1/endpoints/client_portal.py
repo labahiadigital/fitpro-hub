@@ -318,20 +318,36 @@ def _build_goals_payload(client: Client, latest_measurement, first_measurement) 
     }
 
 
-def _build_recent_activity(week_logs, upcoming_bookings) -> list[dict]:
-    """Compose a concise timeline of recent workout logs + next bookings."""
+def _build_recent_activity(week_logs, latest_measurement=None) -> list[dict]:
+    """Compose a concise timeline of PAST activities only.
+
+    Upcoming sessions intentionally live in their own widget to avoid the
+    duplication users were reporting in the client dashboard.
+    """
     items: list[dict] = []
-    for log in (week_logs or [])[:3]:
+    sorted_logs = sorted(
+        list(week_logs or []),
+        key=lambda l: getattr(l, "created_at", None) or datetime.min,
+        reverse=True,
+    )
+    for log in sorted_logs[:4]:
         when = getattr(log, "created_at", None)
         items.append({
             "title": "Entrenamiento completado",
             "time": when.strftime("%d/%m %H:%M") if when else "Reciente",
         })
-    for booking in (upcoming_bookings or [])[:2]:
-        when = getattr(booking, "start_time", None)
+    if latest_measurement is not None:
+        when = getattr(latest_measurement, "measured_at", None) or getattr(latest_measurement, "created_at", None)
+        weight = getattr(latest_measurement, "weight_kg", None)
+        title = "Medición registrada"
+        if weight:
+            try:
+                title = f"Medición registrada · {float(weight):.1f} kg"
+            except (TypeError, ValueError):
+                pass
         items.append({
-            "title": f"Próxima sesión: {booking.title}",
-            "time": when.strftime("%d/%m %H:%M") if when else "Programada",
+            "title": title,
+            "time": when.strftime("%d/%m %H:%M") if when else "Reciente",
         })
     return items[:5]
 
@@ -468,7 +484,7 @@ async def get_client_dashboard(
         },
         nutrition_today=nutrition_totals,
         goals=_build_goals_payload(client, latest_measurement, first_measurement),
-        recent_activity=_build_recent_activity(week_logs, upcoming_bookings),
+        recent_activity=_build_recent_activity(week_logs, latest_measurement),
         upcoming_sessions=upcoming_sessions,
     )
 

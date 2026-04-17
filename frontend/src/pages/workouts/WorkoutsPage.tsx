@@ -469,7 +469,16 @@ export function WorkoutsPage() {
     openBuilder();
   };
 
-  const canSaveProgram = !!(selectedClientId || programForm.values.client_id || clientId || isTemplateModeOn);
+  // Al editar una plantilla ya existente, el guardado es de plantilla por
+  // defecto: no hace falta toggle ni cliente asignado.
+  const isEditingTemplate = !!(editingProgram && editingProgram.is_template);
+  const canSaveProgram = !!(
+    selectedClientId ||
+    programForm.values.client_id ||
+    clientId ||
+    isTemplateModeOn ||
+    isEditingTemplate
+  );
   // Cuando editamos un programa YA asignado a un cliente (no una plantilla),
   // el flujo para crear una plantilla reutilizable es un botón explícito en vez
   // del Switch: evita el patrón confuso de "marca el switch y guarda el plan".
@@ -879,6 +888,7 @@ export function WorkoutsPage() {
             isTemplateModeOn={isTemplateModeOn}
             clientId={clientId}
             canSaveProgram={canSaveProgram}
+            isEditingTemplate={isEditingTemplate}
             isEditingClientProgram={isEditingClientProgram}
             isSavingTemplate={createProgram.isPending}
             onClientChange={handleClientChange}

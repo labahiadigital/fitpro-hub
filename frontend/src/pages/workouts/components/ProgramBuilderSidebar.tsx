@@ -32,6 +32,7 @@ interface ProgramBuilderSidebarProps {
   isTemplateModeOn: boolean;
   clientId: string | null;
   canSaveProgram: boolean;
+  isEditingTemplate?: boolean;
   isEditingClientProgram?: boolean;
   isSavingTemplate?: boolean;
   onClientChange: (value: string | null) => void;
@@ -47,6 +48,7 @@ export function ProgramBuilderSidebar({
   isTemplateModeOn,
   clientId,
   canSaveProgram,
+  isEditingTemplate = false,
   isEditingClientProgram = false,
   isSavingTemplate = false,
   onClientChange,
@@ -60,46 +62,57 @@ export function ProgramBuilderSidebar({
         Configuración
       </Text>
 
-      <Select
-        label="Asignar a cliente"
-        placeholder="Buscar cliente..."
-        data={clientOptions}
-        searchable
-        clearable
-        radius="md"
-        size="sm"
-        leftSection={<IconUser size={14} />}
-        value={selectedClientId}
-        onChange={onClientChange}
-      />
-
-      {isEditingClientProgram ? (
-        <Button
-          variant="light"
-          color="teal"
-          size="sm"
-          radius="md"
-          leftSection={<IconTemplate size={16} />}
-          loading={isSavingTemplate}
-          disabled={!programForm.values.name}
-          onClick={onSaveAsTemplate}
-        >
-          Crear como plantilla
-        </Button>
+      {isEditingTemplate ? (
+        <Group gap="xs" align="center" wrap="nowrap">
+          <IconTemplate size={16} color="var(--mantine-color-teal-6)" />
+          <Text size="sm" fw={600} c="teal">
+            Editando plantilla reutilizable
+          </Text>
+        </Group>
       ) : (
-        <Switch
-          label="Crear como plantilla"
-          description={selectedClientId || clientId
-            ? "Guarda una copia reutilizable además del programa del cliente"
-            : "Guarda como plantilla reutilizable"}
-          checked={isTemplateModeOn}
-          onChange={(e) => onTemplateModeChange(e.currentTarget.checked)}
+        <Select
+          label="Asignar a cliente"
+          placeholder="Buscar cliente..."
+          data={clientOptions}
+          searchable
+          clearable
+          radius="md"
           size="sm"
-          color="teal"
+          leftSection={<IconUser size={14} />}
+          value={selectedClientId}
+          onChange={onClientChange}
         />
       )}
 
-      {!canSaveProgram && !isEditingClientProgram && (
+      {!isEditingTemplate && (
+        isEditingClientProgram ? (
+          <Button
+            variant="light"
+            color="teal"
+            size="sm"
+            radius="md"
+            leftSection={<IconTemplate size={16} />}
+            loading={isSavingTemplate}
+            disabled={!programForm.values.name}
+            onClick={onSaveAsTemplate}
+          >
+            Crear como plantilla
+          </Button>
+        ) : (
+          <Switch
+            label="Crear como plantilla"
+            description={selectedClientId || clientId
+              ? "Guarda una copia reutilizable además del programa del cliente"
+              : "Guarda como plantilla reutilizable"}
+            checked={isTemplateModeOn}
+            onChange={(e) => onTemplateModeChange(e.currentTarget.checked)}
+            size="sm"
+            color="teal"
+          />
+        )
+      )}
+
+      {!canSaveProgram && !isEditingClientProgram && !isEditingTemplate && (
         <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>
       )}
 
@@ -160,7 +173,7 @@ export function ProgramBuilderSidebar({
         {...programForm.getInputProps("tags")}
       />
 
-      {(selectedClientId || clientId) && (
+      {(selectedClientId || clientId) && !isEditingTemplate && (
         <>
           <Group grow>
             <TextInput
