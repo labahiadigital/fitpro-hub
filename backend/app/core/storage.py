@@ -150,31 +150,35 @@ def _cache_set(bucket: str, key: str, url: str, ttl: int) -> None:
 
 
 async def presign_platform_url(key: str) -> str:
-    """Generate a time-limited presigned URL for a platform asset."""
+    """Generate a time-limited presigned URL for a platform asset.
+
+    `generate_presigned_url` de boto3 **no hace I/O**: sólo construye la URL y
+    firma con HMAC-SHA256 en memoria. Por eso se ejecuta en el loop (sin
+    run_in_executor) — así evitamos saturar el ThreadPoolExecutor por defecto
+    cuando una respuesta firma 200+ URLs a la vez (esto antes provocaba picos
+    de +2s en /workouts/exercises en cold-start).
+    """
     bucket = settings.R2_PLATFORM_BUCKET
     cached = _cache_get(bucket, key)
     if cached is not None:
         return cached
-    loop = asyncio.get_running_loop()
-    url = await loop.run_in_executor(
-        None,
-        partial(_sync_presign, bucket, key, PLATFORM_PRESIGN_TTL),
-    )
+    url = _sync_presign(bucket, key, PLATFORM_PRESIGN_TTL)
     _cache_set(bucket, key, url, PLATFORM_PRESIGN_TTL)
     return url
 
 
 async def presign_workspace_url(key: str) -> str:
-    """Generate a time-limited presigned URL for a workspace asset."""
+    """Generate a time-limited presigned URL for a workspace asset.
+
+    Ver nota de :func:`presign_platform_url`: la firma es CPU-bound ligera y
+    síncrona; ejecutarla sin hop al executor es más rápido y no bloquea el
+    event loop de forma apreciable.
+    """
     bucket = settings.R2_WORKSPACES_BUCKET
     cached = _cache_get(bucket, key)
     if cached is not None:
         return cached
-    loop = asyncio.get_running_loop()
-    url = await loop.run_in_executor(
-        None,
-        partial(_sync_presign, bucket, key, WORKSPACE_PRESIGN_TTL),
-    )
+    url = _sync_presign(bucket, key, WORKSPACE_PRESIGN_TTL)
     _cache_set(bucket, key, url, WORKSPACE_PRESIGN_TTL)
     return url
 
