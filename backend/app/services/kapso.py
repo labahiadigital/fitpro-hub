@@ -414,7 +414,74 @@ class KapsoService:
                 exc.message,
             )
             return None
-    
+
+    async def delete_phone_webhook(
+        self, phone_number_id: str, webhook_id: str
+    ) -> bool:
+        """
+        Borrar un webhook concreto de un phone_number. ``True`` si fue ok.
+
+        Usa httpx directo en vez de ``_request`` porque los DELETE de Kapso
+        suelen responder 204 No Content (cuerpo vacío) y ``_request`` asume
+        JSON en la respuesta.
+        """
+        url = (
+            f"{self.platform_url}/whatsapp/phone_numbers/"
+            f"{phone_number_id}/webhooks/{webhook_id}"
+        )
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(url, headers=self._get_headers())
+        except Exception as exc:
+            logger.warning(
+                "Error de red borrando webhook %s de phone %s: %s",
+                webhook_id,
+                phone_number_id,
+                exc,
+            )
+            return False
+
+        if response.status_code >= 400:
+            logger.warning(
+                "No se pudo borrar webhook %s de phone %s: %s %s",
+                webhook_id,
+                phone_number_id,
+                response.status_code,
+                response.text[:200],
+            )
+            return False
+        return True
+
+    async def cleanup_phone_webhooks_for_url(
+        self, phone_number_id: str, url: str
+    ) -> int:
+        """
+        Borrar todos los webhooks del phone_number que apuntan a ``url``.
+
+        Se usa al desconectar WhatsApp para no dejar webhooks huérfanos
+        atacando a nuestro backend. Devuelve el número de webhooks borrados.
+        """
+        try:
+            existing = await self.list_phone_webhooks(phone_number_id)
+        except KapsoError as exc:
+            logger.warning(
+                "No se pudieron listar webhooks para limpiar phone %s: %s",
+                phone_number_id,
+                exc.message,
+            )
+            return 0
+
+        normalized_target = url.rstrip("/")
+        deleted = 0
+        for wh in existing:
+            if (wh.get("url") or "").rstrip("/") == normalized_target:
+                wh_id = wh.get("id")
+                if not wh_id:
+                    continue
+                if await self.delete_phone_webhook(phone_number_id, wh_id):
+                    deleted += 1
+        return deleted
+
     def verify_webhook_signature(
         self,
         payload: bytes,

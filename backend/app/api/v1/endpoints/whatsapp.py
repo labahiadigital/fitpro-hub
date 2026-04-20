@@ -14,7 +14,7 @@ from uuid import UUID
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -438,6 +438,42 @@ async def setup_whatsapp(
         )
 
 
+def _cleared_whatsapp_config(whatsapp_config: dict) -> dict:
+    """
+    Devuelve una copia "limpia" de ``whatsapp_config`` como si el workspace
+    no tuviera WhatsApp. Mantiene ``kapso_customer_id`` para que el
+    entrenador pueda reconectar sin rehacer onboarding.
+    """
+    return {
+        "enabled": False,
+        "kapso_customer_id": whatsapp_config.get("kapso_customer_id"),
+        "phone_number_id": None,
+        "business_account_id": None,
+        "display_phone_number": None,
+        "connected_at": None,
+        "webhook_secret": None,
+        "webhook_registered_at": None,
+    }
+
+
+async def _cleanup_phone_webhooks(phone_number_id: str) -> int:
+    """Borrar en Kapso los webhooks del phone que apuntan a nuestro backend."""
+    destination = _webhook_destination_url()
+    if not destination:
+        return 0
+    try:
+        return await kapso_service.cleanup_phone_webhooks_for_url(
+            phone_number_id=phone_number_id,
+            url=destination,
+        )
+    except Exception:
+        logger.exception(
+            "Fallo inesperado limpiando webhooks del phone %s",
+            phone_number_id,
+        )
+        return 0
+
+
 @router.post("/disconnect", response_model=WhatsAppDisconnectResponse)
 async def disconnect_whatsapp(
     current_user: CurrentUser = Depends(require_staff),
@@ -445,44 +481,70 @@ async def disconnect_whatsapp(
 ):
     """
     Desconectar WhatsApp del workspace.
+
+    1. Borra los webhooks del phone_number en Kapso para no dejar nada
+       apuntando a nuestro backend (best effort — si falla se loguea).
+    2. Limpia ``workspace.settings.whatsapp`` manteniendo ``kapso_customer_id``
+       para permitir una reconexión rápida.
+    3. Cierra los mensajes en vuelo marcando las conversaciones con
+       ``preferred_channel = platform`` (los mensajes existentes se quedan
+       en histórico, pero no se podrá enviar nuevo WhatsApp hasta reconectar).
     """
-    # Obtener workspace
     result = await db.execute(
         select(Workspace).where(Workspace.id == current_user.workspace_id)
     )
     workspace = result.scalar_one_or_none()
-    
+
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace no encontrado"
         )
-    
-    # Verificar que hay WhatsApp conectado
+
     whatsapp_config = workspace.settings.get("whatsapp", {}) if workspace.settings else {}
     if not whatsapp_config.get("enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No hay WhatsApp conectado"
         )
-    
-    # Desconectar (mantener kapso_customer_id para reconexión fácil)
+
+    phone_number_id = whatsapp_config.get("phone_number_id")
+
+    deleted_webhooks = 0
+    if phone_number_id:
+        deleted_webhooks = await _cleanup_phone_webhooks(phone_number_id)
+
     new_settings = dict(workspace.settings) if workspace.settings else {}
-    new_settings["whatsapp"] = {
-        "enabled": False,
-        "kapso_customer_id": whatsapp_config.get("kapso_customer_id"),
-        "phone_number_id": None,
-        "business_account_id": None,
-        "display_phone_number": None,
-        "connected_at": None,
-        "webhook_secret": None
-    }
+    new_settings["whatsapp"] = _cleared_whatsapp_config(whatsapp_config)
     workspace.settings = new_settings
+
+    await _mark_conversations_platform_only(workspace.id, db)
+
     await db.commit()
-    
+
+    logger.info(
+        "Workspace %s desconectó WhatsApp (phone %s, %d webhooks borrados en Kapso)",
+        workspace.id,
+        phone_number_id,
+        deleted_webhooks,
+    )
+
     return WhatsAppDisconnectResponse(
         success=True,
         message="WhatsApp desconectado correctamente"
+    )
+
+
+async def _mark_conversations_platform_only(workspace_id: UUID, db: AsyncSession) -> None:
+    """
+    Tras una desconexión, dejar las conversaciones del workspace en modo
+    plataforma por defecto. No borramos ``whatsapp_phone`` porque el histórico
+    se mantiene y se podrá reutilizar al reconectar.
+    """
+    await db.execute(
+        update(Conversation)
+        .where(Conversation.workspace_id == workspace_id)
+        .values(preferred_channel=MessageSource.PLATFORM)
     )
 
 
@@ -531,14 +593,74 @@ async def kapso_webhook(
     # Procesar según tipo de evento
     if event_type == "whatsapp.phone_number.created":
         await handle_phone_number_created(event_data, db)
+    elif event_type == "whatsapp.phone_number.deleted":
+        await handle_phone_number_deleted(event_data, db)
     elif event_type == "whatsapp.message.received":
         await handle_message_received(event_data, db)
     elif event_type == "whatsapp.message.status_updated":
         await handle_message_status_updated(event_data, db)
     else:
         logger.warning("Evento no manejado: %s", event_type)
-    
+
     return {"status": "ok"}
+
+
+async def handle_phone_number_deleted(data: dict, db: AsyncSession):
+    """
+    Procesar evento de desconexión de número de WhatsApp disparado por Kapso
+    (p.ej. el entrenador quita el número desde el portal de Meta o desde el
+    panel de Kapso directamente). Limpia el workspace y las conversaciones.
+    """
+    phone_number_id = data.get("phone_number_id") or data.get("id")
+    customer_info = data.get("customer", {}) or {}
+    customer_id = customer_info.get("id") or data.get("customer_id")
+
+    workspace: Optional[Workspace] = None
+
+    # 1) Buscar por phone_number_id en settings (lo más específico)
+    if phone_number_id:
+        result = await db.execute(
+            select(Workspace).where(
+                Workspace.settings["whatsapp"]["phone_number_id"].astext
+                == str(phone_number_id)
+            )
+        )
+        workspace = result.scalar_one_or_none()
+
+    # 2) Fallback por customer_id si no encontramos por phone
+    if not workspace and customer_id:
+        result = await db.execute(
+            select(Workspace).where(
+                Workspace.settings["whatsapp"]["kapso_customer_id"].astext
+                == str(customer_id)
+            )
+        )
+        workspace = result.scalar_one_or_none()
+
+    if not workspace:
+        logger.warning(
+            "phone_number.deleted sin workspace match (phone=%s, customer=%s)",
+            phone_number_id,
+            customer_id,
+        )
+        return
+
+    whatsapp_config = (
+        workspace.settings.get("whatsapp", {}) if workspace.settings else {}
+    )
+    new_settings = dict(workspace.settings) if workspace.settings else {}
+    new_settings["whatsapp"] = _cleared_whatsapp_config(whatsapp_config)
+    workspace.settings = new_settings
+
+    await _mark_conversations_platform_only(workspace.id, db)
+
+    await db.commit()
+
+    logger.info(
+        "Workspace %s: WhatsApp desvinculado por Kapso (phone=%s)",
+        workspace.id,
+        phone_number_id,
+    )
 
 
 async def handle_phone_number_created(data: dict, db: AsyncSession):
