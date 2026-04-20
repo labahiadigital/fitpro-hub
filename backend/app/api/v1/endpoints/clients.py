@@ -14,7 +14,7 @@ from pydantic import BaseModel, EmailStr
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.parallel_db import parallel_queries
-from app.core.storage import resolve_url
+from app.core.storage import resolve_url, resolve_urls
 from app.models.client import Client, ClientTag
 from app.models.exercise import ClientMeasurement
 from app.models.user import UserRole, User
@@ -89,6 +89,8 @@ class InvitationResponse(BaseModel):
 
 @router.get("/tags", response_model=List[ClientTagResponse])
 async def list_tags(
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
@@ -96,7 +98,11 @@ async def list_tags(
     Listar todas las etiquetas del workspace.
     """
     result = await db.execute(
-        select(ClientTag).where(ClientTag.workspace_id == current_user.workspace_id)
+        select(ClientTag)
+        .where(ClientTag.workspace_id == current_user.workspace_id)
+        .order_by(ClientTag.name)
+        .limit(limit)
+        .offset(offset)
     )
     return result.scalars().all()
 
@@ -428,6 +434,8 @@ async def create_client(
 @router.get("/invitations", response_model=List[InvitationResponse])
 async def list_invitations(
     status_filter: Optional[str] = Query(None, alias="status"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
@@ -437,7 +445,7 @@ async def list_invitations(
     )
     if status_filter:
         query = query.where(ClientInvitation.status == status_filter)
-    query = query.order_by(desc(ClientInvitation.created_at))
+    query = query.order_by(desc(ClientInvitation.created_at)).limit(limit).offset(offset)
     result = await db.execute(query)
     invitations = result.scalars().all()
     return [
@@ -862,21 +870,28 @@ async def get_client_photos(
         .limit(limit)
     )
     measurements = result.scalars().all()
-    
-    all_photos = []
-    for m in measurements:
-        if m.photos and len(m.photos) > 0:
-            for photo in m.photos:
-                if photo.get("url"):
-                    all_photos.append(ClientPhotoResponse(
-                        url=await resolve_url(photo["url"]),
-                        type=photo.get("type", "unknown"),
-                        notes=photo.get("notes"),
-                        uploaded_at=photo.get("uploaded_at", ""),
-                        measurement_date=m.measured_at.isoformat() if m.measured_at else None
-                    ))
 
-    return all_photos
+    # Recolectamos todas las fotos primero para presignar en paralelo
+    # (sin esto hacíamos N presigns sequenciales → ~50 ms * N).
+    raw_photos: list[tuple[ClientMeasurement, dict]] = []
+    for m in measurements:
+        if not m.photos:
+            continue
+        for photo in m.photos:
+            if photo.get("url"):
+                raw_photos.append((m, photo))
+
+    resolved = await resolve_urls([p["url"] for _, p in raw_photos])
+    return [
+        ClientPhotoResponse(
+            url=presigned,
+            type=photo.get("type", "unknown"),
+            notes=photo.get("notes"),
+            uploaded_at=photo.get("uploaded_at", ""),
+            measurement_date=m.measured_at.isoformat() if m.measured_at else None,
+        )
+        for (m, photo), presigned in zip(raw_photos, resolved)
+    ]
 
 
 @router.get("/{client_id}/progress-summary")
@@ -893,18 +908,38 @@ async def get_client_progress_summary(
     client = await db.get(Client, client_id)
     if not client or client.workspace_id != current_user.workspace_id:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    
-    # Get all measurements
-    result = await db.execute(
+
+    # Antes cargábamos TODAS las mediciones del cliente (potencialmente
+    # miles) solo para extraer la primera, la última y las últimas 20
+    # del gráfico. Tres queries puntuales pequeñas son ~10x más rápidas
+    # y usan los índices existentes sobre (client_id, measured_at).
+    count_stmt = select(func.count(ClientMeasurement.id)).where(
+        ClientMeasurement.client_id == client_id
+    )
+    latest_stmt = (
         select(ClientMeasurement)
         .where(ClientMeasurement.client_id == client_id)
         .order_by(desc(ClientMeasurement.measured_at))
+        .limit(1)
     )
-    measurements = result.scalars().all()
-    
-    latest = measurements[0] if measurements else None
-    first = measurements[-1] if measurements else None
-    
+    first_stmt = (
+        select(ClientMeasurement)
+        .where(ClientMeasurement.client_id == client_id)
+        .order_by(ClientMeasurement.measured_at.asc())
+        .limit(1)
+    )
+    history_stmt = (
+        select(ClientMeasurement)
+        .where(ClientMeasurement.client_id == client_id)
+        .order_by(desc(ClientMeasurement.measured_at))
+        .limit(20)
+    )
+
+    measurements_count = (await db.execute(count_stmt)).scalar() or 0
+    latest = (await db.execute(latest_stmt)).scalar_one_or_none()
+    first = (await db.execute(first_stmt)).scalar_one_or_none()
+    history_desc = (await db.execute(history_stmt)).scalars().all()
+
     return {
         "current_stats": {
             "weight": float(latest.weight_kg) if latest and latest.weight_kg else float(client.weight_kg or 0),
@@ -921,7 +956,7 @@ async def get_client_progress_summary(
             "body_fat": client.health_data.get("goal_body_fat") if client.health_data else None,
             "muscle_mass": client.health_data.get("goal_muscle_mass") if client.health_data else None,
         },
-        "measurements_count": len(measurements),
+        "measurements_count": int(measurements_count),
         "goals": client.goals,
         "weight_history": [
             {
@@ -930,7 +965,7 @@ async def get_client_progress_summary(
                 "body_fat": float(m.body_fat_percentage) if m.body_fat_percentage else None,
                 "muscle_mass": float(m.muscle_mass_kg) if m.muscle_mass_kg else None,
             }
-            for m in reversed(measurements[-20:])  # Last 20, oldest first
+            for m in reversed(history_desc)  # oldest first for chart
         ]
     }
 
