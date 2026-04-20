@@ -26,7 +26,6 @@ import {
   Stack,
   Tabs,
   Text,
-  Textarea,
   TextInput,
   ThemeIcon,
   Tooltip,
@@ -52,16 +51,16 @@ import {
   IconWeight,
   IconPlayerPlay,
   IconInfoCircle,
-  IconPhoto,
-  IconUpload,
-  IconVideo,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
-import { notifications } from "@mantine/notifications";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
 import { useAlternativesCounts } from "../../hooks/useExercises";
-import { api } from "../../services/api";
+import {
+  ExerciseFormModal,
+  EXERCISE_FORM_INITIAL_VALUES,
+  type ExerciseFormValues,
+} from "../../pages/workouts/components/ExerciseFormModal";
 
 // Standardized muscle groups and equipment - exported for reuse
 // Values match the actual data in the exercises table
@@ -195,11 +194,13 @@ interface WorkoutBuilderProps {
   onToggleExerciseFavorite?: (exerciseId: string, isFavorite: boolean) => void;
   onCreateExercise?: (data: {
     name: string;
+    alias?: string;
     category?: string;
     muscle_groups: string[];
     equipment: string[];
     difficulty: string;
     description?: string;
+    instructions?: string;
     image_url?: string;
     video_url?: string;
   }) => Promise<Exercise>;
@@ -216,11 +217,13 @@ interface WorkoutBuilderWithDaysProps {
   onToggleExerciseFavorite?: (exerciseId: string, isFavorite: boolean) => void;
   onCreateExercise?: (data: {
     name: string;
+    alias?: string;
     category?: string;
     muscle_groups: string[];
     equipment: string[];
     difficulty: string;
     description?: string;
+    instructions?: string;
     image_url?: string;
     video_url?: string;
   }) => Promise<Exercise>;
@@ -240,21 +243,6 @@ export const initialWorkoutDays: WorkoutDay[] = [
   { id: "day-5", day: 5, dayName: "Viernes", blocks: [], isRestDay: false, notes: "" },
   { id: "day-6", day: 6, dayName: "Sábado", blocks: [], isRestDay: true, notes: "" },
   { id: "day-7", day: 7, dayName: "Domingo", blocks: [], isRestDay: true, notes: "" },
-];
-
-const CATEGORY_OPTIONS = [
-  { value: "fuerza", label: "Fuerza" },
-  { value: "cardio", label: "Cardio" },
-  { value: "flexibilidad", label: "Flexibilidad" },
-  { value: "core", label: "Core" },
-  { value: "calentamiento", label: "Calentamiento" },
-  { value: "estiramiento", label: "Estiramiento" },
-];
-
-const DIFFICULTY_OPTIONS = [
-  { value: "beginner", label: "Principiante" },
-  { value: "intermediate", label: "Intermedio" },
-  { value: "advanced", label: "Avanzado" },
 ];
 
 export function WorkoutBuilder({
@@ -283,23 +271,12 @@ export function WorkoutBuilder({
   const [exerciseMuscleGroups, setExerciseMuscleGroups] = useState<string[]>([]);
   const [exerciseEquipment, setExerciseEquipment] = useState<string[]>([]);
   
-  const createExerciseForm = useForm({
-    initialValues: {
-      name: "",
-      category: "",
-      muscle_groups: [] as string[],
-      equipment: [] as string[],
-      difficulty: "intermediate" as string,
-      description: "",
-      image_url: "",
-      video_url: "",
-    },
+  const createExerciseForm = useForm<ExerciseFormValues>({
+    initialValues: { ...EXERCISE_FORM_INITIAL_VALUES },
     validate: {
       name: (v: string) => (v.trim().length < 2 ? "Nombre requerido (mín. 2 caracteres)" : null),
     },
   });
-  const [uploadingExerciseImage, setUploadingExerciseImage] = useState(false);
-  const exerciseImageInputRef = useRef<HTMLInputElement>(null);
   
   const exerciseFavoritesSet = useMemo(() => new Set(exerciseFavorites), [exerciseFavorites]);
   const isExerciseFavorite = (exerciseId: string) => exerciseFavoritesSet.has(exerciseId);
@@ -448,38 +425,18 @@ export function WorkoutBuilder({
     closeExerciseModal();
   };
 
-  const handleUploadExerciseImage = async (file: File) => {
-    setUploadingExerciseImage(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await api.post<{ image_url: string; url: string }>(
-        "/exercises/upload-image",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      createExerciseForm.setFieldValue("image_url", res.data.image_url);
-      notifications.show({ color: "green", message: "Imagen subida" });
-    } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      notifications.show({ color: "red", message: detail || "No se pudo subir la imagen" });
-    } finally {
-      setUploadingExerciseImage(false);
-      if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = "";
-    }
-  };
-
-  const handleCreateExercise = async () => {
+  const handleCreateExercise = async (values: ExerciseFormValues) => {
     if (!onCreateExercise) return;
-    const values = createExerciseForm.values;
     try {
       const newExercise = await onCreateExercise({
         name: values.name.trim(),
+        alias: values.alias.trim() || undefined,
         category: values.category || undefined,
         muscle_groups: values.muscle_groups,
         equipment: values.equipment,
         difficulty: values.difficulty,
         description: values.description.trim() || undefined,
+        instructions: values.instructions.trim() || undefined,
         image_url: values.image_url.trim() || undefined,
         video_url: values.video_url.trim() || undefined,
       });
@@ -1391,113 +1348,21 @@ export function WorkoutBuilder({
         {enlargedImage && <Image src={enlargedImage.url} alt={enlargedImage.name} fit="contain" mah={500} />}
       </BottomSheet>
 
-      {/* Create Exercise Sub-Modal */}
-      <BottomSheet
+      {/* Crear ejercicio (mismo componente que la pestaña Ejercicios) */}
+      <ExerciseFormModal
         opened={createExerciseModalOpened}
         onClose={() => { closeCreateExerciseModal(); createExerciseForm.reset(); }}
-        title="Crear ejercicio"
-        size="md"
-      >
-        <form onSubmit={createExerciseForm.onSubmit(handleCreateExercise)}>
-          <Stack gap="sm">
-            <TextInput
-              label="Nombre"
-              placeholder="Nombre del ejercicio"
-              required
-              {...createExerciseForm.getInputProps("name")}
-            />
-            <Select
-              data={CATEGORY_OPTIONS}
-              label="Categoría"
-              placeholder="Selecciona"
-              {...createExerciseForm.getInputProps("category")}
-            />
-            <MultiSelect
-              data={MUSCLE_GROUPS}
-              label="Grupos musculares"
-              placeholder="Selecciona"
-              searchable
-              clearable
-              {...createExerciseForm.getInputProps("muscle_groups")}
-            />
-            <MultiSelect
-              data={EQUIPMENT_TYPES}
-              label="Equipamiento"
-              placeholder="Selecciona"
-              searchable
-              clearable
-              {...createExerciseForm.getInputProps("equipment")}
-            />
-            <Select
-              data={DIFFICULTY_OPTIONS}
-              label="Dificultad"
-              {...createExerciseForm.getInputProps("difficulty")}
-            />
-            <Textarea
-              label="Descripción"
-              placeholder="Descripción opcional"
-              minRows={2}
-              {...createExerciseForm.getInputProps("description")}
-            />
-
-            <Stack gap={4}>
-              <Text size="sm" fw={500}>Imagen</Text>
-              <Group gap="xs" align="flex-end" wrap="nowrap">
-                <TextInput
-                  placeholder="URL de la imagen o súbela con el botón"
-                  leftSection={<IconPhoto size={14} />}
-                  style={{ flex: 1 }}
-                  {...createExerciseForm.getInputProps("image_url")}
-                />
-                <Button
-                  variant="light"
-                  leftSection={<IconUpload size={14} />}
-                  loading={uploadingExerciseImage}
-                  onClick={() => exerciseImageInputRef.current?.click()}
-                >
-                  Subir
-                </Button>
-                <input
-                  ref={exerciseImageInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleUploadExerciseImage(f);
-                  }}
-                />
-              </Group>
-              {createExerciseForm.values.image_url && (
-                <Image
-                  src={createExerciseForm.values.image_url}
-                  alt="preview"
-                  fit="cover"
-                  h={120}
-                  radius="sm"
-                  mt={4}
-                />
-              )}
-            </Stack>
-
-            <TextInput
-              label="Vídeo (URL)"
-              placeholder="https://youtube.com/... o https://..."
-              leftSection={<IconVideo size={14} />}
-              {...createExerciseForm.getInputProps("video_url")}
-            />
-
-            <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={() => { closeCreateExerciseModal(); createExerciseForm.reset(); }}>
-                Cancelar
-              </Button>
-              <Button type="submit" color="green">
-                Crear y añadir
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </BottomSheet>
+        exerciseForm={createExerciseForm}
+        editingExercise={null}
+        exercises={availableExercises}
+        muscleGroups={MUSCLE_GROUPS}
+        equipmentOptions={EQUIPMENT_TYPES}
+        onSubmit={handleCreateExercise}
+        onDelete={() => undefined}
+        createPending={false}
+        updatePending={false}
+        deletePending={false}
+      />
     </>
   );
 }

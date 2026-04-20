@@ -306,6 +306,8 @@ export function WorkoutsPage() {
       equipment: [] as string[],
       difficulty: "intermediate" as "beginner" | "intermediate" | "advanced",
       category: "",
+      image_url: "",
+      video_url: "",
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
@@ -323,6 +325,8 @@ export function WorkoutsPage() {
       equipment: exercise.equipment || [],
       difficulty: (exercise.difficulty || "intermediate") as "beginner" | "intermediate" | "advanced",
       category: exercise.category || "",
+      image_url: exercise.image_url || "",
+      video_url: exercise.video_url || "",
     });
     openExerciseModal();
   };
@@ -406,6 +410,8 @@ export function WorkoutsPage() {
         equipment: exercise.equipment || [],
         difficulty: exercise.difficulty || "intermediate",
         category: exercise.category || "fuerza",
+        image_url: exercise.image_url || "",
+        video_url: exercise.video_url || "",
       };
       const res = await createExercise.mutateAsync(cloneData);
       closeExerciseModal();
@@ -420,6 +426,8 @@ export function WorkoutsPage() {
         equipment: newExercise.equipment || cloneData.equipment,
         difficulty: newExercise.difficulty || cloneData.difficulty,
         category: newExercise.category || cloneData.category,
+        image_url: newExercise.image_url || "",
+        video_url: newExercise.video_url || "",
       });
       openExerciseModal();
       notifications.show({ title: "Copia creada", message: `"${cloneData.name}" se ha clonado como ejercicio propio`, color: "green" });

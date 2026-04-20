@@ -18,17 +18,21 @@ import { notifications } from "@mantine/notifications";
 import {
   IconCopy,
   IconExchange,
+  IconPhoto,
   IconPlus,
   IconSearch,
+  IconUpload,
+  IconVideo,
   IconX,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BottomSheet } from "../../../components/common/BottomSheet";
 import {
   useExerciseAlternatives,
   useAddExerciseAlternative,
   useRemoveExerciseAlternative,
 } from "../../../hooks/useExercises";
+import { api } from "../../../services/api";
 
 function ExerciseAlternativesSection({
   exerciseId,
@@ -143,7 +147,7 @@ function ExerciseAlternativesSection({
   );
 }
 
-interface ExerciseFormValues {
+export interface ExerciseFormValues {
   name: string;
   alias: string;
   description: string;
@@ -152,7 +156,22 @@ interface ExerciseFormValues {
   equipment: string[];
   difficulty: "beginner" | "intermediate" | "advanced";
   category: string;
+  image_url: string;
+  video_url: string;
 }
+
+export const EXERCISE_FORM_INITIAL_VALUES: ExerciseFormValues = {
+  name: "",
+  alias: "",
+  description: "",
+  instructions: "",
+  muscle_groups: [],
+  equipment: [],
+  difficulty: "intermediate",
+  category: "",
+  image_url: "",
+  video_url: "",
+};
 
 interface ExerciseFormModalProps {
   opened: boolean;
@@ -185,6 +204,38 @@ export function ExerciseFormModal({
   updatePending,
   deletePending,
 }: ExerciseFormModalProps) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const isReadOnly = !!editingExercise?.is_global;
+
+  const handleUploadImage = async (file: File) => {
+    if (file.size > 8 * 1024 * 1024) {
+      notifications.show({ color: "red", message: "La imagen no puede superar los 8 MB" });
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post<{ image_url: string; url: string }>(
+        "/exercises/upload-image",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      exerciseForm.setFieldValue("image_url", res.data.image_url);
+      notifications.show({ color: "green", message: "Imagen subida correctamente" });
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      notifications.show({ color: "red", message: detail || "No se pudo subir la imagen" });
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  };
+
+  const previewImage =
+    exerciseForm.values.image_url || editingExercise?.image_url || null;
+
   return (
     <BottomSheet
       onClose={onClose}
@@ -194,10 +245,10 @@ export function ExerciseFormModal({
       radius="lg"
       styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
     >
-      {editingExercise?.image_url && (
+      {previewImage && (
         <Image
-          src={editingExercise.image_url}
-          alt={editingExercise.name}
+          src={previewImage}
+          alt={editingExercise?.name || exerciseForm.values.name || "Ejercicio"}
           h={200}
           fit="cover"
           radius="md"
@@ -295,6 +346,49 @@ export function ExerciseFormModal({
               {...exerciseForm.getInputProps("category")}
             />
           </Group>
+
+          <Stack gap={4}>
+            <Text size="sm" fw={500}>Imagen</Text>
+            <Group gap="xs" align="flex-end" wrap="nowrap">
+              <TextInput
+                placeholder="URL de la imagen o súbela con el botón"
+                leftSection={<IconPhoto size={14} />}
+                style={{ flex: 1 }}
+                disabled={isReadOnly}
+                {...exerciseForm.getInputProps("image_url")}
+              />
+              <Button
+                variant="light"
+                leftSection={<IconUpload size={14} />}
+                loading={uploadingImage}
+                disabled={isReadOnly}
+                onClick={() => imageInputRef.current?.click()}
+              >
+                Subir
+              </Button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadImage(f);
+                }}
+              />
+            </Group>
+            <Text size="xs" c="dimmed">
+              La imagen se guarda en el almacenamiento privado de tu workspace (máx. 8 MB).
+            </Text>
+          </Stack>
+
+          <TextInput
+            label="Vídeo (URL)"
+            placeholder="https://youtube.com/... o enlace directo a un .mp4"
+            leftSection={<IconVideo size={14} />}
+            disabled={isReadOnly}
+            {...exerciseForm.getInputProps("video_url")}
+          />
 
           {!editingExercise?.is_global && (
             <Group justify="flex-end" mt="md">
