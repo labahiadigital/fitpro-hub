@@ -322,35 +322,98 @@ class KapsoService:
     
     # ============ WEBHOOKS ============
     
+    async def list_phone_webhooks(self, phone_number_id: str) -> list:
+        """Listar webhooks registrados para un phone_number."""
+        response = await self._request(
+            "GET",
+            f"{self.platform_url}/whatsapp/phone_numbers/{phone_number_id}/webhooks"
+        )
+        return response.get("data", [])
+
     async def create_phone_webhook(
         self,
         phone_number_id: str,
         url: str,
-        events: list[str]
+        events: list[str],
+        secret_key: str,
     ) -> dict:
         """
-        Crear webhook para eventos de un número de teléfono
-        
-        Args:
-            phone_number_id: ID del número de WhatsApp
-            url: URL del webhook
-            events: Lista de eventos a suscribir
+        Crear webhook para eventos de un número de teléfono.
+
+        Kapso requiere los campos ``webhook_kind`` y ``secret_key``, y el
+        payload debe ir envuelto en ``whatsapp_webhook``.
         """
         payload = {
-            "url": url,
-            "events": events,
-            "kind": "kapso",
-            "payload_version": "v2",
-            "active": True
+            "whatsapp_webhook": {
+                "url": url,
+                "events": events,
+                "webhook_kind": "kapso",
+                "payload_version": "v2",
+                "active": True,
+                "secret_key": secret_key,
+            }
         }
-        
+
         response = await self._request(
             "POST",
             f"{self.platform_url}/whatsapp/phone_numbers/{phone_number_id}/webhooks",
             json=payload
         )
-        
+
         return response.get("data", response)
+
+    async def ensure_phone_webhook(
+        self,
+        phone_number_id: str,
+        url: str,
+        events: list[str],
+        secret_key: str,
+    ) -> Optional[dict]:
+        """
+        Asegurar que existe un webhook para el phone_number apuntando a ``url``.
+
+        Idempotente: si ya hay uno con la misma URL (y los eventos incluidos),
+        lo deja tal cual. Si no existe, lo crea. Devuelve el webhook o ``None``
+        si hubo un error no fatal (se loguea).
+        """
+        try:
+            existing = await self.list_phone_webhooks(phone_number_id)
+        except KapsoError as exc:
+            logger.warning(
+                "No se pudieron listar webhooks para phone %s: %s",
+                phone_number_id,
+                exc.message,
+            )
+            return None
+
+        events_set = set(events)
+        for wh in existing:
+            if (wh.get("url") or "").rstrip("/") == url.rstrip("/"):
+                wh_events = set(wh.get("events") or [])
+                if events_set.issubset(wh_events):
+                    return wh
+                logger.info(
+                    "Webhook %s ya existe para phone %s pero faltan eventos %s",
+                    wh.get("id"),
+                    phone_number_id,
+                    sorted(events_set - wh_events),
+                )
+                return wh
+
+        try:
+            return await self.create_phone_webhook(
+                phone_number_id=phone_number_id,
+                url=url,
+                events=events,
+                secret_key=secret_key,
+            )
+        except KapsoError as exc:
+            logger.warning(
+                "No se pudo crear webhook para phone %s: %s",
+                phone_number_id,
+                exc.message,
+            )
+            return None
     
     def verify_webhook_signature(
         self,

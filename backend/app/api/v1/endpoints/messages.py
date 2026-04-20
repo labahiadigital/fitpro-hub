@@ -152,6 +152,12 @@ async def list_conversations(
         # Enrich with client data
         response = []
         for conv in conversations:
+            # Si la conversación no tiene phone pero el cliente sí, lo
+            # exponemos al frontend para que muestre el selector de canal y
+            # el badge sin esperar a abrir la conversación individual.
+            effective_phone = conv.whatsapp_phone or (
+                conv.client.phone if conv.client else None
+            )
             conv_dict = {
                 "id": conv.id,
                 "workspace_id": conv.workspace_id,
@@ -159,7 +165,7 @@ async def list_conversations(
                 "name": conv.name,
                 "conversation_type": conv.conversation_type,
                 "participant_ids": conv.participant_ids or [],
-                "whatsapp_phone": conv.whatsapp_phone,
+                "whatsapp_phone": effective_phone,
                 "whatsapp_profile_name": conv.whatsapp_profile_name,
                 "preferred_channel": conv.preferred_channel,
                 "last_message_at": conv.last_message_at,
@@ -207,8 +213,18 @@ async def create_conversation(
         )
         existing = result.scalar_one_or_none()
         if existing:
+            # Backfill lazy: si la conversación no tiene whatsapp_phone pero
+            # el cliente sí, vinculamos para que el selector de canal aparezca.
+            if (
+                not existing.whatsapp_phone
+                and existing.client
+                and existing.client.phone
+            ):
+                existing.whatsapp_phone = existing.client.phone
+                await db.commit()
+                await db.refresh(existing)
             return _conversation_to_response(existing)
-        
+
         # Get client info (verify workspace ownership)
         client_result = await db.execute(
             select(Client).where(
@@ -219,6 +235,9 @@ async def create_conversation(
         client = client_result.scalar_one_or_none()
         if client:
             data.name = client.full_name
+            # Auto-vincular phone del cliente si la petición no trae uno.
+            if client.phone and not data.whatsapp_phone:
+                data.whatsapp_phone = client.phone
     
     # If WhatsApp phone provided, check if conversation exists
     if data.whatsapp_phone:
@@ -300,13 +319,23 @@ async def get_conversation(
         ).options(selectinload(Conversation.client))
     )
     conversation = result.scalar_one_or_none()
-    
+
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversación no encontrada"
         )
-    
+
+    # Backfill lazy: si hay cliente con phone y aún no está vinculado.
+    if (
+        not conversation.whatsapp_phone
+        and conversation.client
+        and conversation.client.phone
+    ):
+        conversation.whatsapp_phone = conversation.client.phone
+        await db.commit()
+        await db.refresh(conversation)
+
     return _conversation_to_response(conversation)
 
 
@@ -382,32 +411,40 @@ async def send_message(
                 Conversation.id == data.conversation_id,
                 Conversation.workspace_id == current_user.workspace_id
             )
-        )
+        ).options(selectinload(Conversation.client))
     )
     conversation = result.scalar_one_or_none()
-    
+
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes acceso a esta conversación"
         )
-    
+
+    # Backfill: si no hay whatsapp_phone pero el cliente lo tiene.
+    if (
+        not conversation.whatsapp_phone
+        and conversation.client
+        and conversation.client.phone
+    ):
+        conversation.whatsapp_phone = conversation.client.phone
+
     is_sent = data.scheduled_at is None or data.scheduled_at <= datetime.utcnow()
-    
+
     # Determine which channel to use
     send_via = data.send_via
-    
+
     # Get workspace to check WhatsApp configuration
     workspace_result = await db.execute(
         select(Workspace).where(Workspace.id == current_user.workspace_id)
     )
     workspace = workspace_result.scalar_one_or_none()
-    
+
     # Check if WhatsApp is enabled and configured
     whatsapp_config = workspace.settings.get("whatsapp", {}) if workspace and workspace.settings else {}
     whatsapp_enabled = whatsapp_config.get("enabled", False)
     phone_number_id = whatsapp_config.get("phone_number_id")
-    
+
     if send_via == MessageSource.WHATSAPP:
         if not conversation.whatsapp_phone:
             # Fallback to platform if conversation has no WhatsApp
@@ -552,7 +589,7 @@ async def whatsapp_webhook(
     Verifica la firma del webhook antes de procesar.
     """
     # Verify webhook signature from Kapso/WhatsApp provider
-    webhook_secret = settings.WHATSAPP_WEBHOOK_SECRET if hasattr(settings, "WHATSAPP_WEBHOOK_SECRET") else None
+    webhook_secret = settings.KAPSO_WEBHOOK_SECRET or None
     if webhook_secret:
 
         signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")
@@ -649,7 +686,7 @@ async def whatsapp_status_webhook(
     """
     Webhook para actualizaciones de estado de mensajes de WhatsApp.
     """
-    webhook_secret = settings.WHATSAPP_WEBHOOK_SECRET if hasattr(settings, "WHATSAPP_WEBHOOK_SECRET") else None
+    webhook_secret = settings.KAPSO_WEBHOOK_SECRET or None
     if webhook_secret:
 
         signature = request.headers.get("x-hub-signature-256", "") or request.headers.get("x-webhook-signature", "")

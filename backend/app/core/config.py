@@ -107,6 +107,19 @@ class Settings(BaseSettings):
     
     # Frontend URL (for invitation links)
     FRONTEND_URL: str = "http://localhost:5173"
+
+    # Backend public URL — usada al registrar webhooks en servicios externos
+    # (p.ej. Kapso → ``<BACKEND_PUBLIC_URL>/api/v1/whatsapp/webhook``). Si
+    # está vacío, el código usa FRONTEND_URL como fallback muy pobre; en
+    # producción ÉSTE debe apuntar al dominio público del backend.
+    BACKEND_PUBLIC_URL: str = ""
+
+    # Secreto compartido con Kapso para validar firmas HMAC de los webhooks
+    # entrantes (y registrarlo al crear los webhooks de phone_number). Si no
+    # se define, el backend usa un derivado de ``SECRET_KEY`` — aceptable
+    # para desarrollo, pero en producción se recomienda definirlo explícito.
+    # En ``.env`` se llama ``KAPSO_WEBHOOK_SECRET``.
+    KAPSO_WEBHOOK_SECRET: str = ""
     
     # CORS (comma-separated list of allowed origins)
     # In production this MUST be overridden in .env — the default only contains dev origins.

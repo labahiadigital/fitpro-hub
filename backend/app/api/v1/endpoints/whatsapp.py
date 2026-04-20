@@ -91,6 +91,59 @@ class KapsoWebhookMessageStatus(BaseModel):
 
 # ============ ENDPOINTS ============
 
+WHATSAPP_WEBHOOK_EVENTS = [
+    "whatsapp.message.received",
+    "whatsapp.message.status_updated",
+]
+
+
+def _webhook_destination_url() -> Optional[str]:
+    """
+    Calcula la URL pública donde Kapso debe entregar los webhooks del
+    phone_number. Devuelve ``None`` si no está configurada, en cuyo caso el
+    backend se salta la auto-registración (se logueará un warning).
+    """
+    base = (settings.BACKEND_PUBLIC_URL or "").rstrip("/")
+    if not base:
+        return None
+    return f"{base}{settings.API_V1_PREFIX}/whatsapp/webhook"
+
+
+def _webhook_secret() -> str:
+    """Secret usado para firmar webhooks de Kapso. Fallback a SECRET_KEY."""
+    return settings.KAPSO_WEBHOOK_SECRET or settings.SECRET_KEY
+
+
+async def _ensure_phone_webhook_registered(phone_number_id: str) -> None:
+    """
+    Garantiza que el phone_number está suscrito a los eventos que el backend
+    necesita para alimentar el inbox de la plataforma. Idempotente: si el
+    webhook ya existe, no hace nada.
+    """
+    destination = _webhook_destination_url()
+    if not destination:
+        logger.warning(
+            "BACKEND_PUBLIC_URL no configurado — no puedo registrar "
+            "automáticamente el webhook del phone %s. Los mensajes entrantes "
+            "no llegarán hasta que esto se resuelva.",
+            phone_number_id,
+        )
+        return
+
+    try:
+        await kapso_service.ensure_phone_webhook(
+            phone_number_id=phone_number_id,
+            url=destination,
+            events=WHATSAPP_WEBHOOK_EVENTS,
+            secret_key=_webhook_secret(),
+        )
+    except Exception:
+        logger.exception(
+            "Fallo inesperado asegurando el webhook del phone %s",
+            phone_number_id,
+        )
+
+
 async def _reconcile_whatsapp_from_kapso(
     workspace: Workspace,
     db: AsyncSession,
@@ -179,6 +232,9 @@ async def _reconcile_whatsapp_from_kapso(
         display_phone_number or phone_number_id,
     )
 
+    # Asegurar webhook para recibir mensajes entrantes (idempotente).
+    await _ensure_phone_webhook_registered(phone_number_id)
+
     return new_whatsapp_config
 
 
@@ -210,6 +266,27 @@ async def get_whatsapp_status(
 
     if not whatsapp_config.get("enabled") and whatsapp_config.get("kapso_customer_id"):
         whatsapp_config = await _reconcile_whatsapp_from_kapso(workspace, db)
+
+    # Si el workspace está conectado pero aún no tenemos constancia de haber
+    # registrado el webhook (caso típico: usuarios conectados antes de que
+    # existiera el auto-registro), asegurarlo ahora y marcar en settings
+    # para no volver a llamar a Kapso en cada GET /status.
+    phone_id = whatsapp_config.get("phone_number_id")
+    if (
+        whatsapp_config.get("enabled")
+        and phone_id
+        and not whatsapp_config.get("webhook_registered_at")
+    ):
+        await _ensure_phone_webhook_registered(phone_id)
+        new_whatsapp_config = {
+            **whatsapp_config,
+            "webhook_registered_at": datetime.utcnow().isoformat(),
+        }
+        new_settings = dict(workspace.settings) if workspace.settings else {}
+        new_settings["whatsapp"] = new_whatsapp_config
+        workspace.settings = new_settings
+        await db.commit()
+        whatsapp_config = new_whatsapp_config
 
     return WhatsAppStatusResponse(
         connected=whatsapp_config.get("enabled", False),
@@ -512,11 +589,13 @@ async def handle_phone_number_created(data: dict, db: AsyncSession):
     
     workspace.settings = new_settings
     await db.commit()
-    
+
     logger.info("Workspace %s conectado con número %s", workspace.id, display_phone_number)
-    
-    # TODO: Crear webhook para este phone_number para recibir mensajes
-    # Esto requiere conocer la URL pública del backend
+
+    # Registrar automáticamente el webhook del phone_number para recibir
+    # mensajes entrantes. Idempotente: si ya existe no hace nada.
+    if phone_number_id:
+        await _ensure_phone_webhook_registered(phone_number_id)
 
 
 async def handle_message_received(data: dict, db: AsyncSession):

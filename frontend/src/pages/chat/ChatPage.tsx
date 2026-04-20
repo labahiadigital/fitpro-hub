@@ -1,6 +1,5 @@
 import {
   ActionIcon,
-  Alert,
   Anchor,
   Avatar,
   Badge,
@@ -26,7 +25,6 @@ import {
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
-  IconAlertCircle,
   IconArrowLeft,
   IconBrandWhatsapp,
   IconCheck,
@@ -205,13 +203,31 @@ function MessageBubble({
 }) {
   const isWhatsApp = message.source === "whatsapp";
 
+  const channelLabel = isWhatsApp ? "WhatsApp" : "Plataforma";
+  const channelColor = isWhatsApp
+    ? "var(--mantine-color-green-6)"
+    : "var(--mantine-color-blue-6)";
+
   return (
     <Box
       style={{
         display: "flex",
-        justifyContent: isOwn ? "flex-end" : "flex-start",
+        flexDirection: "column",
+        alignItems: isOwn ? "flex-end" : "flex-start",
       }}
     >
+      {/* Etiqueta de canal ARRIBA de cada bubble — propio o ajeno. */}
+      <Group gap={4} mb={4} px={2}>
+        {isWhatsApp ? (
+          <IconBrandWhatsapp color={channelColor} size={12} />
+        ) : (
+          <IconMessage color={channelColor} size={12} />
+        )}
+        <Text c="dimmed" size="xs" fw={500}>
+          {channelLabel}
+        </Text>
+      </Group>
+
       <Box
         maw={{ base: "85%", sm: "70%" }}
         p="sm"
@@ -220,29 +236,17 @@ function MessageBubble({
             ? isWhatsApp
               ? "var(--mantine-color-green-6)"
               : "var(--mantine-color-primary-6)"
-            : "white",
+            : isWhatsApp
+              ? "var(--mantine-color-green-0)"
+              : "white",
           color: isOwn ? "white" : undefined,
           borderRadius: isOwn ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
           boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+          borderLeft: !isOwn && isWhatsApp
+            ? `3px solid ${channelColor}`
+            : undefined,
         }}
       >
-        {/* Source indicator for incoming messages */}
-        {!isOwn && (
-          <Group gap={4} mb={4}>
-            {isWhatsApp ? (
-              <IconBrandWhatsapp
-                color="var(--mantine-color-green-6)"
-                size={12}
-              />
-            ) : (
-              <IconMessage color="var(--mantine-color-blue-6)" size={12} />
-            )}
-            <Text c="dimmed" size="xs">
-              {isWhatsApp ? "WhatsApp" : "Plataforma"}
-            </Text>
-          </Group>
-        )}
-
         {message.media_url && message.message_type === "image" && (
           <Image
             src={message.media_url}
@@ -264,10 +268,6 @@ function MessageBubble({
         {message.content && <Text size="sm">{message.content}</Text>}
 
         <Group gap={4} justify="flex-end" mt={4}>
-          {/* Source indicator for outgoing messages */}
-          {isOwn && isWhatsApp && (
-            <IconBrandWhatsapp size={12} style={{ opacity: 0.7 }} />
-          )}
           <Text
             c={isOwn ? "white" : "dimmed"}
             size="xs"
@@ -740,67 +740,79 @@ export function ChatPage() {
                   p="md"
                   style={{ borderTop: "1px solid var(--nv-border)", backgroundColor: "var(--nv-paper-bg)" }}
                 >
-                  {/* Channel selector - only show if conversation has WhatsApp */}
-                  {selectedConversation.whatsapp_phone && (
-                    <Group justify="center" mb="xs">
-                      {isWhatsAppEnabled ? (
-                        <SegmentedControl
-                          data={[
-                            {
-                              value: "platform",
-                              label: (
-                                <Group gap={4}>
-                                  <IconMessage size={14} />
-                                  <span>Plataforma</span>
-                                </Group>
-                              ),
-                            },
-                            {
-                              value: "whatsapp",
-                              label: (
-                                <Group gap={4}>
-                                  <IconBrandWhatsapp size={14} />
-                                  <span>WhatsApp</span>
-                                </Group>
-                              ),
-                            },
-                          ]}
-                          onChange={(value) => setSendVia(value as MessageSource)}
-                          size="xs"
-                          value={sendVia}
-                          radius="xl"
-                          styles={{
-                            root: { backgroundColor: "var(--nv-surface)" },
-                            indicator: { borderRadius: "999px" }
-                          }}
-                        />
-                      ) : (
-                        <Alert
-                          color="yellow"
-                          variant="light"
-                          radius="lg"
-                          icon={<IconAlertCircle size={16} />}
-                          py={6}
-                          px="sm"
+                  {/*
+                    Selector de canal: SIEMPRE visible en chats con cliente
+                    para que el entrenador sepa por dónde está enviando.
+                    WhatsApp se deshabilita con tooltip si falta algún
+                    requisito (no configurado o sin teléfono del cliente).
+                  */}
+                  {chatScope !== "internal" && (() => {
+                    const hasPhone = !!selectedConversation.whatsapp_phone;
+                    const waDisabled = !isWhatsAppEnabled || !hasPhone;
+                    const waDisabledReason = !isWhatsAppEnabled
+                      ? "WhatsApp no está conectado en este workspace"
+                      : !hasPhone
+                        ? "Este cliente no tiene número de teléfono"
+                        : "";
+
+                    return (
+                      <Group justify="center" mb="xs">
+                        <Tooltip
+                          label={waDisabledReason}
+                          disabled={!waDisabled}
+                          withArrow
                         >
-                          <Group gap="xs">
-                            <Text size="xs">
-                              Este cliente tiene WhatsApp pero no está configurado.
-                            </Text>
-                            <Button
-                              component={Link}
-                              to="/settings?tab=whatsapp"
+                          <div>
+                            <SegmentedControl
+                              data={[
+                                {
+                                  value: "platform",
+                                  label: (
+                                    <Group gap={4}>
+                                      <IconMessage size={14} />
+                                      <span>Plataforma</span>
+                                    </Group>
+                                  ),
+                                },
+                                {
+                                  value: "whatsapp",
+                                  label: (
+                                    <Group gap={4}>
+                                      <IconBrandWhatsapp size={14} />
+                                      <span>WhatsApp</span>
+                                    </Group>
+                                  ),
+                                  disabled: waDisabled,
+                                },
+                              ]}
+                              onChange={(value) =>
+                                setSendVia(value as MessageSource)
+                              }
                               size="xs"
-                              variant="subtle"
-                              leftSection={<IconSettings size={12} />}
-                            >
-                              Configurar
-                            </Button>
-                          </Group>
-                        </Alert>
-                      )}
-                    </Group>
-                  )}
+                              value={waDisabled ? "platform" : sendVia}
+                              radius="xl"
+                              color={sendVia === "whatsapp" ? "green" : "primary"}
+                              styles={{
+                                root: { backgroundColor: "var(--nv-surface)" },
+                                indicator: { borderRadius: "999px" },
+                              }}
+                            />
+                          </div>
+                        </Tooltip>
+                        {!isWhatsAppEnabled && (
+                          <Button
+                            component={Link}
+                            to="/settings?tab=whatsapp"
+                            size="xs"
+                            variant="subtle"
+                            leftSection={<IconSettings size={12} />}
+                          >
+                            Conectar WhatsApp
+                          </Button>
+                        )}
+                      </Group>
+                    );
+                  })()}
 
                   <Group gap={isMobile ? "xs" : "sm"}>
                     <Popover
