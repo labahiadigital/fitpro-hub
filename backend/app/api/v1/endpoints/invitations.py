@@ -37,6 +37,7 @@ from datetime import timezone
 
 logger = logging.getLogger(__name__)
 from app.services.email import email_service, EmailTemplates
+from app.services.product_capacity import ensure_product_capacity
 from app.tasks.notifications import send_email_task
 
 router = APIRouter()
@@ -255,7 +256,10 @@ async def create_invitation(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Producto no encontrado o no activo"
             )
-    
+
+        # Enforce seat cap (max_users) before reserving the slot with the invitation
+        await ensure_product_capacity(db, product)
+
     # Generate unique token
     token = secrets.token_urlsafe(32)
     
@@ -705,6 +709,13 @@ async def complete_invitation(
             )
             product = product_result.scalar_one_or_none()
             if product:
+                # Final seat-cap guard: block if the product is full.
+                # Exclude THIS invitation from the pending count to avoid a
+                # false positive when we are about to convert it into a sub.
+                await ensure_product_capacity(
+                    db, product, exclude_invitation_id=invitation.id
+                )
+
                 now = datetime.now(timezone.utc)
                 ic = product.interval_count or 1
                 interval_map = {
@@ -855,6 +866,9 @@ async def public_product_signup(
     product = product_result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado o no disponible")
+
+    # Enforce seat cap before locking the invitation token
+    await ensure_product_capacity(db, product)
 
     existing_user = await db.execute(
         select(User).where(User.email == data.email.lower())

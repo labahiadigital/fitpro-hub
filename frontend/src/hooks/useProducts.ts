@@ -13,6 +13,7 @@ export interface Product {
   interval?: string;
   interval_count: number;
   trial_days: number;
+  max_users?: number | null;
   is_active: boolean;
   stripe_price_id?: string;
   stripe_product_id?: string;

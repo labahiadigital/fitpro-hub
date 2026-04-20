@@ -71,6 +71,7 @@ export interface Product {
   type: "subscription" | "one_time" | "package";
   interval?: string;
   sessions_included?: number;
+  max_users?: number | null;
   is_active: boolean;
 }
 
@@ -121,6 +122,7 @@ export function useProducts(options?: { enabled?: boolean }) {
         type: p.product_type || "subscription",
         interval: p.interval,
         sessions_included: p.sessions_included,
+        max_users: p.max_users ?? null,
         is_active: p.is_active ?? true,
       })) as Product[];
     },

@@ -18,6 +18,7 @@ from app.models.client import Client
 from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
 from app.services.auto_invoice import create_invoice_for_payment
 from app.services.notification_service import notify
+from app.services.product_capacity import ensure_product_capacity_by_id
 
 router = APIRouter()
 
@@ -40,6 +41,7 @@ class SubscriptionCreate(BaseModel):
     currency: str = "EUR"
     interval: str = "month"
     stripe_price_id: Optional[str] = None
+    product_id: Optional[UUID] = None
 
 
 class SubscriptionResponse(BaseModel):
@@ -366,6 +368,12 @@ async def create_subscription(
         if not client_check.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado")
 
+    # Enforce max_users cap if the sub is linked to a product
+    extra_data: dict = {}
+    if data.product_id:
+        await ensure_product_capacity_by_id(db, data.product_id)
+        extra_data["product_id"] = str(data.product_id)
+
     subscription = Subscription(
         workspace_id=current_user.workspace_id,
         client_id=data.client_id,
@@ -376,7 +384,8 @@ async def create_subscription(
         interval=data.interval,
         stripe_price_id=data.stripe_price_id,
         status=SubscriptionStatus.active,
-        current_period_start=datetime.utcnow()
+        current_period_start=datetime.utcnow(),
+        extra_data=extra_data,
     )
     db.add(subscription)
     await db.commit()

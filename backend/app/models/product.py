@@ -39,6 +39,7 @@ class Product(BaseModel):
     interval = Column(String(20))
     interval_count = Column(Integer, default=1)
     trial_days = Column(Integer, default=0)
+    max_users = Column(Integer, nullable=True)  # None = unlimited
     is_active = Column(Boolean, default=True)
     extra_data = Column("metadata", JSONB, default={})
     

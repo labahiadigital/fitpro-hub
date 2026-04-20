@@ -31,6 +31,7 @@ from app.models.product import Product, Coupon
 from app.models.client import Client
 from app.services.sequra import sequra_service
 from app.services.auto_invoice import create_invoice_for_payment
+from app.services.product_capacity import ensure_product_capacity
 from app.middleware.auth import require_staff
 
 logger = logging.getLogger(__name__)
@@ -166,6 +167,11 @@ async def start_onboarding(
         )
 
     invitation, product = await _get_invitation_with_product(data.token, db)
+
+    # Seat-cap check: don't start a SeQura payment if the product is full.
+    await ensure_product_capacity(
+        db, product, exclude_invitation_id=invitation.id
+    )
 
     # Check if SeQura payment already succeeded
     if invitation.payment_id:

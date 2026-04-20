@@ -29,6 +29,7 @@ from app.models.invitation import ClientInvitation
 from app.models.product import Product
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 from app.services.auto_invoice import create_invoice_for_payment
+from app.services.product_capacity import ensure_product_capacity
 from app.services.redsys import (
     redsys_service,
     RedsysRedirectPayment,
@@ -236,6 +237,12 @@ async def create_onboarding_payment(
     product = product_result.scalar_one_or_none()
     if not product or not product.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El producto ya no está disponible")
+
+    # Seat-cap check: don't start a Redsys payment if the product is full.
+    # The invitation itself already holds a slot, so exclude it from the count.
+    await ensure_product_capacity(
+        db, product, exclude_invitation_id=invitation.id
+    )
 
     # Generate order ID and calculate amount
     order_id = redsys_service.generate_order_id()

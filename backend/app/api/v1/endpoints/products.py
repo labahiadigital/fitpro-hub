@@ -17,6 +17,10 @@ from app.models.product import (
 from app.models.resource import Machine, Box
 from app.models.payment import Subscription, SubscriptionStatus
 from app.models.user import User
+from app.services.product_capacity import (
+    count_active_subscriptions,
+    count_pending_invitations,
+)
 from app.schemas.product import (
     ProductCreate, ProductUpdate, ProductResponse, ProductList,
     SessionPackageCreate, SessionPackageUpdate, SessionPackageResponse, SessionPackageList,
@@ -205,15 +209,28 @@ async def get_product_active_subscribers(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get count of active subscribers for a product."""
-    count_result = await db.execute(
-        select(func.count()).select_from(Subscription).where(
-            Subscription.extra_data["product_id"].astext == str(product_id),
-            Subscription.status == SubscriptionStatus.active,
-        )
-    )
-    count = count_result.scalar() or 0
-    return {"product_id": str(product_id), "active_subscribers": count}
+    """Get seat usage for a product: active subscribers, pending invitations,
+    and whether the product has reached its `max_users` cap."""
+    product = await db.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    active_subscribers = await count_active_subscriptions(db, product_id)
+    pending = await count_pending_invitations(db, product_id)
+    used = active_subscribers + pending
+    max_users = product.max_users
+    is_full = max_users is not None and used >= max_users
+    remaining = max(max_users - used, 0) if max_users is not None else None
+
+    return {
+        "product_id": str(product_id),
+        "active_subscribers": active_subscribers,
+        "pending_invitations": pending,
+        "used_seats": used,
+        "max_users": max_users,
+        "remaining_seats": remaining,
+        "is_full": is_full,
+    }
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -244,7 +261,7 @@ async def delete_product(
     if count > 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"No se puede eliminar: hay {count} suscripción(es) activa(s) en este producto"
+            detail=f"No se puede eliminar: hay {count} suscripci?n(es) activa(s) en este producto"
         )
     
     await db.delete(product)
@@ -383,7 +400,7 @@ async def use_session(
         raise HTTPException(status_code=404, detail="Paquete del cliente no encontrado")
     
     if package.status != 'active':
-        raise HTTPException(status_code=400, detail="El paquete no está activo")
+        raise HTTPException(status_code=400, detail="El paquete no est? activo")
     
     if package.used_sessions >= package.total_sessions:
         raise HTTPException(status_code=400, detail="No quedan sesiones disponibles")
@@ -489,7 +506,7 @@ async def update_product_resources(
             valid = await db.execute(select(StockItem.id).where(StockItem.id.in_(ids), StockItem.workspace_id == ws))
             valid_ids = {r[0] for r in valid}
             if len(valid_ids) != len(ids):
-                raise HTTPException(400, "Uno o más artículos de stock no pertenecen a este workspace")
+                raise HTTPException(400, "Uno o m?s art?culos de stock no pertenecen a este workspace")
         await db.execute(sa_delete(ProductStockConsumption).where(ProductStockConsumption.product_id == product_id))
         for sc in data.stock_consumption:
             db.add(ProductStockConsumption(
@@ -507,7 +524,7 @@ async def update_product_resources(
             valid = await db.execute(select(Machine.id).where(Machine.id.in_(ids), Machine.workspace_id == ws))
             valid_ids = {r[0] for r in valid}
             if len(valid_ids) != len(ids):
-                raise HTTPException(400, "Una o más máquinas no pertenecen a este workspace")
+                raise HTTPException(400, "Una o m?s m?quinas no pertenecen a este workspace")
         await db.execute(sa_delete(product_machines).where(product_machines.c.product_id == product_id))
         for m in data.machine_ids:
             await db.execute(product_machines.insert().values(product_id=product_id, machine_id=m.id, is_primary=m.is_primary))
@@ -518,7 +535,7 @@ async def update_product_resources(
             valid = await db.execute(select(Box.id).where(Box.id.in_(ids), Box.workspace_id == ws))
             valid_ids = {r[0] for r in valid}
             if len(valid_ids) != len(ids):
-                raise HTTPException(400, "Uno o más boxes no pertenecen a este workspace")
+                raise HTTPException(400, "Uno o m?s boxes no pertenecen a este workspace")
         await db.execute(sa_delete(product_boxes).where(product_boxes.c.product_id == product_id))
         for b in data.box_ids:
             await db.execute(product_boxes.insert().values(product_id=product_id, box_id=b.id, is_primary=b.is_primary))
@@ -590,23 +607,23 @@ async def validate_coupon(
     coupon = result.scalar_one_or_none()
     
     if not coupon:
-        return CouponValidateResponse(is_valid=False, message="Código no encontrado")
+        return CouponValidateResponse(is_valid=False, message="C?digo no encontrado")
     
     if not coupon.is_active:
-        return CouponValidateResponse(is_valid=False, message="Cupón desactivado")
+        return CouponValidateResponse(is_valid=False, message="Cup?n desactivado")
     
     if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
-        return CouponValidateResponse(is_valid=False, message="Cupón agotado")
+        return CouponValidateResponse(is_valid=False, message="Cup?n agotado")
     
     # Check product applicability
     if data.product_id and coupon.applicable_products:
         if data.product_id not in coupon.applicable_products:
-            return CouponValidateResponse(is_valid=False, message="Cupón no aplicable a este producto")
+            return CouponValidateResponse(is_valid=False, message="Cup?n no aplicable a este producto")
     
     return CouponValidateResponse(
         is_valid=True,
         discount_type=coupon.discount_type,
         discount_value=float(coupon.discount_value),
-        message="Cupón válido",
+        message="Cup?n v?lido",
     )
 

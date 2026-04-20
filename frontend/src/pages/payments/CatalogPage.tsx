@@ -207,10 +207,12 @@ export function CatalogPage() {
       type: "subscription",
       interval: "month",
       sessions_included: 0,
+      max_users: null as number | null,
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
       price: (value) => (value < 0 ? "Precio no puede ser negativo" : null),
+      max_users: (value) => (value !== null && value !== undefined && value < 1 ? "Debe ser >= 1" : null),
     },
   });
 
@@ -252,6 +254,7 @@ export function CatalogPage() {
       type: product.type,
       interval: product.interval || "month",
       sessions_included: product.sessions_included || 0,
+      max_users: product.max_users ?? null,
     });
     openProductModal();
   }, [productForm, openProductModal]);
@@ -263,6 +266,7 @@ export function CatalogPage() {
       price: values.price,
       product_type: values.type,
       interval: values.type === "subscription" ? values.interval : undefined,
+      max_users: values.max_users && values.max_users > 0 ? values.max_users : null,
     };
     try {
       let productId: string | undefined;
@@ -524,6 +528,12 @@ export function CatalogPage() {
                 {product.sessions_included && (
                   <Badge mb="md" variant="outline" radius="xl">
                     {product.sessions_included} sesiones incluidas
+                  </Badge>
+                )}
+
+                {product.max_users && (
+                  <Badge mb="md" ml="xs" variant="outline" radius="xl" color="grape" leftSection={<IconUsers size={12} />}>
+                    Máx. {product.max_users} usuarios
                   </Badge>
                 )}
 
@@ -909,6 +919,16 @@ export function CatalogPage() {
             {productForm.values.type === "package" && (
               <NumberInput label="Sesiones incluidas" min={1} placeholder="0" {...productForm.getInputProps("sessions_included")} />
             )}
+
+            <NumberInput
+              label="Límite de usuarios"
+              description="Máximo de usuarios suscritos simultáneamente. Déjalo vacío para ilimitado."
+              placeholder="Ilimitado"
+              min={1}
+              {...productForm.getInputProps("max_users")}
+              value={productForm.values.max_users ?? ""}
+              onChange={(val) => productForm.setFieldValue("max_users", val === "" || val === null ? null : Number(val))}
+            />
 
             <Divider label="Stock vinculado" labelPosition="center" />
             <Text size="xs" c="dimmed">Añade productos de stock que se consumen con cada venta de este producto.</Text>

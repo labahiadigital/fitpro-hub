@@ -17,6 +17,7 @@ class ProductBase(BaseModel):
     interval: Optional[str] = None
     interval_count: int = Field(default=1, ge=1)
     trial_days: int = Field(default=0, ge=0)
+    max_users: Optional[int] = Field(default=None, ge=1, description="Seat cap. None = unlimited.")
     is_active: bool = True
     extra_data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
@@ -34,6 +35,7 @@ class ProductUpdate(BaseModel):
     interval: Optional[str] = None
     interval_count: Optional[int] = Field(None, ge=1)
     trial_days: Optional[int] = Field(None, ge=0)
+    max_users: Optional[int] = Field(None, ge=1)
     is_active: Optional[bool] = None
     extra_data: Optional[Dict[str, Any]] = None
 
