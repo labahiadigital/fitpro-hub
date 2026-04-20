@@ -156,23 +156,55 @@ async def start_onboarding(
     Public endpoint. Security via valid invitation token + rate limiting.
     The amount is taken from the product in DB, never from client input.
     """
+    # Print directly to stderr with flush=True as a belt-and-suspenders log.
+    # logger.info can get swallowed by uvicorn's buffering + custom formatters
+    # so we print a tiny audit line as well to guarantee we see entry in
+    # container stdout no matter what.
+    import sys as _sys
+    rid_pre = getattr(request.state, "request_id", "-")
+    print(
+        f"[SQ-ENTRY] rid={rid_pre} token_prefix={data.token[:8] if data.token else '<none>'} product_code={data.product_code}",
+        file=_sys.stderr, flush=True,
+    )
+    logger.info(
+        "SQ-ENTRY rid=%s token_prefix=%s product_code=%s",
+        rid_pre, data.token[:8] if data.token else "<none>", data.product_code,
+    )
     # Wrap the whole endpoint in try/except so any unhandled exception becomes
     # a 502 with CORS headers, instead of the reverse proxy returning a "mute"
     # 502 Bad Gateway that breaks the browser preflight.
     try:
-        return await _start_onboarding_impl(data, request, db)
-    except HTTPException:
+        result = await _start_onboarding_impl(data, request, db)
+        print(
+            f"[SQ-EXIT-OK] rid={rid_pre}",
+            file=_sys.stderr, flush=True,
+        )
+        return result
+    except HTTPException as exc:
+        print(
+            f"[SQ-EXIT-HTTP] rid={rid_pre} status={exc.status_code} detail={exc.detail!r}",
+            file=_sys.stderr, flush=True,
+        )
         raise
-    except Exception:
+    except BaseException as exc:  # includes SystemExit, KeyboardInterrupt, etc.
+        # Last-resort trap: BaseException covers things Exception misses and
+        # lets us log before the worker dies or re-raises.
+        print(
+            f"[SQ-EXIT-FATAL] rid={rid_pre} type={type(exc).__name__} msg={exc!r}",
+            file=_sys.stderr, flush=True,
+        )
         logger.exception(
-            "SeQura start-onboarding crashed unexpectedly (token_prefix=%s, env=%s)",
+            "SeQura start-onboarding crashed unexpectedly (token_prefix=%s, env=%s, exc_type=%s)",
             data.token[:8] if data.token else "<none>",
             sequra_service.config.environment,
+            type(exc).__name__,
         )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Error interno al iniciar el pago con SeQura. Intentalo de nuevo.",
-        )
+        if isinstance(exc, Exception):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Error interno al iniciar el pago con SeQura. Intentalo de nuevo.",
+            )
+        raise
 
 
 async def _start_onboarding_impl(
