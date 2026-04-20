@@ -102,7 +102,41 @@ const DURATION_TYPE_OPTIONS = [
   { value: "reps", label: "Repeticiones" },
   { value: "seconds", label: "Segundos" },
   { value: "minutes", label: "Minutos" },
+  { value: "distance", label: "Km" },
 ];
+
+// Opciones específicas para ejercicios cardio (bici, cinta, elíptica, remo,
+// correr, etc.): no tiene sentido medir en repeticiones, sólo en tiempo o
+// distancia recorrida.
+const CARDIO_DURATION_TYPE_OPTIONS = [
+  { value: "minutes", label: "Minutos" },
+  { value: "seconds", label: "Segundos" },
+  { value: "distance", label: "Km" },
+];
+
+// Detecta si un ejercicio es cardio para adaptar el UI del constructor
+// (ocultar peso, usar minutos/km por defecto, etc.). Se combina la categoría
+// con heurística por nombre/equipo para cubrir ejercicios antiguos que no
+// tengan ``category = 'cardio'`` marcado.
+const CARDIO_NAME_REGEX = /cinta|bici|bike|cycling|eliptic|elíptic|correr|trotar|running|jog|remo\s*erg|remo\s+erg|stairmaster|stepper|ski\s*erg|spinning/i;
+const CARDIO_EQUIPMENT = new Set([
+  "cinta",
+  "bicicleta",
+  "eliptica",
+  "elíptica",
+  "remo_ergometro",
+  "remo_ergometro_",
+  "ergometro",
+]);
+
+function isCardioExercise(exercise?: { category?: string; muscle_groups?: string[]; equipment?: string[]; name?: string }): boolean {
+  if (!exercise) return false;
+  if ((exercise.category || "").toLowerCase() === "cardio") return true;
+  if ((exercise.muscle_groups || []).some((m) => m.toLowerCase() === "cardio")) return true;
+  if ((exercise.equipment || []).some((eq) => CARDIO_EQUIPMENT.has(eq.toLowerCase()))) return true;
+  if (exercise.name && CARDIO_NAME_REGEX.test(exercise.name)) return true;
+  return false;
+}
 
 interface Exercise {
   id: string;
@@ -122,7 +156,7 @@ interface WorkoutExercise {
   sets: number;
   reps: string;
   rest_seconds: number;
-  duration_type?: "reps" | "seconds" | "minutes";
+  duration_type?: "reps" | "seconds" | "minutes" | "distance";
   notes?: string;
   video_url?: string;
   order: number;
@@ -384,14 +418,15 @@ export function WorkoutBuilder({
     const block = blocks.find((b) => b.id === selectedBlockId);
     if (!block) return;
 
+    const cardio = isCardioExercise(exercise);
     const newExercise: WorkoutExercise = {
       id: `ex-${Date.now()}`,
       exercise_id: exercise.id,
       exercise,
-      sets: 3,
-      reps: "10-12",
-      rest_seconds: 60,
-      duration_type: "reps",
+      sets: cardio ? 1 : 3,
+      reps: cardio ? "20" : "10-12",
+      rest_seconds: cardio ? 0 : 60,
+      duration_type: cardio ? "minutes" : "reps",
       order: block.exercises.length,
     };
 
@@ -488,10 +523,12 @@ export function WorkoutBuilder({
 
   const filteredExercises = useMemo(() => {
     const searchLower = exerciseSearch.toLowerCase();
-    const defaultCategory = blockType === "warmup" ? "calentamiento"
-                          : blockType === "cooldown" ? "estiramiento"
-                          : null;
 
+    // Nota: antes se forzaba un filtrado por categoría derivado de `blockType`
+    // (warmup -> calentamiento, cooldown -> estiramiento), lo que ocultaba el
+    // resto de ejercicios al añadir. Ahora el filtrado es 100% manual mediante
+    // las pestañas (Todos, Favoritos, Calentamiento, Estiramiento, Fuerza,
+    // Cardio, Core, Flexibilidad), el buscador y los MultiSelect.
     const filtered = availableExercises.filter((e) => {
       const matchesSearch =
         e.name.toLowerCase().includes(searchLower) ||
@@ -509,18 +546,14 @@ export function WorkoutBuilder({
           e.equipment.some((eq) => eq.toLowerCase().includes(selected.toLowerCase()))
         );
 
-      const matchesFavorites = exerciseFilter === "favorites" ? isExerciseFavorite(e.id) : true;
-
-      let matchesCategory = true;
-      if (exerciseFilter === "all" || exerciseFilter === "favorites") {
-        if (defaultCategory) {
-          matchesCategory = e.category?.toLowerCase() === defaultCategory;
-        }
-      } else {
-        matchesCategory = e.category?.toLowerCase() === exerciseFilter.toLowerCase();
+      let matchesFilter = true;
+      if (exerciseFilter === "favorites") {
+        matchesFilter = isExerciseFavorite(e.id);
+      } else if (exerciseFilter !== "all") {
+        matchesFilter = e.category?.toLowerCase() === exerciseFilter.toLowerCase();
       }
 
-      return matchesSearch && matchesMuscleGroups && matchesEquipment && matchesFavorites && matchesCategory;
+      return matchesSearch && matchesMuscleGroups && matchesEquipment && matchesFilter;
     });
 
     return filtered.sort((a, b) => {
@@ -528,7 +561,7 @@ export function WorkoutBuilder({
       const bFav = isExerciseFavorite(b.id) ? 0 : 1;
       return aFav - bFav;
     });
-  }, [availableExercises, exerciseSearch, exerciseMuscleGroups, exerciseEquipment, exerciseFilter, exerciseFavorites, blockType]);
+  }, [availableExercises, exerciseSearch, exerciseMuscleGroups, exerciseEquipment, exerciseFilter, exerciseFavorites]);
 
   return (
     <>
@@ -793,9 +826,35 @@ export function WorkoutBuilder({
                                             </Box>
                                           </Group>
 
-                                          <SimpleGrid cols={isMobile ? 2 : 6} spacing="xs" verticalSpacing="xs">
+                                          {(() => {
+                                            const isCardio = isCardioExercise(exercise.exercise);
+                                            const currentType = exercise.duration_type
+                                              ?? (isCardio ? "minutes" : "reps");
+                                            const valueLabel =
+                                              currentType === "reps"
+                                                ? "Reps"
+                                                : currentType === "seconds"
+                                                  ? "Segundos"
+                                                  : currentType === "distance"
+                                                    ? "Km"
+                                                    : "Minutos";
+                                            const valuePlaceholder =
+                                              currentType === "reps"
+                                                ? "Ej: 8-12"
+                                                : currentType === "seconds"
+                                                  ? "Ej: 30"
+                                                  : currentType === "distance"
+                                                    ? "Ej: 5"
+                                                    : "Ej: 20";
+                                            const gridCols = isMobile
+                                              ? 2
+                                              : isCardio
+                                                ? 5
+                                                : 6;
+                                            return (
+                                          <SimpleGrid cols={gridCols} spacing="xs" verticalSpacing="xs">
                                             <NumberInput
-                                              label="Series"
+                                              label={isCardio ? "Bloques" : "Series"}
                                               leftSection={<IconRepeat size={12} />}
                                               max={20}
                                               min={1}
@@ -812,26 +871,24 @@ export function WorkoutBuilder({
                                             />
                                             <Select
                                               label="Tipo"
-                                              data={DURATION_TYPE_OPTIONS}
-                                              value={exercise.duration_type ?? "reps"}
+                                              data={isCardio ? CARDIO_DURATION_TYPE_OPTIONS : DURATION_TYPE_OPTIONS}
+                                              value={currentType}
                                               onChange={(v) =>
                                                 updateExercise(
                                                   block.id,
                                                   exercise.id,
-                                                  { duration_type: (v as "reps" | "seconds" | "minutes") ?? "reps" }
+                                                  {
+                                                    duration_type:
+                                                      ((v as "reps" | "seconds" | "minutes" | "distance") ??
+                                                        (isCardio ? "minutes" : "reps")),
+                                                  }
                                                 )
                                               }
                                               size="xs"
                                               styles={{ input: { minHeight: 32 } }}
                                             />
                                             <TextInput
-                                              label={
-                                                (exercise.duration_type ?? "reps") === "reps"
-                                                  ? "Reps"
-                                                  : (exercise.duration_type ?? "reps") === "seconds"
-                                                    ? "Segundos"
-                                                    : "Minutos"
-                                              }
+                                              label={valueLabel}
                                               onChange={(e) =>
                                                 updateExercise(
                                                   block.id,
@@ -839,7 +896,7 @@ export function WorkoutBuilder({
                                                   { reps: e.target.value }
                                                 )
                                               }
-                                              placeholder="Ej: 8-12"
+                                              placeholder={valuePlaceholder}
                                               size="xs"
                                               value={exercise.reps}
                                               styles={{ input: { minHeight: 32 } }}
@@ -862,24 +919,26 @@ export function WorkoutBuilder({
                                               value={exercise.rest_seconds}
                                               styles={{ input: { minHeight: 32 } }}
                                             />
-                                            <NumberInput
-                                              label="Peso obj."
-                                              leftSection={<IconWeight size={12} />}
-                                              min={0}
-                                              max={500}
-                                              step={0.5}
-                                              size="xs"
-                                              value={exercise.target_weight ?? ""}
-                                              onChange={(v) =>
-                                                updateExerciseDebounced(
-                                                  block.id,
-                                                  exercise.id,
-                                                  { target_weight: v ? Number(v) : undefined }
-                                                )
-                                              }
-                                              suffix="kg"
-                                              styles={{ input: { minHeight: 32 } }}
-                                            />
+                                            {!isCardio && (
+                                              <NumberInput
+                                                label="Peso obj."
+                                                leftSection={<IconWeight size={12} />}
+                                                min={0}
+                                                max={500}
+                                                step={0.5}
+                                                size="xs"
+                                                value={exercise.target_weight ?? ""}
+                                                onChange={(v) =>
+                                                  updateExerciseDebounced(
+                                                    block.id,
+                                                    exercise.id,
+                                                    { target_weight: v ? Number(v) : undefined }
+                                                  )
+                                                }
+                                                suffix="kg"
+                                                styles={{ input: { minHeight: 32 } }}
+                                              />
+                                            )}
                                             <Group gap="xs" align="end">
                                               <ActionIcon
                                                 color="red"
@@ -896,6 +955,8 @@ export function WorkoutBuilder({
                                               </ActionIcon>
                                             </Group>
                                           </SimpleGrid>
+                                            );
+                                          })()}
                                           <SimpleGrid cols={isMobile ? 1 : 2} spacing="xs" mt={4}>
                                             <TextInput
                                               label="URL Vídeo"
@@ -1071,31 +1132,16 @@ export function WorkoutBuilder({
               <Tabs.Tab value="favorites" leftSection={<IconStarFilled size={14} />}>
                 Favoritos
               </Tabs.Tab>
-              {/* Categorías según el tipo de bloque */}
-              {blockType === "warmup" && (
-                <Tabs.Tab value="calentamiento" leftSection={<IconFlame size={14} />}>
-                  Calentamiento
-                </Tabs.Tab>
-              )}
-              {blockType === "cooldown" && (
-                <Tabs.Tab value="estiramiento" leftSection={<IconStretching size={14} />}>
-                  Estiramiento
-                </Tabs.Tab>
-              )}
-              {blockType !== "warmup" && blockType !== "cooldown" && (
-                <>
-                  <Tabs.Tab value="calentamiento" leftSection={<IconFlame size={14} />}>
-                    Calentamiento
-                  </Tabs.Tab>
-                  <Tabs.Tab value="estiramiento" leftSection={<IconStretching size={14} />}>
-                    Estiramiento
-                  </Tabs.Tab>
-                  <Tabs.Tab value="fuerza">Fuerza</Tabs.Tab>
-                  <Tabs.Tab value="cardio">Cardio</Tabs.Tab>
-                  <Tabs.Tab value="core">Core</Tabs.Tab>
-                  <Tabs.Tab value="flexibilidad">Flexibilidad</Tabs.Tab>
-                </>
-              )}
+              <Tabs.Tab value="calentamiento" leftSection={<IconFlame size={14} />}>
+                Calentamiento
+              </Tabs.Tab>
+              <Tabs.Tab value="estiramiento" leftSection={<IconStretching size={14} />}>
+                Estiramiento
+              </Tabs.Tab>
+              <Tabs.Tab value="fuerza">Fuerza</Tabs.Tab>
+              <Tabs.Tab value="cardio">Cardio</Tabs.Tab>
+              <Tabs.Tab value="core">Core</Tabs.Tab>
+              <Tabs.Tab value="flexibilidad">Flexibilidad</Tabs.Tab>
             </Tabs.List>
           </Tabs>
         </Stack>
@@ -1184,14 +1230,9 @@ export function WorkoutBuilder({
             })}
             {filteredExercises.length === 0 && (
               <Text c="dimmed" py="xl" ta="center">
-                {blockType === "warmup" 
-                  ? "No se encontraron ejercicios de calentamiento. Crea algunos en Entrenamientos > Calentamiento."
-                  : blockType === "cooldown"
-                    ? "No se encontraron estiramientos. Crea algunos en Entrenamientos > Estiramientos."
-                    : exerciseFilter === "favorites"
-                      ? "No tienes ejercicios favoritos. Marca algunos con la estrella."
-                      : "No se encontraron ejercicios"
-                }
+                {exerciseFilter === "favorites"
+                  ? "No tienes ejercicios favoritos. Marca algunos con la estrella."
+                  : "No se encontraron ejercicios"}
               </Text>
             )}
           </Stack>

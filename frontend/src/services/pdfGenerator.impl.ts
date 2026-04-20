@@ -103,7 +103,7 @@ interface WorkoutExercise {
   sets: number;
   reps: string;
   rest_seconds: number;
-  duration_type?: "reps" | "seconds" | "minutes";
+  duration_type?: "reps" | "seconds" | "minutes" | "distance";
   notes?: string;
   km?: number;
   duration_minutes?: number;

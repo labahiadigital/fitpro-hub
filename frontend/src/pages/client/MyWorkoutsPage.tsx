@@ -1883,7 +1883,13 @@ export function MyWorkoutsPage() {
                             <Group gap={6} mt={2} wrap="wrap">
                               <Badge variant="light" color="blue" size="xs">
                                 {exercise.sets || 3} x {exercise.reps || "10-12"}
-                                {exercise.duration_type === "seconds" ? " seg" : exercise.duration_type === "minutes" ? " min" : ""}
+                                {exercise.duration_type === "seconds"
+                                  ? " seg"
+                                  : exercise.duration_type === "minutes"
+                                    ? " min"
+                                    : exercise.duration_type === "distance"
+                                      ? " km"
+                                      : ""}
                               </Badge>
                               {exercise.target_weight && (
                                 <Badge variant="light" color="yellow" size="xs">{exercise.target_weight}kg</Badge>
