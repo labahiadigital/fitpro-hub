@@ -357,7 +357,7 @@ export function WorkoutsPage() {
     toggleExerciseFavorite.mutate({ exerciseId, isFavorite });
   }, [toggleExerciseFavorite]);
 
-  const handleCreateExerciseFromBuilder = useCallback(async (data: { name: string; category?: string; muscle_groups: string[]; equipment: string[]; difficulty: string; description?: string }) => {
+  const handleCreateExerciseFromBuilder = useCallback(async (data: { name: string; category?: string; muscle_groups: string[]; equipment: string[]; difficulty: string; description?: string; image_url?: string; video_url?: string }) => {
     const res = await createExercise.mutateAsync(data);
     return res.data;
   }, [createExercise]);
@@ -511,6 +511,9 @@ export function WorkoutsPage() {
           order: ex.order,
           target_weight: ex.target_weight,
           target_reps: ex.target_reps,
+          target_duration_minutes: ex.target_duration_minutes,
+          target_distance_km: ex.target_distance_km,
+          target_speed_kmh: ex.target_speed_kmh,
         })) || [],
       })),
     }));
@@ -540,6 +543,9 @@ export function WorkoutsPage() {
           order: ex.order,
           target_weight: ex.target_weight,
           target_reps: ex.target_reps,
+          target_duration_minutes: ex.target_duration_minutes,
+          target_distance_km: ex.target_distance_km,
+          target_speed_kmh: ex.target_speed_kmh,
         })) || [],
       }))
     ),

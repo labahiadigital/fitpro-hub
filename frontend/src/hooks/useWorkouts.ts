@@ -29,6 +29,10 @@ interface WorkoutExercise {
   duration_type?: "reps" | "seconds" | "minutes" | "distance";
   notes?: string;
   order?: number;
+  target_weight?: number;
+  target_duration_minutes?: number;
+  target_distance_km?: number;
+  target_speed_kmh?: number;
 }
 
 interface WorkoutBlock {

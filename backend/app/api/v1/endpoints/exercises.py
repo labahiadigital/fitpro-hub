@@ -1,13 +1,13 @@
 """Exercise library endpoints - simplified to match actual DB schema."""
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, String
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.storage import resolve_url
+from app.core.storage import generate_filename, resolve_url, upload_workspace_file
 from app.middleware.auth import get_current_user, require_workspace, require_staff, CurrentUser
 from app.models.exercise import Exercise, ExerciseAlternative, ExerciseFavorite
 from app.models.user import User
@@ -201,6 +201,51 @@ async def seed_exercises(
 
     await db.commit()
     return {"message": f"Seeded {created} exercises", "created": created}
+
+
+@router.post("/upload-image")
+async def upload_exercise_image(
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(require_staff),
+):
+    """Upload a custom image for an exercise and return the stored URL.
+
+    The image is saved to the workspace bucket (not the global platform
+    bucket) because custom exercises belong to the workspace that created
+    them. The returned `image_url` can then be persisted via
+    `POST /exercises` or `PUT /exercises/{id}`.
+    """
+    if not current_user.workspace_id:
+        raise HTTPException(status_code=400, detail="Workspace required")
+
+    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tipo de archivo no permitido. Usa JPEG, PNG, WebP o GIF.",
+        )
+
+    content = await file.read()
+    if len(content) > 8 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La imagen no puede superar los 8 MB.",
+        )
+
+    filename = generate_filename(file.filename)
+    try:
+        public_url = await upload_workspace_file(
+            content,
+            current_user.workspace_id,
+            "exercises",
+            filename,
+            content_type=file.content_type or "image/jpeg",
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al subir la imagen")
+
+    presigned = await resolve_url(public_url)
+    return {"image_url": public_url, "url": presigned}
 
 
 @router.get("/{exercise_id}", response_model=ExerciseResponse)

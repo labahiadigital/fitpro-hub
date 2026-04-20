@@ -2,7 +2,9 @@
 Email service using Brevo (formerly Sendinblue)
 """
 import asyncio
+import html as html_mod
 import logging
+import re
 from typing import List, Optional, Dict, Any
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
@@ -12,6 +14,22 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _html_to_text(html: str) -> str:
+    """Very small HTML->text fallback to include a text/plain part.
+
+    Outlook/Hotmail deliverability mejora sustancialmente cuando el email
+    lleva una versión de texto plano además del HTML.
+    """
+    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", html, flags=re.S | re.I)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.I)
+    text = re.sub(r"</p\s*>", "\n\n", text, flags=re.I)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = html_mod.unescape(text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
 class EmailService:
     def __init__(self):
         self.configuration = sib_api_v3_sdk.Configuration()
@@ -19,7 +37,7 @@ class EmailService:
         self.api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
             sib_api_v3_sdk.ApiClient(self.configuration)
         )
-    
+
     async def send_email(
         self,
         to_email: str,
@@ -32,26 +50,73 @@ class EmailService:
     ) -> bool:
         """
         Send a transactional email using Brevo.
+
+        Añade mejoras de deliverability recomendadas para Gmail, Outlook y
+        Hotmail:
+          - Versión `text_content` (plain-text) generada desde el HTML si no
+            se proporciona, para que el email tenga las dos partes MIME.
+          - Cabecera `List-Unsubscribe` y `List-Unsubscribe-Post` (requisito
+            de Gmail/Yahoo 2024 y muy recomendado por Outlook/Hotmail).
+          - Cabecera `X-Entity-Ref-ID` para facilitar el tracking.
+          - Logging detallado del body que devuelve Brevo cuando falla el
+            envío (útil para diagnosticar dominios sin DKIM/SPF).
         """
+        if not settings.BREVO_API_KEY:
+            logger.error(
+                "BREVO_API_KEY no configurada; no se envía email a %s (subject=%r)",
+                to_email,
+                subject,
+            )
+            return False
+
         try:
+            text = text_content or _html_to_text(html_content)
+
+            unsubscribe_url = (
+                f"{settings.FRONTEND_URL.rstrip('/')}/unsubscribe?email={to_email}"
+                if getattr(settings, "FRONTEND_URL", None)
+                else None
+            )
+            headers: Dict[str, str] = {}
+            if unsubscribe_url:
+                headers["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+                headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+            headers["X-Mailer"] = "Trackfiz"
+
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-                to=[{"email": to_email, "name": to_name}],
+                to=[{"email": to_email, "name": to_name or to_email}],
                 sender={"email": settings.FROM_EMAIL, "name": settings.FROM_NAME},
                 subject=subject,
                 html_content=html_content,
-                text_content=text_content,
-                reply_to={"email": reply_to} if reply_to else None,
+                text_content=text,
+                reply_to={"email": reply_to or settings.FROM_EMAIL},
                 attachment=attachments,
+                headers=headers or None,
             )
-            
+
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(
                 None, self.api_instance.send_transac_email, send_smtp_email
             )
+            logger.info(
+                "Email enviado via Brevo to=%s subject=%r from=%s",
+                to_email,
+                subject,
+                settings.FROM_EMAIL,
+            )
             return True
-            
+
         except ApiException as e:
-            logger.error("Error sending email to %s: %s", to_email, e)
+            logger.error(
+                "Brevo ApiException to=%s status=%s reason=%s body=%s",
+                to_email,
+                getattr(e, "status", "?"),
+                getattr(e, "reason", "?"),
+                getattr(e, "body", "?"),
+            )
+            return False
+        except Exception:
+            logger.exception("Error inesperado enviando email a %s", to_email)
             return False
     
     async def send_template_email(

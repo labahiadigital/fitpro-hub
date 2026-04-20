@@ -52,11 +52,16 @@ import {
   IconWeight,
   IconPlayerPlay,
   IconInfoCircle,
+  IconPhoto,
+  IconUpload,
+  IconVideo,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { notifications } from "@mantine/notifications";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
 import { useAlternativesCounts } from "../../hooks/useExercises";
+import { api } from "../../services/api";
 
 // Standardized muscle groups and equipment - exported for reuse
 // Values match the actual data in the exercises table
@@ -102,15 +107,6 @@ const DURATION_TYPE_OPTIONS = [
   { value: "reps", label: "Repeticiones" },
   { value: "seconds", label: "Segundos" },
   { value: "minutes", label: "Minutos" },
-  { value: "distance", label: "Km" },
-];
-
-// Opciones específicas para ejercicios cardio (bici, cinta, elíptica, remo,
-// correr, etc.): no tiene sentido medir en repeticiones, sólo en tiempo o
-// distancia recorrida.
-const CARDIO_DURATION_TYPE_OPTIONS = [
-  { value: "minutes", label: "Minutos" },
-  { value: "seconds", label: "Segundos" },
   { value: "distance", label: "Km" },
 ];
 
@@ -162,6 +158,13 @@ interface WorkoutExercise {
   order: number;
   target_weight?: number;
   target_reps?: number;
+  // Targets para ejercicios de cardio (bici, cinta, eliptica, remo, correr,
+  // etc.). Se muestran al cliente con la misma estructura que usa el log
+  // (#, Min, Km, Km/h) para que los valores cuadren entre el plan y el
+  // registro del entrenamiento.
+  target_duration_minutes?: number;
+  target_distance_km?: number;
+  target_speed_kmh?: number;
 }
 
 interface WorkoutBlock {
@@ -197,6 +200,8 @@ interface WorkoutBuilderProps {
     equipment: string[];
     difficulty: string;
     description?: string;
+    image_url?: string;
+    video_url?: string;
   }) => Promise<Exercise>;
   alternativesCounts?: Record<string, number>;
 }
@@ -216,6 +221,8 @@ interface WorkoutBuilderWithDaysProps {
     equipment: string[];
     difficulty: string;
     description?: string;
+    image_url?: string;
+    video_url?: string;
   }) => Promise<Exercise>;
   startDate?: string | Date | null;
   totalWeeks?: number;
@@ -284,11 +291,15 @@ export function WorkoutBuilder({
       equipment: [] as string[],
       difficulty: "intermediate" as string,
       description: "",
+      image_url: "",
+      video_url: "",
     },
     validate: {
       name: (v: string) => (v.trim().length < 2 ? "Nombre requerido (mín. 2 caracteres)" : null),
     },
   });
+  const [uploadingExerciseImage, setUploadingExerciseImage] = useState(false);
+  const exerciseImageInputRef = useRef<HTMLInputElement>(null);
   
   const exerciseFavoritesSet = useMemo(() => new Set(exerciseFavorites), [exerciseFavorites]);
   const isExerciseFavorite = (exerciseId: string) => exerciseFavoritesSet.has(exerciseId);
@@ -424,16 +435,38 @@ export function WorkoutBuilder({
       exercise_id: exercise.id,
       exercise,
       sets: cardio ? 1 : 3,
-      reps: cardio ? "20" : "10-12",
+      reps: cardio ? "" : "10-12",
       rest_seconds: cardio ? 0 : 60,
       duration_type: cardio ? "minutes" : "reps",
       order: block.exercises.length,
+      target_duration_minutes: cardio ? 20 : undefined,
     };
 
     updateBlock(selectedBlockId, {
       exercises: [...block.exercises, newExercise],
     });
     closeExerciseModal();
+  };
+
+  const handleUploadExerciseImage = async (file: File) => {
+    setUploadingExerciseImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post<{ image_url: string; url: string }>(
+        "/exercises/upload-image",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      createExerciseForm.setFieldValue("image_url", res.data.image_url);
+      notifications.show({ color: "green", message: "Imagen subida" });
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      notifications.show({ color: "red", message: detail || "No se pudo subir la imagen" });
+    } finally {
+      setUploadingExerciseImage(false);
+      if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = "";
+    }
   };
 
   const handleCreateExercise = async () => {
@@ -447,6 +480,8 @@ export function WorkoutBuilder({
         equipment: values.equipment,
         difficulty: values.difficulty,
         description: values.description.trim() || undefined,
+        image_url: values.image_url.trim() || undefined,
+        video_url: values.video_url.trim() || undefined,
       });
       closeCreateExerciseModal();
       createExerciseForm.reset();
@@ -828,8 +863,116 @@ export function WorkoutBuilder({
 
                                           {(() => {
                                             const isCardio = isCardioExercise(exercise.exercise);
-                                            const currentType = exercise.duration_type
-                                              ?? (isCardio ? "minutes" : "reps");
+                                            if (isCardio) {
+                                              return (
+                                                <SimpleGrid cols={isMobile ? 2 : 6} spacing="xs" verticalSpacing="xs">
+                                                  <NumberInput
+                                                    label="Bloques"
+                                                    leftSection={<IconRepeat size={12} />}
+                                                    max={20}
+                                                    min={1}
+                                                    onChange={(v) =>
+                                                      updateExerciseDebounced(
+                                                        block.id,
+                                                        exercise.id,
+                                                        { sets: Number(v) }
+                                                      )
+                                                    }
+                                                    size="xs"
+                                                    value={exercise.sets}
+                                                    styles={{ input: { minHeight: 32 } }}
+                                                  />
+                                                  <NumberInput
+                                                    label="Min"
+                                                    leftSection={<IconClock size={12} />}
+                                                    min={0}
+                                                    max={300}
+                                                    step={1}
+                                                    size="xs"
+                                                    placeholder="20"
+                                                    value={exercise.target_duration_minutes ?? ""}
+                                                    onChange={(v) =>
+                                                      updateExerciseDebounced(
+                                                        block.id,
+                                                        exercise.id,
+                                                        { target_duration_minutes: v === "" ? undefined : Number(v) }
+                                                      )
+                                                    }
+                                                    styles={{ input: { minHeight: 32 } }}
+                                                  />
+                                                  <NumberInput
+                                                    label="Km"
+                                                    min={0}
+                                                    max={500}
+                                                    step={0.1}
+                                                    decimalScale={2}
+                                                    size="xs"
+                                                    placeholder="5"
+                                                    value={exercise.target_distance_km ?? ""}
+                                                    onChange={(v) =>
+                                                      updateExerciseDebounced(
+                                                        block.id,
+                                                        exercise.id,
+                                                        { target_distance_km: v === "" ? undefined : Number(v) }
+                                                      )
+                                                    }
+                                                    styles={{ input: { minHeight: 32 } }}
+                                                  />
+                                                  <NumberInput
+                                                    label="Km/h"
+                                                    min={0}
+                                                    max={60}
+                                                    step={0.1}
+                                                    decimalScale={2}
+                                                    size="xs"
+                                                    placeholder="8"
+                                                    value={exercise.target_speed_kmh ?? ""}
+                                                    onChange={(v) =>
+                                                      updateExerciseDebounced(
+                                                        block.id,
+                                                        exercise.id,
+                                                        { target_speed_kmh: v === "" ? undefined : Number(v) }
+                                                      )
+                                                    }
+                                                    styles={{ input: { minHeight: 32 } }}
+                                                  />
+                                                  <NumberInput
+                                                    label="Descanso"
+                                                    leftSection={<IconClock size={12} />}
+                                                    max={600}
+                                                    min={0}
+                                                    onChange={(v) =>
+                                                      updateExerciseDebounced(
+                                                        block.id,
+                                                        exercise.id,
+                                                        { rest_seconds: Number(v) }
+                                                      )
+                                                    }
+                                                    size="xs"
+                                                    step={15}
+                                                    suffix="s"
+                                                    value={exercise.rest_seconds}
+                                                    styles={{ input: { minHeight: 32 } }}
+                                                  />
+                                                  <Group gap="xs" align="end">
+                                                    <ActionIcon
+                                                      color="red"
+                                                      onClick={() =>
+                                                        removeExercise(
+                                                          block.id,
+                                                          exercise.id
+                                                        )
+                                                      }
+                                                      size="sm"
+                                                      variant="subtle"
+                                                    >
+                                                      <IconTrash size={14} />
+                                                    </ActionIcon>
+                                                  </Group>
+                                                </SimpleGrid>
+                                              );
+                                            }
+                                            const currentType = exercise.duration_type ?? "reps";
                                             const valueLabel =
                                               currentType === "reps"
                                                 ? "Reps"
@@ -846,115 +989,107 @@ export function WorkoutBuilder({
                                                   : currentType === "distance"
                                                     ? "Ej: 5"
                                                     : "Ej: 20";
-                                            const gridCols = isMobile
-                                              ? 2
-                                              : isCardio
-                                                ? 5
-                                                : 6;
                                             return (
-                                          <SimpleGrid cols={gridCols} spacing="xs" verticalSpacing="xs">
-                                            <NumberInput
-                                              label={isCardio ? "Bloques" : "Series"}
-                                              leftSection={<IconRepeat size={12} />}
-                                              max={20}
-                                              min={1}
-                                              onChange={(v) =>
-                                                updateExerciseDebounced(
-                                                  block.id,
-                                                  exercise.id,
-                                                  { sets: Number(v) }
-                                                )
-                                              }
-                                              size="xs"
-                                              value={exercise.sets}
-                                              styles={{ input: { minHeight: 32 } }}
-                                            />
-                                            <Select
-                                              label="Tipo"
-                                              data={isCardio ? CARDIO_DURATION_TYPE_OPTIONS : DURATION_TYPE_OPTIONS}
-                                              value={currentType}
-                                              onChange={(v) =>
-                                                updateExercise(
-                                                  block.id,
-                                                  exercise.id,
-                                                  {
-                                                    duration_type:
-                                                      ((v as "reps" | "seconds" | "minutes" | "distance") ??
-                                                        (isCardio ? "minutes" : "reps")),
+                                              <SimpleGrid cols={isMobile ? 2 : 6} spacing="xs" verticalSpacing="xs">
+                                                <NumberInput
+                                                  label="Series"
+                                                  leftSection={<IconRepeat size={12} />}
+                                                  max={20}
+                                                  min={1}
+                                                  onChange={(v) =>
+                                                    updateExerciseDebounced(
+                                                      block.id,
+                                                      exercise.id,
+                                                      { sets: Number(v) }
+                                                    )
                                                   }
-                                                )
-                                              }
-                                              size="xs"
-                                              styles={{ input: { minHeight: 32 } }}
-                                            />
-                                            <TextInput
-                                              label={valueLabel}
-                                              onChange={(e) =>
-                                                updateExercise(
-                                                  block.id,
-                                                  exercise.id,
-                                                  { reps: e.target.value }
-                                                )
-                                              }
-                                              placeholder={valuePlaceholder}
-                                              size="xs"
-                                              value={exercise.reps}
-                                              styles={{ input: { minHeight: 32 } }}
-                                            />
-                                            <NumberInput
-                                              label="Descanso"
-                                              leftSection={<IconClock size={12} />}
-                                              max={300}
-                                              min={0}
-                                              onChange={(v) =>
-                                                updateExerciseDebounced(
-                                                  block.id,
-                                                  exercise.id,
-                                                  { rest_seconds: Number(v) }
-                                                )
-                                              }
-                                              size="xs"
-                                              step={15}
-                                              suffix="s"
-                                              value={exercise.rest_seconds}
-                                              styles={{ input: { minHeight: 32 } }}
-                                            />
-                                            {!isCardio && (
-                                              <NumberInput
-                                                label="Peso obj."
-                                                leftSection={<IconWeight size={12} />}
-                                                min={0}
-                                                max={500}
-                                                step={0.5}
-                                                size="xs"
-                                                value={exercise.target_weight ?? ""}
-                                                onChange={(v) =>
-                                                  updateExerciseDebounced(
-                                                    block.id,
-                                                    exercise.id,
-                                                    { target_weight: v ? Number(v) : undefined }
-                                                  )
-                                                }
-                                                suffix="kg"
-                                                styles={{ input: { minHeight: 32 } }}
-                                              />
-                                            )}
-                                            <Group gap="xs" align="end">
-                                              <ActionIcon
-                                                color="red"
-                                                onClick={() =>
-                                                  removeExercise(
-                                                    block.id,
-                                                    exercise.id
-                                                  )
-                                                }
-                                                size="sm"
-                                                variant="subtle"
-                                              >
-                                                <IconTrash size={14} />
-                                              </ActionIcon>
-                                            </Group>
-                                          </SimpleGrid>
+                                                  size="xs"
+                                                  value={exercise.sets}
+                                                  styles={{ input: { minHeight: 32 } }}
+                                                />
+                                                <Select
+                                                  label="Tipo"
+                                                  data={DURATION_TYPE_OPTIONS}
+                                                  value={currentType}
+                                                  onChange={(v) =>
+                                                    updateExercise(
+                                                      block.id,
+                                                      exercise.id,
+                                                      {
+                                                        duration_type:
+                                                          ((v as "reps" | "seconds" | "minutes" | "distance") ?? "reps"),
+                                                      }
+                                                    )
+                                                  }
+                                                  size="xs"
+                                                  styles={{ input: { minHeight: 32 } }}
+                                                />
+                                                <TextInput
+                                                  label={valueLabel}
+                                                  onChange={(e) =>
+                                                    updateExercise(
+                                                      block.id,
+                                                      exercise.id,
+                                                      { reps: e.target.value }
+                                                    )
+                                                  }
+                                                  placeholder={valuePlaceholder}
+                                                  size="xs"
+                                                  value={exercise.reps}
+                                                  styles={{ input: { minHeight: 32 } }}
+                                                />
+                                                <NumberInput
+                                                  label="Descanso"
+                                                  leftSection={<IconClock size={12} />}
+                                                  max={300}
+                                                  min={0}
+                                                  onChange={(v) =>
+                                                    updateExerciseDebounced(
+                                                      block.id,
+                                                      exercise.id,
+                                                      { rest_seconds: Number(v) }
+                                                    )
+                                                  }
+                                                  size="xs"
+                                                  step={15}
+                                                  suffix="s"
+                                                  value={exercise.rest_seconds}
+                                                  styles={{ input: { minHeight: 32 } }}
+                                                />
+                                                <NumberInput
+                                                  label="Peso obj."
+                                                  leftSection={<IconWeight size={12} />}
+                                                  min={0}
+                                                  max={500}
+                                                  step={0.5}
+                                                  size="xs"
+                                                  value={exercise.target_weight ?? ""}
+                                                  onChange={(v) =>
+                                                    updateExerciseDebounced(
+                                                      block.id,
+                                                      exercise.id,
+                                                      { target_weight: v ? Number(v) : undefined }
+                                                    )
+                                                  }
+                                                  suffix="kg"
+                                                  styles={{ input: { minHeight: 32 } }}
+                                                />
+                                                <Group gap="xs" align="end">
+                                                  <ActionIcon
+                                                    color="red"
+                                                    onClick={() =>
+                                                      removeExercise(
+                                                        block.id,
+                                                        exercise.id
+                                                      )
+                                                    }
+                                                    size="sm"
+                                                    variant="subtle"
+                                                  >
+                                                    <IconTrash size={14} />
+                                                  </ActionIcon>
+                                                </Group>
+                                              </SimpleGrid>
                                             );
                                           })()}
                                           <SimpleGrid cols={isMobile ? 1 : 2} spacing="xs" mt={4}>
@@ -1304,6 +1439,54 @@ export function WorkoutBuilder({
               minRows={2}
               {...createExerciseForm.getInputProps("description")}
             />
+
+            <Stack gap={4}>
+              <Text size="sm" fw={500}>Imagen</Text>
+              <Group gap="xs" align="flex-end" wrap="nowrap">
+                <TextInput
+                  placeholder="URL de la imagen o súbela con el botón"
+                  leftSection={<IconPhoto size={14} />}
+                  style={{ flex: 1 }}
+                  {...createExerciseForm.getInputProps("image_url")}
+                />
+                <Button
+                  variant="light"
+                  leftSection={<IconUpload size={14} />}
+                  loading={uploadingExerciseImage}
+                  onClick={() => exerciseImageInputRef.current?.click()}
+                >
+                  Subir
+                </Button>
+                <input
+                  ref={exerciseImageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadExerciseImage(f);
+                  }}
+                />
+              </Group>
+              {createExerciseForm.values.image_url && (
+                <Image
+                  src={createExerciseForm.values.image_url}
+                  alt="preview"
+                  fit="cover"
+                  h={120}
+                  radius="sm"
+                  mt={4}
+                />
+              )}
+            </Stack>
+
+            <TextInput
+              label="Vídeo (URL)"
+              placeholder="https://youtube.com/... o https://..."
+              leftSection={<IconVideo size={14} />}
+              {...createExerciseForm.getInputProps("video_url")}
+            />
+
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={() => { closeCreateExerciseModal(); createExerciseForm.reset(); }}>
                 Cancelar

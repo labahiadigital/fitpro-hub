@@ -260,6 +260,9 @@ interface ExerciseForLog {
   reps: string;
   target_weight?: number;
   target_reps?: number;
+  target_duration_minutes?: number;
+  target_distance_km?: number;
+  target_speed_kmh?: number;
   rest_seconds?: number;
   video_url?: string;
   prefillSets?: Array<{ weight_kg?: number; reps_completed?: number; completed?: boolean }>;
@@ -401,7 +404,14 @@ function ExerciseLogRow({
               {exercise.rest_seconds >= 60 ? `${Math.floor(exercise.rest_seconds / 60)}:${String(exercise.rest_seconds % 60).padStart(2, "0")}` : `${exercise.rest_seconds}s`} descanso
             </Badge>
           )}
-          {(exercise.target_weight != null || exercise.target_reps != null) && (
+          {cardio && (exercise.target_duration_minutes != null || exercise.target_distance_km != null || exercise.target_speed_kmh != null) && (
+            <Badge variant="light" color="yellow" size="xs">
+              Obj:{exercise.target_duration_minutes != null ? ` ${exercise.target_duration_minutes}min` : ""}
+              {exercise.target_distance_km != null ? ` · ${exercise.target_distance_km}km` : ""}
+              {exercise.target_speed_kmh != null ? ` · ${exercise.target_speed_kmh}km/h` : ""}
+            </Badge>
+          )}
+          {!cardio && (exercise.target_weight != null || exercise.target_reps != null) && (
             <Badge variant="light" color="yellow" size="xs">
               Obj: {exercise.target_weight ?? "—"}kg x {exercise.target_reps ?? exercise.reps ?? "—"}
             </Badge>
@@ -1434,7 +1444,7 @@ export function MyWorkoutsPage() {
   const isTodayRestDay = todayWorkoutDay?.isRestDay ?? false;
   
   // Flatten all exercises from today's blocks (with exercise_id for history/targets)
-  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; target_weight?: number; target_reps?: number }> }) => 
+  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; target_weight?: number; target_reps?: number; target_duration_minutes?: number; target_distance_km?: number; target_speed_kmh?: number }> }) =>
     (block.exercises || []).map(ex => ({
       exercise_id: ex.exercise_id || ex.exercise?.id || "",
       name: ex.exercise?.name || ex.name || "Ejercicio",
@@ -1442,6 +1452,9 @@ export function MyWorkoutsPage() {
       reps: ex.reps || "10-12",
       target_weight: ex.target_weight,
       target_reps: ex.target_reps,
+      target_duration_minutes: ex.target_duration_minutes,
+      target_distance_km: ex.target_distance_km,
+      target_speed_kmh: ex.target_speed_kmh,
       rest_seconds: ex.rest_seconds,
       video_url: ex.video_url || ex.exercise?.video_url,
     }))

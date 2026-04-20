@@ -108,6 +108,9 @@ interface WorkoutExercise {
   km?: number;
   duration_minutes?: number;
   speed?: number;
+  target_duration_minutes?: number;
+  target_distance_km?: number;
+  target_speed_kmh?: number;
 }
 
 interface WorkoutBlock {
@@ -1052,9 +1055,9 @@ function renderWorkoutSection(doc: jsPDF, workoutProgram: WorkoutProgramData, ex
           `${ex.sets}`,
           typeof ex.reps === "string" ? ex.reps : `${ex.reps}`,
           `${ex.rest_seconds}s`,
-          isCardio && ex.km ? `${ex.km}` : "",
-          isCardio && ex.duration_minutes ? `${ex.duration_minutes}'` : "",
-          isCardio && ex.speed ? `${ex.speed}` : "",
+          isCardio ? ((ex.target_distance_km ?? ex.km) != null ? `${ex.target_distance_km ?? ex.km}` : "") : "",
+          isCardio ? ((ex.target_duration_minutes ?? ex.duration_minutes) != null ? `${ex.target_duration_minutes ?? ex.duration_minutes}'` : "") : "",
+          isCardio ? ((ex.target_speed_kmh ?? ex.speed) != null ? `${ex.target_speed_kmh ?? ex.speed}` : "") : "",
           ex.exercise?.video_url ? { content: "Ver", styles: { textColor: [59, 130, 246] } } : "",
         ]);
       }
