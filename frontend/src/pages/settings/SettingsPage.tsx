@@ -77,6 +77,7 @@ import {
   openWhatsAppSetupPopup,
   useConnectWhatsApp,
   useDisconnectWhatsApp,
+  useSyncWhatsApp,
   useWhatsAppStatus,
 } from "../../hooks/useWhatsApp";
 import {
@@ -275,6 +276,7 @@ export function SettingsPage() {
   });
   const connectWhatsApp = useConnectWhatsApp();
   const disconnectWhatsApp = useDisconnectWhatsApp();
+  const syncWhatsApp = useSyncWhatsApp();
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Google Calendar integration
@@ -297,11 +299,12 @@ export function SettingsPage() {
     if (setupResult === "success") {
       notifications.show({
         title: "WhatsApp conectado",
-        message: "Tu cuenta de WhatsApp Business ha sido conectada correctamente",
+        message: "Estamos sincronizando con Kapso, un momento…",
         color: "green",
         icon: <IconCheck size={16} />,
       });
       setIsConnecting(false);
+      syncWhatsApp.mutate();
     } else if (setupResult === "failed") {
       notifications.show({
         title: "Error de conexión",
@@ -310,6 +313,9 @@ export function SettingsPage() {
       });
       setIsConnecting(false);
     }
+    // Nota: syncWhatsApp.mutate es estable con react-query, no hace falta
+    // añadirlo al array de dependencias y evita loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Handle Google Calendar OAuth callback

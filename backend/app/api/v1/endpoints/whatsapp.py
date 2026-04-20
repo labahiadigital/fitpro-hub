@@ -91,6 +91,97 @@ class KapsoWebhookMessageStatus(BaseModel):
 
 # ============ ENDPOINTS ============
 
+async def _reconcile_whatsapp_from_kapso(
+    workspace: Workspace,
+    db: AsyncSession,
+) -> dict:
+    """
+    Fallback de reconciliación: si el webhook ``whatsapp.phone_number.created``
+    no llegó (porque el proyecto en Kapso no tiene webhook configurado o por
+    cualquier otra razón), consultamos Kapso directamente usando el
+    ``kapso_customer_id`` que guardamos cuando generamos el setup link.
+
+    Si encontramos un número ``CONNECTED`` (preferimos el que no es sandbox y
+    el más reciente) persistimos la información en ``workspace.settings.whatsapp``
+    y devolvemos la configuración actualizada.
+
+    Si no hay nada que actualizar, devuelve la config actual sin tocar nada.
+    """
+    whatsapp_config = dict(workspace.settings.get("whatsapp", {})) if workspace.settings else {}
+    kapso_customer_id = whatsapp_config.get("kapso_customer_id")
+
+    if whatsapp_config.get("enabled") or not kapso_customer_id:
+        return whatsapp_config
+
+    try:
+        phone_numbers = await kapso_service.get_phone_numbers(customer_id=kapso_customer_id)
+    except KapsoError as exc:
+        logger.warning(
+            "Kapso sync falló para workspace %s (customer %s): %s",
+            workspace.id,
+            kapso_customer_id,
+            exc.message,
+        )
+        return whatsapp_config
+    except Exception as exc:
+        logger.exception(
+            "Error inesperado consultando Kapso para workspace %s: %s",
+            workspace.id,
+            exc,
+        )
+        return whatsapp_config
+
+    if not phone_numbers:
+        return whatsapp_config
+
+    def _rank(pn: dict) -> tuple:
+        status_value = (pn.get("status") or "").upper()
+        kind_value = (pn.get("kind") or "").lower()
+        return (
+            1 if status_value == "CONNECTED" else 0,
+            0 if kind_value == "sandbox" else 1,
+            pn.get("updated_at") or pn.get("created_at") or "",
+        )
+
+    phone_numbers_sorted = sorted(phone_numbers, key=_rank, reverse=True)
+    phone = phone_numbers_sorted[0]
+
+    if (phone.get("status") or "").upper() != "CONNECTED":
+        return whatsapp_config
+
+    phone_number_id = phone.get("phone_number_id") or phone.get("id")
+    if not phone_number_id:
+        return whatsapp_config
+
+    display_phone_number = phone.get("display_phone_number") or ""
+    if display_phone_number and "%2B" in display_phone_number:
+        display_phone_number = unquote(display_phone_number)
+
+    new_whatsapp_config = {
+        **whatsapp_config,
+        "enabled": True,
+        "phone_number_id": phone_number_id,
+        "business_account_id": phone.get("business_account_id"),
+        "display_phone_number": display_phone_number,
+        "connected_at": whatsapp_config.get("connected_at")
+        or phone.get("created_at")
+        or datetime.utcnow().isoformat(),
+    }
+
+    new_settings = dict(workspace.settings) if workspace.settings else {}
+    new_settings["whatsapp"] = new_whatsapp_config
+    workspace.settings = new_settings
+    await db.commit()
+
+    logger.info(
+        "WhatsApp auto-sincronizado para workspace %s (phone %s)",
+        workspace.id,
+        display_phone_number or phone_number_id,
+    )
+
+    return new_whatsapp_config
+
+
 @router.get("/status", response_model=WhatsAppStatusResponse)
 async def get_whatsapp_status(
     current_user: CurrentUser = Depends(require_workspace),
@@ -98,22 +189,77 @@ async def get_whatsapp_status(
 ):
     """
     Obtener estado de la conexión de WhatsApp del workspace.
+
+    Si la config local dice que no hay conexión pero sí existe un
+    ``kapso_customer_id``, intenta reconciliar llamando a la API de Kapso
+    (caso típico: el webhook ``whatsapp.phone_number.created`` no llegó o no
+    está configurado en el proyecto de Kapso).
     """
-    # Obtener workspace
     result = await db.execute(
         select(Workspace).where(Workspace.id == current_user.workspace_id)
     )
     workspace = result.scalar_one_or_none()
-    
+
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace no encontrado"
         )
-    
-    # Obtener configuración de WhatsApp
+
     whatsapp_config = workspace.settings.get("whatsapp", {}) if workspace.settings else {}
-    
+
+    if not whatsapp_config.get("enabled") and whatsapp_config.get("kapso_customer_id"):
+        whatsapp_config = await _reconcile_whatsapp_from_kapso(workspace, db)
+
+    return WhatsAppStatusResponse(
+        connected=whatsapp_config.get("enabled", False),
+        phone_number_id=whatsapp_config.get("phone_number_id"),
+        display_phone_number=whatsapp_config.get("display_phone_number"),
+        business_account_id=whatsapp_config.get("business_account_id"),
+        connected_at=whatsapp_config.get("connected_at"),
+        kapso_customer_id=whatsapp_config.get("kapso_customer_id")
+    )
+
+
+@router.post("/sync", response_model=WhatsAppStatusResponse)
+async def sync_whatsapp_status(
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Forzar una reconciliación con Kapso.
+
+    Útil cuando el entrenador acaba de completar el flujo de setup y quiere
+    sincronizar de inmediato sin esperar al polling automático (p.ej. cuando
+    vuelve del popup con ``?setup=success``).
+    """
+    if not settings.KAPSO_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Integración con Kapso no configurada."
+        )
+
+    result = await db.execute(
+        select(Workspace).where(Workspace.id == current_user.workspace_id)
+    )
+    workspace = result.scalar_one_or_none()
+
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workspace no encontrado"
+        )
+
+    whatsapp_config = workspace.settings.get("whatsapp", {}) if workspace.settings else {}
+
+    if not whatsapp_config.get("kapso_customer_id"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay un proceso de conexión iniciado. Pulsa primero en conectar WhatsApp."
+        )
+
+    whatsapp_config = await _reconcile_whatsapp_from_kapso(workspace, db)
+
     return WhatsAppStatusResponse(
         connected=whatsapp_config.get("enabled", False),
         phone_number_id=whatsapp_config.get("phone_number_id"),

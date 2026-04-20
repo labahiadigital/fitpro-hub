@@ -75,6 +75,36 @@ export function useConnectWhatsApp() {
 }
 
 /**
+ * Hook para forzar una reconciliación del estado con Kapso.
+ * Útil cuando el usuario acaba de volver del popup de setup y queremos
+ * sincronizar de inmediato en vez de esperar al polling.
+ */
+export function useSyncWhatsApp() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post("/whatsapp/sync");
+      return response.data as WhatsAppStatus;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["whatsapp", "status"], data);
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.detail ||
+        error.message ||
+        "No se pudo sincronizar con Kapso";
+      notifications.show({
+        title: "Error al sincronizar",
+        message,
+        color: "red",
+      });
+    },
+  });
+}
+
+/**
  * Hook para desconectar WhatsApp
  */
 export function useDisconnectWhatsApp() {
