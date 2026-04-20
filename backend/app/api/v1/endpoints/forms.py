@@ -238,11 +238,14 @@ async def list_all_submissions(
     form_id: Optional[UUID] = None,
     client_id: Optional[UUID] = None,
     status_filter: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Listar todas las respuestas del workspace con nombre de cliente y formulario.
+    Paginada con ``limit``/``offset`` para no devolver miles de filas.
     """
     query = (
         select(
@@ -263,7 +266,9 @@ async def list_all_submissions(
     if status_filter:
         query = query.where(FormSubmission.status == status_filter)
 
-    result = await db.execute(query.order_by(FormSubmission.created_at.desc()))
+    result = await db.execute(
+        query.order_by(FormSubmission.created_at.desc()).limit(limit).offset(offset)
+    )
     rows = result.all()
 
     submissions = []
@@ -289,12 +294,12 @@ async def list_all_submissions(
 async def list_submissions(
     form_id: UUID,
     status: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Listar respuestas de un formulario.
-    """
+    """Listar respuestas de un formulario (paginadas)."""
     form_result = await db.execute(
         select(Form.id).where(
             Form.id == form_id,
@@ -305,11 +310,13 @@ async def list_submissions(
         raise HTTPException(status_code=404, detail="Formulario no encontrado")
 
     query = select(FormSubmission).where(FormSubmission.form_id == form_id)
-    
+
     if status:
         query = query.where(FormSubmission.status == status)
-    
-    result = await db.execute(query.order_by(FormSubmission.created_at.desc()))
+
+    result = await db.execute(
+        query.order_by(FormSubmission.created_at.desc()).limit(limit).offset(offset)
+    )
     return result.scalars().all()
 
 

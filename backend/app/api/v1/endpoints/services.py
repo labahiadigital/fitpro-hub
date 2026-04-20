@@ -161,7 +161,19 @@ async def create_service(
     await db.flush()
 
     if data.machine_ids:
-        machines = (await db.execute(select(Machine).where(Machine.id.in_(data.machine_ids)))).scalars().all()
+        machines = (
+            await db.execute(
+                select(Machine).where(
+                    Machine.id.in_(data.machine_ids),
+                    Machine.workspace_id == current_user.workspace_id,
+                )
+            )
+        ).scalars().all()
+        if len(machines) != len(set(data.machine_ids)):
+            raise HTTPException(
+                status_code=400,
+                detail="Una o mas maquinas no pertenecen a este workspace",
+            )
         svc.machines = list(machines)
 
     for sa_item in data.staff:
@@ -218,8 +230,23 @@ async def update_service(
             setattr(svc, k, v)
 
     if data.machine_ids is not None:
-        machines = (await db.execute(select(Machine).where(Machine.id.in_(data.machine_ids)))).scalars().all()
-        svc.machines = list(machines)
+        if data.machine_ids:
+            machines = (
+                await db.execute(
+                    select(Machine).where(
+                        Machine.id.in_(data.machine_ids),
+                        Machine.workspace_id == current_user.workspace_id,
+                    )
+                )
+            ).scalars().all()
+            if len(machines) != len(set(data.machine_ids)):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Una o mas maquinas no pertenecen a este workspace",
+                )
+            svc.machines = list(machines)
+        else:
+            svc.machines = []
 
     if data.staff is not None:
         await db.execute(sa_delete(ServiceStaff).where(ServiceStaff.service_id == svc.id))

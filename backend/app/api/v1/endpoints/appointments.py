@@ -146,9 +146,17 @@ async def _check_overlap(db: AsyncSession, workspace_id: UUID, start: datetime, 
         if count and count > 0:
             conflicts.append({"type": "machine", "id": str(mid), "message": f"La máquina está ocupada en ese horario"})
 
-    # Anchor rule: if a machine has fixed_box_id, that box is also blocked
+    # Anchor rule: if a machine has fixed_box_id, that box is also blocked.
+    # Scope the lookup by workspace to avoid returning anchors from other tenants.
     if machine_ids:
-        machines = (await db.execute(select(Machine).where(Machine.id.in_(machine_ids)))).scalars().all()
+        machines = (
+            await db.execute(
+                select(Machine).where(
+                    Machine.id.in_(machine_ids),
+                    Machine.workspace_id == workspace_id,
+                )
+            )
+        ).scalars().all()
         for m in machines:
             if m.fixed_box_id and m.fixed_box_id != box_id:
                 count = await db.scalar(
@@ -262,7 +270,13 @@ async def create_appointment(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
-    svc = await db.get(Service, data.service_id)
+    svc_res = await db.execute(
+        select(Service).where(
+            Service.id == data.service_id,
+            Service.workspace_id == current_user.workspace_id,
+        )
+    )
+    svc = svc_res.scalar_one_or_none()
     if not svc:
         raise HTTPException(status_code=404, detail="Servicio no encontrado")
 
@@ -275,13 +289,29 @@ async def create_appointment(
         mr = await db.execute(
             select(Machine.id).select_from(Machine)
             .join(service_machines, service_machines.c.machine_id == Machine.id)
-            .where(service_machines.c.service_id == data.service_id)
+            .where(
+                service_machines.c.service_id == data.service_id,
+                Machine.workspace_id == current_user.workspace_id,
+            )
         )
         machine_ids = [r[0] for r in mr.all()]
 
-    # Anchor: if machines have fixed_box_id, use that box
+    # Anchor: if machines have fixed_box_id, use that box. Scope lookup by
+    # workspace so a caller can never reference machines from another tenant.
     if machine_ids:
-        machines = (await db.execute(select(Machine).where(Machine.id.in_(machine_ids)))).scalars().all()
+        machines = (
+            await db.execute(
+                select(Machine).where(
+                    Machine.id.in_(machine_ids),
+                    Machine.workspace_id == current_user.workspace_id,
+                )
+            )
+        ).scalars().all()
+        if len(machines) != len(set(machine_ids)):
+            raise HTTPException(
+                status_code=400,
+                detail="Una o mas maquinas no pertenecen a este workspace",
+            )
         for m in machines:
             if m.fixed_box_id and not box_id:
                 box_id = m.fixed_box_id
@@ -386,6 +416,20 @@ async def update_appointment(
         setattr(appt, k, v)
 
     if data.machine_ids is not None:
+        if data.machine_ids:
+            ids = list(set(data.machine_ids))
+            valid_rows = await db.execute(
+                select(Machine.id).where(
+                    Machine.id.in_(ids),
+                    Machine.workspace_id == current_user.workspace_id,
+                )
+            )
+            valid_ids = {r[0] for r in valid_rows.all()}
+            if len(valid_ids) != len(ids):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Una o mas maquinas no pertenecen a este workspace",
+                )
         await db.execute(appointment_machines.delete().where(appointment_machines.c.appointment_id == appt.id))
         for mid in data.machine_ids:
             await db.execute(appointment_machines.insert().values(appointment_id=appt.id, machine_id=mid))

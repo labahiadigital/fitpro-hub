@@ -220,6 +220,8 @@ async def list_bookings(
     client_id: Optional[UUID] = None,
     status: Optional[BookingStatus] = None,
     sync_calendar: bool = False,  # Opcional: forzar sincronización
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
@@ -259,8 +261,8 @@ async def list_bookings(
     if status:
         query = query.where(Booking.status == status)
     
-    query = query.order_by(Booking.start_time)
-    
+    query = query.order_by(Booking.start_time).limit(limit).offset(offset)
+
     result = await db.execute(query)
     bookings = result.scalars().all()
     

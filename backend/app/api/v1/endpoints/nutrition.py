@@ -237,6 +237,8 @@ async def create_food(
 async def list_meal_plans(
     client_id: Optional[UUID] = None,
     is_template: Optional[bool] = None,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
@@ -278,7 +280,9 @@ async def list_meal_plans(
     if is_template is not None:
         query = query.where(MealPlan.is_template == is_template)
 
-    result = await db.execute(query.order_by(MealPlan.created_at.desc()))
+    result = await db.execute(
+        query.order_by(MealPlan.created_at.desc()).limit(limit).offset(offset)
+    )
     return result.scalars().all()
 
 

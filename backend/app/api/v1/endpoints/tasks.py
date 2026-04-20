@@ -86,6 +86,8 @@ async def list_tasks(
     search: Optional[str] = None,
     due_from: Optional[datetime] = None,
     due_to: Optional[datetime] = None,
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
@@ -114,7 +116,7 @@ async def list_tasks(
         if due_to:
             query = query.where(Task.due_date <= due_to)
 
-        query = query.order_by(Task.created_at.desc())
+        query = query.order_by(Task.created_at.desc()).limit(limit).offset(offset)
         result = await db.execute(query)
         return result.scalars().all()
     except Exception as e:

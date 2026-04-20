@@ -304,20 +304,37 @@ async def update_user(
 ):
     """
     Actualizar perfil de usuario.
-    Solo el propio usuario o el owner del workspace pueden actualizar.
+    Solo el propio usuario o el owner del workspace pueden actualizar, y
+    únicamente usuarios que pertenezcan al mismo workspace (evita que un
+    owner de workspace A modifique cuentas de workspace B).
     """
-    # Check permissions
-    if user_id != current_user.id and not current_user.is_owner():
+    is_self = user_id == current_user.id
+    if not is_self and not current_user.is_owner():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para modificar este usuario"
         )
-    
+
+    # Cuando es un owner editando a otra persona, exigimos que el objetivo
+    # esté efectivamente en su mismo workspace.
+    if not is_self:
+        membership = await db.execute(
+            select(UserRole.id).where(
+                UserRole.user_id == user_id,
+                UserRole.workspace_id == current_user.workspace_id,
+            )
+        )
+        if not membership.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado en este workspace"
+            )
+
     result = await db.execute(
         select(User).where(User.id == user_id)
     )
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -379,13 +379,29 @@ async def delete_course(
 # MÓDULOS
 # =====================================================
 
+async def _assert_course_in_workspace(db: AsyncSession, course_id: UUID, workspace_id: UUID) -> Course:
+    """Return the Course if it belongs to ``workspace_id``, else raise 404.
+
+    Centraliza la comprobación de tenencia para evitar que módulos, lecciones
+    o inscripciones se creen/lean apuntando a cursos de otro workspace.
+    """
+    res = await db.execute(
+        select(Course).where(Course.id == course_id, Course.workspace_id == workspace_id)
+    )
+    course = res.scalar_one_or_none()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso no encontrado")
+    return course
+
+
 @router.get("/courses/{course_id}/modules", response_model=List[ModuleResponse])
 async def list_modules(
     course_id: UUID,
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Listar módulos de un curso"""
+    """Listar módulos de un curso."""
+    await _assert_course_in_workspace(db, course_id, current_user.workspace_id)
     result = await db.execute(
         select(CourseModule)
         .where(CourseModule.course_id == course_id)
@@ -400,17 +416,12 @@ async def create_module(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Crear un nuevo módulo"""
+    """Crear un nuevo módulo."""
+    await _assert_course_in_workspace(db, module_data.course_id, current_user.workspace_id)
     module = CourseModule(**module_data.model_dump())
     db.add(module)
     await db.commit()
     await db.refresh(module)
-    
-    # Actualizar contador de módulos del curso
-    await db.execute(
-        select(Course).where(Course.id == module_data.course_id)
-    )
-    
     return module
 
 
@@ -424,7 +435,8 @@ async def list_lessons(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Listar lecciones de un curso"""
+    """Listar lecciones de un curso."""
+    await _assert_course_in_workspace(db, course_id, current_user.workspace_id)
     result = await db.execute(
         select(Lesson)
         .where(Lesson.course_id == course_id)
@@ -439,7 +451,8 @@ async def create_lesson(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Crear una nueva lección"""
+    """Crear una nueva lección (validando tenencia del curso padre)."""
+    await _assert_course_in_workspace(db, lesson_data.course_id, current_user.workspace_id)
     lesson = Lesson(**lesson_data.model_dump())
     db.add(lesson)
     await db.commit()
@@ -453,15 +466,20 @@ async def get_lesson(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Obtener una lección por ID"""
+    """Obtener una lección por ID (acotada al workspace del curso padre)."""
     result = await db.execute(
-        select(Lesson).where(Lesson.id == lesson_id)
+        select(Lesson)
+        .join(Course, Course.id == Lesson.course_id)
+        .where(
+            Lesson.id == lesson_id,
+            Course.workspace_id == current_user.workspace_id,
+        )
     )
     lesson = result.scalar_one_or_none()
-    
+
     if not lesson:
         raise HTTPException(status_code=404, detail="Lección no encontrada")
-    
+
     return lesson
 
 
@@ -475,15 +493,10 @@ async def enroll_in_course(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Inscribirse en un curso"""
-    # Verificar que el curso existe
-    course_result = await db.execute(
-        select(Course).where(Course.id == enrollment_data.course_id)
+    """Inscribirse en un curso."""
+    course = await _assert_course_in_workspace(
+        db, enrollment_data.course_id, current_user.workspace_id
     )
-    course = course_result.scalar_one_or_none()
-    
-    if not course:
-        raise HTTPException(status_code=404, detail="Curso no encontrado")
     
     # Verificar si ya está inscrito
     existing_result = await db.execute(

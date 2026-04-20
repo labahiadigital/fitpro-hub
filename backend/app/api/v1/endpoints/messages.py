@@ -112,11 +112,13 @@ class WhatsAppIncomingMessage(BaseModel):
 async def list_conversations(
     include_archived: bool = False,
     scope: Optional[str] = Query(None, pattern="^(client|internal)$"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar conversaciones del workspace.
+    Listar conversaciones del workspace (paginadas).
     Incluye conversaciones de plataforma y WhatsApp unificadas.
     Filtrar por scope: 'client' (chats con clientes) o 'internal' (chat equipo).
     """
@@ -124,23 +126,26 @@ async def list_conversations(
         query = select(Conversation).where(
             Conversation.workspace_id == current_user.workspace_id
         ).options(selectinload(Conversation.client))
-        
+
         if not include_archived:
             query = query.where(Conversation.is_archived == False)
 
         if scope:
             query = query.where(Conversation.scope == scope)
 
+        order = Conversation.last_message_at.desc().nullslast()
         try:
-            result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
+            result = await db.execute(query.order_by(order).limit(limit).offset(offset))
         except Exception:
+            # Fallback: algunas instalaciones antiguas no tienen todas las
+            # columnas (p.ej. scope); reintentamos con la query mínima.
             await db.rollback()
             query = select(Conversation).where(
                 Conversation.workspace_id == current_user.workspace_id
             ).options(selectinload(Conversation.client))
             if not include_archived:
                 query = query.where(Conversation.is_archived == False)
-            result = await db.execute(query.order_by(Conversation.last_message_at.desc().nullslast()))
+            result = await db.execute(query.order_by(order).limit(limit).offset(offset))
 
         conversations = result.scalars().all()
         

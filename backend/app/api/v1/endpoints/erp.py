@@ -665,7 +665,14 @@ async def list_invoices(
     series: Optional[str] = Query(None),
     from_date: Optional[date] = Query(None),
     to_date: Optional[date] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ):
+    """Listar facturas (paginadas) del workspace.
+
+    Se limita a ``limit`` registros para evitar respuestas enormes cuando la
+    cuenta tiene miles de facturas. Usar ``offset`` para paginar.
+    """
     query = (
         select(Invoice)
         .where(Invoice.workspace_id == current_user.workspace_id)
@@ -683,7 +690,7 @@ async def list_invoices(
     if to_date:
         query = query.where(Invoice.issue_date <= to_date)
 
-    query = query.order_by(Invoice.created_at.desc())
+    query = query.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
 
     result = await db.execute(query)
     return result.scalars().all()
@@ -1727,7 +1734,10 @@ async def list_expenses(
     status_filter: Optional[str] = Query(None, alias="status"),
     from_date: Optional[date] = Query(None),
     to_date: Optional[date] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ):
+    """Listar gastos del workspace con filtros y paginación."""
     query = select(Expense).where(Expense.workspace_id == current_user.workspace_id)
     if category:
         query = query.where(Expense.category == category)
@@ -1738,7 +1748,7 @@ async def list_expenses(
     if to_date:
         query = query.where(Expense.expense_date <= to_date)
 
-    query = query.order_by(Expense.expense_date.desc())
+    query = query.order_by(Expense.expense_date.desc()).limit(limit).offset(offset)
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -1858,12 +1868,15 @@ async def list_quotes(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
     status_filter: Optional[str] = Query(None, alias="status"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ):
+    """Listar presupuestos del workspace con paginación."""
     query = select(Quote).where(Quote.workspace_id == current_user.workspace_id)
     if status_filter:
         query = query.where(Quote.status == status_filter)
 
-    query = query.order_by(Quote.issue_date.desc())
+    query = query.order_by(Quote.issue_date.desc()).limit(limit).offset(offset)
     result = await db.execute(query)
     return result.scalars().all()
 

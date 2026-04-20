@@ -480,7 +480,20 @@ async def list_registrations(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Listar inscripciones de una clase"""
+    """Listar inscripciones de una clase.
+
+    Verificamos que la clase pertenezca al workspace del usuario para evitar
+    que un staff de otro tenant vea sus inscripciones.
+    """
+    class_check = await db.execute(
+        select(LiveClass.id).where(
+            LiveClass.id == class_id,
+            LiveClass.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not class_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Clase no encontrada")
+
     result = await db.execute(
         select(LiveClassRegistration).where(LiveClassRegistration.class_id == class_id)
     )
@@ -496,7 +509,10 @@ async def register_for_class(
     """Inscribirse en una clase"""
     class_result = await db.execute(
         select(LiveClass)
-        .where(LiveClass.id == registration_data.class_id)
+        .where(
+            LiveClass.id == registration_data.class_id,
+            LiveClass.workspace_id == current_user.workspace_id,
+        )
         .with_for_update()
     )
     live_class = class_result.scalar_one_or_none()
@@ -545,9 +561,17 @@ async def cancel_registration(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Cancelar inscripción"""
+    """Cancelar inscripción.
+
+    Sólo se permite cancelar inscripciones de clases del workspace del usuario.
+    """
     result = await db.execute(
-        select(LiveClassRegistration).where(LiveClassRegistration.id == registration_id)
+        select(LiveClassRegistration)
+        .join(LiveClass, LiveClass.id == LiveClassRegistration.class_id)
+        .where(
+            LiveClassRegistration.id == registration_id,
+            LiveClass.workspace_id == current_user.workspace_id,
+        )
     )
     registration = result.scalar_one_or_none()
 
@@ -556,7 +580,7 @@ async def cancel_registration(
 
     registration.status = "cancelled"
 
-    # Actualizar contador de la clase
+    # Actualizar contador de la clase (ya validada por el join anterior)
     class_result = await db.execute(
         select(LiveClass).where(LiveClass.id == registration.class_id)
     )
@@ -574,9 +598,14 @@ async def join_class(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Registrar entrada a la clase"""
+    """Registrar entrada a la clase."""
     result = await db.execute(
-        select(LiveClassRegistration).where(LiveClassRegistration.id == registration_id)
+        select(LiveClassRegistration)
+        .join(LiveClass, LiveClass.id == LiveClassRegistration.class_id)
+        .where(
+            LiveClassRegistration.id == registration_id,
+            LiveClass.workspace_id == current_user.workspace_id,
+        )
     )
     registration = result.scalar_one_or_none()
 
@@ -598,9 +627,14 @@ async def submit_feedback(
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Enviar feedback de la clase"""
+    """Enviar feedback de la clase."""
     result = await db.execute(
-        select(LiveClassRegistration).where(LiveClassRegistration.id == registration_id)
+        select(LiveClassRegistration)
+        .join(LiveClass, LiveClass.id == LiveClassRegistration.class_id)
+        .where(
+            LiveClassRegistration.id == registration_id,
+            LiveClass.workspace_id == current_user.workspace_id,
+        )
     )
     registration = result.scalar_one_or_none()
 
