@@ -31,9 +31,21 @@ class SequraConfig:
         self.user = settings.SEQURA_USER
         self.password = settings.SEQURA_PASSWORD
         self.merchant_id = settings.SEQURA_MERCHANT_ID
-        self.endpoint = settings.SEQURA_ENDPOINT.rstrip("/")
+        # Normalise the endpoint: SeQura's docs often quote the full "/orders"
+        # URL, but the rest of the service appends "/orders" already. Strip any
+        # trailing "/orders" (and slashes) so both forms work and we never end
+        # up POSTing to ".../orders/orders" (which 404s silently).
+        raw_endpoint = (settings.SEQURA_ENDPOINT or "").strip().rstrip("/")
+        if raw_endpoint.endswith("/orders"):
+            raw_endpoint = raw_endpoint[: -len("/orders")].rstrip("/")
+        self.endpoint = raw_endpoint
         self.asset_key = settings.SEQURA_ASSET_KEY
         self.environment = settings.SEQURA_ENVIRONMENT
+        logger.info(
+            "SequraConfig loaded (endpoint=%s, orders_url=%s, env=%s, merchant_set=%s)",
+            self.endpoint, f"{self.endpoint}/orders", self.environment,
+            bool(self.merchant_id),
+        )
 
     @property
     def is_configured(self) -> bool:
