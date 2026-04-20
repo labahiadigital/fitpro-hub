@@ -81,8 +81,9 @@ class SequraConfigStatusResponse(BaseModel):
 # ============ RATE LIMITING ============
 
 _rate_limit: dict = {}
-_RATE_LIMIT_MAX = 5
-_RATE_LIMIT_WINDOW = 3600
+import os as _os_rl
+_RATE_LIMIT_MAX = int(_os_rl.getenv("SEQURA_RATE_LIMIT_MAX", "30"))
+_RATE_LIMIT_WINDOW = int(_os_rl.getenv("SEQURA_RATE_LIMIT_WINDOW", "3600"))
 
 
 def _check_rate_limit(key: str) -> bool:
