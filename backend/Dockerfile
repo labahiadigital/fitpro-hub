@@ -71,6 +71,7 @@ CMD ["gunicorn", "app.main:app", \
      "-b", "0.0.0.0:8000", \
      "--timeout", "120", \
      "--graceful-timeout", "30", \
+     "--worker-tmp-dir", "/dev/shm", \
      "--preload", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \

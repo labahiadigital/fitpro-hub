@@ -50,6 +50,12 @@ def _run_alembic_upgrade():
     Guarded by RUN_MIGRATIONS_ON_STARTUP env var. When running multiple replicas
     behind a load balancer, leave it unset (or "false") on every replica and run
     migrations as a separate one-shot job to avoid concurrent upgrade races.
+
+    Uses ``lock_timeout`` and ``statement_timeout`` to bail out fast if another
+    backend holds a lock on the tables we need to alter. Without that guard the
+    worker can block indefinitely inside ``CREATE TABLE ... REFERENCES products``
+    when a sibling container still has an open transaction, which makes the
+    entire container fail the healthcheck and loop in restarts.
     """
     from alembic.config import Config
     from alembic import command
@@ -69,11 +75,42 @@ def _run_alembic_upgrade():
         db_url = db_url.replace("+asyncpg", "")
     cfg.set_main_option("sqlalchemy.url", db_url)
 
+    # Bound every DDL inside the migration with lock_timeout + statement_timeout
+    # so we don't hang forever if another backend is holding a lock on any of
+    # the tables we need to alter. PGOPTIONS is honoured by psycopg2 out of
+    # the box, which is what Alembic uses once we drop the +asyncpg dialect.
+    lock_timeout_ms = int(os.getenv("MIGRATION_LOCK_TIMEOUT_MS", "30000"))
+    statement_timeout_ms = int(os.getenv("MIGRATION_STATEMENT_TIMEOUT_MS", "180000"))
+    prev_pgoptions = os.environ.get("PGOPTIONS")
+    os.environ["PGOPTIONS"] = (
+        f"-c lock_timeout={lock_timeout_ms} "
+        f"-c statement_timeout={statement_timeout_ms}"
+    )
+    logger.info(
+        "Alembic upgrade starting (lock_timeout=%dms, statement_timeout=%dms)",
+        lock_timeout_ms, statement_timeout_ms,
+    )
+
     try:
         command.upgrade(cfg, "head")
         logger.info("Alembic migrations applied successfully")
     except Exception as exc:
-        logger.error("Alembic migration failed: %s", exc, exc_info=True)
+        # Lock timeouts show up as "canceling statement due to lock timeout".
+        # We intentionally DO NOT re-raise: letting the app start means that
+        # endpoints not touching the unmigrated tables keep working, instead
+        # of Coolify looping the container in a restart storm that produces
+        # the 502-without-CORS we have seen at the edge.
+        logger.error(
+            "Alembic migration failed (app will continue starting anyway): %s",
+            exc, exc_info=True,
+        )
+    finally:
+        # Restore PGOPTIONS so the runtime DB pool doesn't inherit these very
+        # low timeouts (the app uses its own pool with its own settings).
+        if prev_pgoptions is None:
+            os.environ.pop("PGOPTIONS", None)
+        else:
+            os.environ["PGOPTIONS"] = prev_pgoptions
 
 
 @asynccontextmanager

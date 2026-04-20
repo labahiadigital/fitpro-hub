@@ -180,36 +180,50 @@ async def _start_onboarding_impl(
     request: Request,
     db: AsyncSession,
 ) -> "StartOnboardingResponse":
+    rid = getattr(request.state, "request_id", "-")
+    tk = data.token[:8] if data.token else "<none>"
     logger.info(
-        "SeQura start-onboarding BEGIN (token_prefix=%s, product_code=%s, env=%s)",
-        data.token[:8] if data.token else "<none>",
-        data.product_code,
-        sequra_service.config.environment,
+        "SQ[%s] BEGIN (token_prefix=%s, product_code=%s, env=%s)",
+        rid, tk, data.product_code, sequra_service.config.environment,
     )
 
     if not _check_rate_limit(data.token):
+        logger.warning("SQ[%s] rate-limited", rid)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Demasiados intentos. Espera unos minutos.",
         )
 
     if not sequra_service.config.is_configured:
+        logger.error("SQ[%s] SeQura not configured", rid)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="SeQura no está configurado.",
         )
 
+    logger.info("SQ[%s] step=fetch_invitation", rid)
     invitation, product = await _get_invitation_with_product(data.token, db)
+    logger.info(
+        "SQ[%s] step=fetch_invitation OK (inv_id=%s, product_id=%s, client_id=%s, payment_id=%s)",
+        rid, invitation.id, product.id, invitation.client_id, invitation.payment_id,
+    )
 
-    # Seat-cap check: don't start a SeQura payment if the product is full.
+    logger.info("SQ[%s] step=ensure_capacity", rid)
     await ensure_product_capacity(
         db, product, exclude_invitation_id=invitation.id
     )
+    logger.info("SQ[%s] step=ensure_capacity OK", rid)
 
-    # Check if SeQura payment already succeeded
     if invitation.payment_id:
+        logger.info("SQ[%s] step=check_existing_payment", rid)
         existing = await db.execute(select(Payment).where(Payment.id == invitation.payment_id))
         existing_payment = existing.scalar_one_or_none()
+        logger.info(
+            "SQ[%s] step=check_existing_payment OK (found=%s, status=%s)",
+            rid,
+            existing_payment is not None,
+            getattr(existing_payment, "status", None),
+        )
         if existing_payment and existing_payment.status == PaymentStatus.succeeded:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -219,6 +233,7 @@ async def _start_onboarding_impl(
     amount_cents = int(round(float(product.price) * 100))
     if amount_cents <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Importe no válido")
+    logger.info("SQ[%s] step=amount_cents=%d", rid, amount_cents)
 
     # Build URLs
     base_url = str(request.base_url).rstrip("/")
@@ -245,13 +260,14 @@ async def _start_onboarding_impl(
         product_type=product.product_type or "subscription",
     )
 
-    # Load client data for billing address and previous orders
+    logger.info("SQ[%s] step=load_client", rid)
     client_obj = None
     if invitation.client_id:
         client_result = await db.execute(
             select(Client).where(Client.id == invitation.client_id)
         )
         client_obj = client_result.scalar_one_or_none()
+    logger.info("SQ[%s] step=load_client OK (client=%s)", rid, client_obj.id if client_obj else None)
 
     billing_address = "N/A"
     billing_city = "Madrid"
@@ -266,29 +282,36 @@ async def _start_onboarding_impl(
         if client_obj.billing_postal_code:
             billing_postal_code = client_obj.billing_postal_code
 
-    # Build previous_orders from succeeded SeQura payments for this client
+    logger.info("SQ[%s] step=previous_orders_query", rid)
     previous_orders = []
     if invitation.client_id:
-        prev_result = await db.execute(
-            select(Payment).where(
-                Payment.client_id == invitation.client_id,
-                Payment.status == PaymentStatus.succeeded,
-                Payment.extra_data["gateway"].astext == "sequra",
-            ).order_by(Payment.paid_at.desc())
-        )
-        prev_payments = prev_result.scalars().all()
-        for prev_pay in prev_payments:
-            previous_orders.append({
-                "created_at": prev_pay.paid_at.isoformat() if prev_pay.paid_at else prev_pay.created_at.isoformat(),
-                "amount": int(round(float(prev_pay.amount) * 100)),
-                "currency": prev_pay.currency or "EUR",
-                "raw_status": "Pago completado",
-                "status": "delivered",
-                "payment_method_raw": "SeQura",
-                "payment_method": "SQ",
-                "postal_code": billing_postal_code,
-                "country_code": "ES",
-            })
+        try:
+            prev_result = await db.execute(
+                select(Payment).where(
+                    Payment.client_id == invitation.client_id,
+                    Payment.status == PaymentStatus.succeeded,
+                    Payment.extra_data["gateway"].astext == "sequra",
+                ).order_by(Payment.paid_at.desc())
+            )
+            prev_payments = prev_result.scalars().all()
+        except Exception:
+            logger.exception("SQ[%s] step=previous_orders_query FAILED (non-fatal)", rid)
+            prev_payments = []
+    else:
+        prev_payments = []
+    logger.info("SQ[%s] step=previous_orders_query OK (count=%d)", rid, len(prev_payments))
+    for prev_pay in prev_payments:
+        previous_orders.append({
+            "created_at": prev_pay.paid_at.isoformat() if prev_pay.paid_at else prev_pay.created_at.isoformat(),
+            "amount": int(round(float(prev_pay.amount) * 100)),
+            "currency": prev_pay.currency or "EUR",
+            "raw_status": "Pago completado",
+            "status": "delivered",
+            "payment_method_raw": "SeQura",
+            "payment_method": "SQ",
+            "postal_code": billing_postal_code,
+            "country_code": "ES",
+        })
 
     # Handle coupon/discount if provided
     discount_items = None
@@ -316,6 +339,7 @@ async def _start_onboarding_impl(
                     "total_with_tax": discount_cents,
                 }]
 
+    logger.info("SQ[%s] step=build_order_payload", rid)
     order_data = sequra_service.build_order_payload(
         amount_cents=amount_cents,
         product_name=product.name[:125],
@@ -343,26 +367,23 @@ async def _start_onboarding_impl(
         discount_items=discount_items,
     )
 
-    # Start solicitation with SeQura. Cualquier excepción del servicio se
-    # traduce a un 502 controlado para no tumbar el worker (lo que dejaría
-    # al edge respondiendo 502 sin cabeceras CORS, como ya hemos visto en
-    # producción al cambiar a live).
+    logger.info("SQ[%s] step=start_solicitation (endpoint=%s, merchant=%s)",
+                rid, sequra_service.config.orders_url, sequra_service.config.merchant_id)
     try:
         order_uri = await sequra_service.start_solicitation(order_data)
     except Exception:
         logger.exception(
-            "SeQura start_solicitation crashed (endpoint=%s, merchant=%s, env=%s)",
-            sequra_service.config.orders_url,
-            sequra_service.config.merchant_id,
-            sequra_service.config.environment,
+            "SQ[%s] step=start_solicitation crashed", rid,
         )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Error al comunicarse con SeQura. Intentalo de nuevo.",
         )
+    logger.info("SQ[%s] step=start_solicitation OK (order_uri=%s)", rid, order_uri)
     if not order_uri:
         logger.error(
-            "SeQura start_solicitation returned no order_uri (endpoint=%s, env=%s)",
+            "SQ[%s] step=start_solicitation returned None (endpoint=%s, env=%s)",
+            rid,
             sequra_service.config.orders_url,
             sequra_service.config.environment,
         )
