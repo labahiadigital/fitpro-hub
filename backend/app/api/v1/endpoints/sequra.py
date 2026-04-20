@@ -145,6 +145,26 @@ async def _get_invitation_with_product(token: str, db: AsyncSession):
 
 # ============ ENDPOINTS ============
 
+_SEQURA_CODE_VERSION = "sequra-debug-v3-2026-04-20"
+
+
+@router.get("/debug-ping")
+async def debug_ping(request: Request):
+    """Lightweight probe to confirm which build is currently live and reachable.
+    No DB, no external calls — just echoes the container's running code version
+    so we can confirm the latest commit got deployed.
+    """
+    import sys as _sys
+    print(f"[SQ-PING] version={_SEQURA_CODE_VERSION}", file=_sys.stderr, flush=True)
+    logger.info("SQ-PING version=%s", _SEQURA_CODE_VERSION)
+    return {
+        "ok": True,
+        "version": _SEQURA_CODE_VERSION,
+        "rate_limit_max": _RATE_LIMIT_MAX,
+        "rate_limit_window": _RATE_LIMIT_WINDOW,
+    }
+
+
 @router.post("/start-onboarding", response_model=StartOnboardingResponse)
 async def start_onboarding(
     data: StartOnboardingRequest,
