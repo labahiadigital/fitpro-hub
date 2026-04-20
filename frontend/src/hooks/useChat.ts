@@ -48,6 +48,7 @@ export interface Message {
   media_metadata?: Record<string, unknown>;
   external_id?: string;
   external_status: MessageStatus;
+  external_error?: string | null;
   read_by: string[];
   is_sent: boolean;
   is_deleted: boolean;
@@ -107,12 +108,29 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: SendMessageData) => api.post("/messages", data),
-    onSuccess: (_, variables) => {
+    mutationFn: async (data: SendMessageData) => {
+      const response = await api.post<Message>("/messages", data);
+      return response.data;
+    },
+    onSuccess: (message, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["messages", variables.conversation_id],
       });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
+
+      // El backend devuelve 200 aunque el envío a WhatsApp haya fallado: el
+      // mensaje se guarda local, pero `external_status === "failed"` indica
+      // que WhatsApp/Meta lo rechazó. Avisamos explícitamente.
+      if (message?.external_status === "failed") {
+        notifications.show({
+          title: "No se pudo enviar por WhatsApp",
+          message:
+            message.external_error ||
+            "El mensaje se guardó en la plataforma pero WhatsApp no lo aceptó. Revisa si el cliente ha iniciado conversación contigo o si necesitas usar una plantilla aprobada.",
+          color: "red",
+          autoClose: 8000,
+        });
+      }
     },
     onError: (error: Error) => {
       notifications.show({

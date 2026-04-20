@@ -86,6 +86,7 @@ class MessageResponse(BaseModel):
     media_metadata: Optional[dict]
     external_id: Optional[str]
     external_status: MessageStatus
+    external_error: Optional[str] = None
     read_by: List[UUID]
     is_sent: bool
     is_deleted: bool

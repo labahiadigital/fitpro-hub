@@ -10,6 +10,14 @@ export interface WhatsAppStatus {
   business_account_id: string | null;
   connected_at: string | null;
   kapso_customer_id: string | null;
+  /**
+   * Cuando es true, el número está conectado en modo "coexistencia" con la
+   * app oficial de WhatsApp. Meta sólo acepta respuestas dentro de la ventana
+   * de 24h y plantillas aprobadas; los mensajes de texto iniciados desde la
+   * API son rechazados. Para enviar libremente hace falta reconectar en modo
+   * "API nativa" (dedicated).
+   */
+  is_coexistence?: boolean;
 }
 
 export interface WhatsAppSetupResponse {

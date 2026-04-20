@@ -34,6 +34,7 @@ import { useForm } from "@mantine/form";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconAlertCircle,
+  IconAlertTriangle,
   IconBell,
   IconBrandGoogle,
   IconBrandWhatsapp,
@@ -1303,9 +1304,38 @@ export function SettingsPage() {
                         <Button color="red" variant="subtle" onClick={handleDisconnectWhatsApp} loading={disconnectWhatsApp.isPending}>Desconectar</Button>
                       </Group>
                     </Paper>
-                    <Alert color="blue" variant="light" radius="lg">
-                      <Text size="sm">Los mensajes de WhatsApp ahora aparecerán en tu bandeja de Chat.</Text>
-                    </Alert>
+                    {whatsappStatus.is_coexistence ? (
+                      <Alert
+                        color="yellow"
+                        icon={<IconAlertTriangle size={16} />}
+                        radius="lg"
+                        title="Modo coexistencia activo"
+                        variant="light"
+                      >
+                        <Text size="sm">
+                          Conectaste tu número manteniéndolo activo en la app
+                          oficial de WhatsApp (modo coexistencia). Por
+                          limitaciones de Meta, desde Trackfiz sólo podrás{" "}
+                          <b>responder</b> a clientes que te hayan escrito en
+                          las últimas 24&nbsp;h; los mensajes de texto
+                          iniciados desde la plataforma serán rechazados por
+                          WhatsApp.
+                        </Text>
+                        <Text mt={4} size="sm">
+                          Si necesitas iniciar conversaciones libremente,
+                          desconecta y vuelve a conectar eligiendo{" "}
+                          <b>API nativa (dedicated)</b>, o crea plantillas
+                          aprobadas para tus mensajes proactivos.
+                        </Text>
+                      </Alert>
+                    ) : (
+                      <Alert color="blue" variant="light" radius="lg">
+                        <Text size="sm">
+                          Los mensajes de WhatsApp ahora aparecerán en tu
+                          bandeja de Chat.
+                        </Text>
+                      </Alert>
+                    )}
                   </Stack>
                 ) : (
                   <Stack gap="md">

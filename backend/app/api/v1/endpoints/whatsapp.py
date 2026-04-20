@@ -49,6 +49,11 @@ class WhatsAppStatusResponse(BaseModel):
     business_account_id: Optional[str] = None
     connected_at: Optional[datetime] = None
     kapso_customer_id: Optional[str] = None
+    # Si es True, el número está conectado en modo "coexistencia" con la app
+    # oficial de WhatsApp. En ese modo Meta solo deja enviar respuestas dentro
+    # de la ventana de 24 h y plantillas aprobadas; los mensajes de texto
+    # iniciados desde la API son rechazados (Graph error 100/33).
+    is_coexistence: bool = False
 
 
 class WhatsAppDisconnectResponse(BaseModel):
@@ -216,6 +221,7 @@ async def _reconcile_whatsapp_from_kapso(
         "phone_number_id": phone_number_id,
         "business_account_id": phone.get("business_account_id"),
         "display_phone_number": display_phone_number,
+        "is_coexistence": bool(phone.get("is_coexistence")),
         "connected_at": whatsapp_config.get("connected_at")
         or phone.get("created_at")
         or datetime.utcnow().isoformat(),
@@ -294,7 +300,8 @@ async def get_whatsapp_status(
         display_phone_number=whatsapp_config.get("display_phone_number"),
         business_account_id=whatsapp_config.get("business_account_id"),
         connected_at=whatsapp_config.get("connected_at"),
-        kapso_customer_id=whatsapp_config.get("kapso_customer_id")
+        kapso_customer_id=whatsapp_config.get("kapso_customer_id"),
+        is_coexistence=bool(whatsapp_config.get("is_coexistence")),
     )
 
 
@@ -343,7 +350,8 @@ async def sync_whatsapp_status(
         display_phone_number=whatsapp_config.get("display_phone_number"),
         business_account_id=whatsapp_config.get("business_account_id"),
         connected_at=whatsapp_config.get("connected_at"),
-        kapso_customer_id=whatsapp_config.get("kapso_customer_id")
+        kapso_customer_id=whatsapp_config.get("kapso_customer_id"),
+        is_coexistence=bool(whatsapp_config.get("is_coexistence")),
     )
 
 

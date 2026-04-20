@@ -25,6 +25,7 @@ import {
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconBrandWhatsapp,
   IconCheck,
@@ -76,8 +77,18 @@ dayjs.locale("es");
 function MessageStatus({ message }: { message: Message }) {
   if (message.direction === "inbound") return null;
 
-  const { external_status } = message;
+  const { external_status, external_error } = message;
 
+  if (external_status === "failed") {
+    const tooltip = external_error
+      ? `No se pudo enviar por WhatsApp: ${external_error}`
+      : "No se pudo enviar por WhatsApp";
+    return (
+      <Tooltip label={tooltip} multiline w={260} withArrow>
+        <IconAlertTriangle color="var(--mantine-color-red-5)" size={14} />
+      </Tooltip>
+    );
+  }
   if (external_status === "pending") {
     return <IconClock size={14} style={{ opacity: 0.7 }} />;
   }
@@ -202,11 +213,27 @@ function MessageBubble({
   isOwn: boolean;
 }) {
   const isWhatsApp = message.source === "whatsapp";
+  const hasFailed = isOwn && message.external_status === "failed";
 
   const channelLabel = isWhatsApp ? "WhatsApp" : "Plataforma";
   const channelColor = isWhatsApp
     ? "var(--mantine-color-green-6)"
     : "var(--mantine-color-blue-6)";
+
+  const bubbleBg = hasFailed
+    ? "var(--mantine-color-red-0)"
+    : isOwn
+      ? isWhatsApp
+        ? "var(--mantine-color-green-6)"
+        : "var(--mantine-color-primary-6)"
+      : isWhatsApp
+        ? "var(--mantine-color-green-0)"
+        : "white";
+  const bubbleText = hasFailed
+    ? "var(--mantine-color-red-9)"
+    : isOwn
+      ? "white"
+      : undefined;
 
   return (
     <Box
@@ -226,25 +253,28 @@ function MessageBubble({
         <Text c="dimmed" size="xs" fw={500}>
           {channelLabel}
         </Text>
+        {hasFailed && (
+          <Text c="red" fw={600} size="xs">
+            · No entregado
+          </Text>
+        )}
       </Group>
 
       <Box
         maw={{ base: "85%", sm: "70%" }}
         p="sm"
         style={{
-          backgroundColor: isOwn
-            ? isWhatsApp
-              ? "var(--mantine-color-green-6)"
-              : "var(--mantine-color-primary-6)"
-            : isWhatsApp
-              ? "var(--mantine-color-green-0)"
-              : "white",
-          color: isOwn ? "white" : undefined,
+          backgroundColor: bubbleBg,
+          color: bubbleText,
           borderRadius: isOwn ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
           boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-          borderLeft: !isOwn && isWhatsApp
-            ? `3px solid ${channelColor}`
+          border: hasFailed
+            ? "1px solid var(--mantine-color-red-4)"
             : undefined,
+          borderLeft:
+            !hasFailed && !isOwn && isWhatsApp
+              ? `3px solid ${channelColor}`
+              : undefined,
         }}
       >
         {message.media_url && message.message_type === "image" && (
@@ -269,9 +299,9 @@ function MessageBubble({
 
         <Group gap={4} justify="flex-end" mt={4}>
           <Text
-            c={isOwn ? "white" : "dimmed"}
+            c={hasFailed ? "red.9" : isOwn ? "white" : "dimmed"}
             size="xs"
-            style={{ opacity: 0.7 }}
+            style={{ opacity: hasFailed ? 0.9 : 0.7 }}
           >
             {dayjs(message.created_at).format("HH:mm")}
           </Text>
@@ -813,6 +843,35 @@ export function ChatPage() {
                       </Group>
                     );
                   })()}
+
+                  {sendVia === "whatsapp" &&
+                    isWhatsAppEnabled &&
+                    whatsappStatus?.is_coexistence && (
+                      <Group
+                        gap={6}
+                        justify="center"
+                        mb="xs"
+                        wrap="nowrap"
+                        px="sm"
+                      >
+                        <IconAlertTriangle
+                          color="var(--mantine-color-yellow-7)"
+                          size={14}
+                        />
+                        <Text c="yellow.8" size="xs" ta="center">
+                          Tu número está en modo coexistencia. Solo llegarán
+                          tus respuestas si el cliente te escribió en las
+                          últimas 24h.{" "}
+                          <Anchor
+                            component={Link}
+                            size="xs"
+                            to="/settings?tab=whatsapp"
+                          >
+                            Más info
+                          </Anchor>
+                        </Text>
+                      </Group>
+                    )}
 
                   <Group gap={isMobile ? "xs" : "sm"}>
                     <Popover

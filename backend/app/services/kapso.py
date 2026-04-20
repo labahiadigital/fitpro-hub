@@ -28,6 +28,43 @@ class KapsoError(Exception):
         super().__init__(self.message)
 
 
+def _extract_error_message(error_data: dict) -> Optional[str]:
+    """Extrae el mensaje humano de una respuesta de error de Kapso/Meta.
+
+    Kapso reenvía errores de Meta en formatos variados según el endpoint.
+    Intentamos, en orden: Meta Graph (`error.message`), Kapso (`message`,
+    `error`), detalle anidado (`errors[0].message`) y fallback a JSON plano.
+    """
+    if not isinstance(error_data, dict):
+        return None
+
+    err = error_data.get("error")
+    if isinstance(err, dict):
+        msg = err.get("message") or err.get("error_user_msg")
+        if msg:
+            code = err.get("code")
+            return f"{msg} (Meta code {code})" if code is not None else msg
+    if isinstance(err, str) and err:
+        return err
+
+    for key in ("message", "detail", "error_description"):
+        value = error_data.get(key)
+        if isinstance(value, str) and value:
+            return value
+
+    errors = error_data.get("errors")
+    if isinstance(errors, list) and errors:
+        first = errors[0]
+        if isinstance(first, dict):
+            msg = first.get("message") or first.get("detail") or first.get("title")
+            if msg:
+                return msg
+        if isinstance(first, str):
+            return first
+
+    return None
+
+
 class KapsoService:
     """
     Cliente para la API de Kapso
@@ -71,13 +108,26 @@ class KapsoService:
                     error_data = response.json()
                 except Exception:
                     error_data = {"message": response.text}
-                
-                raise KapsoError(
-                    message=error_data.get("message", f"Kapso API error: {response.status_code}"),
-                    status_code=response.status_code,
-                    details=error_data
+
+                message = _extract_error_message(error_data) or (
+                    f"Kapso API error: {response.status_code}"
                 )
-            
+
+                logger.error(
+                    "Kapso %s %s -> %s: %s | details=%s",
+                    method,
+                    url,
+                    response.status_code,
+                    message,
+                    error_data,
+                )
+
+                raise KapsoError(
+                    message=message,
+                    status_code=response.status_code,
+                    details=error_data,
+                )
+
             return response.json()
     
     # ============ CUSTOMERS ============
