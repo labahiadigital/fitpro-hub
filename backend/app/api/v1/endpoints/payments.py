@@ -368,10 +368,12 @@ async def create_subscription(
         if not client_check.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado")
 
-    # Enforce max_users cap if the sub is linked to a product
+    # Enforce max_users cap if the sub is linked to a product (scoped to workspace)
     extra_data: dict = {}
     if data.product_id:
-        await ensure_product_capacity_by_id(db, data.product_id)
+        await ensure_product_capacity_by_id(
+            db, data.product_id, workspace_id=current_user.workspace_id
+        )
         extra_data["product_id"] = str(data.product_id)
 
     subscription = Subscription(

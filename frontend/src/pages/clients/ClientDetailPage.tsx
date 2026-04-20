@@ -599,15 +599,15 @@ export function ClientDetailPage() {
   // Heavy endpoints — only fetched when the user lands on (or pre-selects via
   // the URL) a tab that actually renders the data. Reduces the greedy burst of
   // 7-10 concurrent queries that used to hit the backend on every mount.
-  const photosEnabled = activeTab === "photos" || activeTab === "progress";
+  const photosEnabled = activeTab === "photos" || activeTab === "progress" || activeTab === "overview";
   const { data: clientPhotos = [] } = useClientPhotos(id || "", 50, { enabled: photosEnabled });
   const { data: clientProgressSummary } = useClientProgressSummary(id || "");
   const workoutLogsEnabled =
-    activeTab === "sessions" || activeTab === "history" || activeTab === "progress";
+    activeTab === "sessions" || activeTab === "history" || activeTab === "progress" || activeTab === "overview";
   const { data: clientWorkoutLogs = [] } = useClientWorkoutLogs(id || "", undefined, {
     enabled: workoutLogsEnabled,
   });
-  const nutritionLogsEnabled = activeTab === "nutrition" || activeTab === "progress";
+  const nutritionLogsEnabled = activeTab === "nutrition" || activeTab === "progress" || activeTab === "overview";
   const { data: clientNutritionLogs } = useClientNutritionLogs(id || "", 30, {
     enabled: nutritionLogsEnabled,
   });
@@ -1270,8 +1270,86 @@ export function ClientDetailPage() {
     days_as_client: calculateDaysAsClient(),
   };
 
-  // TODO: Conectar a endpoints de actividades y sesiones cuando estén disponibles
-  const activities: { id: string; type: string; title: string; description: string; date: string }[] = [];
+  // Actividad reciente agregada a partir de datos reales del cliente
+  // (entrenamientos, nutrición, medidas y fotos).
+  const activities = useMemo(() => {
+    const items: { id: string; type: string; title: string; description: string; date: string }[] = [];
+
+    for (const log of clientWorkoutLogs || []) {
+      const l: any = (log as any)?.log || {};
+      const date =
+        l.completed_at ||
+        l.date ||
+        (log as any).created_at ||
+        "";
+      if (!date) continue;
+      const exercises: any[] = Array.isArray(l.exercises) ? l.exercises : [];
+      const done = exercises.filter((e: any) => e?.completed).length;
+      const total = exercises.length;
+      const minutes = typeof l.duration_minutes === "number" ? ` - ${l.duration_minutes} min` : "";
+      const descParts: string[] = [];
+      if (total > 0) descParts.push(`${done}/${total} ejercicios completados`);
+      if (minutes) descParts.push(minutes.replace(" - ", ""));
+      items.push({
+        id: `workout-${(log as any).id}`,
+        type: "workout",
+        title: safeString(l.workout_name) || "Entrenamiento registrado",
+        description: descParts.join(" · ") || "Sesión completada",
+        date,
+      });
+    }
+
+    for (const day of (clientNutritionLogs?.logs || [])) {
+      if (!day?.date) continue;
+      const cals = Math.round(day.totals?.calories || 0);
+      const meals = Array.isArray(day.meals) ? day.meals.length : 0;
+      items.push({
+        id: `nutrition-${day.date}`,
+        type: "form",
+        title: "Comidas registradas",
+        description: `${cals} kcal${meals ? ` · ${meals} comida${meals === 1 ? "" : "s"}` : ""}`,
+        date: day.date,
+      });
+    }
+
+    for (const m of clientMeasurements || []) {
+      const date = m.measured_at || m.created_at;
+      if (!date) continue;
+      const parts: string[] = [];
+      if (m.weight_kg) parts.push(`${m.weight_kg} kg`);
+      if (m.body_fat_percentage) parts.push(`${m.body_fat_percentage}% grasa`);
+      if (m.muscle_mass_kg) parts.push(`${m.muscle_mass_kg} kg músculo`);
+      items.push({
+        id: `measurement-${m.id}`,
+        type: "form",
+        title: "Nueva medida registrada",
+        description: parts.join(" · ") || "Progreso actualizado",
+        date,
+      });
+    }
+
+    for (const p of clientPhotos || []) {
+      const date = p.measurement_date || p.uploaded_at;
+      if (!date) continue;
+      items.push({
+        id: `photo-${p.url}`,
+        type: "session",
+        title: "Nueva foto de progreso",
+        description:
+          p.type === "front" ? "Frontal"
+          : p.type === "back" ? "Espalda"
+          : p.type === "side" ? "Lateral"
+          : String(p.type || "Progreso"),
+        date,
+      });
+    }
+
+    return items
+      .filter(a => !isNaN(new Date(a.date).getTime()))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 8);
+  }, [clientWorkoutLogs, clientNutritionLogs, clientMeasurements, clientPhotos]);
+
   const sessions: { id: string; date: string; time: string; type: string; status: string; notes: string }[] = [];
   
   // Medidas del cliente (conectado al backend)
@@ -3383,7 +3461,8 @@ export function ClientDetailPage() {
               ) : (
                 <Stack gap="sm">
                   {clientWorkoutLogs.slice(0, 10).map((log, index) => {
-                    const logDate = log.log?.completed_at || log.created_at;
+                    const rawLog = (log as any)?.log || {};
+                    const logDate = rawLog.completed_at || rawLog.date || (log as any).created_at;
                     const dateStr = logDate && !isNaN(new Date(logDate).getTime())
                       ? new Date(logDate).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })
                       : "Sin fecha";

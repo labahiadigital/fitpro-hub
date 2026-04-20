@@ -6,9 +6,9 @@ from dateutil.relativedelta import relativedelta
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func as sa_func
 from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
@@ -323,23 +323,39 @@ async def create_invitation(
 
 @router.get("", response_model=InvitationListResponse)
 async def list_invitations(
-    status_filter: Optional[str] = None,
+    status_filter: Optional[str] = Query(
+        None,
+        alias="status",
+        description="Filter by invitation status (pending/accepted/expired/cancelled)",
+    ),
+    limit: int = 200,
+    offset: int = 0,
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all invitations for the workspace."""
-    query = select(ClientInvitation).where(
-        ClientInvitation.workspace_id == current_user.workspace_id
-    )
-    
+    """List all invitations for the workspace (paginated)."""
+    limit = max(1, min(limit, 500))
+    offset = max(0, offset)
+
+    base_filters = [ClientInvitation.workspace_id == current_user.workspace_id]
     if status_filter:
-        query = query.where(ClientInvitation.status == status_filter)
-    
-    query = query.order_by(ClientInvitation.created_at.desc())
-    
+        base_filters.append(ClientInvitation.status == status_filter)
+
+    # Total count (independent of pagination) so the client can paginate.
+    total_q = select(sa_func.count()).select_from(ClientInvitation).where(*base_filters)
+    total = int((await db.scalar(total_q)) or 0)
+
+    query = (
+        select(ClientInvitation)
+        .where(*base_filters)
+        .order_by(ClientInvitation.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
     result = await db.execute(query)
     invitations = result.scalars().all()
-    
+
     items = []
     for inv in invitations:
         invitation_url = f"{settings.FRONTEND_URL}/onboarding/invite/{inv.token}"
@@ -354,8 +370,8 @@ async def list_invitations(
             created_at=inv.created_at,
             invitation_url=invitation_url,
         ))
-    
-    return InvitationListResponse(items=items, total=len(items))
+
+    return InvitationListResponse(items=items, total=total)
 
 
 @router.post("/{invitation_id}/resend", response_model=InvitationResponse)

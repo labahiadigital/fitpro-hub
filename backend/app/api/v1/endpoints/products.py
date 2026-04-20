@@ -211,7 +211,13 @@ async def get_product_active_subscribers(
 ):
     """Get seat usage for a product: active subscribers, pending invitations,
     and whether the product has reached its `max_users` cap."""
-    product = await db.get(Product, product_id)
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == current_user.workspace_id,
+        )
+    )
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 

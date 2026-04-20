@@ -114,9 +114,21 @@ async def ensure_product_capacity_by_id(
     *,
     include_pending: bool = True,
     exclude_invitation_id: Optional[UUID] = None,
+    workspace_id: Optional[UUID] = None,
 ) -> Product:
-    """Load a product by id and enforce its capacity. Returns the product."""
-    product = await db.get(Product, product_id)
+    """Load a product by id and enforce its capacity. Returns the product.
+
+    ``workspace_id`` is recommended to scope the lookup to the caller's
+    workspace and prevent cross-tenant product references.
+    """
+    if workspace_id is not None:
+        q = select(Product).where(
+            Product.id == product_id,
+            Product.workspace_id == workspace_id,
+        )
+        product = (await db.execute(q)).scalar_one_or_none()
+    else:
+        product = await db.get(Product, product_id)
     if product is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

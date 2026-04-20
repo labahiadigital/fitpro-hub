@@ -116,7 +116,9 @@ class WorkoutLogResponse(BaseModel):
     program_id: UUID
     client_id: UUID
     log: dict
-    
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 
@@ -974,11 +976,17 @@ async def create_workout_log(
 async def get_client_logs(
     client_id: UUID,
     program_id: Optional[UUID] = None,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Obtener historial de entrenamientos de un cliente.
+
+    Devuelve hasta `limit` registros ordenados por fecha descendente. Se usa
+    paginación (limit/offset) para evitar payloads enormes en clientes con
+    mucho historial.
     """
     client_check = await db.execute(
         select(Client.id).where(
@@ -990,11 +998,12 @@ async def get_client_logs(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
     query = select(WorkoutLog).where(WorkoutLog.client_id == client_id)
-    
+
     if program_id:
         query = query.where(WorkoutLog.program_id == program_id)
-    
-    result = await db.execute(query.order_by(WorkoutLog.created_at.desc()))
+
+    query = query.order_by(WorkoutLog.created_at.desc()).limit(limit).offset(offset)
+    result = await db.execute(query)
     return result.scalars().all()
 
 
