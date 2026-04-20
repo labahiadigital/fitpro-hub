@@ -98,29 +98,48 @@ class SequraService:
         Start a SeQura solicitation by POSTing order data.
 
         Returns the order URI from the Location header on success, None on failure.
+        All network errors (timeout, DNS, TLS, connection refused) are caught
+        so the caller receives a clean None instead of propagating a 500/502.
         """
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
+        # Timeout agresivo: Cloudflare corta a ~100 s; fallar rápido permite
+        # devolver un 502 controlado con cabeceras CORS en vez de que el edge
+        # responda 502 genérico sin CORS.
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    self.config.orders_url,
+                    json={"order": order_data},
+                    auth=self._auth(),
+                    headers={
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                    },
+                )
+        except httpx.TimeoutException:
+            logger.exception(
+                "SeQura start_solicitation timeout (endpoint=%s)",
                 self.config.orders_url,
-                json={"order": order_data},
-                auth=self._auth(),
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                },
             )
+            return None
+        except httpx.HTTPError:
+            logger.exception(
+                "SeQura start_solicitation HTTP error (endpoint=%s)",
+                self.config.orders_url,
+            )
+            return None
+        except Exception:
+            logger.exception(
+                "SeQura start_solicitation unexpected error (endpoint=%s)",
+                self.config.orders_url,
+            )
+            return None
 
         logger.info(f"SeQura start_solicitation: status={response.status_code}")
 
-        if response.status_code == 204:
-            location = response.headers.get("Location", "")
-            logger.info(f"SeQura solicitation OK: uri={location}")
-            return location
-
-        if 200 <= response.status_code <= 299:
+        if response.status_code == 204 or 200 <= response.status_code <= 299:
             location = response.headers.get("Location", "")
             logger.info(f"SeQura solicitation OK ({response.status_code}): uri={location}")
-            return location
+            return location or None
 
         if response.status_code == 409:
             try:
@@ -128,10 +147,14 @@ class SequraService:
                 errors = error_body.get("errors", [])
                 logger.warning(f"SeQura solicitation conflict: {errors}")
             except Exception:
-                logger.warning(f"SeQura solicitation conflict: {response.text}")
+                logger.warning(f"SeQura solicitation conflict: {response.text[:500]}")
             return None
 
-        logger.error(f"SeQura solicitation failed: {response.status_code} - {response.text}")
+        logger.error(
+            "SeQura solicitation failed: status=%s body=%s",
+            response.status_code,
+            response.text[:500],
+        )
         return None
 
     async def get_identification_form(
@@ -149,18 +172,32 @@ class SequraService:
 
         form_url = f"{order_uri}/form_v2"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                form_url,
-                params=params,
-                auth=self._auth(),
-                headers={"Accept": "text/html"},
-            )
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(
+                    form_url,
+                    params=params,
+                    auth=self._auth(),
+                    headers={"Accept": "text/html"},
+                )
+        except httpx.TimeoutException:
+            logger.exception("SeQura get_identification_form timeout (url=%s)", form_url)
+            return None
+        except httpx.HTTPError:
+            logger.exception("SeQura get_identification_form HTTP error (url=%s)", form_url)
+            return None
+        except Exception:
+            logger.exception("SeQura get_identification_form unexpected error (url=%s)", form_url)
+            return None
 
         if 200 <= response.status_code <= 299:
             return response.text
 
-        logger.error(f"SeQura get_identification_form failed: {response.status_code} - {response.text}")
+        logger.error(
+            "SeQura get_identification_form failed: status=%s body=%s",
+            response.status_code,
+            response.text[:500],
+        )
         return None
 
     async def update_order(self, order_uri: str, order_data: Dict[str, Any]) -> tuple[bool, Optional[Dict]]:
@@ -172,16 +209,26 @@ class SequraService:
         if not order_uri.startswith("http"):
             order_uri = f"{self.config.orders_url}/{order_uri}"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.put(
-                order_uri,
-                json={"order": order_data},
-                auth=self._auth(),
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                },
-            )
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.put(
+                    order_uri,
+                    json={"order": order_data},
+                    auth=self._auth(),
+                    headers={
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                    },
+                )
+        except httpx.TimeoutException:
+            logger.exception("SeQura update_order timeout (uri=%s)", order_uri)
+            return False, None
+        except httpx.HTTPError:
+            logger.exception("SeQura update_order HTTP error (uri=%s)", order_uri)
+            return False, None
+        except Exception:
+            logger.exception("SeQura update_order unexpected error (uri=%s)", order_uri)
+            return False, None
 
         if 200 <= response.status_code <= 299:
             logger.info(f"SeQura update_order OK: {response.status_code}")
@@ -205,17 +252,31 @@ class SequraService:
         """
         url = f"{self.config.orders_url}/{order_id}/payment_methods"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                url,
-                auth=self._auth(),
-                headers={"Accept": "application/json"},
-            )
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(
+                    url,
+                    auth=self._auth(),
+                    headers={"Accept": "application/json"},
+                )
+        except httpx.TimeoutException:
+            logger.exception("SeQura get_payment_methods timeout (url=%s)", url)
+            return None
+        except httpx.HTTPError:
+            logger.exception("SeQura get_payment_methods HTTP error (url=%s)", url)
+            return None
+        except Exception:
+            logger.exception("SeQura get_payment_methods unexpected error (url=%s)", url)
+            return None
 
         if 200 <= response.status_code <= 299:
             return response.json()
 
-        logger.error(f"SeQura get_payment_methods failed: {response.status_code}")
+        logger.error(
+            "SeQura get_payment_methods failed: status=%s body=%s",
+            response.status_code,
+            response.text[:500],
+        )
         return None
 
     async def get_credit_agreements(self, amount_cents: int) -> Optional[List[Dict]]:

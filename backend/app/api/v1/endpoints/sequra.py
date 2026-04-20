@@ -74,6 +74,8 @@ class SequraConfigStatusResponse(BaseModel):
     configured: bool
     environment: str
     merchant_id_set: bool
+    endpoint: str = ""
+    script_uri: str = ""
 
 
 # ============ RATE LIMITING ============
@@ -310,12 +312,32 @@ async def start_onboarding(
         discount_items=discount_items,
     )
 
-    # Start solicitation with SeQura
-    order_uri = await sequra_service.start_solicitation(order_data)
-    if not order_uri:
+    # Start solicitation with SeQura. Cualquier excepción del servicio se
+    # traduce a un 502 controlado para no tumbar el worker (lo que dejaría
+    # al edge respondiendo 502 sin cabeceras CORS, como ya hemos visto en
+    # producción al cambiar a live).
+    try:
+        order_uri = await sequra_service.start_solicitation(order_data)
+    except Exception:
+        logger.exception(
+            "SeQura start_solicitation crashed (endpoint=%s, merchant=%s, env=%s)",
+            sequra_service.config.orders_url,
+            sequra_service.config.merchant_id,
+            sequra_service.config.environment,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Error al comunicarse con SeQura. Inténtalo de nuevo.",
+            detail="Error al comunicarse con SeQura. Intentalo de nuevo.",
+        )
+    if not order_uri:
+        logger.error(
+            "SeQura start_solicitation returned no order_uri (endpoint=%s, env=%s)",
+            sequra_service.config.orders_url,
+            sequra_service.config.environment,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Error al comunicarse con SeQura. Intentalo de nuevo.",
         )
 
     # Extract order UUID from URI
@@ -354,10 +376,15 @@ async def start_onboarding(
         f"amount={amount_cents}c, product={product.name}, payment_id={payment.id}"
     )
 
-    # Fetch the identification form
-    form_html = await sequra_service.get_identification_form(
-        order_uri, product=data.product_code, ajax=True
-    )
+    # Fetch the identification form. Best-effort: si falla igual devolvemos
+    # el order_uri y el frontend puede reintentar con /identification-form.
+    try:
+        form_html = await sequra_service.get_identification_form(
+            order_uri, product=data.product_code, ajax=True
+        )
+    except Exception:
+        logger.exception("SeQura get_identification_form crashed for %s", order_uri)
+        form_html = None
     if not form_html:
         form_html = ""
         logger.warning(f"SeQura: could not fetch identification form for {order_uri}")
@@ -719,4 +746,6 @@ async def get_config_status(_=Depends(require_staff)):
         configured=config.is_configured,
         environment=config.environment,
         merchant_id_set=bool(config.merchant_id),
+        endpoint=config.endpoint,
+        script_uri=config.script_uri,
     )
