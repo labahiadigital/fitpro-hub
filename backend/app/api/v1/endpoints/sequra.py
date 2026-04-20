@@ -156,6 +156,37 @@ async def start_onboarding(
     Public endpoint. Security via valid invitation token + rate limiting.
     The amount is taken from the product in DB, never from client input.
     """
+    # Wrap the whole endpoint in try/except so any unhandled exception becomes
+    # a 502 with CORS headers, instead of the reverse proxy returning a "mute"
+    # 502 Bad Gateway that breaks the browser preflight.
+    try:
+        return await _start_onboarding_impl(data, request, db)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(
+            "SeQura start-onboarding crashed unexpectedly (token_prefix=%s, env=%s)",
+            data.token[:8] if data.token else "<none>",
+            sequra_service.config.environment,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Error interno al iniciar el pago con SeQura. Intentalo de nuevo.",
+        )
+
+
+async def _start_onboarding_impl(
+    data: StartOnboardingRequest,
+    request: Request,
+    db: AsyncSession,
+) -> "StartOnboardingResponse":
+    logger.info(
+        "SeQura start-onboarding BEGIN (token_prefix=%s, product_code=%s, env=%s)",
+        data.token[:8] if data.token else "<none>",
+        data.product_code,
+        sequra_service.config.environment,
+    )
+
     if not _check_rate_limit(data.token):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
