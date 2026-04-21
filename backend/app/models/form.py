@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -7,31 +7,37 @@ from app.models.base import BaseModel
 
 class Form(BaseModel):
     __tablename__ = "forms"
-    
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # NULL cuando el formulario es una plantilla global del sistema
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    
+
     # Form details
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     form_type = Column(String(50), default="custom")  # parq, custom, consent, etc.
-    
+
     # Form schema (fields definition)
     schema = Column(JSONB, default=lambda: {
         "fields": []
     })
-    
+
     # Settings
     settings = Column(JSONB, default=lambda: {
         "require_signature": False,
         "send_reminder": True,
         "reminder_days": 3,
-        "allow_edit": False
+        "allow_edit": False,
+        "send_on_onboarding": False,
     })
-    
+
     # Status
-    is_active = Column(String(1), default="Y")  # Y/N
-    
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    # Plantilla del sistema (visible para todos los workspaces, no editable).
+    # Para usarlo en el workspace propio debe copiarse (fork).
+    is_global = Column(Boolean, default=False, nullable=False, index=True)
+
     # Relationships
     workspace = relationship("Workspace", back_populates="forms")
     submissions = relationship("FormSubmission", back_populates="form", cascade="all, delete-orphan")

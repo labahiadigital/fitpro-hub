@@ -22,6 +22,7 @@ import {
   Textarea,
   TextInput,
   ThemeIcon,
+  Tooltip,
   Skeleton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -65,6 +66,7 @@ import {
   useCreateForm,
   useUpdateForm,
   useDeleteForm,
+  useCopyForm,
   type Form,
 } from "../../hooks/useForms";
 import { formatDecimal } from "../../utils/format";
@@ -96,6 +98,7 @@ interface FormTemplate {
   fields: FormField[];
   is_active: boolean;
   send_on_onboarding: boolean;
+  is_global: boolean;
   submissions_count: number;
   created_at: string;
 }
@@ -133,6 +136,7 @@ export function FormsPage() {
   const createForm = useCreateForm();
   const updateForm = useUpdateForm();
   const deleteFormMutation = useDeleteForm();
+  const copyFormMutation = useCopyForm();
   
   // Map API forms to FormTemplate interface
   const forms: FormTemplate[] = Array.isArray(formsData) ? (formsData as Form[]).map((f) => ({
@@ -143,9 +147,14 @@ export function FormsPage() {
     fields: (f.fields || []).map((field, idx) => ({ ...field, order: field.order ?? idx })) as FormField[],
     is_active: f.is_active === true || f.is_active === "Y" || f.is_active === "true",
     send_on_onboarding: f.send_on_onboarding ?? false,
+    is_global: f.is_global ?? false,
     submissions_count: f.submissions_count ?? 0,
     created_at: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
   })) : [];
+
+  // Separar plantillas del sistema de los formularios propios del workspace
+  const systemForms = useMemo(() => forms.filter((f) => f.is_global), [forms]);
+  const workspaceForms = useMemo(() => forms.filter((f) => !f.is_global), [forms]);
   // Map submissions from API
   const submissions = useMemo(() => {
     if (!Array.isArray(submissionsData)) return [];
@@ -190,7 +199,10 @@ export function FormsPage() {
     uploadModalOpened,
     { open: openUploadModal, close: closeUploadModal },
   ] = useDisclosure(false);
+  const [previewOpened, { open: openPreview, close: closePreview }] =
+    useDisclosure(false);
   const [editingForm, setEditingForm] = useState<FormTemplate | null>(null);
+  const [previewForm, setPreviewForm] = useState<FormTemplate | null>(null);
   const [formFields, setFormFields] = useState<FormField[]>([]);
 
   const form = useForm({
@@ -378,6 +390,28 @@ export function FormsPage() {
     });
   };
 
+  const handleCopyForm = async (formTemplate: FormTemplate) => {
+    try {
+      await copyFormMutation.mutateAsync(formTemplate.id);
+      notifications.show({
+        title: "Plantilla copiada",
+        message: `"${formTemplate.name}" se ha copiado a tu workspace y ya puedes editarla.`,
+        color: "green",
+      });
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo copiar el formulario",
+        color: "red",
+      });
+    }
+  };
+
+  const openPreviewDrawer = (formTemplate: FormTemplate) => {
+    setPreviewForm(formTemplate);
+    openPreview();
+  };
+
   const getFormTypeColor = (type: FormTemplate["type"]) => {
     switch (type) {
       case "par_q":
@@ -429,6 +463,139 @@ export function FormsPage() {
   const getFieldIcon = (type: FormField["type"]) => {
     const fieldType = fieldTypes.find((f) => f.value === type);
     return fieldType?.icon || IconTextSize;
+  };
+
+  const renderFormCard = (formTemplate: FormTemplate) => {
+    const isSystem = formTemplate.is_global;
+    return (
+      <Card key={formTemplate.id} padding="lg" radius="lg" withBorder>
+        <Group justify="space-between" mb="sm">
+          <Group gap={6}>
+            <Badge
+              color={getFormTypeColor(formTemplate.type)}
+              variant="light"
+            >
+              {getFormTypeLabel(formTemplate.type)}
+            </Badge>
+            {isSystem && (
+              <Badge
+                color="violet"
+                variant="filled"
+                size="sm"
+                leftSection={<IconForms size={12} />}
+              >
+                Sistema
+              </Badge>
+            )}
+          </Group>
+          {isSystem ? (
+            <Tooltip label="Las plantillas del sistema siempre están activas" withArrow>
+              <Badge color="gray" variant="outline" size="sm">
+                Plantilla
+              </Badge>
+            </Tooltip>
+          ) : (
+            <Switch
+              checked={formTemplate.is_active}
+              color="green"
+              onChange={() => toggleFormActive(formTemplate.id, formTemplate.is_active)}
+              size="sm"
+            />
+          )}
+        </Group>
+
+        <Text fw={600} mb="xs">
+          {formTemplate.name}
+        </Text>
+        <Text c="dimmed" lineClamp={2} mb="md" size="sm">
+          {formTemplate.description || "Sin descripción"}
+        </Text>
+
+        <Group gap="xs" mb="md">
+          {formTemplate.send_on_onboarding && (
+            <Badge color="blue" size="xs" variant="outline">
+              Onboarding
+            </Badge>
+          )}
+          {!isSystem && (
+            <Badge size="xs" variant="light">
+              {formTemplate.submissions_count} respuestas
+            </Badge>
+          )}
+          <Badge size="xs" variant="light" color="gray">
+            {formTemplate.fields.length} campos
+          </Badge>
+        </Group>
+
+        <Divider mb="md" />
+
+        {isSystem ? (
+          <Group gap="xs">
+            <Button
+              flex={1}
+              leftSection={<IconEye size={14} />}
+              onClick={() => openPreviewDrawer(formTemplate)}
+              size="xs"
+              variant="light"
+              color="violet"
+            >
+              Ver plantilla
+            </Button>
+            <Button
+              flex={1}
+              leftSection={<IconCopy size={14} />}
+              onClick={() => handleCopyForm(formTemplate)}
+              size="xs"
+              variant="filled"
+              loading={copyFormMutation.isPending}
+            >
+              Copiar y editar
+            </Button>
+          </Group>
+        ) : (
+          <Group gap="xs">
+            <Button
+              flex={1}
+              leftSection={<IconEdit size={14} />}
+              onClick={() => openFormBuilder(formTemplate)}
+              size="xs"
+              variant="light"
+            >
+              Editar
+            </Button>
+            <ActionIcon
+              color="blue"
+              variant="light"
+              onClick={() => openPreviewDrawer(formTemplate)}
+              title="Previsualizar"
+            >
+              <IconEye size={16} />
+            </ActionIcon>
+            <ActionIcon color="green" variant="light" title="Enviar">
+              <IconSend size={16} />
+            </ActionIcon>
+            <ActionIcon
+              color="gray"
+              variant="light"
+              onClick={() => handleCopyForm(formTemplate)}
+              loading={copyFormMutation.isPending}
+              title="Duplicar"
+            >
+              <IconCopy size={16} />
+            </ActionIcon>
+            <ActionIcon
+              color="red"
+              loading={deleteFormMutation.isPending}
+              onClick={() => handleDeleteForm(formTemplate.id, formTemplate.name)}
+              variant="light"
+              title="Eliminar"
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Group>
+        )}
+      </Card>
+    );
   };
 
   return (
@@ -493,75 +660,51 @@ export function FormsPage() {
               ))}
             </SimpleGrid>
           ) : forms.length > 0 ? (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
-              {forms.map((formTemplate) => (
-                <Card key={formTemplate.id} padding="lg" radius="lg" withBorder>
-                  <Group justify="space-between" mb="sm">
-                    <Badge
-                      color={getFormTypeColor(formTemplate.type)}
-                      variant="light"
-                    >
-                      {getFormTypeLabel(formTemplate.type)}
-                    </Badge>
-                    <Switch
-                      checked={formTemplate.is_active}
-                      color="green"
-                      onChange={() => toggleFormActive(formTemplate.id, formTemplate.is_active)}
-                      size="sm"
-                    />
-                  </Group>
-
-                  <Text fw={600} mb="xs">
-                    {formTemplate.name}
-                  </Text>
-                  <Text c="dimmed" lineClamp={2} mb="md" size="sm">
-                    {formTemplate.description || "Sin descripción"}
-                  </Text>
-
-                  <Group gap="xs" mb="md">
-                    {formTemplate.send_on_onboarding && (
-                      <Badge color="blue" size="xs" variant="outline">
-                        Onboarding
-                      </Badge>
-                    )}
-                    <Badge size="xs" variant="light">
-                      {formTemplate.submissions_count} respuestas
+            <Stack gap="xl">
+              {systemForms.length > 0 && (
+                <Box>
+                  <Group gap="xs" mb="sm">
+                    <Text fw={700} size="md">
+                      Plantillas del sistema
+                    </Text>
+                    <Badge color="violet" variant="light" size="sm">
+                      {systemForms.length}
                     </Badge>
                   </Group>
+                  <Text c="dimmed" size="sm" mb="md">
+                    Formularios predefinidos compartidos por toda la plataforma. No se
+                    pueden editar, pero puedes copiarlos a tu workspace para personalizarlos.
+                  </Text>
+                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
+                    {systemForms.map(renderFormCard)}
+                  </SimpleGrid>
+                </Box>
+              )}
 
-                  <Divider mb="md" />
-
-                  <Group gap="xs">
-                    <Button
-                      flex={1}
-                      leftSection={<IconEdit size={14} />}
-                      onClick={() => openFormBuilder(formTemplate)}
-                      size="xs"
-                      variant="light"
-                    >
-                      Editar
-                    </Button>
-                    <ActionIcon color="blue" variant="light">
-                      <IconEye size={16} />
-                    </ActionIcon>
-                    <ActionIcon color="green" variant="light">
-                      <IconSend size={16} />
-                    </ActionIcon>
-                    <ActionIcon color="gray" variant="light">
-                      <IconCopy size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      color="red"
-                      loading={deleteFormMutation.isPending}
-                      onClick={() => handleDeleteForm(formTemplate.id, formTemplate.name)}
-                      variant="light"
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Card>
-              ))}
-            </SimpleGrid>
+              <Box>
+                <Group gap="xs" mb="sm">
+                  <Text fw={700} size="md">
+                    Mis formularios
+                  </Text>
+                  <Badge color="blue" variant="light" size="sm">
+                    {workspaceForms.length}
+                  </Badge>
+                </Group>
+                {workspaceForms.length > 0 ? (
+                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
+                    {workspaceForms.map(renderFormCard)}
+                  </SimpleGrid>
+                ) : (
+                  <EmptyState
+                    actionLabel="Crear Formulario"
+                    description="Crea tu primer formulario o copia una plantilla del sistema para empezar."
+                    icon={<IconForms size={40} />}
+                    onAction={() => openFormBuilder()}
+                    title="Aún no tienes formularios propios"
+                  />
+                )}
+              </Box>
+            </Stack>
           ) : (
             <EmptyState
               actionLabel="Crear Formulario"
@@ -756,6 +899,111 @@ export function FormsPage() {
           )}
         </Tabs.Panel>
       </Tabs>
+
+      {/* Form Preview Drawer (read-only, usado para plantillas del sistema) */}
+      <Drawer
+        onClose={closePreview}
+        opened={previewOpened}
+        position="right"
+        size="lg"
+        title={previewForm?.name || "Previsualización"}
+      >
+        {previewForm && (
+          <ScrollArea h="calc(100vh - 180px)" offsetScrollbars>
+            <Stack>
+              <Paper p="md" radius="md" withBorder>
+                <Group gap="xs" mb="sm">
+                  <Badge color={getFormTypeColor(previewForm.type)} variant="light">
+                    {getFormTypeLabel(previewForm.type)}
+                  </Badge>
+                  {previewForm.is_global && (
+                    <Badge color="violet" variant="filled">
+                      Plantilla del sistema
+                    </Badge>
+                  )}
+                  {previewForm.send_on_onboarding && (
+                    <Badge color="blue" variant="outline">
+                      Onboarding
+                    </Badge>
+                  )}
+                </Group>
+                {previewForm.description && (
+                  <Text c="dimmed" size="sm">
+                    {previewForm.description}
+                  </Text>
+                )}
+              </Paper>
+
+              <Divider label={`${previewForm.fields.length} campos`} labelPosition="center" />
+
+              <Stack gap="sm">
+                {previewForm.fields.map((field, idx) => {
+                  const FieldIcon = getFieldIcon(field.type);
+                  return (
+                    <Paper key={field.id || idx} p="md" radius="md" withBorder>
+                      <Group gap="sm" mb="xs">
+                        <ThemeIcon color="blue" size="sm" variant="light">
+                          <FieldIcon size={12} />
+                        </ThemeIcon>
+                        <Text fw={500} size="sm">
+                          {fieldTypes.find((f) => f.value === field.type)?.label || field.type}
+                        </Text>
+                        {field.required && (
+                          <Badge size="xs" color="red" variant="light">
+                            Obligatorio
+                          </Badge>
+                        )}
+                      </Group>
+                      <Text fw={600} size="sm" mb={4}>
+                        {field.label || "(sin etiqueta)"}
+                      </Text>
+                      {field.placeholder && (
+                        <Text c="dimmed" size="xs" mb="xs">
+                          {field.placeholder}
+                        </Text>
+                      )}
+                      {field.options && field.options.length > 0 && (
+                        <Group gap={4} mt="xs">
+                          {field.options.map((opt, i) => (
+                            <Badge key={i} size="sm" variant="light">
+                              {opt}
+                            </Badge>
+                          ))}
+                        </Group>
+                      )}
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            </Stack>
+          </ScrollArea>
+        )}
+
+        <Group
+          justify="flex-end"
+          mt="md"
+          p="md"
+          style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+        >
+          <Button onClick={closePreview} variant="default">
+            Cerrar
+          </Button>
+          {previewForm?.is_global && (
+            <Button
+              leftSection={<IconCopy size={16} />}
+              loading={copyFormMutation.isPending}
+              onClick={async () => {
+                if (previewForm) {
+                  await handleCopyForm(previewForm);
+                  closePreview();
+                }
+              }}
+            >
+              Copiar a mi workspace
+            </Button>
+          )}
+        </Group>
+      </Drawer>
 
       {/* Form Builder Drawer */}
       <Drawer

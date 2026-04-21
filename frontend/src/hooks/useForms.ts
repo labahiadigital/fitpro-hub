@@ -4,7 +4,7 @@ import { useAuthStore } from "../stores/auth";
 
 export interface Form {
   id: string;
-  workspace_id: string;
+  workspace_id: string | null;
   name: string;
   description?: string;
   form_type: "health" | "consent" | "assessment" | "survey" | "custom";
@@ -12,6 +12,7 @@ export interface Form {
   is_active: boolean | string; // Backend may return "Y"/"N"
   is_required?: boolean;
   send_on_onboarding?: boolean;
+  is_global?: boolean;
   submissions_count?: number;
   created_at: string;
   updated_at?: string;
@@ -124,6 +125,20 @@ export function useDeleteForm() {
     mutationFn: async (id: string) => {
       const response = await api.delete(`/forms/${id}`);
       return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+    },
+  });
+}
+
+export function useCopyForm() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.post(`/forms/${id}/copy`);
+      return response.data as Form;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forms"] });
