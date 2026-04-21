@@ -38,6 +38,10 @@ class Form(BaseModel):
     # Para usarlo en el workspace propio debe copiarse (fork).
     is_global = Column(Boolean, default=False, nullable=False, index=True)
 
+    # Obligatorio: cuando se envía a un cliente debe aparecer como
+    # notificación persistente hasta que el cliente responda.
+    is_required = Column(Boolean, default=False, nullable=False)
+
     # Relationships
     workspace = relationship("Workspace", back_populates="forms")
     submissions = relationship("FormSubmission", back_populates="form", cascade="all, delete-orphan")

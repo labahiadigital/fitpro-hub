@@ -67,8 +67,10 @@ import {
   useUpdateForm,
   useDeleteForm,
   useCopyForm,
+  useSendForm,
   type Form,
 } from "../../hooks/useForms";
+import { useClients } from "../../hooks/useClients";
 import { formatDecimal } from "../../utils/format";
 
 interface FormField {
@@ -97,6 +99,7 @@ interface FormTemplate {
   type: "custom" | "par_q" | "consent" | "health" | "feedback";
   fields: FormField[];
   is_active: boolean;
+  is_required: boolean;
   send_on_onboarding: boolean;
   is_global: boolean;
   submissions_count: number;
@@ -137,6 +140,15 @@ export function FormsPage() {
   const updateForm = useUpdateForm();
   const deleteFormMutation = useDeleteForm();
   const copyFormMutation = useCopyForm();
+  const sendFormMutation = useSendForm();
+  const { data: clientsResponse } = useClients({ page_size: 500 });
+  const clientsList = (clientsResponse?.items || []) as Array<{
+    id: string;
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  }>;
   
   // Map API forms to FormTemplate interface
   const forms: FormTemplate[] = Array.isArray(formsData) ? (formsData as Form[]).map((f) => ({
@@ -146,6 +158,7 @@ export function FormsPage() {
     type: f.form_type === "assessment" ? "custom" : f.form_type === "survey" ? "feedback" : f.form_type as FormTemplate["type"],
     fields: (f.fields || []).map((field, idx) => ({ ...field, order: field.order ?? idx })) as FormField[],
     is_active: f.is_active === true || f.is_active === "Y" || f.is_active === "true",
+    is_required: f.is_required ?? false,
     send_on_onboarding: f.send_on_onboarding ?? false,
     is_global: f.is_global ?? false,
     submissions_count: f.submissions_count ?? 0,
@@ -366,10 +379,39 @@ export function FormsPage() {
         id: formId,
         data: { is_active: !currentStatus },
       });
-    } catch (error) {
+      notifications.show({
+        title: "Estado actualizado",
+        message: !currentStatus
+          ? "El formulario está activo."
+          : "El formulario se ha desactivado.",
+        color: "green",
+      });
+    } catch {
       notifications.show({
         title: "Error",
         message: "No se pudo cambiar el estado del formulario",
+        color: "red",
+      });
+    }
+  };
+
+  const toggleFormRequired = async (formId: string, currentValue: boolean) => {
+    try {
+      await updateForm.mutateAsync({
+        id: formId,
+        data: { is_required: !currentValue },
+      });
+      notifications.show({
+        title: !currentValue ? "Formulario obligatorio" : "Formulario opcional",
+        message: !currentValue
+          ? "Los clientes verán una notificación persistente hasta completarlo."
+          : "El formulario ya no es obligatorio.",
+        color: !currentValue ? "orange" : "gray",
+      });
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo cambiar el carácter obligatorio del formulario",
         color: "red",
       });
     }
@@ -410,6 +452,48 @@ export function FormsPage() {
   const openPreviewDrawer = (formTemplate: FormTemplate) => {
     setPreviewForm(formTemplate);
     openPreview();
+  };
+
+  const [sendOpened, { open: openSend, close: closeSend }] = useDisclosure(false);
+  const [sendingForm, setSendingForm] = useState<FormTemplate | null>(null);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+
+  const openSendDrawer = (formTemplate: FormTemplate) => {
+    setSendingForm(formTemplate);
+    setSelectedClientIds([]);
+    openSend();
+  };
+
+  const handleSendForm = async () => {
+    if (!sendingForm || selectedClientIds.length === 0) return;
+    try {
+      const results = await sendFormMutation.mutateAsync({
+        form_id: sendingForm.id,
+        client_ids: selectedClientIds,
+      });
+      const sent = Array.isArray(results)
+        ? results.filter((r: { status: string }) => r.status === "sent").length
+        : selectedClientIds.length;
+      const already = Array.isArray(results)
+        ? results.filter((r: { status: string }) => r.status === "already_pending").length
+        : 0;
+      notifications.show({
+        title: "Formulario enviado",
+        message:
+          `Enviado a ${sent} cliente${sent === 1 ? "" : "s"}.` +
+          (already > 0 ? ` ${already} ya tenían uno pendiente.` : ""),
+        color: "green",
+      });
+      closeSend();
+      setSendingForm(null);
+      setSelectedClientIds([]);
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo enviar el formulario",
+        color: "red",
+      });
+    }
   };
 
   const getFormTypeColor = (type: FormTemplate["type"]) => {
@@ -495,12 +579,19 @@ export function FormsPage() {
               </Badge>
             </Tooltip>
           ) : (
-            <Switch
-              checked={formTemplate.is_active}
-              color="green"
-              onChange={() => toggleFormActive(formTemplate.id, formTemplate.is_active)}
-              size="sm"
-            />
+            <Tooltip
+              label={formTemplate.is_active ? "Activo" : "Desactivado"}
+              withArrow
+            >
+              <Switch
+                checked={formTemplate.is_active}
+                color="green"
+                onChange={() =>
+                  toggleFormActive(formTemplate.id, formTemplate.is_active)
+                }
+                size="sm"
+              />
+            </Tooltip>
           )}
         </Group>
 
@@ -517,6 +608,11 @@ export function FormsPage() {
               Onboarding
             </Badge>
           )}
+          {formTemplate.is_required && (
+            <Badge color="orange" size="xs" variant="filled">
+              Obligatorio
+            </Badge>
+          )}
           {!isSystem && (
             <Badge size="xs" variant="light">
               {formTemplate.submissions_count} respuestas
@@ -526,6 +622,22 @@ export function FormsPage() {
             {formTemplate.fields.length} campos
           </Badge>
         </Group>
+
+        {!isSystem && (
+          <Group justify="space-between" mb="xs" gap="xs">
+            <Text size="xs" c="dimmed">
+              Marcar como obligatorio
+            </Text>
+            <Switch
+              checked={formTemplate.is_required}
+              color="orange"
+              onChange={() =>
+                toggleFormRequired(formTemplate.id, formTemplate.is_required)
+              }
+              size="sm"
+            />
+          </Group>
+        )}
 
         <Divider mb="md" />
 
@@ -571,7 +683,12 @@ export function FormsPage() {
             >
               <IconEye size={16} />
             </ActionIcon>
-            <ActionIcon color="green" variant="light" title="Enviar">
+            <ActionIcon
+              color="green"
+              variant="light"
+              title="Enviar a clientes"
+              onClick={() => openSendDrawer(formTemplate)}
+            >
               <IconSend size={16} />
             </ActionIcon>
             <ActionIcon
@@ -1177,6 +1294,113 @@ export function FormsPage() {
             {editingForm ? "Guardar Cambios" : "Crear Formulario"}
           </Button>
         </Group>
+      </Drawer>
+
+      {/* Send Form Drawer */}
+      <Drawer
+        onClose={closeSend}
+        opened={sendOpened}
+        position="right"
+        size="md"
+        title={sendingForm ? `Enviar: ${sendingForm.name}` : "Enviar formulario"}
+      >
+        <Stack>
+          <Text c="dimmed" size="sm">
+            Selecciona los clientes a los que se les enviará este formulario.
+            Recibirán una notificación y podrán responderlo desde su portal.
+          </Text>
+          {sendingForm?.is_required && (
+            <Paper withBorder p="sm" radius="md" bg="orange.0">
+              <Group gap={6}>
+                <IconAlertTriangle color="orange" size={16} />
+                <Text size="xs" c="orange.8" fw={500}>
+                  Este formulario es obligatorio: generará una alerta persistente
+                  hasta que el cliente lo complete.
+                </Text>
+              </Group>
+            </Paper>
+          )}
+
+          <ScrollArea h={380} offsetScrollbars>
+            <Stack gap="xs">
+              {clientsList.map((c) => {
+                const name =
+                  c.full_name ||
+                  [c.first_name, c.last_name].filter(Boolean).join(" ") ||
+                  c.email ||
+                  c.id;
+                return (
+                  <Paper key={c.id} p="sm" radius="md" withBorder>
+                    <Group justify="space-between" wrap="nowrap">
+                      <Box style={{ minWidth: 0 }}>
+                        <Text fw={500} size="sm" truncate>
+                          {name}
+                        </Text>
+                        {c.email && (
+                          <Text c="dimmed" size="xs" truncate>
+                            {c.email}
+                          </Text>
+                        )}
+                      </Box>
+                      <Checkbox
+                        checked={selectedClientIds.includes(c.id)}
+                        onChange={(event) => {
+                          const checked = event.currentTarget.checked;
+                          setSelectedClientIds((prev) =>
+                            checked
+                              ? [...prev, c.id]
+                              : prev.filter((id) => id !== c.id)
+                          );
+                        }}
+                      />
+                    </Group>
+                  </Paper>
+                );
+              })}
+              {clientsList.length === 0 && (
+                <Text c="dimmed" size="sm">
+                  No hay clientes disponibles.
+                </Text>
+              )}
+            </Stack>
+          </ScrollArea>
+
+          <Group justify="space-between">
+            <Text size="xs" c="dimmed">
+              {selectedClientIds.length} seleccionados
+            </Text>
+            <Group gap="xs">
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() => setSelectedClientIds(clientsList.map((c) => c.id))}
+              >
+                Seleccionar todos
+              </Button>
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() => setSelectedClientIds([])}
+              >
+                Ninguno
+              </Button>
+            </Group>
+          </Group>
+
+          <Group justify="flex-end" mt="sm">
+            <Button variant="default" onClick={closeSend}>
+              Cancelar
+            </Button>
+            <Button
+              leftSection={<IconSend size={16} />}
+              disabled={selectedClientIds.length === 0}
+              loading={sendFormMutation.isPending}
+              onClick={handleSendForm}
+            >
+              Enviar ({selectedClientIds.length})
+            </Button>
+          </Group>
+        </Stack>
       </Drawer>
 
       {/* Upload Document Modal */}

@@ -30,6 +30,7 @@ import {
   ScrollArea,
   Collapse,
   Paper,
+  Modal,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
@@ -69,6 +70,8 @@ import {
     IconPlayerPause,
     IconChecklist,
     IconCalendar,
+    IconForms,
+    IconBolt,
 } from "@tabler/icons-react";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -84,6 +87,7 @@ import {
   useActivateWorkoutProgram,
   useDeactivateWorkoutProgram,
   useAssignMealPlan,
+  useUpdateMealPlan,
   useSupabaseMealPlan,
   useClientWorkoutAssignments,
   useDeleteAssignedProgram,
@@ -95,6 +99,7 @@ import {
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
 import { NutritionCalculatorCard } from "../../components/nutrition/NutritionCalculatorCard";
 import { NutritionHistoryPanel } from "../../components/nutrition/NutritionHistoryPanel";
+import { ClientFormsTab } from "../../components/clients/ClientFormsTab";
 import type { NutritionCalculationEntry } from "../../hooks/useClients";
 import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calories";
 import { generateClientPlanPDF, generateMealPlanPDF, generateWorkoutProgramPDF } from "../../services/pdfGenerator";
@@ -639,6 +644,12 @@ export function ClientDetailPage() {
   const [editingMedicalConditions, setEditingMedicalConditions] = useState("");
   const [editingMedications, setEditingMedications] = useState("");
   
+  // Modal de la Calculadora Nutricional (se abre desde el botón "rayo")
+  const [
+    nutritionCalculatorOpened,
+    { open: openNutritionCalculator, close: closeNutritionCalculator },
+  ] = useDisclosure(false);
+
   // Modal de PAR-Q
   const [parqModalOpened, { open: openParqModal, close: closeParqModal }] = useDisclosure(false);
   const [editingParq, setEditingParq] = useState({
@@ -681,6 +692,7 @@ export function ClientDetailPage() {
   const activateWorkoutProgram = useActivateWorkoutProgram();
   const deactivateWorkoutProgram = useDeactivateWorkoutProgram();
   const assignMealPlan = useAssignMealPlan();
+  const updateMealPlanMutation = useUpdateMealPlan();
   const activateMealPlan = useActivateMealPlan();
   const deactivateMealPlan = useDeactivateMealPlan();
   
@@ -817,30 +829,55 @@ export function ClientDetailPage() {
   // Calcular TDEE
   const clientTDEE = Math.round(calculateTDEE(clientBMR, activityLevel));
 
-  // Calcular objetivos según tipo de objetivo
+  // Calcular objetivos según tipo de objetivo.
+  // Prioridad:
+  //  1. Último cálculo guardado por el entrenador en "Calculadora Nutricional"
+  //     (health_data.target_calories / target_protein / target_carbs / target_fat).
+  //  2. Valores iniciales derivados de los datos del onboarding (BMR + TDEE + objetivo).
+  // De esta forma, al asignar o editar un plan, los objetivos mostrados siempre
+  // reflejan o bien el onboarding inicial o bien el último cálculo del trainer.
   const nutritionalTargets = (() => {
     const weight = parseFloat(String(client.weight_kg)) || 70;
+    const healthData = (client as { health_data?: {
+      target_calories?: number;
+      target_protein?: number;
+      target_carbs?: number;
+      target_fat?: number;
+      bmr?: number;
+      tdee?: number;
+    } }).health_data || {};
+
+    const hasSavedObjectives =
+      typeof healthData.target_calories === "number" && healthData.target_calories > 0;
+
+    if (hasSavedObjectives) {
+      return {
+        calories: healthData.target_calories || 0,
+        protein: Math.round(healthData.target_protein ?? 0),
+        carbs: Math.round(healthData.target_carbs ?? 0),
+        fat: Math.round(healthData.target_fat ?? 0),
+        bmr: Math.round(healthData.bmr ?? clientBMR),
+        tdee: Math.round(healthData.tdee ?? clientTDEE),
+      };
+    }
+
     let targetCalories = clientTDEE;
-    
     if (goalType === "fat_loss") {
       targetCalories = Math.round(clientTDEE * 0.8); // -20%
     } else if (goalType === "muscle_gain") {
       targetCalories = Math.round(clientTDEE * 1.15); // +15%
     }
-    
-    // Proteínas: 2.0-2.2g/kg según objetivo
+
     const proteinMultiplier = goalType === "maintenance" ? 1.8 : 2.2;
     const targetProtein = Math.round(weight * proteinMultiplier);
-    
-    // Grasas: 25-30% de calorías
+
     const fatCalories = targetCalories * 0.28;
     const targetFat = Math.round(fatCalories / 9);
-    
-    // Carbohidratos: resto de calorías
+
     const proteinCalories = targetProtein * 4;
     const remainingCalories = targetCalories - proteinCalories - fatCalories;
     const targetCarbs = Math.round(remainingCalories / 4);
-    
+
     return {
       calories: targetCalories,
       protein: targetProtein,
@@ -1168,6 +1205,23 @@ export function ClientDetailPage() {
     }
     
     try {
+      // Antes de asignar, volcamos los objetivos nutricionales actuales del
+      // cliente (del onboarding o del último cálculo en la Calculadora) al
+      // meal plan, de forma que la asignación siempre use los mismos targets
+      // que se muestran en "Objetivos Nutricionales Calculados".
+      try {
+        await updateMealPlanMutation.mutateAsync({
+          id: selectedMealPlanForAssign,
+          target_calories: nutritionalTargets.calories,
+          target_protein: nutritionalTargets.protein,
+          target_carbs: nutritionalTargets.carbs,
+          target_fat: nutritionalTargets.fat,
+        });
+      } catch (syncError) {
+        // No bloquea la asignación aunque falle la sincronización.
+        console.warn("No se pudieron sincronizar los objetivos al plan:", syncError);
+      }
+
       await assignMealPlan.mutateAsync({
         clientId: id,
         mealPlanId: selectedMealPlanForAssign,
@@ -1178,7 +1232,7 @@ export function ClientDetailPage() {
       });
       notifications.show({
         title: "Plan asignado",
-        message: "El plan nutricional ha sido asignado correctamente",
+        message: "El plan nutricional ha sido asignado con los objetivos actuales del cliente.",
         color: "green",
       });
       closeAssignMealPlanModal();
@@ -1636,6 +1690,8 @@ export function ClientDetailPage() {
       if (entry.formula_used === "mifflin" || entry.formula_used === "harris" || entry.formula_used === "katch") {
         setSelectedFormula(entry.formula_used);
       }
+      // Cierra el modal de la calculadora tras guardar.
+      closeNutritionCalculator();
     } catch {
       // useUpdateClient gestiona el error.
     }
@@ -1967,6 +2023,7 @@ export function ClientDetailPage() {
             <Tabs.Tab leftSection={<IconCalendar size={16} />} value="client-calendar">Calendario</Tabs.Tab>
             <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconForms size={16} />} value="forms">Formularios</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
           </Tabs.List>
         )}
@@ -2747,8 +2804,8 @@ export function ClientDetailPage() {
             <>
               {/* Tarjeta principal de Objetivos Nutricionales del Cliente */}
               <Box className="nv-card" p="xl" mb="xl" style={{ background: "linear-gradient(135deg, var(--nv-accent) 0%, #10B981 100%)" }}>
-                <Group justify="space-between" align="flex-start" mb="lg">
-                  <Box>
+                <Group justify="space-between" align="flex-start" mb="lg" wrap="wrap">
+                  <Box style={{ flex: 1, minWidth: 200 }}>
                     <Text size="xs" tt="uppercase" fw={700} style={{ letterSpacing: "0.1em", color: "rgba(0,0,0,0.6)" }}>
                       Objetivos Nutricionales Calculados
                     </Text>
@@ -2756,17 +2813,37 @@ export function ClientDetailPage() {
                       {client.first_name} {client.last_name}
                     </Text>
                   </Box>
-                  <Badge 
-                    size="lg" 
-                    radius="xl"
-                    style={{ 
-                      background: goalType === "fat_loss" ? "#EF4444" : goalType === "muscle_gain" ? "#22C55E" : "#3B82F6",
-                      color: "white",
-                      fontWeight: 700
-                    }}
-                  >
-                    {GOAL_LABELS[goalType] || "Mantenimiento"}
-                  </Badge>
+                  <Group gap="xs" wrap="nowrap">
+                    {!isDemoClient && (
+                      <Button
+                        leftSection={<IconBolt size={16} />}
+                        radius="xl"
+                        size="sm"
+                        variant="white"
+                        styles={{
+                          root: {
+                            color: "var(--nv-dark)",
+                            fontWeight: 700,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                          },
+                        }}
+                        onClick={openNutritionCalculator}
+                      >
+                        Calculadora Nutricional
+                      </Button>
+                    )}
+                    <Badge
+                      size="lg"
+                      radius="xl"
+                      style={{
+                        background: goalType === "fat_loss" ? "#EF4444" : goalType === "muscle_gain" ? "#22C55E" : "#3B82F6",
+                        color: "white",
+                        fontWeight: 700
+                      }}
+                    >
+                      {GOAL_LABELS[goalType] || "Mantenimiento"}
+                    </Badge>
+                  </Group>
                 </Group>
 
                 <Group mb="md" gap="sm">
@@ -3112,13 +3189,6 @@ export function ClientDetailPage() {
                   </Stack>
                 </Box>
 
-                {/* Calculadora Nutricional */}
-                <NutritionCalculatorCard
-                  client={client as any}
-                  latestMeasurement={clientMeasurements?.[0] as any}
-                  onSave={handleSaveNutritionCalculation}
-                  isSaving={updateClient.isPending}
-                />
               </SimpleGrid>
             </>
           )}
@@ -3825,6 +3895,14 @@ export function ClientDetailPage() {
               </Button>
             </Box>
           )}
+        </Tabs.Panel>
+
+        {/* Formularios */}
+        <Tabs.Panel value="forms">
+          <ClientFormsTab
+            clientId={id || ""}
+            clientName={client?.full_name || client?.first_name}
+          />
         </Tabs.Panel>
 
         {/* Pagos */}
@@ -5088,6 +5166,28 @@ export function ClientDetailPage() {
           </Group>
         </Stack>
       </BottomSheet>
+
+      {/* Modal: Calculadora Nutricional (se abre con el botón "rayo") */}
+      <Modal
+        opened={nutritionCalculatorOpened}
+        onClose={closeNutritionCalculator}
+        size="xl"
+        radius="lg"
+        title={
+          <Group gap={8}>
+            <IconBolt size={18} color="#F59E0B" />
+            <Text fw={700}>Calculadora Nutricional</Text>
+          </Group>
+        }
+        centered
+      >
+        <NutritionCalculatorCard
+          client={client as any}
+          latestMeasurement={clientMeasurements?.[0] as any}
+          onSave={handleSaveNutritionCalculation}
+          isSaving={updateClient.isPending}
+        />
+      </Modal>
     </Container>
   );
 }

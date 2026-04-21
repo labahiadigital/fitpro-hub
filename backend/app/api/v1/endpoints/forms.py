@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.models.form import Form, FormSubmission
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
+from app.services.notification_service import notify
 
 router = APIRouter()
 
@@ -57,6 +58,7 @@ class FormCreate(BaseModel):
     form_schema: Optional[dict] = Field(default=None, alias="schema")
     settings: Optional[FormSettingsSchema] = None
     is_active: Optional[bool] = None
+    is_required: Optional[bool] = None
     send_on_onboarding: Optional[bool] = None
 
 
@@ -72,6 +74,7 @@ class FormResponse(BaseModel):
     settings: dict = {}
     is_active: bool = True
     is_global: bool = False
+    is_required: bool = False
     send_on_onboarding: bool = False
     submissions_count: int = 0
     created_at: datetime
@@ -118,6 +121,7 @@ def _serialize_form(form: Form, submissions_count: int = 0) -> FormResponse:
         settings=settings,
         is_active=bool(is_active_val),
         is_global=bool(getattr(form, "is_global", False)),
+        is_required=bool(getattr(form, "is_required", False)),
         send_on_onboarding=bool(settings.get("send_on_onboarding", False)),
         submissions_count=submissions_count,
         created_at=form.created_at,
@@ -151,6 +155,9 @@ def _apply_payload(form: Form, data: FormCreate) -> None:
 
     if data.is_active is not None:
         form.is_active = bool(data.is_active)
+
+    if data.is_required is not None:
+        form.is_required = bool(data.is_required)
 
     # IMPORTANTE: marcar JSONB como modificado para que SQLAlchemy persista cambios
     flag_modified(form, "schema")
@@ -592,6 +599,251 @@ async def update_submission(
 
     if data.status is not None:
         sub.status = data.status
+
+    await db.commit()
+    await db.refresh(sub)
+    return sub
+
+
+# ============ SEND FORM TO CLIENT(S) ============
+
+
+class FormSendRequest(BaseModel):
+    """Payload para enviar un formulario a uno o varios clientes."""
+
+    client_ids: List[UUID] = Field(default_factory=list)
+
+
+class FormSendResponseItem(BaseModel):
+    submission_id: UUID
+    client_id: UUID
+    status: str
+
+
+@router.post("/{form_id}/send", response_model=List[FormSendResponseItem])
+async def send_form_to_clients(
+    form_id: UUID,
+    payload: FormSendRequest,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Envía un formulario a una lista de clientes.
+
+    Crea una ``FormSubmission`` con ``status='pending'`` por cliente si
+    no existe ya otra pendiente para el mismo form/cliente. Genera una
+    notificación in-app al usuario del cliente (si está vinculado).
+    """
+    form_result = await db.execute(
+        select(Form).where(
+            Form.id == form_id,
+            or_(
+                Form.workspace_id == current_user.workspace_id,
+                Form.is_global == True,  # noqa: E712
+            ),
+        )
+    )
+    form = form_result.scalar_one_or_none()
+    if not form:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formulario no encontrado")
+
+    if not payload.client_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes indicar al menos un cliente.",
+        )
+
+    clients_result = await db.execute(
+        select(Client).where(
+            Client.id.in_(payload.client_ids),
+            Client.workspace_id == current_user.workspace_id,
+        )
+    )
+    clients = clients_result.scalars().all()
+    valid_client_ids = {c.id for c in clients}
+    client_by_id = {c.id: c for c in clients}
+
+    # Buscar submissions pendientes existentes para evitar duplicados
+    existing_result = await db.execute(
+        select(FormSubmission).where(
+            FormSubmission.form_id == form_id,
+            FormSubmission.client_id.in_(list(valid_client_ids)) if valid_client_ids else False,
+            FormSubmission.status == "pending",
+        )
+    )
+    existing_by_client = {s.client_id: s for s in existing_result.scalars().all()}
+
+    out: List[FormSendResponseItem] = []
+    created_submissions: List[FormSubmission] = []
+
+    for client_id in payload.client_ids:
+        if client_id not in valid_client_ids:
+            continue
+        if client_id in existing_by_client:
+            sub = existing_by_client[client_id]
+            out.append(FormSendResponseItem(submission_id=sub.id, client_id=client_id, status="already_pending"))
+            continue
+        sub = FormSubmission(
+            form_id=form_id,
+            client_id=client_id,
+            answers={},
+            status="pending",
+        )
+        db.add(sub)
+        created_submissions.append(sub)
+
+    await db.commit()
+    for sub in created_submissions:
+        await db.refresh(sub)
+        out.append(FormSendResponseItem(submission_id=sub.id, client_id=sub.client_id, status="sent"))
+
+    # Notificaciones a los clientes con user_id vinculado (best-effort)
+    for sub in created_submissions:
+        client = client_by_id.get(sub.client_id)
+        if not client or not client.user_id:
+            continue
+        try:
+            await notify(
+                db=db,
+                event="form_pending",
+                user_id=client.user_id,
+                workspace_id=client.workspace_id,
+                title=f"Tienes un formulario pendiente: {form.name}",
+                body=(
+                    f"Tu entrenador te ha enviado el formulario \"{form.name}\". "
+                    + ("Es obligatorio. " if form.is_required else "")
+                    + "Responde cuando puedas desde la sección Formularios."
+                ),
+                link="/my-forms",
+                notification_type="reminder" if form.is_required else "info",
+            )
+        except Exception:  # pragma: no cover - best-effort
+            pass
+
+    return out
+
+
+# ============ CLIENT-FACING ENDPOINTS ============
+
+
+class ClientPendingFormResponse(BaseModel):
+    """Formulario pendiente/completado para un cliente."""
+
+    submission_id: UUID
+    form_id: UUID
+    form_name: str
+    form_description: Optional[str] = None
+    form_type: str
+    fields: List[dict] = []
+    status: str
+    is_required: bool = False
+    created_at: datetime
+    submitted_at: Optional[datetime] = None
+
+
+async def _get_client_for_current_user(current_user: CurrentUser, db: AsyncSession) -> Client:
+    """Devuelve el Client asociado al user actual (para endpoints de cliente)."""
+    result = await db.execute(
+        select(Client).where(
+            Client.user_id == current_user.id,
+            Client.workspace_id == current_user.workspace_id,
+        )
+    )
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado")
+    return client
+
+
+@router.get("/my/pending", response_model=List[ClientPendingFormResponse])
+async def list_my_forms(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    current_user: CurrentUser = Depends(require_any_role),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista los formularios recibidos por el cliente actual (pendientes/enviados)."""
+    client = await _get_client_for_current_user(current_user, db)
+
+    query = (
+        select(FormSubmission, Form)
+        .join(Form, FormSubmission.form_id == Form.id)
+        .where(FormSubmission.client_id == client.id)
+    )
+    if status_filter:
+        query = query.where(FormSubmission.status == status_filter)
+
+    result = await db.execute(query.order_by(FormSubmission.created_at.desc()))
+    rows = result.all()
+
+    out: List[ClientPendingFormResponse] = []
+    for sub, form in rows:
+        schema = form.schema or {}
+        out.append(
+            ClientPendingFormResponse(
+                submission_id=sub.id,
+                form_id=form.id,
+                form_name=form.name,
+                form_description=form.description,
+                form_type=form.form_type or "custom",
+                fields=list(schema.get("fields") or []),
+                status=sub.status,
+                is_required=bool(getattr(form, "is_required", False)),
+                created_at=sub.created_at,
+                submitted_at=sub.submitted_at,
+            )
+        )
+    return out
+
+
+@router.get("/my/pending/count")
+async def count_my_pending_required(
+    current_user: CurrentUser = Depends(require_any_role),
+    db: AsyncSession = Depends(get_db),
+):
+    """Devuelve cuántos formularios obligatorios siguen pendientes para el cliente actual."""
+    client = await _get_client_for_current_user(current_user, db)
+    result = await db.execute(
+        select(func.count(FormSubmission.id))
+        .join(Form, FormSubmission.form_id == Form.id)
+        .where(
+            FormSubmission.client_id == client.id,
+            FormSubmission.status == "pending",
+            Form.is_required == True,  # noqa: E712
+        )
+    )
+    return {"pending_required": int(result.scalar() or 0)}
+
+
+class MyFormAnswerPayload(BaseModel):
+    answers: dict = Field(default_factory=dict)
+    signature_data: Optional[dict] = None
+
+
+@router.post("/my/submissions/{submission_id}/respond", response_model=FormSubmissionResponse)
+async def respond_my_form(
+    submission_id: UUID,
+    payload: MyFormAnswerPayload,
+    current_user: CurrentUser = Depends(require_any_role),
+    db: AsyncSession = Depends(get_db),
+):
+    """El cliente responde un formulario que le fue enviado."""
+    client = await _get_client_for_current_user(current_user, db)
+
+    result = await db.execute(
+        select(FormSubmission).where(
+            FormSubmission.id == submission_id,
+            FormSubmission.client_id == client.id,
+        )
+    )
+    sub = result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formulario no encontrado")
+
+    sub.answers = payload.answers or {}
+    if payload.signature_data is not None:
+        sub.signature_data = payload.signature_data
+    sub.status = "submitted"
+    sub.submitted_at = datetime.utcnow()
+    flag_modified(sub, "answers")
 
     await db.commit()
     await db.refresh(sub)

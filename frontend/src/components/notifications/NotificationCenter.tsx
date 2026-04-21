@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Badge,
+  Box,
   Button,
   Divider,
   Drawer,
@@ -21,6 +22,7 @@ import {
   IconCheckbox,
   IconCreditCard,
   IconDotsVertical,
+  IconForms,
   IconMessage,
   IconSettings,
   IconTrash,
@@ -39,10 +41,19 @@ interface Notification {
   actionUrl?: string;
 }
 
+export interface RequiredPendingForm {
+  id: string;
+  form_id: string;
+  title: string;
+  message?: string;
+  link?: string;
+}
+
 interface NotificationCenterProps {
   opened: boolean;
   onClose: () => void;
   notifications: Notification[];
+  requiredPendingForms?: RequiredPendingForm[];
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
   onDelete: (id: string) => void;
@@ -71,6 +82,7 @@ export function NotificationCenter({
   opened,
   onClose,
   notifications,
+  requiredPendingForms = [],
   onMarkAsRead,
   onMarkAllAsRead,
   onDelete,
@@ -114,15 +126,69 @@ export function NotificationCenter({
         <Group gap="sm">
           <IconBell size={20} />
           <Text fw={600}>Notificaciones</Text>
-          {unreadCount > 0 && (
+          {(unreadCount > 0 || requiredPendingForms.length > 0) && (
             <Badge circle color="red" size="sm">
-              {unreadCount}
+              {unreadCount + requiredPendingForms.length}
             </Badge>
           )}
         </Group>
       }
     >
       <Stack gap={0} h="100%">
+        {/* Formularios obligatorios pendientes (persistentes) */}
+        {requiredPendingForms.length > 0 && (
+          <Stack gap={0} px="md" pt="xs" pb="sm">
+            {requiredPendingForms.map((f) => (
+              <Paper
+                key={f.id}
+                withBorder
+                p="sm"
+                mb={8}
+                radius="md"
+                style={{
+                  borderColor: "var(--mantine-color-red-3)",
+                  background:
+                    "linear-gradient(90deg, rgba(255,82,82,0.07), rgba(255,82,82,0.02))",
+                }}
+                onClick={() => {
+                  onClose();
+                  navigate(f.link || "/my-forms");
+                }}
+              >
+                <Group align="flex-start" gap="sm" wrap="nowrap">
+                  <ThemeIcon color="red" radius="xl" size="md" variant="light">
+                    <IconForms size={16} />
+                  </ThemeIcon>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Group gap={6} mb={2}>
+                      <Text fw={700} size="sm" lineClamp={1}>
+                        {f.title}
+                      </Text>
+                      <Badge color="red" size="xs" variant="filled">
+                        Obligatorio
+                      </Badge>
+                    </Group>
+                    <Text c="dimmed" size="xs" lineClamp={2}>
+                      {f.message || "Pendiente de responder."}
+                    </Text>
+                  </div>
+                  <Box
+                    aria-hidden
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: "#EF4444",
+                      flexShrink: 0,
+                      marginTop: 4,
+                    }}
+                  />
+                </Group>
+              </Paper>
+            ))}
+          </Stack>
+        )}
+
         {/* Actions */}
         <Group
           justify="space-between"

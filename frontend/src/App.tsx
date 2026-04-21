@@ -75,6 +75,7 @@ const MyNutritionPage = lazyRetry(() => import("./pages/client/MyNutritionPage")
 const MyProgressPage = lazyRetry(() => import("./pages/client/MyProgressPage").then(m => ({ default: m.MyProgressPage })));
 const MyCalendarPage = lazyRetry(() => import("./pages/client/MyCalendarPage").then(m => ({ default: m.MyCalendarPage })));
 const MyDocumentsPage = lazyRetry(() => import("./pages/client/MyDocumentsPage").then(m => ({ default: m.MyDocumentsPage })));
+const MyFormsPage = lazyRetry(() => import("./pages/my-forms/MyFormsPage").then(m => ({ default: m.MyFormsPage })));
 const MyProfilePage = lazyRetry(() => import("./pages/client/MyProfilePage").then(m => ({ default: m.MyProfilePage })));
 const MyMessagesPage = lazyRetry(() => import("./pages/client/MyMessagesPage").then(m => ({ default: m.MyMessagesPage })));
 const NotFoundPage = lazyRetry(() => import("./pages/NotFoundPage"));
@@ -284,6 +285,7 @@ export default function App() {
                   <Route element={<MyProgressPage />} path="/my-progress" />
                   <Route element={<MyCalendarPage />} path="/my-calendar" />
                   <Route element={<MyDocumentsPage />} path="/my-documents" />
+                  <Route element={<MyFormsPage />} path="/my-forms" />
                   <Route element={<MyProfilePage />} path="/my-profile" />
                   <Route element={<MyMessagesPage />} path="/my-messages" />
                   

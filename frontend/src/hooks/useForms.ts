@@ -192,11 +192,112 @@ export function useSendForm() {
 
   return useMutation({
     mutationFn: async (data: { form_id: string; client_ids: string[] }) => {
-      const response = await api.post("/forms/send", data);
+      const response = await api.post(`/forms/${data.form_id}/send`, {
+        client_ids: data.client_ids,
+      });
       return response.data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
       queryClient.invalidateQueries({ queryKey: ["form-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["client-forms"] });
+      queryClient.invalidateQueries({ queryKey: ["my-forms"] });
     },
+  });
+}
+
+// ============ CLIENT-FACING HOOKS ============
+
+export interface ClientFormItem {
+  submission_id: string;
+  form_id: string;
+  form_name: string;
+  form_description?: string | null;
+  form_type: string;
+  fields: FormField[];
+  status: "pending" | "submitted" | "expired";
+  is_required: boolean;
+  created_at: string;
+  submitted_at?: string | null;
+}
+
+export function useMyForms(
+  statusFilter?: "pending" | "submitted",
+  options?: { enabled?: boolean }
+) {
+  return useQuery<ClientFormItem[]>({
+    queryKey: ["my-forms", statusFilter],
+    queryFn: async () => {
+      const response = await api.get("/forms/my/pending", {
+        params: statusFilter ? { status: statusFilter } : undefined,
+      });
+      return response.data;
+    },
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useMyPendingRequiredCount(options?: { enabled?: boolean }) {
+  return useQuery<{ pending_required: number }>({
+    queryKey: ["my-forms", "pending-required-count"],
+    queryFn: async () => {
+      const response = await api.get("/forms/my/pending/count");
+      return response.data;
+    },
+    refetchInterval: 60_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useRespondMyForm() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      submissionId,
+      answers,
+      signature_data,
+    }: {
+      submissionId: string;
+      answers: Record<string, unknown>;
+      signature_data?: Record<string, unknown>;
+    }) => {
+      const response = await api.post(
+        `/forms/my/submissions/${submissionId}/respond`,
+        { answers, signature_data }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-forms"] });
+    },
+  });
+}
+
+// ============ TRAINER: client-scoped form submissions ============
+
+export function useClientForms(clientId?: string) {
+  const { currentWorkspace } = useAuthStore();
+  return useQuery({
+    queryKey: ["client-forms", currentWorkspace?.id, clientId],
+    queryFn: async () => {
+      const response = await api.get("/forms/submissions/", {
+        params: {
+          workspace_id: currentWorkspace?.id,
+          client_id: clientId,
+        },
+      });
+      return response.data as Array<{
+        id: string;
+        form_id: string;
+        client_id: string;
+        status: "pending" | "submitted" | "expired";
+        answers: Record<string, unknown>;
+        created_at: string;
+        submitted_at?: string | null;
+        signature_data?: Record<string, unknown> | null;
+      }>;
+    },
+    enabled: !!currentWorkspace?.id && !!clientId,
   });
 }

@@ -66,6 +66,7 @@ import {
   useMarkAllRead,
   useDeleteNotification,
 } from "../../hooks/useNotifications";
+import { useMyForms, useMyPendingRequiredCount } from "../../hooks/useForms";
 import { usePWAInstall } from "../../hooks/usePWAInstall";
 
 // --- TIPOS Y DATOS ---
@@ -183,7 +184,10 @@ function filterNavEntries(entries: NavEntry[], permissions?: Record<string, stri
   }, []);
 }
 
-const getClientNavItems = (unreadCount: number): NavItemProps[] => [
+const getClientNavItems = (
+  unreadCount: number,
+  pendingRequiredForms = 0
+): NavItemProps[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
   { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/my-workouts" },
   { icon: <IconSalad size={20} />, label: "Mi Nutrición", to: "/my-nutrition" },
@@ -191,6 +195,12 @@ const getClientNavItems = (unreadCount: number): NavItemProps[] => [
   { icon: <IconCalendarEvent size={20} />, label: "Mis Citas", to: "/my-calendar" },
   { icon: <IconMessage size={20} />, label: "Mensajes", to: "/my-messages", badge: unreadCount },
   { icon: <IconFileText size={20} />, label: "Mis Documentos", to: "/my-documents" },
+  {
+    icon: <IconForms size={20} />,
+    label: "Formularios",
+    to: "/my-forms",
+    badge: pendingRequiredForms,
+  },
   { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
 ];
 
@@ -586,8 +596,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   });
   
   const unreadCount = unreadData?.unread_count || 0;
+
+  // Badge de formularios obligatorios pendientes (solo para cliente)
+  const { data: pendingRequiredData } = useMyPendingRequiredCount({ enabled: isClient });
+  const pendingRequired = isClient ? pendingRequiredData?.pending_required || 0 : 0;
+
   const navEntries = isClient
-    ? getClientNavItems(unreadCount)
+    ? getClientNavItems(unreadCount, pendingRequired)
     : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount), user?.permissions);
   const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 
@@ -708,6 +723,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/my-documents": "Mis Documentos",
   "/my-profile": "Mi Perfil",
   "/my-messages": "Mensajes",
+  "/my-forms": "Formularios",
 };
 
 function useBreadcrumb(): string {
@@ -743,6 +759,20 @@ export function DashboardLayout() {
     isRead: n.is_read,
     actionUrl: n.link || undefined,
   }));
+
+  // Formularios obligatorios pendientes (solo para cliente) — alertas persistentes
+  const { data: myPendingForms = [] } = useMyForms("pending", { enabled: isClientLayout });
+  const requiredPendingForms = (myPendingForms || [])
+    .filter((f) => f.is_required)
+    .map((f) => ({
+      id: f.submission_id,
+      form_id: f.form_id,
+      title: f.form_name,
+      message:
+        f.form_description || "Tienes un formulario obligatorio pendiente.",
+      link: "/my-forms",
+    }));
+  const hasPersistentAlert = requiredPendingForms.length > 0;
 
   useHotkeys([["mod+K", () => openPalette()]]);
 
@@ -856,7 +886,7 @@ export function DashboardLayout() {
             )}
             <UnstyledButton style={{ position: "relative" }} aria-label="Notificaciones" onClick={openNotif}>
               <IconBell size={22} color="var(--nv-text-secondary)" stroke={1.5} />
-              {unreadNotifCount > 0 && (
+              {(unreadNotifCount > 0 || hasPersistentAlert) && (
                 <Box
                   style={{
                     position: "absolute",
@@ -885,6 +915,7 @@ export function DashboardLayout() {
         opened={notifOpen}
         onClose={closeNotif}
         notifications={mappedNotifications}
+        requiredPendingForms={requiredPendingForms}
         onMarkAsRead={(id) => markRead.mutate(id)}
         onMarkAllAsRead={() => markAllRead.mutate()}
         onDelete={(id) => deleteNotif.mutate(id)}
