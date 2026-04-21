@@ -51,9 +51,11 @@ class FormCreate(BaseModel):
 
     model_config = {"populate_by_name": True, "extra": "ignore"}
 
-    name: str
+    # name es obligatorio al crear pero opcional al actualizar parcialmente
+    # (PATCH-style). Se valida explícitamente en ``create_form`` cuando falta.
+    name: Optional[str] = None
     description: Optional[str] = None
-    form_type: str = "custom"
+    form_type: Optional[str] = None
     fields: Optional[List[FormFieldSchema]] = None
     form_schema: Optional[dict] = Field(default=None, alias="schema")
     settings: Optional[FormSettingsSchema] = None
@@ -216,6 +218,11 @@ async def create_form(
     db: AsyncSession = Depends(get_db),
 ):
     """Crear un nuevo formulario en el workspace actual."""
+    if not data.name or not data.name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El nombre del formulario es obligatorio",
+        )
     form = Form(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,

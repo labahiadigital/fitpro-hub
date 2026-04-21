@@ -1301,34 +1301,11 @@ export function ClientDetailPage() {
     }
   };
   
-  if (isLoading) {
-    return (
-      <Center h="50vh">
-        <Loader size="lg" color="yellow" />
-      </Center>
-    );
-  }
-
-  // Calculate stats from client data
-  const calculateDaysAsClient = () => {
-    if (!client?.created_at) return 0;
-    const created = new Date(client.created_at);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - created.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const stats = {
-    total_sessions: 0, // TODO: Get from bookings API when endpoint available
-    sessions_this_month: 0, // TODO: Get from bookings API when endpoint available  
-    adherence: 0, // TODO: Calculate from completed vs scheduled sessions
-    mrr: 0, // TODO: Get from subscriptions API when endpoint available
-    lifetime_value: 0, // TODO: Get from payments API when endpoint available
-    days_as_client: calculateDaysAsClient(),
-  };
-
   // Actividad reciente agregada a partir de datos reales del cliente
   // (entrenamientos, nutrición, medidas y fotos).
+  // IMPORTANTE: este ``useMemo`` debe ejecutarse en todos los renders antes
+  // de cualquier early-return para no violar las reglas de hooks (Minified
+  // React error #310 en producción).
   const activities = useMemo(() => {
     const items: { id: string; type: string; title: string; description: string; date: string }[] = [];
 
@@ -1406,6 +1383,32 @@ export function ClientDetailPage() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 8);
   }, [clientWorkoutLogs, clientNutritionLogs, clientMeasurements, clientPhotos]);
+
+  if (isLoading) {
+    return (
+      <Center h="50vh">
+        <Loader size="lg" color="yellow" />
+      </Center>
+    );
+  }
+
+  // Calculate stats from client data
+  const calculateDaysAsClient = () => {
+    if (!client?.created_at) return 0;
+    const created = new Date(client.created_at);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const stats = {
+    total_sessions: 0, // TODO: Get from bookings API when endpoint available
+    sessions_this_month: 0, // TODO: Get from bookings API when endpoint available  
+    adherence: 0, // TODO: Calculate from completed vs scheduled sessions
+    mrr: 0, // TODO: Get from subscriptions API when endpoint available
+    lifetime_value: 0, // TODO: Get from payments API when endpoint available
+    days_as_client: calculateDaysAsClient(),
+  };
 
   const sessions: { id: string; date: string; time: string; type: string; status: string; notes: string }[] = [];
   
@@ -1689,6 +1692,22 @@ export function ClientDetailPage() {
       // Sincroniza la fórmula seleccionada en la UI.
       if (entry.formula_used === "mifflin" || entry.formula_used === "harris" || entry.formula_used === "katch") {
         setSelectedFormula(entry.formula_used);
+      }
+      // Si hay un plan nutricional asignado, propaga los nuevos objetivos
+      // al plan para que el cliente vea macros consistentes en su app.
+      const assignedPlan = mealPlans?.[0];
+      if (assignedPlan?.id) {
+        try {
+          await updateMealPlanMutation.mutateAsync({
+            id: assignedPlan.id,
+            target_calories: entry.target_calories,
+            target_protein: entry.target_protein,
+            target_carbs: entry.target_carbs,
+            target_fat: entry.target_fat,
+          });
+        } catch {
+          // no bloqueamos el guardado si falla la sincronización del plan
+        }
       }
       // Cierra el modal de la calculadora tras guardar.
       closeNutritionCalculator();
@@ -2925,53 +2944,56 @@ export function ClientDetailPage() {
                 </Button>
                 )}
 
-                {/* Macros Objetivo - del Plan Asignado o Calculados */}
+                {/* Macros Objetivo - siempre reflejan el último cálculo del
+                    entrenador (o los datos iniciales del onboarding). Si hay
+                    un plan nutricional asignado con valores distintos se
+                    muestra como referencia secundaria. */}
                 <Box p="lg" style={{ background: "rgba(255,255,255,0.95)", borderRadius: "var(--radius-lg)" }}>
                   <Text fw={700} size="sm" mb="md" style={{ color: "var(--nv-dark)" }}>
-                    🎯 Objetivos Diarios {mealPlans.length > 0 ? `(${mealPlans[0].name})` : "(Calculados automáticamente)"}
+                    🎯 Objetivos Diarios{mealPlans.length > 0 ? ` (${mealPlans[0].name})` : " (Calculados automáticamente)"}
                   </Text>
                   <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="lg">
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#3B82F6", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {mealPlans.length > 0 && mealPlans[0].target_calories ? mealPlans[0].target_calories : nutritionalTargets.calories}
+                        {nutritionalTargets.calories}
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Calorías</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_calories && mealPlans[0].target_calories !== nutritionalTargets.calories && (
                         <Text size="xs" c="gray.5" mt={2}>
-                          (Recom: {nutritionalTargets.calories})
+                          (Plan: {mealPlans[0].target_calories})
                         </Text>
                       )}
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#22C55E", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {mealPlans.length > 0 && mealPlans[0].target_protein ? mealPlans[0].target_protein : nutritionalTargets.protein}g
+                        {nutritionalTargets.protein}g
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Proteínas</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_protein && mealPlans[0].target_protein !== nutritionalTargets.protein && (
                         <Text size="xs" c="gray.5" mt={2}>
-                          (Recom: {nutritionalTargets.protein}g)
+                          (Plan: {mealPlans[0].target_protein}g)
                         </Text>
                       )}
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#F59E0B", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {mealPlans.length > 0 && mealPlans[0].target_carbs ? mealPlans[0].target_carbs : nutritionalTargets.carbs}g
+                        {nutritionalTargets.carbs}g
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Carbohidratos</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_carbs && mealPlans[0].target_carbs !== nutritionalTargets.carbs && (
                         <Text size="xs" c="gray.5" mt={2}>
-                          (Recom: {nutritionalTargets.carbs}g)
+                          (Plan: {mealPlans[0].target_carbs}g)
                         </Text>
                       )}
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#8B5CF6", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {mealPlans.length > 0 && mealPlans[0].target_fat ? mealPlans[0].target_fat : nutritionalTargets.fat}g
+                        {nutritionalTargets.fat}g
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Grasas</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_fat && mealPlans[0].target_fat !== nutritionalTargets.fat && (
                         <Text size="xs" c="gray.5" mt={2}>
-                          (Recom: {nutritionalTargets.fat}g)
+                          (Plan: {mealPlans[0].target_fat}g)
                         </Text>
                       )}
                     </Box>
