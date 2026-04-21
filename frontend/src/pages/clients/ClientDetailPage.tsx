@@ -94,6 +94,7 @@ import {
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
 import { NutritionCalculatorCard } from "../../components/nutrition/NutritionCalculatorCard";
+import { NutritionHistoryPanel } from "../../components/nutrition/NutritionHistoryPanel";
 import type { NutritionCalculationEntry } from "../../hooks/useClients";
 import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calories";
 import { generateClientPlanPDF, generateMealPlanPDF, generateWorkoutProgramPDF } from "../../services/pdfGenerator";
@@ -2919,6 +2920,16 @@ export function ClientDetailPage() {
                 )}
               </Box>
 
+              {/* Histórico de Objetivos Nutricionales Calculados (colapsable) */}
+              <NutritionHistoryPanel
+                history={
+                  ((client as { health_data?: { nutrition_calculations_history?: NutritionCalculationEntry[] } })
+                    .health_data?.nutrition_calculations_history || [])
+                }
+                onClear={handleClearNutritionHistory}
+                isClearing={updateClient.isPending}
+              />
+
               <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="lg">
                 <Box className="nv-card" p="xl">
                   <Group justify="space-between" mb="lg">
@@ -3106,7 +3117,6 @@ export function ClientDetailPage() {
                   client={client as any}
                   latestMeasurement={clientMeasurements?.[0] as any}
                   onSave={handleSaveNutritionCalculation}
-                  onClearHistory={handleClearNutritionHistory}
                   isSaving={updateClient.isPending}
                 />
               </SimpleGrid>
