@@ -3,6 +3,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clientsApi, workoutsApi, nutritionApi } from "../services/api";
 import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 
+export interface NutritionCalculationEntry {
+  calculated_at: string;
+  weight_kg: number;
+  height_cm: number;
+  age: number;
+  gender: "male" | "female" | string;
+  body_fat_pct?: number | null;
+  activity_level: string;
+  goal_type: string;
+  formula_used: string;
+  bmr: number;
+  tdee: number;
+  target_calories: number;
+  target_protein: number;
+  target_carbs: number;
+  target_fat: number;
+  notes?: string;
+}
+
 export interface ClientHealthData {
   allergens?: string[];
   allergies?: string[];
@@ -18,6 +37,14 @@ export interface ClientHealthData {
   medications?: string | string[];
   medical_conditions?: string | string[];
   diseases?: string[];
+  bmr?: number;
+  tdee?: number;
+  target_calories?: number;
+  target_protein?: number;
+  target_carbs?: number;
+  target_fat?: number;
+  calculated_at?: string;
+  nutrition_calculations_history?: NutritionCalculationEntry[];
   [key: string]: unknown;
 }
 

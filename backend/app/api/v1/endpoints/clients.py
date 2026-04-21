@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, and_, case
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
@@ -542,9 +543,12 @@ async def update_client(
     for field, value in update_data.items():
         if value is not None:
             if field in ["health_data", "consents"] and isinstance(value, dict):
-                current_value = getattr(client, field) or {}
+                # IMPORTANTE: Crear un dict NUEVO (no mutar in-place) y marcar el campo
+                # como modificado para que SQLAlchemy detecte el cambio en columnas JSONB.
+                current_value = dict(getattr(client, field) or {})
                 current_value.update(value)
                 setattr(client, field, current_value)
+                flag_modified(client, field)
             else:
                 setattr(client, field, value)
     

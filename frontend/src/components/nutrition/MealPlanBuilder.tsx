@@ -18,7 +18,6 @@ import {
   ScrollArea,
   SegmentedControl,
   Select,
-  Slider,
   SimpleGrid,
   Stack,
   Tabs,
@@ -57,6 +56,7 @@ import { nutritionApi } from "../../services/api";
 import { useBeverages, useFoodGroups } from "../../hooks/useSupabaseData";
 import { calculateMacroPercentages, gramsFromPercentages } from "../../utils/calories";
 import { BottomSheet } from "../common/BottomSheet";
+import { MacroProportionBar } from "./MacroProportionBar";
 import { RecipeFormModal } from "../recipes/RecipeFormModal";
 import { useCreateRecipe } from "../../hooks/useRecipes";
 import type { RecipeItem } from "../../types/recipe";
@@ -873,35 +873,6 @@ export function MealPlanBuilder({
     onTargetMacrosChange?.({ protein: grams.protein_g, carbs: grams.carbs_g, fat: grams.fat_g });
   }, [targetCalories, onTargetMacrosChange]);
 
-  const clampAndNormalize = (
-    changed: "protein" | "carbs" | "fat",
-    newVal: number
-  ): { protein: number; carbs: number; fat: number } => {
-    const clamped = Math.max(0, Math.min(100, newVal));
-    const others =
-      changed === "protein" ? (["carbs", "fat"] as const) : changed === "carbs" ? (["protein", "fat"] as const) : (["protein", "carbs"] as const);
-    const otherSum = macroPct[others[0]] + macroPct[others[1]];
-    const remaining = 100 - clamped;
-    if (otherSum === 0) {
-      const half = Math.round(remaining / 2);
-      return {
-        ...macroPct,
-        [changed]: clamped,
-        [others[0]]: half,
-        [others[1]]: remaining - half,
-      };
-    }
-    const scale = remaining / otherSum;
-    const first = Math.round(macroPct[others[0]] * scale);
-    const second = remaining - first;
-    return {
-      ...macroPct,
-      [changed]: clamped,
-      [others[0]]: first,
-      [others[1]]: second,
-    };
-  };
-
   return (
     <>
       {selectedClient && (
@@ -1108,74 +1079,25 @@ export function MealPlanBuilder({
           </Box>
         </SimpleGrid>
 
-        {/* Target macro percentages - trainer can set % and recalculate grams */}
+        {/* Distribución de macros (barra interactiva) */}
         {onTargetMacrosChange && (
           <Box mt="md" pt="md" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
-            <Text size="sm" fw={500} mb="sm" c="dimmed">
-              Objetivos por porcentaje (recalcula gramos según calorías)
-            </Text>
-            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-              <Box>
-                <Group justify="space-between" mb={4}>
-                  <Text size="xs">Proteína %</Text>
-                  <Text fw={600} size="sm" c="green">{macroPct.protein}%</Text>
-                </Group>
-                <Slider
-                  value={macroPct.protein}
-                  onChange={(v: number) => {
-                    const next = clampAndNormalize("protein", v);
-                    setMacroPct(next);
-                    applyPercentagesToTargets(next);
-                  }}
-                  min={5}
-                  max={60}
-                  step={1}
-                  color="green"
-                  size="sm"
-                />
-              </Box>
-              <Box>
-                <Group justify="space-between" mb={4}>
-                  <Text size="xs">Carbohidratos %</Text>
-                  <Text fw={600} size="sm" c="orange">{macroPct.carbs}%</Text>
-                </Group>
-                <Slider
-                  value={macroPct.carbs}
-                  onChange={(v: number) => {
-                    const next = clampAndNormalize("carbs", v);
-                    setMacroPct(next);
-                    applyPercentagesToTargets(next);
-                  }}
-                  min={5}
-                  max={70}
-                  step={1}
-                  color="orange"
-                  size="sm"
-                />
-              </Box>
-              <Box>
-                <Group justify="space-between" mb={4}>
-                  <Text size="xs">Grasas %</Text>
-                  <Text fw={600} size="sm" c="grape">{macroPct.fat}%</Text>
-                </Group>
-                <Slider
-                  value={macroPct.fat}
-                  onChange={(v: number) => {
-                    const next = clampAndNormalize("fat", v);
-                    setMacroPct(next);
-                    applyPercentagesToTargets(next);
-                  }}
-                  min={5}
-                  max={60}
-                  step={1}
-                  color="grape"
-                  size="sm"
-                />
-              </Box>
-            </SimpleGrid>
-            <Text size="xs" c="dimmed" mt="xs">
-              Total: {macroPct.protein + macroPct.carbs + macroPct.fat}% • Objetivo: {Math.round((targetCalories * macroPct.protein / 100) / 4)}g P, {Math.round((targetCalories * macroPct.carbs / 100) / 4)}g C, {Math.round((targetCalories * macroPct.fat / 100) / 9)}g G
-            </Text>
+            <Group justify="space-between" mb="sm" align="baseline">
+              <Text size="sm" fw={600}>
+                Distribución de macros
+              </Text>
+              <Text size="xs" c="dimmed">
+                Arrastra los separadores · ajusta con los %
+              </Text>
+            </Group>
+            <MacroProportionBar
+              value={macroPct}
+              targetCalories={targetCalories}
+              onChange={(next) => {
+                setMacroPct(next);
+                applyPercentagesToTargets(next);
+              }}
+            />
           </Box>
         )}
       </Paper>

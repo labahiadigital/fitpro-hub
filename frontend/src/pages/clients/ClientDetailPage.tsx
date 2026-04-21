@@ -93,6 +93,8 @@ import {
 } from "../../hooks/useSupabaseData";
 // AllergenList removed - using inline badges now
 import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailView";
+import { NutritionCalculatorCard } from "../../components/nutrition/NutritionCalculatorCard";
+import type { NutritionCalculationEntry } from "../../hooks/useClients";
 import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calories";
 import { generateClientPlanPDF, generateMealPlanPDF, generateWorkoutProgramPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
@@ -1597,6 +1599,64 @@ export function ClientDetailPage() {
     }
   };
 
+  // ===== Calculadora nutricional + histórico =====
+  const handleSaveNutritionCalculation = async (entry: NutritionCalculationEntry) => {
+    if (!id || isDemoClient) {
+      notifications.show({
+        title: "Modo Demo",
+        message: "En modo demo los cálculos no se guardan permanentemente",
+        color: "yellow",
+      });
+      return;
+    }
+    const existingHistory = (client as { health_data?: { nutrition_calculations_history?: NutritionCalculationEntry[] } })
+      .health_data?.nutrition_calculations_history || [];
+    try {
+      await updateClient.mutateAsync({
+        id,
+        data: {
+          health_data: {
+            ...((client as { health_data?: object }).health_data || {}),
+            bmr: entry.bmr,
+            tdee: entry.tdee,
+            target_calories: entry.target_calories,
+            target_protein: entry.target_protein,
+            target_carbs: entry.target_carbs,
+            target_fat: entry.target_fat,
+            formula_used: entry.formula_used,
+            activity_level: entry.activity_level,
+            goal_type: entry.goal_type,
+            calculated_at: entry.calculated_at,
+            nutrition_calculations_history: [...existingHistory, entry],
+          },
+        },
+      });
+      // Sincroniza la fórmula seleccionada en la UI.
+      if (entry.formula_used === "mifflin" || entry.formula_used === "harris" || entry.formula_used === "katch") {
+        setSelectedFormula(entry.formula_used);
+      }
+    } catch {
+      // useUpdateClient gestiona el error.
+    }
+  };
+
+  const handleClearNutritionHistory = async () => {
+    if (!id || isDemoClient) return;
+    try {
+      await updateClient.mutateAsync({
+        id,
+        data: {
+          health_data: {
+            ...((client as { health_data?: object }).health_data || {}),
+            nutrition_calculations_history: [],
+          },
+        },
+      });
+    } catch {
+      // gestionado por useUpdateClient
+    }
+  };
+
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
@@ -3040,6 +3100,15 @@ export function ClientDetailPage() {
                     ))}
                   </Stack>
                 </Box>
+
+                {/* Calculadora Nutricional */}
+                <NutritionCalculatorCard
+                  client={client as any}
+                  latestMeasurement={clientMeasurements?.[0] as any}
+                  onSave={handleSaveNutritionCalculation}
+                  onClearHistory={handleClearNutritionHistory}
+                  isSaving={updateClient.isPending}
+                />
               </SimpleGrid>
             </>
           )}
