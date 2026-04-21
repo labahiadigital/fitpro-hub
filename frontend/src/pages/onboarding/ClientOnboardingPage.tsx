@@ -7,6 +7,7 @@ import {
   Divider,
   Group,
   Loader,
+  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -48,6 +49,7 @@ interface OnboardingFormData {
   firstName: string;
   lastName: string;
   email: string;
+  confirmEmail: string;
   password: string;
   phone: string;
   birthDate: Date | null;
@@ -133,6 +135,16 @@ export function ClientOnboardingPage() {
   const [loadingWorkspace, setLoadingWorkspace] = useState(true);
   const [productInfo, setProductInfo] = useState<{ name: string; description?: string; price: number; interval?: string } | null>(null);
   const [creatingInvitation, setCreatingInvitation] = useState(false);
+  const [soldOutState, setSoldOutState] = useState<{
+    action: "redirect" | "message" | "waitlist" | null;
+    redirect_url?: string;
+    message_html?: string;
+    waitlist_success_message?: string;
+  } | null>(null);
+  const [soldOutModalOpen, setSoldOutModalOpen] = useState(false);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+  const [waitlistData, setWaitlistData] = useState({ email: "", name: "", phone: "", message: "" });
 
   // Verificar que el workspace existe
   useEffect(() => {
@@ -169,6 +181,27 @@ export function ClientOnboardingPage() {
                 interval: prodRes.data.interval,
               });
             }
+            // Also check availability to detect sold-out state up front and
+            // apply the configured action (redirect now, or show custom pop-up).
+            try {
+              const availRes = await api.get(`/products/public/${productId}/availability`);
+              if (availRes.data?.is_full) {
+                const soldOut = availRes.data?.sold_out || {};
+                const action = (soldOut.action as "redirect" | "message" | "waitlist" | null) || null;
+                if (action === "redirect" && soldOut.redirect_url) {
+                  window.location.href = soldOut.redirect_url;
+                  return;
+                }
+                setSoldOutState({
+                  action,
+                  redirect_url: soldOut.redirect_url,
+                  message_html: soldOut.message_html,
+                  waitlist_success_message: soldOut.waitlist_success_message,
+                });
+              }
+            } catch {
+              /* availability check is best-effort */
+            }
           } catch {
             notifications.show({
               title: "Producto no disponible",
@@ -195,12 +228,37 @@ export function ClientOnboardingPage() {
   const handleProductSignup = async () => {
     if (!workspaceSlug || !productId) return;
 
+    // Intercept sold-out products before any backend roundtrip so we can
+    // surface the configured action (redirect / modal / waitlist).
+    if (soldOutState) {
+      if (soldOutState.action === "redirect" && soldOutState.redirect_url) {
+        window.location.href = soldOutState.redirect_url;
+        return;
+      }
+      setWaitlistData((prev) => ({
+        ...prev,
+        email: form.values.email || prev.email,
+        name: `${form.values.firstName || ""} ${form.values.lastName || ""}`.trim() || prev.name,
+      }));
+      setSoldOutModalOpen(true);
+      return;
+    }
+
     const emailVal = form.values.email;
+    const confirmEmailVal = form.values.confirmEmail;
     const firstNameVal = form.values.firstName;
     const lastNameVal = form.values.lastName;
 
     if (!emailVal || !firstNameVal) {
       notifications.show({ title: "Error", message: "Completa al menos tu nombre y email", color: "red" });
+      return;
+    }
+    if (confirmEmailVal !== emailVal) {
+      notifications.show({
+        title: "Los emails no coinciden",
+        message: "Revisa el campo de confirmación de email",
+        color: "red",
+      });
       return;
     }
 
@@ -231,6 +289,7 @@ export function ClientOnboardingPage() {
       firstName: "",
       lastName: "",
       email: "",
+      confirmEmail: "",
       password: "",
       phone: "",
       birthDate: null,
@@ -274,6 +333,10 @@ export function ClientOnboardingPage() {
           firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
           lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
           email: /^\S+@\S+$/.test(values.email) ? null : "Email inválido",
+          confirmEmail:
+            values.confirmEmail !== values.email
+              ? "Los emails no coinciden"
+              : null,
           password: values.password.length < 8 ? "Mínimo 8 caracteres" : null,
         };
       }
@@ -496,6 +559,93 @@ export function ClientOnboardingPage() {
     );
   }
 
+  const handleWaitlistSubmit = async () => {
+    if (!productId || !workspaceSlug) return;
+    const email = waitlistData.email.trim();
+    if (!/^\S+@\S+$/.test(email)) {
+      notifications.show({ title: "Email no válido", message: "Introduce un email correcto", color: "red" });
+      return;
+    }
+    setWaitlistSubmitting(true);
+    try {
+      await api.post(`/products/public/${productId}/waitlist`, {
+        email,
+        name: waitlistData.name || null,
+        phone: waitlistData.phone || null,
+        message: waitlistData.message || null,
+      });
+      setWaitlistSubmitted(true);
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudo registrar en la waitlist", color: "red" });
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  };
+
+  const soldOutModal = soldOutState ? (
+    <Modal
+      opened={soldOutModalOpen}
+      onClose={() => setSoldOutModalOpen(false)}
+      title={soldOutState.action === "waitlist" ? "Apúntate a la lista de espera" : "Producto agotado"}
+      size="md"
+      centered
+    >
+      {soldOutState.action === "message" && soldOutState.message_html ? (
+        <Box
+          dangerouslySetInnerHTML={{ __html: soldOutState.message_html }}
+          style={{ color: "var(--mantine-color-text)" }}
+        />
+      ) : null}
+
+      {soldOutState.action === "waitlist" && !waitlistSubmitted && (
+        <Stack gap="sm">
+          <Text size="sm" c="dimmed">
+            Este producto está completo. Déjanos tus datos y te avisaremos cuando haya plaza.
+          </Text>
+          <TextInput
+            label="Email"
+            required
+            value={waitlistData.email}
+            onChange={(e) => setWaitlistData((s) => ({ ...s, email: e.currentTarget.value }))}
+          />
+          <TextInput
+            label="Nombre"
+            value={waitlistData.name}
+            onChange={(e) => setWaitlistData((s) => ({ ...s, name: e.currentTarget.value }))}
+          />
+          <TextInput
+            label="Teléfono (opcional)"
+            value={waitlistData.phone}
+            onChange={(e) => setWaitlistData((s) => ({ ...s, phone: e.currentTarget.value }))}
+          />
+          <Textarea
+            label="Comentario (opcional)"
+            autosize
+            minRows={2}
+            value={waitlistData.message}
+            onChange={(e) => setWaitlistData((s) => ({ ...s, message: e.currentTarget.value }))}
+          />
+          <Button loading={waitlistSubmitting} onClick={handleWaitlistSubmit}>
+            Apuntarme a la waitlist
+          </Button>
+        </Stack>
+      )}
+
+      {soldOutState.action === "waitlist" && waitlistSubmitted && (
+        <Alert color="green" icon={<IconCheck size={16} />}>
+          {soldOutState.waitlist_success_message ||
+            "¡Listo! Te hemos añadido a la lista de espera. Te avisaremos cuando haya una plaza disponible."}
+        </Alert>
+      )}
+
+      {!soldOutState.action && (
+        <Text>
+          Este producto está agotado por el momento. Vuelve a intentarlo más tarde.
+        </Text>
+      )}
+    </Modal>
+  ) : null;
+
   if (productId && productInfo) {
     return (
       <Container py="xl" size="sm">
@@ -509,6 +659,17 @@ export function ClientOnboardingPage() {
         </Box>
 
         <Paper p="xl" radius="lg" withBorder>
+          {soldOutState && (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              color={soldOutState.action === "waitlist" ? "yellow" : "red"}
+              mb="md"
+            >
+              {soldOutState.action === "waitlist"
+                ? "Este producto está completo. Puedes apuntarte a la lista de espera."
+                : "Este producto no tiene plazas disponibles en este momento."}
+            </Alert>
+          )}
           <Box mb="lg" p="md" style={{ backgroundColor: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
             <Text fw={700} size="lg" mb={4}>{productInfo.name}</Text>
             {productInfo.description && <Text size="sm" c="dimmed" mb="xs">{productInfo.description}</Text>}
@@ -545,6 +706,19 @@ export function ClientOnboardingPage() {
               leftSection={<IconMail size={16} />}
               {...form.getInputProps("email")}
             />
+            <TextInput
+              label="Confirma tu email"
+              placeholder="Repite tu email"
+              required
+              leftSection={<IconMail size={16} />}
+              {...form.getInputProps("confirmEmail")}
+              error={
+                form.values.confirmEmail &&
+                form.values.confirmEmail !== form.values.email
+                  ? "Los emails no coinciden"
+                  : undefined
+              }
+            />
 
             <Button
               size="lg"
@@ -552,11 +726,22 @@ export function ClientOnboardingPage() {
               mt="md"
               loading={creatingInvitation}
               onClick={handleProductSignup}
+              color={soldOutState ? "yellow" : undefined}
+              disabled={
+                !soldOutState &&
+                !!form.values.confirmEmail &&
+                form.values.confirmEmail !== form.values.email
+              }
             >
-              Continuar con el registro
+              {soldOutState?.action === "waitlist"
+                ? "Unirme a la lista de espera"
+                : soldOutState
+                  ? "Ver información"
+                  : "Continuar con el registro"}
             </Button>
           </Stack>
         </Paper>
+        {soldOutModal}
       </Container>
     );
   }
@@ -629,6 +814,19 @@ export function ClientOnboardingPage() {
                 required
                 leftSection={<IconMail size={16} />}
                 {...form.getInputProps("email")}
+              />
+              <TextInput
+                label="Confirma tu email"
+                placeholder="Repite tu email"
+                required
+                leftSection={<IconMail size={16} />}
+                {...form.getInputProps("confirmEmail")}
+                error={
+                  form.values.confirmEmail &&
+                  form.values.confirmEmail !== form.values.email
+                    ? "Los emails no coinciden"
+                    : undefined
+                }
               />
               <PasswordInput
                 label="Contraseña"

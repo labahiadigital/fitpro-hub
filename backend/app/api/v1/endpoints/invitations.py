@@ -801,15 +801,22 @@ async def complete_invitation(
         
         await db.commit()
         
-        # Send verification email
+        # Send verification email (use workspace name as brand so the client
+        # recognises the gym/coach that invited them).
         confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
-        html_content = EmailTemplates.email_confirmation(full_name, confirmation_url)
-        
+        ws_name_for_email = workspace.name if workspace else None
+        html_content = EmailTemplates.email_confirmation(
+            full_name,
+            confirmation_url,
+            workspace_name=ws_name_for_email,
+        )
+        subject_brand = ws_name_for_email or "Trackfiz"
+
         try:
             await email_service.send_email(
                 to_email=data.email,
                 to_name=full_name,
-                subject="Confirma tu cuenta en Trackfiz",
+                subject=f"Confirma tu cuenta en {subject_brand}",
                 html_content=html_content,
             )
             logger.info(f"Verification email sent to {data.email}")

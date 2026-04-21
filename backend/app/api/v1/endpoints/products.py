@@ -154,6 +154,143 @@ async def get_product_public(
     return ProductResponse.model_validate(product)
 
 
+@router.get("/public/{product_id}/availability")
+async def get_product_public_availability(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Public availability check used by the onboarding flow.
+
+    Reports whether the product is sold out and, if so, exposes the custom
+    ``sold_out`` action the workspace owner configured (redirect, HTML
+    message or a waitlist form).
+    """
+    result = await db.execute(
+        select(Product).where(Product.id == product_id, Product.is_active.is_(True))
+    )
+    product = result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado o no disponible")
+
+    active = await count_active_subscriptions(db, product_id)
+    pending = await count_pending_invitations(db, product_id)
+    used = active + pending
+    max_users = product.max_users
+    is_full = max_users is not None and used >= max_users
+
+    sold_out_cfg = {}
+    if isinstance(product.extra_data, dict):
+        raw = product.extra_data.get("sold_out")
+        if isinstance(raw, dict):
+            sold_out_cfg = raw
+
+    return {
+        "product_id": str(product_id),
+        "is_full": is_full,
+        "used_seats": used,
+        "max_users": max_users,
+        "sold_out": sold_out_cfg if is_full else None,
+    }
+
+
+class WaitlistSignupRequest(BaseSchema):
+    email: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    message: Optional[str] = None
+
+
+@router.post("/public/{product_id}/waitlist")
+async def join_product_waitlist(
+    product_id: UUID,
+    data: WaitlistSignupRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Enlist a prospective client on a sold-out product's waitlist.
+
+    Persists the signup in ``extra_data.waitlist`` and, if configured, emails
+    the workspace owner so they can follow up.
+    """
+    from datetime import datetime
+    from sqlalchemy.orm.attributes import flag_modified
+
+    from app.models.workspace import Workspace
+    from app.models.user import User, UserRole, RoleType
+    from app.services.email import email_service
+
+    product = (
+        await db.execute(
+            select(Product).where(Product.id == product_id, Product.is_active.is_(True))
+        )
+    ).scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado o no disponible")
+
+    email = (data.email or "").strip().lower()
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Email no válido")
+
+    extra = dict(product.extra_data or {})
+    sold_out = extra.get("sold_out") if isinstance(extra.get("sold_out"), dict) else {}
+    waitlist = list(extra.get("waitlist") or [])
+
+    if any((entry.get("email") or "").lower() == email for entry in waitlist if isinstance(entry, dict)):
+        return {"status": "already_registered"}
+
+    entry = {
+        "email": email,
+        "name": (data.name or "").strip() or None,
+        "phone": (data.phone or "").strip() or None,
+        "message": (data.message or "").strip() or None,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    waitlist.append(entry)
+    extra["waitlist"] = waitlist
+    product.extra_data = extra
+    flag_modified(product, "extra_data")
+    await db.commit()
+
+    # Notify workspace owner / configured email so they can contact the lead.
+    notify_email = (sold_out.get("waitlist_notify_email") or "").strip()
+    if not notify_email:
+        owner_q = await db.execute(
+            select(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .where(
+                UserRole.workspace_id == product.workspace_id,
+                UserRole.role == RoleType.owner,
+            )
+            .limit(1)
+        )
+        owner = owner_q.scalar_one_or_none()
+        notify_email = owner.email if owner else ""
+
+    if notify_email:
+        workspace = await db.get(Workspace, product.workspace_id)
+        ws_name = workspace.name if workspace else "Trackfiz"
+        body = (
+            f"<p>Nueva inscripción en la waitlist del producto <strong>{product.name}</strong> "
+            f"({ws_name}).</p>"
+            f"<ul>"
+            f"<li><strong>Email:</strong> {entry['email']}</li>"
+            f"<li><strong>Nombre:</strong> {entry['name'] or '—'}</li>"
+            f"<li><strong>Teléfono:</strong> {entry['phone'] or '—'}</li>"
+            f"<li><strong>Mensaje:</strong> {entry['message'] or '—'}</li>"
+            f"</ul>"
+        )
+        try:
+            await email_service.send_email(
+                to_email=notify_email,
+                to_name=ws_name,
+                subject=f"Nueva waitlist — {product.name}",
+                html_content=body,
+            )
+        except Exception:  # pragma: no cover - non-blocking
+            pass
+
+    return {"status": "ok"}
+
+
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: UUID,

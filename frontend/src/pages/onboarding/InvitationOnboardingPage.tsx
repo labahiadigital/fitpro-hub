@@ -74,6 +74,7 @@ interface OnboardingFormData {
   firstName: string;
   lastName: string;
   email: string;
+  confirmEmail: string;
   password: string;
   phone: string;
   birthDate: Date | null;
@@ -280,6 +281,7 @@ export function InvitationOnboardingPage() {
           form.setValues({
             ...form.values,
             email: response.data.email || "",
+            confirmEmail: response.data.email || "",
             firstName: response.data.first_name || "",
             lastName: response.data.last_name || "",
           });
@@ -560,6 +562,7 @@ export function InvitationOnboardingPage() {
       firstName: "",
       lastName: "",
       email: "",
+      confirmEmail: "",
       password: "",
       phone: "",
       birthDate: null,
@@ -599,10 +602,16 @@ export function InvitationOnboardingPage() {
     },
     validate: (values) => {
       if (active === 0) {
+        const emailPrefilled = !!invitationData?.email;
         return {
           firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
           lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
           email: /^\S+@\S+$/.test(values.email) ? null : "Email inválido",
+          confirmEmail: emailPrefilled
+            ? null
+            : values.confirmEmail !== values.email
+              ? "Los emails no coinciden"
+              : null,
           password: values.password.length < 8 ? "Mínimo 8 caracteres" : null,
         };
       }
@@ -1098,6 +1107,21 @@ export function InvitationOnboardingPage() {
                 leftSection={<IconMail size={16} />}
                 {...form.getInputProps("email")}
               />
+              {!invitationData.email && (
+                <TextInput
+                  label="Confirma tu email"
+                  placeholder="Repite tu email"
+                  required
+                  leftSection={<IconMail size={16} />}
+                  {...form.getInputProps("confirmEmail")}
+                  error={
+                    form.values.confirmEmail &&
+                    form.values.confirmEmail !== form.values.email
+                      ? "Los emails no coinciden"
+                      : undefined
+                  }
+                />
+              )}
               <PasswordInput
                 label="Contraseña"
                 placeholder="Mínimo 8 caracteres"

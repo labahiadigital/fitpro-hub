@@ -208,11 +208,20 @@ export function CatalogPage() {
       interval: "month",
       sessions_included: 0,
       max_users: null as number | null,
+      sold_out_action: "" as "" | "redirect" | "message" | "waitlist",
+      sold_out_redirect_url: "",
+      sold_out_message_html: "",
+      sold_out_waitlist_email: "",
+      sold_out_waitlist_success: "",
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
       price: (value) => (value < 0 ? "Precio no puede ser negativo" : null),
       max_users: (value) => (value !== null && value !== undefined && value < 1 ? "Debe ser >= 1" : null),
+      sold_out_redirect_url: (value, values) =>
+        values.sold_out_action === "redirect" && !/^https?:\/\//.test(value)
+          ? "URL debe empezar por http(s)://"
+          : null,
     },
   });
 
@@ -247,6 +256,7 @@ export function CatalogPage() {
 
   const handleOpenEditProduct = useCallback((product: Product) => {
     setEditingProduct(product);
+    const soldOut = product.extra_data?.sold_out || {};
     productForm.setValues({
       name: product.name,
       description: product.description || "",
@@ -255,11 +265,35 @@ export function CatalogPage() {
       interval: product.interval || "month",
       sessions_included: product.sessions_included || 0,
       max_users: product.max_users ?? null,
+      sold_out_action: (soldOut.action as "redirect" | "message" | "waitlist") || "",
+      sold_out_redirect_url: soldOut.redirect_url || "",
+      sold_out_message_html: soldOut.message_html || "",
+      sold_out_waitlist_email: soldOut.waitlist_notify_email || "",
+      sold_out_waitlist_success: soldOut.waitlist_success_message || "",
     });
     openProductModal();
   }, [productForm, openProductModal]);
 
   const handleSaveProduct = useCallback(async (values: typeof productForm.values) => {
+    const existingExtra = (editingProduct?.extra_data || {}) as Record<string, unknown>;
+    const soldOut: Record<string, unknown> = {};
+    if (values.sold_out_action) {
+      soldOut.action = values.sold_out_action;
+      if (values.sold_out_action === "redirect") {
+        soldOut.redirect_url = values.sold_out_redirect_url.trim();
+      }
+      if (values.sold_out_action === "message") {
+        soldOut.message_html = values.sold_out_message_html;
+      }
+      if (values.sold_out_action === "waitlist") {
+        soldOut.waitlist_notify_email = values.sold_out_waitlist_email.trim() || undefined;
+        soldOut.waitlist_success_message = values.sold_out_waitlist_success.trim() || undefined;
+      }
+    }
+    const mergedExtra = {
+      ...existingExtra,
+      sold_out: values.sold_out_action ? soldOut : undefined,
+    };
     const data = {
       name: values.name,
       description: values.description || undefined,
@@ -267,6 +301,7 @@ export function CatalogPage() {
       product_type: values.type,
       interval: values.type === "subscription" ? values.interval : undefined,
       max_users: values.max_users && values.max_users > 0 ? values.max_users : null,
+      extra_data: mergedExtra,
     };
     try {
       let productId: string | undefined;
@@ -929,6 +964,60 @@ export function CatalogPage() {
               value={productForm.values.max_users ?? ""}
               onChange={(val) => productForm.setFieldValue("max_users", val === "" || val === null ? null : Number(val))}
             />
+
+            <Divider label="Cuando se agote el stock" labelPosition="center" />
+            <Text size="xs" c="dimmed">
+              Elige qué pasa cuando un cliente intente registrarse en este producto una vez alcanzado el límite.
+            </Text>
+            <Select
+              label="Acción al agotarse"
+              data={[
+                { value: "", label: "Ninguna (mostrar mensaje por defecto)" },
+                { value: "redirect", label: "Redirigir a otra URL" },
+                { value: "message", label: "Mostrar ventana emergente con texto/HTML" },
+                { value: "waitlist", label: "Recoger emails en una waitlist" },
+              ]}
+              value={productForm.values.sold_out_action}
+              onChange={(val) =>
+                productForm.setFieldValue(
+                  "sold_out_action",
+                  (val as "" | "redirect" | "message" | "waitlist") ?? ""
+                )
+              }
+            />
+            {productForm.values.sold_out_action === "redirect" && (
+              <TextInput
+                label="URL de redirección"
+                placeholder="https://..."
+                {...productForm.getInputProps("sold_out_redirect_url")}
+              />
+            )}
+            {productForm.values.sold_out_action === "message" && (
+              <Textarea
+                label="Contenido del pop-up"
+                description="Se admite HTML. Por ejemplo enlaces, listas, etc."
+                autosize
+                minRows={4}
+                {...productForm.getInputProps("sold_out_message_html")}
+              />
+            )}
+            {productForm.values.sold_out_action === "waitlist" && (
+              <Stack gap="xs">
+                <TextInput
+                  label="Email para recibir avisos (opcional)"
+                  description="Si lo dejas vacío, avisaremos al owner del workspace."
+                  placeholder="contacto@tudominio.com"
+                  {...productForm.getInputProps("sold_out_waitlist_email")}
+                />
+                <Textarea
+                  label="Mensaje de confirmación"
+                  description="Se muestra al cliente cuando se apunta a la waitlist."
+                  autosize
+                  minRows={3}
+                  {...productForm.getInputProps("sold_out_waitlist_success")}
+                />
+              </Stack>
+            )}
 
             <Divider label="Stock vinculado" labelPosition="center" />
             <Text size="xs" c="dimmed">Añade productos de stock que se consumen con cada venta de este producto.</Text>

@@ -62,6 +62,16 @@ export interface Subscription {
   cancel_at_period_end: boolean;
 }
 
+export type SoldOutAction = "redirect" | "message" | "waitlist" | null;
+
+export interface ProductSoldOutConfig {
+  action?: SoldOutAction;
+  redirect_url?: string;
+  message_html?: string;
+  waitlist_notify_email?: string;
+  waitlist_success_message?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -73,6 +83,7 @@ export interface Product {
   sessions_included?: number;
   max_users?: number | null;
   is_active: boolean;
+  extra_data?: Record<string, unknown> & { sold_out?: ProductSoldOutConfig };
 }
 
 export interface PaymentKPIs {

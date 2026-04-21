@@ -644,6 +644,11 @@ function LogWorkoutModal({
     exercises.forEach((e) => {
       const defaultWeight = e.target_weight ?? undefined;
       const defaultReps = e.target_reps ?? parseRepsFromString(e.reps);
+      // Cardio targets coming from the trainer's plan. These should prefill
+      // the inputs so clients only tweak the values they actually change.
+      const defaultDurationMin = e.target_duration_minutes ?? undefined;
+      const defaultDistanceKm = e.target_distance_km ?? undefined;
+      const defaultSpeedKmh = e.target_speed_kmh ?? undefined;
       const existingEx = existingExercises.find(
         (ee) => ee.exercise_id === e.exercise_id || ee.exercise_name === e.name
       );
@@ -653,9 +658,9 @@ function LogWorkoutModal({
           weight_kg: s.weight_kg ?? defaultWeight,
           reps_completed: s.reps_completed ?? defaultReps,
           duration_seconds: s.duration_seconds,
-          distance_km: s.distance_km,
-          speed_kmh: s.speed_kmh,
-          duration_minutes: s.duration_minutes,
+          distance_km: s.distance_km ?? defaultDistanceKm,
+          speed_kmh: s.speed_kmh ?? defaultSpeedKmh,
+          duration_minutes: s.duration_minutes ?? defaultDurationMin,
           completed: s.completed ?? true,
         }));
         while (initial[e.exercise_id].length < e.sets) {
@@ -663,6 +668,9 @@ function LogWorkoutModal({
             set_number: initial[e.exercise_id].length + 1,
             weight_kg: defaultWeight,
             reps_completed: defaultReps,
+            duration_minutes: defaultDurationMin,
+            distance_km: defaultDistanceKm,
+            speed_kmh: defaultSpeedKmh,
             completed: true,
           });
         }
@@ -671,6 +679,9 @@ function LogWorkoutModal({
           set_number: i + 1,
           weight_kg: s.weight_kg ?? defaultWeight,
           reps_completed: s.reps_completed ?? defaultReps,
+          duration_minutes: defaultDurationMin,
+          distance_km: defaultDistanceKm,
+          speed_kmh: defaultSpeedKmh,
           completed: s.completed ?? true,
         }));
         while (initial[e.exercise_id].length < e.sets) {
@@ -678,6 +689,9 @@ function LogWorkoutModal({
             set_number: initial[e.exercise_id].length + 1,
             weight_kg: defaultWeight,
             reps_completed: defaultReps,
+            duration_minutes: defaultDurationMin,
+            distance_km: defaultDistanceKm,
+            speed_kmh: defaultSpeedKmh,
             completed: true,
           });
         }
@@ -686,6 +700,9 @@ function LogWorkoutModal({
           set_number: i + 1,
           weight_kg: defaultWeight,
           reps_completed: defaultReps,
+          duration_minutes: defaultDurationMin,
+          distance_km: defaultDistanceKm,
+          speed_kmh: defaultSpeedKmh,
           completed: true,
         }));
       }
@@ -693,9 +710,22 @@ function LogWorkoutModal({
     return initial;
   });
 
+  // Prefill total duration using the sum of cardio targets (if any). Falls
+  // back to 60 min so resistance sessions keep a sensible default.
+  const plannedDuration = (() => {
+    const total = exercises.reduce((sum, e) => {
+      if (e.target_duration_minutes && e.target_duration_minutes > 0) {
+        const reps = Math.max(e.sets || 1, 1);
+        return sum + e.target_duration_minutes * reps;
+      }
+      return sum;
+    }, 0);
+    return total > 0 ? total : 60;
+  })();
+
   const form = useForm({
     initialValues: {
-      duration_minutes: 60,
+      duration_minutes: plannedDuration,
       perceived_effort: 5,
       notes: "",
     },
@@ -1856,7 +1886,7 @@ export function MyWorkoutsPage() {
               </Box>
 
               {/* Edge-to-edge exercise list */}
-              {data.todayWorkout.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; exercise_id?: string; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number }> }, blockIndex: number) => (
+              {data.todayWorkout.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; exercise_id?: string; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number; target_duration_minutes?: number; target_distance_km?: number; target_speed_kmh?: number }> }, blockIndex: number) => (
                 <Box key={block.id || blockIndex} mb="md">
                   <Group gap="xs" px="md" mb="xs">
                     <Badge 
@@ -1952,6 +1982,9 @@ export function MyWorkoutsPage() {
                                       reps: exercise.reps || "10-12",
                                       target_weight: exercise.target_weight,
                                       target_reps: exercise.target_reps,
+                                      target_duration_minutes: exercise.target_duration_minutes,
+                                      target_distance_km: exercise.target_distance_km,
+                                      target_speed_kmh: exercise.target_speed_kmh,
                                       rest_seconds: exercise.rest_seconds,
                                       video_url: videoUrl,
                                       ...(isLogged && existing?.sets ? { prefillSets: existing.sets } : {}),

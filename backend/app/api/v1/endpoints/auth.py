@@ -124,13 +124,19 @@ async def register(
         
         # Send verification email
         confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
-        html_content = EmailTemplates.email_confirmation(data.full_name, confirmation_url)
-        
+        workspace_name_for_email = workspace.name if workspace else None
+        html_content = EmailTemplates.email_confirmation(
+            data.full_name,
+            confirmation_url,
+            workspace_name=workspace_name_for_email,
+        )
+        subject_brand = workspace_name_for_email or "Trackfiz"
+
         try:
             await email_service.send_email(
                 to_email=data.email,
                 to_name=data.full_name,
-                subject="Confirma tu cuenta en Trackfiz",
+                subject=f"Confirma tu cuenta en {subject_brand}",
                 html_content=html_content,
             )
             logger.info(f"Verification email sent to {data.email}")
@@ -639,14 +645,29 @@ async def resend_verification(
         
         await db.commit()
         
-        # Send email
+        # Send email (lookup user's default workspace so the email shows the right brand)
+        ws_lookup = await db.execute(
+            select(Workspace)
+            .join(UserRole, UserRole.workspace_id == Workspace.id)
+            .where(UserRole.user_id == user.id)
+            .order_by(UserRole.is_default.desc())
+            .limit(1)
+        )
+        ws_for_user = ws_lookup.scalar_one_or_none()
+        ws_name_for_email = ws_for_user.name if ws_for_user else None
+
         confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
-        html_content = EmailTemplates.email_confirmation(user.full_name or user.email, confirmation_url)
-        
+        html_content = EmailTemplates.email_confirmation(
+            user.full_name or user.email,
+            confirmation_url,
+            workspace_name=ws_name_for_email,
+        )
+        subject_brand = ws_name_for_email or "Trackfiz"
+
         await email_service.send_email(
             to_email=user.email,
             to_name=user.full_name or user.email,
-            subject="Confirma tu cuenta en Trackfiz",
+            subject=f"Confirma tu cuenta en {subject_brand}",
             html_content=html_content,
         )
         
@@ -983,15 +1004,21 @@ async def register_client(
         
         await db.commit()
         
-        # Send verification email
+        # Send verification email (use workspace name as brand for client emails)
         confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
-        html_content = EmailTemplates.email_confirmation(full_name, confirmation_url)
-        
+        ws_name_for_email = workspace.name if workspace else None
+        html_content = EmailTemplates.email_confirmation(
+            full_name,
+            confirmation_url,
+            workspace_name=ws_name_for_email,
+        )
+        subject_brand = ws_name_for_email or "Trackfiz"
+
         try:
             await email_service.send_email(
                 to_email=data.email,
                 to_name=full_name,
-                subject="Confirma tu cuenta en Trackfiz",
+                subject=f"Confirma tu cuenta en {subject_brand}",
                 html_content=html_content,
             )
         except Exception as e:

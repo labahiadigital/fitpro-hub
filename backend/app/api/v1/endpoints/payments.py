@@ -15,8 +15,11 @@ from app.core.database import get_db
 from app.core.parallel_db import parallel_queries
 from app.models.payment import StripeAccount, Subscription, Payment, SubscriptionStatus, PaymentStatus
 from app.models.client import Client
+from app.models.workspace import Workspace
+from app.models.user import User, UserRole, RoleType
 from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
 from app.services.auto_invoice import create_invoice_for_payment
+from app.services.email import email_service, EmailTemplates
 from app.services.notification_service import notify
 from app.services.product_capacity import ensure_product_capacity_by_id
 
@@ -576,11 +579,77 @@ async def mark_payment_paid(
         email_subject=f"Pago recibido: {float(payment.amount):.2f} EUR",
         email_html=f"<p>Se ha registrado un pago de <strong>{float(payment.amount):.2f} EUR</strong> — {payment.description}.</p>",
     )
+
+    # Send a branded receipt to the client, including workspace contact details
+    # so they can reach the coach/gym directly if they need support.
+    try:
+        await _send_payment_receipt_to_client(db, payment, invoice)
+    except Exception as exc:  # pragma: no cover - non-blocking
+        import logging
+        logging.getLogger(__name__).warning(
+            "Failed to send payment receipt to client for payment %s: %s",
+            payment.id, exc,
+        )
+
     return {
         "status": "ok",
         "message": "Pago marcado como completado",
         "invoice_id": str(invoice.id) if invoice else None,
     }
+
+
+async def _send_payment_receipt_to_client(
+    db: AsyncSession, payment: Payment, invoice
+) -> None:
+    """Send the payment receipt email to the client (if any) with workspace details."""
+    if not payment.client_id:
+        return
+
+    client = await db.get(Client, payment.client_id)
+    if not client or not client.email:
+        return
+
+    workspace = await db.get(Workspace, payment.workspace_id)
+    if not workspace:
+        return
+
+    # Grab the owner (coach/gym) as the workspace contact for the client.
+    owner_q = await db.execute(
+        select(User)
+        .join(UserRole, UserRole.user_id == User.id)
+        .where(
+            UserRole.workspace_id == workspace.id,
+            UserRole.role == RoleType.owner,
+        )
+        .limit(1)
+    )
+    owner = owner_q.scalar_one_or_none()
+    ws_email = owner.email if owner else None
+    ws_phone = owner.phone if owner and getattr(owner, "phone", None) else None
+
+    client_name = f"{client.first_name or ''} {client.last_name or ''}".strip() or client.email
+    paid_at_str = (payment.paid_at or datetime.utcnow()).strftime("%d/%m/%Y %H:%M")
+    invoice_number = getattr(invoice, "number", None) if invoice else None
+
+    html = EmailTemplates.payment_receipt(
+        client_name=client_name,
+        workspace_name=workspace.name,
+        amount=float(payment.amount),
+        currency=payment.currency or "EUR",
+        description=payment.description or "Pago",
+        paid_at=paid_at_str,
+        invoice_number=invoice_number,
+        workspace_email=ws_email,
+        workspace_phone=ws_phone,
+        payment_method=payment.payment_type,
+    )
+    await email_service.send_email(
+        to_email=client.email,
+        to_name=client_name,
+        subject=f"Recibo de pago — {workspace.name}",
+        html_content=html,
+        reply_to=ws_email,
+    )
 
 
 @router.delete("/payments/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
