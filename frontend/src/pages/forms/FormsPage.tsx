@@ -168,24 +168,30 @@ export function FormsPage() {
   // Separar plantillas del sistema de los formularios propios del workspace
   const systemForms = useMemo(() => forms.filter((f) => f.is_global), [forms]);
   const workspaceForms = useMemo(() => forms.filter((f) => !f.is_global), [forms]);
+  type SubmissionApiItem = {
+    id: string;
+    form_id: string;
+    client_id: string;
+    client_name?: string;
+    form_name?: string;
+    status: string;
+    submitted_at?: string;
+    created_at: string;
+    answers?: Record<string, unknown>;
+  };
+
   // Map submissions from API
   const submissions = useMemo(() => {
     if (!Array.isArray(submissionsData)) return [];
-    return (submissionsData as Array<{
-      id: string;
-      form_id: string;
-      client_id: string;
-      client_name?: string;
-      form_name?: string;
-      status: string;
-      submitted_at?: string;
-      created_at: string;
-    }>).map((s) => ({
+    return (submissionsData as SubmissionApiItem[]).map((s) => ({
       id: s.id,
+      form_id: s.form_id,
+      client_id: s.client_id,
       client: s.client_name || "Cliente desconocido",
       form: s.form_name || "Formulario",
       status: s.status,
       date: (s.submitted_at || s.created_at || "").split("T")[0],
+      answers: s.answers || {},
     }));
   }, [submissionsData]);
 
@@ -201,6 +207,74 @@ export function FormsPage() {
       notifications.show({
         title: "Error",
         message: "No se pudo actualizar el estado",
+        color: "red",
+      });
+    }
+  };
+
+  // Modal para ver respuestas de un formulario enviado por un cliente
+  type ViewingSubmission = {
+    id: string;
+    form_id: string;
+    client: string;
+    form: string;
+    status: string;
+    date: string;
+    answers: Record<string, unknown>;
+  };
+  const [viewingSubmission, setViewingSubmission] = useState<ViewingSubmission | null>(null);
+  const [submissionViewerOpened, { open: openSubmissionViewer, close: closeSubmissionViewer }] = useDisclosure(false);
+
+  const handleViewSubmission = async (submission: ViewingSubmission) => {
+    setViewingSubmission(submission);
+    openSubmissionViewer();
+    // Marcar como "leída" automáticamente si aún está "submitted" (nueva/sin leer)
+    if (submission.status === "submitted") {
+      try {
+        await updateSubmissionMutation.mutateAsync({ submissionId: submission.id, status: "read" });
+      } catch {
+        // silencioso: la vista ya se abrió
+      }
+    }
+  };
+
+  const handleDownloadSubmission = (submission: ViewingSubmission) => {
+    try {
+      const template = forms.find((f) => f.id === submission.form_id);
+      const lines: string[] = [];
+      lines.push(`Formulario: ${submission.form}`);
+      lines.push(`Cliente: ${submission.client}`);
+      lines.push(`Fecha: ${submission.date}`);
+      lines.push("");
+      const answers = submission.answers || {};
+      const templateFields = template?.fields || [];
+      if (templateFields.length > 0) {
+        for (const field of templateFields) {
+          const value = answers[field.id] ?? answers[field.label] ?? "";
+          const printable = Array.isArray(value) ? value.join(", ") : String(value ?? "");
+          lines.push(`${field.label}: ${printable}`);
+        }
+      } else {
+        for (const [key, value] of Object.entries(answers)) {
+          const printable = Array.isArray(value) ? value.join(", ") : String(value ?? "");
+          lines.push(`${key}: ${printable}`);
+        }
+      }
+      const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safeClient = submission.client.replace(/[^\w\-]+/g, "_");
+      const safeForm = submission.form.replace(/[^\w\-]+/g, "_");
+      link.download = `${safeForm}-${safeClient}-${submission.date}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo descargar la respuesta",
         color: "red",
       });
     }
@@ -951,17 +1025,21 @@ export function FormsPage() {
                           color={
                             submission.status === "completed" || submission.status === "reviewed"
                               ? "green"
-                              : submission.status === "read" || submission.status === "submitted"
-                                ? "blue"
-                                : "yellow"
+                              : submission.status === "submitted"
+                                ? "red"
+                                : submission.status === "read"
+                                  ? "blue"
+                                  : "yellow"
                           }
-                          variant="light"
+                          variant={submission.status === "submitted" ? "filled" : "light"}
                         >
                           {submission.status === "completed" || submission.status === "reviewed"
                             ? "Completado"
-                            : submission.status === "read" || submission.status === "submitted"
-                              ? "Leído"
-                              : "Pendiente"}
+                            : submission.status === "submitted"
+                              ? "Nueva"
+                              : submission.status === "read"
+                                ? "Leído"
+                                : "Pendiente"}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
@@ -971,10 +1049,20 @@ export function FormsPage() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs" justify="flex-end">
-                          <ActionIcon color="blue" variant="subtle" title="Ver respuesta">
+                          <ActionIcon
+                            color="blue"
+                            variant="subtle"
+                            title="Ver respuesta"
+                            onClick={() => handleViewSubmission(submission)}
+                          >
                             <IconEye size={16} />
                           </ActionIcon>
-                          <ActionIcon color="green" variant="subtle" title="Descargar">
+                          <ActionIcon
+                            color="green"
+                            variant="subtle"
+                            title="Descargar"
+                            onClick={() => handleDownloadSubmission(submission)}
+                          >
                             <IconDownload size={16} />
                           </ActionIcon>
                           {submission.status !== "completed" && submission.status !== "reviewed" && (
@@ -1117,6 +1205,107 @@ export function FormsPage() {
               }}
             >
               Copiar a mi workspace
+            </Button>
+          )}
+        </Group>
+      </Drawer>
+
+      {/* Submission Viewer Drawer */}
+      <Drawer
+        onClose={closeSubmissionViewer}
+        opened={submissionViewerOpened}
+        position="right"
+        size="lg"
+        title={viewingSubmission ? `Respuesta · ${viewingSubmission.form}` : "Respuesta"}
+      >
+        {viewingSubmission && (() => {
+          const template = forms.find((f) => f.id === viewingSubmission.form_id);
+          const answers = viewingSubmission.answers || {};
+          const fields = template?.fields || [];
+          return (
+            <ScrollArea h="calc(100vh - 180px)" offsetScrollbars>
+              <Stack>
+                <Paper p="md" radius="md" withBorder>
+                  <Group gap="xs" mb="xs">
+                    <Badge color="yellow" variant="light">
+                      {viewingSubmission.client}
+                    </Badge>
+                    <Badge color="gray" variant="light">
+                      {viewingSubmission.date}
+                    </Badge>
+                    <Badge
+                      color={
+                        viewingSubmission.status === "completed" || viewingSubmission.status === "reviewed"
+                          ? "green"
+                          : viewingSubmission.status === "submitted"
+                            ? "red"
+                            : viewingSubmission.status === "read"
+                              ? "blue"
+                              : "yellow"
+                      }
+                      variant="light"
+                    >
+                      {viewingSubmission.status === "completed" || viewingSubmission.status === "reviewed"
+                        ? "Completado"
+                        : viewingSubmission.status === "submitted"
+                          ? "Nueva"
+                          : viewingSubmission.status === "read"
+                            ? "Leído"
+                            : "Pendiente"}
+                    </Badge>
+                  </Group>
+                </Paper>
+
+                {fields.length === 0 && Object.keys(answers).length === 0 ? (
+                  <Text c="dimmed" ta="center" py="md">
+                    Sin respuestas registradas
+                  </Text>
+                ) : (
+                  <Stack gap="sm">
+                    {(fields.length > 0 ? fields : Object.keys(answers).map((k, i) => ({ id: k, label: k, type: "text" as const, required: false, order: i }))).map((field) => {
+                      const raw = answers[field.id] ?? answers[field.label];
+                      const display = Array.isArray(raw)
+                        ? raw.join(", ")
+                        : raw === undefined || raw === null || raw === ""
+                          ? "—"
+                          : String(raw);
+                      return (
+                        <Paper key={field.id} p="sm" radius="md" withBorder>
+                          <Text c="dimmed" fw={500} size="xs" tt="uppercase">
+                            {field.label}
+                          </Text>
+                          <Text mt={4} style={{ whiteSpace: "pre-wrap" }}>
+                            {display}
+                          </Text>
+                        </Paper>
+                      );
+                    })}
+                  </Stack>
+                )}
+              </Stack>
+            </ScrollArea>
+          );
+        })()}
+
+        <Group gap="xs" justify="flex-end" mt="md">
+          <Button
+            variant="default"
+            leftSection={<IconDownload size={16} />}
+            onClick={() => viewingSubmission && handleDownloadSubmission(viewingSubmission)}
+          >
+            Descargar
+          </Button>
+          {viewingSubmission && viewingSubmission.status !== "completed" && viewingSubmission.status !== "reviewed" && (
+            <Button
+              color="green"
+              leftSection={<IconCheck size={16} />}
+              loading={updateSubmissionMutation.isPending}
+              onClick={async () => {
+                await handleUpdateSubmissionStatus(viewingSubmission.id, "completed");
+                setViewingSubmission({ ...viewingSubmission, status: "completed" });
+              }}
+            >
+              Marcar como completado
             </Button>
           )}
         </Group>

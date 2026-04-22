@@ -1178,6 +1178,67 @@ interface ProgramDay {
   notes?: string;
 }
 
+// Tipo auxiliar con todos los campos que puede tener un ejercicio de la
+// plantilla del entrenador (series, reps, descanso, objetivos de peso, etc.).
+type PrescribedExercise = {
+  sets?: number;
+  reps?: string | number;
+  rest_seconds?: number;
+  duration_type?: string;
+  target_weight?: number;
+  target_reps?: number;
+  target_duration_minutes?: number;
+  target_distance_km?: number;
+  target_speed_kmh?: number;
+};
+
+// Construye los badges/etiquetas que resumen la prescripción del entrenador
+// para un ejercicio concreto. Muestra sólo las variables que realmente se
+// han definido (series x reps, peso objetivo, distancia, duración, velocidad,
+// descanso) en lugar de placeholders genéricos.
+function getExercisePrescriptionChips(ex: PrescribedExercise): string[] {
+  const chips: string[] = [];
+  const isCardio =
+    ex.duration_type === "cardio" ||
+    ex.target_duration_minutes != null ||
+    ex.target_distance_km != null ||
+    ex.target_speed_kmh != null;
+
+  // Series x reps (solo si se definieron)
+  const hasSets = ex.sets != null && Number(ex.sets) > 0;
+  const hasReps = ex.reps != null && String(ex.reps).trim() !== "";
+  if (hasSets && hasReps) {
+    chips.push(`${ex.sets} x ${ex.reps}`);
+  } else if (hasSets) {
+    chips.push(`${ex.sets} series`);
+  } else if (hasReps) {
+    chips.push(`${ex.reps} reps`);
+  }
+
+  // Peso objetivo para entrenos de fuerza
+  if (!isCardio && ex.target_weight != null) {
+    chips.push(`${ex.target_weight} kg`);
+  }
+
+  // Cardio: duración, distancia y velocidad
+  if (isCardio) {
+    if (ex.target_duration_minutes != null) chips.push(`${ex.target_duration_minutes} min`);
+    if (ex.target_distance_km != null) chips.push(`${ex.target_distance_km} km`);
+    if (ex.target_speed_kmh != null) chips.push(`${ex.target_speed_kmh} km/h`);
+  }
+
+  // Descanso
+  if (ex.rest_seconds != null && ex.rest_seconds > 0) {
+    chips.push(
+      ex.rest_seconds >= 60
+        ? `${Math.floor(ex.rest_seconds / 60)}:${String(ex.rest_seconds % 60).padStart(2, "0")} desc.`
+        : `${ex.rest_seconds}s desc.`,
+    );
+  }
+
+  return chips;
+}
+
 function WeekDayDetail({
   schedule,
   weekDayName,
@@ -1186,7 +1247,7 @@ function WeekDayDetail({
   onSwapDay,
   isExecutedView = false,
 }: {
-  schedule: { dayName?: string; exercises_list?: Array<{ name: string; sets: number; reps: string }>; blocks?: Array<{ id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }> };
+  schedule: { dayName?: string; exercises_list?: Array<{ name: string; sets: number; reps: string }>; blocks?: Array<{ id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number; target_duration_minutes?: number; target_distance_km?: number; target_speed_kmh?: number }> }> };
   weekDayName: string;
   onImageClick: (url: string, name: string) => void;
   onSwapExercise?: (blockIndex: number, exerciseIndex: number, exerciseName: string) => void;
@@ -1218,7 +1279,7 @@ function WeekDayDetail({
         </Group>
       </Box>
 
-      {schedule.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string }> }, blockIndex: number) => (
+      {schedule.blocks?.map((block: { id?: string; name: string; type?: string; exercises?: Array<{ exercise?: { name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; duration_type?: string; target_weight?: number; target_reps?: number; target_duration_minutes?: number; target_distance_km?: number; target_speed_kmh?: number }> }, blockIndex: number) => (
         <Box key={block.id || blockIndex} mb="md">
           <Group gap="xs" px="md" mb="xs">
             <Badge
@@ -1255,8 +1316,16 @@ function WeekDayDetail({
                   <Box style={{ flex: 1, minWidth: 0 }}>
                     <Text fw={600} size="sm" lineClamp={1}>{exName}</Text>
                     <Group gap={6} mt={2}>
-                      <Badge variant="light" color="blue" size="xs">{exercise.sets || 3} x {exercise.reps || "10-12"}</Badge>
-                      <Badge variant="light" color="gray" size="xs">{exercise.rest_seconds || 60}s</Badge>
+                      {getExercisePrescriptionChips(exercise).map((chip, chipIdx) => (
+                        <Badge
+                          key={chipIdx}
+                          variant="light"
+                          color={chipIdx === 0 ? "blue" : "gray"}
+                          size="xs"
+                        >
+                          {chip}
+                        </Badge>
+                      ))}
                     </Group>
                     {exercise.notes && <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{exercise.notes}</Text>}
                   </Box>
@@ -1924,26 +1993,22 @@ export function MyWorkoutsPage() {
                           <Box style={{ flex: 1, minWidth: 0 }}>
                             <Text fw={600} size="sm" lineClamp={1}>{exName}</Text>
                             <Group gap={6} mt={2} wrap="wrap">
-                              <Badge variant="light" color="blue" size="xs">
-                                {exercise.sets || 3} x {exercise.reps || "10-12"}
-                                {exercise.duration_type === "seconds"
-                                  ? " seg"
-                                  : exercise.duration_type === "minutes"
-                                    ? " min"
-                                    : exercise.duration_type === "distance"
-                                      ? " km"
-                                      : ""}
-                              </Badge>
-                              {exercise.target_weight && (
-                                <Badge variant="light" color="yellow" size="xs">{exercise.target_weight}kg</Badge>
-                              )}
-                              {exercise.rest_seconds != null && exercise.rest_seconds > 0 && (
-                                <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>
-                                  {exercise.rest_seconds >= 60
-                                    ? `${Math.floor(exercise.rest_seconds / 60)}:${String(exercise.rest_seconds % 60).padStart(2, "0")} descanso`
-                                    : `${exercise.rest_seconds}s descanso`}
-                                </Badge>
-                              )}
+                              {getExercisePrescriptionChips(exercise).map((chip, chipIdx) => {
+                                const looksLikeWeight = /kg$/i.test(chip);
+                                const looksLikeRest = /desc\./i.test(chip);
+                                const color = looksLikeWeight ? "yellow" : looksLikeRest ? "gray" : chipIdx === 0 ? "blue" : "gray";
+                                return (
+                                  <Badge
+                                    key={chipIdx}
+                                    variant="light"
+                                    color={color}
+                                    size="xs"
+                                    leftSection={looksLikeRest ? <IconClock size={10} /> : undefined}
+                                  >
+                                    {chip}
+                                  </Badge>
+                                );
+                              })}
                             </Group>
                             {exercise.notes && <Text size="xs" c="dimmed" mt={2} lineClamp={2}>{exercise.notes}</Text>}
                           </Box>

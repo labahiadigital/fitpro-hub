@@ -1277,10 +1277,94 @@ async def cancel_invitation(
         )
     )
     invitation = result.scalar_one_or_none()
-    
+
     if not invitation:
         raise HTTPException(status_code=404, detail="Invitación no encontrada")
-    
+
     invitation.status = "cancelled"
     await db.commit()
+
+
+@router.post("/{client_id}/send-password-reset")
+async def send_password_reset_to_client(
+    client_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Permite al entrenador enviar un email de restablecimiento de contraseña a
+    un cliente de su workspace. Genera un nuevo token y reenvía el email sin
+    exponer ni cambiar la contraseña actual.
+    """
+    from app.core.security import generate_password_reset_token
+    from app.services.email import email_service, EmailTemplates
+
+    result = await db.execute(
+        select(Client).where(
+            and_(
+                Client.id == client_id,
+                Client.workspace_id == current_user.workspace_id,
+            )
+        )
+    )
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    if not client.user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="El cliente aún no tiene cuenta activa para restablecer la contraseña",
+        )
+
+    user_result = await db.execute(select(User).where(User.id == client.user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="El cliente no tiene una cuenta de usuario asociada",
+        )
+
+    ws_result = await db.execute(
+        select(Workspace).where(Workspace.id == current_user.workspace_id)
+    )
+    workspace = ws_result.scalar_one_or_none()
+
+    reset_token = generate_password_reset_token()
+    user.password_reset_token = reset_token
+    user.password_reset_sent_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={reset_token}"
+    ws_name = workspace.name if workspace else None
+    try:
+        html_content = EmailTemplates.password_reset(
+            user.full_name or user.email,
+            reset_url,
+            workspace_name=ws_name,
+        )
+    except TypeError:
+        # Retrocompatibilidad si la plantilla aún no acepta workspace_name.
+        html_content = EmailTemplates.password_reset(
+            user.full_name or user.email, reset_url
+        )
+
+    subject_brand = ws_name or "Trackfiz"
+    try:
+        await email_service.send_email(
+            to_email=user.email,
+            to_name=user.full_name or user.email,
+            subject=f"Restablecer contraseña - {subject_brand}",
+            html_content=html_content,
+        )
+    except Exception as mail_err:  # noqa: BLE001
+        logger.error(
+            f"Trainer-initiated password reset email failed for {user.email}: {mail_err}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo enviar el email de restablecimiento",
+        ) from mail_err
+
+    return {"success": True, "message": "Email de restablecimiento enviado"}
 

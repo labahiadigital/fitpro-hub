@@ -634,6 +634,9 @@ export function InvitationOnboardingPage() {
   const nextStep = () => {
     if (form.validate().hasErrors) return;
     if (active === 4) {
+      // Evitar dobles envíos: si ya estamos enviando o el registro se completó,
+      // no volvemos a llamar al backend (provocaría "La invitación ya fue utilizada").
+      if (loading || completed) return;
       handleSubmit();
     } else {
       setActive((current) => current + 1);
@@ -653,7 +656,9 @@ export function InvitationOnboardingPage() {
 
   const handleSubmit = async () => {
     if (!invitationData || !token) return;
-    
+    // Evitar dobles ejecuciones cuando React StrictMode o el usuario hacen doble clic.
+    if (loading || completed) return;
+
     setLoading(true);
     try {
       const values = form.values;

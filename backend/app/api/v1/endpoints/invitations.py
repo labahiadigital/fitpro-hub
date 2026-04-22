@@ -629,6 +629,28 @@ async def complete_invitation(
         )
     
     if invitation.status == STATUS_ACCEPTED:
+        # Idempotencia: si ya fue aceptada pero el usuario vuelve a enviar el
+        # formulario (doble clic, reintento tras timeout, StrictMode en dev,
+        # etc.), consideramos éxito silencioso en lugar de mostrar un error,
+        # porque la cuenta ya existe. El cliente debe confirmar por email.
+        existing_user_result = await db.execute(
+            select(User).where(User.email == data.email.lower())
+        )
+        existing_user = existing_user_result.scalar_one_or_none()
+        if existing_user:
+            return {
+                "access_token": "pending_email_confirmation",
+                "token_type": "bearer",
+                "expires_in": 0,
+                "refresh_token": "",
+                "requires_email_verification": not existing_user.email_verified,
+                "user": {
+                    "id": str(existing_user.id),
+                    "email": existing_user.email,
+                    "full_name": existing_user.full_name,
+                },
+                "already_completed": True,
+            }
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La invitación ya fue utilizada"

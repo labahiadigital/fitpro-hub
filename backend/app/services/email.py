@@ -277,7 +277,8 @@ class EmailTemplates:
         """
     
     @staticmethod
-    def password_reset(name: str, reset_url: str) -> str:
+    def password_reset(name: str, reset_url: str, workspace_name: Optional[str] = None) -> str:
+        brand = workspace_name or "Trackfiz"
         return f"""
         <!DOCTYPE html>
         <html xmlns="http://www.w3.org/1999/xhtml">
@@ -285,7 +286,7 @@ class EmailTemplates:
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <title>Restablecer contraseña - Trackfiz</title>
+            <title>Restablecer contraseña - {brand}</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%;">
@@ -295,7 +296,7 @@ class EmailTemplates:
                             <!-- Header -->
                             <tr>
                                 <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 40px 30px; text-align: center;">
-                                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Trackfiz</h1>
+                                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">{brand}</h1>
                                 </td>
                             </tr>
                             

@@ -105,7 +105,7 @@ import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calor
 import { generateClientPlanPDF, generateMealPlanPDF, generateWorkoutProgramPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
-import { paymentsApi } from "../../services/api";
+import { paymentsApi, api } from "../../services/api";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { formatDecimal } from "../../utils/format";
@@ -744,6 +744,7 @@ export function ClientDetailPage() {
   const documents: { id: string; name: string; type: string; direction: string; created_at: string; is_read: boolean }[] = [];
   
   const [trainerPhotoFilter, setTrainerPhotoFilter] = useState<string>("all");
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
   const progressPhotos = (clientPhotos || []).map((photo, index) => ({
     id: `photo-${index}`,
     photo_url: photo.url,
@@ -917,7 +918,90 @@ export function ClientDetailPage() {
   
   // Verificar si es cliente demo
   const isDemoClient = id?.startsWith("demo-client-") || false;
-  
+
+  // Actividad reciente agregada a partir de datos reales del cliente
+  // (entrenamientos, nutrición, medidas y fotos).
+  // IMPORTANTE: este ``useMemo`` debe ejecutarse en todos los renders antes
+  // de cualquier early-return para no violar las reglas de hooks (Minified
+  // React error #310 en producción).
+  const activities = useMemo(() => {
+    const items: { id: string; type: string; title: string; description: string; date: string }[] = [];
+
+    for (const log of clientWorkoutLogs || []) {
+      const l: any = (log as any)?.log || {};
+      const date =
+        l.completed_at ||
+        l.date ||
+        (log as any).created_at ||
+        "";
+      if (!date) continue;
+      const exercises: any[] = Array.isArray(l.exercises) ? l.exercises : [];
+      const done = exercises.filter((e: any) => e?.completed).length;
+      const total = exercises.length;
+      const minutes = typeof l.duration_minutes === "number" ? ` - ${l.duration_minutes} min` : "";
+      const descParts: string[] = [];
+      if (total > 0) descParts.push(`${done}/${total} ejercicios completados`);
+      if (minutes) descParts.push(minutes.replace(" - ", ""));
+      items.push({
+        id: `workout-${(log as any).id}`,
+        type: "workout",
+        title: safeString(l.workout_name) || "Entrenamiento registrado",
+        description: descParts.join(" · ") || "Sesión completada",
+        date,
+      });
+    }
+
+    for (const day of (clientNutritionLogs?.logs || [])) {
+      if (!day?.date) continue;
+      const cals = Math.round(day.totals?.calories || 0);
+      const meals = Array.isArray(day.meals) ? day.meals.length : 0;
+      items.push({
+        id: `nutrition-${day.date}`,
+        type: "form",
+        title: "Comidas registradas",
+        description: `${cals} kcal${meals ? ` · ${meals} comida${meals === 1 ? "" : "s"}` : ""}`,
+        date: day.date,
+      });
+    }
+
+    for (const m of clientMeasurements || []) {
+      const date = m.measured_at || m.created_at;
+      if (!date) continue;
+      const parts: string[] = [];
+      if (m.weight_kg) parts.push(`${m.weight_kg} kg`);
+      if (m.body_fat_percentage) parts.push(`${m.body_fat_percentage}% grasa`);
+      if (m.muscle_mass_kg) parts.push(`${m.muscle_mass_kg} kg músculo`);
+      items.push({
+        id: `measurement-${m.id}`,
+        type: "form",
+        title: "Nueva medida registrada",
+        description: parts.join(" · ") || "Progreso actualizado",
+        date,
+      });
+    }
+
+    for (const p of clientPhotos || []) {
+      const date = p.measurement_date || p.uploaded_at;
+      if (!date) continue;
+      items.push({
+        id: `photo-${p.url}`,
+        type: "session",
+        title: "Nueva foto de progreso",
+        description:
+          p.type === "front" ? "Frontal"
+          : p.type === "back" ? "Espalda"
+          : p.type === "side" ? "Lateral"
+          : String(p.type || "Progreso"),
+        date,
+      });
+    }
+
+    return items
+      .filter(a => !isNaN(new Date(a.date).getTime()))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 8);
+  }, [clientWorkoutLogs, clientNutritionLogs, clientMeasurements, clientPhotos]);
+
   // If loading, show loader
   if (isLoading) {
     return (
@@ -1111,10 +1195,36 @@ export function ClientDetailPage() {
   const handleSendMessage = () => {
     navigate(`/chat?client=${id}`);
   };
-  
+
   // Handler para nueva sesión
   const handleNewSession = () => {
     navigate(`/calendar?new=true&client=${id}`);
+  };
+
+  // Handler para enviar email de restablecimiento de contraseña al cliente
+  const handleSendPasswordReset = async () => {
+    if (!id || sendingPasswordReset) return;
+    setSendingPasswordReset(true);
+    try {
+      await api.post(`/clients/${id}/send-password-reset`);
+      notifications.show({
+        title: "Email enviado",
+        message: "Se ha enviado al cliente un email para restablecer su contraseña.",
+        color: "green",
+      });
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } }; message?: string };
+      notifications.show({
+        title: "Error",
+        message:
+          e.response?.data?.detail ||
+          e.message ||
+          "No se pudo enviar el email de restablecimiento",
+        color: "red",
+      });
+    } finally {
+      setSendingPasswordReset(false);
+    }
   };
   
   // Handler para asignar programa
@@ -1301,97 +1411,6 @@ export function ClientDetailPage() {
     }
   };
   
-  // Actividad reciente agregada a partir de datos reales del cliente
-  // (entrenamientos, nutrición, medidas y fotos).
-  // IMPORTANTE: este ``useMemo`` debe ejecutarse en todos los renders antes
-  // de cualquier early-return para no violar las reglas de hooks (Minified
-  // React error #310 en producción).
-  const activities = useMemo(() => {
-    const items: { id: string; type: string; title: string; description: string; date: string }[] = [];
-
-    for (const log of clientWorkoutLogs || []) {
-      const l: any = (log as any)?.log || {};
-      const date =
-        l.completed_at ||
-        l.date ||
-        (log as any).created_at ||
-        "";
-      if (!date) continue;
-      const exercises: any[] = Array.isArray(l.exercises) ? l.exercises : [];
-      const done = exercises.filter((e: any) => e?.completed).length;
-      const total = exercises.length;
-      const minutes = typeof l.duration_minutes === "number" ? ` - ${l.duration_minutes} min` : "";
-      const descParts: string[] = [];
-      if (total > 0) descParts.push(`${done}/${total} ejercicios completados`);
-      if (minutes) descParts.push(minutes.replace(" - ", ""));
-      items.push({
-        id: `workout-${(log as any).id}`,
-        type: "workout",
-        title: safeString(l.workout_name) || "Entrenamiento registrado",
-        description: descParts.join(" · ") || "Sesión completada",
-        date,
-      });
-    }
-
-    for (const day of (clientNutritionLogs?.logs || [])) {
-      if (!day?.date) continue;
-      const cals = Math.round(day.totals?.calories || 0);
-      const meals = Array.isArray(day.meals) ? day.meals.length : 0;
-      items.push({
-        id: `nutrition-${day.date}`,
-        type: "form",
-        title: "Comidas registradas",
-        description: `${cals} kcal${meals ? ` · ${meals} comida${meals === 1 ? "" : "s"}` : ""}`,
-        date: day.date,
-      });
-    }
-
-    for (const m of clientMeasurements || []) {
-      const date = m.measured_at || m.created_at;
-      if (!date) continue;
-      const parts: string[] = [];
-      if (m.weight_kg) parts.push(`${m.weight_kg} kg`);
-      if (m.body_fat_percentage) parts.push(`${m.body_fat_percentage}% grasa`);
-      if (m.muscle_mass_kg) parts.push(`${m.muscle_mass_kg} kg músculo`);
-      items.push({
-        id: `measurement-${m.id}`,
-        type: "form",
-        title: "Nueva medida registrada",
-        description: parts.join(" · ") || "Progreso actualizado",
-        date,
-      });
-    }
-
-    for (const p of clientPhotos || []) {
-      const date = p.measurement_date || p.uploaded_at;
-      if (!date) continue;
-      items.push({
-        id: `photo-${p.url}`,
-        type: "session",
-        title: "Nueva foto de progreso",
-        description:
-          p.type === "front" ? "Frontal"
-          : p.type === "back" ? "Espalda"
-          : p.type === "side" ? "Lateral"
-          : String(p.type || "Progreso"),
-        date,
-      });
-    }
-
-    return items
-      .filter(a => !isNaN(new Date(a.date).getTime()))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 8);
-  }, [clientWorkoutLogs, clientNutritionLogs, clientMeasurements, clientPhotos]);
-
-  if (isLoading) {
-    return (
-      <Center h="50vh">
-        <Loader size="lg" color="yellow" />
-      </Center>
-    );
-  }
-
   // Calculate stats from client data
   const calculateDaysAsClient = () => {
     if (!client?.created_at) return 0;
@@ -1936,6 +1955,14 @@ export function ClientDetailPage() {
                   </Menu.Item>
                   <Menu.Item leftSection={<IconSalad size={16} />} onClick={handleAssignNutritionPlan}>
                     Asignar plan nutricional
+                  </Menu.Item>
+                  <Menu.Divider />
+                  <Menu.Item
+                    leftSection={<IconMail size={16} />}
+                    onClick={handleSendPasswordReset}
+                    disabled={sendingPasswordReset || !client.email}
+                  >
+                    Enviar email para restablecer contraseña
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={openDeleteModal}>

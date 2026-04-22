@@ -728,22 +728,29 @@ async def forgot_password(
         
         await db.commit()
         
-        # Send email
+        # Send email (si el envío falla no bloqueamos la respuesta al cliente:
+        # registramos el error para observabilidad y devolvemos éxito genérico
+        # para no filtrar información sobre la cuenta).
         reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={reset_token}"
         html_content = EmailTemplates.password_reset(user.full_name or user.email, reset_url)
-        
-        await email_service.send_email(
-            to_email=user.email,
-            to_name=user.full_name or user.email,
-            subject="Restablecer contraseña - Trackfiz",
-            html_content=html_content,
-        )
-        
+
+        try:
+            await email_service.send_email(
+                to_email=user.email,
+                to_name=user.full_name or user.email,
+                subject="Restablecer contraseña - Trackfiz",
+                html_content=html_content,
+            )
+        except Exception as mail_err:  # noqa: BLE001
+            logger.error(
+                f"Failed to send password reset email to {user.email}: {mail_err}"
+            )
+
         return AuthResponse(
             success=True,
             message="Si el email está registrado, recibirás instrucciones para restablecer tu contraseña."
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
