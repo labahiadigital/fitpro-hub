@@ -57,6 +57,8 @@ import {
   useLinkedProducts,
   useExportStock,
 } from "../../hooks/useStock";
+import { useBoxes } from "../../hooks/useBoxes";
+import { useSuppliers } from "../../hooks/useSuppliers";
 
 const UNITS = [
   { value: "ud", label: "Unidades" },
@@ -115,6 +117,18 @@ export function StockPage() {
     [categories]
   );
 
+  const { data: boxesData } = useBoxes();
+  const boxOptions = useMemo(
+    () => (boxesData ?? []).map((b: any) => ({ value: b.id, label: b.name })),
+    [boxesData]
+  );
+
+  const { data: suppliersData } = useSuppliers({ is_active: true });
+  const supplierOptions = useMemo(
+    () => (suppliersData ?? []).map((s: any) => ({ value: s.id, label: s.legal_name })),
+    [suppliersData]
+  );
+
   const itemForm = useForm({
     initialValues: {
       name: "",
@@ -128,6 +142,8 @@ export function StockPage() {
       location: "",
       tax_rate: 21,
       irpf_rate: 0,
+      box_id: null as string | null,
+      supplier_id: null as string | null,
     },
     validate: {
       name: (v) => (v.trim() ? null : "El nombre es obligatorio"),
@@ -170,6 +186,8 @@ export function StockPage() {
       location: item.location || "",
       tax_rate: item.tax_rate,
       irpf_rate: item.irpf_rate,
+      box_id: item.box_id || null,
+      supplier_id: item.supplier_id || null,
     });
     openItemModal();
   };
@@ -191,7 +209,12 @@ export function StockPage() {
   };
 
   const handleItemSubmit = itemForm.onSubmit((values) => {
-    const payload = { ...values, category_id: values.category_id || undefined };
+    const payload = {
+      ...values,
+      category_id: values.category_id || undefined,
+      box_id: values.box_id || null,
+      supplier_id: values.supplier_id || null,
+    };
     if (editMode && selectedItem) {
       updateItem.mutate(
         { id: selectedItem.id, ...payload },
@@ -428,6 +451,28 @@ export function StockPage() {
               <NumberInput label="IRPF (%)" min={0} max={100} {...itemForm.getInputProps("irpf_rate")} />
             </Group>
             <TextInput label="Ubicación" placeholder="Almacén, estantería..." {...itemForm.getInputProps("location")} />
+            <Select
+              label="Box"
+              placeholder="Selecciona un box"
+              description="Asigna este stock a uno de tus boxes"
+              data={boxOptions}
+              searchable
+              clearable
+              nothingFoundMessage="No hay boxes creados"
+              value={itemForm.values.box_id}
+              onChange={(val) => itemForm.setFieldValue("box_id", val)}
+            />
+            <Select
+              label="Proveedor"
+              placeholder="Selecciona un proveedor"
+              description="Asocia este artículo al proveedor que lo suministra"
+              data={supplierOptions}
+              searchable
+              clearable
+              nothingFoundMessage="No hay proveedores activos"
+              value={itemForm.values.supplier_id}
+              onChange={(val) => itemForm.setFieldValue("supplier_id", val)}
+            />
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeItemModal}>Cancelar</Button>
               <Button type="submit" loading={createItem.isPending || updateItem.isPending}>

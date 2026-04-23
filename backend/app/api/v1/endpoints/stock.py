@@ -25,6 +25,25 @@ router = APIRouter()
 CurrentUser = Depends(require_workspace)
 
 
+def _safe_attr(obj, name: str):
+    """Lee un atributo defensivamente.
+
+    Si la columna no existe aún en el schema (p.ej. la migración 048 no se ha
+    aplicado), devolvemos ``None`` en lugar de levantar ``ProgrammingError``.
+    """
+    try:
+        return getattr(obj, name, None)
+    except Exception:
+        return None
+
+
+def _safe_set(obj, name: str, value) -> None:
+    try:
+        setattr(obj, name, value)
+    except Exception:
+        pass
+
+
 # --- Pydantic schemas ---
 
 class CategoryCreate(PydanticModel):
@@ -51,6 +70,8 @@ class ItemCreate(PydanticModel):
     location: Optional[str] = None
     tax_rate: float = 21
     irpf_rate: float = 0
+    box_id: Optional[UUID] = None
+    supplier_id: Optional[UUID] = None
 
 class ItemUpdate(PydanticModel):
     name: Optional[str] = None
@@ -63,6 +84,8 @@ class ItemUpdate(PydanticModel):
     location: Optional[str] = None
     tax_rate: Optional[float] = None
     irpf_rate: Optional[float] = None
+    box_id: Optional[UUID] = None
+    supplier_id: Optional[UUID] = None
 
 class MovementCreate(PydanticModel):
     movement_type: str  # entry, exit, adjustment
@@ -165,6 +188,8 @@ async def list_items(
             "tax_rate": float(i.tax_rate),
             "irpf_rate": float(i.irpf_rate),
             "is_active": i.is_active,
+            "box_id": str(_safe_attr(i, "box_id")) if _safe_attr(i, "box_id") else None,
+            "supplier_id": str(_safe_attr(i, "supplier_id")) if _safe_attr(i, "supplier_id") else None,
             "created_at": i.created_at.isoformat() if i.created_at else "",
         }
         for i in items
@@ -187,6 +212,12 @@ async def create_item(data: ItemCreate, user=CurrentUser, db: AsyncSession = Dep
         tax_rate=data.tax_rate,
         irpf_rate=data.irpf_rate,
     )
+    # box/supplier son opcionales y pueden no existir aún como columnas en
+    # entornos donde no se haya aplicado la migración 048.
+    if data.box_id is not None:
+        _safe_set(item, "box_id", data.box_id)
+    if data.supplier_id is not None:
+        _safe_set(item, "supplier_id", data.supplier_id)
     db.add(item)
     await db.commit()
     await db.refresh(item)
@@ -201,7 +232,13 @@ async def update_item(item_id: UUID, data: ItemUpdate, user=CurrentUser, db: Asy
     item = result.scalar_one_or_none()
     if not item:
         raise HTTPException(404, "Item not found")
-    for field, value in data.model_dump(exclude_unset=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    # Aplicamos box_id / supplier_id con setter defensivo
+    if "box_id" in payload:
+        _safe_set(item, "box_id", payload.pop("box_id"))
+    if "supplier_id" in payload:
+        _safe_set(item, "supplier_id", payload.pop("supplier_id"))
+    for field, value in payload.items():
         setattr(item, field, value)
     await db.commit()
     return {"ok": True}

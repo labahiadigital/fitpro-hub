@@ -548,10 +548,10 @@ export function CalendarPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nueva Sesión",
+          label: "Nueva Sesión/Cita",
           onClick: openModal,
         }}
-        description="Gestiona tus sesiones y reservas de forma eficiente"
+        description="Gestiona tus sesiones/citas y reservas de forma eficiente"
         title="Calendario"
       >
         <Group justify="space-between" wrap="wrap">
@@ -593,7 +593,7 @@ export function CalendarPage() {
             <Group gap={6}>
               <Checkbox
                 size="xs"
-                label="Sesiones"
+                label="Sesiones/Citas"
                 checked={eventFilters.bookings}
                 color="teal"
                 onChange={(e) => setEventFilters(p => ({ ...p, bookings: e.currentTarget.checked }))}
@@ -700,7 +700,7 @@ export function CalendarPage() {
           <Group justify="space-between">
             <Box>
               <Text className="text-label" mb="xs">
-                Sesiones Hoy
+                Sesiones/Citas Hoy
               </Text>
               <Text
                 className="text-display"
@@ -1288,7 +1288,7 @@ export function CalendarPage() {
         onClose={closeModal}
         opened={modalOpened}
         size="lg"
-        title="Nueva Sesión"
+        title="Nueva Sesión/Cita"
       >
         <form onSubmit={form.onSubmit(handleCreateBooking)}>
           <Stack>
@@ -1394,7 +1394,7 @@ export function CalendarPage() {
             />
 
             <Switch
-              label="Sesión recurrente"
+              label="Sesión/Cita recurrente"
               {...form.getInputProps("is_recurring", { type: "checkbox" })}
             />
 
@@ -1423,7 +1423,7 @@ export function CalendarPage() {
                 Cancelar
               </Button>
               <Button loading={createBooking.isPending} type="submit">
-                Crear Sesión
+                Crear Sesión/Cita
               </Button>
             </Group>
           </Stack>
@@ -1435,7 +1435,7 @@ export function CalendarPage() {
         onClose={() => { setSelectedBooking(null); setIsEditing(false); }}
         opened={!!selectedBooking}
         size="md"
-        title={isEditing ? "Modificar Sesión" : "Detalle de Sesión"}
+        title={isEditing ? "Modificar Sesión/Cita" : "Detalle de Sesión/Cita"}
       >
         {selectedBooking && !isEditing && (
           <Stack>

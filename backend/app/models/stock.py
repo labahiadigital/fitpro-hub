@@ -1,7 +1,7 @@
 """Stock management models."""
 from sqlalchemy import Column, String, Text, ForeignKey, Boolean, Numeric
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 
 from app.models.base import BaseModel
 
@@ -36,6 +36,18 @@ class StockItem(BaseModel):
     tax_rate = Column(Numeric, nullable=False, server_default="21")
     irpf_rate = Column(Numeric, nullable=False, server_default="0")
     is_active = Column(Boolean, nullable=False, server_default="true")
+    # Asignación opcional a un box y/o proveedor ya existentes. Ambas
+    # columnas se marcan ``deferred`` para que los SELECT por defecto no
+    # las incluyan; así los listados siguen funcionando aunque la migración
+    # 048 aún no esté aplicada en el entorno destino.
+    box_id = deferred(
+        Column(UUID(as_uuid=True), ForeignKey("boxes.id", ondelete="SET NULL"), nullable=True, index=True),
+        group="box_id",
+    )
+    supplier_id = deferred(
+        Column(UUID(as_uuid=True), ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True, index=True),
+        group="supplier_id",
+    )
 
     category = relationship("StockCategory", back_populates="items", lazy="selectin")
     movements = relationship("StockMovement", back_populates="item", cascade="all, delete-orphan")

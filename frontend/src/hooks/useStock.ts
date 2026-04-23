@@ -17,6 +17,8 @@ export interface StockItem {
   tax_rate: number;
   irpf_rate: number;
   is_active: boolean;
+  box_id?: string | null;
+  supplier_id?: string | null;
   created_at: string;
 }
 
