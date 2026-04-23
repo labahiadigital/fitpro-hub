@@ -1233,14 +1233,23 @@ function getExercisePrescriptionChips(ex: PrescribedExercise): string[] {
     category.includes("cardio") ||
     isCardioExercise(exerciseName);
 
-  // Para ejercicios cardio NO mostramos series x reps ni peso; mostramos
-  // exclusivamente las métricas cardio (min/km/km·h⁻¹). Si no hay ninguna
-  // definida, añadimos un chip genérico "Cardio" como fallback.
+  // Para ejercicios cardio NO mostramos reps ni peso objetivo; mostramos
+  // exclusivamente las métricas cardio (series × min/km/km·h⁻¹) que haya
+  // configurado el entrenador. Si no hay ninguna métrica definida, mostramos
+  // el número de series para indicar la estructura; si tampoco hay series
+  // no añadimos ningún chip y evitamos el genérico "Cardio" hueco.
   if (isCardio) {
-    if (ex.target_duration_minutes != null) chips.push(`${ex.target_duration_minutes} min`);
-    if (ex.target_distance_km != null) chips.push(`${ex.target_distance_km} km`);
-    if (ex.target_speed_kmh != null) chips.push(`${ex.target_speed_kmh} km/h`);
-    if (chips.length === 0) chips.push("Cardio");
+    const sets = ex.sets != null && Number(ex.sets) > 0 ? Number(ex.sets) : null;
+    const parts: string[] = [];
+    if (ex.target_duration_minutes != null) parts.push(`${ex.target_duration_minutes} min`);
+    if (ex.target_distance_km != null) parts.push(`${ex.target_distance_km} km`);
+    if (ex.target_speed_kmh != null) parts.push(`${ex.target_speed_kmh} km/h`);
+
+    if (parts.length > 0) {
+      chips.push(sets ? `${sets} × ${parts.join(" · ")}` : parts.join(" · "));
+    } else if (sets) {
+      chips.push(`${sets} ${sets === 1 ? "serie" : "series"}`);
+    }
   } else {
     // Series x reps (solo si se definieron)
     const hasSets = ex.sets != null && Number(ex.sets) > 0;

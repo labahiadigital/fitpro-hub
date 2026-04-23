@@ -33,6 +33,7 @@ from app.models.rectification import RectificationRequest
 from app.models.beverage import Beverage
 from app.models.custom_role import CustomRole
 from app.models.stock import StockCategory, StockItem, StockMovement
+from app.models.supplier import Supplier
 from app.models.resource import Box, Machine, Service, ServiceStaff, ServiceStockConsumption, Appointment
 from app.models.time_clock import TimeRecord, LeaveRequest, PublicHoliday
 from app.models.schedule import StaffSchedule, MachineSchedule, BoxSchedule
@@ -107,6 +108,7 @@ __all__ = [
     "StockCategory",
     "StockItem",
     "StockMovement",
+    "Supplier",
     "Box",
     "Machine",
     "Service",

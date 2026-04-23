@@ -55,6 +55,7 @@ const SupplementsPage = lazyRetry(() => import("./pages/supplements/SupplementsP
 const FormsPage = lazyRetry(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
 const CatalogPage = lazyRetry(() => import("./pages/payments/CatalogPage").then(m => ({ default: m.CatalogPage })));
 const StockPage = lazyRetry(() => import("./pages/stock/StockPage").then(m => ({ default: m.StockPage })));
+const SuppliersPage = lazyRetry(() => import("./pages/suppliers/SuppliersPage"));
 const BoxesPage = lazyRetry(() => import("./pages/boxes/BoxesPage"));
 const MachinesPage = lazyRetry(() => import("./pages/machines/MachinesPage"));
 const BillingPage = lazyRetry(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
@@ -156,6 +157,7 @@ const ROUTE_RESOURCE_MAP: Record<string, string> = {
   "/forms": "forms",
   "/catalog": "catalog",
   "/stock": "catalog",
+  "/suppliers": "billing",
   "/boxes": "catalog",
   "/machines": "catalog",
   "/billing": "billing",
@@ -288,6 +290,7 @@ export default function App() {
                   <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
                   <Route element={<TrainerRoute><CatalogPage /></TrainerRoute>} path="/catalog" />
                   <Route element={<TrainerRoute><StockPage /></TrainerRoute>} path="/stock" />
+                  <Route element={<TrainerRoute><SuppliersPage /></TrainerRoute>} path="/suppliers" />
                   <Route element={<TrainerRoute><BoxesPage /></TrainerRoute>} path="/boxes" />
                   <Route element={<TrainerRoute><MachinesPage /></TrainerRoute>} path="/machines" />
                   <Route element={<TrainerRoute><BillingPage /></TrainerRoute>} path="/billing" />

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 
 from app.models.base import BaseModel
 
@@ -45,7 +45,13 @@ class Form(BaseModel):
     # Productos a los que está vinculado el formulario. Cuando un cliente
     # compre o contrate un producto incluido en esta lista, el formulario
     # podrá enviarse automáticamente (o sugerirse) como parte del flujo.
-    product_ids = Column(ARRAY(UUID(as_uuid=True)), nullable=False, server_default="{}")
+    # Usamos ``deferred`` para que SQLAlchemy NO incluya la columna en el
+    # SELECT por defecto: así los listados siguen funcionando aunque la
+    # migración 045 no se haya aplicado todavía en el entorno destino.
+    product_ids = deferred(
+        Column(ARRAY(UUID(as_uuid=True)), nullable=False, server_default="{}"),
+        group="product_ids",
+    )
 
     # Relationships
     workspace = relationship("Workspace", back_populates="forms")

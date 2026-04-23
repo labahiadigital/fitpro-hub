@@ -116,6 +116,7 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
     children: [
       { icon: <IconReceipt size={18} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
       { icon: <IconChartBar size={18} />, label: "Reportes", to: "/reports", requiredResource: "reports" },
+      { icon: <IconBuildingStore size={18} />, label: "Proveedores", to: "/suppliers", requiredResource: "billing" },
     ],
   },
   { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
@@ -700,6 +701,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/forms": "Formularios",
   "/catalog": "Catálogo",
   "/stock": "Stock",
+  "/suppliers": "Proveedores",
   "/boxes": "Boxes",
   "/machines": "Maquinaria",
   "/billing": "Facturación",

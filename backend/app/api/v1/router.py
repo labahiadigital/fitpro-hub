@@ -6,7 +6,7 @@ from app.api.v1.endpoints import (
     foods, notifications, supplements, documents, pdf, roles, redsys, sequra, lms, erp, referrals,
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
     whatsapp, google_calendar, storage, tasks, team_groups, rectifications, beverages, stock,
-    boxes, machines, services, appointments, time_clock, schedules,
+    boxes, machines, services, appointments, time_clock, schedules, suppliers,
 )
 
 api_router = APIRouter()
@@ -133,6 +133,9 @@ api_router.include_router(beverages.router, prefix="/beverages", tags=["Bebidas"
 
 # Stock Management
 api_router.include_router(stock.router, prefix="/stock", tags=["Gestión de Stock"])
+
+# Suppliers (Proveedores)
+api_router.include_router(suppliers.router, prefix="/suppliers", tags=["Proveedores"])
 
 # Boxes (Consultas/Espacios)
 api_router.include_router(boxes.router, prefix="/boxes", tags=["Boxes / Consultas"])

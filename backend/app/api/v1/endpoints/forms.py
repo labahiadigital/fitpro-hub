@@ -113,6 +113,21 @@ class FormSubmissionResponse(BaseModel):
 
 # ============ HELPERS ============
 
+def _safe_product_ids(form: Form) -> List[UUID]:
+    """Devuelve ``product_ids`` del formulario siendo tolerante con una
+    posible migración 045 aún sin aplicar en el entorno destino.
+
+    La columna está definida como ``deferred`` en el modelo, por lo que sólo
+    se consulta al accederla. Si aún no existe en la BD (p. ej. durante un
+    deploy en curso) atrapamos el error y devolvemos lista vacía para que
+    los listados/serializaciones sigan funcionando.
+    """
+    try:
+        return list(getattr(form, "product_ids", None) or [])
+    except Exception:  # noqa: BLE001 - defensivo frente a ProgrammingError
+        return []
+
+
 def _serialize_form(form: Form, submissions_count: int = 0) -> FormResponse:
     """Aplana schema/settings a campos de primer nivel esperados por el frontend."""
     schema = form.schema or {}
@@ -133,7 +148,7 @@ def _serialize_form(form: Form, submissions_count: int = 0) -> FormResponse:
         is_global=bool(getattr(form, "is_global", False)),
         is_required=bool(getattr(form, "is_required", False)),
         send_on_onboarding=bool(settings.get("send_on_onboarding", False)),
-        product_ids=list(getattr(form, "product_ids", None) or []),
+        product_ids=_safe_product_ids(form),
         submissions_count=submissions_count,
         created_at=form.created_at,
         updated_at=form.updated_at,
@@ -172,7 +187,12 @@ def _apply_payload(form: Form, data: FormCreate) -> None:
 
     if data.product_ids is not None:
         # Dedupe y normalizar: sólo UUIDs válidos (pydantic ya lo validó).
-        form.product_ids = list(dict.fromkeys(data.product_ids))
+        # Tolerante con migración 045 aún no aplicada: si la columna no
+        # existe la escritura simplemente se ignora.
+        try:
+            form.product_ids = list(dict.fromkeys(data.product_ids))
+        except Exception:  # noqa: BLE001
+            pass
 
     # IMPORTANTE: marcar JSONB como modificado para que SQLAlchemy persista cambios
     flag_modified(form, "schema")
