@@ -13,6 +13,8 @@ export interface Form {
   is_required?: boolean;
   send_on_onboarding?: boolean;
   is_global?: boolean;
+  /** IDs de productos a los que está vinculado el formulario. */
+  product_ids?: string[];
   submissions_count?: number;
   created_at: string;
   updated_at?: string;
@@ -219,6 +221,10 @@ export interface ClientFormItem {
   is_required: boolean;
   created_at: string;
   submitted_at?: string | null;
+  /** Valores sugeridos por el backend a partir del perfil del cliente. */
+  prefill?: Record<string, unknown>;
+  /** Respuestas ya enviadas (solo para status="submitted"). */
+  answers?: Record<string, unknown>;
 }
 
 export function useMyForms(

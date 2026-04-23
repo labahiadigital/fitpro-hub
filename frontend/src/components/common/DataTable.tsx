@@ -34,6 +34,15 @@ interface Column<T> {
   hideOnMobile?: boolean;
 }
 
+export interface DataTableExtraAction<T> {
+  label: string;
+  icon?: React.ReactNode;
+  onClick: (item: T) => void;
+  color?: string;
+  /** Si devuelve false la acción no se muestra para este item. */
+  visible?: (item: T) => boolean;
+}
+
 interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
@@ -48,6 +57,8 @@ interface DataTableProps<T> {
   onView?: (item: T) => void;
   getDeleteLabel?: (item: T) => string;
   getDeleteIcon?: (item: T) => React.ReactNode;
+  /** Acciones extra que se añaden al menú (⋮) después de Ver/Editar. */
+  extraActions?: DataTableExtraAction<T>[];
   pagination?: {
     page: number;
     pageSize: number;
@@ -71,6 +82,7 @@ export function DataTable<T extends { id: string }>({
   onView,
   getDeleteLabel,
   getDeleteIcon,
+  extraActions,
   pagination,
   emptyMessage = "No hay datos disponibles",
 }: DataTableProps<T>) {
@@ -100,7 +112,9 @@ export function DataTable<T extends { id: string }>({
     onSearch?.(query);
   };
 
-  const hasActions = onEdit || onDelete || onView;
+  const hasActions = Boolean(
+    onEdit || onDelete || onView || (extraActions && extraActions.length > 0),
+  );
 
   if (loading) {
     return (
@@ -320,6 +334,18 @@ export function DataTable<T extends { id: string }>({
                               Editar
                             </Menu.Item>
                           )}
+                          {extraActions
+                            ?.filter((a) => !a.visible || a.visible(item))
+                            .map((action) => (
+                              <Menu.Item
+                                key={action.label}
+                                color={action.color}
+                                leftSection={action.icon}
+                                onClick={() => action.onClick(item)}
+                              >
+                                {action.label}
+                              </Menu.Item>
+                            ))}
                           {onDelete && (
                             <>
                               <Menu.Divider />

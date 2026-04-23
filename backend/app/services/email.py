@@ -171,6 +171,42 @@ class EmailService:
 
 
 # Email templates
+def _cta_button(
+    text: str,
+    href: str,
+    fill_hex: str = "#2D6A4F",
+    gradient_end_hex: str = "#40916C",
+) -> str:
+    """Renderiza un botón CTA bulletproof para email.
+
+    Outlook/Windows Mail ignora ``linear-gradient`` y deja el botón vacío
+    (texto blanco sobre fondo transparente). Usamos el patrón "bulletproof
+    button" recomendado por Campaign Monitor / Litmus: una caja VML para
+    Outlook con fallback a un ``<a>`` sólido para el resto de clientes.
+    """
+    safe_text = html_mod.escape(text)
+    return f"""
+<div>
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+     href="{href}" style="height:52px;v-text-anchor:middle;width:280px;" arcsize="22%"
+     stroke="f" fillcolor="{fill_hex}">
+  <w:anchorlock/>
+  <center style="color:#ffffff;font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;font-size:16px;font-weight:bold;">
+    {safe_text}
+  </center>
+</v:roundrect>
+<![endif]-->
+<!--[if !mso]><!-- -->
+<a href="{href}"
+   style="display:inline-block;background-color:{fill_hex};background-image:linear-gradient(135deg, {fill_hex} 0%, {gradient_end_hex} 100%);color:#ffffff;padding:16px 40px;text-decoration:none;border-radius:12px;font-size:16px;font-weight:600;font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;mso-hide:all;box-shadow:0 4px 14px rgba(45, 106, 79, 0.4);">
+  {safe_text}
+</a>
+<!--<![endif]-->
+</div>
+""".strip()
+
+
 class EmailTemplates:
     @staticmethod
     def email_confirmation(
@@ -237,9 +273,7 @@ class EmailTemplates:
                                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
                                         <tr>
                                             <td align="center">
-                                                <a href="{confirmation_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4); transition: transform 0.2s;">
-                                                    Confirmar mi cuenta
-                                                </a>
+                                                {_cta_button("Confirmar mi cuenta", confirmation_url)}
                                             </td>
                                         </tr>
                                     </table>
@@ -318,13 +352,18 @@ class EmailTemplates:
                                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
                                         <tr>
                                             <td align="center">
-                                                <a href="{reset_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4);">
-                                                    Restablecer contraseña
-                                                </a>
+                                                {_cta_button("Restablecer contraseña", reset_url)}
                                             </td>
                                         </tr>
                                     </table>
-                                    
+
+                                    <p style="margin: 25px 0 0 0; color: #718096; font-size: 14px; line-height: 1.6; text-align: center;">
+                                        Si el botón no funciona, copia y pega este enlace en tu navegador:
+                                    </p>
+                                    <p style="margin: 10px 0 0 0; color: #2D6A4F; font-size: 12px; word-break: break-all; text-align: center; background: #f0fdf4; padding: 12px; border-radius: 8px;">
+                                        {reset_url}
+                                    </p>
+
                                     <p style="margin: 25px 0 0 0; color: #a0aec0; font-size: 13px; text-align: center;">
                                         Este enlace expirará en 1 hora.
                                     </p>
@@ -385,9 +424,7 @@ class EmailTemplates:
                                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
                                         <tr>
                                             <td align="center">
-                                                <a href="{magic_link_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4);">
-                                                    Acceder a Trackfiz
-                                                </a>
+                                                {_cta_button("Acceder a Trackfiz", magic_link_url)}
                                             </td>
                                         </tr>
                                     </table>
@@ -447,9 +484,7 @@ class EmailTemplates:
                                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
                                         <tr>
                                             <td align="center">
-                                                <a href="{invitation_url}" style="display: inline-block; background: linear-gradient(135deg, #2D6A4F 0%, #40916C 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(45, 106, 79, 0.4);">
-                                                    Aceptar invitación
-                                                </a>
+                                                {_cta_button("Aceptar invitación", invitation_url)}
                                             </td>
                                         </tr>
                                     </table>

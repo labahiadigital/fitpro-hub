@@ -2957,7 +2957,7 @@ export function ClientDetailPage() {
                     muestra como referencia secundaria. */}
                 <Box p="lg" style={{ background: "rgba(255,255,255,0.95)", borderRadius: "var(--radius-lg)" }}>
                   <Text fw={700} size="sm" mb="md" style={{ color: "var(--nv-dark)" }}>
-                    🎯 Objetivos Diarios{mealPlans.length > 0 ? ` (${mealPlans[0].name})` : " (Calculados automáticamente)"}
+                    🎯 Objetivos Diarios
                   </Text>
                   <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="lg">
                     <Box ta="center">

@@ -11,6 +11,7 @@ import {
   FileButton,
   Group,
   Paper,
+  MultiSelect,
   ScrollArea,
   Select,
   SimpleGrid,
@@ -71,6 +72,7 @@ import {
   type Form,
 } from "../../hooks/useForms";
 import { useClients } from "../../hooks/useClients";
+import { useProducts, type Product } from "../../hooks/useProducts";
 import { formatDecimal } from "../../utils/format";
 
 interface FormField {
@@ -103,6 +105,7 @@ interface FormTemplate {
   is_required: boolean;
   send_on_onboarding: boolean;
   is_global: boolean;
+  product_ids: string[];
   submissions_count: number;
   created_at: string;
 }
@@ -144,6 +147,14 @@ export function FormsPage() {
   const copyFormMutation = useCopyForm();
   const sendFormMutation = useSendForm();
   const { data: clientsResponse } = useClients({ page_size: 500 });
+  const { data: productsData } = useProducts({ is_active: true });
+  const productOptions = useMemo(() => {
+    const list = (productsData ?? []) as Product[];
+    return list.map((p) => ({
+      value: p.id,
+      label: p.name,
+    }));
+  }, [productsData]);
   const clientsList = (clientsResponse?.items || []) as Array<{
     id: string;
     full_name?: string;
@@ -163,6 +174,7 @@ export function FormsPage() {
     is_required: f.is_required ?? false,
     send_on_onboarding: f.send_on_onboarding ?? false,
     is_global: f.is_global ?? false,
+    product_ids: f.product_ids ?? [],
     submissions_count: f.submissions_count ?? 0,
     created_at: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
   })) : [];
@@ -300,6 +312,7 @@ export function FormsPage() {
       description: "",
       type: "custom",
       send_on_onboarding: false,
+      product_ids: [] as string[],
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
@@ -314,6 +327,7 @@ export function FormsPage() {
         description: formTemplate.description || "",
         type: formTemplate.type,
         send_on_onboarding: formTemplate.send_on_onboarding,
+        product_ids: formTemplate.product_ids ?? [],
       });
       setFormFields(formTemplate.fields);
     } else {
@@ -417,6 +431,7 @@ export function FormsPage() {
       fields: formFields,
       is_active: editingForm?.is_active ?? true,
       send_on_onboarding: values.send_on_onboarding,
+      product_ids: values.product_ids ?? [],
     };
 
     try {
@@ -1358,6 +1373,17 @@ export function FormsPage() {
                   {...form.getInputProps("send_on_onboarding", {
                     type: "checkbox",
                   })}
+                />
+
+                <MultiSelect
+                  label="Vincular a productos"
+                  description="El formulario se enviará automáticamente cuando un cliente contrate uno de estos productos"
+                  placeholder="Selecciona uno o varios productos"
+                  data={productOptions}
+                  searchable
+                  clearable
+                  nothingFoundMessage="No hay productos activos"
+                  {...form.getInputProps("product_ids")}
                 />
               </Stack>
             </Paper>

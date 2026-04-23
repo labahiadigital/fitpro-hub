@@ -343,9 +343,27 @@ function parseRepsFromString(reps?: string): number | undefined {
   return match ? parseInt(match[1], 10) : undefined;
 }
 
-const CARDIO_KEYWORDS = ["caminar", "correr", "trotar", "bicicleta", "elíptica", "nadar", "remo", "saltar", "cardio", "cinta", "andar"];
+const CARDIO_KEYWORDS = [
+  "caminar",
+  "correr",
+  "trotar",
+  "bicicleta",
+  "bici",
+  "elíptica",
+  "eliptica",
+  "nadar",
+  "remo",
+  "remar",
+  "saltar",
+  "cardio",
+  "cinta",
+  "andar",
+  "rodar",
+  "spinning",
+];
 
 function isCardioExercise(name: string): boolean {
+  if (!name) return false;
   const lower = name.toLowerCase();
   return CARDIO_KEYWORDS.some((kw) => lower.includes(kw));
 }
@@ -1190,6 +1208,13 @@ type PrescribedExercise = {
   target_duration_minutes?: number;
   target_distance_km?: number;
   target_speed_kmh?: number;
+  name?: string;
+  exercise?: {
+    name?: string;
+    alias?: string;
+    category?: string;
+    exercise_type?: string;
+  };
 };
 
 // Construye los badges/etiquetas que resumen la prescripción del entrenador
@@ -1198,33 +1223,40 @@ type PrescribedExercise = {
 // descanso) en lugar de placeholders genéricos.
 function getExercisePrescriptionChips(ex: PrescribedExercise): string[] {
   const chips: string[] = [];
+  const exerciseName = ex.exercise?.name || ex.name || "";
+  const category = (ex.exercise?.category || ex.exercise?.exercise_type || "").toLowerCase();
   const isCardio =
     ex.duration_type === "cardio" ||
     ex.target_duration_minutes != null ||
     ex.target_distance_km != null ||
-    ex.target_speed_kmh != null;
+    ex.target_speed_kmh != null ||
+    category.includes("cardio") ||
+    isCardioExercise(exerciseName);
 
-  // Series x reps (solo si se definieron)
-  const hasSets = ex.sets != null && Number(ex.sets) > 0;
-  const hasReps = ex.reps != null && String(ex.reps).trim() !== "";
-  if (hasSets && hasReps) {
-    chips.push(`${ex.sets} x ${ex.reps}`);
-  } else if (hasSets) {
-    chips.push(`${ex.sets} series`);
-  } else if (hasReps) {
-    chips.push(`${ex.reps} reps`);
-  }
-
-  // Peso objetivo para entrenos de fuerza
-  if (!isCardio && ex.target_weight != null) {
-    chips.push(`${ex.target_weight} kg`);
-  }
-
-  // Cardio: duración, distancia y velocidad
+  // Para ejercicios cardio NO mostramos series x reps ni peso; mostramos
+  // exclusivamente las métricas cardio (min/km/km·h⁻¹). Si no hay ninguna
+  // definida, añadimos un chip genérico "Cardio" como fallback.
   if (isCardio) {
     if (ex.target_duration_minutes != null) chips.push(`${ex.target_duration_minutes} min`);
     if (ex.target_distance_km != null) chips.push(`${ex.target_distance_km} km`);
     if (ex.target_speed_kmh != null) chips.push(`${ex.target_speed_kmh} km/h`);
+    if (chips.length === 0) chips.push("Cardio");
+  } else {
+    // Series x reps (solo si se definieron)
+    const hasSets = ex.sets != null && Number(ex.sets) > 0;
+    const hasReps = ex.reps != null && String(ex.reps).trim() !== "";
+    if (hasSets && hasReps) {
+      chips.push(`${ex.sets} x ${ex.reps}`);
+    } else if (hasSets) {
+      chips.push(`${ex.sets} series`);
+    } else if (hasReps) {
+      chips.push(`${ex.reps} reps`);
+    }
+
+    // Peso objetivo para entrenos de fuerza
+    if (ex.target_weight != null) {
+      chips.push(`${ex.target_weight} kg`);
+    }
   }
 
   // Descanso

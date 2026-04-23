@@ -179,7 +179,16 @@ interface FormRespondCardProps {
 
 function FormRespondCard({ item }: FormRespondCardProps) {
   const respond = useRespondMyForm();
-  const [values, setValues] = useState<Record<string, unknown>>({});
+  // Pre-rellenamos con las respuestas previas (si ya se envió) o con los
+  // valores sugeridos por el backend a partir del perfil del cliente
+  // (alergias e intolerancias ya declaradas en el onboarding, etc).
+  const initialValues = useMemo<Record<string, unknown>>(() => {
+    if (item.status === "submitted" && item.answers) {
+      return { ...item.answers };
+    }
+    return { ...(item.prefill ?? {}) };
+  }, [item.status, item.answers, item.prefill]);
+  const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [error, setError] = useState<string | null>(null);
 
   const isDone = item.status === "submitted";
@@ -258,9 +267,21 @@ function FormRespondCard({ item }: FormRespondCardProps) {
       <Divider mb="md" />
 
       {isDone ? (
-        <Alert color="green" icon={<IconCheck size={16} />}>
-          Ya has respondido este formulario. Gracias.
-        </Alert>
+        <Stack gap="md">
+          <Alert color="green" icon={<IconCheck size={16} />}>
+            Ya has respondido este formulario. Puedes revisar tus respuestas abajo.
+          </Alert>
+          {item.fields.map((f) => (
+            <Box key={f.id}>
+              {renderField(
+                f,
+                values[f.id],
+                () => undefined,
+                true,
+              )}
+            </Box>
+          ))}
+        </Stack>
       ) : (
         <Stack gap="md">
           {item.fields.map((f) => (

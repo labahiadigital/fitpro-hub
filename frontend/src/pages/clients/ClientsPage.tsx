@@ -40,6 +40,7 @@ import {
   IconTrashX,
   IconRestore,
   IconRefresh,
+  IconKey,
 } from "@tabler/icons-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -63,7 +64,7 @@ import {
 } from "../../hooks/useClients";
 import { useCreateInvitation, useInvitations, useResendInvitation, useCancelInvitation } from "../../hooks/useInvitations";
 import { useQuery } from "@tanstack/react-query";
-import { productsApi } from "../../services/api";
+import { api, productsApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
@@ -75,7 +76,15 @@ function getClientStatus(client: { is_active: boolean; has_user_account?: boolea
 }
 
 // Componente de tarjeta de cliente para vista de grid
-function ClientCard({ client, onView }: { client: any; onView: () => void }) {
+function ClientCard({
+  client,
+  onView,
+  onResetPassword,
+}: {
+  client: any;
+  onView: () => void;
+  onResetPassword?: (client: any) => void;
+}) {
   return (
     <Box 
       className="nv-card" 
@@ -126,6 +135,17 @@ function ClientCard({ client, onView }: { client: any; onView: () => void }) {
             <Menu.Item leftSection={<IconEdit size={14} />}>
               Editar
             </Menu.Item>
+            {onResetPassword && client.email && !client.deleted_at && (
+              <Menu.Item
+                leftSection={<IconKey size={14} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onResetPassword(client);
+                }}
+              >
+                Restablecer contraseña
+              </Menu.Item>
+            )}
             <Menu.Divider />
             <Menu.Item leftSection={<IconTrash size={14} />} color="red">
               Eliminar
@@ -415,6 +435,28 @@ export function ClientsPage() {
       setEditingClient(null);
     } catch {
       // Error handled by mutation
+    }
+  };
+
+  const handleSendPasswordReset = async (client: any) => {
+    if (!client?.id || client.id.startsWith("demo-client-")) return;
+    try {
+      await api.post(`/clients/${client.id}/send-password-reset`);
+      notifications.show({
+        title: "Email enviado",
+        message: `Se ha enviado un email para restablecer la contraseña a ${client.email}`,
+        color: "green",
+      });
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } }; message?: string };
+      notifications.show({
+        title: "Error",
+        message:
+          e.response?.data?.detail ||
+          e.message ||
+          "No se pudo enviar el email de restablecimiento",
+        color: "red",
+      });
     }
   };
 
@@ -743,6 +785,16 @@ export function ClientsPage() {
             onSearch={setSearch}
             onView={(client: { id: string }) => navigate(`/clients/${client.id}`)}
             onRowClick={(client: { id: string }) => navigate(`/clients/${client.id}`)}
+            extraActions={[
+              {
+                label: "Restablecer contraseña",
+                icon: <IconKey size={16} />,
+                onClick: (client: any) => handleSendPasswordReset(client),
+                // Sólo tiene sentido para clientes con cuenta (no descartados y con email)
+                visible: (client: any) =>
+                  Boolean(client?.email) && !client?.deleted_at,
+              },
+            ]}
             getDeleteLabel={(client: any) =>
               client.deleted_at
                 ? "Eliminar definitivamente"
@@ -762,10 +814,11 @@ export function ClientsPage() {
         ) : (
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
             {clientsData.items.map((client: any) => (
-              <ClientCard 
-                key={client.id} 
-                client={client} 
+              <ClientCard
+                key={client.id}
+                client={client}
                 onView={() => navigate(`/clients/${client.id}`)}
+                onResetPassword={handleSendPasswordReset}
               />
             ))}
           </SimpleGrid>

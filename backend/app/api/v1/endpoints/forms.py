@@ -13,6 +13,12 @@ from app.models.form import Form, FormSubmission
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
 from app.services.notification_service import notify
+from app.constants.allergens import (
+    ALLERGY_IDS,
+    INTOLERANCE_IDS,
+    id_to_label,
+    label_to_id,
+)
 
 router = APIRouter()
 
@@ -62,6 +68,7 @@ class FormCreate(BaseModel):
     is_active: Optional[bool] = None
     is_required: Optional[bool] = None
     send_on_onboarding: Optional[bool] = None
+    product_ids: Optional[List[UUID]] = None
 
 
 class FormResponse(BaseModel):
@@ -78,6 +85,7 @@ class FormResponse(BaseModel):
     is_global: bool = False
     is_required: bool = False
     send_on_onboarding: bool = False
+    product_ids: List[UUID] = []
     submissions_count: int = 0
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -125,6 +133,7 @@ def _serialize_form(form: Form, submissions_count: int = 0) -> FormResponse:
         is_global=bool(getattr(form, "is_global", False)),
         is_required=bool(getattr(form, "is_required", False)),
         send_on_onboarding=bool(settings.get("send_on_onboarding", False)),
+        product_ids=list(getattr(form, "product_ids", None) or []),
         submissions_count=submissions_count,
         created_at=form.created_at,
         updated_at=form.updated_at,
@@ -160,6 +169,10 @@ def _apply_payload(form: Form, data: FormCreate) -> None:
 
     if data.is_required is not None:
         form.is_required = bool(data.is_required)
+
+    if data.product_ids is not None:
+        # Dedupe y normalizar: sólo UUIDs válidos (pydantic ya lo validó).
+        form.product_ids = list(dict.fromkeys(data.product_ids))
 
     # IMPORTANTE: marcar JSONB como modificado para que SQLAlchemy persista cambios
     flag_modified(form, "schema")
@@ -745,6 +758,106 @@ class ClientPendingFormResponse(BaseModel):
     is_required: bool = False
     created_at: datetime
     submitted_at: Optional[datetime] = None
+    # Valores pre-rellenados tomados del perfil del cliente cuando aplique
+    # (p. ej. alergias ya declaradas en el onboarding). Clave = field.id.
+    prefill: dict = {}
+    # Respuestas ya enviadas (sólo para estado "submitted"), para que el
+    # cliente pueda revisar lo que respondió.
+    answers: dict = {}
+
+
+def _build_prefill_for_client(form: Form, client: Client) -> dict:
+    """Genera los valores pre-rellenados de un formulario a partir del
+    ``health_data`` del cliente. Se aplica SOLO a los campos conocidos del
+    sistema (los que empiezan por ``sys_``)."""
+    schema = form.schema or {}
+    fields = schema.get("fields") or []
+    health = (client.health_data or {}) if isinstance(client.health_data, dict) else {}
+
+    allergies_ids = list(
+        dict.fromkeys(
+            [
+                *((health.get("allergens") or [])),
+                *((health.get("allergies") or [])),
+            ]
+        )
+    )
+    intolerances_ids = list(health.get("intolerances") or [])
+
+    prefill: dict = {}
+
+    for field in fields:
+        if not isinstance(field, dict):
+            continue
+        field_id = field.get("id")
+        if field_id == "sys_nut_allergies":
+            # El cuestionario unifica alergias + intolerancias en un solo
+            # multiselect (ver frontend/src/constants/allergens.ts).
+            all_ids = [*allergies_ids, *intolerances_ids]
+            labels = [id_to_label(i) for i in all_ids if i]
+            options = field.get("options") or []
+            labels = [l for l in labels if l in options]
+            if labels:
+                prefill[field_id] = labels
+    return prefill
+
+
+def _sync_health_data_from_answers(
+    form: Form, client: Client, answers: dict
+) -> bool:
+    """Si las respuestas contienen campos del sistema conocidos, actualiza
+    ``client.health_data`` con los IDs correspondientes. Devuelve True si
+    hubo cambios.
+    """
+    if not isinstance(answers, dict) or not answers:
+        return False
+
+    schema = form.schema or {}
+    fields = schema.get("fields") or []
+    known_ids = {f.get("id") for f in fields if isinstance(f, dict)}
+
+    if "sys_nut_allergies" not in known_ids:
+        return False
+
+    raw_values = answers.get("sys_nut_allergies") or []
+    if not isinstance(raw_values, list):
+        return False
+
+    ids = [label_to_id(v) for v in raw_values if isinstance(v, str)]
+    allergies = [i for i in ids if i in ALLERGY_IDS]
+    intolerances = [i for i in ids if i in INTOLERANCE_IDS]
+
+    current = dict(client.health_data or {}) if isinstance(client.health_data, dict) else {}
+
+    # Fusionar: añadir las nuevas a las existentes para no perder otras
+    # alergias registradas manualmente por el entrenador.
+    existing_allergens = list(current.get("allergens") or [])
+    existing_allergies = list(current.get("allergies") or [])
+    existing_intolerances = list(current.get("intolerances") or [])
+
+    merged_allergens = list(
+        dict.fromkeys([*existing_allergens, *existing_allergies, *allergies])
+    )
+    merged_intolerances = list(
+        dict.fromkeys([*existing_intolerances, *intolerances])
+    )
+
+    changed = False
+    if merged_allergens != existing_allergens:
+        current["allergens"] = merged_allergens
+        changed = True
+    if merged_intolerances != existing_intolerances:
+        current["intolerances"] = merged_intolerances
+        changed = True
+    # Eliminamos la clave duplicada legacy del onboarding si existe;
+    # dejamos la fuente de verdad en "allergens" e "intolerances".
+    if "allergies" in current:
+        current.pop("allergies", None)
+        changed = True
+
+    if changed:
+        client.health_data = current
+    return changed
 
 
 async def _get_client_for_current_user(current_user: CurrentUser, db: AsyncSession) -> Client:
@@ -784,6 +897,13 @@ async def list_my_forms(
     out: List[ClientPendingFormResponse] = []
     for sub, form in rows:
         schema = form.schema or {}
+        # Prefill con datos del cliente sólo cuando sigue pendiente
+        # (una vez enviado mostramos exactamente lo respondido).
+        prefill = (
+            _build_prefill_for_client(form, client)
+            if sub.status != "submitted"
+            else {}
+        )
         out.append(
             ClientPendingFormResponse(
                 submission_id=sub.id,
@@ -796,6 +916,8 @@ async def list_my_forms(
                 is_required=bool(getattr(form, "is_required", False)),
                 created_at=sub.created_at,
                 submitted_at=sub.submitted_at,
+                prefill=prefill,
+                answers=sub.answers or {},
             )
         )
     return out
@@ -836,21 +958,30 @@ async def respond_my_form(
     client = await _get_client_for_current_user(current_user, db)
 
     result = await db.execute(
-        select(FormSubmission).where(
+        select(FormSubmission, Form)
+        .join(Form, FormSubmission.form_id == Form.id)
+        .where(
             FormSubmission.id == submission_id,
             FormSubmission.client_id == client.id,
         )
     )
-    sub = result.scalar_one_or_none()
-    if not sub:
+    row = result.first()
+    if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formulario no encontrado")
+    sub, form = row
 
-    sub.answers = payload.answers or {}
+    answers = payload.answers or {}
+    sub.answers = answers
     if payload.signature_data is not None:
         sub.signature_data = payload.signature_data
     sub.status = "submitted"
     sub.submitted_at = datetime.utcnow()
     flag_modified(sub, "answers")
+
+    # Sincronizar health_data con las respuestas conocidas del sistema
+    # (p. ej. alergias declaradas en el Cuestionario alimentación).
+    if _sync_health_data_from_answers(form, client, answers):
+        flag_modified(client, "health_data")
 
     await db.commit()
     await db.refresh(sub)

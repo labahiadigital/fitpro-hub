@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Text, ForeignKey, DateTime, Boolean
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -41,6 +41,11 @@ class Form(BaseModel):
     # Obligatorio: cuando se envía a un cliente debe aparecer como
     # notificación persistente hasta que el cliente responda.
     is_required = Column(Boolean, default=False, nullable=False)
+
+    # Productos a los que está vinculado el formulario. Cuando un cliente
+    # compre o contrate un producto incluido en esta lista, el formulario
+    # podrá enviarse automáticamente (o sugerirse) como parte del flujo.
+    product_ids = Column(ARRAY(UUID(as_uuid=True)), nullable=False, server_default="{}")
 
     # Relationships
     workspace = relationship("Workspace", back_populates="forms")
