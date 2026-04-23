@@ -54,13 +54,18 @@ COMMON_DISEASES = [
 ]
 
 # Food intolerances
+# Mantener sincronizado con frontend/src/constants/allergens.ts
+# (restricciones con category="intolerance").
 COMMON_INTOLERANCES = [
     "lactosa",
     "fructosa",
     "gluten",
     "histamina",
     "sorbitol",
-    "cafeina"
+    "glutamato_monosodico",
+    "fodmap",
+    "cafeina",
+    "alcohol",
 ]
 
 

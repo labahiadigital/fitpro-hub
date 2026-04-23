@@ -46,6 +46,10 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api, redsysApi, sequraApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
+import {
+  ALLERGENS_SELECT_DATA,
+  INTOLERANCES_SELECT_DATA,
+} from "../../constants/allergens";
 
 interface ProductInfo {
   id: string;
@@ -121,30 +125,8 @@ interface OnboardingFormData {
   acceptMarketing: boolean;
 }
 
-// Opciones de alérgenos
-const ALLERGENS = [
-  { value: "gluten", label: "Gluten" },
-  { value: "lactosa", label: "Lactosa" },
-  { value: "huevo", label: "Huevo" },
-  { value: "pescado", label: "Pescado" },
-  { value: "mariscos", label: "Mariscos" },
-  { value: "frutos_secos", label: "Frutos secos" },
-  { value: "cacahuete", label: "Cacahuete" },
-  { value: "soja", label: "Soja" },
-  { value: "apio", label: "Apio" },
-  { value: "mostaza", label: "Mostaza" },
-  { value: "sesamo", label: "Sésamo" },
-  { value: "sulfitos", label: "Sulfitos" },
-];
-
-// Opciones de intolerancias
-const INTOLERANCES = [
-  { value: "fructosa", label: "Fructosa" },
-  { value: "sorbitol", label: "Sorbitol" },
-  { value: "histamina", label: "Histamina" },
-  { value: "fodmap", label: "FODMAP" },
-  { value: "cafeina", label: "Cafeína" },
-];
+const ALLERGENS = ALLERGENS_SELECT_DATA;
+const INTOLERANCES = INTOLERANCES_SELECT_DATA;
 
 export function InvitationOnboardingPage() {
   const { token } = useParams<{ token: string }>();

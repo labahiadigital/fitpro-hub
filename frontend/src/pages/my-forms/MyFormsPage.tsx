@@ -109,6 +109,17 @@ function renderField(
           searchable
         />
       );
+    case "multiselect":
+      return (
+        <MultiSelect
+          {...common}
+          data={(field.options || []).map((o) => ({ value: o, label: o }))}
+          value={Array.isArray(value) ? (value as string[]) : []}
+          onChange={(v) => onChange(v)}
+          searchable
+          clearable
+        />
+      );
     case "checkbox":
       return (
         <Checkbox.Group
@@ -161,10 +172,6 @@ function renderField(
       );
   }
 }
-
-// Mantine `MultiSelect` está importado por si se necesitase en el futuro,
-// no se utiliza en los tipos actuales.
-void MultiSelect;
 
 interface FormRespondCardProps {
   item: ClientFormItem;

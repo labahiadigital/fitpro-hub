@@ -1,23 +1,13 @@
 import { Badge, Group, Tooltip, ThemeIcon, Text, Box } from "@mantine/core";
 import { IconAlertTriangle, IconCheck } from "@tabler/icons-react";
+import { DIETARY_RESTRICTIONS } from "../../constants/allergens";
 
-// Common allergens list
-export const COMMON_ALLERGENS = [
-  { id: "gluten", name: "Gluten", icon: "🌾" },
-  { id: "lactosa", name: "Lactosa", icon: "🥛" },
-  { id: "huevo", name: "Huevo", icon: "🥚" },
-  { id: "pescado", name: "Pescado", icon: "🐟" },
-  { id: "marisco", name: "Marisco", icon: "🦐" },
-  { id: "frutos_secos", name: "Frutos Secos", icon: "🥜" },
-  { id: "cacahuete", name: "Cacahuete", icon: "🥜" },
-  { id: "soja", name: "Soja", icon: "🫘" },
-  { id: "apio", name: "Apio", icon: "🥬" },
-  { id: "mostaza", name: "Mostaza", icon: "🟡" },
-  { id: "sesamo", name: "Sésamo", icon: "⚪" },
-  { id: "sulfitos", name: "Sulfitos", icon: "🍷" },
-  { id: "moluscos", name: "Moluscos", icon: "🦪" },
-  { id: "altramuces", name: "Altramuces", icon: "🫘" },
-];
+// Listado común (alergias + intolerancias) que comparte toda la app.
+export const COMMON_ALLERGENS = DIETARY_RESTRICTIONS.map((r) => ({
+  id: r.id,
+  name: r.short_label,
+  icon: r.icon ?? "⚠️",
+}));
 
 interface AllergenBadgeProps {
   allergen: string;

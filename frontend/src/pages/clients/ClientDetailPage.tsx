@@ -110,24 +110,12 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { formatDecimal } from "../../utils/format";
 import { BottomSheet } from "../../components/common/BottomSheet";
+import {
+  ALLERGENS_SELECT_DATA,
+  INTOLERANCES_SELECT_DATA,
+} from "../../constants/allergens";
 
-// Lista de alérgenos comunes
-const COMMON_ALLERGENS = [
-  { value: "gluten", label: "Gluten" },
-  { value: "lactosa", label: "Lactosa" },
-  { value: "huevo", label: "Huevo" },
-  { value: "pescado", label: "Pescado" },
-  { value: "mariscos", label: "Mariscos" },
-  { value: "frutos_secos", label: "Frutos secos" },
-  { value: "cacahuete", label: "Cacahuete" },
-  { value: "soja", label: "Soja" },
-  { value: "apio", label: "Apio" },
-  { value: "mostaza", label: "Mostaza" },
-  { value: "sesamo", label: "Sésamo" },
-  { value: "sulfitos", label: "Sulfitos" },
-  { value: "moluscos", label: "Moluscos" },
-  { value: "altramuces", label: "Altramuces" },
-];
+const COMMON_ALLERGENS = ALLERGENS_SELECT_DATA;
 
 const CLIENT_DETAIL_TABS_SELECT_DATA = [
   { value: "overview", label: "Resumen" },
@@ -144,15 +132,7 @@ const CLIENT_DETAIL_TABS_SELECT_DATA = [
   { value: "payments", label: "Pagos" },
 ];
 
-// Lista de intolerancias comunes
-const COMMON_INTOLERANCES = [
-  { value: "fructosa", label: "Fructosa" },
-  { value: "sorbitol", label: "Sorbitol" },
-  { value: "histamina", label: "Histamina" },
-  { value: "fodmap", label: "FODMAP" },
-  { value: "cafeina", label: "Cafeína" },
-  { value: "alcohol", label: "Alcohol" },
-];
+const COMMON_INTOLERANCES = INTOLERANCES_SELECT_DATA;
 
 // KPI Card Component - Compact version
 function StatCard({ icon, label, value, color, trend, hint, onClick }: {

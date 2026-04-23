@@ -83,6 +83,7 @@ interface FormField {
     | "phone"
     | "date"
     | "select"
+    | "multiselect"
     | "checkbox"
     | "radio";
   label: string;
@@ -123,6 +124,7 @@ const fieldTypes = [
   { value: "phone", label: "Teléfono", icon: IconPhone },
   { value: "date", label: "Fecha", icon: IconCalendar },
   { value: "select", label: "Desplegable", icon: IconList },
+  { value: "multiselect", label: "Desplegable múltiple", icon: IconList },
   { value: "checkbox", label: "Casillas", icon: IconCheckbox },
   { value: "radio", label: "Opción única", icon: IconList },
 ];
@@ -1416,6 +1418,7 @@ export function FormsPage() {
                           value={field.placeholder || ""}
                         />
                         {(field.type === "select" ||
+                          field.type === "multiselect" ||
                           field.type === "checkbox" ||
                           field.type === "radio") && (
                           <Textarea
