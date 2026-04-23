@@ -1,7 +1,7 @@
 """Product, Session Package, and Coupon models."""
 from sqlalchemy import Column, String, Text, Numeric, Integer, Boolean, ForeignKey, ARRAY, Table
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 
 from app.models.base import BaseModel
 
@@ -32,6 +32,14 @@ class Product(BaseModel):
     name = Column(String(255), nullable=False)
     description = Column(Text)
     product_type = Column(String(50), nullable=False, default='subscription')
+    # Separación entre "servicio" (lo histórico, puede vincularse a
+    # boxes/máquinas/miembros del equipo) y "producto" físico, que NO permite
+    # asignar esos recursos. Se marca como ``deferred`` para que los listados
+    # sigan funcionando si la migración 047 aún no está aplicada.
+    kind = deferred(
+        Column(String(20), nullable=False, server_default='service'),
+        group="kind",
+    )
     price = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(3), default='EUR')
     stripe_price_id = Column(String(255))

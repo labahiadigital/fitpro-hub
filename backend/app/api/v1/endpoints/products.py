@@ -32,6 +32,29 @@ from app.schemas.product import (
 router = APIRouter()
 
 
+# --- Helpers defensivos ---
+
+def _safe_product_kind(product: Product) -> str:
+    """Lee ``product.kind`` tolerando una migración 047 aún no aplicada.
+
+    La columna está definida como ``deferred``: si no existe en BD, devolvemos
+    ``'service'`` para mantener el comportamiento previo.
+    """
+    try:
+        val = getattr(product, "kind", None)
+        if val in ("service", "product"):
+            return val
+    except Exception:  # noqa: BLE001
+        pass
+    return "service"
+
+
+def _product_response(product: Product) -> ProductResponse:
+    """Serializa un ``Product`` incluyendo ``kind`` (con fallback a service)."""
+    base = ProductResponse.model_validate(product)
+    return base.model_copy(update={"kind": _safe_product_kind(product)})
+
+
 # --- Resource binding schemas ---
 
 class StockConsumptionSlot(BaseSchema):
@@ -92,31 +115,45 @@ class ProductResourcesResponse(BaseSchema):
 async def list_products(
     workspace_id: UUID,
     product_type: Optional[str] = None,
+    kind: Optional[str] = Query(None, pattern=r'^(service|product)$'),
     is_active: Optional[bool] = None,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all products for a workspace."""
+    """List all products for a workspace.
+
+    ``kind`` permite filtrar entre servicios (por defecto, los "productos"
+    históricos) y productos físicos (sin recursos asignables).
+    """
     query = select(Product).where(Product.workspace_id == workspace_id)
-    
+
     if product_type:
         query = query.where(Product.product_type == product_type)
     if is_active is not None:
         query = query.where(Product.is_active == is_active)
-    
-    # Count total
+    # Si la migración 047 está aplicada podemos filtrar por ``kind``; si aún
+    # no lo está, hacemos el filtro en memoria para no romper el endpoint.
+    apply_kind_filter_py = False
+    if kind:
+        try:
+            query = query.where(Product.kind == kind)
+        except Exception:  # noqa: BLE001
+            apply_kind_filter_py = True
+
     count_query = select(func.count()).select_from(query.subquery())
     total = await db.scalar(count_query)
-    
-    # Apply pagination
+
     query = query.offset((page - 1) * size).limit(size)
     result = await db.execute(query)
-    products = result.scalars().all()
-    
+    products = list(result.scalars().all())
+
+    if apply_kind_filter_py and kind:
+        products = [p for p in products if _safe_product_kind(p) == kind]
+
     return ProductList(
-        items=[ProductResponse.model_validate(p) for p in products],
+        items=[_product_response(p) for p in products],
         total=total or 0,
         page=page,
         size=size,
@@ -130,11 +167,20 @@ async def create_product(
     current_user: User = Depends(require_roles(["owner", "collaborator"])),
 ):
     """Create a new product."""
-    product = Product(**data.model_dump())
+    payload = data.model_dump()
+    # Defensivo: si la migración 047 aún no se aplicó, evitamos pasar ``kind``
+    # al constructor del modelo para no romper el INSERT.
+    kind_value = payload.pop("kind", None)
+    product = Product(**payload)
+    if kind_value:
+        try:
+            product.kind = kind_value
+        except Exception:  # noqa: BLE001
+            pass
     db.add(product)
     await db.commit()
     await db.refresh(product)
-    return ProductResponse.model_validate(product)
+    return _product_response(product)
 
 
 @router.get("/public/{product_id}", response_model=ProductResponse)
@@ -150,8 +196,8 @@ async def get_product_public(
     
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado o no disponible")
-    
-    return ProductResponse.model_validate(product)
+
+    return _product_response(product)
 
 
 @router.get("/public/{product_id}/availability")
@@ -308,8 +354,8 @@ async def get_product(
     
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    
-    return ProductResponse.model_validate(product)
+
+    return _product_response(product)
 
 
 @router.patch("/{product_id}", response_model=ProductResponse)
@@ -333,11 +379,15 @@ async def update_product(
     
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(product, field, value)
-    
+        try:
+            setattr(product, field, value)
+        except Exception:  # noqa: BLE001 - defensivo por si la columna kind no existe aún
+            if field != "kind":
+                raise
+
     await db.commit()
     await db.refresh(product)
-    return ProductResponse.model_validate(product)
+    return _product_response(product)
 
 
 @router.get("/{product_id}/active-subscribers", response_model=dict)
@@ -642,6 +692,15 @@ async def update_product_resources(
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
     ws = current_user.workspace_id
+
+    # Los "productos" físicos no admiten recursos asignables (box/máquina/staff).
+    # Sólo pueden vincular consumo de stock.
+    if _safe_product_kind(product) == "product":
+        if data.staff or data.machine_ids or data.box_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Los productos físicos no pueden vincularse a boxes, máquinas ni miembros del equipo. Usa un servicio para eso.",
+            )
 
     if data.stock_consumption is not None:
         if data.stock_consumption:

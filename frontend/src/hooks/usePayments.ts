@@ -79,6 +79,7 @@ export interface Product {
   price: number;
   currency: string;
   type: "subscription" | "one_time" | "package";
+  kind: "service" | "product";
   interval?: string;
   sessions_included?: number;
   max_users?: number | null;
@@ -131,10 +132,12 @@ export function useProducts(options?: { enabled?: boolean }) {
         price: p.price,
         currency: p.currency || "EUR",
         type: p.product_type || "subscription",
+        kind: (p.kind === "product" ? "product" : "service") as Product["kind"],
         interval: p.interval,
         sessions_included: p.sessions_included,
         max_users: p.max_users ?? null,
         is_active: p.is_active ?? true,
+        extra_data: p.extra_data,
       })) as Product[];
     },
   });
@@ -184,7 +187,7 @@ export function useCreateProduct() {
   const { currentWorkspace } = useAuthStore();
 
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string; price: number; product_type: string; interval?: string; sessions_included?: number }) => {
+    mutationFn: async (data: { name: string; description?: string; price: number; product_type: string; kind?: "service" | "product"; interval?: string; sessions_included?: number; max_users?: number | null; extra_data?: Record<string, unknown> }) => {
       return productsApi.create({ ...data, workspace_id: currentWorkspace?.id });
     },
     onSuccess: () => {

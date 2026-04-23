@@ -12,6 +12,11 @@ class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     product_type: str = Field(default='subscription')
+    kind: str = Field(
+        default='service',
+        pattern=r'^(service|product)$',
+        description="'service' (puede vincularse a box/máquina/staff) o 'product' (artículo físico)",
+    )
     price: float = Field(..., ge=0)
     currency: str = Field(default='EUR', max_length=3)
     interval: Optional[str] = None
@@ -30,6 +35,7 @@ class ProductUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     product_type: Optional[str] = None
+    kind: Optional[str] = Field(None, pattern=r'^(service|product)$')
     price: Optional[float] = Field(None, ge=0)
     currency: Optional[str] = Field(None, max_length=3)
     interval: Optional[str] = None

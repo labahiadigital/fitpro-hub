@@ -111,7 +111,7 @@ const sessionTypeOptions = [
 
 export function CatalogPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const [activeTab, setActiveTab] = useState<string | null>("products");
+  const [activeTab, setActiveTab] = useState<string | null>("services");
   const [bonosSubTab, setBonosSubTab] = useState<string | null>("packages");
   const { currentWorkspace } = useAuthStore();
 
@@ -205,6 +205,7 @@ export function CatalogPage() {
       description: "",
       price: 0,
       type: "subscription",
+      kind: "service" as "service" | "product",
       interval: "month",
       sessions_included: 0,
       max_users: null as number | null,
@@ -244,9 +245,10 @@ export function CatalogPage() {
   });
 
   // --- Product Handlers ---
-  const handleOpenNewProduct = useCallback(() => {
+  const handleOpenNewProduct = useCallback((kind: "service" | "product" = "service") => {
     setEditingProduct(null);
     productForm.reset();
+    productForm.setFieldValue("kind", kind);
     setStockConsumption([]);
     setStaffAssignments([]);
     setMachineBindings([]);
@@ -262,6 +264,7 @@ export function CatalogPage() {
       description: product.description || "",
       price: product.price,
       type: product.type,
+      kind: product.kind === "product" ? "product" : "service",
       interval: product.interval || "month",
       sessions_included: product.sessions_included || 0,
       max_users: product.max_users ?? null,
@@ -299,6 +302,7 @@ export function CatalogPage() {
       description: values.description || undefined,
       price: values.price,
       product_type: values.type,
+      kind: values.kind,
       interval: values.type === "subscription" ? values.interval : undefined,
       max_users: values.max_users && values.max_users > 0 ? values.max_users : null,
       extra_data: mergedExtra,
@@ -314,13 +318,14 @@ export function CatalogPage() {
         productId = raw?.id || (created as any)?.id;
       }
       if (productId) {
+        const isPhysical = values.kind === "product";
         await updateResources.mutateAsync({
           productId,
           data: {
             stock_consumption: stockConsumption.filter((s) => s.stock_item_id).map((s) => ({ stock_item_id: s.stock_item_id, quantity: s.quantity })),
-            staff: staffAssignments.filter((s) => s.user_id),
-            machine_ids: machineBindings.filter((m) => m.id),
-            box_ids: boxBindings.filter((b) => b.id),
+            staff: isPhysical ? [] : staffAssignments.filter((s) => s.user_id),
+            machine_ids: isPhysical ? [] : machineBindings.filter((m) => m.id),
+            box_ids: isPhysical ? [] : boxBindings.filter((b) => b.id),
           },
         });
       }
@@ -459,15 +464,129 @@ export function CatalogPage() {
   const activePackagesCount = clientPackages.filter((p) => p.status === "active").length;
   const totalSessionsSold = packages.reduce((sum, p) => sum + p.totalSessions * p.soldCount, 0);
 
+  // Separamos servicios (lo histórico) y productos físicos (sin recursos asignables)
+  const servicesProducts = products.filter((p) => (p.kind ?? "service") !== "product");
+  const physicalProducts = products.filter((p) => p.kind === "product");
+
+  const renderProductCard = (product: Product) => (
+    <Box key={product.id} className="nv-card" p="lg">
+      <Group justify="space-between" mb="sm">
+        <Group gap={6}>
+          <Badge
+            color={
+              product.type === "subscription"
+                ? "blue"
+                : product.type === "package"
+                  ? "green"
+                  : "orange"
+            }
+            variant="light"
+            radius="xl"
+          >
+            {product.type === "subscription"
+              ? "Suscripción"
+              : product.type === "package"
+                ? "Bono"
+                : "Puntual"}
+          </Badge>
+          {product.kind === "product" && (
+            <Badge color="grape" variant="light" radius="xl">Producto físico</Badge>
+          )}
+        </Group>
+        <Group gap="xs">
+          <Switch
+            checked={product.is_active}
+            color="green"
+            size="sm"
+            onChange={() => handleToggleActive(product)}
+          />
+          <CopyButton value={getPublicLink(product)}>
+            {({ copied, copy }) => (
+              <Tooltip label={copied ? "¡Copiado!" : "Copiar enlace público"}>
+                <ActionIcon
+                  color={copied ? "green" : "gray"}
+                  variant="light"
+                  radius="xl"
+                  size="sm"
+                  onClick={copy}
+                >
+                  {copied ? <IconCheck size={14} /> : <IconLink size={14} />}
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+        </Group>
+      </Group>
+
+      <Text fw={600} mb="xs" size="lg" style={{ color: "var(--nv-text-primary)" }}>
+        {product.name}
+      </Text>
+      <Text c="dimmed" mb="md" size="sm">
+        {product.description}
+      </Text>
+
+      {product.sessions_included && (
+        <Badge mb="md" variant="outline" radius="xl">
+          {product.sessions_included} sesiones incluidas
+        </Badge>
+      )}
+
+      {product.max_users && (
+        <Badge mb="md" ml="xs" variant="outline" radius="xl" color="grape" leftSection={<IconUsers size={12} />}>
+          Máx. {product.max_users} usuarios
+        </Badge>
+      )}
+
+      <Divider mb="md" style={{ borderColor: "var(--nv-border)" }} />
+
+      <Group align="flex-end" justify="space-between">
+        <Box>
+          <Text fw={700} size="xl" style={{ color: "var(--nv-primary)" }}>
+            {product.price === 0 ? "Gratuito" : `€${product.price}`}
+          </Text>
+          <Text c="dimmed" size="xs">
+            {product.type === "subscription" ? `/${
+              product.interval === "week" ? "semana" :
+              product.interval === "biweekly" ? "quincenal" :
+              product.interval === "quarter" ? "trimestre" :
+              product.interval === "semester" ? "semestre" :
+              product.interval === "year" ? "año" : "mes"
+            }` : ""}
+          </Text>
+        </Box>
+        <Group gap="xs">
+          <Tooltip label="Editar">
+            <ActionIcon color="blue" variant="light" radius="xl" onClick={() => handleOpenEditProduct(product)}>
+              <IconEdit size={16} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Eliminar">
+            <ActionIcon
+              color="red"
+              variant="light"
+              radius="xl"
+              onClick={() => handleDeleteProduct(product)}
+              loading={deleteProduct.isPending}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      </Group>
+    </Box>
+  );
+
+  const isPhysicalKind = productForm.values.kind === "product";
+
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nuevo Producto",
+          label: activeTab === "physical" ? "Nuevo Producto" : "Nuevo Servicio",
           icon: <IconPlus size={16} />,
-          onClick: handleOpenNewProduct,
+          onClick: () => handleOpenNewProduct(activeTab === "physical" ? "product" : "service"),
         }}
-        description="Gestiona productos, suscripciones y paquetes de sesiones"
+        description="Gestiona servicios, productos, suscripciones y paquetes de sesiones"
         title="Catálogo"
       />
 
@@ -476,7 +595,8 @@ export function CatalogPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "products", label: "Productos" },
+            { value: "services", label: "Servicios" },
+            { value: "physical", label: "Productos" },
             { value: "subscriptions", label: "Suscripciones" },
             { value: "bonos", label: "Bonos" },
           ]}
@@ -488,7 +608,10 @@ export function CatalogPage() {
       <Tabs onChange={setActiveTab} value={activeTab}>
         {!isMobile && (
           <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
-            <Tabs.Tab leftSection={<IconPackage size={14} />} value="products" style={{ fontWeight: 500 }}>
+            <Tabs.Tab leftSection={<IconPackage size={14} />} value="services" style={{ fontWeight: 500 }}>
+              Servicios
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPackage size={14} />} value="physical" style={{ fontWeight: 500 }}>
               Productos
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
@@ -500,116 +623,27 @@ export function CatalogPage() {
           </Tabs.List>
         )}
 
-        {/* ═══════════════ PRODUCTS TAB ═══════════════ */}
-        <Tabs.Panel value="products">
-          {products.length === 0 && (
+        {/* ═══════════════ SERVICES TAB ═══════════════ */}
+        <Tabs.Panel value="services">
+          {servicesProducts.length === 0 && (
             <Box className="nv-card" p="xl">
-              <Text c="dimmed" ta="center">No hay productos creados. Usa "Nuevo Producto" para crear uno.</Text>
+              <Text c="dimmed" ta="center">No hay servicios creados. Usa "Nuevo Servicio" para crear uno.</Text>
             </Box>
           )}
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
-            {products.map((product) => (
-              <Box key={product.id} className="nv-card" p="lg">
-                <Group justify="space-between" mb="sm">
-                  <Badge
-                    color={
-                      product.type === "subscription"
-                        ? "blue"
-                        : product.type === "package"
-                          ? "green"
-                          : "orange"
-                    }
-                    variant="light"
-                    radius="xl"
-                  >
-                    {product.type === "subscription"
-                      ? "Suscripción"
-                      : product.type === "package"
-                        ? "Bono"
-                        : "Puntual"}
-                  </Badge>
-                  <Group gap="xs">
-                    <Switch
-                      checked={product.is_active}
-                      color="green"
-                      size="sm"
-                      onChange={() => handleToggleActive(product)}
-                    />
-                    <CopyButton value={getPublicLink(product)}>
-                      {({ copied, copy }) => (
-                        <Tooltip label={copied ? "¡Copiado!" : "Copiar enlace público"}>
-                          <ActionIcon
-                            color={copied ? "green" : "gray"}
-                            variant="light"
-                            radius="xl"
-                            size="sm"
-                            onClick={copy}
-                          >
-                            {copied ? <IconCheck size={14} /> : <IconLink size={14} />}
-                          </ActionIcon>
-                        </Tooltip>
-                      )}
-                    </CopyButton>
-                  </Group>
-                </Group>
+            {servicesProducts.map(renderProductCard)}
+          </SimpleGrid>
+        </Tabs.Panel>
 
-                <Text fw={600} mb="xs" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-                  {product.name}
-                </Text>
-                <Text c="dimmed" mb="md" size="sm">
-                  {product.description}
-                </Text>
-
-                {product.sessions_included && (
-                  <Badge mb="md" variant="outline" radius="xl">
-                    {product.sessions_included} sesiones incluidas
-                  </Badge>
-                )}
-
-                {product.max_users && (
-                  <Badge mb="md" ml="xs" variant="outline" radius="xl" color="grape" leftSection={<IconUsers size={12} />}>
-                    Máx. {product.max_users} usuarios
-                  </Badge>
-                )}
-
-                <Divider mb="md" style={{ borderColor: "var(--nv-border)" }} />
-
-                <Group align="flex-end" justify="space-between">
-                  <Box>
-                    <Text fw={700} size="xl" style={{ color: "var(--nv-primary)" }}>
-                      {product.price === 0 ? "Gratuito" : `€${product.price}`}
-                    </Text>
-                    <Text c="dimmed" size="xs">
-                      {product.type === "subscription" ? `/${
-                        product.interval === "week" ? "semana" :
-                        product.interval === "biweekly" ? "quincenal" :
-                        product.interval === "quarter" ? "trimestre" :
-                        product.interval === "semester" ? "semestre" :
-                        product.interval === "year" ? "año" : "mes"
-                      }` : ""}
-                    </Text>
-                  </Box>
-                  <Group gap="xs">
-                    <Tooltip label="Editar producto">
-                      <ActionIcon color="blue" variant="light" radius="xl" onClick={() => handleOpenEditProduct(product)}>
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Eliminar producto">
-                      <ActionIcon
-                        color="red"
-                        variant="light"
-                        radius="xl"
-                        onClick={() => handleDeleteProduct(product)}
-                        loading={deleteProduct.isPending}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                </Group>
-              </Box>
-            ))}
+        {/* ═══════════════ PHYSICAL PRODUCTS TAB ═══════════════ */}
+        <Tabs.Panel value="physical">
+          {physicalProducts.length === 0 && (
+            <Box className="nv-card" p="xl">
+              <Text c="dimmed" ta="center">No hay productos físicos creados. Usa "Nuevo Producto" para crear uno.</Text>
+            </Box>
+          )}
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
+            {physicalProducts.map(renderProductCard)}
           </SimpleGrid>
         </Tabs.Panel>
 
@@ -917,12 +951,22 @@ export function CatalogPage() {
         onClose={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }}
         opened={productModalOpened}
         size="lg"
-        title={editingProduct ? "Editar Producto" : "Nuevo Producto"}
+        title={editingProduct ? (isPhysicalKind ? "Editar Producto" : "Editar Servicio") : (isPhysicalKind ? "Nuevo Producto" : "Nuevo Servicio")}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={productForm.onSubmit(handleSaveProduct)}>
           <Stack>
+            <Select
+              label="Catálogo"
+              description={isPhysicalKind ? "Producto físico: no se puede vincular a boxes, máquinas ni miembros del equipo." : "Servicio: puede vincularse a boxes, máquinas y miembros del equipo."}
+              data={[
+                { value: "service", label: "Servicio" },
+                { value: "product", label: "Producto" },
+              ]}
+              value={productForm.values.kind}
+              onChange={(val) => productForm.setFieldValue("kind", (val === "product" ? "product" : "service"))}
+            />
             <TextInput label="Nombre" placeholder="Plan Premium" required {...productForm.getInputProps("name")} />
             <Textarea label="Descripción" minRows={2} placeholder="Describe el producto..." {...productForm.getInputProps("description")} />
             <Group grow>
@@ -1061,6 +1105,8 @@ export function CatalogPage() {
               Añadir stock
             </Button>
 
+            {!isPhysicalKind && (
+            <>
             <Divider label="Recursos vinculados" labelPosition="center" />
             <Text size="xs" c="dimmed">Vincula boxes, máquinas y miembros del equipo a este producto para gestionar disponibilidad.</Text>
 
@@ -1174,6 +1220,8 @@ export function CatalogPage() {
             <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setStaffAssignments([...staffAssignments, { user_id: "", is_primary: false }])}>
               Añadir miembro
             </Button>
+            </>
+            )}
 
             <Group justify="flex-end" mt="md">
               <Button onClick={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }} variant="default">Cancelar</Button>
