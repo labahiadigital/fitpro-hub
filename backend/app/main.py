@@ -143,12 +143,39 @@ app = FastAPI(
 )
 
 
+def _cors_headers_for(request: Request) -> dict[str, str]:
+    """Cabeceras CORS a inyectar manualmente en respuestas de error.
+
+    Starlette aplica ``CORSMiddleware`` ANTES de los exception handlers, por
+    lo que una 500 generada dentro de ``app.exception_handler(Exception)``
+    NO recibe ``Access-Control-Allow-Origin`` de forma automática. Eso es lo
+    que el navegador reporta como "blocked by CORS policy: No 'Access-
+    Control-Allow-Origin' header" cuando ve un 500 cross-origin.
+
+    Este helper replica la lógica mínima para que el browser acepte la
+    respuesta de error y la app pueda mostrar un mensaje al usuario en
+    lugar de un corte mudo.
+    """
+    origin = request.headers.get("origin")
+    if not origin:
+        return {}
+    allowed = settings.cors_origins_list
+    if "*" in allowed or origin in allowed:
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
+    return {}
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
     return JSONResponse(
         status_code=422,
         content={"detail": exc.errors()},
+        headers=_cors_headers_for(request),
     )
 
 
@@ -160,6 +187,16 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},
+        headers=_cors_headers_for(request),
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers={**(exc.headers or {}), **_cors_headers_for(request)},
     )
 
 

@@ -8,16 +8,43 @@ from typing import List, Optional
 from uuid import UUID
 from decimal import Decimal
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import ProgrammingError
 
 from app.core.database import get_db
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 from app.models.supplier import Supplier
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+def _is_missing_suppliers_table(exc: Exception) -> bool:
+    """Detecta el error de Postgres cuando la tabla ``suppliers`` aún no existe.
+
+    Si la migración 046 todavía no se ha aplicado, cualquier operación sobre
+    ``suppliers`` devolverá ``UndefinedTable``. Lo tratamos como "tabla
+    pendiente de migración" y respondemos con un 503 legible en vez de un 500
+    silencioso sin CABECERAS CORS (que el navegador muestra como "blocked by
+    CORS policy").
+    """
+    if not isinstance(exc, ProgrammingError):
+        return False
+    msg = str(getattr(exc, "orig", exc)).lower()
+    return "suppliers" in msg and ("does not exist" in msg or "undefinedtable" in msg)
+
+
+async def _rollback_silently(db: AsyncSession) -> None:
+    try:
+        await db.rollback()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # ============ SCHEMAS ============
@@ -153,6 +180,12 @@ def _serialize(supplier: Supplier) -> SupplierResponse:
 
 # ============ ENDPOINTS ============
 
+_MIGRATION_PENDING_DETAIL = (
+    "La tabla de proveedores todavía no está disponible. Ejecuta las "
+    "migraciones pendientes (alembic upgrade head) y vuelve a intentarlo."
+)
+
+
 @router.get("", response_model=List[SupplierResponse])
 async def list_suppliers(
     is_active: Optional[bool] = None,
@@ -176,8 +209,16 @@ async def list_suppliers(
             )
         )
 
-    result = await db.execute(query.order_by(Supplier.legal_name.asc()))
-    return [_serialize(s) for s in result.scalars().all()]
+    try:
+        result = await db.execute(query.order_by(Supplier.legal_name.asc()))
+        return [_serialize(s) for s in result.scalars().all()]
+    except Exception as exc:  # noqa: BLE001
+        await _rollback_silently(db)
+        if _is_missing_suppliers_table(exc):
+            logger.warning("list_suppliers: tabla suppliers aún no existe; devolviendo lista vacía")
+            return []
+        logger.exception("list_suppliers: error inesperado")
+        raise HTTPException(status_code=500, detail="Error al listar proveedores") from exc
 
 
 @router.get("/{supplier_id}", response_model=SupplierResponse)
@@ -186,13 +227,20 @@ async def get_supplier(
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Supplier).where(
-            Supplier.id == supplier_id,
-            Supplier.workspace_id == current_user.workspace_id,
+    try:
+        result = await db.execute(
+            select(Supplier).where(
+                Supplier.id == supplier_id,
+                Supplier.workspace_id == current_user.workspace_id,
+            )
         )
-    )
-    supplier = result.scalar_one_or_none()
+        supplier = result.scalar_one_or_none()
+    except Exception as exc:  # noqa: BLE001
+        await _rollback_silently(db)
+        if _is_missing_suppliers_table(exc):
+            raise HTTPException(status_code=503, detail=_MIGRATION_PENDING_DETAIL) from exc
+        logger.exception("get_supplier: error inesperado")
+        raise HTTPException(status_code=500, detail="Error al obtener el proveedor") from exc
     if not supplier:
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
     return _serialize(supplier)
@@ -229,8 +277,15 @@ async def create_supplier(
         is_active=payload.is_active,
     )
     db.add(supplier)
-    await db.commit()
-    await db.refresh(supplier)
+    try:
+        await db.commit()
+        await db.refresh(supplier)
+    except Exception as exc:  # noqa: BLE001
+        await _rollback_silently(db)
+        if _is_missing_suppliers_table(exc):
+            raise HTTPException(status_code=503, detail=_MIGRATION_PENDING_DETAIL) from exc
+        logger.exception("create_supplier: error inesperado")
+        raise HTTPException(status_code=500, detail="Error al crear el proveedor") from exc
     return _serialize(supplier)
 
 
@@ -241,13 +296,20 @@ async def update_supplier(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Supplier).where(
-            Supplier.id == supplier_id,
-            Supplier.workspace_id == current_user.workspace_id,
+    try:
+        result = await db.execute(
+            select(Supplier).where(
+                Supplier.id == supplier_id,
+                Supplier.workspace_id == current_user.workspace_id,
+            )
         )
-    )
-    supplier = result.scalar_one_or_none()
+        supplier = result.scalar_one_or_none()
+    except Exception as exc:  # noqa: BLE001
+        await _rollback_silently(db)
+        if _is_missing_suppliers_table(exc):
+            raise HTTPException(status_code=503, detail=_MIGRATION_PENDING_DETAIL) from exc
+        logger.exception("update_supplier: error inesperado al leer")
+        raise HTTPException(status_code=500, detail="Error al obtener el proveedor") from exc
     if not supplier:
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
 
@@ -261,8 +323,15 @@ async def update_supplier(
     for field, value in data.items():
         setattr(supplier, field, value)
 
-    await db.commit()
-    await db.refresh(supplier)
+    try:
+        await db.commit()
+        await db.refresh(supplier)
+    except Exception as exc:  # noqa: BLE001
+        await _rollback_silently(db)
+        if _is_missing_suppliers_table(exc):
+            raise HTTPException(status_code=503, detail=_MIGRATION_PENDING_DETAIL) from exc
+        logger.exception("update_supplier: error inesperado al guardar")
+        raise HTTPException(status_code=500, detail="Error al actualizar el proveedor") from exc
     return _serialize(supplier)
 
 
@@ -272,14 +341,28 @@ async def delete_supplier(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Supplier).where(
-            Supplier.id == supplier_id,
-            Supplier.workspace_id == current_user.workspace_id,
+    try:
+        result = await db.execute(
+            select(Supplier).where(
+                Supplier.id == supplier_id,
+                Supplier.workspace_id == current_user.workspace_id,
+            )
         )
-    )
-    supplier = result.scalar_one_or_none()
+        supplier = result.scalar_one_or_none()
+    except Exception as exc:  # noqa: BLE001
+        await _rollback_silently(db)
+        if _is_missing_suppliers_table(exc):
+            raise HTTPException(status_code=503, detail=_MIGRATION_PENDING_DETAIL) from exc
+        logger.exception("delete_supplier: error inesperado al leer")
+        raise HTTPException(status_code=500, detail="Error al obtener el proveedor") from exc
     if not supplier:
         raise HTTPException(status_code=404, detail="Proveedor no encontrado")
-    await db.delete(supplier)
-    await db.commit()
+    try:
+        await db.delete(supplier)
+        await db.commit()
+    except Exception as exc:  # noqa: BLE001
+        await _rollback_silently(db)
+        if _is_missing_suppliers_table(exc):
+            raise HTTPException(status_code=503, detail=_MIGRATION_PENDING_DETAIL) from exc
+        logger.exception("delete_supplier: error inesperado al borrar")
+        raise HTTPException(status_code=500, detail="Error al eliminar el proveedor") from exc

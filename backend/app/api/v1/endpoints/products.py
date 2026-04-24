@@ -35,24 +35,55 @@ router = APIRouter()
 # --- Helpers defensivos ---
 
 def _safe_product_kind(product: Product) -> str:
-    """Lee ``product.kind`` tolerando una migración 047 aún no aplicada.
+    """Lee ``product.kind`` SIN disparar el lazy-load del atributo diferido.
 
-    La columna está definida como ``deferred``: si no existe en BD, devolvemos
-    ``'service'`` para mantener el comportamiento previo.
+    Si la migración 047 aún no está aplicada en el entorno destino la columna
+    ``kind`` no existe en BD. Al ser un atributo ``deferred``, SQLAlchemy
+    dispararía un ``SELECT products.kind WHERE id=…`` al primer acceso, que
+    lanzaría ``UndefinedColumn`` y abortaría la transacción. Leemos
+    directamente del ``__dict__`` del ORM para evitar eso.
     """
-    try:
-        val = getattr(product, "kind", None)
-        if val in ("service", "product"):
-            return val
-    except Exception:  # noqa: BLE001
-        pass
+    val = product.__dict__.get("kind")
+    if val in ("service", "product"):
+        return val
     return "service"
 
 
 def _product_response(product: Product) -> ProductResponse:
-    """Serializa un ``Product`` incluyendo ``kind`` (con fallback a service)."""
-    base = ProductResponse.model_validate(product)
-    return base.model_copy(update={"kind": _safe_product_kind(product)})
+    """Serializa un ``Product`` incluyendo ``kind`` (con fallback a service).
+
+    Pre-poblamos ``product.__dict__["kind"]`` para que Pydantic obtenga el
+    valor sin forzar el lazy-load de SQLAlchemy (que petaría si la columna
+    aún no existe en BD).
+    """
+    kind_value = _safe_product_kind(product)
+    try:
+        product.__dict__["kind"] = kind_value
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        return ProductResponse.model_validate(product)
+    except Exception:  # noqa: BLE001 - fallback manual si algo explota
+        return ProductResponse(
+            id=product.id,
+            workspace_id=product.workspace_id,
+            name=product.name,
+            description=product.description,
+            product_type=product.product_type or "subscription",
+            kind=kind_value,
+            price=float(product.price) if product.price is not None else 0.0,
+            currency=product.currency or "EUR",
+            interval=product.interval,
+            interval_count=product.interval_count or 1,
+            trial_days=product.trial_days or 0,
+            max_users=product.max_users,
+            is_active=bool(product.is_active) if product.is_active is not None else True,
+            extra_data=product.extra_data or {},
+            stripe_price_id=product.stripe_price_id,
+            stripe_product_id=product.stripe_product_id,
+            created_at=product.created_at,
+            updated_at=product.updated_at,
+        )
 
 
 # --- Resource binding schemas ---
@@ -133,24 +164,32 @@ async def list_products(
         query = query.where(Product.product_type == product_type)
     if is_active is not None:
         query = query.where(Product.is_active == is_active)
-    # Si la migración 047 está aplicada podemos filtrar por ``kind``; si aún
-    # no lo está, hacemos el filtro en memoria para no romper el endpoint.
-    apply_kind_filter_py = False
+    # Filtro por ``kind``: intentamos a nivel SQL, pero si la columna aún no
+    # existe en BD (migración 047 pendiente) nos caemos a un filtro en
+    # memoria para no romper el endpoint.
+    query_with_kind = query
     if kind:
         try:
-            query = query.where(Product.kind == kind)
+            query_with_kind = query.where(Product.kind == kind)
         except Exception:  # noqa: BLE001
-            apply_kind_filter_py = True
+            query_with_kind = query
 
-    count_query = select(func.count()).select_from(query.subquery())
-    total = await db.scalar(count_query)
-
-    query = query.offset((page - 1) * size).limit(size)
-    result = await db.execute(query)
-    products = list(result.scalars().all())
-
-    if apply_kind_filter_py and kind:
-        products = [p for p in products if _safe_product_kind(p) == kind]
+    try:
+        count_query = select(func.count()).select_from(query_with_kind.subquery())
+        total = await db.scalar(count_query)
+        paged_query = query_with_kind.offset((page - 1) * size).limit(size)
+        result = await db.execute(paged_query)
+        products = list(result.scalars().all())
+    except Exception:  # noqa: BLE001 - fallback sin filtrar por kind en SQL
+        await db.rollback()
+        count_query = select(func.count()).select_from(query.subquery())
+        total = await db.scalar(count_query)
+        paged_query = query.offset((page - 1) * size).limit(size)
+        result = await db.execute(paged_query)
+        products = list(result.scalars().all())
+        if kind:
+            products = [p for p in products if _safe_product_kind(p) == kind]
+            total = len(products)
 
     return ProductList(
         items=[_product_response(p) for p in products],
@@ -178,8 +217,17 @@ async def create_product(
         except Exception:  # noqa: BLE001
             pass
     db.add(product)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:  # noqa: BLE001 - reintentar sin ``kind`` si la columna no está
+        await db.rollback()
+        product = Product(**payload)
+        db.add(product)
+        await db.commit()
     await db.refresh(product)
+    # Pre-poblar ``kind`` en el instance dict por si se intentó setear arriba.
+    if kind_value:
+        product.__dict__.setdefault("kind", kind_value)
     return _product_response(product)
 
 

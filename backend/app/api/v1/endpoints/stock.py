@@ -25,12 +25,20 @@ router = APIRouter()
 CurrentUser = Depends(require_workspace)
 
 
-def _safe_attr(obj, name: str):
-    """Lee un atributo defensivamente.
+_DEFERRED_STOCK_ATTRS = {"box_id", "supplier_id"}
 
-    Si la columna no existe aún en el schema (p.ej. la migración 048 no se ha
-    aplicado), devolvemos ``None`` en lugar de levantar ``ProgrammingError``.
+
+def _safe_attr(obj, name: str):
+    """Lee un atributo defensivamente SIN disparar lazy-load en deferred.
+
+    Si la columna no existe aún en el schema (p.ej. migración 048 pendiente),
+    ``getattr`` sobre un atributo ``deferred`` lanzaría un SELECT contra esa
+    columna y explotaría con ``UndefinedColumn`` abortando la transacción.
+    Para los atributos conocidos como diferidos leemos directamente de
+    ``__dict__`` (que sólo contiene valores ya cargados por SQLAlchemy).
     """
+    if name in _DEFERRED_STOCK_ATTRS:
+        return getattr(obj, "__dict__", {}).get(name)
     try:
         return getattr(obj, name, None)
     except Exception:
@@ -196,10 +204,9 @@ async def list_items(
     ]
 
 
-@router.post("/items")
-async def create_item(data: ItemCreate, user=CurrentUser, db: AsyncSession = Depends(get_db)):
-    item = StockItem(
-        workspace_id=user.workspace_id,
+def _build_stock_item_base(data: "ItemCreate", workspace_id) -> StockItem:
+    return StockItem(
+        workspace_id=workspace_id,
         name=data.name,
         category_id=data.category_id,
         description=data.description,
@@ -212,6 +219,11 @@ async def create_item(data: ItemCreate, user=CurrentUser, db: AsyncSession = Dep
         tax_rate=data.tax_rate,
         irpf_rate=data.irpf_rate,
     )
+
+
+@router.post("/items")
+async def create_item(data: ItemCreate, user=CurrentUser, db: AsyncSession = Depends(get_db)):
+    item = _build_stock_item_base(data, user.workspace_id)
     # box/supplier son opcionales y pueden no existir aún como columnas en
     # entornos donde no se haya aplicado la migración 048.
     if data.box_id is not None:
@@ -219,7 +231,19 @@ async def create_item(data: ItemCreate, user=CurrentUser, db: AsyncSession = Dep
     if data.supplier_id is not None:
         _safe_set(item, "supplier_id", data.supplier_id)
     db.add(item)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as exc:  # noqa: BLE001
+        try:
+            await db.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+        # Reintento sin box/supplier si la columna aún no existe.
+        logger.warning("create_item: retry sin box/supplier (%s)", exc)
+        retry = _build_stock_item_base(data, user.workspace_id)
+        db.add(retry)
+        await db.commit()
+        item = retry
     await db.refresh(item)
     return {"id": str(item.id), "name": item.name}
 
@@ -234,13 +258,37 @@ async def update_item(item_id: UUID, data: ItemUpdate, user=CurrentUser, db: Asy
         raise HTTPException(404, "Item not found")
     payload = data.model_dump(exclude_unset=True)
     # Aplicamos box_id / supplier_id con setter defensivo
+    touched_deferred = False
     if "box_id" in payload:
         _safe_set(item, "box_id", payload.pop("box_id"))
+        touched_deferred = True
     if "supplier_id" in payload:
         _safe_set(item, "supplier_id", payload.pop("supplier_id"))
+        touched_deferred = True
     for field, value in payload.items():
         setattr(item, field, value)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as exc:  # noqa: BLE001
+        try:
+            await db.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+        if not touched_deferred:
+            raise
+        logger.warning("update_item: retry sin box/supplier (%s)", exc)
+        # Recargar y aplicar sólo los campos no-diferidos.
+        result = await db.execute(
+            select(StockItem).where(StockItem.id == item_id, StockItem.workspace_id == user.workspace_id)
+        )
+        item = result.scalar_one_or_none()
+        if not item:
+            raise HTTPException(404, "Item not found")
+        for field, value in data.model_dump(exclude_unset=True).items():
+            if field in _DEFERRED_STOCK_ATTRS:
+                continue
+            setattr(item, field, value)
+        await db.commit()
     return {"ok": True}
 
 
