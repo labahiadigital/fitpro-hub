@@ -4,7 +4,7 @@ This replaces Supabase Auth with a self-managed authentication system.
 """
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Body, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from datetime import datetime, timezone, timedelta
 import traceback
 import logging
@@ -780,26 +780,33 @@ async def reset_password(
                 detail=strength_error,
             )
 
+        # Cargamos sólo los campos que necesitamos. Evitamos materializar la
+        # entidad ``User`` completa con sus relaciones cargadas en lazy mode,
+        # que durante un ``commit`` async puede disparar greenlet/cascade
+        # errors (workspace_roles + notifications con delete-orphan).
         result = await db.execute(
-            select(User).where(User.password_reset_token == data.token)
+            select(User.id, User.email, User.password_reset_sent_at).where(
+                User.password_reset_token == data.token
+            )
         )
-        user = result.scalar_one_or_none()
+        row = result.first()
 
-        if not user:
+        if row is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Token de recuperación inválido"
+                detail="Token de recuperación inválido",
             )
 
-        if user.password_reset_sent_at:
-            sent_at = user.password_reset_sent_at
+        user_id, user_email, sent_at = row
+
+        if sent_at is not None:
             if sent_at.tzinfo is None:
                 sent_at = sent_at.replace(tzinfo=timezone.utc)
             token_age = datetime.now(timezone.utc) - sent_at
             if token_age > timedelta(hours=1):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="El enlace de recuperación ha expirado. Solicita uno nuevo."
+                    detail="El enlace de recuperación ha expirado. Solicita uno nuevo.",
                 )
 
         try:
@@ -811,28 +818,49 @@ async def reset_password(
                 detail="La contraseña no es válida. Prueba con una más corta o sin caracteres especiales raros.",
             ) from ve
 
-        user.password_hash = new_hash
-        user.password_reset_token = None
-        user.password_reset_sent_at = None
+        try:
+            await db.execute(
+                update(User)
+                .where(User.id == user_id)
+                .values(
+                    password_hash=new_hash,
+                    password_reset_token=None,
+                    password_reset_sent_at=None,
+                )
+                .execution_options(synchronize_session=False)
+            )
+            await db.commit()
+        except Exception as commit_err:  # noqa: BLE001
+            await db.rollback()
+            logger.exception(
+                "reset_password: fallo al actualizar contraseña para %s: %r",
+                user_email,
+                commit_err,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudo actualizar la contraseña. Inténtalo de nuevo.",
+            ) from commit_err
 
-        await db.commit()
-
-        logger.info("Password reset for user %s", user.email)
+        logger.info("Password reset for user %s", user_email)
 
         return AuthResponse(
             success=True,
             message="Tu contraseña ha sido actualizada. Ya puedes iniciar sesión.",
-            user_id=str(user.id)
+            user_id=str(user_id),
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        await db.rollback()
+        try:
+            await db.rollback()
+        except Exception:  # noqa: BLE001
+            pass
         logger.exception("Error resetting password: %r", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error al restablecer la contraseña"
+            detail="Error al restablecer la contraseña",
         ) from e
 
 
