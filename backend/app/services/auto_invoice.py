@@ -50,6 +50,22 @@ def _country_from_code(code: str) -> Optional[str]:
     return _COUNTRY_CODE_NAMES.get(code.upper(), code.upper())
 
 
+# Mensaje legal IGI cuando la operación se vende fuera de Andorra.
+# Lo exigen las facturas emitidas desde un negocio andorrano cuando el destino
+# no se localiza en territorio andorrano (art. 43 de la Llei 11/2012 de l'IGI).
+_NON_ANDORRA_IGI_NOTE = (
+    "Operació no localitzada a Andorra segons art. 43 de la Llei 11/2012 (IGI). "
+    "IGI no aplicable."
+)
+
+
+def _is_andorra(country: Optional[str]) -> bool:
+    if not country:
+        return False
+    normalized = country.strip().lower()
+    return normalized in {"andorra", "ad", "principat d'andorra", "principado de andorra"}
+
+
 async def _get_settings(db: AsyncSession, workspace_id: UUID) -> Optional[InvoiceSettings]:
     result = await db.execute(
         select(InvoiceSettings).where(InvoiceSettings.workspace_id == workspace_id)
@@ -137,17 +153,24 @@ async def create_invoice_for_payment(
         country_code = (delivery_address.get("country_code") or "").upper()
         client_country = _country_from_code(country_code) or "España"
 
-    # Regla fiscal vigente del proyecto: el IVA solo aplica cuando el cliente
-    # es de Andorra. Para cualquier otro país (España, resto UE, internacional)
-    # la base sale al 0%. Además, el IVA se SUMA al importe del producto en
-    # lugar de descontarlo: payment.amount = precio neto del producto.
-    default_rate = float(settings.default_tax_rate or 21)
-    tax_rate = default_rate if (client_country or "").strip().lower() == "andorra" else 0.0
+    # Regla fiscal vigente (negocio andorrano):
+    #   - Venta DENTRO de Andorra → se aplica IGI al tipo configurado (4,5% por
+    #     defecto, pero respetamos lo que el entrenador haya puesto en
+    #     `invoice_settings.default_tax_rate`).
+    #   - Venta FUERA de Andorra → IGI 0% y la factura debe llevar la nota
+    #     legal del art. 43 de la Llei 11/2012 (IGI no aplicable / operación
+    #     no localizada en Andorra).
+    # En ambos casos `payment.amount` es el precio NETO: el IGI se SUMA, no
+    # se descuenta del importe del producto.
+    default_rate = float(settings.default_tax_rate or 0)
+    sells_in_andorra = _is_andorra(client_country)
+    tax_rate = default_rate if sells_in_andorra else 0.0
 
     base_imponible = round(amount, 2)
     tax_amount = round(base_imponible * tax_rate / 100, 2)
     total_amount = round(base_imponible + tax_amount, 2)
 
+    invoice_notes = None if sells_in_andorra else _NON_ANDORRA_IGI_NOTE
     invoice_type = "F1" if client_tax_id else "F2"
 
     # Generamos la PK en Python para poder enlazar items y audit logs
@@ -177,10 +200,10 @@ async def create_invoice_for_payment(
         discount_amount=0,
         total=total_amount,
         tax_rate=tax_rate,
-        tax_name=settings.default_tax_name or "IVA",
+        tax_name=settings.default_tax_name or "IGI",
         payment_method=_resolve_payment_method(payment),
         payment_id=payment.id,
-        notes=None,
+        notes=invoice_notes,
     )
     db.add(invoice)
 
@@ -189,7 +212,7 @@ async def create_invoice_for_payment(
         quantity=1,
         unit_price=base_imponible,
         tax_rate=tax_rate,
-        tax_name=settings.default_tax_name or "IVA",
+        tax_name=settings.default_tax_name or "IGI",
         subtotal=base_imponible,
         tax_amount=tax_amount,
         total=total_amount,
