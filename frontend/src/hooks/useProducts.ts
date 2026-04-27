@@ -80,7 +80,12 @@ export function useProducts(params?: {
       const response = await api.get("/products/", {
         params: { workspace_id: currentWorkspace?.id, ...params },
       });
-      return response.data;
+      // El backend devuelve {items, total, page, size}. Normalizamos
+      // a un array plano para que los consumidores puedan iterar
+      // directamente con .map() sin sorpresas.
+      const data = response.data;
+      if (Array.isArray(data)) return data as Product[];
+      return (data?.items ?? []) as Product[];
     },
     enabled: !!currentWorkspace?.id,
   });

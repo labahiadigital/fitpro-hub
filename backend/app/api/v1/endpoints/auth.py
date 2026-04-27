@@ -1001,39 +1001,162 @@ async def register_client(
 ):
     """
     Register new client (user with client role in an existing workspace).
+
+    Permite multi-workspace: si el email ya está registrado pero la
+    contraseña proporcionada coincide con la del usuario existente,
+    sólo añadimos el nuevo `UserRole` + perfil `Client` en este
+    workspace, sin crear un usuario nuevo. Así el cliente puede ser
+    cliente de varios entrenadores con la misma cuenta.
     """
-    # Check if user already exists
-    result = await db.execute(
-        select(User).where(User.email == data.email.lower())
-    )
-    existing_user = result.scalar_one_or_none()
-    
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El email ya está registrado"
-        )
-    
-    # Verify workspace exists
+    email_lc = data.email.lower()
+
+    # Verify workspace exists primero (para errores claros)
     result = await db.execute(
         select(Workspace).where(Workspace.id == data.workspace_id)
     )
     workspace = result.scalar_one_or_none()
-    
+
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace no encontrado"
         )
-    
+
+    # Check if user already exists
+    result = await db.execute(
+        select(User).where(User.email == email_lc)
+    )
+    existing_user = result.scalar_one_or_none()
+
+    full_name = f"{data.first_name} {data.last_name}"
+
     try:
-        # Generate email verification token
+        if existing_user:
+            # Caso 1: el email ya tiene cuenta -> intentamos reutilizarla
+            # para registrar al usuario en otro workspace.
+            if not existing_user.is_active or existing_user.deleted_at is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Esta cuenta no está disponible. Contacta con soporte.",
+                )
+
+            if not existing_user.password_hash or not verify_password(
+                data.password, existing_user.password_hash
+            ):
+                # Email correcto pero password incorrecto -> el usuario está
+                # tratando de "robar" un email ajeno o se ha equivocado.
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Ese email ya tiene cuenta en Trackfiz. "
+                        "Usa la misma contraseña que ya tenías para vincular "
+                        "este perfil al nuevo entrenador, o inicia sesión "
+                        "y completa el alta desde tu cuenta."
+                    ),
+                )
+
+            # Comprobar si ya tiene rol/cliente en este workspace
+            result = await db.execute(
+                select(UserRole).where(
+                    UserRole.user_id == existing_user.id,
+                    UserRole.workspace_id == data.workspace_id,
+                )
+            )
+            existing_role = result.scalar_one_or_none()
+            result = await db.execute(
+                select(Client).where(
+                    Client.workspace_id == data.workspace_id,
+                    Client.email == email_lc,
+                )
+            )
+            existing_client = result.scalar_one_or_none()
+
+            if existing_role and existing_client and existing_client.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Ya estás registrado en este workspace. "
+                        "Inicia sesión con tu email y contraseña."
+                    ),
+                )
+
+            # Crear UserRole si no existe
+            if not existing_role:
+                db.add(UserRole(
+                    user_id=existing_user.id,
+                    workspace_id=data.workspace_id,
+                    role=RoleType.client,
+                    is_default=False,
+                ))
+
+            # Crear Client si no existe (o reactivarlo)
+            if existing_client:
+                existing_client.user_id = existing_user.id
+                existing_client.first_name = data.first_name
+                existing_client.last_name = data.last_name
+                existing_client.phone = data.phone or existing_client.phone
+                existing_client.birth_date = data.birth_date or existing_client.birth_date
+                existing_client.gender = data.gender or existing_client.gender
+                if data.height_cm is not None:
+                    existing_client.height_cm = str(data.height_cm)
+                if data.weight_kg is not None:
+                    existing_client.weight_kg = str(data.weight_kg)
+                if data.goals:
+                    existing_client.goals = data.goals
+                if data.health_data:
+                    existing_client.health_data = data.health_data
+                if data.consents:
+                    existing_client.consents = data.consents
+                existing_client.is_active = True
+                existing_client.deleted_at = None
+            else:
+                db.add(Client(
+                    workspace_id=data.workspace_id,
+                    user_id=existing_user.id,
+                    first_name=data.first_name,
+                    last_name=data.last_name,
+                    email=email_lc,
+                    phone=data.phone,
+                    birth_date=data.birth_date,
+                    gender=data.gender,
+                    height_cm=str(data.height_cm) if data.height_cm else None,
+                    weight_kg=str(data.weight_kg) if data.weight_kg else None,
+                    goals=data.goals,
+                    health_data=data.health_data or {},
+                    consents=data.consents or {},
+                    is_active=True,
+                ))
+
+            # Si el email aún no estaba verificado, lo verificamos: la
+            # persona ha demostrado conocer la contraseña del usuario, así
+            # que es legítima.
+            if not existing_user.email_verified:
+                existing_user.email_verified = True
+                existing_user.email_verification_token = None
+                existing_user.email_verification_sent_at = None
+
+            await db.commit()
+
+            # Login automático: el usuario ya está vinculado al nuevo
+            # workspace y puede entrar.
+            access_token, refresh_token = create_tokens(
+                {"sub": str(existing_user.id), "email": existing_user.email}
+            )
+            set_refresh_cookie(response, refresh_token)
+
+            return Token(
+                access_token=access_token,
+                token_type="bearer",
+                expires_in=settings.access_token_expire_minutes * 60,
+                refresh_token=refresh_token,
+                requires_email_verification=False,
+            )
+
+        # Caso 2: usuario nuevo -> creación normal con verificación de email
         verification_token = generate_verification_token()
-        full_name = f"{data.first_name} {data.last_name}"
-        
-        # Create user with hashed password
+
         user = User(
-            email=data.email.lower(),
+            email=email_lc,
             full_name=full_name,
             phone=data.phone,
             password_hash=get_password_hash(data.password),
@@ -1044,23 +1167,20 @@ async def register_client(
         )
         db.add(user)
         await db.flush()
-        
-        # Assign user as client role in workspace
-        user_role = UserRole(
+
+        db.add(UserRole(
             user_id=user.id,
             workspace_id=data.workspace_id,
             role=RoleType.client,
-            is_default=True
-        )
-        db.add(user_role)
-        
-        # Create client profile
-        client = Client(
+            is_default=True,
+        ))
+
+        db.add(Client(
             workspace_id=data.workspace_id,
             user_id=user.id,
             first_name=data.first_name,
             last_name=data.last_name,
-            email=data.email.lower(),
+            email=email_lc,
             phone=data.phone,
             birth_date=data.birth_date,
             gender=data.gender,
@@ -1069,13 +1189,11 @@ async def register_client(
             goals=data.goals,
             health_data=data.health_data or {},
             consents=data.consents or {},
-            is_active=True
-        )
-        db.add(client)
-        
+            is_active=True,
+        ))
+
         await db.commit()
-        
-        # Send verification email (use workspace name as brand for client emails)
+
         confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
         ws_name_for_email = workspace.name if workspace else None
         html_content = EmailTemplates.email_confirmation(
@@ -1094,7 +1212,7 @@ async def register_client(
             )
         except Exception as e:
             logger.error(f"Failed to send verification email to client: {e}")
-        
+
         return Token(
             access_token="pending_email_confirmation",
             token_type="bearer",
