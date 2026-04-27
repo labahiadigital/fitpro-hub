@@ -183,10 +183,23 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def global_exception_handler(request: Request, exc: Exception):
     if isinstance(exc, HTTPException):
         raise exc
-    logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    rid = getattr(request.state, "request_id", "-")
+    logger.error(
+        "Unhandled exception rid=%s on %s %s: %s",
+        rid, request.method, request.url.path, exc, exc_info=True,
+    )
+    # Incluimos el tipo de excepción y el request_id en la respuesta para
+    # facilitar el diagnóstico desde el navegador / cliente sin exponer
+    # mensajes ni stack traces internos. El detalle textual sigue siendo
+    # genérico para no leak información sensible.
+    error_type = type(exc).__name__
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
+        content={
+            "detail": "Internal server error",
+            "error_type": error_type,
+            "request_id": rid,
+        },
         headers=_cors_headers_for(request),
     )
 
