@@ -95,7 +95,7 @@ async def _sync_box_allocations(
     db: AsyncSession,
     workspace_id,
     item: StockItem,
-    allocations: List[BoxAllocationInput],
+    allocations: "List[BoxAllocationInput]",
 ) -> Optional[float]:
     """Reemplaza las allocations del item con las recibidas.
 
