@@ -786,6 +786,7 @@ export function NutritionPage() {
       id: food.id, name: food.name || "Sin nombre", calories: food.calories || 0,
       protein: food.protein_g || 0, carbs: food.carbs_g || 0, fat: food.fat_g || 0,
       serving_size: "100", category: mapCategory(food.category), is_global: food.is_global ?? false,
+      image_url: food.image_url || null,
     }));
     if (foodSourceFilter === "system") foodsList = foodsList.filter((f: Food) => f.is_global);
     else if (foodSourceFilter === "custom") foodsList = foodsList.filter((f: Food) => !f.is_global);

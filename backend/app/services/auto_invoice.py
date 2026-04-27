@@ -25,6 +25,31 @@ def _generate_invoice_number(prefix: str, year: int, number: int) -> str:
     return f"{prefix}{year}-{str(number).zfill(5)}"
 
 
+# Mapeo mínimo de country_code (ISO-3166 alpha-2) a nombre legible para los
+# fallbacks de billing. Solo cubrimos los casos que realmente usamos en
+# facturación; cualquier otro código se devuelve tal cual.
+_COUNTRY_CODE_NAMES = {
+    "ES": "España",
+    "AD": "Andorra",
+    "PT": "Portugal",
+    "FR": "Francia",
+    "IT": "Italia",
+    "DE": "Alemania",
+    "GB": "Reino Unido",
+    "US": "Estados Unidos",
+    "MX": "México",
+    "AR": "Argentina",
+    "CL": "Chile",
+    "CO": "Colombia",
+}
+
+
+def _country_from_code(code: str) -> Optional[str]:
+    if not code:
+        return None
+    return _COUNTRY_CODE_NAMES.get(code.upper(), code.upper())
+
+
 async def _get_settings(db: AsyncSession, workspace_id: UUID) -> Optional[InvoiceSettings]:
     result = await db.execute(
         select(InvoiceSettings).where(InvoiceSettings.workspace_id == workspace_id)
@@ -58,17 +83,19 @@ async def create_invoice_for_payment(
     if payment.client_id:
         result = await db.execute(select(Client).where(Client.id == payment.client_id))
         client = result.scalar_one_or_none()
+        if client is None:
+            logger.warning(
+                "Payment %s has client_id=%s but client was not found (deleted?). "
+                "Falling back to extra_data customer info.",
+                payment.id, payment.client_id,
+            )
 
     prefix = settings.invoice_prefix or "F"
     next_number = settings.invoice_next_number or 1
     year = date.today().year
     invoice_number = _generate_invoice_number(prefix, year, next_number)
 
-    tax_rate = float(settings.default_tax_rate or 21)
     amount = float(payment.amount or 0)
-
-    base_imponible = round(amount / (1 + tax_rate / 100), 2)
-    tax_amount = round(amount - base_imponible, 2)
 
     client_name = "Cliente sin identificar"
     client_email = None
@@ -79,13 +106,47 @@ async def create_invoice_for_payment(
     client_country = "España"
 
     if client:
-        client_name = f"{client.first_name} {client.last_name}".strip()
+        full_name = f"{client.first_name or ''} {client.last_name or ''}".strip()
+        if full_name:
+            client_name = full_name
         client_email = client.email
         client_tax_id = client.tax_id
         client_address = client.billing_address
         client_city = client.billing_city
         client_postal_code = client.billing_postal_code
         client_country = client.billing_country or "España"
+    else:
+        # Fallback: usar info que viaja en payment.extra_data (p.ej. SeQura
+        # onboarding genera Payments antes de crear el Client). Esto evita
+        # facturas con "Cliente sin identificar" cuando sí tenemos los datos.
+        extra = payment.extra_data or {}
+        order_data = extra.get("sequra_order_data") or {}
+        customer = order_data.get("customer") or {}
+        delivery_address = order_data.get("delivery_address") or order_data.get("invoice_address") or {}
+
+        given = (customer.get("given_names") or "").strip()
+        surname = (customer.get("surnames") or "").strip()
+        composed_name = f"{given} {surname}".strip()
+        if composed_name:
+            client_name = composed_name
+        client_email = customer.get("email") or None
+        client_tax_id = customer.get("nin") or customer.get("vat_number") or None
+        client_address = delivery_address.get("address_line_1") or None
+        client_city = delivery_address.get("city") or None
+        client_postal_code = delivery_address.get("postal_code") or None
+        country_code = (delivery_address.get("country_code") or "").upper()
+        client_country = _country_from_code(country_code) or "España"
+
+    # Regla fiscal vigente del proyecto: el IVA solo aplica cuando el cliente
+    # es de Andorra. Para cualquier otro país (España, resto UE, internacional)
+    # la base sale al 0%. Además, el IVA se SUMA al importe del producto en
+    # lugar de descontarlo: payment.amount = precio neto del producto.
+    default_rate = float(settings.default_tax_rate or 21)
+    tax_rate = default_rate if (client_country or "").strip().lower() == "andorra" else 0.0
+
+    base_imponible = round(amount, 2)
+    tax_amount = round(base_imponible * tax_rate / 100, 2)
+    total_amount = round(base_imponible + tax_amount, 2)
 
     invoice_type = "F1" if client_tax_id else "F2"
 
@@ -114,7 +175,7 @@ async def create_invoice_for_payment(
         subtotal=base_imponible,
         tax_amount=tax_amount,
         discount_amount=0,
-        total=amount,
+        total=total_amount,
         tax_rate=tax_rate,
         tax_name=settings.default_tax_name or "IVA",
         payment_method=_resolve_payment_method(payment),
@@ -131,7 +192,7 @@ async def create_invoice_for_payment(
         tax_name=settings.default_tax_name or "IVA",
         subtotal=base_imponible,
         tax_amount=tax_amount,
-        total=amount,
+        total=total_amount,
         position=0,
     )
     invoice.items.append(item)
@@ -143,7 +204,7 @@ async def create_invoice_for_payment(
         action="created",
         new_values={
             "invoice_number": invoice_number,
-            "total": amount,
+            "total": total_amount,
             "payment_id": str(payment.id),
             "auto_generated": True,
         },
@@ -154,19 +215,20 @@ async def create_invoice_for_payment(
     invoice.audit_logs.append(audit)
 
     if auto_finalize:
-        try:
-            await VeriFactuService.compute_and_set_hash(db, invoice, settings)
-        except Exception:
-            # Cualquier fallo calculando el hash VeriFactu (ej. tabla de
-            # encadenamiento vacía o datos inconsistentes) NO debe impedir la
-            # emisión de la factura. Lo registramos y continuamos.
-            logger.exception("VeriFactu hash compute failed, continuing without chain hash")
-            invoice.verifactu_hash = invoice.verifactu_hash or None
-
         invoice.status = "finalized"
-        invoice.verifactu_status = "pending"
 
+        # Solo calculamos hash/UUID/QR de VeriFactu cuando está habilitado.
+        # Si el toggle está desactivado, la factura NO debe llevar marcas
+        # VeriFactu (badge, hash, UUID) ni en el modal ni en el PDF, y desde
+        # luego nada se envía a AEAT (ni preproducción ni producción).
         if settings.verifactu_enabled:
+            invoice.verifactu_status = "pending"
+            try:
+                await VeriFactuService.compute_and_set_hash(db, invoice, settings)
+            except Exception:
+                logger.exception("VeriFactu hash compute failed, continuing without chain hash")
+                invoice.verifactu_hash = invoice.verifactu_hash or None
+
             try:
                 resp = await VeriFactuService.send_to_provider(invoice, settings, db_session=db)
                 invoice.verifactu_response = resp
@@ -179,6 +241,13 @@ async def create_invoice_for_payment(
                     invoice_number,
                 )
                 invoice.verifactu_status = "pending"
+        else:
+            invoice.verifactu_status = None
+            invoice.verifactu_hash = None
+            invoice.verifactu_uuid = None
+            invoice.verifactu_qr_data = None
+            invoice.verifactu_prev_hash = None
+            invoice.verifactu_response = None
 
         finalize_audit = InvoiceAuditLog(
             workspace_id=payment.workspace_id,
