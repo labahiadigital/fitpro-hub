@@ -1,4 +1,4 @@
-const CACHE_NAME = "trackfiz-v1";
+const CACHE_NAME = "trackfiz-v2";
 const STATIC_ASSETS = ["/", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -23,12 +23,25 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   if (event.request.url.includes("/api/")) return;
 
+  let requestUrl;
+  try {
+    requestUrl = new URL(event.request.url);
+  } catch (_err) {
+    return;
+  }
+
+  if (requestUrl.protocol !== "http:" && requestUrl.protocol !== "https:") return;
+  if (requestUrl.origin !== self.location.origin) return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response.ok) {
+        if (response.ok && response.type === "basic") {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.put(event.request, clone))
+            .catch(() => {});
         }
         return response;
       })

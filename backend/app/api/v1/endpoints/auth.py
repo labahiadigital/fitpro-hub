@@ -26,6 +26,7 @@ from app.core.security import (
     decode_refresh_token,
     generate_verification_token,
     generate_password_reset_token,
+    validate_password_strength,
 )
 from app.models.user import User, UserRole, RoleType
 from app.models.workspace import Workspace, generate_slug, check_slug_available
@@ -772,50 +773,67 @@ async def reset_password(
     Reset password using token from email.
     """
     try:
-        # Find user by reset token
+        is_strong, strength_error = validate_password_strength(data.new_password)
+        if not is_strong:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=strength_error,
+            )
+
         result = await db.execute(
             select(User).where(User.password_reset_token == data.token)
         )
         user = result.scalar_one_or_none()
-        
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Token de recuperación inválido"
             )
-        
-        # Check if token is expired (1 hour)
+
         if user.password_reset_sent_at:
-            token_age = datetime.now(timezone.utc) - user.password_reset_sent_at.replace(tzinfo=timezone.utc)
+            sent_at = user.password_reset_sent_at
+            if sent_at.tzinfo is None:
+                sent_at = sent_at.replace(tzinfo=timezone.utc)
+            token_age = datetime.now(timezone.utc) - sent_at
             if token_age > timedelta(hours=1):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="El enlace de recuperación ha expirado. Solicita uno nuevo."
                 )
-        
-        # Update password
-        user.password_hash = get_password_hash(data.new_password)
+
+        try:
+            new_hash = get_password_hash(data.new_password)
+        except ValueError as ve:
+            logger.warning("reset_password: contraseña inválida para bcrypt: %s", ve)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña no es válida. Prueba con una más corta o sin caracteres especiales raros.",
+            ) from ve
+
+        user.password_hash = new_hash
         user.password_reset_token = None
         user.password_reset_sent_at = None
-        
+
         await db.commit()
-        
-        logger.info(f"Password reset for user {user.email}")
-        
+
+        logger.info("Password reset for user %s", user.email)
+
         return AuthResponse(
             success=True,
             message="Tu contraseña ha sido actualizada. Ya puedes iniciar sesión.",
             user_id=str(user.id)
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error resetting password: {str(e)}")
+        await db.rollback()
+        logger.exception("Error resetting password: %r", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al restablecer la contraseña"
-        )
+        ) from e
 
 
 # ===== CHANGE EMAIL (authenticated) =====

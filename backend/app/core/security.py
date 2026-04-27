@@ -34,19 +34,27 @@ class TokenPayload(BaseModel):
     type: str = "access"  # Token type: "access" or "refresh"
 
 
+def _bcrypt_bytes(password: str) -> bytes:
+    """
+    Codifica la contraseña a bytes UTF-8 y la trunca al límite duro de
+    bcrypt (72 bytes). Mantiene compatibilidad con bcrypt 4.x, que lanza
+    ``ValueError`` si se le entrega un valor más largo. Truncar bytes
+    conserva el comportamiento previo de bcrypt sin romper hashes
+    existentes.
+    """
+    return password.encode("utf-8")[:72]
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a plain password against a hashed password.
     Uses bcrypt's constant-time comparison to prevent timing attacks.
     """
     try:
-        # Encode strings to bytes
-        password_bytes = plain_password.encode('utf-8')
-        hash_bytes = hashed_password.encode('utf-8')
+        password_bytes = _bcrypt_bytes(plain_password)
+        hash_bytes = hashed_password.encode("utf-8")
         return bcrypt.checkpw(password_bytes, hash_bytes)
     except Exception:
-        # If verification fails for any reason, return False
-        # This prevents information leakage about the hash format
         return False
 
 
@@ -54,20 +62,19 @@ def get_password_hash(password: str) -> str:
     """
     Hash a password using bcrypt.
     Returns a secure hash suitable for storage.
-    
+
     bcrypt automatically handles:
     - Salt generation
     - Secure hashing with configurable work factor
     - Constant-time comparison
+
+    Trunca a 72 bytes UTF-8 para no romper con contraseñas largas en
+    bcrypt 4.x (lanza ``ValueError`` en lugar de truncar internamente).
     """
-    # Encode password to bytes (required by bcrypt)
-    password_bytes = password.encode('utf-8')
-    # Generate salt with specified rounds
+    password_bytes = _bcrypt_bytes(password)
     salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
-    # Hash the password
     hashed = bcrypt.hashpw(password_bytes, salt)
-    # Return as string for storage
-    return hashed.decode('utf-8')
+    return hashed.decode("utf-8")
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
