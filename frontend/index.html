@@ -28,8 +28,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
 
-    <!-- Initial app chunk: hint the browser to start fetching before JS parse. -->
-    <link rel="modulepreload" href="/src/main.tsx" as="script">
+    <!--
+      Note: removed manual `<link rel="modulepreload" href="/src/main.tsx">`.
+      In dev it served the TSX source, but in prod Vite was inlining it as
+      base64 with MIME `application/octet-stream`, which the browser rejects
+      ("Failed to load module script") and broke initial JS hydration.
+      Vite already emits proper modulepreload links for the built entry
+      chunk during `vite build`, so no manual hint is needed.
+    -->
 
     <style>
       /* Paint a neutral background immediately so there's no white flash
