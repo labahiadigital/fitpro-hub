@@ -20,6 +20,10 @@ import {
 } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import {
+  PasswordRulesIndicator,
+  passwordValidator,
+} from "../../components/common/PasswordRulesIndicator";
 
 const REGISTRATION_ENABLED = false;
 
@@ -68,7 +72,7 @@ export function RegisterPage() {
       email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
       confirm_email: (value, values) =>
         value !== values.email ? "Los emails no coinciden" : null,
-      password: (value) => (value.length < 8 ? "Mínimo 8 caracteres" : null),
+      password: passwordValidator,
       workspace_name: (value) =>
         value.length < 2 ? "Nombre de tu gimnasio virtual requerido" : null,
       terms: (value) => (value ? null : "Debes aceptar los términos"),
@@ -163,14 +167,17 @@ export function RegisterPage() {
             {...form.getInputProps("confirm_email")}
           />
 
-          <PasswordInput
-            label="Contraseña"
-            leftSection={<IconLock size={18} />}
-            placeholder="Mínimo 8 caracteres"
-            required
-            styles={inputStyles}
-            {...form.getInputProps("password")}
-          />
+          <Box>
+            <PasswordInput
+              label="Contraseña"
+              leftSection={<IconLock size={18} />}
+              placeholder="Mínimo 8 caracteres"
+              required
+              styles={inputStyles}
+              {...form.getInputProps("password")}
+            />
+            <PasswordRulesIndicator value={form.values.password} dark />
+          </Box>
 
           <TextInput
             label="Nombre de tu gimnasio virtual"

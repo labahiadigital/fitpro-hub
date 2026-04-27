@@ -2256,11 +2256,25 @@ async def get_progress_photos(
             all_photos.append(p)
 
     resolved = await resolve_urls(urls_to_resolve)
+    cleaned: list[dict] = []
     for p, presigned in zip(all_photos, resolved):
-        if p.get("ref_url"):
-            p["url"] = presigned
+        raw_url = p.get("ref_url") or ""
+        if not raw_url:
+            continue
+        if not presigned:
+            continue
+        # Filtra URLs heredadas (Supabase antiguo, etc.) que no se pudieron
+        # presignar — devolverían 400/403 desde el navegador.
+        if (
+            presigned == raw_url
+            and "r2.cloudflarestorage.com" not in presigned
+            and "trackfiz" not in presigned
+        ):
+            continue
+        p["url"] = presigned
+        cleaned.append(p)
 
-    return all_photos
+    return cleaned
 
 
 @router.delete("/progress/photos")

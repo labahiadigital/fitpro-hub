@@ -17,6 +17,10 @@ import { useForm } from "@mantine/form";
 import { IconCheck, IconX, IconUserPlus } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { usersApi } from "../../services/api";
+import {
+  PasswordRulesIndicator,
+  passwordValidator,
+} from "../../components/common/PasswordRulesIndicator";
 
 type PageState = "loading" | "form" | "success" | "error";
 
@@ -37,7 +41,7 @@ export function AcceptStaffInvitePage() {
     initialValues: { full_name: "", password: "", password_confirm: "" },
     validate: {
       full_name: (v) => (v.trim().length < 2 ? "Nombre demasiado corto" : null),
-      password: (v) => (v.length < 8 ? "Mínimo 8 caracteres" : null),
+      password: passwordValidator,
       password_confirm: (v, values) =>
         v !== values.password ? "Las contraseñas no coinciden" : null,
     },
@@ -178,12 +182,15 @@ export function AcceptStaffInvitePage() {
                 {...form.getInputProps("full_name")}
               />
 
-              <PasswordInput
-                label="Contraseña"
-                placeholder="Mínimo 8 caracteres"
-                radius="md"
-                {...form.getInputProps("password")}
-              />
+              <Box>
+                <PasswordInput
+                  label="Contraseña"
+                  placeholder="Mínimo 8 caracteres"
+                  radius="md"
+                  {...form.getInputProps("password")}
+                />
+                <PasswordRulesIndicator value={form.values.password} />
+              </Box>
 
               <PasswordInput
                 label="Confirmar contraseña"

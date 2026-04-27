@@ -15,9 +15,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.middleware.auth import require_workspace
-from app.models.stock import StockCategory, StockItem, StockMovement
+from app.models.stock import StockCategory, StockItem, StockItemBox, StockMovement
 from app.models.product import ProductStockConsumption, Product
 from app.models.resource import ServiceStockConsumption, Service
+from app.models.resource import Box
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -52,6 +53,91 @@ def _safe_set(obj, name: str, value) -> None:
         pass
 
 
+async def _load_box_allocations_map(
+    db: AsyncSession, workspace_id, item_ids: List[UUID]
+) -> dict:
+    """Devuelve un dict ``{item_id: [BoxAllocationOut...]}`` para los items dados.
+
+    Si la tabla ``stock_item_boxes`` aún no existe (migración 049 no aplicada),
+    devuelve un dict vacío para no romper el listado.
+    """
+    if not item_ids:
+        return {}
+    try:
+        result = await db.execute(
+            select(StockItemBox, Box.name)
+            .join(Box, Box.id == StockItemBox.box_id, isouter=True)
+            .where(
+                StockItemBox.workspace_id == workspace_id,
+                StockItemBox.item_id.in_(item_ids),
+            )
+        )
+    except Exception as exc:  # pragma: no cover - migración pendiente
+        logger.warning("box_allocations: tabla aún no disponible (%s)", exc)
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+        return {}
+    bucket: dict = {}
+    for alloc, box_name in result.all():
+        bucket.setdefault(alloc.item_id, []).append({
+            "box_id": alloc.box_id,
+            "box_name": box_name,
+            "current_stock": float(alloc.current_stock),
+            "min_stock": float(alloc.min_stock),
+            "max_stock": float(alloc.max_stock),
+        })
+    return bucket
+
+
+async def _sync_box_allocations(
+    db: AsyncSession,
+    workspace_id,
+    item: StockItem,
+    allocations: List[BoxAllocationInput],
+) -> Optional[float]:
+    """Reemplaza las allocations del item con las recibidas.
+
+    Devuelve la suma de unidades agregadas para que el llamador pueda
+    actualizar ``StockItem.current_stock`` en consecuencia. Si la tabla aún
+    no existe (migración pendiente), devuelve ``None`` para que el caller
+    decida no tocar el current_stock derivado.
+    """
+    try:
+        existing = await db.execute(
+            select(StockItemBox).where(StockItemBox.item_id == item.id)
+        )
+        for row in existing.scalars().all():
+            await db.delete(row)
+        await db.flush()
+    except Exception as exc:  # pragma: no cover - migración pendiente
+        logger.warning("sync_box_allocations: tabla no disponible (%s)", exc)
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+        return None
+
+    seen: set = set()
+    total = 0.0
+    for alloc in allocations or []:
+        if alloc.box_id in seen:
+            continue
+        seen.add(alloc.box_id)
+        row = StockItemBox(
+            workspace_id=workspace_id,
+            item_id=item.id,
+            box_id=alloc.box_id,
+            current_stock=Decimal(str(alloc.current_stock or 0)),
+            min_stock=Decimal(str(alloc.min_stock or 0)),
+            max_stock=Decimal(str(alloc.max_stock or 0)),
+        )
+        db.add(row)
+        total += float(alloc.current_stock or 0)
+    return total
+
+
 # --- Pydantic schemas ---
 
 class CategoryCreate(PydanticModel):
@@ -65,6 +151,21 @@ class CategoryResponse(PydanticModel):
 
     class Config:
         from_attributes = True
+
+class BoxAllocationInput(PydanticModel):
+    box_id: UUID
+    current_stock: float = 0
+    min_stock: float = 0
+    max_stock: float = 0
+
+
+class BoxAllocationOut(PydanticModel):
+    box_id: UUID
+    box_name: Optional[str] = None
+    current_stock: float
+    min_stock: float
+    max_stock: float
+
 
 class ItemCreate(PydanticModel):
     name: str
@@ -80,6 +181,7 @@ class ItemCreate(PydanticModel):
     irpf_rate: float = 0
     box_id: Optional[UUID] = None
     supplier_id: Optional[UUID] = None
+    box_allocations: Optional[List[BoxAllocationInput]] = None
 
 class ItemUpdate(PydanticModel):
     name: Optional[str] = None
@@ -94,11 +196,13 @@ class ItemUpdate(PydanticModel):
     irpf_rate: Optional[float] = None
     box_id: Optional[UUID] = None
     supplier_id: Optional[UUID] = None
+    box_allocations: Optional[List[BoxAllocationInput]] = None
 
 class MovementCreate(PydanticModel):
     movement_type: str  # entry, exit, adjustment
     quantity: float
     reason: str
+    box_id: Optional[UUID] = None
 
 class ItemResponse(PydanticModel):
     id: UUID
@@ -180,15 +284,34 @@ async def list_items(
     q = q.order_by(StockItem.name)
     result = await db.execute(q)
     items = result.scalars().all()
-    return [
-        {
+
+    allocations_by_item = await _load_box_allocations_map(
+        db, user.workspace_id, [i.id for i in items]
+    )
+
+    def _serialize_alloc(alloc: dict) -> dict:
+        return {
+            "box_id": str(alloc["box_id"]),
+            "box_name": alloc.get("box_name"),
+            "current_stock": alloc["current_stock"],
+            "min_stock": alloc["min_stock"],
+            "max_stock": alloc["max_stock"],
+        }
+
+    out: List[dict] = []
+    for i in items:
+        boxes = [_serialize_alloc(a) for a in allocations_by_item.get(i.id, [])]
+        # Si tiene multi-box, el stock total se considera la suma de boxes;
+        # si no hay allocations, se usa el current_stock directo del item.
+        derived_stock = sum(b["current_stock"] for b in boxes) if boxes else float(i.current_stock)
+        out.append({
             "id": str(i.id),
             "name": i.name,
             "category_id": str(i.category_id) if i.category_id else None,
             "category_name": i.category.name if i.category else None,
             "description": i.description,
             "unit": i.unit,
-            "current_stock": float(i.current_stock),
+            "current_stock": derived_stock,
             "min_stock": float(i.min_stock),
             "max_stock": float(i.max_stock),
             "price": float(i.price),
@@ -198,10 +321,10 @@ async def list_items(
             "is_active": i.is_active,
             "box_id": str(_safe_attr(i, "box_id")) if _safe_attr(i, "box_id") else None,
             "supplier_id": str(_safe_attr(i, "supplier_id")) if _safe_attr(i, "supplier_id") else None,
+            "box_allocations": boxes,
             "created_at": i.created_at.isoformat() if i.created_at else "",
-        }
-        for i in items
-    ]
+        })
+    return out
 
 
 def _build_stock_item_base(data: "ItemCreate", workspace_id) -> StockItem:
@@ -238,13 +361,19 @@ async def create_item(data: ItemCreate, user=CurrentUser, db: AsyncSession = Dep
             await db.rollback()
         except Exception:  # noqa: BLE001
             pass
-        # Reintento sin box/supplier si la columna aún no existe.
         logger.warning("create_item: retry sin box/supplier (%s)", exc)
         retry = _build_stock_item_base(data, user.workspace_id)
         db.add(retry)
         await db.commit()
         item = retry
     await db.refresh(item)
+
+    if data.box_allocations:
+        total = await _sync_box_allocations(db, user.workspace_id, item, data.box_allocations)
+        if total is not None:
+            item.current_stock = Decimal(str(total))
+        await db.commit()
+        await db.refresh(item)
     return {"id": str(item.id), "name": item.name}
 
 
@@ -257,7 +386,7 @@ async def update_item(item_id: UUID, data: ItemUpdate, user=CurrentUser, db: Asy
     if not item:
         raise HTTPException(404, "Item not found")
     payload = data.model_dump(exclude_unset=True)
-    # Aplicamos box_id / supplier_id con setter defensivo
+    box_allocations = payload.pop("box_allocations", None)
     touched_deferred = False
     if "box_id" in payload:
         _safe_set(item, "box_id", payload.pop("box_id"))
@@ -277,7 +406,6 @@ async def update_item(item_id: UUID, data: ItemUpdate, user=CurrentUser, db: Asy
         if not touched_deferred:
             raise
         logger.warning("update_item: retry sin box/supplier (%s)", exc)
-        # Recargar y aplicar sólo los campos no-diferidos.
         result = await db.execute(
             select(StockItem).where(StockItem.id == item_id, StockItem.workspace_id == user.workspace_id)
         )
@@ -285,9 +413,16 @@ async def update_item(item_id: UUID, data: ItemUpdate, user=CurrentUser, db: Asy
         if not item:
             raise HTTPException(404, "Item not found")
         for field, value in data.model_dump(exclude_unset=True).items():
-            if field in _DEFERRED_STOCK_ATTRS:
+            if field in _DEFERRED_STOCK_ATTRS or field == "box_allocations":
                 continue
             setattr(item, field, value)
+        await db.commit()
+
+    if box_allocations is not None:
+        allocations_input = [BoxAllocationInput(**a) if isinstance(a, dict) else a for a in box_allocations]
+        total = await _sync_box_allocations(db, user.workspace_id, item, allocations_input)
+        if total is not None:
+            item.current_stock = Decimal(str(total))
         await db.commit()
     return {"ok": True}
 
@@ -316,19 +451,50 @@ async def register_movement(item_id: UUID, data: MovementCreate, user=CurrentUse
     if not item:
         raise HTTPException(404, "Item not found")
 
-    previous = float(item.current_stock)
     qty = data.quantity
+    if data.movement_type not in {"entry", "exit", "adjustment"}:
+        raise HTTPException(400, "Invalid movement type")
+
+    # Si el movimiento se aplica a un box concreto, ajustamos esa allocation
+    # y derivamos el current_stock global como suma. Si no se especifica
+    # box, aplicamos al item directamente (modo legacy).
+    box_alloc: Optional[StockItemBox] = None
+    if data.box_id is not None:
+        try:
+            res_alloc = await db.execute(
+                select(StockItemBox).where(
+                    StockItemBox.item_id == item.id,
+                    StockItemBox.box_id == data.box_id,
+                )
+            )
+            box_alloc = res_alloc.scalar_one_or_none()
+        except Exception:  # tabla no creada aún
+            box_alloc = None
+
+    if box_alloc is not None:
+        previous = float(box_alloc.current_stock)
+    else:
+        previous = float(item.current_stock)
 
     if data.movement_type == "entry":
         new_stock = previous + qty
     elif data.movement_type == "exit":
         new_stock = max(0, previous - qty)
-    elif data.movement_type == "adjustment":
+    else:  # adjustment
         new_stock = qty
-    else:
-        raise HTTPException(400, "Invalid movement type")
 
-    item.current_stock = Decimal(str(new_stock))
+    if box_alloc is not None:
+        box_alloc.current_stock = Decimal(str(new_stock))
+        await db.flush()
+        # Recalcula el current_stock total del item a partir de allocations.
+        total_q = await db.execute(
+            select(func.coalesce(func.sum(StockItemBox.current_stock), 0))
+            .where(StockItemBox.item_id == item.id)
+        )
+        total = float(total_q.scalar() or 0)
+        item.current_stock = Decimal(str(total))
+    else:
+        item.current_stock = Decimal(str(new_stock))
 
     movement = StockMovement(
         workspace_id=user.workspace_id,
@@ -340,9 +506,62 @@ async def register_movement(item_id: UUID, data: MovementCreate, user=CurrentUse
         reason=data.reason,
         created_by=user.id,
     )
+    if data.box_id is not None:
+        _safe_set(movement, "box_id", data.box_id)
     db.add(movement)
     await db.commit()
-    return {"ok": True, "new_stock": new_stock}
+    return {"ok": True, "new_stock": float(item.current_stock)}
+
+
+# --- Box allocations ---
+
+
+@router.get("/items/{item_id}/boxes", response_model=List[BoxAllocationOut])
+async def list_box_allocations(item_id: UUID, user=CurrentUser, db: AsyncSession = Depends(get_db)):
+    item_check = await db.execute(
+        select(StockItem.id).where(StockItem.id == item_id, StockItem.workspace_id == user.workspace_id)
+    )
+    if not item_check.scalar_one_or_none():
+        raise HTTPException(404, "Item not found")
+    allocations = await _load_box_allocations_map(db, user.workspace_id, [item_id])
+    return [
+        BoxAllocationOut(
+            box_id=a["box_id"],
+            box_name=a.get("box_name"),
+            current_stock=a["current_stock"],
+            min_stock=a["min_stock"],
+            max_stock=a["max_stock"],
+        )
+        for a in allocations.get(item_id, [])
+    ]
+
+
+@router.put("/items/{item_id}/boxes")
+async def upsert_box_allocations(
+    item_id: UUID,
+    data: List[BoxAllocationInput],
+    user=CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reemplaza la distribución por boxes del item con las allocations dadas.
+
+    El ``current_stock`` total del item pasa a ser la suma de las unidades
+    asignadas. Si el listado llega vacío, se borran todas las allocations y
+    el item vuelve al modo legacy (un único almacén implícito).
+    """
+    res = await db.execute(
+        select(StockItem).where(StockItem.id == item_id, StockItem.workspace_id == user.workspace_id)
+    )
+    item = res.scalar_one_or_none()
+    if not item:
+        raise HTTPException(404, "Item not found")
+
+    total = await _sync_box_allocations(db, user.workspace_id, item, data)
+    if total is None:
+        raise HTTPException(503, "La distribución por boxes aún no está disponible. Aplica la migración 049.")
+    item.current_stock = Decimal(str(total))
+    await db.commit()
+    return {"ok": True, "current_stock": total, "boxes": len(data)}
 
 
 @router.get("/items/{item_id}/movements")

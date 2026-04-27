@@ -69,6 +69,10 @@ const AutomationsPage = lazy(() => import("../automations/AutomationsPage").then
 const SuggestionsPage = lazy(() => import("../suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
 import { PageHeader } from "../../components/common/PageHeader";
 import {
+  PasswordRulesIndicator,
+  passwordValidator,
+} from "../../components/common/PasswordRulesIndicator";
+import {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from "../../hooks/useNotifications";
@@ -622,7 +626,7 @@ export function SettingsPage() {
     initialValues: { current_password: "", new_password: "", confirm_password: "" },
     validate: {
       current_password: (v) => (!v ? "Requerida" : null),
-      new_password: (v) => (!v ? "Requerida" : v.length < 8 ? "Mínimo 8 caracteres" : null),
+      new_password: passwordValidator,
       confirm_password: (v, values) => v !== values.new_password ? "No coinciden" : null,
     },
   });
@@ -1458,7 +1462,10 @@ export function SettingsPage() {
                 <form onSubmit={passwordForm.onSubmit((v) => changePasswordMutation.mutate(v))}>
                   <Stack gap="md">
                     <PasswordInput label="Contraseña actual" placeholder="Tu contraseña actual" {...passwordForm.getInputProps("current_password")} />
-                    <PasswordInput label="Nueva contraseña" placeholder="Nueva contraseña" {...passwordForm.getInputProps("new_password")} />
+                    <Box>
+                      <PasswordInput label="Nueva contraseña" placeholder="Mínimo 8 caracteres" {...passwordForm.getInputProps("new_password")} />
+                      <PasswordRulesIndicator value={passwordForm.values.new_password} />
+                    </Box>
                     <PasswordInput label="Confirmar nueva contraseña" placeholder="Confirmar nueva contraseña" {...passwordForm.getInputProps("confirm_password")} />
                     <Group justify="flex-end">
                       <Button type="submit" radius="xl" loading={changePasswordMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>

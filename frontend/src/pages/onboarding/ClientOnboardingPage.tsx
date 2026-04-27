@@ -47,6 +47,10 @@ import {
   ALLERGENS_SELECT_DATA,
   INTOLERANCES_SELECT_DATA,
 } from "../../constants/allergens";
+import {
+  PasswordRulesIndicator,
+  isStrongPassword,
+} from "../../components/common/PasswordRulesIndicator";
 
 interface OnboardingFormData {
   // Personal Info
@@ -319,7 +323,9 @@ export function ClientOnboardingPage() {
             values.confirmEmail !== values.email
               ? "Los emails no coinciden"
               : null,
-          password: values.password.length < 8 ? "Mínimo 8 caracteres" : null,
+          password: isStrongPassword(values.password)
+            ? null
+            : "Mínimo 8 caracteres con mayúscula, minúscula y número",
         };
       }
       if (active === 1) {
@@ -810,13 +816,16 @@ export function ClientOnboardingPage() {
                     : undefined
                 }
               />
-              <PasswordInput
-                label="Contraseña"
-                placeholder="Mínimo 8 caracteres"
-                required
-                leftSection={<IconLock size={16} />}
-                {...form.getInputProps("password")}
-              />
+              <Box>
+                <PasswordInput
+                  label="Contraseña"
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  leftSection={<IconLock size={16} />}
+                  {...form.getInputProps("password")}
+                />
+                <PasswordRulesIndicator value={form.values.password} />
+              </Box>
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <TextInput
                   label="Teléfono"

@@ -40,10 +40,12 @@ import {
   IconSwitch,
   IconTrash,
   IconTrendingUp,
+  IconX,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import {
+  type BoxAllocation,
   type StockItem,
   useStockItems,
   useStockCategories,
@@ -155,6 +157,7 @@ export function StockPage() {
       movement_type: "entry" as string,
       quantity: 0,
       reason: "",
+      box_id: null as string | null,
     },
     validate: {
       quantity: (v) => (v > 0 ? null : "Cantidad debe ser mayor a 0"),
@@ -163,11 +166,18 @@ export function StockPage() {
   });
 
   const [newCatName, setNewCatName] = useState("");
+  const [boxAllocations, setBoxAllocations] = useState<BoxAllocation[]>([]);
+
+  const totalAllocatedStock = useMemo(
+    () => boxAllocations.reduce((acc, b) => acc + (Number(b.current_stock) || 0), 0),
+    [boxAllocations]
+  );
 
   const handleOpenCreate = () => {
     setEditMode(false);
     setSelectedItem(null);
     itemForm.reset();
+    setBoxAllocations([]);
     openItemModal();
   };
 
@@ -189,6 +199,15 @@ export function StockPage() {
       box_id: item.box_id || null,
       supplier_id: item.supplier_id || null,
     });
+    setBoxAllocations(
+      (item.box_allocations || []).map((a) => ({
+        box_id: a.box_id,
+        box_name: a.box_name ?? null,
+        current_stock: Number(a.current_stock) || 0,
+        min_stock: Number(a.min_stock) || 0,
+        max_stock: Number(a.max_stock) || 0,
+      }))
+    );
     openItemModal();
   };
 
@@ -209,21 +228,41 @@ export function StockPage() {
   };
 
   const handleItemSubmit = itemForm.onSubmit((values) => {
-    const payload = {
+    const cleanedAllocations = boxAllocations
+      .filter((a) => a.box_id)
+      .map((a) => ({
+        box_id: a.box_id,
+        current_stock: Number(a.current_stock) || 0,
+        min_stock: Number(a.min_stock) || 0,
+        max_stock: Number(a.max_stock) || 0,
+      }));
+    const payload: Partial<StockItem> & {
+      category_id?: string;
+      box_id?: string | null;
+      supplier_id?: string | null;
+      box_allocations?: typeof cleanedAllocations;
+      current_stock?: number;
+    } = {
       ...values,
       category_id: values.category_id || undefined,
       box_id: values.box_id || null,
       supplier_id: values.supplier_id || null,
     };
+    if (cleanedAllocations.length > 0) {
+      payload.box_allocations = cleanedAllocations;
+      payload.current_stock = cleanedAllocations.reduce((acc, b) => acc + b.current_stock, 0);
+    } else {
+      payload.box_allocations = [];
+    }
     if (editMode && selectedItem) {
       updateItem.mutate(
         { id: selectedItem.id, ...payload },
-        { onSuccess: () => { closeItemModal(); } }
+        { onSuccess: () => { closeItemModal(); setBoxAllocations([]); } }
       );
     } else {
       createItem.mutate(
         payload,
-        { onSuccess: () => { closeItemModal(); itemForm.reset(); } }
+        { onSuccess: () => { closeItemModal(); itemForm.reset(); setBoxAllocations([]); } }
       );
     }
   });
@@ -351,6 +390,11 @@ export function StockPage() {
                   <Table.Td style={{ textAlign: "right" }}>
                     <Text size="sm" fw={600}>{item.current_stock} {item.unit}</Text>
                     <Text size="xs" c="dimmed">min: {item.min_stock} / max: {item.max_stock}</Text>
+                    {item.box_allocations && item.box_allocations.length > 0 && (
+                      <Text size="xs" c="blue">
+                        {item.box_allocations.length} box{item.box_allocations.length > 1 ? "es" : ""}
+                      </Text>
+                    )}
                   </Table.Td>
                   <Table.Td style={{ textAlign: "right" }}>
                     <Text size="sm">{item.price.toFixed(2)} €</Text>
@@ -451,17 +495,137 @@ export function StockPage() {
               <NumberInput label="IRPF (%)" min={0} max={100} {...itemForm.getInputProps("irpf_rate")} />
             </Group>
             <TextInput label="Ubicación" placeholder="Almacén, estantería..." {...itemForm.getInputProps("location")} />
-            <Select
-              label="Box"
-              placeholder="Selecciona un box"
-              description="Asigna este stock a uno de tus boxes"
-              data={boxOptions}
-              searchable
-              clearable
-              nothingFoundMessage="No hay boxes creados"
-              value={itemForm.values.box_id}
-              onChange={(val) => itemForm.setFieldValue("box_id", val)}
-            />
+            <Paper p="sm" radius="md" withBorder>
+              <Stack gap="xs">
+                <Group justify="space-between" align="center">
+                  <div>
+                    <Text fw={600} size="sm">Distribución por boxes</Text>
+                    <Text size="xs" c="dimmed">
+                      Asigna unidades a uno o varios boxes. Si no asignas ninguno se usará el stock global del item.
+                    </Text>
+                  </div>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    leftSection={<IconPlus size={12} />}
+                    disabled={boxOptions.length === 0}
+                    onClick={() => {
+                      const used = new Set(boxAllocations.map((a) => a.box_id));
+                      const next = boxOptions.find((b) => !used.has(b.value));
+                      setBoxAllocations((prev) => [
+                        ...prev,
+                        {
+                          box_id: next?.value || "",
+                          box_name: next?.label || null,
+                          current_stock: 0,
+                          min_stock: 0,
+                          max_stock: 0,
+                        },
+                      ]);
+                    }}
+                  >
+                    Añadir box
+                  </Button>
+                </Group>
+
+                {boxAllocations.length === 0 ? (
+                  <Text size="xs" c="dimmed" ta="center" py="xs">
+                    Sin distribución por boxes (modo legacy con stock único).
+                  </Text>
+                ) : (
+                  <Stack gap="xs">
+                    {boxAllocations.map((alloc, idx) => (
+                      <Group key={idx} gap="xs" align="flex-end" wrap="nowrap">
+                        <Select
+                          label={idx === 0 ? "Box" : undefined}
+                          placeholder="Box"
+                          data={boxOptions}
+                          searchable
+                          value={alloc.box_id || null}
+                          onChange={(val) =>
+                            setBoxAllocations((prev) =>
+                              prev.map((a, i) =>
+                                i === idx
+                                  ? {
+                                      ...a,
+                                      box_id: val || "",
+                                      box_name:
+                                        boxOptions.find((b) => b.value === val)?.label || null,
+                                    }
+                                  : a
+                              )
+                            )
+                          }
+                          style={{ flex: 1 }}
+                          size="xs"
+                        />
+                        <NumberInput
+                          label={idx === 0 ? "Unidades" : undefined}
+                          min={0}
+                          value={alloc.current_stock}
+                          onChange={(val) =>
+                            setBoxAllocations((prev) =>
+                              prev.map((a, i) =>
+                                i === idx ? { ...a, current_stock: Number(val) || 0 } : a
+                              )
+                            )
+                          }
+                          size="xs"
+                          w={110}
+                        />
+                        <NumberInput
+                          label={idx === 0 ? "Mín" : undefined}
+                          min={0}
+                          value={alloc.min_stock}
+                          onChange={(val) =>
+                            setBoxAllocations((prev) =>
+                              prev.map((a, i) =>
+                                i === idx ? { ...a, min_stock: Number(val) || 0 } : a
+                              )
+                            )
+                          }
+                          size="xs"
+                          w={80}
+                        />
+                        <NumberInput
+                          label={idx === 0 ? "Máx" : undefined}
+                          min={0}
+                          value={alloc.max_stock}
+                          onChange={(val) =>
+                            setBoxAllocations((prev) =>
+                              prev.map((a, i) =>
+                                i === idx ? { ...a, max_stock: Number(val) || 0 } : a
+                              )
+                            )
+                          }
+                          size="xs"
+                          w={80}
+                        />
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          size="lg"
+                          onClick={() =>
+                            setBoxAllocations((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          title="Eliminar"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      </Group>
+                    ))}
+                    <Group justify="space-between" pt="xs">
+                      <Text size="xs" c="dimmed">
+                        Total asignado a boxes
+                      </Text>
+                      <Badge variant="light" color="blue">
+                        {totalAllocatedStock.toFixed(0)} {itemForm.values.unit}
+                      </Badge>
+                    </Group>
+                  </Stack>
+                )}
+              </Stack>
+            </Paper>
             <Select
               label="Proveedor"
               placeholder="Selecciona un proveedor"
@@ -516,6 +680,22 @@ export function StockPage() {
                 <Text fw={600}>{detailItem.location || "—"}</Text>
               </Paper>
             </Group>
+
+            {detailItem.box_allocations && detailItem.box_allocations.length > 0 && (
+              <>
+                <Divider label="Distribución por boxes" labelPosition="center" />
+                <Stack gap={4}>
+                  {detailItem.box_allocations.map((a) => (
+                    <Group key={a.box_id} justify="space-between">
+                      <Text size="sm" fw={500}>{a.box_name || "Box"}</Text>
+                      <Badge variant="light" color="blue">
+                        {a.current_stock} {detailItem.unit}
+                      </Badge>
+                    </Group>
+                  ))}
+                </Stack>
+              </>
+            )}
 
             <Divider label="Productos / Servicios vinculados" labelPosition="center" />
 
@@ -590,6 +770,19 @@ export function StockPage() {
                 ]}
                 {...movementForm.getInputProps("movement_type")}
               />
+              {movementItem.box_allocations && movementItem.box_allocations.length > 0 && (
+                <Select
+                  label="Box (opcional)"
+                  description="Si seleccionas un box, el movimiento se aplica sólo a ese box."
+                  placeholder="Aplicar al stock global"
+                  data={movementItem.box_allocations.map((a) => ({
+                    value: a.box_id,
+                    label: `${a.box_name || "Box"} · ${a.current_stock} ${movementItem.unit}`,
+                  }))}
+                  clearable
+                  {...movementForm.getInputProps("box_id")}
+                />
+              )}
               <NumberInput
                 label="Cantidad"
                 min={0}

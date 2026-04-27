@@ -2,6 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import api from "../services/api";
 
+export interface BoxAllocation {
+  box_id: string;
+  box_name?: string | null;
+  current_stock: number;
+  min_stock: number;
+  max_stock: number;
+}
+
 export interface StockItem {
   id: string;
   name: string;
@@ -19,6 +27,7 @@ export interface StockItem {
   is_active: boolean;
   box_id?: string | null;
   supplier_id?: string | null;
+  box_allocations?: BoxAllocation[];
   created_at: string;
 }
 
@@ -119,13 +128,34 @@ export function useDeleteStockItem() {
 export function useRegisterMovement() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ itemId, ...data }: { itemId: string; movement_type: string; quantity: number; reason: string }) =>
+    mutationFn: async ({ itemId, ...data }: { itemId: string; movement_type: string; quantity: number; reason: string; box_id?: string | null }) =>
       (await api.post(`/stock/items/${itemId}/movements`, data)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-items"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
       qc.invalidateQueries({ queryKey: ["stock-movements"] });
       notifications.show({ title: "Movimiento registrado", message: "El stock se ha actualizado", color: "green" });
+    },
+  });
+}
+
+export function useBoxAllocations(itemId?: string) {
+  return useQuery<BoxAllocation[]>({
+    queryKey: ["stock-box-allocations", itemId],
+    queryFn: async () => (await api.get(`/stock/items/${itemId}/boxes`)).data,
+    enabled: !!itemId,
+  });
+}
+
+export function useUpdateBoxAllocations() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemId, allocations }: { itemId: string; allocations: BoxAllocation[] }) =>
+      (await api.put(`/stock/items/${itemId}/boxes`, allocations)).data,
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["stock-items"] });
+      qc.invalidateQueries({ queryKey: ["stock-summary"] });
+      qc.invalidateQueries({ queryKey: ["stock-box-allocations", vars.itemId] });
     },
   });
 }

@@ -886,16 +886,26 @@ async def get_client_photos(
                 raw_photos.append((m, photo))
 
     resolved = await resolve_urls([p["url"] for _, p in raw_photos])
-    return [
-        ClientPhotoResponse(
-            url=presigned,
-            type=photo.get("type", "unknown"),
-            notes=photo.get("notes"),
-            uploaded_at=photo.get("uploaded_at", ""),
-            measurement_date=m.measured_at.isoformat() if m.measured_at else None,
+    output: list[ClientPhotoResponse] = []
+    for (m, photo), presigned in zip(raw_photos, resolved):
+        if not presigned:
+            continue
+        # Si resolve_url devolvió la URL original sin presignar y NO pertenece
+        # a un bucket R2 conocido, la consideramos inválida (legado, Supabase
+        # antiguo, etc.) para evitar que el frontend cargue imágenes rotas.
+        raw_url = photo.get("url") or ""
+        if presigned == raw_url and "r2.cloudflarestorage.com" not in presigned and "trackfiz" not in presigned:
+            continue
+        output.append(
+            ClientPhotoResponse(
+                url=presigned,
+                type=photo.get("type", "unknown"),
+                notes=photo.get("notes"),
+                uploaded_at=photo.get("uploaded_at", ""),
+                measurement_date=m.measured_at.isoformat() if m.measured_at else None,
+            )
         )
-        for (m, photo), presigned in zip(raw_photos, resolved)
-    ]
+    return output
 
 
 @router.get("/{client_id}/progress-summary")

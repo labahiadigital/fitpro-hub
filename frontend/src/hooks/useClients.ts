@@ -352,7 +352,12 @@ export function useClientPhotos(
     queryFn: async () => clientsApi.getPhotos(clientId, limit),
     select: (response) => response.data as ClientPhoto[],
     enabled: !!clientId && !clientId.startsWith("demo-") && extraEnabled,
-    staleTime: 60 * 1000,
+    // Las URLs presignadas de R2 expiran en ~15 min: refrescamos antes para
+    // evitar 400/403 al cargar imágenes después de un rato sin volver al
+    // tab. ``gcTime`` también se acota para que no se sirvan URLs viejas.
+    staleTime: 8 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 

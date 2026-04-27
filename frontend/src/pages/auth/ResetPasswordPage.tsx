@@ -19,6 +19,10 @@ import {
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { authApi } from "../../services/api";
+import {
+  PasswordRulesIndicator,
+  passwordValidator,
+} from "../../components/common/PasswordRulesIndicator";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -34,7 +38,7 @@ export function ResetPasswordPage() {
       confirmPassword: "",
     },
     validate: {
-      password: (value) => (value.length >= 8 ? null : "Mínimo 8 caracteres"),
+      password: passwordValidator,
       confirmPassword: (value, values) =>
         value === values.password ? null : "Las contraseñas no coinciden",
     },
@@ -282,14 +286,17 @@ export function ResetPasswordPage() {
               </Text>
             </Box>
 
-            <PasswordInput
-              label="Nueva contraseña"
-              placeholder="Mínimo 8 caracteres"
-              required
-              leftSection={<IconLock size={18} />}
-              styles={inputStyles}
-              {...form.getInputProps("password")}
-            />
+            <Box>
+              <PasswordInput
+                label="Nueva contraseña"
+                placeholder="Mínimo 8 caracteres"
+                required
+                leftSection={<IconLock size={18} />}
+                styles={inputStyles}
+                {...form.getInputProps("password")}
+              />
+              <PasswordRulesIndicator value={form.values.password} dark />
+            </Box>
 
             <PasswordInput
               label="Confirmar contraseña"

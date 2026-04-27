@@ -43,6 +43,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { notifications } from "@mantine/notifications";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
+import {
+  PasswordRulesIndicator,
+  passwordValidator,
+} from "../../components/common/PasswordRulesIndicator";
 
 interface SubscriptionPayment {
   id: string;
@@ -585,8 +589,7 @@ export function MyProfilePage() {
     },
     validate: {
       current_password: (v) => (!v ? "Introduce tu contraseña actual" : null),
-      new_password: (v) =>
-        !v ? "Introduce la nueva contraseña" : v.length < 6 ? "Mínimo 6 caracteres" : null,
+      new_password: passwordValidator,
       confirm_password: (v, values) =>
         v !== values.new_password ? "Las contraseñas no coinciden" : null,
     },
@@ -827,11 +830,14 @@ export function MyProfilePage() {
               placeholder="Tu contraseña actual"
               {...changePasswordForm.getInputProps("current_password")}
             />
-            <PasswordInput
-              label="Nueva contraseña"
-              placeholder="Mínimo 6 caracteres"
-              {...changePasswordForm.getInputProps("new_password")}
-            />
+            <Box>
+              <PasswordInput
+                label="Nueva contraseña"
+                placeholder="Mínimo 8 caracteres"
+                {...changePasswordForm.getInputProps("new_password")}
+              />
+              <PasswordRulesIndicator value={changePasswordForm.values.new_password} />
+            </Box>
             <PasswordInput
               label="Confirmar contraseña"
               placeholder="Repite la nueva contraseña"

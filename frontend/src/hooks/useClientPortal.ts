@@ -919,7 +919,11 @@ export function useProgressPhotos(limit = 50, options?: { enabled?: boolean }) {
       return response.data;
     },
     enabled: options?.enabled ?? true,
-    staleTime: 60 * 1000,
+    // Las URLs presignadas de R2 expiran en ~15 min; refrescamos antes de
+    // que caduquen para evitar errores 400/403 al cargar las imágenes.
+    staleTime: 8 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 
