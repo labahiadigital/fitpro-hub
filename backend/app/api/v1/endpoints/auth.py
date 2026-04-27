@@ -823,6 +823,12 @@ async def reset_password(
             ) from ve
 
         try:
+            # Al completar el reset-password damos por hecho que el usuario
+            # tiene control real del buzón (ha podido abrir el enlace que le
+            # enviamos), así que aprovechamos para marcar el email como
+            # verificado. Esto evita el bucle "no puedo entrar porque mi
+            # email no está verificado" cuando el correo de verificación
+            # original se perdió o nunca llegó.
             await db.execute(
                 update(User)
                 .where(User.id == user_id)
@@ -830,6 +836,9 @@ async def reset_password(
                     password_hash=new_hash,
                     password_reset_token=None,
                     password_reset_sent_at=None,
+                    email_verified=True,
+                    email_verification_token=None,
+                    email_verification_sent_at=None,
                 )
                 .execution_options(synchronize_session=False)
             )

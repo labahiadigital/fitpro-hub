@@ -4254,6 +4254,28 @@ export function ClientDetailPage() {
                 {...editClientForm.getInputProps("billing_postal_code")}
               />
             </Group>
+            <Select
+              label="País"
+              placeholder="Selecciona el país del cliente"
+              radius="md"
+              searchable
+              data={[
+                { value: "Andorra", label: "Andorra" },
+                { value: "España", label: "España" },
+                { value: "Portugal", label: "Portugal" },
+                { value: "Francia", label: "Francia" },
+                { value: "Italia", label: "Italia" },
+                { value: "Alemania", label: "Alemania" },
+                { value: "Reino Unido", label: "Reino Unido" },
+                { value: "Estados Unidos", label: "Estados Unidos" },
+                { value: "México", label: "México" },
+                { value: "Argentina", label: "Argentina" },
+                { value: "Chile", label: "Chile" },
+                { value: "Colombia", label: "Colombia" },
+              ]}
+              description="Determina la fiscalidad de las facturas (IGI 4,5% sólo en Andorra)"
+              {...editClientForm.getInputProps("billing_country")}
+            />
 
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeEditClientModal} radius="xl">

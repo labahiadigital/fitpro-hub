@@ -36,6 +36,51 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+async def _client_to_response(client: Client) -> ClientResponse:
+    """Serializa un Client a ClientResponse incluyendo TODOS los campos
+    (incluidos los fiscales). Centralizar aquí evita olvidarlos en alguno
+    de los endpoints (regresión histórica con tax_id / billing_*).
+
+    Los `tags` se incluyen sólo si están cargados (selectinload). Si no,
+    se devuelve [] sin disparar lazy-loading que rompa en async.
+    """
+    try:
+        tags = list(client.tags) if "tags" in client.__dict__ else []
+    except Exception:  # noqa: BLE001
+        tags = []
+    return ClientResponse(
+        id=client.id,
+        workspace_id=client.workspace_id,
+        first_name=client.first_name,
+        last_name=client.last_name,
+        full_name=client.full_name,
+        email=client.email,
+        phone=client.phone,
+        avatar_url=await resolve_url(client.avatar_url),
+        birth_date=client.birth_date,
+        gender=client.gender,
+        height_cm=client.height_cm,
+        weight_kg=client.weight_kg,
+        health_data=client.health_data,
+        goals=client.goals,
+        consents=client.consents,
+        is_active=client.is_active,
+        chat_enabled=getattr(client, "chat_enabled", False) or False,
+        tax_id=client.tax_id,
+        billing_address=client.billing_address,
+        billing_city=client.billing_city,
+        billing_postal_code=client.billing_postal_code,
+        billing_country=client.billing_country,
+        tags=[
+            ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at)
+            for t in tags
+        ],
+        deleted_at=client.deleted_at,
+        created_at=client.created_at,
+        updated_at=client.updated_at,
+    )
+
+
 # Schemas para medidas (usados por el entrenador)
 class ClientMeasurementResponse(BaseModel):
     id: UUID
@@ -403,28 +448,7 @@ async def create_client(
     except Exception as e:
         logger.warning("Could not send validation email to new client %s: %s", client.email, e)
 
-    return ClientResponse(
-        id=client.id,
-        workspace_id=client.workspace_id,
-        first_name=client.first_name,
-        last_name=client.last_name,
-        full_name=client.full_name,
-        email=client.email,
-        phone=client.phone,
-        avatar_url=await resolve_url(client.avatar_url),
-        birth_date=client.birth_date,
-        gender=client.gender,
-        height_cm=client.height_cm,
-        weight_kg=client.weight_kg,
-        health_data=client.health_data,
-        goals=client.goals,
-        consents=client.consents,
-        is_active=client.is_active,
-        chat_enabled=getattr(client, 'chat_enabled', False) or False,
-        tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
-        created_at=client.created_at,
-        updated_at=client.updated_at
-    )
+    return await _client_to_response(client)
 
 
 ## ============ INVITATIONS (must be before /{client_id} to avoid path conflict) ============
@@ -487,29 +511,8 @@ async def get_client(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Cliente no encontrado"
         )
-    
-    return ClientResponse(
-        id=client.id,
-        workspace_id=client.workspace_id,
-        first_name=client.first_name,
-        last_name=client.last_name,
-        full_name=client.full_name,
-        email=client.email,
-        phone=client.phone,
-        avatar_url=await resolve_url(client.avatar_url),
-        birth_date=client.birth_date,
-        gender=client.gender,
-        height_cm=client.height_cm,
-        weight_kg=client.weight_kg,
-        health_data=client.health_data,
-        goals=client.goals,
-        consents=client.consents,
-        is_active=client.is_active,
-        chat_enabled=getattr(client, 'chat_enabled', False) or False,
-        tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
-        created_at=client.created_at,
-        updated_at=client.updated_at
-    )
+
+    return await _client_to_response(client)
 
 
 @router.put("/{client_id}", response_model=ClientResponse)
@@ -565,29 +568,8 @@ async def update_client(
     
     await db.commit()
     await db.refresh(client)
-    
-    return ClientResponse(
-        id=client.id,
-        workspace_id=client.workspace_id,
-        first_name=client.first_name,
-        last_name=client.last_name,
-        full_name=client.full_name,
-        email=client.email,
-        phone=client.phone,
-        avatar_url=await resolve_url(client.avatar_url),
-        birth_date=client.birth_date,
-        gender=client.gender,
-        height_cm=client.height_cm,
-        weight_kg=client.weight_kg,
-        health_data=client.health_data,
-        goals=client.goals,
-        consents=client.consents,
-        is_active=client.is_active,
-        chat_enabled=getattr(client, 'chat_enabled', False) or False,
-        tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
-        created_at=client.created_at,
-        updated_at=client.updated_at
-    )
+
+    return await _client_to_response(client)
 
 
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -671,32 +653,7 @@ async def restore_client(
     await db.commit()
     await db.refresh(client)
 
-    return ClientResponse(
-        id=client.id,
-        workspace_id=client.workspace_id,
-        first_name=client.first_name,
-        last_name=client.last_name,
-        email=client.email,
-        phone=client.phone,
-        avatar_url=client.avatar_url,
-        tax_id=client.tax_id,
-        billing_address=client.billing_address,
-        billing_city=client.billing_city,
-        billing_postal_code=client.billing_postal_code,
-        billing_country=client.billing_country,
-        birth_date=client.birth_date,
-        gender=client.gender,
-        height_cm=client.height_cm,
-        weight_kg=client.weight_kg,
-        health_data=client.health_data,
-        goals=client.goals,
-        consents=client.consents,
-        is_active=client.is_active,
-        chat_enabled=getattr(client, 'chat_enabled', False) or False,
-        tags=[ClientTagResponse(id=t.id, name=t.name, color=t.color, created_at=t.created_at) for t in client.tags],
-        created_at=client.created_at,
-        updated_at=client.updated_at
-    )
+    return await _client_to_response(client)
 
 
 # ============ ONBOARDING ============
@@ -783,29 +740,7 @@ async def complete_onboarding(
         await db.commit()
         await db.refresh(client)
     
-    # Return response
-    return ClientResponse(
-        id=client.id,
-        workspace_id=client.workspace_id,
-        first_name=client.first_name,
-        last_name=client.last_name,
-        full_name=client.full_name,
-        email=client.email,
-        phone=client.phone,
-        avatar_url=await resolve_url(client.avatar_url),
-        birth_date=client.birth_date,
-        gender=client.gender,
-        height_cm=client.height_cm,
-        weight_kg=client.weight_kg,
-        health_data=client.health_data or {},
-        goals=client.goals,
-        consents=client.consents or {},
-        is_active=client.is_active,
-        chat_enabled=getattr(client, 'chat_enabled', False) or False,
-        tags=[],
-        created_at=client.created_at,
-        updated_at=client.updated_at
-    )
+    return await _client_to_response(client)
 
 
 # ============ CLIENT MEASUREMENTS (Staff access) ============

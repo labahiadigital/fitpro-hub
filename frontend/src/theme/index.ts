@@ -1,4 +1,6 @@
 import { createTheme, type MantineColorsTuple } from "@mantine/core";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
+import { createElement } from "react";
 
 // TrackFiz Professional SaaS Color Palette
 // Primary/Accent (Highlights, CTAs): #E7E247 (Bright Yellow)
@@ -157,6 +159,13 @@ export const theme = createTheme({
     PasswordInput: {
       defaultProps: {
         radius: "md",
+        // Forzamos el "ojito" para mostrar/ocultar la contraseña en TODOS
+        // los formularios de la app (login, registro, reset, onboarding,
+        // ajustes, etc.). Mantine ya trae visibility toggle, pero algunos
+        // estilos custom de ciertas páginas lo dejaban casi invisible: aquí
+        // damos un icono explícito y consistente.
+        visibilityToggleIcon: ({ reveal }: { reveal: boolean }) =>
+          createElement(reveal ? IconEyeOff : IconEye, { size: 18, stroke: 1.6 }),
       },
     },
     Select: {
