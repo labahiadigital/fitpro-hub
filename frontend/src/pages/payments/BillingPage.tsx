@@ -542,10 +542,32 @@ export function BillingPage() {
         message: `Se ha descargado la factura ${invoiceNumber}.`,
       });
     } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-        "No se pudo generar la factura. Revisa tu configuración de facturación.";
-      notifications.show({ color: "red", title: "Error al generar factura", message: detail });
+      // Como la respuesta es blob, axios no parsea automáticamente el JSON
+      // de error: intentamos leer el blob como texto/JSON para extraer el
+      // detail que devuelve el backend.
+      let detail: string | null = null;
+      const response = (err as { response?: { data?: unknown } })?.response;
+      const data = response?.data;
+      if (data instanceof Blob) {
+        try {
+          const text = await data.text();
+          try {
+            const parsed = JSON.parse(text) as { detail?: string };
+            detail = parsed?.detail || null;
+          } catch {
+            detail = text || null;
+          }
+        } catch {
+          detail = null;
+        }
+      } else if (data && typeof data === "object" && "detail" in (data as Record<string, unknown>)) {
+        detail = String((data as { detail?: unknown }).detail || "") || null;
+      }
+      notifications.show({
+        color: "red",
+        title: "Error al generar factura",
+        message: detail || "No se pudo generar la factura. Revisa tu configuración de facturación.",
+      });
     } finally {
       setInvoiceLoadingPaymentId(null);
     }

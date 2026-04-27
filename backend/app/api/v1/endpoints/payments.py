@@ -839,24 +839,55 @@ async def download_payment_invoice_pdf(
     user_id_value = getattr(current_user, "user_id", None) or getattr(getattr(current_user, "user", None), "id", None)
     user_name_value = getattr(getattr(current_user, "user", current_user), "full_name", None)
 
-    invoice = await _get_or_create_invoice_for_payment(
-        db, payment,
-        user_id=user_id_value,
-        user_name=user_name_value,
-    )
+    try:
+        invoice = await _get_or_create_invoice_for_payment(
+            db, payment,
+            user_id=user_id_value,
+            user_name=user_name_value,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # Aseguramos que la sesión queda limpia para que el resto de la
+        # request (no la habrá, pero por si acaso) no arrastre el estado roto.
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+        logger.exception(
+            "Error creando/recuperando factura para cobro %s: %s",
+            payment.id, exc,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "No se pudo emitir la factura. "
+                f"Detalle técnico: {type(exc).__name__}: {exc}"
+            ),
+        )
 
     settings_q = await db.execute(
         select(InvoiceSettings).where(InvoiceSettings.workspace_id == payment.workspace_id)
     )
     invoice_settings = settings_q.scalar_one_or_none()
 
-    generator = InvoicePDFGenerator()
-    pdf_bytes = generator.generate(
-        invoice=_invoice_to_pdf_dict(invoice),
-        items=_items_to_pdf_dicts(invoice.items or []),
-        settings=_invoice_settings_to_pdf_dict(invoice_settings),
-        qr_data=invoice.verifactu_qr_data,
-    )
+    try:
+        generator = InvoicePDFGenerator()
+        pdf_bytes = generator.generate(
+            invoice=_invoice_to_pdf_dict(invoice),
+            items=_items_to_pdf_dicts(invoice.items or []),
+            settings=_invoice_settings_to_pdf_dict(invoice_settings),
+            qr_data=invoice.verifactu_qr_data,
+        )
+    except Exception as exc:
+        logger.exception("Error generando PDF de factura %s: %s", invoice.invoice_number, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "No se pudo generar el PDF de la factura. "
+                f"Detalle técnico: {type(exc).__name__}: {exc}"
+            ),
+        )
 
     filename = f"Factura_{(invoice.invoice_number or 'sin_numero').replace('/', '-')}.pdf"
     return StreamingResponse(

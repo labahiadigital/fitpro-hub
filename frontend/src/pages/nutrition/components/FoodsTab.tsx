@@ -4,6 +4,7 @@ import {
   Box,
   Center,
   Group,
+  Image,
   Loader,
   Pagination,
   SegmentedControl,
@@ -208,6 +209,29 @@ export function FoodsTab({
               const CategoryIcon = getCategoryIcon(food.category);
               return (
                 <Box key={food.id} className="food-card">
+                  {food.image_url ? (
+                    <Box
+                      h={120}
+                      mb="sm"
+                      style={{
+                        background: "var(--nv-surface-subtle)",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Image
+                        src={food.image_url}
+                        alt={food.name}
+                        h={120}
+                        w="100%"
+                        fit="cover"
+                        fallbackSrc={undefined}
+                      />
+                    </Box>
+                  ) : null}
                   <Box className="food-card-header">
                     <Box
                       className="food-card-icon"

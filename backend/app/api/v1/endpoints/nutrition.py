@@ -37,8 +37,9 @@ class FoodResponse(BaseModel):
     carbs_g: Optional[Decimal] = None
     fat_g: Optional[Decimal] = None
     fiber_g: Optional[Decimal] = None
+    image_url: Optional[str] = None
     is_global: bool = False
-    
+
     class Config:
         from_attributes = True
 

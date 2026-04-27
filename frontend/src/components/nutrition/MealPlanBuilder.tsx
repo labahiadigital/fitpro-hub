@@ -96,6 +96,7 @@ export interface Food {
   fat: number;
   serving_size: string;
   category: string;
+  image_url?: string | null;
   is_global?: boolean;
 }
 

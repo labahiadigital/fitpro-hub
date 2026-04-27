@@ -7,6 +7,7 @@ import io
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
+from html import escape as _html_escape
 from typing import Any, Dict, List, Optional
 
 
@@ -16,6 +17,18 @@ def _d(val: Any) -> Decimal:
 
 def _fmt(val: Any) -> str:
     return f"{_d(val):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _esc(value: Any) -> str:
+    """Escapa strings para que reportlab.Paragraph no rompa con <, >, &.
+
+    Conserva saltos de línea convirtiéndolos a <br/> para mantener el
+    formato del texto multilinea (footer, condiciones, notas, etc).
+    """
+    if value is None:
+        return ""
+    text = _html_escape(str(value), quote=False)
+    return text.replace("\r\n", "\n").replace("\n", "<br/>")
 
 
 class InvoicePDFGenerator:
@@ -138,27 +151,27 @@ class InvoicePDFGenerator:
         issuer_lines = []
         if settings:
             if settings.get("business_name"):
-                issuer_lines.append(f"<b>{settings['business_name']}</b>")
+                issuer_lines.append(f"<b>{_esc(settings['business_name'])}</b>")
             if settings.get("tax_id"):
-                issuer_lines.append(f"NIF/CIF: {settings['tax_id']}")
+                issuer_lines.append(f"NIF/CIF: {_esc(settings['tax_id'])}")
             addr_parts = [p for p in [settings.get("address"), settings.get("postal_code"), settings.get("city"), settings.get("province")] if p]
             if addr_parts:
-                issuer_lines.append(", ".join(addr_parts))
+                issuer_lines.append(_esc(", ".join(addr_parts)))
             if settings.get("phone"):
-                issuer_lines.append(f"Tel: {settings['phone']}")
+                issuer_lines.append(f"Tel: {_esc(settings['phone'])}")
             if settings.get("email"):
-                issuer_lines.append(settings["email"])
+                issuer_lines.append(_esc(settings["email"]))
 
         client_lines = []
         if invoice.get("client_name"):
-            client_lines.append(f"<b>{invoice['client_name']}</b>")
+            client_lines.append(f"<b>{_esc(invoice['client_name'])}</b>")
         if invoice.get("client_tax_id"):
-            client_lines.append(f"NIF/CIF: {invoice['client_tax_id']}")
+            client_lines.append(f"NIF/CIF: {_esc(invoice['client_tax_id'])}")
         addr_parts = [p for p in [invoice.get("client_address"), invoice.get("client_postal_code"), invoice.get("client_city")] if p]
         if addr_parts:
-            client_lines.append(", ".join(addr_parts))
+            client_lines.append(_esc(", ".join(addr_parts)))
         if invoice.get("client_email"):
-            client_lines.append(invoice["client_email"])
+            client_lines.append(_esc(invoice["client_email"]))
 
         parties_data = [
             [Paragraph("EMISOR", s_heading), Paragraph("CLIENTE", s_heading)],
@@ -183,9 +196,9 @@ class InvoicePDFGenerator:
             due_date = due_date.strftime("%d/%m/%Y")
 
         dates_data = [[
-            Paragraph(f"<b>Fecha emisión:</b> {issue_date}", s_body),
-            Paragraph(f"<b>Fecha vencimiento:</b> {due_date or '—'}", s_body),
-            Paragraph(f"<b>Método de pago:</b> {invoice.get('payment_method', '—') or '—'}", s_body),
+            Paragraph(f"<b>Fecha emisión:</b> {_esc(issue_date)}", s_body),
+            Paragraph(f"<b>Fecha vencimiento:</b> {_esc(due_date) or '—'}", s_body),
+            Paragraph(f"<b>Método de pago:</b> {_esc(invoice.get('payment_method')) or '—'}", s_body),
         ]]
         dates_table = Table(dates_data, colWidths=[doc.width / 3] * 3)
         dates_table.setStyle(TableStyle([
@@ -220,7 +233,7 @@ class InvoicePDFGenerator:
             total = _d(item.get("total", 0))
 
             table_data.append([
-                Paragraph(item.get("description", ""), s_body),
+                Paragraph(_esc(item.get("description", "")), s_body),
                 Paragraph(f"{qty:.0f}" if qty == int(qty) else f"{qty:.2f}", ParagraphStyle("ic", parent=s_body, alignment=TA_CENTER)),
                 Paragraph(f"{_fmt(price)} €", s_body_r),
                 Paragraph(tax_str, ParagraphStyle("ic2", parent=s_body, alignment=TA_CENTER)),
@@ -312,8 +325,8 @@ class InvoicePDFGenerator:
         if settings and settings.get("bank_account"):
             bank_info = []
             if settings.get("bank_name"):
-                bank_info.append(f"<b>Banco:</b> {settings['bank_name']}")
-            bank_info.append(f"<b>IBAN:</b> {settings['bank_account']}")
+                bank_info.append(f"<b>Banco:</b> {_esc(settings['bank_name'])}")
+            bank_info.append(f"<b>IBAN:</b> {_esc(settings['bank_account'])}")
             elements.append(Paragraph("Datos bancarios para transferencia", s_heading))
             elements.append(Paragraph("<br/>".join(bank_info), s_body))
             elements.append(Spacer(1, 0.3 * cm))
@@ -321,7 +334,7 @@ class InvoicePDFGenerator:
         # ----- NOTES -----
         if invoice.get("notes"):
             elements.append(Paragraph("Observaciones", s_heading))
-            elements.append(Paragraph(invoice["notes"], s_body))
+            elements.append(Paragraph(_esc(invoice["notes"]), s_body))
             elements.append(Spacer(1, 0.3 * cm))
 
         # ----- QR CODE + VERIFACTU FOOTER -----
@@ -333,7 +346,12 @@ class InvoicePDFGenerator:
                 qr.make(fit=True)
                 qr_img = qr.make_image(fill_color="black", back_color="white")
                 qr_buf = io.BytesIO()
-                qr_img.save(qr_buf)
+                # Pillow exige format cuando se guarda en BytesIO sin extensión.
+                try:
+                    qr_img.save(qr_buf, format="PNG")
+                except TypeError:
+                    # qrcode>=7 devuelve PilImage cuyo save no acepta format kw
+                    qr_img.save(qr_buf)
                 qr_buf.seek(0)
 
                 qr_table_data = [[
@@ -356,15 +374,19 @@ class InvoicePDFGenerator:
                 elements.append(qr_table)
             except ImportError:
                 elements.append(Paragraph("<i>QR no disponible (instalar qrcode)</i>", s_small_c))
+            except Exception:
+                # No queremos que un fallo del QR rompa el PDF entero.
+                import logging as _logging
+                _logging.getLogger(__name__).exception("Error generando QR de VeriFactu, se omite del PDF")
 
         # ----- CUSTOM FOOTER -----
         if settings and settings.get("footer_text"):
             elements.append(Spacer(1, 0.4 * cm))
-            elements.append(Paragraph(settings["footer_text"], s_small_c))
+            elements.append(Paragraph(_esc(settings["footer_text"]), s_small_c))
 
         if settings and settings.get("terms_and_conditions"):
             elements.append(Spacer(1, 0.2 * cm))
-            elements.append(Paragraph(settings["terms_and_conditions"], s_small_c))
+            elements.append(Paragraph(_esc(settings["terms_and_conditions"]), s_small_c))
 
         doc.build(elements)
         return buf.getvalue()

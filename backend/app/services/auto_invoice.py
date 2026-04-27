@@ -5,6 +5,7 @@ SeQura IPN, and recurring payment tasks.
 """
 
 import logging
+import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Optional
 from uuid import UUID
@@ -88,7 +89,13 @@ async def create_invoice_for_payment(
 
     invoice_type = "F1" if client_tax_id else "F2"
 
+    # Generamos la PK en Python para poder enlazar items y audit logs
+    # antes de hacer flush. El modelo tiene server_default, pero al asignarlo
+    # explícitamente nos aseguramos de que invoice.id sea conocido al instante,
+    # lo cual evita que los InvoiceAuditLog se inserten con invoice_id=NULL
+    # (que rompe la NOT NULL constraint).
     invoice = Invoice(
+        id=uuid.uuid4(),
         workspace_id=payment.workspace_id,
         invoice_number=invoice_number,
         invoice_series="F",
@@ -117,7 +124,6 @@ async def create_invoice_for_payment(
     db.add(invoice)
 
     item = InvoiceItem(
-        invoice_id=invoice.id,
         description=payment.description or "Servicio de entrenamiento personal",
         quantity=1,
         unit_price=base_imponible,
@@ -133,7 +139,6 @@ async def create_invoice_for_payment(
     settings.invoice_next_number = next_number + 1
 
     audit = InvoiceAuditLog(
-        invoice_id=invoice.id,
         workspace_id=payment.workspace_id,
         action="created",
         new_values={
@@ -146,22 +151,36 @@ async def create_invoice_for_payment(
         user_name=user_name or "Sistema",
         ip_address=ip_address,
     )
-    db.add(audit)
+    invoice.audit_logs.append(audit)
 
     if auto_finalize:
-        await VeriFactuService.compute_and_set_hash(db, invoice, settings)
+        try:
+            await VeriFactuService.compute_and_set_hash(db, invoice, settings)
+        except Exception:
+            # Cualquier fallo calculando el hash VeriFactu (ej. tabla de
+            # encadenamiento vacía o datos inconsistentes) NO debe impedir la
+            # emisión de la factura. Lo registramos y continuamos.
+            logger.exception("VeriFactu hash compute failed, continuing without chain hash")
+            invoice.verifactu_hash = invoice.verifactu_hash or None
+
         invoice.status = "finalized"
         invoice.verifactu_status = "pending"
 
         if settings.verifactu_enabled:
-            resp = await VeriFactuService.send_to_provider(invoice, settings, db_session=db)
-            invoice.verifactu_response = resp
-            if resp.get("status") == "accepted":
-                invoice.verifactu_status = "accepted"
-                invoice.verifactu_sent_at = datetime.now(timezone.utc)
+            try:
+                resp = await VeriFactuService.send_to_provider(invoice, settings, db_session=db)
+                invoice.verifactu_response = resp
+                if resp.get("status") == "accepted":
+                    invoice.verifactu_status = "accepted"
+                    invoice.verifactu_sent_at = datetime.now(timezone.utc)
+            except Exception:
+                logger.exception(
+                    "VeriFactu send_to_provider failed for invoice %s",
+                    invoice_number,
+                )
+                invoice.verifactu_status = "pending"
 
         finalize_audit = InvoiceAuditLog(
-            invoice_id=invoice.id,
             workspace_id=payment.workspace_id,
             action="finalized",
             new_values={
@@ -173,7 +192,7 @@ async def create_invoice_for_payment(
             user_name=user_name or "Sistema",
             ip_address=ip_address,
         )
-        db.add(finalize_audit)
+        invoice.audit_logs.append(finalize_audit)
 
     logger.info(
         f"Auto-invoice {invoice_number} created for payment {payment.id} "
