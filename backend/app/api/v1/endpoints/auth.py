@@ -58,8 +58,9 @@ router = APIRouter()
 @limiter.limit("5/minute")
 async def register(
     request: Request,
+    response: Response,
     data: RegisterRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Register a new user and create workspace.
@@ -604,8 +605,9 @@ async def verify_email(
 @limiter.limit("3/minute")
 async def resend_verification(
     request: Request,
+    response: Response,
     data: ResendVerificationRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Resend email verification link.
@@ -693,8 +695,9 @@ async def resend_verification(
 @limiter.limit("3/minute")
 async def forgot_password(
     request: Request,
+    response: Response,
     data: PasswordResetRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Request password reset email.
@@ -766,13 +769,13 @@ async def forgot_password(
 @limiter.limit("5/minute")
 async def reset_password(
     request: Request,
+    response: Response,
     data: PasswordResetConfirm,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Reset password using token from email.
     """
-    logger.info("reset_password: ENTER token_len=%d", len(data.token or ""))
     try:
         is_strong, strength_error = validate_password_strength(data.new_password)
         if not is_strong:
@@ -785,14 +788,12 @@ async def reset_password(
         # entidad ``User`` completa con sus relaciones cargadas en lazy mode,
         # que durante un ``commit`` async puede disparar greenlet/cascade
         # errors (workspace_roles + notifications con delete-orphan).
-        logger.info("reset_password: BEFORE select")
         result = await db.execute(
             select(User.id, User.email, User.password_reset_sent_at).where(
                 User.password_reset_token == data.token
             )
         )
         row = result.first()
-        logger.info("reset_password: AFTER select row_found=%s", row is not None)
 
         if row is None:
             raise HTTPException(
@@ -812,7 +813,6 @@ async def reset_password(
                     detail="El enlace de recuperación ha expirado. Solicita uno nuevo.",
                 )
 
-        logger.info("reset_password: BEFORE hash")
         try:
             new_hash = get_password_hash(data.new_password)
         except ValueError as ve:
@@ -821,9 +821,7 @@ async def reset_password(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="La contraseña no es válida. Prueba con una más corta o sin caracteres especiales raros.",
             ) from ve
-        logger.info("reset_password: AFTER hash hash_len=%d", len(new_hash or ""))
 
-        logger.info("reset_password: BEFORE update for user_id=%s", user_id)
         try:
             await db.execute(
                 update(User)
@@ -835,9 +833,7 @@ async def reset_password(
                 )
                 .execution_options(synchronize_session=False)
             )
-            logger.info("reset_password: AFTER update, BEFORE commit")
             await db.commit()
-            logger.info("reset_password: AFTER commit OK")
         except Exception as commit_err:  # noqa: BLE001
             try:
                 await db.rollback()
@@ -853,15 +849,13 @@ async def reset_password(
                 detail="No se pudo actualizar la contraseña. Inténtalo de nuevo.",
             ) from commit_err
 
-        logger.info("reset_password: Password reset for user %s", user_email)
+        logger.info("Password reset for user %s", user_email)
 
-        response = AuthResponse(
+        return AuthResponse(
             success=True,
             message="Tu contraseña ha sido actualizada. Ya puedes iniciar sesión.",
             user_id=str(user_id),
         )
-        logger.info("reset_password: RETURNING response")
-        return response
 
     except HTTPException:
         raise
@@ -931,9 +925,10 @@ async def change_email(
 @limiter.limit("5/minute")
 async def change_password(
     request: Request,
+    response: Response,
     data: ChangePasswordRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Change password for authenticated user.
@@ -991,8 +986,9 @@ class ClientRegisterRequest(BaseModel):
 @limiter.limit("5/minute")
 async def register_client(
     request: Request,
+    response: Response,
     data: ClientRegisterRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Register new client (user with client role in an existing workspace).

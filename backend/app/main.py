@@ -193,19 +193,21 @@ async def global_exception_handler(request: Request, exc: Exception):
     # mensajes ni stack traces internos. El detalle textual sigue siendo
     # genérico para no leak información sensible.
     error_type = type(exc).__name__
-    # Mensaje truncado para diagnóstico — nunca incluye stack traces ni
-    # vars locales. Lo limitamos a 500 caracteres para no leak datos.
-    error_msg = str(exc)
-    if len(error_msg) > 500:
-        error_msg = error_msg[:500] + "…"
+    payload: dict = {
+        "detail": "Internal server error",
+        "error_type": error_type,
+        "request_id": rid,
+    }
+    # En modo DEBUG (desarrollo) incluimos el mensaje recortado para
+    # facilitar diagnóstico. En producción no, para no leak información.
+    if settings.DEBUG:
+        error_msg = str(exc)
+        if len(error_msg) > 500:
+            error_msg = error_msg[:500] + "…"
+        payload["error_message"] = error_msg
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": "Internal server error",
-            "error_type": error_type,
-            "error_message": error_msg,
-            "request_id": rid,
-        },
+        content=payload,
         headers=_cors_headers_for(request),
     )
 

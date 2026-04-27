@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -142,6 +142,7 @@ async def configure_ai(
 @limiter.limit("10/minute")
 async def generate_workout_plan(
     request: Request,
+    response: Response,
     body: GenerateWorkoutRequest,
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
@@ -214,6 +215,7 @@ async def generate_workout_plan(
 @limiter.limit("10/minute")
 async def generate_meal_plan(
     request: Request,
+    response: Response,
     body: GenerateMealPlanRequest,
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
@@ -286,6 +288,7 @@ async def generate_meal_plan(
 @limiter.limit("10/minute")
 async def analyze_client_progress(
     request: Request,
+    response: Response,
     body: AnalyzeProgressRequest,
     current_user: Any = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
