@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import io
+import logging
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
@@ -6,13 +9,16 @@ from uuid import UUID
 import stripe
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.parallel_db import parallel_queries
+from app.models.erp import Invoice, InvoiceAuditLog, InvoiceItem, InvoiceSettings
 from app.models.payment import StripeAccount, Subscription, Payment, SubscriptionStatus, PaymentStatus
 from app.models.client import Client
 from app.models.workspace import Workspace
@@ -20,8 +26,11 @@ from app.models.user import User, UserRole, RoleType
 from app.middleware.auth import require_workspace, require_owner, require_staff, CurrentUser
 from app.services.auto_invoice import create_invoice_for_payment
 from app.services.email import email_service, EmailTemplates
+from app.services.invoice_pdf import InvoicePDFGenerator
 from app.services.notification_service import notify
 from app.services.product_capacity import ensure_product_capacity_by_id
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -672,6 +681,346 @@ async def delete_payment(
         raise HTTPException(status_code=400, detail="No se pueden eliminar pagos completados")
     await db.delete(payment)
     await db.commit()
+
+
+# ============ INVOICE FROM PAYMENT ============
+
+
+def _invoice_to_pdf_dict(invoice: Invoice) -> dict:
+    return {
+        "id": str(invoice.id),
+        "invoice_number": invoice.invoice_number,
+        "invoice_series": invoice.invoice_series,
+        "invoice_type": invoice.invoice_type,
+        "client_name": invoice.client_name,
+        "client_tax_id": invoice.client_tax_id,
+        "client_address": invoice.client_address,
+        "client_city": invoice.client_city,
+        "client_postal_code": invoice.client_postal_code,
+        "client_country": invoice.client_country,
+        "client_email": invoice.client_email,
+        "issue_date": str(invoice.issue_date) if invoice.issue_date else None,
+        "due_date": str(invoice.due_date) if invoice.due_date else None,
+        "status": invoice.status,
+        "subtotal": float(invoice.subtotal or 0),
+        "tax_amount": float(invoice.tax_amount or 0),
+        "discount_amount": float(invoice.discount_amount or 0),
+        "total": float(invoice.total or 0),
+        "payment_method": invoice.payment_method,
+        "notes": invoice.notes,
+    }
+
+
+def _items_to_pdf_dicts(items) -> list:
+    return [
+        {
+            "description": it.description,
+            "quantity": float(it.quantity or 1),
+            "unit_price": float(it.unit_price or 0),
+            "discount_type": it.discount_type,
+            "discount_value": float(it.discount_value or 0),
+            "tax_rate": float(it.tax_rate) if it.tax_rate is not None else None,
+            "tax_name": it.tax_name,
+            "subtotal": float(it.subtotal or 0),
+            "tax_amount": float(it.tax_amount or 0),
+            "total": float(it.total or 0),
+            "position": it.position,
+        }
+        for it in sorted(items, key=lambda x: x.position or 0)
+    ]
+
+
+def _invoice_settings_to_pdf_dict(s: Optional[InvoiceSettings]) -> Optional[dict]:
+    if not s:
+        return None
+    return {
+        "business_name": s.business_name,
+        "tax_id": s.tax_id,
+        "nif_type": s.nif_type,
+        "address": s.address,
+        "city": s.city,
+        "postal_code": s.postal_code,
+        "province": s.province,
+        "country": s.country,
+        "phone": s.phone,
+        "email": s.email,
+        "bank_account": s.bank_account,
+        "bank_name": s.bank_name,
+        "footer_text": s.footer_text,
+        "terms_and_conditions": s.terms_and_conditions,
+    }
+
+
+async def _get_or_create_invoice_for_payment(
+    db: AsyncSession,
+    payment: Payment,
+    *,
+    user_id: Optional[UUID] = None,
+    user_name: Optional[str] = None,
+) -> Invoice:
+    """Devuelve la factura ligada al pago. La crea (auto-finalize) si no existe.
+
+    Lanza HTTPException si falta configuración de facturación o si el pago
+    no está en un estado válido para emitir factura.
+    """
+    if payment.status != PaymentStatus.succeeded:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Solo se puede emitir factura de cobros completados.",
+        )
+
+    existing_q = await db.execute(
+        select(Invoice)
+        .where(Invoice.payment_id == payment.id)
+        .where(Invoice.workspace_id == payment.workspace_id)
+        .options(selectinload(Invoice.items))
+        .order_by(Invoice.created_at.desc())
+    )
+    invoice = existing_q.scalars().first()
+    if invoice:
+        return invoice
+
+    settings_q = await db.execute(
+        select(InvoiceSettings).where(InvoiceSettings.workspace_id == payment.workspace_id)
+    )
+    if not settings_q.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "No hay configuración de facturación para tu workspace. "
+                "Configura tus datos fiscales en Facturación → Configuración."
+            ),
+        )
+
+    created = await create_invoice_for_payment(
+        db, payment,
+        user_id=user_id,
+        user_name=user_name,
+        auto_finalize=True,
+    )
+    if not created:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo emitir la factura. Revisa la configuración de facturación.",
+        )
+
+    await db.commit()
+
+    refreshed_q = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == created.id)
+        .options(selectinload(Invoice.items))
+    )
+    return refreshed_q.scalar_one()
+
+
+@router.get("/payments/{payment_id}/invoice/pdf")
+async def download_payment_invoice_pdf(
+    payment_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Genera/recupera la factura asociada a un cobro completado y devuelve el PDF.
+
+    Si el cobro aún no tiene factura emitida, se crea automáticamente
+    respetando la configuración de facturación del workspace
+    (datos fiscales, prefijos, IVA por defecto, pie de factura, etc).
+    """
+    result = await db.execute(
+        select(Payment).where(
+            Payment.id == payment_id,
+            Payment.workspace_id == current_user.workspace_id,
+        )
+    )
+    payment = result.scalar_one_or_none()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+
+    user_id_value = getattr(current_user, "user_id", None) or getattr(getattr(current_user, "user", None), "id", None)
+    user_name_value = getattr(getattr(current_user, "user", current_user), "full_name", None)
+
+    invoice = await _get_or_create_invoice_for_payment(
+        db, payment,
+        user_id=user_id_value,
+        user_name=user_name_value,
+    )
+
+    settings_q = await db.execute(
+        select(InvoiceSettings).where(InvoiceSettings.workspace_id == payment.workspace_id)
+    )
+    invoice_settings = settings_q.scalar_one_or_none()
+
+    generator = InvoicePDFGenerator()
+    pdf_bytes = generator.generate(
+        invoice=_invoice_to_pdf_dict(invoice),
+        items=_items_to_pdf_dicts(invoice.items or []),
+        settings=_invoice_settings_to_pdf_dict(invoice_settings),
+        qr_data=invoice.verifactu_qr_data,
+    )
+
+    filename = f"Factura_{(invoice.invoice_number or 'sin_numero').replace('/', '-')}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Invoice-Id": str(invoice.id),
+            "X-Invoice-Number": invoice.invoice_number or "",
+        },
+    )
+
+
+@router.get("/payments/{payment_id}/invoice")
+async def get_payment_invoice_meta(
+    payment_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Devuelve metadatos de la factura ligada al cobro (si ya existe)."""
+    result = await db.execute(
+        select(Payment).where(
+            Payment.id == payment_id,
+            Payment.workspace_id == current_user.workspace_id,
+        )
+    )
+    payment = result.scalar_one_or_none()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+
+    invoice_q = await db.execute(
+        select(Invoice)
+        .where(Invoice.payment_id == payment.id)
+        .where(Invoice.workspace_id == payment.workspace_id)
+        .order_by(Invoice.created_at.desc())
+    )
+    invoice = invoice_q.scalars().first()
+
+    if not invoice:
+        return {
+            "exists": False,
+            "payment_id": str(payment.id),
+            "can_generate": payment.status == PaymentStatus.succeeded,
+        }
+
+    return {
+        "exists": True,
+        "payment_id": str(payment.id),
+        "invoice_id": str(invoice.id),
+        "invoice_number": invoice.invoice_number,
+        "status": invoice.status,
+        "issue_date": str(invoice.issue_date) if invoice.issue_date else None,
+        "total": float(invoice.total or 0),
+        "client_email": invoice.client_email,
+    }
+
+
+@router.post("/payments/{payment_id}/invoice/send-email")
+async def send_payment_invoice_email(
+    payment_id: UUID,
+    request: Request,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Genera la factura del cobro (si falta) y se la envía al cliente por email."""
+    result = await db.execute(
+        select(Payment).where(
+            Payment.id == payment_id,
+            Payment.workspace_id == current_user.workspace_id,
+        )
+    )
+    payment = result.scalar_one_or_none()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+
+    user_id_value = getattr(current_user, "user_id", None) or getattr(getattr(current_user, "user", None), "id", None)
+    user_name_value = getattr(getattr(current_user, "user", current_user), "full_name", None)
+
+    invoice = await _get_or_create_invoice_for_payment(
+        db, payment,
+        user_id=user_id_value,
+        user_name=user_name_value,
+    )
+
+    target_email = invoice.client_email
+    if not target_email and payment.client_id:
+        client = await db.get(Client, payment.client_id)
+        if client and client.email:
+            target_email = client.email
+    if not target_email:
+        raise HTTPException(
+            status_code=400,
+            detail="El cliente no tiene email configurado, no se puede enviar la factura.",
+        )
+
+    settings_q = await db.execute(
+        select(InvoiceSettings).where(InvoiceSettings.workspace_id == payment.workspace_id)
+    )
+    invoice_settings = settings_q.scalar_one_or_none()
+
+    generator = InvoicePDFGenerator()
+    pdf_bytes = generator.generate(
+        invoice=_invoice_to_pdf_dict(invoice),
+        items=_items_to_pdf_dicts(invoice.items or []),
+        settings=_invoice_settings_to_pdf_dict(invoice_settings),
+        qr_data=invoice.verifactu_qr_data,
+    )
+
+    business_name = invoice_settings.business_name if invoice_settings else "Tu entrenador"
+    subject = f"Factura {invoice.invoice_number} - {business_name}"
+    safe_client_name = invoice.client_name or "cliente"
+    html = f"""
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color:#1a202c;">
+        <h2 style="color: #2D6A4F;">Factura {invoice.invoice_number}</h2>
+        <p>Hola <strong>{safe_client_name}</strong>,</p>
+        <p>Adjuntamos tu factura <strong>{invoice.invoice_number}</strong> por un importe de <strong>{float(invoice.total or 0):.2f} €</strong>.</p>
+        <p>Puedes descargar el PDF que va adjunto a este correo. Guárdalo como justificante de tu pago.</p>
+        <br/>
+        <p>Un saludo,<br/><strong>{business_name}</strong></p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:24px;">Enviado a través de Trackfiz.</p>
+    </div>
+    """
+    attachment = [{
+        "content": base64.b64encode(pdf_bytes).decode("utf-8"),
+        "name": f"Factura_{(invoice.invoice_number or 'sin_numero').replace('/', '-')}.pdf",
+    }]
+
+    sent = False
+    try:
+        sent = await email_service.send_email(
+            to_email=target_email,
+            to_name=invoice.client_name,
+            subject=subject,
+            html_content=html,
+            attachments=attachment,
+        )
+    except Exception:
+        logger.exception("Error enviando factura del pago %s al cliente", payment.id)
+        sent = False
+
+    if not sent:
+        raise HTTPException(status_code=500, detail="No se pudo enviar el email con la factura.")
+
+    if invoice.status == "finalized":
+        invoice.status = "sent"
+
+    audit = InvoiceAuditLog(
+        invoice_id=invoice.id,
+        workspace_id=payment.workspace_id,
+        action="email_sent",
+        new_values={"email": target_email, "from_payment_id": str(payment.id)},
+        user_id=user_id_value,
+        user_name=user_name_value or "Sistema",
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(audit)
+    await db.commit()
+
+    return {
+        "status": "ok",
+        "invoice_id": str(invoice.id),
+        "invoice_number": invoice.invoice_number,
+        "sent_to": target_email,
+    }
 
 
 # ============ WEBHOOKS ============

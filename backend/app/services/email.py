@@ -770,6 +770,122 @@ class EmailTemplates:
         </html>
         """
 
+    @staticmethod
+    def form_pending(
+        client_name: str,
+        form_name: str,
+        form_url: str,
+        workspace_name: Optional[str] = None,
+        is_required: bool = False,
+        form_description: Optional[str] = None,
+    ) -> str:
+        """Email enviado al cliente cuando su entrenador le asigna un nuevo formulario.
+
+        Muestra al gimnasio/entrenador como marca principal y pone un CTA
+        directo a la pantalla de formularios pendientes del cliente.
+        """
+        brand_title = workspace_name or "Trackfiz"
+        brand_subtitle = (
+            "Vía Trackfiz · Tu plataforma de entrenamiento"
+            if workspace_name
+            else "Tu plataforma de entrenamiento personal"
+        )
+        required_badge_html = (
+            '<div style="display:inline-block;background:#fef3c7;color:#92400e;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;margin-bottom:18px;">⚠️ Formulario obligatorio</div>'
+            if is_required
+            else '<div style="display:inline-block;background:#e0f2fe;color:#075985;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;margin-bottom:18px;">📝 Nuevo formulario</div>'
+        )
+        description_html = (
+            f'<p style="margin:0 0 18px 0;color:#475569;font-size:14px;line-height:1.6;background:#f8fafc;padding:14px 16px;border-left:3px solid #2D6A4F;border-radius:6px;">{html_mod.escape(form_description)}</p>'
+            if form_description
+            else ""
+        )
+        intro_text = (
+            f"<strong>{html_mod.escape(workspace_name)}</strong> te ha enviado un nuevo formulario para que lo completes."
+            if workspace_name
+            else "Tienes un nuevo formulario disponible para completar."
+        )
+        cta_text = "Responder formulario" if not is_required else "Responder ahora"
+        return f"""
+        <!DOCTYPE html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <title>Nuevo formulario - {html_mod.escape(brand_title)}</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%;">
+                <tr>
+                    <td align="center" style="padding: 40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 540px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #2D6A4F 0%, #40916C 50%, #52B788 100%); padding: 36px 30px; text-align: center;">
+                                    <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">{html_mod.escape(brand_title)}</h1>
+                                    <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 13px;">{brand_subtitle}</p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td style="padding: 36px 30px 30px 30px;">
+                                    <div style="text-align:center;">
+                                        {required_badge_html}
+                                    </div>
+
+                                    <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-weight: 600; text-align: center;">
+                                        {html_mod.escape(form_name)}
+                                    </h2>
+
+                                    <p style="margin: 0 0 14px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                                        Hola <strong style="color: #2D6A4F;">{html_mod.escape(client_name)}</strong>,
+                                    </p>
+
+                                    <p style="margin: 0 0 18px 0; color: #4a5568; font-size: 15px; line-height: 1.6;">
+                                        {intro_text}
+                                    </p>
+
+                                    {description_html}
+
+                                    <p style="margin: 0 0 8px 0; color: #4a5568; font-size: 14px; line-height: 1.6;">
+                                        {"Es <strong>obligatorio</strong> que lo completes para continuar con tu plan." if is_required else "Cuando puedas, dedícale unos minutos a responderlo."}
+                                    </p>
+
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 28px 0 8px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                {_cta_button(cta_text, form_url)}
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    <p style="margin: 24px 0 0 0; color: #718096; font-size: 13px; line-height: 1.6; text-align: center;">
+                                        Si el botón no funciona, copia y pega este enlace en tu navegador:
+                                    </p>
+                                    <p style="margin: 8px 0 0 0; color: #2D6A4F; font-size: 12px; word-break: break-all; text-align: center; background: #f0fdf4; padding: 10px; border-radius: 8px;">
+                                        {form_url}
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td style="background: #f8fafc; padding: 22px 30px; border-top: 1px solid #e2e8f0;">
+                                    <p style="margin: 0; color: #718096; font-size: 13px; text-align: center; line-height: 1.5;">
+                                        Recibes este correo porque eres cliente de {html_mod.escape(brand_title)}.
+                                    </p>
+                                    <p style="margin: 12px 0 0 0; color: #a0aec0; font-size: 12px; text-align: center;">
+                                        © 2026 Trackfiz. Todos los derechos reservados.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+
 
 # Singleton instance
 email_service = EmailService()

@@ -423,6 +423,14 @@ export const paymentsApi = {
   deletePayment: (paymentId: string) => api.delete(`/payments/payments/${paymentId}`),
   createPaymentIntent: (data: object) => api.post("/payments/intent", data),
   refund: (paymentId: string) => api.post(`/payments/payments/${paymentId}/refund`),
+
+  // Invoice from a completed payment
+  getPaymentInvoiceMeta: (paymentId: string) =>
+    api.get(`/payments/payments/${paymentId}/invoice`),
+  downloadPaymentInvoicePdf: (paymentId: string) =>
+    api.get(`/payments/payments/${paymentId}/invoice/pdf`, { responseType: "blob" }),
+  sendPaymentInvoiceEmail: (paymentId: string) =>
+    api.post(`/payments/payments/${paymentId}/invoice/send-email`),
 };
 
 // Products API

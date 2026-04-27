@@ -9,10 +9,13 @@ from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
+from app.core.config import settings as app_settings
 from app.models.form import Form, FormSubmission
 from app.models.client import Client
+from app.models.workspace import Workspace
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
 from app.services.notification_service import notify
+from app.services.email import EmailTemplates
 from app.constants.allergens import (
     ALLERGY_IDS,
     INTOLERANCE_IDS,
@@ -736,11 +739,46 @@ async def send_form_to_clients(
         await db.refresh(sub)
         out.append(FormSendResponseItem(submission_id=sub.id, client_id=sub.client_id, status="sent"))
 
-    # Notificaciones a los clientes con user_id vinculado (best-effort)
+    # Resolver el nombre del workspace para personalizar el email del cliente.
+    workspace_name: Optional[str] = None
+    try:
+        ws = await db.get(Workspace, current_user.workspace_id)
+        if ws and getattr(ws, "name", None):
+            workspace_name = ws.name
+    except Exception:  # pragma: no cover - non-critical
+        pass
+
+    frontend_url = (app_settings.FRONTEND_URL or "https://app.trackfiz.com").rstrip("/")
+    form_link = f"{frontend_url}/my-forms"
+
+    # Notificaciones (in-app + email) a los clientes con user_id vinculado.
     for sub in created_submissions:
         client = client_by_id.get(sub.client_id)
         if not client or not client.user_id:
             continue
+        client_full_name = (
+            f"{client.first_name or ''} {client.last_name or ''}".strip()
+            or client.email
+            or "cliente"
+        )
+        try:
+            email_html = EmailTemplates.form_pending(
+                client_name=client_full_name,
+                form_name=form.name,
+                form_url=form_link,
+                workspace_name=workspace_name,
+                is_required=bool(form.is_required),
+                form_description=form.description,
+            )
+        except Exception:  # pragma: no cover - never block on template render
+            email_html = None
+
+        email_subject = (
+            f"Tienes un nuevo formulario: {form.name}"
+            if not form.is_required
+            else f"⚠️ Formulario obligatorio pendiente: {form.name}"
+        )
+
         try:
             await notify(
                 db=db,
@@ -755,6 +793,9 @@ async def send_form_to_clients(
                 ),
                 link="/my-forms",
                 notification_type="reminder" if form.is_required else "info",
+                email_subject=email_subject,
+                email_html=email_html,
+                email_to=client.email,
             )
         except Exception:  # pragma: no cover - best-effort
             pass

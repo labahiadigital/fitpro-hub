@@ -93,7 +93,7 @@ import {
   type Invoice,
   type VeriFactuTestResult,
 } from "../../hooks/useInvoices";
-import { erpApi } from "../../services/api";
+import { erpApi, paymentsApi } from "../../services/api";
 import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
@@ -516,6 +516,68 @@ export function BillingPage() {
       onConfirm: async () => { try { await deletePayment.mutateAsync(payment.id); } catch { /* handled */ } },
     });
   }, [deletePayment]);
+
+  const [invoiceLoadingPaymentId, setInvoiceLoadingPaymentId] = useState<string | null>(null);
+  const [invoiceEmailLoadingPaymentId, setInvoiceEmailLoadingPaymentId] = useState<string | null>(null);
+
+  const handleDownloadPaymentInvoice = useCallback(async (payment: Payment) => {
+    setInvoiceLoadingPaymentId(payment.id);
+    try {
+      const res = await paymentsApi.downloadPaymentInvoicePdf(payment.id);
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: "application/pdf" });
+      const invoiceNumber =
+        (res.headers as Record<string, string> | undefined)?.["x-invoice-number"] ||
+        "factura";
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Factura_${invoiceNumber.replace(/\//g, "-")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      notifications.show({
+        color: "green",
+        title: "Factura generada",
+        message: `Se ha descargado la factura ${invoiceNumber}.`,
+      });
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+        "No se pudo generar la factura. Revisa tu configuración de facturación.";
+      notifications.show({ color: "red", title: "Error al generar factura", message: detail });
+    } finally {
+      setInvoiceLoadingPaymentId(null);
+    }
+  }, []);
+
+  const handleEmailPaymentInvoice = useCallback((payment: Payment) => {
+    openConfirm({
+      title: "Enviar factura por email",
+      message: `¿Enviar la factura de este cobro al cliente por email?`,
+      confirmLabel: "Enviar",
+      color: "blue",
+      onConfirm: async () => {
+        setInvoiceEmailLoadingPaymentId(payment.id);
+        try {
+          const res = await paymentsApi.sendPaymentInvoiceEmail(payment.id);
+          const data = res.data as { sent_to?: string; invoice_number?: string };
+          notifications.show({
+            color: "green",
+            title: "Factura enviada",
+            message: `Factura ${data.invoice_number || ""} enviada a ${data.sent_to || "el cliente"}.`,
+          });
+        } catch (err: unknown) {
+          const detail =
+            (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+            "No se pudo enviar la factura por email.";
+          notifications.show({ color: "red", title: "Error", message: detail });
+        } finally {
+          setInvoiceEmailLoadingPaymentId(null);
+        }
+      },
+    });
+  }, []);
 
   const handleCreateCharge = useCallback(async (values: typeof chargeForm.values) => {
     const selectedProduct = values.product_id ? products.find(p => p.id === values.product_id) : null;
@@ -950,6 +1012,32 @@ export function BillingPage() {
                           <Tooltip label="Ver detalle">
                             <ActionIcon color="blue" variant="subtle" radius="xl" onClick={() => handleViewPayment(payment)}><IconEye size={16} /></ActionIcon>
                           </Tooltip>
+                          {payment.status === "completed" && (
+                            <Tooltip label="Descargar factura PDF">
+                              <ActionIcon
+                                color="grape"
+                                variant="subtle"
+                                radius="xl"
+                                onClick={() => handleDownloadPaymentInvoice(payment)}
+                                loading={invoiceLoadingPaymentId === payment.id}
+                              >
+                                <IconFileInvoice size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {payment.status === "completed" && (
+                            <Tooltip label="Enviar factura por email">
+                              <ActionIcon
+                                color="indigo"
+                                variant="subtle"
+                                radius="xl"
+                                onClick={() => handleEmailPaymentInvoice(payment)}
+                                loading={invoiceEmailLoadingPaymentId === payment.id}
+                              >
+                                <IconMail size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
                           {payment.status === "pending" && (
                             <Tooltip label="Marcar como pagado">
                               <ActionIcon color="green" variant="subtle" radius="xl" onClick={() => handleMarkPaid(payment)} loading={markPaymentPaid.isPending}>
