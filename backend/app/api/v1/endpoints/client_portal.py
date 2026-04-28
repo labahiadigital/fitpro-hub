@@ -272,6 +272,231 @@ class BookingClientResponse(BaseModel):
 
 
 
+# ============ MEDIA HYDRATION HELPERS ============
+# Workout templates and meal-plan JSON blobs were saved before exercise/food
+# images existed, so the image_url fields embedded in those structures are
+# usually stale or missing. To avoid forcing an offline migration we hydrate
+# the JSON on read by joining the current `exercises` / `foods` tables.
+
+def _iter_workout_exercise_dicts(template: dict | None):
+    """Yield every exercise dict inside a workout template/executed_template,
+    handling both the modern (``days[].blocks[].exercises[]``) and legacy
+    (``weeks[].days[].exercises[]`` or top-level ``blocks[]``) shapes."""
+    if not isinstance(template, dict):
+        return
+    days = template.get("days")
+    if isinstance(days, list):
+        for day in days:
+            if not isinstance(day, dict):
+                continue
+            for block in day.get("blocks") or []:
+                if not isinstance(block, dict):
+                    continue
+                for ex in block.get("exercises") or []:
+                    if isinstance(ex, dict):
+                        yield ex
+    weeks = template.get("weeks")
+    if isinstance(weeks, list):
+        for week in weeks:
+            if not isinstance(week, dict):
+                continue
+            for day in week.get("days") or []:
+                if not isinstance(day, dict):
+                    continue
+                for block in day.get("blocks") or []:
+                    if isinstance(block, dict):
+                        for ex in block.get("exercises") or []:
+                            if isinstance(ex, dict):
+                                yield ex
+                for ex in day.get("exercises") or []:
+                    if isinstance(ex, dict):
+                        yield ex
+    for block in template.get("blocks") or []:
+        if not isinstance(block, dict):
+            continue
+        for ex in block.get("exercises") or []:
+            if isinstance(ex, dict):
+                yield ex
+
+
+def _collect_exercise_ids(*templates) -> set[str]:
+    """Collect every exercise_id referenced by any of the given templates."""
+    ids: set[str] = set()
+    for tmpl in templates:
+        for ex in _iter_workout_exercise_dicts(tmpl):
+            eid = ex.get("exercise_id") or (ex.get("exercise") or {}).get("id")
+            if eid:
+                ids.add(str(eid))
+    return ids
+
+
+def _apply_exercise_media(template: dict | None, media: dict[str, dict]) -> None:
+    """Mutate a workout template in place to refresh image_url/video_url on
+    every exercise dict using the supplied media map."""
+    if not isinstance(template, dict) or not media:
+        return
+    for ex in _iter_workout_exercise_dicts(template):
+        eid = ex.get("exercise_id") or (ex.get("exercise") or {}).get("id")
+        if not eid:
+            continue
+        info = media.get(str(eid))
+        if not info:
+            continue
+        nested = ex.get("exercise")
+        if not isinstance(nested, dict):
+            nested = {"id": str(eid)}
+            ex["exercise"] = nested
+        if info.get("name") and not nested.get("name"):
+            nested["name"] = info["name"]
+        if info.get("image_url"):
+            nested["image_url"] = info["image_url"]
+        if info.get("video_url") and not nested.get("video_url"):
+            nested["video_url"] = info["video_url"]
+
+
+async def _fetch_exercise_media(
+    db: AsyncSession, exercise_ids: set[str]
+) -> dict[str, dict]:
+    """Return ``{exercise_id: {name, image_url, video_url}}`` for the given ids."""
+    if not exercise_ids:
+        return {}
+    valid_ids: list[UUID] = []
+    for raw in exercise_ids:
+        try:
+            valid_ids.append(UUID(str(raw)))
+        except (ValueError, TypeError):
+            continue
+    if not valid_ids:
+        return {}
+    result = await db.execute(
+        select(Exercise.id, Exercise.name, Exercise.image_url, Exercise.video_url).where(
+            Exercise.id.in_(valid_ids)
+        )
+    )
+    return {
+        str(row.id): {
+            "name": row.name,
+            "image_url": row.image_url,
+            "video_url": row.video_url,
+        }
+        for row in result.all()
+    }
+
+
+async def _hydrate_workout_program(db: AsyncSession, program: WorkoutProgram) -> WorkoutProgram:
+    """Refresh the image_url / video_url of every exercise embedded in a
+    program's ``template`` and ``executed_template``."""
+    ids = _collect_exercise_ids(program.template, program.executed_template)
+    if not ids:
+        return program
+    media = await _fetch_exercise_media(db, ids)
+    if not media:
+        return program
+    if program.template:
+        program.template = copy.deepcopy(program.template)
+        _apply_exercise_media(program.template, media)
+    if program.executed_template:
+        program.executed_template = copy.deepcopy(program.executed_template)
+        _apply_exercise_media(program.executed_template, media)
+    return program
+
+
+def _iter_meal_food_items(plan: dict | None):
+    """Yield every ``items[i]`` dict that represents a food entry in a meal
+    plan/executed_plan, regardless of weeks-vs-days layout."""
+    if not isinstance(plan, dict):
+        return
+    layouts: list[list] = []
+    weeks = plan.get("weeks")
+    if isinstance(weeks, list):
+        for week in weeks:
+            if isinstance(week, dict) and isinstance(week.get("days"), list):
+                layouts.append(week["days"])
+    days = plan.get("days")
+    if isinstance(days, list):
+        layouts.append(days)
+    for day_list in layouts:
+        for day in day_list:
+            if not isinstance(day, dict):
+                continue
+            for meal in day.get("meals") or []:
+                if not isinstance(meal, dict):
+                    continue
+                for item in meal.get("items") or []:
+                    if isinstance(item, dict):
+                        yield item
+
+
+def _collect_food_ids(*plans) -> set[str]:
+    """Collect every food_id referenced by the given meal plan blobs."""
+    ids: set[str] = set()
+    for plan in plans:
+        for item in _iter_meal_food_items(plan):
+            if item.get("type") and item.get("type") != "food":
+                continue
+            fid = item.get("food_id") or (item.get("food") or {}).get("id")
+            if fid:
+                ids.add(str(fid))
+    return ids
+
+
+def _apply_food_media(plan: dict | None, media: dict[str, str]) -> None:
+    """Mutate a meal plan in place adding image_url to each food item."""
+    if not isinstance(plan, dict) or not media:
+        return
+    for item in _iter_meal_food_items(plan):
+        if item.get("type") and item.get("type") != "food":
+            continue
+        fid = item.get("food_id") or (item.get("food") or {}).get("id")
+        if not fid:
+            continue
+        url = media.get(str(fid))
+        if not url:
+            continue
+        food = item.get("food")
+        if not isinstance(food, dict):
+            food = {"id": str(fid)}
+            item["food"] = food
+        food["image_url"] = url
+
+
+async def _fetch_food_media(db: AsyncSession, food_ids: set[str]) -> dict[str, str]:
+    """Return ``{food_id: image_url}`` for the given ids."""
+    if not food_ids:
+        return {}
+    valid_ids: list[UUID] = []
+    for raw in food_ids:
+        try:
+            valid_ids.append(UUID(str(raw)))
+        except (ValueError, TypeError):
+            continue
+    if not valid_ids:
+        return {}
+    result = await db.execute(
+        select(Food.id, Food.image_url).where(
+            Food.id.in_(valid_ids), Food.image_url.is_not(None)
+        )
+    )
+    return {str(row.id): row.image_url for row in result.all() if row.image_url}
+
+
+async def _hydrate_meal_plan(db: AsyncSession, plan: MealPlan) -> MealPlan:
+    """Refresh image_url for every food embedded in a meal plan."""
+    ids = _collect_food_ids(plan.plan, plan.executed_plan)
+    if not ids:
+        return plan
+    media = await _fetch_food_media(db, ids)
+    if not media:
+        return plan
+    if plan.plan:
+        plan.plan = copy.deepcopy(plan.plan)
+        _apply_food_media(plan.plan, media)
+    if plan.executed_plan:
+        plan.executed_plan = copy.deepcopy(plan.executed_plan)
+        _apply_food_media(plan.executed_plan, media)
+    return plan
+
+
 # ============ DASHBOARD ============
 
 def _safe_float(value) -> float:
@@ -580,6 +805,8 @@ class ExerciseListClientResponse(BaseModel):
     equipment: List[str] = []
     category: Optional[str] = None
     difficulty: Optional[str] = None
+    image_url: Optional[str] = None
+    video_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -696,7 +923,24 @@ async def get_my_workouts(
         stmt = stmt.where(WorkoutProgram.is_active.is_(True))
 
     result = await db.execute(stmt)
-    return result.scalars().all()
+    programs = result.scalars().all()
+
+    # Re-hydrate exercise media (image_url/video_url) so old templates pick
+    # up freshly generated assets without requiring a DB migration.
+    if programs:
+        ids: set[str] = set()
+        for p in programs:
+            ids.update(_collect_exercise_ids(p.template, p.executed_template))
+        media = await _fetch_exercise_media(db, ids)
+        if media:
+            for p in programs:
+                if p.template:
+                    p.template = copy.deepcopy(p.template)
+                    _apply_exercise_media(p.template, media)
+                if p.executed_template:
+                    p.executed_template = copy.deepcopy(p.executed_template)
+                    _apply_exercise_media(p.executed_template, media)
+    return programs
 
 
 class UpdateProgramExerciseRequest(BaseModel):
@@ -801,6 +1045,7 @@ async def get_my_workout(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Programa no encontrado"
         )
+    await _hydrate_workout_program(db, program)
     return program
 
 
@@ -1280,11 +1525,13 @@ async def get_my_meal_plan(
             continue
         if ed and today > ed:
             continue
+        await _hydrate_meal_plan(db, plan)
         return plan
 
     if active_plans:
         no_dates = [p for p in active_plans if not p.start_date and not p.end_date]
         if no_dates:
+            await _hydrate_meal_plan(db, no_dates[0])
             return no_dates[0]
 
     return None
@@ -1303,7 +1550,22 @@ async def get_all_meal_plans(
         .where(MealPlan.client_id == client.id)
         .order_by(desc(MealPlan.created_at))
     )
-    return result.scalars().all()
+    plans = result.scalars().all()
+
+    if plans:
+        ids: set[str] = set()
+        for p in plans:
+            ids.update(_collect_food_ids(p.plan, p.executed_plan))
+        media = await _fetch_food_media(db, ids)
+        if media:
+            for p in plans:
+                if p.plan:
+                    p.plan = copy.deepcopy(p.plan)
+                    _apply_food_media(p.plan, media)
+                if p.executed_plan:
+                    p.executed_plan = copy.deepcopy(p.executed_plan)
+                    _apply_food_media(p.executed_plan, media)
+    return plans
 
 
 def _get_plan_days_mutable(plan: dict, week_num: int = 1):
@@ -1971,6 +2233,7 @@ async def search_foods_for_client(
                 "carbs": float(f.carbs_g) if f.carbs_g else 0,
                 "fat": float(f.fat_g) if f.fat_g else 0,
                 "fiber": float(f.fiber_g) if f.fiber_g else 0,
+                "image_url": f.image_url,
             }
             for f in foods
         ],

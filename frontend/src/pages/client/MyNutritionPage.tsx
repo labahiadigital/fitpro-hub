@@ -25,6 +25,7 @@ import {
   Tooltip,
   Checkbox,
   Divider,
+  Image,
 } from "@mantine/core";
 import { useDisclosure, useMediaQuery, useDebouncedValue } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
@@ -124,6 +125,8 @@ interface FoodItem {
   recipe_group?: string;
   food_category?: string;
   is_manual?: boolean;
+  food_id?: string;
+  image_url?: string | null;
 }
 
 function MacroCard({
@@ -211,6 +214,7 @@ interface SearchableFoodResult {
   protein: number;
   carbs: number;
   fat: number;
+  image_url?: string | null;
 }
 
 function FoodSearchInput({
@@ -274,10 +278,15 @@ function FoodSearchInput({
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
             >
               <Group justify="space-between" wrap="nowrap">
-                <Box style={{ minWidth: 0 }}>
-                  <Text size="sm" fw={500} lineClamp={1}>{food.name}</Text>
-                  {food.brand && <Text size="xs" c="dimmed">{food.brand}</Text>}
-                </Box>
+                <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+                  {food.image_url ? (
+                    <Image src={food.image_url} alt={food.name} w={32} h={32} fit="cover" radius="sm" style={{ flexShrink: 0 }} />
+                  ) : null}
+                  <Box style={{ minWidth: 0 }}>
+                    <Text size="sm" fw={500} lineClamp={1}>{food.name}</Text>
+                    {food.brand && <Text size="xs" c="dimmed">{food.brand}</Text>}
+                  </Box>
+                </Group>
                 <Group gap={4} style={{ flexShrink: 0 }}>
                   <Badge size="xs" variant="light" color="orange">{Math.round(food.calories)} kcal</Badge>
                   <Badge size="xs" variant="outline" color="red">P:{Math.round(food.protein)}</Badge>
@@ -333,6 +342,8 @@ function LogMealModal({
         carbs: Math.round(food.carbs * factor * 10) / 10,
         fat: Math.round(food.fat * factor * 10) / 10,
         quantity: grams,
+        food_id: food.id,
+        image_url: food.image_url ?? null,
       },
     ]);
   };
@@ -410,6 +421,9 @@ function LogMealModal({
   const foodRows = foods.map((food, index) => (
     <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
       <Group gap="xs" mb="xs" wrap="nowrap">
+        {food.image_url ? (
+          <Image src={food.image_url} alt={food.name} w={40} h={40} fit="cover" radius="md" style={{ flexShrink: 0 }} />
+        ) : null}
         <TextInput
           placeholder="Nombre del alimento"
           value={food.name}
@@ -620,6 +634,8 @@ interface PlanMealFoodItem {
   protein_per_100g?: number;
   carbs_per_100g?: number;
   fat_per_100g?: number;
+  image_url?: string | null;
+  food_id?: string;
 }
 
 interface SupplementData {
@@ -649,6 +665,7 @@ interface PlanMeal {
       carbs: string | number;
       fat: string | number;
       serving_size: string;
+      image_url?: string | null;
     };
     supplement?: SupplementData;
     quantity_grams: number;
@@ -720,6 +737,8 @@ function LogPlanMealModal({
           fat: Math.round(Number(food?.fat || 0) * factor * 10) / 10,
           quantity: item.quantity_grams,
           recipe_group: item.recipe_group,
+          food_id: item.food_id || item.food?.id,
+          image_url: (item.food as { image_url?: string | null } | undefined)?.image_url ?? null,
         };
       });
       setFoods(initial);
@@ -772,6 +791,8 @@ function LogPlanMealModal({
         carbs: Math.round(food.carbs * factor * 10) / 10,
         fat: Math.round(food.fat * factor * 10) / 10,
         quantity: grams,
+        food_id: food.id,
+        image_url: food.image_url ?? null,
       },
     ]);
   };
@@ -862,6 +883,9 @@ function LogPlanMealModal({
         const renderFoodRow = (food: FoodItem, index: number, showLabels: boolean) => (
           <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
             <Group gap="xs" mb="xs" wrap="nowrap">
+              {food.image_url ? (
+                <Image src={food.image_url} alt={food.name} w={40} h={40} fit="cover" radius="md" style={{ flexShrink: 0 }} />
+              ) : null}
               <TextInput
                 placeholder="Nombre del alimento"
                 value={food.name}
@@ -1184,6 +1208,8 @@ function NutritionDayDetail({
                   protein_per_100g: Math.round(Number(food?.protein || 0) * 10) / 10,
                   carbs_per_100g: Math.round(Number(food?.carbs || 0) * 10) / 10,
                   fat_per_100g: Math.round(Number(food?.fat || 0) * 10) / 10,
+                  image_url: (item.food as { image_url?: string | null } | undefined)?.image_url ?? null,
+                  food_id: item.food_id || item.food?.id,
                 };
               }) || []) as PlanMealFoodItem[];
               const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
@@ -1326,8 +1352,13 @@ function NutritionDayDetail({
                               <Stack gap={4} ml="sm">
                                 {items.map((f, i) => (
                                   <Box key={i}>
-                                    <Group justify="space-between">
-                                      <Text size="xs" fw={500}>{f.name}</Text>
+                                    <Group justify="space-between" wrap="nowrap">
+                                      <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                                        {f.image_url ? (
+                                          <Image src={f.image_url} alt={f.name} w={28} h={28} fit="cover" radius="sm" style={{ flexShrink: 0 }} />
+                                        ) : null}
+                                        <Text size="xs" fw={500} lineClamp={1}>{f.name}</Text>
+                                      </Group>
                                       <Group gap={4}>
                                         <Badge size="xs" variant="light" color="blue">{f.calories_per_100g ?? f.calories} kcal</Badge>
                                         <Badge size="xs" variant="light" color="green">P:{f.protein_per_100g ?? f.protein_g}g</Badge>
@@ -1346,8 +1377,13 @@ function NutritionDayDetail({
                         ungrouped.forEach((food, i) => {
                           elements.push(
                             <Box key={`u-${i}`}>
-                              <Group justify="space-between">
-                                <Text size="sm" fw={500}>{food.name}</Text>
+                              <Group justify="space-between" wrap="nowrap">
+                                <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+                                  {food.image_url ? (
+                                    <Image src={food.image_url} alt={food.name} w={36} h={36} fit="cover" radius="md" style={{ flexShrink: 0 }} />
+                                  ) : null}
+                                  <Text size="sm" fw={500} lineClamp={1}>{food.name}</Text>
+                                </Group>
                                 <Group gap={4}>
                                   <Badge size="xs" variant="light" color="blue">{food.calories_per_100g ?? food.calories} kcal</Badge>
                                   <Badge size="xs" variant="light" color="green">P:{food.protein_per_100g ?? food.protein_g}g</Badge>
@@ -2791,6 +2827,8 @@ export function MyNutritionPage() {
                             protein_per_100g: Math.round(Number(food?.protein || 0) * 10) / 10,
                             carbs_per_100g: Math.round(Number(food?.carbs || 0) * 10) / 10,
                             fat_per_100g: Math.round(Number(food?.fat || 0) * 10) / 10,
+                            image_url: (item.food as { image_url?: string | null } | undefined)?.image_url ?? null,
+                            food_id: item.food_id || item.food?.id,
                           };
                         }) || []) as PlanMealFoodItem[];
                         
@@ -2910,8 +2948,13 @@ export function MyNutritionPage() {
                               <Stack gap={6} mt="sm" ml={54}>
                                 {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
                                   <Box key={foodIndex}>
-                                    <Group justify="space-between">
-                                      <Text size="sm" fw={500}>{food.name}</Text>
+                                    <Group justify="space-between" wrap="nowrap">
+                                      <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+                                        {food.image_url ? (
+                                          <Image src={food.image_url} alt={food.name} w={36} h={36} fit="cover" radius="md" style={{ flexShrink: 0 }} />
+                                        ) : null}
+                                        <Text size="sm" fw={500} lineClamp={1}>{food.name}</Text>
+                                      </Group>
                                       <Group gap={4}>
                                         <Badge size="xs" variant="light" color="blue">{food.calories_per_100g ?? food.calories} kcal</Badge>
                                         <Badge size="xs" variant="light" color="green">P:{food.protein_per_100g ?? food.protein_g}g</Badge>
