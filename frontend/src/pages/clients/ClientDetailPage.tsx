@@ -217,7 +217,7 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
     enabled: !!clientId,
   });
 
-  const { data: subsData = [] } = useQuery({
+  const { data: subsData = [], isLoading: loadingSubs } = useQuery({
     queryKey: ["client-subscriptions", clientId],
     queryFn: async () => {
       const res = await paymentsApi.subscriptions({ client_id: clientId });
@@ -226,7 +226,9 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
     enabled: !!clientId,
   });
 
-  const activeSub = subsData.find((s: any) => s.status === "active") || subsData[0];
+  const ACTIVE_STATES = new Set(["active", "trialing", "past_due", "paused"]);
+  const activeSubs = (subsData as any[]).filter((s) => ACTIVE_STATES.has(s.status));
+  const inactiveSubs = (subsData as any[]).filter((s) => !ACTIVE_STATES.has(s.status));
 
   const statusMap: Record<string, { label: string; color: string }> = {
     completed: { label: "Pagado", color: "green" },
@@ -236,65 +238,200 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
     refunded: { label: "Devuelto", color: "gray" },
   };
 
+  const subStatusMap: Record<string, { label: string; color: string }> = {
+    active: { label: "Activa", color: "green" },
+    trialing: { label: "Periodo de prueba", color: "blue" },
+    past_due: { label: "Pago atrasado", color: "orange" },
+    paused: { label: "Pausada", color: "yellow" },
+    canceled: { label: "Cancelada", color: "gray" },
+    cancelled: { label: "Cancelada", color: "gray" },
+    expired: { label: "Caducada", color: "gray" },
+    failed: { label: "Fallida", color: "red" },
+  };
+
+  const intervalLabel = (i?: string) => {
+    switch (i) {
+      case "week": return "semana";
+      case "biweekly": return "quincenal";
+      case "month": return "mes";
+      case "quarter": return "trimestre";
+      case "semester": return "semestre";
+      case "year": return "año";
+      default: return i || "";
+    }
+  };
+
   const formatDate = (d: string | null) => {
     if (!d) return "—";
     return new Date(d).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
 
   return (
-    <Box className="nv-card" p="xl">
-      <Group justify="space-between" mb="lg">
-        <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          Historial de Pagos
-        </Text>
-        {activeSub && (
-          <Badge size="lg" variant="light" radius="xl" color={activeSub.status === "active" ? "green" : "gray"}>
-            {activeSub.name || activeSub.plan_name} - €{activeSub.amount}/{
-              activeSub.interval === "week" ? "semana" :
-              activeSub.interval === "biweekly" ? "quincenal" :
-              activeSub.interval === "month" ? "mes" :
-              activeSub.interval === "quarter" ? "trimestre" :
-              activeSub.interval === "semester" ? "semestre" :
-              activeSub.interval === "year" ? "año" : activeSub.interval
-            }
-          </Badge>
-        )}
-      </Group>
+    <Stack gap="lg">
+      {/* Suscripciones del cliente */}
+      <Box className="nv-card" p="xl">
+        <Group justify="space-between" mb="lg">
+          <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Suscripciones
+          </Text>
+          {activeSubs.length > 0 && (
+            <Badge size="lg" variant="light" radius="xl" color="green">
+              {activeSubs.length} activa{activeSubs.length > 1 ? "s" : ""}
+            </Badge>
+          )}
+        </Group>
 
-      {loadingPayments ? (
-        <Center py="xl"><Loader size="sm" /></Center>
-      ) : paymentsData.length === 0 ? (
-        <Text c="dimmed" ta="center" py="xl">No hay pagos registrados para este cliente.</Text>
-      ) : (
-        <ScrollArea type="auto">
-          <Table verticalSpacing="md" style={{ minWidth: 600 }}>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Fecha</Table.Th>
-                <Table.Th>Concepto</Table.Th>
-                <Table.Th ta="right">Importe</Table.Th>
-                <Table.Th ta="center">Estado</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {paymentsData.map((p: any) => {
-                const st = statusMap[p.status] || { label: p.status, color: "gray" };
-                return (
-                  <Table.Tr key={p.id}>
-                    <Table.Td><Text size="sm">{formatDate(p.paid_at || p.created_at)}</Text></Table.Td>
-                    <Table.Td><Text size="sm">{p.description || "Pago"}</Text></Table.Td>
-                    <Table.Td ta="right"><Text fw={600} size="sm">€{formatDecimal(Number(p.amount), 2)}</Text></Table.Td>
-                    <Table.Td ta="center">
-                      <Badge color={st.color} size="sm" variant="light" radius="xl">{st.label}</Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                );
-              })}
-            </Table.Tbody>
-          </Table>
-        </ScrollArea>
-      )}
-    </Box>
+        {loadingSubs ? (
+          <Center py="xl"><Loader size="sm" /></Center>
+        ) : subsData.length === 0 ? (
+          <Paper withBorder radius="md" p="md">
+            <Group gap="sm">
+              <ThemeIcon size="lg" radius="xl" variant="light" color="gray">
+                <IconCreditCard size={18} />
+              </ThemeIcon>
+              <Box>
+                <Text size="sm" fw={600}>Sin plan asignado</Text>
+                <Text size="xs" c="dimmed">
+                  Este cliente no tiene ninguna suscripción registrada todavía.
+                </Text>
+              </Box>
+            </Group>
+          </Paper>
+        ) : (
+          <Stack gap="sm">
+            {activeSubs.map((s: any) => {
+              const st = subStatusMap[s.status] || { label: s.status, color: "gray" };
+              return (
+                <Paper
+                  key={s.id}
+                  withBorder
+                  radius="md"
+                  p="md"
+                  style={{
+                    background: "linear-gradient(135deg,rgba(45,106,79,0.06),rgba(82,183,136,0.04))",
+                    borderColor: "var(--mantine-color-green-3)",
+                  }}
+                >
+                  <Group justify="space-between" wrap="nowrap" align="flex-start">
+                    <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
+                      <Group gap="xs">
+                        <ThemeIcon size="md" radius="xl" variant="light" color="green">
+                          <IconCreditCard size={16} />
+                        </ThemeIcon>
+                        <Text fw={700} size="sm" truncate>
+                          {s.name || s.plan_name || "Plan"}
+                        </Text>
+                        <Badge color={st.color} size="sm" variant="light" radius="xl">
+                          {st.label}
+                        </Badge>
+                        {s.cancel_at_period_end && (
+                          <Badge color="orange" size="sm" variant="light" radius="xl">
+                            Se cancelará al finalizar
+                          </Badge>
+                        )}
+                      </Group>
+                      {s.description && (
+                        <Text size="xs" c="dimmed" lineClamp={2}>
+                          {s.description}
+                        </Text>
+                      )}
+                      <Group gap="lg" mt={4}>
+                        <Box>
+                          <Text size="xs" c="dimmed">Precio</Text>
+                          <Text fw={700} size="sm">
+                            €{formatDecimal(Number(s.amount || 0), 2)}
+                            <Text span size="xs" c="dimmed" fw={400}>
+                              {" "}/ {intervalLabel(s.interval)}
+                            </Text>
+                          </Text>
+                        </Box>
+                        <Box>
+                          <Text size="xs" c="dimmed">Periodo actual</Text>
+                          <Text size="sm" fw={600}>
+                            {formatDate(s.current_period_start)} — {formatDate(s.current_period_end)}
+                          </Text>
+                        </Box>
+                        <Box>
+                          <Text size="xs" c="dimmed">Alta</Text>
+                          <Text size="sm" fw={600}>{formatDate(s.created_at)}</Text>
+                        </Box>
+                      </Group>
+                    </Stack>
+                  </Group>
+                </Paper>
+              );
+            })}
+
+            {inactiveSubs.length > 0 && (
+              <>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" mt="md" style={{ letterSpacing: 0.6 }}>
+                  Históricas
+                </Text>
+                {inactiveSubs.map((s: any) => {
+                  const st = subStatusMap[s.status] || { label: s.status, color: "gray" };
+                  return (
+                    <Paper key={s.id} withBorder radius="md" p="sm">
+                      <Group justify="space-between" wrap="nowrap">
+                        <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                          <Text fw={600} size="sm" truncate>{s.name || s.plan_name || "Plan"}</Text>
+                          <Badge color={st.color} size="xs" variant="light" radius="xl">{st.label}</Badge>
+                        </Group>
+                        <Text size="xs" c="dimmed">
+                          €{formatDecimal(Number(s.amount || 0), 2)} / {intervalLabel(s.interval)} · {formatDate(s.created_at)}
+                        </Text>
+                      </Group>
+                    </Paper>
+                  );
+                })}
+              </>
+            )}
+          </Stack>
+        )}
+      </Box>
+
+      {/* Historial de pagos */}
+      <Box className="nv-card" p="xl">
+        <Group justify="space-between" mb="lg">
+          <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Historial de Pagos
+          </Text>
+        </Group>
+
+        {loadingPayments ? (
+          <Center py="xl"><Loader size="sm" /></Center>
+        ) : paymentsData.length === 0 ? (
+          <Text c="dimmed" ta="center" py="xl">No hay pagos registrados para este cliente.</Text>
+        ) : (
+          <ScrollArea type="auto">
+            <Table verticalSpacing="md" style={{ minWidth: 600 }}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Fecha</Table.Th>
+                  <Table.Th>Concepto</Table.Th>
+                  <Table.Th ta="right">Importe</Table.Th>
+                  <Table.Th ta="center">Estado</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {paymentsData.map((p: any) => {
+                  const st = statusMap[p.status] || { label: p.status, color: "gray" };
+                  return (
+                    <Table.Tr key={p.id}>
+                      <Table.Td><Text size="sm">{formatDate(p.paid_at || p.created_at)}</Text></Table.Td>
+                      <Table.Td><Text size="sm">{p.description || "Pago"}</Text></Table.Td>
+                      <Table.Td ta="right"><Text fw={600} size="sm">€{formatDecimal(Number(p.amount), 2)}</Text></Table.Td>
+                      <Table.Td ta="center">
+                        <Badge color={st.color} size="sm" variant="light" radius="xl">{st.label}</Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
+        )}
+      </Box>
+    </Stack>
   );
 }
 

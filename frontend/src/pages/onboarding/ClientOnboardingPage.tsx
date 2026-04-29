@@ -9,7 +9,6 @@ import {
   Group,
   Image,
   Loader,
-  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -140,7 +139,6 @@ export function ClientOnboardingPage() {
     message_html?: string;
     waitlist_success_message?: string;
   } | null>(null);
-  const [soldOutModalOpen, setSoldOutModalOpen] = useState(false);
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
   const [waitlistData, setWaitlistData] = useState({ email: "", name: "", phone: "", message: "" });
@@ -229,21 +227,11 @@ export function ClientOnboardingPage() {
   const handleProductSignup = async () => {
     if (!workspaceSlug || !productId) return;
 
-    // Intercept sold-out products before any backend roundtrip so we can
-    // surface the configured action (redirect / modal / waitlist).
-    if (soldOutState) {
-      if (soldOutState.action === "redirect" && soldOutState.redirect_url) {
-        window.location.href = soldOutState.redirect_url;
-        return;
-      }
-      setWaitlistData((prev) => ({
-        ...prev,
-        email: form.values.email || prev.email,
-        name: `${form.values.firstName || ""} ${form.values.lastName || ""}`.trim() || prev.name,
-      }));
-      setSoldOutModalOpen(true);
-      return;
-    }
+    // Cuando el producto está agotado, esta pantalla no muestra el form
+    // de signup (lo intercepta el render principal mostrando solo la
+    // configuración de sold-out). Como guarda extra, si por cualquier
+    // motivo se llamara a este handler, lo abortamos.
+    if (soldOutState) return;
 
     const emailVal = form.values.email;
     const confirmEmailVal = form.values.confirmEmail;
@@ -588,71 +576,129 @@ export function ClientOnboardingPage() {
     }
   };
 
-  const soldOutModal = soldOutState ? (
-    <Modal
-      opened={soldOutModalOpen}
-      onClose={() => setSoldOutModalOpen(false)}
-      title={soldOutState.action === "waitlist" ? "Apúntate a la lista de espera" : "Producto agotado"}
-      size="md"
-      centered
-    >
-      {soldOutState.action === "message" && soldOutState.message_html ? (
-        <Box
-          dangerouslySetInnerHTML={{ __html: soldOutState.message_html }}
-          style={{ color: "var(--mantine-color-text)" }}
-        />
-      ) : null}
-
-      {soldOutState.action === "waitlist" && !waitlistSubmitted && (
-        <Stack gap="sm">
-          <Text size="sm" c="dimmed">
-            Este producto está completo. Déjanos tus datos y te avisaremos cuando haya plaza.
-          </Text>
-          <TextInput
-            label="Email"
-            required
-            value={waitlistData.email}
-            onChange={(e) => setWaitlistData((s) => ({ ...s, email: e.currentTarget.value }))}
-          />
-          <TextInput
-            label="Nombre"
-            value={waitlistData.name}
-            onChange={(e) => setWaitlistData((s) => ({ ...s, name: e.currentTarget.value }))}
-          />
-          <TextInput
-            label="Teléfono (opcional)"
-            value={waitlistData.phone}
-            onChange={(e) => setWaitlistData((s) => ({ ...s, phone: e.currentTarget.value }))}
-          />
-          <Textarea
-            label="Comentario (opcional)"
-            autosize
-            minRows={2}
-            value={waitlistData.message}
-            onChange={(e) => setWaitlistData((s) => ({ ...s, message: e.currentTarget.value }))}
-          />
-          <Button loading={waitlistSubmitting} onClick={handleWaitlistSubmit}>
-            Apuntarme a la waitlist
-          </Button>
-        </Stack>
-      )}
-
-      {soldOutState.action === "waitlist" && waitlistSubmitted && (
-        <Alert color="green" icon={<IconCheck size={16} />}>
-          {soldOutState.waitlist_success_message ||
-            "¡Listo! Te hemos añadido a la lista de espera. Te avisaremos cuando haya una plaza disponible."}
-        </Alert>
-      )}
-
-      {!soldOutState.action && (
-        <Text>
-          Este producto está agotado por el momento. Vuelve a intentarlo más tarde.
-        </Text>
-      )}
-    </Modal>
-  ) : null;
-
   if (productId && productInfo) {
+    // Cuando el producto ha alcanzado su límite de usuarios, NO se debe
+    // permitir iniciar el onboarding (ni siquiera rellenar nombre/email).
+    // En su lugar, aplicamos la configuración del producto:
+    //  - "redirect" (ya redirige el efecto inicial)
+    //  - "waitlist" → formulario público de waitlist inline
+    //  - "message"  → mensaje HTML configurado por el coach
+    //  - sin acción → mensaje genérico de agotado
+    if (soldOutState) {
+      return (
+        <Container py="xl" size="sm">
+          <Box mb="xl" ta="center">
+            <Title mb="xs" order={2}>
+              {workspaceInfo.name}
+            </Title>
+            <Text c="dimmed">{productInfo.name}</Text>
+          </Box>
+
+          <Paper p="xl" radius="lg" withBorder>
+            <Box mb="lg" p="md" style={{ backgroundColor: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
+              <Text fw={700} size="lg" mb={4}>{productInfo.name}</Text>
+              {productInfo.description && (
+                <Box
+                  c="dimmed"
+                  fz="sm"
+                  mb="xs"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(productInfo.description) }}
+                />
+              )}
+              <Text fw={700} size="xl" c="blue">
+                €{formatDecimal(Number(productInfo.price), 2)}
+                {productInfo.interval && <Text span size="sm" c="dimmed" fw={400}>/{
+                  productInfo.interval === "week" ? "semana" :
+                  productInfo.interval === "biweekly" ? "quincenal" :
+                  productInfo.interval === "quarter" ? "trimestre" :
+                  productInfo.interval === "semester" ? "semestre" :
+                  productInfo.interval === "year" ? "año" : "mes"
+                }</Text>}
+              </Text>
+            </Box>
+
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              color={soldOutState.action === "waitlist" ? "yellow" : "red"}
+              mb="md"
+              title={soldOutState.action === "waitlist" ? "Plazas agotadas" : "Producto agotado"}
+            >
+              {soldOutState.action === "waitlist"
+                ? "Este producto está completo. Apúntate a la lista de espera y te avisaremos cuando haya una plaza disponible."
+                : "Este producto no tiene plazas disponibles en este momento."}
+            </Alert>
+
+            {soldOutState.action === "message" && soldOutState.message_html && (
+              <Box
+                p="md"
+                mb="md"
+                style={{
+                  border: "1px solid var(--mantine-color-gray-3)",
+                  borderRadius: "var(--mantine-radius-md)",
+                  background: "var(--mantine-color-gray-0)",
+                }}
+                dangerouslySetInnerHTML={{ __html: soldOutState.message_html }}
+              />
+            )}
+
+            {soldOutState.action === "waitlist" && !waitlistSubmitted && (
+              <Stack gap="sm">
+                <TextInput
+                  label="Email"
+                  required
+                  leftSection={<IconMail size={16} />}
+                  value={waitlistData.email}
+                  onChange={(e) => setWaitlistData((s) => ({ ...s, email: e.currentTarget.value }))}
+                />
+                <TextInput
+                  label="Nombre"
+                  value={waitlistData.name}
+                  onChange={(e) => setWaitlistData((s) => ({ ...s, name: e.currentTarget.value }))}
+                />
+                <TextInput
+                  label="Teléfono (opcional)"
+                  value={waitlistData.phone}
+                  onChange={(e) => setWaitlistData((s) => ({ ...s, phone: e.currentTarget.value }))}
+                />
+                <Textarea
+                  label="Comentario (opcional)"
+                  autosize
+                  minRows={2}
+                  value={waitlistData.message}
+                  onChange={(e) => setWaitlistData((s) => ({ ...s, message: e.currentTarget.value }))}
+                />
+                <Button size="lg" fullWidth mt="xs" loading={waitlistSubmitting} onClick={handleWaitlistSubmit}>
+                  Apuntarme a la lista de espera
+                </Button>
+              </Stack>
+            )}
+
+            {soldOutState.action === "waitlist" && waitlistSubmitted && (
+              <Alert color="green" icon={<IconCheck size={16} />}>
+                {soldOutState.waitlist_success_message ||
+                  "¡Listo! Te hemos añadido a la lista de espera. Te avisaremos cuando haya una plaza disponible."}
+              </Alert>
+            )}
+
+            {soldOutState.action === "redirect" && soldOutState.redirect_url && (
+              <Stack gap="sm" align="center">
+                <Text size="sm" c="dimmed">Te redirigimos al sitio configurado por el entrenador.</Text>
+                <Button size="lg" onClick={() => { window.location.href = soldOutState.redirect_url || "/"; }}>
+                  Continuar
+                </Button>
+              </Stack>
+            )}
+
+            {!soldOutState.action && (
+              <Stack gap="sm" align="center">
+                <Text size="sm" c="dimmed">Vuelve a intentarlo más tarde o contacta con tu entrenador.</Text>
+              </Stack>
+            )}
+          </Paper>
+        </Container>
+      );
+    }
+
     return (
       <Container py="xl" size="sm">
         <Box mb="xl" ta="center">
@@ -665,17 +711,6 @@ export function ClientOnboardingPage() {
         </Box>
 
         <Paper p="xl" radius="lg" withBorder>
-          {soldOutState && (
-            <Alert
-              icon={<IconAlertCircle size={16} />}
-              color={soldOutState.action === "waitlist" ? "yellow" : "red"}
-              mb="md"
-            >
-              {soldOutState.action === "waitlist"
-                ? "Este producto está completo. Puedes apuntarte a la lista de espera."
-                : "Este producto no tiene plazas disponibles en este momento."}
-            </Alert>
-          )}
           <Box mb="lg" p="md" style={{ backgroundColor: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
             <Text fw={700} size="lg" mb={4}>{productInfo.name}</Text>
             {productInfo.description && (
@@ -739,22 +774,15 @@ export function ClientOnboardingPage() {
               mt="md"
               loading={creatingInvitation}
               onClick={handleProductSignup}
-              color={soldOutState ? "yellow" : undefined}
               disabled={
-                !soldOutState &&
                 !!form.values.confirmEmail &&
                 form.values.confirmEmail !== form.values.email
               }
             >
-              {soldOutState?.action === "waitlist"
-                ? "Unirme a la lista de espera"
-                : soldOutState
-                  ? "Ver información"
-                  : "Continuar con el registro"}
+              Continuar con el registro
             </Button>
           </Stack>
         </Paper>
-        {soldOutModal}
       </Container>
     );
   }

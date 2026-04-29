@@ -459,7 +459,7 @@ async def create_client(
         await email_service.send_email(
             to_email=client.email,
             to_name=client.full_name,
-            subject=f"Bienvenido a {workspace.name if workspace else 'Trackfiz'}",
+            subject="🚀 ¡Bienvenido/a a mi asesoría! Tus próximos pasos",
             html_content=EmailTemplates.client_welcome_after_onboarding(
                 client.full_name,
                 f"{settings.FRONTEND_URL}/my-dashboard",

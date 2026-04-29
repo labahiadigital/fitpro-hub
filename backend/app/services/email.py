@@ -226,6 +226,10 @@ class EmailTemplates:
         safe_name = html_mod.escape(name.strip() if name else "atleta")
         safe_brand = html_mod.escape(workspace_name or "Trackfiz")
         safe_coach = html_mod.escape(coach_name) if coach_name else "Borja Sanfélix"
+        # "Soy [coach o nombre del negocio]" — usamos primero el nombre del coach;
+        # si no se ha pasado, caemos al nombre del workspace (negocio).
+        intro_label = (coach_name or workspace_name or "Borja Sanfélix").strip()
+        safe_intro = html_mod.escape(intro_label)
         phone_value = coach_phone or "+376 383 382"
         safe_phone = html_mod.escape(phone_value)
         portal_href = html_mod.escape(portal_url, quote=True)
@@ -236,7 +240,7 @@ class EmailTemplates:
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Bienvenido a {safe_brand}</title>
+            <title>Bienvenido a Trackfiz</title>
         </head>
         <body style="margin:0;padding:0;background:#f4f7f6;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;color:#1f2937;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
@@ -245,8 +249,9 @@ class EmailTemplates:
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.10);">
                             <tr>
                                 <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:38px 32px;text-align:center;">
-                                    <h1 style="margin:0;color:white;font-size:28px;font-weight:700;">Hola, {safe_name}</h1>
-                                    <p style="margin:10px 0 0;color:rgba(255,255,255,.92);font-size:15px;">Bienvenido a {safe_brand}</p>
+                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;line-height:1.3;">Hola, {safe_name}</h1>
+                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.95);font-size:15px;">Soy {safe_intro}</p>
+                                    <p style="margin:6px 0 0;color:rgba(255,255,255,.85);font-size:14px;">Bienvenido a Trackfiz</p>
                                 </td>
                             </tr>
                             <tr>
@@ -260,8 +265,8 @@ class EmailTemplates:
                             <!-- 1. Plataforma -->
                             <tr>
                                 <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
-                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">1. Accede a la plataforma (TrackFit)</h3>
-                                    <p style="margin:0 0 12px;">Vamos a trabajar con TrackFit, la plataforma donde llevaré todo tu seguimiento. Desde ahí tendrás tu planificación y podrás ver tu progreso en tiempo real.</p>
+                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">1. Accede a la plataforma (Trackfiz)</h3>
+                                    <p style="margin:0 0 12px;">Vamos a trabajar con Trackfiz, la plataforma donde llevaré todo tu seguimiento. Desde ahí tendrás tu planificación y podrás ver tu progreso en tiempo real.</p>
                                     <p style="margin:0 0 6px;">Aquí tienes el enlace:</p>
                                     <p style="margin:0 0 18px;"><a href="{portal_href}" style="color:#2D6A4F;font-weight:600;text-decoration:underline;">{portal_href}</a></p>
                                     <div style="text-align:center;margin:18px 0 24px;">
@@ -286,7 +291,7 @@ class EmailTemplates:
                             <tr>
                                 <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
                                     <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">3. Cómo trabajaremos</h3>
-                                    <p style="margin:0 0 22px;">Dentro de TrackFit irás marcando todo lo que vayas haciendo (entrenos, seguimiento, etc.). Así queda todo registrado y puedo ajustar tu plan con precisión en función de tu evolución.</p>
+                                    <p style="margin:0 0 22px;">Dentro de Trackfiz irás marcando todo lo que vayas haciendo (entrenos, seguimiento, etc.). Así queda todo registrado y puedo ajustar tu plan con precisión en función de tu evolución.</p>
                                 </td>
                             </tr>
 

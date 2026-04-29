@@ -30,6 +30,7 @@ from app.core.security import (
     get_password_hash,
     create_tokens,
     generate_verification_token,
+    verify_password,
 )
 import logging
 import traceback
@@ -668,39 +669,87 @@ async def complete_invitation(
             detail="La invitación ha expirado"
         )
     
-    # Check if user already exists
+    # MULTI-WORKSPACE: si el email ya existe en el sistema, no es un error
+    # automático. Si la persona tiene cuenta en otro workspace, la dejamos
+    # vincularse a este nuevo workspace siempre que demuestre conocer su
+    # contraseña actual. Si ya es cliente activa de este mismo workspace,
+    # entonces sí que debe iniciar sesión.
+    email_lc = data.email.lower()
     result = await db.execute(
-        select(User).where(User.email == data.email.lower())
+        select(User).where(User.email == email_lc)
     )
     existing_user = result.scalar_one_or_none()
-    
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El email ya está registrado"
-        )
 
     workspace_result = await db.execute(
         select(Workspace).where(Workspace.id == invitation.workspace_id)
     )
     workspace = workspace_result.scalar_one_or_none()
-    
-    # If invitation requires payment, verify it was completed
-    if invitation.product_id:
-        if not invitation.payment_id:
+
+    if existing_user:
+        if not existing_user.is_active or existing_user.deleted_at is not None:
             raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail="Esta invitación requiere pago. Completa el pago antes de registrarte.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Esta cuenta no está disponible. Contacta con soporte.",
             )
-        payment_result = await db.execute(
-            select(Payment).where(Payment.id == invitation.payment_id)
+        # Verificamos que conoce la contraseña: para vincularse a otro
+        # workspace debe demostrar que es el dueño de la cuenta.
+        if not existing_user.password_hash or not verify_password(
+            data.password, existing_user.password_hash
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Ese email ya tiene cuenta en Trackfiz. Usa la misma "
+                    "contraseña que ya tenías para vincular este perfil al "
+                    "nuevo entrenador, o inicia sesión con tu cuenta."
+                ),
+            )
+        # ¿ya es cliente activo de ESTE workspace?
+        existing_client_q = await db.execute(
+            select(Client).where(
+                Client.workspace_id == invitation.workspace_id,
+                Client.user_id == existing_user.id,
+                Client.is_active == True,  # noqa: E712
+                Client.deleted_at.is_(None),
+            )
         )
-        payment_record = payment_result.scalar_one_or_none()
-        if not payment_record or payment_record.status != PaymentStatus.succeeded:
+        if existing_client_q.scalar_one_or_none():
             raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail="El pago no se ha completado correctamente.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Ya estás registrado en este workspace. Inicia sesión "
+                    "con tu email y contraseña."
+                ),
             )
+    
+    # Si la invitación exige pago, lo verificamos. Los productos gratuitos
+    # (price <= 0) no requieren payment_id; el resto sí.
+    if invitation.product_id:
+        product_for_payment_q = await db.execute(
+            select(Product).where(Product.id == invitation.product_id)
+        )
+        product_for_payment = product_for_payment_q.scalar_one_or_none()
+        try:
+            product_price_value = float(product_for_payment.price) if product_for_payment and product_for_payment.price is not None else 0.0
+        except (TypeError, ValueError):
+            product_price_value = 0.0
+        requires_payment = product_for_payment is not None and product_price_value > 0
+
+        if requires_payment:
+            if not invitation.payment_id:
+                raise HTTPException(
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                    detail="Esta invitación requiere pago. Completa el pago antes de registrarte.",
+                )
+            payment_result = await db.execute(
+                select(Payment).where(Payment.id == invitation.payment_id)
+            )
+            payment_record = payment_result.scalar_one_or_none()
+            if not payment_record or payment_record.status != PaymentStatus.succeeded:
+                raise HTTPException(
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                    detail="El pago no se ha completado correctamente.",
+                )
     
     try:
         full_name = f"{data.first_name} {data.last_name}"
@@ -711,52 +760,100 @@ async def complete_invitation(
             height_cm=data.height_cm,
             weight_kg=data.weight_kg,
         )
-        
-        # Generate email verification token
-        verification_token = generate_verification_token()
-        
-        # Create user in our database with hashed password
-        user = User(
-            email=data.email.lower(),
-            full_name=full_name,
-            phone=data.phone,
-            password_hash=get_password_hash(data.password),
-            email_verified=False,
-            email_verification_token=verification_token,
-            email_verification_sent_at=datetime.now(timezone.utc),
-            is_active=True,
+
+        verification_token: Optional[str] = None
+        is_returning_user = existing_user is not None
+
+        if is_returning_user:
+            # Reutilizamos la cuenta global. La contraseña ya se ha validado
+            # arriba; no la sobrescribimos.
+            user = existing_user
+            user.is_active = True
+            if not user.email_verified:
+                # La persona ha demostrado conocer la contraseña, así que
+                # legitimamos el email para no exigirle reverificarlo.
+                user.email_verified = True
+                user.email_verification_token = None
+                user.email_verification_sent_at = None
+        else:
+            verification_token = generate_verification_token()
+            user = User(
+                email=email_lc,
+                full_name=full_name,
+                phone=data.phone,
+                password_hash=get_password_hash(data.password),
+                email_verified=False,
+                email_verification_token=verification_token,
+                email_verification_sent_at=datetime.now(timezone.utc),
+                is_active=True,
+            )
+            db.add(user)
+            await db.flush()
+
+        # UserRole en este workspace (puede no existir si es nuevo o si
+        # venía de otro workspace).
+        existing_role_q = await db.execute(
+            select(UserRole).where(
+                UserRole.user_id == user.id,
+                UserRole.workspace_id == invitation.workspace_id,
+            )
         )
-        db.add(user)
-        await db.flush()
-        
-        # Assign user as client role in workspace
-        user_role = UserRole(
-            user_id=user.id,
-            workspace_id=invitation.workspace_id,
-            role=RoleType.client,
-            is_default=True
+        existing_role = existing_role_q.scalar_one_or_none()
+        if not existing_role:
+            db.add(UserRole(
+                user_id=user.id,
+                workspace_id=invitation.workspace_id,
+                role=RoleType.client,
+                is_default=not is_returning_user,
+            ))
+
+        # Si ya hubiera un Client previo (p.ej. inactivo) en este workspace,
+        # lo reactivamos. Si no, creamos uno nuevo.
+        existing_client_q = await db.execute(
+            select(Client).where(
+                Client.workspace_id == invitation.workspace_id,
+                Client.email == email_lc,
+            )
         )
-        db.add(user_role)
-        
-        # Create client profile
-        client = Client(
-            workspace_id=invitation.workspace_id,
-            user_id=user.id,
-            first_name=data.first_name,
-            last_name=data.last_name,
-            email=data.email.lower(),
-            phone=data.phone,
-            birth_date=data.birth_date,
-            gender=data.gender,
-            height_cm=str(data.height_cm) if data.height_cm else None,
-            weight_kg=str(data.weight_kg) if data.weight_kg else None,
-            goals=data.goals,
-            health_data=enriched_health_data,
-            consents=data.consents or {},
-            is_active=True
-        )
-        db.add(client)
-        await db.flush()
+        client = existing_client_q.scalar_one_or_none()
+        if client:
+            client.user_id = user.id
+            client.first_name = data.first_name
+            client.last_name = data.last_name
+            client.phone = data.phone or client.phone
+            client.birth_date = data.birth_date or client.birth_date
+            client.gender = data.gender or client.gender
+            if data.height_cm is not None:
+                client.height_cm = str(data.height_cm)
+            if data.weight_kg is not None:
+                client.weight_kg = str(data.weight_kg)
+            if data.goals:
+                client.goals = data.goals
+            if enriched_health_data:
+                client.health_data = enriched_health_data
+            if data.consents:
+                client.consents = data.consents
+            client.is_active = True
+            client.deleted_at = None
+        else:
+            client = Client(
+                workspace_id=invitation.workspace_id,
+                user_id=user.id,
+                first_name=data.first_name,
+                last_name=data.last_name,
+                email=email_lc,
+                phone=data.phone,
+                birth_date=data.birth_date,
+                gender=data.gender,
+                height_cm=str(data.height_cm) if data.height_cm else None,
+                weight_kg=str(data.weight_kg) if data.weight_kg else None,
+                goals=data.goals,
+                health_data=enriched_health_data,
+                consents=data.consents or {},
+                is_active=True,
+            )
+            db.add(client)
+            await db.flush()
         await attach_onboarding_progress_photo(
             db=db,
             client=client,
@@ -847,33 +944,35 @@ async def complete_invitation(
         
         await db.commit()
         
-        # Send verification email (use workspace name as brand so the client
-        # recognises the gym/coach that invited them).
-        confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
         ws_name_for_email = workspace.name if workspace else None
-        html_content = EmailTemplates.email_confirmation(
-            full_name,
-            confirmation_url,
-            workspace_name=ws_name_for_email,
-        )
         subject_brand = ws_name_for_email or "Trackfiz"
 
-        try:
-            await email_service.send_email(
-                to_email=data.email,
-                to_name=full_name,
-                subject=f"Confirma tu cuenta en {subject_brand}",
-                html_content=html_content,
+        # Sólo enviamos email de verificación a usuarios completamente
+        # nuevos. Si el usuario reutiliza una cuenta existente y ya tenía
+        # el email validado, lo dejamos entrar directamente.
+        if not is_returning_user and verification_token:
+            confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
+            html_content = EmailTemplates.email_confirmation(
+                full_name,
+                confirmation_url,
+                workspace_name=ws_name_for_email,
             )
-            logger.info(f"Verification email sent to {data.email}")
-        except Exception as e:
-            logger.error(f"Failed to send verification email: {e}")
+            try:
+                await email_service.send_email(
+                    to_email=data.email,
+                    to_name=full_name,
+                    subject=f"Confirma tu cuenta en {subject_brand}",
+                    html_content=html_content,
+                )
+                logger.info(f"Verification email sent to {data.email}")
+            except Exception as e:
+                logger.error(f"Failed to send verification email: {e}")
 
         try:
             await email_service.send_email(
                 to_email=data.email,
                 to_name=full_name,
-                subject=f"Bienvenido a {subject_brand}",
+                subject="🚀 ¡Bienvenido/a a mi asesoría! Tus próximos pasos",
                 html_content=EmailTemplates.client_welcome_after_onboarding(
                     full_name,
                     f"{settings.FRONTEND_URL}/my-dashboard",
@@ -882,8 +981,27 @@ async def complete_invitation(
             )
         except Exception as e:
             logger.error(f"Failed to send welcome email: {e}")
-        
-        # Return response indicating email verification is required
+
+        if is_returning_user:
+            # Login directo: la persona ya tenía cuenta y se ha vinculado a
+            # este nuevo workspace usando su contraseña actual.
+            access_token, refresh_token = create_tokens(
+                {"sub": str(user.id), "email": user.email}
+            )
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "expires_in": settings.access_token_expire_minutes * 60,
+                "refresh_token": refresh_token,
+                "requires_email_verification": False,
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "full_name": user.full_name,
+                },
+            }
+
+        # Cuenta nueva: pedimos confirmación por email.
         return {
             "access_token": "pending_email_confirmation",
             "token_type": "bearer",
@@ -953,14 +1071,34 @@ async def public_product_signup(
     # Enforce seat cap before locking the invitation token
     await ensure_product_capacity(db, product)
 
-    existing_user = await db.execute(
-        select(User).where(User.email == data.email.lower())
+    # MULTI-WORKSPACE: un email puede existir en otros workspaces. Sólo
+    # bloqueamos si la persona YA es cliente activa de ESTE workspace
+    # concreto. Si tiene cuenta pero no está en este workspace, le dejamos
+    # avanzar al onboarding -- en /complete/{token} se reutiliza el User
+    # existente exigiéndole su contraseña actual (igual que en
+    # /register-client).
+    email_lc = data.email.lower()
+    existing_user_q = await db.execute(
+        select(User).where(User.email == email_lc)
     )
-    if existing_user.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Este email ya tiene una cuenta. Inicia sesión."
+    existing_user = existing_user_q.scalar_one_or_none()
+    if existing_user:
+        already_in_ws_q = await db.execute(
+            select(Client).where(
+                Client.workspace_id == workspace.id,
+                Client.user_id == existing_user.id,
+                Client.is_active == True,  # noqa: E712
+                Client.deleted_at.is_(None),
+            )
         )
+        if already_in_ws_q.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Ya tienes una cuenta activa con este entrenador. "
+                    "Inicia sesión para acceder a tu plan."
+                ),
+            )
 
     owner_result = await db.execute(
         select(UserRole.user_id).where(
