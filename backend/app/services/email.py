@@ -213,35 +213,108 @@ class EmailTemplates:
         name: str,
         portal_url: str,
         workspace_name: Optional[str] = None,
+        coach_name: Optional[str] = None,
+        coach_phone: Optional[str] = None,
     ) -> str:
-        brand_title = workspace_name or "Trackfiz"
+        """Email de bienvenida tras completar el onboarding del cliente.
+
+        El copy lo proporciona el entrenador (Borja Sanfélix) y se renderiza
+        con tipografía limpia. Se hace HTML-escape de todos los datos
+        dinámicos para evitar problemas de inyección. Si no se pasa
+        ``coach_name``/``coach_phone`` se usan los valores por defecto.
+        """
+        safe_name = html_mod.escape(name.strip() if name else "atleta")
+        safe_brand = html_mod.escape(workspace_name or "Trackfiz")
+        safe_coach = html_mod.escape(coach_name) if coach_name else "Borja Sanfélix"
+        phone_value = coach_phone or "+376 383 382"
+        safe_phone = html_mod.escape(phone_value)
+        portal_href = html_mod.escape(portal_url, quote=True)
+
         return f"""
         <!DOCTYPE html>
         <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Bienvenido a {brand_title}</title>
+            <title>Bienvenido a {safe_brand}</title>
         </head>
-        <body style="margin:0;padding:0;background:#f4f7f6;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
+        <body style="margin:0;padding:0;background:#f4f7f6;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;color:#1f2937;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                     <td align="center" style="padding:40px 20px;">
-                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.10);">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.10);">
                             <tr>
                                 <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:38px 32px;text-align:center;">
-                                    <h1 style="margin:0;color:white;font-size:30px;">¡Bienvenido, {html_mod.escape(name or 'atleta')}!</h1>
-                                    <p style="margin:10px 0 0;color:rgba(255,255,255,.92);font-size:15px;">Tu onboarding en {html_mod.escape(brand_title)} se ha completado correctamente.</p>
+                                    <h1 style="margin:0;color:white;font-size:28px;font-weight:700;">Hola, {safe_name}</h1>
+                                    <p style="margin:10px 0 0;color:rgba(255,255,255,.92);font-size:15px;">Bienvenido a {safe_brand}</p>
                                 </td>
                             </tr>
                             <tr>
-                                <td style="padding:34px 32px;color:#1f2937;">
-                                    <p style="font-size:16px;line-height:1.65;margin:0 0 16px;">Ya hemos recibido tu información inicial. A partir de ahora tu entrenador podrá preparar tu plan, revisar tu progreso y comunicarse contigo desde tu portal.</p>
-                                    <p style="font-size:16px;line-height:1.65;margin:0 0 24px;">Puedes entrar cuando quieras para consultar tus entrenamientos, nutrición, historial y formularios pendientes.</p>
-                                    <div style="text-align:center;margin:30px 0;">
+                                <td style="padding:32px 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <p style="margin:0 0 14px;">Lo primero, gracias por confiar en mí.</p>
+                                    <p style="margin:0 0 22px;">Ya has dado el paso importante. Ahora vamos a trabajar juntos para conseguir ese cambio que buscas.</p>
+                                    <p style="margin:0 0 22px;">Para comenzar hoy mismo, si no lo has hecho todavía, necesito que hagas lo siguiente:</p>
+                                </td>
+                            </tr>
+
+                            <!-- 1. Plataforma -->
+                            <tr>
+                                <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">1. Accede a la plataforma (TrackFit)</h3>
+                                    <p style="margin:0 0 12px;">Vamos a trabajar con TrackFit, la plataforma donde llevaré todo tu seguimiento. Desde ahí tendrás tu planificación y podrás ver tu progreso en tiempo real.</p>
+                                    <p style="margin:0 0 6px;">Aquí tienes el enlace:</p>
+                                    <p style="margin:0 0 18px;"><a href="{portal_href}" style="color:#2D6A4F;font-weight:600;text-decoration:underline;">{portal_href}</a></p>
+                                    <div style="text-align:center;margin:18px 0 24px;">
                                         {_cta_button("Ir a mi portal", portal_url)}
                                     </div>
-                                    <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0;">Si acabas de crear tu cuenta, es posible que también tengas que confirmar tu email antes de iniciar sesión.</p>
+                                </td>
+                            </tr>
+
+                            <!-- 2. Perfil -->
+                            <tr>
+                                <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">2. Completa tu perfil</h3>
+                                    <ul style="margin:0 0 8px 18px;padding:0;">
+                                        <li style="margin:0 0 6px;">Rellena los formularios que tengas pendientes</li>
+                                        <li style="margin:0 0 6px;">Sube tus fotos y medidas en la sección &ldquo;Progreso&rdquo;<br><span style="color:#6b7280;font-size:14px;">(Puedes hacerlo fácilmente desde las notificaciones de la plataforma 🔔)</span></li>
+                                    </ul>
+                                    <p style="margin:8px 0 22px;color:#374151;">Esto es clave para empezar con una base clara.</p>
+                                </td>
+                            </tr>
+
+                            <!-- 3. Cómo trabajaremos -->
+                            <tr>
+                                <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">3. Cómo trabajaremos</h3>
+                                    <p style="margin:0 0 22px;">Dentro de TrackFit irás marcando todo lo que vayas haciendo (entrenos, seguimiento, etc.). Así queda todo registrado y puedo ajustar tu plan con precisión en función de tu evolución.</p>
+                                </td>
+                            </tr>
+
+                            <!-- 4. Contacto -->
+                            <tr>
+                                <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">4. Contacto</h3>
+                                    <p style="margin:0 0 8px;">En breve me pondré en contacto contigo por WhatsApp para empezar a trabajar contigo de forma directa.</p>
+                                    <p style="margin:0 0 22px;">De todas formas, te dejo mi número: <a href="tel:{safe_phone}" style="color:#2D6A4F;font-weight:600;text-decoration:none;">{safe_phone}</a></p>
+                                </td>
+                            </tr>
+
+                            <!-- Soporte -->
+                            <tr>
+                                <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">Soporte</h3>
+                                    <p style="margin:0 0 8px;">Estoy disponible de lunes a viernes para lo que necesites.</p>
+                                    <p style="margin:0 0 22px;">Intentaré responderte siempre en menos de 24h laborables.</p>
+                                </td>
+                            </tr>
+
+                            <!-- Cierre -->
+                            <tr>
+                                <td style="padding:0 32px 32px 32px;font-size:16px;line-height:1.7;">
+                                    <p style="margin:0 0 8px;">A partir de aquí, empieza lo bueno.</p>
+                                    <p style="margin:0 0 22px;">Yo me encargo de guiarte. Tú encárgate de darlo todo.</p>
+                                    <p style="margin:0 0 8px;font-weight:700;font-size:18px;">Vamos a darle GAS 💪🏽</p>
+                                    <p style="margin:18px 0 0;color:#374151;font-weight:600;">{safe_coach}</p>
                                 </td>
                             </tr>
                         </table>

@@ -219,6 +219,16 @@ export function WorkoutsPage() {
     }
   }, [editProgramId, programs, specificClientProgram, builderOpened]);
 
+  // Si llegamos desde el perfil del cliente con `?clientId=...` (botón
+  // "Crear programa personalizado") y no se está editando uno existente,
+  // abrimos directamente el builder con el cliente preseleccionado.
+  useEffect(() => {
+    if (clientId && !editProgramId && !builderOpened) {
+      openProgramBuilder();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, editProgramId]);
+
   const loadTemplateIntoWeeks = (program: any) => {
     const tmpl = program.template;
     const numWeeks = program.duration_weeks || 1;

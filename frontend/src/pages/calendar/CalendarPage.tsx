@@ -911,11 +911,38 @@ export function CalendarPage() {
                         </Box>
                       );
                     })}
-                    {dayBookings.length > 2 && (
-                      <Text c="dimmed" size="xs">
-                        +{dayBookings.length - 2} más
-                      </Text>
-                    )}
+                    {(() => {
+                      const otherEvents = getEventsForDay(day).filter((ev) => ev.type !== "booking");
+                      const totalExtra = (dayBookings.length > 2 ? dayBookings.length - 2 : 0) + otherEvents.length;
+                      return (
+                        <>
+                          {otherEvents.slice(0, Math.max(0, 2 - dayBookings.length)).map((ev) => (
+                            <Box
+                              key={ev.id}
+                              p={2}
+                              title={ev.title}
+                              style={{
+                                backgroundColor: `var(--mantine-color-${ev.color}-1)`,
+                                borderLeft: `2px solid var(--mantine-color-${ev.color}-6)`,
+                                borderRadius: 2,
+                                cursor: "pointer",
+                              }}
+                              onClick={() => {
+                                if (ev.type === "task") navigate("/tasks");
+                                else if (ev.type === "appointment") navigate("/appointments");
+                              }}
+                            >
+                              <Text size="xs" truncate>{ev.title}</Text>
+                            </Box>
+                          ))}
+                          {totalExtra > 0 && (
+                            <Text c="dimmed" size="xs">
+                              +{totalExtra} más
+                            </Text>
+                          )}
+                        </>
+                      );
+                    })()}
                   </Stack>
                 </Box>
               );
@@ -1143,14 +1170,59 @@ export function CalendarPage() {
               }}
             >
               {(view === "week" ? weekDays : [dayjs(currentDate)]).map(
-                (day) => (
+                (day) => {
+                  const dayEvents = getEventsForDay(day);
+                  const allDayEvents = dayEvents.filter((ev) => {
+                    if (ev.type === "booking") return false;
+                    const startsAtMidnight = dayjs(ev.start_time).format("HH:mm") === "00:00";
+                    const longSpan = dayjs(ev.end_time).diff(dayjs(ev.start_time), "hour") >= 12;
+                    return startsAtMidnight && longSpan;
+                  });
+                  return (
                   <Box
                     key={day.format("YYYY-MM-DD")}
                     style={{
                       borderLeft: "1px solid var(--mantine-color-gray-2)",
-                      position: "relative",
                     }}
                   >
+                    {/* All-day band (tareas y citas sin hora) */}
+                    {allDayEvents.length > 0 && (
+                      <Stack
+                        gap={2}
+                        p={3}
+                        style={{
+                          background: "var(--mantine-color-gray-0)",
+                          borderBottom: "1px dashed var(--mantine-color-gray-3)",
+                          minHeight: 28,
+                        }}
+                      >
+                        {allDayEvents.slice(0, 3).map((ev) => (
+                          <Box
+                            key={ev.id}
+                            p={3}
+                            title={ev.title}
+                            onClick={() => {
+                              if (ev.type === "task") navigate("/tasks");
+                              else if (ev.type === "appointment") navigate("/appointments");
+                            }}
+                            style={{
+                              background: `var(--mantine-color-${ev.color}-1)`,
+                              borderLeft: `3px solid var(--mantine-color-${ev.color}-6)`,
+                              borderRadius: 4,
+                              cursor: ev.type === "task" || ev.type === "appointment" ? "pointer" : "default",
+                            }}
+                          >
+                            <Text size="xs" fw={600} truncate>{ev.title}</Text>
+                          </Box>
+                        ))}
+                        {allDayEvents.length > 3 && (
+                          <Text size="xs" c="dimmed">+{allDayEvents.length - 3} más</Text>
+                        )}
+                      </Stack>
+                    )}
+
+                    {/* Time grid */}
+                    <Box style={{ position: "relative" }}>
                     {hours.map((hour) => (
                       <Box
                         h={60}
@@ -1160,6 +1232,72 @@ export function CalendarPage() {
                         }}
                       />
                     ))}
+
+                    {/* Citas (appointments) con hora */}
+                    {dayEvents
+                      .filter((ev) => ev.type === "appointment" && !allDayEvents.includes(ev))
+                      .map((ev) => {
+                        const startHour = dayjs(ev.start_time).hour();
+                        const startMinute = dayjs(ev.start_time).minute();
+                        const duration = Math.max(dayjs(ev.end_time).diff(dayjs(ev.start_time), "minute"), 30);
+                        const top = ((startHour - 7) * 60 + startMinute);
+                        if (top < 0) return null;
+                        return (
+                          <Box
+                            key={ev.id}
+                            onClick={() => navigate("/appointments")}
+                            style={{
+                              position: "absolute",
+                              left: 2,
+                              right: 2,
+                              top: `${top}px`,
+                              height: `${duration}px`,
+                              backgroundColor: `var(--mantine-color-${ev.color}-1)`,
+                              borderLeft: `3px solid var(--mantine-color-${ev.color}-6)`,
+                              borderRadius: 4,
+                              padding: 4,
+                              cursor: "pointer",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <Text fw={600} size="xs" truncate>{ev.title}</Text>
+                            <Text c="dimmed" size="xs">{dayjs(ev.start_time).format("HH:mm")}</Text>
+                          </Box>
+                        );
+                      })}
+
+                    {/* Tareas con hora concreta */}
+                    {dayEvents
+                      .filter((ev) => ev.type === "task" && !allDayEvents.includes(ev))
+                      .map((ev) => {
+                        const startHour = dayjs(ev.start_time).hour();
+                        const startMinute = dayjs(ev.start_time).minute();
+                        const duration = Math.max(dayjs(ev.end_time).diff(dayjs(ev.start_time), "minute"), 30);
+                        const top = ((startHour - 7) * 60 + startMinute);
+                        if (top < 0) return null;
+                        return (
+                          <Box
+                            key={ev.id}
+                            onClick={() => navigate("/tasks")}
+                            style={{
+                              position: "absolute",
+                              left: 2,
+                              right: 2,
+                              top: `${top}px`,
+                              height: `${duration}px`,
+                              backgroundColor: `var(--mantine-color-${ev.color}-1)`,
+                              borderLeft: `3px solid var(--mantine-color-${ev.color}-6)`,
+                              borderRadius: 4,
+                              padding: 4,
+                              cursor: "pointer",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <Text fw={600} size="xs" truncate>{ev.title}</Text>
+                            <Text c="dimmed" size="xs">{dayjs(ev.start_time).format("HH:mm")}</Text>
+                          </Box>
+                        );
+                      })}
 
                     {/* Bookings de Trackfiz */}
                     {getBookingsForDay(day).map((booking) => {
@@ -1273,8 +1411,10 @@ export function CalendarPage() {
                           </Box>
                         );
                       })}
+                    </Box>
                   </Box>
-                )
+                  );
+                }
               )}
             </Box>
           </Box>
