@@ -3042,22 +3042,44 @@ export function ClientDetailPage() {
                     <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       Planes Nutricionales
                     </Text>
-                    <Button 
-                      size="sm" 
-                      leftSection={<IconPlus size={16} />}
-                      radius="xl"
-                      onClick={handleAssignNutritionPlan}
-                      styles={{
-                        root: {
-                          background: "var(--nv-accent)",
-                          color: "var(--nv-dark)",
-                          fontWeight: 600,
-                          "&:hover": { background: "var(--nv-accent-hover)" }
-                        }
-                      }}
-                    >
-                      {mealPlans.filter((p: { status: string }) => p.status === "active").length > 0 ? "Cambiar Plan" : "Asignar Plan"}
-                    </Button>
+                    <Menu shadow="md" width={240} position="bottom-end">
+                      <Menu.Target>
+                        <Button
+                          size="sm"
+                          leftSection={<IconPlus size={16} />}
+                          rightSection={<IconChevronDown size={14} />}
+                          radius="xl"
+                          styles={{
+                            root: {
+                              background: "var(--nv-accent)",
+                              color: "var(--nv-dark)",
+                              fontWeight: 600,
+                              "&:hover": { background: "var(--nv-accent-hover)" }
+                            }
+                          }}
+                        >
+                          {mealPlans.filter((p: { status: string }) => p.status === "active").length > 0 ? "Cambiar Plan" : "Asignar Plan"}
+                        </Button>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Label>Plan nutricional</Menu.Label>
+                        <Menu.Item
+                          leftSection={<IconClipboard size={16} />}
+                          onClick={handleAssignNutritionPlan}
+                        >
+                          Asignar plantilla existente
+                        </Menu.Item>
+                        <Menu.Item
+                          leftSection={<IconBolt size={16} />}
+                          onClick={() => {
+                            if (!id) return;
+                            navigate(`/nutrition?clientId=${id}&returnTo=${encodeURIComponent(`/clients/${id}`)}`);
+                          }}
+                        >
+                          Crear plan personalizado
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
                   </Group>
 
                   <Stack gap="sm">

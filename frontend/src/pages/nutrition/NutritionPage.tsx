@@ -556,6 +556,16 @@ export function NutritionPage() {
     }
   }, [editPlanId, mealPlans, specificClientPlan, builderOpened]);
 
+  // Si llegamos desde el perfil del cliente con `?clientId=...` (botón
+  // "Crear plan personalizado") y no se está editando uno existente, abrimos
+  // directamente el builder con el cliente preseleccionado.
+  useEffect(() => {
+    if (clientId && !editPlanId && !builderOpened) {
+      openPlanBuilder();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, editPlanId]);
+
   const openPlanBuilderFromUrl = (plan: any) => {
     setEditingPlan(plan);
     const planClientId = plan.client_id || clientId || null;
@@ -610,14 +620,44 @@ export function NutritionPage() {
       const client = res.data;
       setSelectedClient(client);
       planForm.setFieldValue("client_id", clientIdValue);
-      if (client.weight_kg && client.height_cm && client.birth_date && client.gender) {
+
+      // Prioridad: si el trainer ya guardó objetivos en la calculadora
+      // (perfil del cliente -> health_data.target_calories), usarlos tal cual
+      // en lugar de recalcular y mostrar un valor distinto al de la ficha.
+      const hd = (client.health_data || {}) as {
+        target_calories?: number;
+        target_protein?: number;
+        target_carbs?: number;
+        target_fat?: number;
+        activity_level?: string;
+        formula_used?: "mifflin" | "harris" | "katch";
+      };
+
+      if (typeof hd.target_calories === "number" && hd.target_calories > 0) {
+        const tc = Math.round(hd.target_calories);
+        planForm.setFieldValue("target_calories", tc);
+        planForm.setFieldValue("target_protein", Math.round(hd.target_protein ?? (tc * 0.3) / 4));
+        planForm.setFieldValue("target_carbs", Math.round(hd.target_carbs ?? (tc * 0.4) / 4));
+        planForm.setFieldValue("target_fat", Math.round(hd.target_fat ?? (tc * 0.3) / 9));
+        return;
+      }
+
+      if (client.weight_kg && client.height_cm && client.birth_date) {
         const age = calculateAge(client.birth_date);
-        const bmr = calculateBMR({ weight_kg: Number(client.weight_kg), height_cm: Number(client.height_cm), age, gender: client.gender === "masculino" ? "male" : "female" });
-        const tdee = calculateTDEE(bmr, (client.health_data?.activity_level as string) || "moderate");
-        planForm.setFieldValue("target_calories", Math.round(tdee));
-        planForm.setFieldValue("target_protein", Math.round((tdee * 0.3) / 4));
-        planForm.setFieldValue("target_carbs", Math.round((tdee * 0.4) / 4));
-        planForm.setFieldValue("target_fat", Math.round((tdee * 0.3) / 9));
+        // El backend almacena gender como "male"/"female"/"other"; sólo
+        // cuando es exactamente "female" aplicamos la fórmula femenina.
+        const genderRaw = String(client.gender || "").toLowerCase();
+        const gender = (genderRaw === "female" || genderRaw === "femenino" || genderRaw === "f") ? "female" : "male";
+        const bmr = calculateBMR(
+          { weight_kg: Number(client.weight_kg), height_cm: Number(client.height_cm), age, gender, body_fat_pct: client.body_fat_pct },
+          hd.formula_used || "mifflin",
+        );
+        const tdee = calculateTDEE(bmr, hd.activity_level || "moderate");
+        const tc = Math.round(tdee);
+        planForm.setFieldValue("target_calories", tc);
+        planForm.setFieldValue("target_protein", Math.round((tc * 0.3) / 4));
+        planForm.setFieldValue("target_carbs", Math.round((tc * 0.4) / 4));
+        planForm.setFieldValue("target_fat", Math.round((tc * 0.3) / 9));
       }
     } catch { setSelectedClient(null); }
   }, [planForm]);
