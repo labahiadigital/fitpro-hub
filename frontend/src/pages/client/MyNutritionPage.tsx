@@ -653,6 +653,7 @@ interface PlanMeal {
   id: string;
   name: string;
   time: string;
+  is_free_meal?: boolean;
   items: Array<{
     id: string;
     food_id?: string;
@@ -1212,7 +1213,7 @@ function NutritionDayDetail({
                   food_id: item.food_id || item.food?.id,
                 };
               }) || []) as PlanMealFoodItem[];
-              const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
+              const totalCalories = meal.is_free_meal ? 0 : mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
               const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.protein_g) || 0), 0);
               const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.carbs_g) || 0), 0);
               const totalFat = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.fat_g) || 0), 0);
@@ -1302,6 +1303,7 @@ function NutritionDayDetail({
                         </Group>
                         <Text size="xs" c="dimmed">
                           {(() => {
+                            if (meal.is_free_meal) return "Comida libre";
                             const recipeNames = new Set(mealFoods.filter((f: PlanMealFoodItem) => f.recipe_group).map((f: PlanMealFoodItem) => f.recipe_group));
                             const ungroupedCount = mealFoods.filter((f: PlanMealFoodItem) => !f.recipe_group).length;
                             const parts: string[] = [];
@@ -1313,10 +1315,16 @@ function NutritionDayDetail({
                       </Box>
                     </Group>
                     <Group gap="xs" wrap="wrap">
-                      <Badge variant="light" color="yellow" size="sm">{totalCalories} kcal</Badge>
-                      <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
-                      <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
-                      <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                      <Badge variant="light" color={meal.is_free_meal ? "teal" : "yellow"} size="sm">
+                        {meal.is_free_meal ? "Libre" : `${totalCalories} kcal`}
+                      </Badge>
+                      {!meal.is_free_meal && (
+                        <>
+                          <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
+                          <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
+                          <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                        </>
+                      )}
                       {!readOnly && (
                         <Tooltip label="Intercambiar comida">
                           <ActionIcon variant="subtle" color="teal" size="sm" onClick={() => setSwapState({ sourceMealIndex: mealIndex, step: "day" })}>
@@ -1326,7 +1334,12 @@ function NutritionDayDetail({
                       )}
                     </Group>
                   </Group>
-                  {mealFoods.length > 0 && (
+                  {meal.is_free_meal ? (
+                    <Paper p="sm" radius="md" withBorder mt="sm" ml={54} style={{ background: "var(--mantine-color-teal-light)" }}>
+                      <Text fw={700} size="sm">Comida libre</Text>
+                      <Text c="dimmed" size="xs">Este bloque del plan está marcado como comida libre.</Text>
+                    </Paper>
+                  ) : mealFoods.length > 0 && (
                     <Stack gap="xs" mt="sm" ml={54}>
                       {(() => {
                         const recipeGroups = new Map<string, PlanMealFoodItem[]>();
@@ -2832,7 +2845,7 @@ export function MyNutritionPage() {
                           };
                         }) || []) as PlanMealFoodItem[];
                         
-                        const totalCalories = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
+                        const totalCalories = meal.is_free_meal ? 0 : mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.calories) || 0), 0);
                         const totalProtein = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.protein_g) || 0), 0);
                         const totalCarbs = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.carbs_g) || 0), 0);
                         const totalFat = mealFoods.reduce((sum: number, f: PlanMealFoodItem) => sum + (Number(f.fat_g) || 0), 0);
@@ -2927,14 +2940,20 @@ export function MyNutritionPage() {
                                       </Group>
                                     )}
                                   </Group>
-                                  <Text size="xs" c="dimmed">{mealFoods.length} alimentos</Text>
+                                  <Text size="xs" c="dimmed">{meal.is_free_meal ? "Comida libre" : `${mealFoods.length} alimentos`}</Text>
                                 </Box>
                               </Group>
                               <Group gap="xs">
-                                <Badge variant="light" color="yellow" size="sm">{totalCalories} kcal</Badge>
-                                <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
-                                <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
-                                <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                                <Badge variant="light" color={meal.is_free_meal ? "teal" : "yellow"} size="sm">
+                                  {meal.is_free_meal ? "Libre" : `${totalCalories} kcal`}
+                                </Badge>
+                                {!meal.is_free_meal && (
+                                  <>
+                                    <Badge variant="outline" color="red" size="xs">P: {Math.round(totalProtein)}g</Badge>
+                                    <Badge variant="outline" color="blue" size="xs">C: {Math.round(totalCarbs)}g</Badge>
+                                    <Badge variant="outline" color="grape" size="xs">G: {Math.round(totalFat)}g</Badge>
+                                  </>
+                                )}
                                 {planViewMode !== "original" && currentPlanDayNum && (
                                   <Tooltip label="Intercambiar comida">
                                     <ActionIcon variant="subtle" color="teal" size="sm" onClick={() => setPlanSwapState({ sourceMealIndex: mealIndex, sourceDayNum: currentPlanDayNum, step: "day" })}>
@@ -2944,7 +2963,12 @@ export function MyNutritionPage() {
                                 )}
                               </Group>
                             </Group>
-                            {mealFoods.length > 0 && (
+                            {meal.is_free_meal ? (
+                              <Paper p="sm" radius="md" withBorder mt="sm" ml={54} style={{ background: "var(--mantine-color-teal-light)" }}>
+                                <Text fw={700} size="sm">Comida libre</Text>
+                                <Text c="dimmed" size="xs">Este bloque del plan está marcado como comida libre.</Text>
+                              </Paper>
+                            ) : mealFoods.length > 0 && (
                               <Stack gap={6} mt="sm" ml={54}>
                                 {mealFoods.map((food: PlanMealFoodItem, foodIndex: number) => (
                                   <Box key={foodIndex}>

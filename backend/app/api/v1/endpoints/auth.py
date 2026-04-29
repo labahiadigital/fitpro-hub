@@ -48,6 +48,10 @@ from uuid import UUID
 from app.schemas.user import UserResponse
 from app.middleware.auth import get_current_user, oauth2_scheme, CurrentUser
 from app.services.email import email_service, EmailTemplates
+from app.services.onboarding import (
+    attach_onboarding_progress_photo,
+    enrich_onboarding_health_data,
+)
 
 router = APIRouter()
 
@@ -989,6 +993,8 @@ class ClientRegisterRequest(BaseModel):
     goals: Optional[str] = None
     health_data: Optional[dict] = None
     consents: Optional[dict] = None
+    progress_photo_data_url: Optional[str] = None
+    progress_photo_type: Optional[str] = "front"
 
 
 @router.post("/register-client", response_model=Token)
@@ -1029,6 +1035,13 @@ async def register_client(
     existing_user = result.scalar_one_or_none()
 
     full_name = f"{data.first_name} {data.last_name}"
+    enriched_health_data = enrich_onboarding_health_data(
+        health_data=data.health_data,
+        birth_date=data.birth_date,
+        gender=data.gender,
+        height_cm=data.height_cm,
+        weight_kg=data.weight_kg,
+    )
 
     try:
         if existing_user:
@@ -1103,14 +1116,20 @@ async def register_client(
                     existing_client.weight_kg = str(data.weight_kg)
                 if data.goals:
                     existing_client.goals = data.goals
-                if data.health_data:
-                    existing_client.health_data = data.health_data
+                if enriched_health_data:
+                    existing_client.health_data = enriched_health_data
                 if data.consents:
                     existing_client.consents = data.consents
                 existing_client.is_active = True
                 existing_client.deleted_at = None
+                await attach_onboarding_progress_photo(
+                    db=db,
+                    client=existing_client,
+                    data_url=data.progress_photo_data_url,
+                    photo_type=data.progress_photo_type or "front",
+                )
             else:
-                db.add(Client(
+                client = Client(
                     workspace_id=data.workspace_id,
                     user_id=existing_user.id,
                     first_name=data.first_name,
@@ -1122,10 +1141,18 @@ async def register_client(
                     height_cm=str(data.height_cm) if data.height_cm else None,
                     weight_kg=str(data.weight_kg) if data.weight_kg else None,
                     goals=data.goals,
-                    health_data=data.health_data or {},
+                    health_data=enriched_health_data,
                     consents=data.consents or {},
                     is_active=True,
-                ))
+                )
+                db.add(client)
+                await db.flush()
+                await attach_onboarding_progress_photo(
+                    db=db,
+                    client=client,
+                    data_url=data.progress_photo_data_url,
+                    photo_type=data.progress_photo_type or "front",
+                )
 
             # Si el email aún no estaba verificado, lo verificamos: la
             # persona ha demostrado conocer la contraseña del usuario, así
@@ -1143,6 +1170,20 @@ async def register_client(
                 {"sub": str(existing_user.id), "email": existing_user.email}
             )
             set_refresh_cookie(response, refresh_token)
+
+            try:
+                await email_service.send_email(
+                    to_email=data.email,
+                    to_name=full_name,
+                    subject=f"Bienvenido a {workspace.name if workspace else 'Trackfiz'}",
+                    html_content=EmailTemplates.client_welcome_after_onboarding(
+                        full_name,
+                        f"{settings.FRONTEND_URL}/my-dashboard",
+                        workspace_name=workspace.name if workspace else None,
+                    ),
+                )
+            except Exception as e:
+                logger.error(f"Failed to send welcome email to client: {e}")
 
             return Token(
                 access_token=access_token,
@@ -1175,7 +1216,7 @@ async def register_client(
             is_default=True,
         ))
 
-        db.add(Client(
+        client = Client(
             workspace_id=data.workspace_id,
             user_id=user.id,
             first_name=data.first_name,
@@ -1187,10 +1228,18 @@ async def register_client(
             height_cm=str(data.height_cm) if data.height_cm else None,
             weight_kg=str(data.weight_kg) if data.weight_kg else None,
             goals=data.goals,
-            health_data=data.health_data or {},
+            health_data=enriched_health_data,
             consents=data.consents or {},
             is_active=True,
-        ))
+        )
+        db.add(client)
+        await db.flush()
+        await attach_onboarding_progress_photo(
+            db=db,
+            client=client,
+            data_url=data.progress_photo_data_url,
+            photo_type=data.progress_photo_type or "front",
+        )
 
         await db.commit()
 
@@ -1212,6 +1261,20 @@ async def register_client(
             )
         except Exception as e:
             logger.error(f"Failed to send verification email to client: {e}")
+
+        try:
+            await email_service.send_email(
+                to_email=data.email,
+                to_name=full_name,
+                subject=f"Bienvenido a {subject_brand}",
+                html_content=EmailTemplates.client_welcome_after_onboarding(
+                    full_name,
+                    f"{settings.FRONTEND_URL}/my-dashboard",
+                    workspace_name=ws_name_for_email,
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Failed to send welcome email to client: {e}")
 
         return Token(
             access_token="pending_email_confirmation",

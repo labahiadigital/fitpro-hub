@@ -209,6 +209,50 @@ def _cta_button(
 
 class EmailTemplates:
     @staticmethod
+    def client_welcome_after_onboarding(
+        name: str,
+        portal_url: str,
+        workspace_name: Optional[str] = None,
+    ) -> str:
+        brand_title = workspace_name or "Trackfiz"
+        return f"""
+        <!DOCTYPE html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bienvenido a {brand_title}</title>
+        </head>
+        <body style="margin:0;padding:0;background:#f4f7f6;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td align="center" style="padding:40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.10);">
+                            <tr>
+                                <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:38px 32px;text-align:center;">
+                                    <h1 style="margin:0;color:white;font-size:30px;">¡Bienvenido, {html_mod.escape(name or 'atleta')}!</h1>
+                                    <p style="margin:10px 0 0;color:rgba(255,255,255,.92);font-size:15px;">Tu onboarding en {html_mod.escape(brand_title)} se ha completado correctamente.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:34px 32px;color:#1f2937;">
+                                    <p style="font-size:16px;line-height:1.65;margin:0 0 16px;">Ya hemos recibido tu información inicial. A partir de ahora tu entrenador podrá preparar tu plan, revisar tu progreso y comunicarse contigo desde tu portal.</p>
+                                    <p style="font-size:16px;line-height:1.65;margin:0 0 24px;">Puedes entrar cuando quieras para consultar tus entrenamientos, nutrición, historial y formularios pendientes.</p>
+                                    <div style="text-align:center;margin:30px 0;">
+                                        {_cta_button("Ir a mi portal", portal_url)}
+                                    </div>
+                                    <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0;">Si acabas de crear tu cuenta, es posible que también tengas que confirmar tu email antes de iniciar sesión.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+
+    @staticmethod
     def email_confirmation(
         name: str,
         confirmation_url: str,

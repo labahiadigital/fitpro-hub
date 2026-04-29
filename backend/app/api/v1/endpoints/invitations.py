@@ -39,6 +39,10 @@ logger = logging.getLogger(__name__)
 from app.services.email import email_service, EmailTemplates
 from app.services.product_capacity import ensure_product_capacity
 from app.tasks.notifications import send_email_task
+from app.services.onboarding import (
+    attach_onboarding_progress_photo,
+    enrich_onboarding_health_data,
+)
 
 router = APIRouter()
 
@@ -604,6 +608,8 @@ class InvitationCompleteRequest(BaseModel):
     goals: Optional[str] = None
     health_data: Optional[dict] = None
     consents: Optional[dict] = None
+    progress_photo_data_url: Optional[str] = None
+    progress_photo_type: Optional[str] = "front"
 
 
 @router.post("/complete/{token}")
@@ -673,6 +679,11 @@ async def complete_invitation(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El email ya está registrado"
         )
+
+    workspace_result = await db.execute(
+        select(Workspace).where(Workspace.id == invitation.workspace_id)
+    )
+    workspace = workspace_result.scalar_one_or_none()
     
     # If invitation requires payment, verify it was completed
     if invitation.product_id:
@@ -693,6 +704,13 @@ async def complete_invitation(
     
     try:
         full_name = f"{data.first_name} {data.last_name}"
+        enriched_health_data = enrich_onboarding_health_data(
+            health_data=data.health_data,
+            birth_date=data.birth_date,
+            gender=data.gender,
+            height_cm=data.height_cm,
+            weight_kg=data.weight_kg,
+        )
         
         # Generate email verification token
         verification_token = generate_verification_token()
@@ -733,12 +751,18 @@ async def complete_invitation(
             height_cm=str(data.height_cm) if data.height_cm else None,
             weight_kg=str(data.weight_kg) if data.weight_kg else None,
             goals=data.goals,
-            health_data=data.health_data or {},
+            health_data=enriched_health_data,
             consents=data.consents or {},
             is_active=True
         )
         db.add(client)
         await db.flush()
+        await attach_onboarding_progress_photo(
+            db=db,
+            client=client,
+            data_url=data.progress_photo_data_url,
+            photo_type=data.progress_photo_type or "front",
+        )
         
         # Create subscription if invitation has a product
         if invitation.product_id:
@@ -844,6 +868,20 @@ async def complete_invitation(
             logger.info(f"Verification email sent to {data.email}")
         except Exception as e:
             logger.error(f"Failed to send verification email: {e}")
+
+        try:
+            await email_service.send_email(
+                to_email=data.email,
+                to_name=full_name,
+                subject=f"Bienvenido a {subject_brand}",
+                html_content=EmailTemplates.client_welcome_after_onboarding(
+                    full_name,
+                    f"{settings.FRONTEND_URL}/my-dashboard",
+                    workspace_name=ws_name_for_email,
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Failed to send welcome email: {e}")
         
         # Return response indicating email verification is required
         return {

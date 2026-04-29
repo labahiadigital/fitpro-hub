@@ -30,6 +30,11 @@ from app.schemas.base import PaginatedResponse, BaseSchema
 from app.middleware.auth import require_workspace, require_staff, CurrentUser, get_current_user
 from app.services.notification_service import notify
 from app.tasks.notifications import send_email_task
+from app.services.email import email_service, EmailTemplates
+from app.services.onboarding import (
+    attach_onboarding_progress_photo,
+    enrich_onboarding_health_data,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -448,6 +453,22 @@ async def create_client(
     except Exception as e:
         logger.warning("Could not send validation email to new client %s: %s", client.email, e)
 
+    try:
+        workspace_result = await db.execute(select(Workspace).where(Workspace.id == client.workspace_id))
+        workspace = workspace_result.scalar_one_or_none()
+        await email_service.send_email(
+            to_email=client.email,
+            to_name=client.full_name,
+            subject=f"Bienvenido a {workspace.name if workspace else 'Trackfiz'}",
+            html_content=EmailTemplates.client_welcome_after_onboarding(
+                client.full_name,
+                f"{settings.FRONTEND_URL}/my-dashboard",
+                workspace_name=workspace.name if workspace else None,
+            ),
+        )
+    except Exception:
+        logger.exception("Failed to send onboarding welcome email to client %s", client.id)
+
     return await _client_to_response(client)
 
 
@@ -670,6 +691,8 @@ class OnboardingRequest(BaseSchema):
     goals: Optional[str] = None
     health_data: Optional[Dict] = None
     consents: Optional[Dict] = None
+    progress_photo_data_url: Optional[str] = None
+    progress_photo_type: Optional[str] = "front"
 
 
 @router.post("/onboarding", response_model=ClientResponse)
@@ -688,6 +711,14 @@ async def complete_onboarding(
     )
     existing_client = result.scalar_one_or_none()
     
+    enriched_health_data = enrich_onboarding_health_data(
+        health_data=data.health_data,
+        birth_date=data.birth_date,
+        gender=data.gender,
+        height_cm=data.height_cm,
+        weight_kg=data.weight_kg,
+    )
+
     if existing_client:
         # Update existing client profile
         existing_client.first_name = data.first_name
@@ -698,8 +729,14 @@ async def complete_onboarding(
         existing_client.height_cm = str(data.height_cm) if data.height_cm else None
         existing_client.weight_kg = str(data.weight_kg) if data.weight_kg else None
         existing_client.goals = data.goals
-        existing_client.health_data = data.health_data or {}
+        existing_client.health_data = enriched_health_data
         existing_client.consents = data.consents or {}
+        await attach_onboarding_progress_photo(
+            db=db,
+            client=existing_client,
+            data_url=data.progress_photo_data_url,
+            photo_type=data.progress_photo_type or "front",
+        )
         
         await db.commit()
         await db.refresh(existing_client)
@@ -732,11 +769,18 @@ async def complete_onboarding(
             height_cm=str(data.height_cm) if data.height_cm else None,
             weight_kg=str(data.weight_kg) if data.weight_kg else None,
             goals=data.goals,
-            health_data=data.health_data or {},
+            health_data=enriched_health_data,
             consents=data.consents or {},
             is_active=True
         )
         db.add(client)
+        await db.flush()
+        await attach_onboarding_progress_photo(
+            db=db,
+            client=client,
+            data_url=data.progress_photo_data_url,
+            photo_type=data.progress_photo_type or "front",
+        )
         await db.commit()
         await db.refresh(client)
     

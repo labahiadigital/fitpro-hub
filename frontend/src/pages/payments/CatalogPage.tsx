@@ -75,6 +75,7 @@ import { useTeamMembers } from "../../hooks/useTeam";
 import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
+import { sanitizeHtml } from "../../utils/safeHtml";
 
 interface SessionPackage {
   id: string;
@@ -276,6 +277,11 @@ export function CatalogPage() {
     });
     openProductModal();
   }, [productForm, openProductModal]);
+
+  const insertDescriptionTag = useCallback((openTag: string, closeTag = "") => {
+    const current = productForm.values.description || "";
+    productForm.setFieldValue("description", `${current}${current ? "\n" : ""}${openTag}${closeTag}`);
+  }, [productForm]);
 
   const handleSaveProduct = useCallback(async (values: typeof productForm.values) => {
     const existingExtra = (editingProduct?.extra_data || {}) as Record<string, unknown>;
@@ -521,9 +527,15 @@ export function CatalogPage() {
       <Text fw={600} mb="xs" size="lg" style={{ color: "var(--nv-text-primary)" }}>
         {product.name}
       </Text>
-      <Text c="dimmed" mb="md" size="sm">
-        {product.description}
-      </Text>
+      {product.description && (
+        <Box
+          c="dimmed"
+          mb="md"
+          fz="sm"
+          style={{ lineHeight: 1.45 }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }}
+        />
+      )}
 
       {product.sessions_included && (
         <Badge mb="md" variant="outline" radius="xl">
@@ -968,7 +980,28 @@ export function CatalogPage() {
               onChange={(val) => productForm.setFieldValue("kind", (val === "product" ? "product" : "service"))}
             />
             <TextInput label="Nombre" placeholder="Plan Premium" required {...productForm.getInputProps("name")} />
-            <Textarea label="Descripción" minRows={2} placeholder="Describe el producto..." {...productForm.getInputProps("description")} />
+            <Box>
+              <Group gap={6} mb={6}>
+                <Text size="sm" fw={500}>Descripción</Text>
+                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<strong>Texto en negrita</strong>")}>Negrita</Button>
+                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<br />")}>Salto</Button>
+                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<ul><li>Nuevo punto</li></ul>")}>Lista</Button>
+                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<p>Nuevo párrafo</p>")}>Párrafo</Button>
+              </Group>
+              <Textarea
+                autosize
+                minRows={5}
+                description="Puedes usar formato HTML básico: negritas, párrafos, listas y saltos de línea. Este formato se conserva en el onboarding y en la ficha pública."
+                placeholder="Describe el producto con formato..."
+                {...productForm.getInputProps("description")}
+              />
+              {productForm.values.description && (
+                <Paper mt="xs" p="sm" radius="md" withBorder>
+                  <Text size="xs" c="dimmed" mb={4}>Vista previa</Text>
+                  <Box fz="sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(productForm.values.description) }} />
+                </Paper>
+              )}
+            </Box>
             <Group grow>
               <NumberInput label="Precio (€)" min={0} placeholder="0" required decimalScale={2} {...productForm.getInputProps("price")} />
               <Select

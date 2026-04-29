@@ -98,6 +98,16 @@ export function NotificationCenter({
   });
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const todayNotifications = filteredNotifications.filter((n) => {
+    const d = new Date(n.timestamp);
+    const now = new Date();
+    return d.toDateString() === now.toDateString();
+  });
+  const earlierNotifications = filteredNotifications.filter((n) => {
+    const d = new Date(n.timestamp);
+    const now = new Date();
+    return d.toDateString() !== now.toDateString();
+  });
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -113,6 +123,97 @@ export function NotificationCenter({
     if (diffDays < 7) return `Hace ${diffDays}d`;
     return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
   };
+
+  const renderNotification = (notification: Notification) => (
+    <Paper
+      key={notification.id}
+      onClick={() => {
+        if (!notification.isRead) onMarkAsRead(notification.id);
+      }}
+      p="md"
+      style={{
+        borderBottom: "1px solid var(--mantine-color-gray-1)",
+        background: notification.isRead
+          ? undefined
+          : "var(--mantine-color-blue-0)",
+        cursor: "pointer",
+      }}
+    >
+      <Group
+        align="flex-start"
+        justify="space-between"
+        wrap="nowrap"
+      >
+        <Group align="flex-start" gap="sm" wrap="nowrap">
+          <ThemeIcon
+            color={notificationColors[notification.type]}
+            radius="xl"
+            size="md"
+            variant="light"
+          >
+            {notificationIcons[notification.type]}
+          </ThemeIcon>
+          <div style={{ flex: 1 }}>
+            <Group gap="xs" mb={2}>
+              <Text
+                fw={notification.isRead ? 400 : 600}
+                lineClamp={1}
+                size="sm"
+              >
+                {notification.title}
+              </Text>
+              {!notification.isRead && (
+                <Badge color="blue" size="xs" variant="filled">
+                  Nuevo
+                </Badge>
+              )}
+            </Group>
+            <Text c="dimmed" lineClamp={2} size="xs">
+              {notification.message}
+            </Text>
+            <Text c="dimmed" mt={4} size="xs">
+              {formatTimestamp(notification.timestamp)}
+            </Text>
+          </div>
+        </Group>
+        <Menu shadow="md" width={150}>
+          <Menu.Target>
+            <ActionIcon
+              color="gray"
+              onClick={(e) => e.stopPropagation()}
+              size="sm"
+              variant="subtle"
+            >
+              <IconDotsVertical size={14} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            {!notification.isRead && (
+              <Menu.Item
+                leftSection={<IconCheck size={14} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkAsRead(notification.id);
+                }}
+              >
+                Marcar leído
+              </Menu.Item>
+            )}
+            <Menu.Item
+              color="red"
+              leftSection={<IconTrash size={14} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(notification.id);
+              }}
+            >
+              Eliminar
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      </Group>
+    </Paper>
+  );
 
   return (
     <Drawer
@@ -242,96 +343,22 @@ export function NotificationCenter({
             </Stack>
           ) : (
             <Stack gap={0}>
-              {filteredNotifications.map((notification) => (
-                <Paper
-                  key={notification.id}
-                  onClick={() => {
-                    if (!notification.isRead) onMarkAsRead(notification.id);
-                  }}
-                  p="md"
-                  style={{
-                    borderBottom: "1px solid var(--mantine-color-gray-1)",
-                    background: notification.isRead
-                      ? undefined
-                      : "var(--mantine-color-blue-0)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Group
-                    align="flex-start"
-                    justify="space-between"
-                    wrap="nowrap"
-                  >
-                    <Group align="flex-start" gap="sm" wrap="nowrap">
-                      <ThemeIcon
-                        color={notificationColors[notification.type]}
-                        radius="xl"
-                        size="md"
-                        variant="light"
-                      >
-                        {notificationIcons[notification.type]}
-                      </ThemeIcon>
-                      <div style={{ flex: 1 }}>
-                        <Group gap="xs" mb={2}>
-                          <Text
-                            fw={notification.isRead ? 400 : 600}
-                            lineClamp={1}
-                            size="sm"
-                          >
-                            {notification.title}
-                          </Text>
-                          {!notification.isRead && (
-                            <Badge color="blue" size="xs" variant="filled">
-                              Nuevo
-                            </Badge>
-                          )}
-                        </Group>
-                        <Text c="dimmed" lineClamp={2} size="xs">
-                          {notification.message}
-                        </Text>
-                        <Text c="dimmed" mt={4} size="xs">
-                          {formatTimestamp(notification.timestamp)}
-                        </Text>
-                      </div>
-                    </Group>
-                    <Menu shadow="md" width={150}>
-                      <Menu.Target>
-                        <ActionIcon
-                          color="gray"
-                          onClick={(e) => e.stopPropagation()}
-                          size="sm"
-                          variant="subtle"
-                        >
-                          <IconDotsVertical size={14} />
-                        </ActionIcon>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        {!notification.isRead && (
-                          <Menu.Item
-                            leftSection={<IconCheck size={14} />}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onMarkAsRead(notification.id);
-                            }}
-                          >
-                            Marcar leído
-                          </Menu.Item>
-                        )}
-                        <Menu.Item
-                          color="red"
-                          leftSection={<IconTrash size={14} />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(notification.id);
-                          }}
-                        >
-                          Eliminar
-                        </Menu.Item>
-                      </Menu.Dropdown>
-                    </Menu>
-                  </Group>
-                </Paper>
-              ))}
+              {todayNotifications.length > 0 && (
+                <>
+                  <Text px="md" py="xs" size="xs" fw={800} c="blue" tt="uppercase" style={{ letterSpacing: 0.6 }}>
+                    Hoy
+                  </Text>
+                  {todayNotifications.map(renderNotification)}
+                </>
+              )}
+              {earlierNotifications.length > 0 && (
+                <>
+                  <Text px="md" py="xs" size="xs" fw={800} c="dimmed" tt="uppercase" style={{ letterSpacing: 0.6 }}>
+                    Anteriores
+                  </Text>
+                  {earlierNotifications.map(renderNotification)}
+                </>
+              )}
             </Stack>
           )}
         </ScrollArea>

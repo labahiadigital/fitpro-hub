@@ -134,6 +134,7 @@ export interface Meal {
   name: string;
   time: string;
   items: MealItem[];
+  is_free_meal?: boolean;
 }
 
 export interface DayPlan {
@@ -514,6 +515,23 @@ export function MealPlanBuilder({
           ? {
               ...d,
               meals: d.meals.map((m) => (m.id === mealId ? { ...m, time } : m)),
+            }
+          : d
+      )
+    );
+  }, [activeDay, days, onChange]);
+
+  const toggleFreeMeal = useCallback((mealId: string, checked: boolean) => {
+    onChange(
+      days.map((d) =>
+        d.id === activeDay
+          ? {
+              ...d,
+              meals: d.meals.map((m) =>
+                m.id === mealId
+                  ? { ...m, is_free_meal: checked, items: checked ? [] : m.items }
+                  : m
+              ),
             }
           : d
       )
@@ -1246,17 +1264,21 @@ export function MealPlanBuilder({
                       </Group>
                       <Group gap="sm">
                         <Badge color="blue" variant="light" radius="md">
-                          {Math.round(mealMacros.calories)} kcal
+                          {meal.is_free_meal ? "Libre" : `${Math.round(mealMacros.calories)} kcal`}
                         </Badge>
-                        <Badge color="green" variant="outline" radius="md">
-                          P: {Math.round(mealMacros.protein)}g
-                        </Badge>
-                        <Badge color="orange" variant="outline" radius="md">
-                          C: {Math.round(mealMacros.carbs)}g
-                        </Badge>
-                        <Badge color="grape" variant="outline" radius="md">
-                          G: {Math.round(mealMacros.fat)}g
-                        </Badge>
+                        {!meal.is_free_meal && (
+                          <>
+                            <Badge color="green" variant="outline" radius="md">
+                              P: {Math.round(mealMacros.protein)}g
+                            </Badge>
+                            <Badge color="orange" variant="outline" radius="md">
+                              C: {Math.round(mealMacros.carbs)}g
+                            </Badge>
+                            <Badge color="grape" variant="outline" radius="md">
+                              G: {Math.round(mealMacros.fat)}g
+                            </Badge>
+                          </>
+                        )}
                         <Tooltip label="Subir">
                           <ActionIcon
                             color="gray"
@@ -1300,6 +1322,25 @@ export function MealPlanBuilder({
                       </Group>
                     </Group>
 
+                    <Group justify="flex-end" mb="xs">
+                      <Switch
+                        label="Comida libre"
+                        checked={meal.is_free_meal || false}
+                        onChange={(e) => toggleFreeMeal(meal.id, e.currentTarget.checked)}
+                        size="xs"
+                        color="teal"
+                      />
+                    </Group>
+
+                    {meal.is_free_meal ? (
+                      <Paper p="md" radius="md" withBorder ta="center" style={{ backgroundColor: "var(--mantine-color-teal-light)" }}>
+                        <ThemeIcon size="lg" radius="xl" color="teal" variant="light" mb="xs">
+                          <IconCalendarOff size={18} />
+                        </ThemeIcon>
+                        <Text fw={700} size="sm">Comida libre</Text>
+                        <Text c="dimmed" size="xs">Este bloque no tiene alimentos preasignados. El cliente puede comer libremente en esta comida.</Text>
+                      </Paper>
+                    ) : (
                     <Stack gap="xs">
                       {(() => {
                         const recipeGroups = new Map<string, MealItem[]>();
@@ -1567,7 +1608,9 @@ export function MealPlanBuilder({
                         );
                       })}
                     </Stack>
+                    )}
 
+                    {!meal.is_free_meal && (
                     <Group mt="sm" gap="xs">
                       <Button
                         leftSection={<IconPlus size={14} />}
@@ -1613,6 +1656,7 @@ export function MealPlanBuilder({
                         )
                       )}
                     </Group>
+                    )}
                   </Paper>
                 );
               })}

@@ -5,7 +5,9 @@ import {
   Checkbox,
   Container,
   Divider,
+  FileButton,
   Group,
+  Image,
   Loader,
   Modal,
   MultiSelect,
@@ -35,6 +37,7 @@ import {
   IconHeartbeat,
   IconLock,
   IconMail,
+  IconPhoto,
   IconTarget,
   IconUser,
 } from "@tabler/icons-react";
@@ -43,6 +46,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
+import { sanitizeHtml } from "../../utils/safeHtml";
 import {
   ALLERGENS_SELECT_DATA,
   INTOLERANCES_SELECT_DATA,
@@ -107,6 +111,15 @@ interface OnboardingFormData {
 const ALLERGENS = ALLERGENS_SELECT_DATA;
 const INTOLERANCES = INTOLERANCES_SELECT_DATA;
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export function ClientOnboardingPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [searchParams] = useSearchParams();
@@ -131,6 +144,8 @@ export function ClientOnboardingPage() {
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
   const [waitlistData, setWaitlistData] = useState({ email: "", name: "", phone: "", message: "" });
+  const [progressPhoto, setProgressPhoto] = useState<File | null>(null);
+  const [progressPhotoPreview, setProgressPhotoPreview] = useState<string | null>(null);
 
   // Verificar que el workspace existe
   useEffect(() => {
@@ -387,6 +402,7 @@ export function ClientOnboardingPage() {
         }
       }
       
+      const progressPhotoDataUrl = progressPhoto ? await fileToDataUrl(progressPhoto) : undefined;
       const response = await api.post(`/auth/register-client`, {
         workspace_id: workspaceInfo.id,
         email: values.email,
@@ -419,6 +435,8 @@ export function ClientOnboardingPage() {
           marketing: values.acceptMarketing,
           consent_date: new Date().toISOString(),
         },
+        progress_photo_data_url: progressPhotoDataUrl,
+        progress_photo_type: "front",
       });
       
       // If registration succeeded and returned tokens, save them
@@ -660,7 +678,14 @@ export function ClientOnboardingPage() {
           )}
           <Box mb="lg" p="md" style={{ backgroundColor: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
             <Text fw={700} size="lg" mb={4}>{productInfo.name}</Text>
-            {productInfo.description && <Text size="sm" c="dimmed" mb="xs">{productInfo.description}</Text>}
+            {productInfo.description && (
+              <Box
+                c="dimmed"
+                fz="sm"
+                mb="xs"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(productInfo.description) }}
+              />
+            )}
             <Text fw={700} size="xl" c="blue">
               €{formatDecimal(Number(productInfo.price), 2)}
               {productInfo.interval && <Text span size="sm" c="dimmed" fw={400}>/{
@@ -1017,6 +1042,32 @@ export function ClientOnboardingPage() {
                 placeholder="Lista los medicamentos que tomas actualmente (si aplica)"
                 {...form.getInputProps("medications")}
               />
+              <Paper p="md" radius="md" withBorder>
+                <Group justify="space-between" align="center">
+                  <Box>
+                    <Text fw={600} size="sm">Foto inicial de progreso</Text>
+                    <Text c="dimmed" size="xs">
+                      Opcional. Puedes subir una foto frontal para que tu entrenador tenga un primer punto de referencia.
+                    </Text>
+                  </Box>
+                  <FileButton
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(file) => {
+                      setProgressPhoto(file);
+                      setProgressPhotoPreview(file ? URL.createObjectURL(file) : null);
+                    }}
+                  >
+                    {(props) => (
+                      <Button {...props} variant="light" leftSection={<IconPhoto size={16} />} radius="xl" size="xs">
+                        {progressPhoto ? "Cambiar foto" : "Subir foto"}
+                      </Button>
+                    )}
+                  </FileButton>
+                </Group>
+                {progressPhotoPreview && (
+                  <Image src={progressPhotoPreview} alt="Foto inicial de progreso" radius="md" mt="md" mah={220} fit="cover" />
+                )}
+              </Paper>
             </Stack>
           </Paper>
         </Stepper.Step>

@@ -6,7 +6,9 @@ import {
   Checkbox,
   Container,
   Divider,
+  FileButton,
   Group,
+  Image,
   Loader,
   MultiSelect,
   NumberInput,
@@ -37,6 +39,7 @@ import {
   IconHeartbeat,
   IconLock,
   IconMail,
+  IconPhoto,
   IconShieldCheck,
   IconTarget,
   IconUser,
@@ -46,6 +49,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api, redsysApi, sequraApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
+import { sanitizeHtml } from "../../utils/safeHtml";
 import {
   ALLERGENS_SELECT_DATA,
   INTOLERANCES_SELECT_DATA,
@@ -128,6 +132,15 @@ interface OnboardingFormData {
 const ALLERGENS = ALLERGENS_SELECT_DATA;
 const INTOLERANCES = INTOLERANCES_SELECT_DATA;
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export function InvitationOnboardingPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
@@ -146,6 +159,8 @@ export function InvitationOnboardingPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [progressPhoto, setProgressPhoto] = useState<File | null>(null);
+  const [progressPhotoPreview, setProgressPhotoPreview] = useState<string | null>(null);
 
   // Payment method selection: "redsys" (card) or "sequra" (installments)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"redsys" | "sequra">("redsys");
@@ -657,6 +672,7 @@ export function InvitationOnboardingPage() {
         }
       }
       
+      const progressPhotoDataUrl = progressPhoto ? await fileToDataUrl(progressPhoto) : undefined;
       const response = await api.post(`/invitations/complete/${token}`, {
         email: values.email,
         password: values.password,
@@ -688,6 +704,8 @@ export function InvitationOnboardingPage() {
           marketing: values.acceptMarketing,
           consent_date: new Date().toISOString(),
         },
+        progress_photo_data_url: progressPhotoDataUrl,
+        progress_photo_type: "front",
       });
       
       // Check if email verification is required
@@ -871,7 +889,11 @@ export function InvitationOnboardingPage() {
                 <div style={{ textAlign: "center" }}>
                   <Title order={3} mb="xs">{product.name}</Title>
                   {product.description && (
-                    <Text c="dimmed" size="sm">{product.description}</Text>
+                    <Box
+                      c="dimmed"
+                      fz="sm"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }}
+                    />
                   )}
                 </div>
 
@@ -1293,6 +1315,32 @@ export function InvitationOnboardingPage() {
                 placeholder="Lista los medicamentos que tomas actualmente (si aplica)"
                 {...form.getInputProps("medications")}
               />
+              <Paper p="md" radius="md" withBorder>
+                <Group justify="space-between" align="center">
+                  <Box>
+                    <Text fw={600} size="sm">Foto inicial de progreso</Text>
+                    <Text c="dimmed" size="xs">
+                      Opcional. Sube una foto frontal para que tu entrenador tenga un primer punto de referencia.
+                    </Text>
+                  </Box>
+                  <FileButton
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(file) => {
+                      setProgressPhoto(file);
+                      setProgressPhotoPreview(file ? URL.createObjectURL(file) : null);
+                    }}
+                  >
+                    {(props) => (
+                      <Button {...props} variant="light" leftSection={<IconPhoto size={16} />} radius="xl" size="xs">
+                        {progressPhoto ? "Cambiar foto" : "Subir foto"}
+                      </Button>
+                    )}
+                  </FileButton>
+                </Group>
+                {progressPhotoPreview && (
+                  <Image src={progressPhotoPreview} alt="Foto inicial de progreso" radius="md" mt="md" mah={220} fit="cover" />
+                )}
+              </Paper>
             </Stack>
           </Paper>
         </Stepper.Step>
