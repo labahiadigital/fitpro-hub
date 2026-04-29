@@ -76,6 +76,7 @@ import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
 import { sanitizeHtml } from "../../utils/safeHtml";
+import { RichTextEditorField } from "../../components/common/RichTextEditor";
 
 interface SessionPackage {
   id: string;
@@ -277,11 +278,6 @@ export function CatalogPage() {
     });
     openProductModal();
   }, [productForm, openProductModal]);
-
-  const insertDescriptionTag = useCallback((openTag: string, closeTag = "") => {
-    const current = productForm.values.description || "";
-    productForm.setFieldValue("description", `${current}${current ? "\n" : ""}${openTag}${closeTag}`);
-  }, [productForm]);
 
   const handleSaveProduct = useCallback(async (values: typeof productForm.values) => {
     const existingExtra = (editingProduct?.extra_data || {}) as Record<string, unknown>;
@@ -980,28 +976,13 @@ export function CatalogPage() {
               onChange={(val) => productForm.setFieldValue("kind", (val === "product" ? "product" : "service"))}
             />
             <TextInput label="Nombre" placeholder="Plan Premium" required {...productForm.getInputProps("name")} />
-            <Box>
-              <Group gap={6} mb={6}>
-                <Text size="sm" fw={500}>Descripción</Text>
-                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<strong>Texto en negrita</strong>")}>Negrita</Button>
-                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<br />")}>Salto</Button>
-                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<ul><li>Nuevo punto</li></ul>")}>Lista</Button>
-                <Button size="compact-xs" variant="light" onClick={() => insertDescriptionTag("<p>Nuevo párrafo</p>")}>Párrafo</Button>
-              </Group>
-              <Textarea
-                autosize
-                minRows={5}
-                description="Puedes usar formato HTML básico: negritas, párrafos, listas y saltos de línea. Este formato se conserva en el onboarding y en la ficha pública."
-                placeholder="Describe el producto con formato..."
-                {...productForm.getInputProps("description")}
-              />
-              {productForm.values.description && (
-                <Paper mt="xs" p="sm" radius="md" withBorder>
-                  <Text size="xs" c="dimmed" mb={4}>Vista previa</Text>
-                  <Box fz="sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(productForm.values.description) }} />
-                </Paper>
-              )}
-            </Box>
+            <RichTextEditorField
+              label="Descripción"
+              description="Da formato (negritas, listas, encabezados, enlaces). Se mantiene en el onboarding y en la ficha pública."
+              placeholder="Describe el producto..."
+              value={productForm.values.description}
+              onChange={(val) => productForm.setFieldValue("description", val)}
+            />
             <Group grow>
               <NumberInput label="Precio (€)" min={0} placeholder="0" required decimalScale={2} {...productForm.getInputProps("price")} />
               <Select

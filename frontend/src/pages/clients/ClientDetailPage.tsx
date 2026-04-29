@@ -3781,21 +3781,42 @@ export function ClientDetailPage() {
                 <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Programas de Entrenamiento
                 </Text>
-                <Button 
-                  leftSection={<IconPlus size={18} />}
-                  radius="xl"
-                  onClick={handleAssignProgram}
-                  size="sm"
-                  styles={{
-                    root: {
-                      background: "var(--nv-accent)",
-                      color: "var(--nv-dark)",
-                      fontWeight: 700,
-                    }
-                  }}
-                >
-                  Asignar Programa
-                </Button>
+                <Menu shadow="md" width={260} position="bottom-end">
+                  <Menu.Target>
+                    <Button
+                      size="sm"
+                      leftSection={<IconPlus size={16} />}
+                      rightSection={<IconChevronDown size={14} />}
+                      radius="xl"
+                      styles={{
+                        root: {
+                          background: "var(--nv-accent)",
+                          color: "var(--nv-dark)",
+                          fontWeight: 700,
+                        },
+                      }}
+                    >
+                      {clientWorkoutPrograms.some((p: { is_active?: boolean }) => p.is_active)
+                        ? "Cambiar Programa"
+                        : "Asignar Programa"}
+                    </Button>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label>Programa de entrenamiento</Menu.Label>
+                    <Menu.Item leftSection={<IconClipboard size={16} />} onClick={handleAssignProgram}>
+                      Asignar plantilla existente
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconBolt size={16} />}
+                      onClick={() => {
+                        if (!id) return;
+                        navigate(`/workouts?clientId=${id}&returnTo=${encodeURIComponent(`/clients/${id}?tab=programs`)}`);
+                      }}
+                    >
+                      Crear programa personalizado
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
               </Group>
               <Stack gap="md">
                 {clientWorkoutPrograms.map((program: { id: string; name: string; description?: string; duration_weeks?: number; difficulty?: string; created_at?: string; assigned_at?: string; start_date?: string; end_date?: string; is_active?: boolean; template?: { blocks?: Array<{ name: string; type?: string; exercises?: Array<{ exercise?: { name?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string }> }> } }, progIdx: number) => {
@@ -3929,21 +3950,40 @@ export function ClientDetailPage() {
               <Text c="dimmed" mb="lg" maw={400} mx="auto">
                 Asigna un programa de entrenamiento para este cliente
               </Text>
-              <Button 
-                leftSection={<IconPlus size={18} />}
-                radius="xl"
-                onClick={handleAssignProgram}
-                styles={{
-                  root: {
-                    background: "var(--nv-accent)",
-                    color: "var(--nv-dark)",
-                    fontWeight: 700,
-                    "&:hover": { background: "var(--nv-accent-hover)" }
-                  }
-                }}
-              >
-                Asignar Programa
-              </Button>
+              <Menu shadow="md" width={260} position="bottom">
+                <Menu.Target>
+                  <Button
+                    leftSection={<IconPlus size={18} />}
+                    rightSection={<IconChevronDown size={14} />}
+                    radius="xl"
+                    styles={{
+                      root: {
+                        background: "var(--nv-accent)",
+                        color: "var(--nv-dark)",
+                        fontWeight: 700,
+                        "&:hover": { background: "var(--nv-accent-hover)" },
+                      },
+                    }}
+                  >
+                    Asignar Programa
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>Programa de entrenamiento</Menu.Label>
+                  <Menu.Item leftSection={<IconClipboard size={16} />} onClick={handleAssignProgram}>
+                    Asignar plantilla existente
+                  </Menu.Item>
+                  <Menu.Item
+                    leftSection={<IconBolt size={16} />}
+                    onClick={() => {
+                      if (!id) return;
+                      navigate(`/workouts?clientId=${id}&returnTo=${encodeURIComponent(`/clients/${id}?tab=programs`)}`);
+                    }}
+                  >
+                    Crear programa personalizado
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             </Box>
           )}
         </Tabs.Panel>

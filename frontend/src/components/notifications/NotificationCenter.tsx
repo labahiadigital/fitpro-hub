@@ -343,17 +343,39 @@ export function NotificationCenter({
             </Stack>
           ) : (
             <Stack gap={0}>
-              {todayNotifications.length > 0 && (
-                <>
-                  <Text px="md" py="xs" size="xs" fw={800} c="blue" tt="uppercase" style={{ letterSpacing: 0.6 }}>
-                    Hoy
+              <Group
+                px="md"
+                py="xs"
+                gap={6}
+                style={{ background: "var(--mantine-color-blue-0)" }}
+              >
+                <Text size="xs" fw={800} c="blue" tt="uppercase" style={{ letterSpacing: 0.6 }}>
+                  Hoy
+                </Text>
+                <Badge size="xs" variant="filled" color="blue" radius="xl">
+                  {todayNotifications.length}
+                </Badge>
+              </Group>
+              {todayNotifications.length === 0 ? (
+                <Box px="md" py="sm">
+                  <Text c="dimmed" size="xs">
+                    No tienes nuevas notificaciones hoy.
                   </Text>
-                  {todayNotifications.map(renderNotification)}
-                </>
+                </Box>
+              ) : (
+                todayNotifications.map(renderNotification)
               )}
               {earlierNotifications.length > 0 && (
                 <>
-                  <Text px="md" py="xs" size="xs" fw={800} c="dimmed" tt="uppercase" style={{ letterSpacing: 0.6 }}>
+                  <Text
+                    px="md"
+                    py="xs"
+                    size="xs"
+                    fw={800}
+                    c="dimmed"
+                    tt="uppercase"
+                    style={{ letterSpacing: 0.6, background: "var(--mantine-color-gray-0)" }}
+                  >
                     Anteriores
                   </Text>
                   {earlierNotifications.map(renderNotification)}
