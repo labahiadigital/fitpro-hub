@@ -68,18 +68,31 @@ async def list_exercises(
     muscle_groups: Optional[str] = None,
     equipment: Optional[str] = None,
     difficulty: Optional[str] = None,
+    source: Optional[str] = Query(
+        None,
+        description="Filtrar por origen: 'system' (sólo globales), 'custom' (sólo del workspace) o sin valor (todos).",
+        pattern="^(system|custom)$",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
     """List exercises (global and workspace-specific)."""
-    query = select(Exercise).where(
-        or_(
+    if source == "system":
+        query = select(Exercise).where(Exercise.is_global.is_(True))
+    elif source == "custom":
+        query = select(Exercise).where(
             Exercise.workspace_id == current_user.workspace_id,
-            Exercise.is_global.is_(True)
+            Exercise.is_global.is_(False),
         )
-    )
+    else:
+        query = select(Exercise).where(
+            or_(
+                Exercise.workspace_id == current_user.workspace_id,
+                Exercise.is_global.is_(True)
+            )
+        )
     
     if search:
         search_pattern = f"%{search}%"

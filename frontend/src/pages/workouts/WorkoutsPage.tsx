@@ -131,16 +131,27 @@ export function WorkoutsPage() {
     label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Sin nombre",
   }));
 
-  const { data: exercises = [], isLoading: loadingExercises } = useExercises({ search: searchExercise });
+  // Pasamos el filtro de origen al backend para que la query sólo devuelva
+  // ejercicios del workspace o del sistema según corresponda (evita el bug de
+  // paginación de los alimentos cuando el filtro se hacía sólo en cliente).
+  const exerciseSourceParam: "system" | "custom" | undefined =
+    exerciseSourceFilter === "system" || exerciseSourceFilter === "custom"
+      ? exerciseSourceFilter
+      : undefined;
+  const { data: exercises = [], isLoading: loadingExercises } = useExercises({
+    search: searchExercise,
+    source: exerciseSourceParam,
+  });
 
   const { data: exerciseFavorites = [] } = useExerciseFavorites();
   const toggleExerciseFavorite = useToggleExerciseFavorite();
   const favoritesSet = useMemo(() => new Set<string>(exerciseFavorites as string[]), [exerciseFavorites]);
 
   const sourceFilteredExercises = useMemo(() => {
+    // 'system' / 'custom' ya vienen filtrados del servidor; aquí sólo
+    // resolvemos el caso "favorites" (que es un filtro local sobre los IDs
+    // marcados como favoritos por el usuario).
     if (exerciseSourceFilter === "favorites") return exercises.filter((e: any) => favoritesSet.has(e.id));
-    if (exerciseSourceFilter === "system") return exercises.filter((e: any) => e.is_global);
-    if (exerciseSourceFilter === "custom") return exercises.filter((e: any) => !e.is_global);
     return exercises;
   }, [exercises, exerciseSourceFilter, favoritesSet]);
 

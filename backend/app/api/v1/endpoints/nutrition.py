@@ -119,21 +119,38 @@ class MealPlanResponse(BaseModel):
 async def list_foods(
     search: Optional[str] = None,
     category: Optional[str] = None,
+    source: Optional[str] = Query(
+        None,
+        description="Filtrar por origen: 'system' (sólo globales), 'custom' (sólo del workspace) o sin valor (todos).",
+        pattern="^(system|custom)$",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Listar alimentos (globales y del workspace).
+    Listar alimentos (globales + del workspace) con paginación.
+    El filtro ``source`` se aplica a nivel de base de datos para que la
+    paginación devuelta al frontend cuadre con lo que el usuario realmente
+    ve (antes el filtro se aplicaba después de paginar y mostraba páginas
+    casi vacías).
     """
-    query = select(Food).where(
-        or_(
+    if source == "system":
+        query = select(Food).where(Food.is_global.is_(True))
+    elif source == "custom":
+        query = select(Food).where(
             Food.workspace_id == current_user.workspace_id,
-            Food.is_global.is_(True)
+            Food.is_global.is_(False),
         )
-    )
-    
+    else:
+        query = select(Food).where(
+            or_(
+                Food.workspace_id == current_user.workspace_id,
+                Food.is_global.is_(True)
+            )
+        )
+
     if search:
         query = query.where(
             func.unaccent(Food.name).ilike(func.unaccent(f"%{search}%"))

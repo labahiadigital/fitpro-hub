@@ -412,11 +412,14 @@ export function NutritionPage() {
   const plansNeeded = activeTab === "templates" || !!editPlanId;
 
   const { data: supabaseFoods } = useSupabaseFoods(builderOpened);
+  const foodSourceParam: "system" | "custom" | "all" =
+    foodSourceFilter === "system" || foodSourceFilter === "custom" ? foodSourceFilter : "all";
   const { data: paginatedFoods, isLoading: isLoadingPaginatedFoods, isFetching: isFetchingFoods } = useSupabaseFoodsPaginated(
     currentPage,
     FOODS_PER_PAGE,
     debouncedSearch,
     foodCategoryFilter,
+    foodSourceParam,
     { enabled: foodsNeeded },
   );
   // Total is already returned by the paginated endpoint; avoid a second request.
@@ -822,18 +825,18 @@ export function NutritionPage() {
 
   const paginatedFoodsList: Food[] = useMemo(() => {
     if (!paginatedFoods?.items) return [];
+    // El filtro 'system'/'custom' se aplica server-side (ver foodSourceParam), por
+    // lo que aquí no volvemos a filtrar por origen y la paginación cuadra.
     let foodsList = paginatedFoods.items.map((food: any) => ({
       id: food.id, name: food.name || "Sin nombre", calories: food.calories || 0,
       protein: food.protein_g || 0, carbs: food.carbs_g || 0, fat: food.fat_g || 0,
       serving_size: "100", category: mapCategory(food.category), is_global: food.is_global ?? false,
       image_url: food.image_url || null,
     }));
-    if (foodSourceFilter === "system") foodsList = foodsList.filter((f: Food) => f.is_global);
-    else if (foodSourceFilter === "custom") foodsList = foodsList.filter((f: Food) => !f.is_global);
     if (foodFilter === "favorites") foodsList = foodsList.filter((food: Food) => isFoodFavorite(food.id));
     foodsList.sort((a: Food, b: Food) => { const aF = isFoodFavorite(a.id); const bF = isFoodFavorite(b.id); if (aF && !bF) return -1; if (!aF && bF) return 1; return 0; });
     return foodsList;
-  }, [paginatedFoods, foodFilter, foodSourceFilter, isFoodFavorite]);
+  }, [paginatedFoods, foodFilter, isFoodFavorite]);
 
   const filteredSupplements = useMemo(() => {
     let suppList = supplements;
@@ -905,7 +908,7 @@ export function NutritionPage() {
             foodCategoryFilter={foodCategoryFilter}
             currentPage={currentPage} totalPages={paginatedFoods?.totalPages || 0} total={paginatedFoods?.total || 0}
             isFoodFavorite={isFoodFavorite} getCategoryIcon={getCategoryIcon} getCategoryColor={getCategoryColor}
-            onSearchChange={handleSearchChange} onFilterChange={setFoodFilter} onSourceFilterChange={setFoodSourceFilter}
+            onSearchChange={handleSearchChange} onFilterChange={setFoodFilter} onSourceFilterChange={(v) => { setFoodSourceFilter(v); setCurrentPage(1); }}
             onCategoryFilterChange={(v) => { setFoodCategoryFilter(v || ""); setCurrentPage(1); }}
             onPageChange={setCurrentPage}
             onToggleFavorite={handleToggleFoodFavorite}

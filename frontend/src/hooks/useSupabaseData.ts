@@ -115,16 +115,18 @@ export function useSupabaseFoodsPaginated(
   pageSize = 50,
   search = "",
   category = "",
+  source: "system" | "custom" | "all" = "all",
   options?: { enabled?: boolean },
 ) {
   return useQuery({
-    queryKey: ["foods-paginated", page, pageSize, search, category],
+    queryKey: ["foods-paginated", page, pageSize, search, category, source],
     queryFn: async () => {
       const response = await nutritionApi.foods({
         page,
         limit: pageSize,
         search: search || undefined,
         category: category || undefined,
+        source: source !== "all" ? source : undefined,
       });
       const data = response.data;
       return {

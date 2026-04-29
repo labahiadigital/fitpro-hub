@@ -676,17 +676,31 @@ async def send_form_to_clients(
     no existe ya otra pendiente para el mismo form/cliente. Genera una
     notificación in-app al usuario del cliente (si está vinculado).
     """
+    # Sólo se pueden enviar al cliente formularios PROPIOS del workspace.
+    # Las plantillas globales del sistema deben copiarse antes (POST /forms/{id}/clone)
+    # y luego enviar la copia personal: ese es el flujo intencionado para que el
+    # entrenador pueda editarlas y se respete su criterio.
     form_result = await db.execute(
         select(Form).where(
             Form.id == form_id,
-            or_(
-                Form.workspace_id == current_user.workspace_id,
-                Form.is_global == True,  # noqa: E712
-            ),
+            Form.workspace_id == current_user.workspace_id,
         )
     )
     form = form_result.scalar_one_or_none()
     if not form:
+        # Distinguimos entre "no existe" y "es plantilla del sistema" para dar
+        # un mensaje claro al usuario.
+        global_check = await db.execute(
+            select(Form.id).where(Form.id == form_id, Form.is_global == True)  # noqa: E712
+        )
+        if global_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "No puedes enviar plantillas del sistema directamente. "
+                    "Cópialas primero a tu workspace y envía la copia."
+                ),
+            )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formulario no encontrado")
 
     if not payload.client_ids:

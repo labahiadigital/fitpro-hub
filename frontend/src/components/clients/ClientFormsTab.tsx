@@ -94,10 +94,16 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
     return map;
   }, [forms]);
 
-  // Solo se pueden enviar formularios activos (propios o del sistema).
+  // Solo se pueden enviar al cliente formularios PROPIOS del workspace.
+  // Las plantillas del sistema (is_global=true) deben copiarse primero
+  // a "Mis formularios" desde la pantalla de Formularios y, una vez
+  // copiadas, ya forman parte del workspace y se pueden enviar.
   const sendableForms = useMemo(
     () =>
-      forms.filter((f) => f.is_active === true || f.is_active === "Y" || f.is_active === "true"),
+      forms.filter((f) => {
+        const active = f.is_active === true || f.is_active === "Y" || f.is_active === "true";
+        return active && !f.is_global;
+      }),
     [forms]
   );
 
@@ -296,24 +302,47 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             {clientName ? ` a ${clientName}` : ""}. El cliente recibirá una
             notificación en su portal.
           </Text>
-          <Select
-            label="Formulario"
-            placeholder="Selecciona un formulario activo"
-            searchable
-            data={sendableForms.map((f) => ({
-              value: f.id,
-              label: f.is_required ? `${f.name} · Obligatorio` : f.name,
-            }))}
-            value={selectedFormId}
-            onChange={setSelectedFormId}
-          />
+          {sendableForms.length === 0 ? (
+            <Paper withBorder p="md" radius="md">
+              <Stack gap={6}>
+                <Text fw={600} size="sm">No tienes formularios propios todavía</Text>
+                <Text size="xs" c="dimmed">
+                  Sólo se pueden enviar al cliente formularios de tu workspace.
+                  Las plantillas del sistema deben copiarse antes desde la
+                  pantalla de Formularios.
+                </Text>
+                <Button
+                  variant="light"
+                  size="xs"
+                  onClick={() => {
+                    closeSend();
+                    window.location.assign("/forms");
+                  }}
+                >
+                  Ir a Formularios
+                </Button>
+              </Stack>
+            </Paper>
+          ) : (
+            <Select
+              label="Formulario"
+              placeholder="Selecciona un formulario activo"
+              searchable
+              data={sendableForms.map((f) => ({
+                value: f.id,
+                label: f.is_required ? `${f.name} · Obligatorio` : f.name,
+              }))}
+              value={selectedFormId}
+              onChange={setSelectedFormId}
+            />
+          )}
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={closeSend}>
               Cancelar
             </Button>
             <Button
               leftSection={<IconSend size={16} />}
-              disabled={!selectedFormId}
+              disabled={!selectedFormId || sendableForms.length === 0}
               loading={sendForm.isPending}
               onClick={handleSend}
             >

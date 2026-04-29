@@ -72,15 +72,29 @@ interface ExerciseFilters {
   search?: string;
   muscle_group?: string;
   category?: string;
+  source?: "system" | "custom";
+  page_size?: number;
 }
 
 export function useExercises(filters: ExerciseFilters = {}) {
+  // El listado del WorkoutsPage no pagina en cliente: pedimos un page_size
+  // alto para no truncar a 50 (default del backend) y asegurar que todos los
+  // ejercicios del workspace + sistema estén disponibles para los filtros y
+  // el builder.
+  const finalFilters = { page_size: 200, ...filters };
   return useQuery({
-    queryKey: ["exercises", filters],
+    queryKey: ["exercises", finalFilters],
     queryFn: async () => {
-      return workoutsApi.exercises(filters);
+      return workoutsApi.exercises(finalFilters);
     },
-    select: (response) => response.data as Exercise[],
+    select: (response) => {
+      const data = response.data;
+      // El backend devuelve {items, total, page, page_size}. Mantenemos
+      // compatibilidad con consumidores anteriores que esperaban un array
+      // plano si en algún entorno el endpoint todavía devuelve sólo `items`.
+      if (Array.isArray(data)) return data as Exercise[];
+      return ((data?.items ?? []) as Exercise[]);
+    },
     placeholderData: (previousData) => previousData,
     staleTime: 60 * 1000,
   });
