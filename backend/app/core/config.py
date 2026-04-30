@@ -56,7 +56,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = ""
     DATABASE_SSL: bool = True
-    DATABASE_SSL_VERIFY: bool = False  # Enforces CERT_REQUIRED + hostname check (auto-on in production)
+    # Enforces CERT_REQUIRED + hostname check. Opt-in only — APP_ENV=production
+    # alone does NOT enable it, because some hosted providers present certs
+    # that slim Python images can't validate against their default CA bundle.
+    # Turn this on explicitly once you've confirmed the runtime trusts the DB CA.
+    DATABASE_SSL_VERIFY: bool = False
     DATABASE_SSL_CA: str = ""  # Optional path to a CA bundle file for self-hosted Postgres
     DATABASE_STATEMENT_TIMEOUT_MS: int = 15000  # 15s per-statement hard stop
     # Pool tuning.

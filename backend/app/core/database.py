@@ -77,17 +77,27 @@ def _create_engine():
         logger.info("Supabase pooler detected -> disabling asyncpg statement cache")
 
     if settings.DATABASE_SSL:
-        if settings.APP_ENV == "production" or settings.DATABASE_SSL_VERIFY:
+        # TLS verification is gated by DATABASE_SSL_VERIFY ONLY. We deliberately
+        # do NOT auto-enable strict verification when APP_ENV=production: in
+        # several real deployments the DB host (e.g. Supabase pooler) presents
+        # a certificate that the slim runtime image can't validate against its
+        # bundled CA store, which left the whole API returning 500s the moment
+        # APP_ENV switched to production. Operators opt into strict mode
+        # explicitly with DATABASE_SSL_VERIFY=true once they have validated
+        # that the runtime trusts the DB CA (and, if necessary, supplied
+        # DATABASE_SSL_CA pointing at the right bundle).
+        if settings.DATABASE_SSL_VERIFY:
             connect_args["ssl"] = _build_ssl_context()
+            logger.info("Database TLS: strict verification enabled (CERT_REQUIRED + hostname check)")
         else:
-            # Dev/staging: allow self-signed without hostname checks, but still encrypt.
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
             connect_args["ssl"] = ctx
-            logger.warning(
-                "DATABASE_SSL is enabled without certificate verification (APP_ENV=%s). "
-                "Set DATABASE_SSL_VERIFY=true and APP_ENV=production to enforce full TLS validation.",
+            log = logger.warning if settings.is_production else logger.info
+            log(
+                "Database TLS: encrypted-but-unverified (APP_ENV=%s, DATABASE_SSL_VERIFY=false). "
+                "Set DATABASE_SSL_VERIFY=true once the runtime trusts the DB CA.",
                 settings.APP_ENV,
             )
 
