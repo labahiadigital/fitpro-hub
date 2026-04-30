@@ -249,13 +249,13 @@ class EmailTemplates:
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.10);">
                             <tr>
                                 <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:38px 32px;text-align:center;">
-                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;line-height:1.3;">Hola, {safe_name}</h1>
-                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.95);font-size:15px;">Soy {safe_intro}</p>
-                                    <p style="margin:6px 0 0;color:rgba(255,255,255,.85);font-size:14px;">Bienvenido a Trackfiz</p>
+                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;line-height:1.3;">Soy {safe_intro}</h1>
+                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.92);font-size:15px;">Bienvenido a Trackfiz</p>
                                 </td>
                             </tr>
                             <tr>
                                 <td style="padding:32px 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <p style="margin:0 0 14px;">Hola, {safe_name},</p>
                                     <p style="margin:0 0 14px;">Lo primero, gracias por confiar en mí.</p>
                                     <p style="margin:0 0 22px;">Ya has dado el paso importante. Ahora vamos a trabajar juntos para conseguir ese cambio que buscas.</p>
                                     <p style="margin:0 0 22px;">Para comenzar hoy mismo, si no lo has hecho todavía, necesito que hagas lo siguiente:</p>
