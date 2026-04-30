@@ -110,16 +110,37 @@ class RedsysConfigStatus(BaseModel):
 def _get_default_urls() -> dict:
     """Get default notification/redirect URLs based on settings."""
     frontend = settings.FRONTEND_URL.rstrip("/")
-    backend_base = f"{settings.FRONTEND_URL.split(':')[0]}:{settings.FRONTEND_URL.split(':')[1]}:8001" if ":" in settings.FRONTEND_URL else settings.FRONTEND_URL
-    
-    # For the webhook, we need the backend's public URL
-    # In development, Redsys test can't reach localhost, so we note this
-    api_prefix = settings.API_V1_PREFIX
-    
     return {
         "ok_url": f"{frontend}/payments/redsys/success",
         "ko_url": f"{frontend}/payments/redsys/error",
     }
+
+
+def _build_merchant_notification_url(request: Request) -> str:
+    """
+    Build the public webhook URL that Redsys will call to notify us of the
+    payment outcome.
+
+    Order of preference:
+      1. ``settings.BACKEND_PUBLIC_URL`` (recommended in production) — explicit,
+         immune to reverse-proxy quirks.
+      2. ``request.base_url`` with the scheme normalized to HTTPS in
+         production. Necessary because when TLS terminates at Cloudflare /
+         Traefik / Coolify, ``request.base_url`` may report ``http://`` even
+         though the public origin is HTTPS. If we leave it as HTTP, Redsys
+         hits the HTTP endpoint, the proxy returns a 301/308 redirect to
+         HTTPS, Redsys does NOT follow redirects, and the synchronous flow
+         fails with response code 9915 ("ERROR: server return…").
+    """
+    api_prefix = settings.API_V1_PREFIX
+    public = (settings.BACKEND_PUBLIC_URL or "").rstrip("/")
+    if public:
+        return f"{public}{api_prefix}/redsys/notification"
+
+    base_url = str(request.base_url).rstrip("/")
+    if settings.is_production and base_url.startswith("http://"):
+        base_url = "https://" + base_url[len("http://"):]
+    return f"{base_url}{api_prefix}/redsys/notification"
 
 
 # ============ ONBOARDING PAYMENT (PUBLIC) ============
@@ -287,8 +308,7 @@ async def create_onboarding_payment(
     ok_url = f"{frontend}/onboarding/invite/{data.token}?payment=success"
     ko_url = f"{frontend}/onboarding/invite/{data.token}?payment=error"
 
-    base_url = str(request.base_url).rstrip("/")
-    merchant_url = f"{base_url}{settings.API_V1_PREFIX}/redsys/notification"
+    merchant_url = _build_merchant_notification_url(request)
 
     # COF params: initial operation for recurring subscription
     # IDENTIFIER=REQUIRED tells Redsys to generate and return a card token
@@ -424,8 +444,7 @@ async def create_redsys_payment(
 
     # Build the notification URL (webhook) - must be publicly accessible
     # In production this would be the real domain
-    base_url = str(request.base_url).rstrip("/")
-    merchant_url = f"{base_url}{settings.API_V1_PREFIX}/redsys/notification"
+    merchant_url = _build_merchant_notification_url(request)
 
     # Create payment record
     amount_cents = int(round(data.amount * 100))
