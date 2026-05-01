@@ -830,6 +830,140 @@ async def get_payment_status(
     )
 
 
+class AdminMarkPaidRequest(BaseModel):
+    """
+    Body de ``POST /redsys/admin/mark-paid``.
+
+    El operador (staff) introduce el "Nº de Pedido" tal y como aparece en el
+    panel de Redsys para un cobro que en Redsys aparece como
+    aprobado (``Ds_Response`` 0000-0099) pero cuya notificación HTTP no llegó
+    al backend (típicamente porque la WAF de Cloudflare bloqueó el POST de
+    Redsys con 403, o por una caída de red puntual). Marcar el pago como
+    ``succeeded`` desbloquea el resto del flujo: la invitación deja de exigir
+    402 al completar el formulario y la factura automática se genera.
+    """
+    order_id: str = Field(..., min_length=4, max_length=12, description="Nº de pedido tal y como aparece en el panel de Redsys (Ds_Order)")
+    response_code: str = Field("0000", min_length=4, max_length=4, description="Código de respuesta (Ds_Response) que se ve en el panel de Redsys")
+    notes: str = Field("", max_length=500, description="Nota libre de auditoría: por qué se está marcando manualmente")
+
+
+class AdminMarkPaidResponse(BaseModel):
+    payment_id: UUID
+    order_id: str
+    previous_status: str
+    new_status: str
+    invoice_created: bool
+
+
+@router.post("/admin/mark-paid", response_model=AdminMarkPaidResponse)
+async def admin_mark_payment_paid(
+    data: AdminMarkPaidRequest,
+    request: Request,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reproceso manual de un pago de Redsys cuyo webhook se perdió.
+
+    Solo staff. Idempotente: si el pago ya está en ``succeeded`` no hace
+    nada y devuelve ``invoice_created=False``. Para evitar abuso:
+      - El staff debe pertenecer al workspace al que pertenece el pago.
+      - Sólo se acepta para pagos en estado ``pending``; nunca degrada
+        un pago ya cobrado o ya devuelto.
+      - Toda la operación queda registrada en ``payment.extra_data`` con
+        usuario, IP y timestamp.
+
+    Después de marcarlo, el cliente puede simplemente volver a abrir su
+    enlace de invitación y completar el formulario: el endpoint
+    ``/invitations/complete/{token}`` validará el pago en ``succeeded`` y
+    creará la cuenta + el cliente como en el flujo normal.
+    """
+    if not redsys_service.is_successful_response(data.response_code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Ds_Response={data.response_code} no es un código de éxito "
+                f"(rango aceptado: 0000-0099). No se puede marcar como pagado."
+            ),
+        )
+
+    result = await db.execute(
+        select(Payment).where(
+            and_(
+                Payment.extra_data["redsys_order_id"].astext == data.order_id,
+                Payment.workspace_id == current_user.workspace_id,
+            )
+        )
+    )
+    payment = result.scalar_one_or_none()
+
+    if not payment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se ha encontrado ningún pago con order_id={data.order_id} en este workspace",
+        )
+
+    previous_status = payment.status.value
+
+    if payment.status == PaymentStatus.succeeded:
+        return AdminMarkPaidResponse(
+            payment_id=payment.id,
+            order_id=data.order_id,
+            previous_status=previous_status,
+            new_status=previous_status,
+            invoice_created=False,
+        )
+
+    if payment.status != PaymentStatus.pending:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"El pago está en estado '{previous_status}', no se puede "
+                f"forzar a 'succeeded' desde aquí. Sólo se acepta 'pending'."
+            ),
+        )
+
+    response_message = redsys_service.get_response_code_message(data.response_code)
+
+    payment.status = PaymentStatus.succeeded
+    payment.paid_at = datetime.utcnow()
+    payment.extra_data = {
+        **(payment.extra_data or {}),
+        "redsys_response_code": data.response_code,
+        "redsys_response_message": response_message,
+        "redsys_confirmed_via": "admin_manual",
+        "redsys_confirmed_at": datetime.utcnow().isoformat(),
+        "redsys_confirmed_by_user_id": str(current_user.id),
+        "redsys_confirmed_by_ip": (request.client.host if request.client else "unknown"),
+        "redsys_admin_notes": data.notes,
+    }
+
+    invoice_created = False
+    try:
+        await create_invoice_for_payment(db, payment)
+        invoice_created = True
+    except Exception as exc:
+        logger.error(
+            "admin/mark-paid: auto-invoice failed for payment %s: %s",
+            payment.id, exc,
+        )
+
+    await db.commit()
+
+    logger.warning(
+        "admin/mark-paid: payment %s (order=%s) FORCED to succeeded by user=%s notes=%r",
+        payment.id, data.order_id, current_user.id, data.notes,
+    )
+
+    return AdminMarkPaidResponse(
+        payment_id=payment.id,
+        order_id=data.order_id,
+        previous_status=previous_status,
+        new_status=payment.status.value,
+        invoice_created=invoice_created,
+    )
+
+
 @router.post("/refund", response_model=RefundResponse)
 async def refund_payment(
     data: RefundRequest,
