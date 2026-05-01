@@ -234,9 +234,23 @@ Esto evita pushes accidentales a producción.
 
 ## 10. Sincronización nocturna PROD → DEV (datos reales en pre)
 
-Hay una tarea Celery (`app.tasks.db_sync.sync_prod_to_dev`) programada en el
-beat schedule a las **04:00 Europe/Madrid**. Copia datos del schema `public`
-del proyecto Supabase de prod al de dev usando `pg_dump`/`pg_restore`.
+### 10.0 ¿Quién dispara el sync? (importante)
+
+| Componente | ¿Programa la tarea? | ¿La ejecuta? |
+|---|---|---|
+| `trackfiz-celery-beat` (PROD) | Sí, está en el código del repo y aparece en su schedule | **No** — la tarea se aborta sola al detectar `APP_ENV=production` |
+| `trackfiz-dev-celery-beat`    | Sí, programada a las 04:00 Europe/Madrid | **No directamente** — solo programa |
+| `trackfiz-dev-celery-worker`  | No programa | **Sí, ejecuta** el `pg_dump`/`pg_restore` |
+| `trackfiz-celery-worker` (PROD) | No programa | **Nunca recibe la tarea** porque el beat de prod no la encola |
+
+Reforzado en código (`backend/app/celery_app.py`): la entrada del beat
+schedule **solo se añade si `not settings.is_production`**, por lo que en
+producción ni siquiera aparece. Y aún si alguien la encolara manualmente, la
+tarea aborta dentro de `sync_prod_to_dev` antes de hacer nada.
+
+Conexión PROD → DEV es **unidireccional**: el worker de dev abre la conexión
+de lectura a prod (con `PROD_DATABASE_URL`) y escribe en su propia BD. Prod
+nunca conoce ni se conecta a dev.
 
 ### 10.1 Cómo está protegida (defensa en profundidad)
 
@@ -271,21 +285,24 @@ DB_SYNC_POST_SQL_FILE=
 
 Puedes añadir más tablas separándolas por comas en `DB_SYNC_EXCLUDE_TABLES`.
 
-### 10.4 ⚠️ Riesgo de credenciales reales
+### 10.4 Hook SQL post-sync (desactivado por defecto)
 
-Si tu sistema de auth es propio (`public.users` con `hashed_password`), después
-del sync los users de prod existen tal cual en dev → cualquiera con un email/
-password real podría loggearse en pre.
-
-**Recomendado**: copia `scripts/sync_supabase_post_dev.example.sql` a
-`scripts/sync_supabase_post_dev.sql` (gitignored), descomenta el bloque que
-quieras (resetear passwords, anonimizar, desactivar users), y configura:
+Desactivado a propósito (`DB_SYNC_POST_SQL_FILE=`) porque la intención del
+entorno dev es que sea **lo más parecido posible a prod** (datos reales tal
+cual). Si en el futuro decides anonimizar / resetear passwords / desactivar
+users en dev, hay una plantilla en
+`scripts/sync_supabase_post_dev.example.sql`. Cópiala a
+`scripts/sync_supabase_post_dev.sql` (gitignored) y configura:
 
 ```env
 DB_SYNC_POST_SQL_FILE=/app/scripts/sync_supabase_post_dev.sql
 ```
 
-El hook se ejecuta tras cada sync (en la BD de dev solamente).
+> **Riesgo asumido**: como dev es una copia 1:1 de prod, cualquiera con un
+> email/password real de un cliente puede loggearse en pre. Asegúrate de que
+> el dominio `preapp.trackfiz.com` no es público y que el acceso está
+> restringido (Cloudflare Access, IP whitelist, basic auth, etc.) si manejas
+> datos sensibles.
 
 ### 10.5 Primera carga inicial (manual)
 

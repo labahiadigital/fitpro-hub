@@ -68,6 +68,7 @@ import {
 } from "../../hooks/useNotifications";
 import { useMyForms, useMyPendingRequiredCount } from "../../hooks/useForms";
 import { usePWAInstall } from "../../hooks/usePWAInstall";
+import { DevModeBanner } from "../common/DevModeBanner";
 
 // --- TIPOS Y DATOS ---
 
@@ -821,6 +822,9 @@ export function DashboardLayout() {
 
       {/* --- MAIN CONTENT AREA --- */}
       <Box style={{ position: "relative", flex: 1, minWidth: 0 }}>
+        {/* Banner de entorno NO productivo (DEV/staging) */}
+        <DevModeBanner />
+
         {/* Floating Header */}
         <Box
           py="lg"

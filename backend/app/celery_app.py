@@ -154,11 +154,14 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(minute=0),
         "options": {"queue": "notifications"},
     },
-    # Solo se ejecuta en entornos DEV (la tarea aborta sola si APP_ENV=production
-    # o si ENABLE_DB_SYNC != "true"). Programada en hora local Europe/Madrid.
-    "sync-supabase-prod-to-dev": {
-        "task": "app.tasks.db_sync.sync_prod_to_dev",
-        "schedule": crontab(hour=4, minute=0),
-        "options": {"queue": "reports"},
-    },
 }
+
+# Solo en entornos NO productivos: el beat de prod NO programa esta tarea, y
+# además la propia tarea tiene un guard interno que la aborta si APP_ENV es
+# "production" o si ENABLE_DB_SYNC != "true". Defensa en profundidad.
+if not settings.is_production:
+    celery_app.conf.beat_schedule["sync-supabase-prod-to-dev"] = {
+        "task": "app.tasks.db_sync.sync_prod_to_dev",
+        "schedule": crontab(hour=4, minute=0),  # 04:00 Europe/Madrid
+        "options": {"queue": "reports"},
+    }
