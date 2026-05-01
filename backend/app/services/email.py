@@ -343,12 +343,21 @@ class EmailTemplates:
         muestra como plataforma detrás. Así el cliente reconoce a quién se
         está registrando en lugar de ver sólo "Trackfiz".
         """
-        brand_title = workspace_name or "Trackfiz"
-        brand_subtitle = (
-            "Vía Trackfiz · Tu plataforma de entrenamiento"
-            if workspace_name
-            else "Tu plataforma de entrenamiento personal"
-        )
+        # En el flujo de registro del ENTRENADOR (sin workspace asociado
+        # todavía) mostramos un saludo personal en el header verde
+        # ("Hola, Juan" + "Bienvenido a Trackfiz") en lugar del genérico
+        # "Trackfiz / Tu plataforma...". El header se veía vacío de
+        # personalización y los entrenadores reportaban que parecía un
+        # email "sin texto".
+        # En el flujo del CLIENTE (con workspace_name) mantenemos el
+        # branding del entrenador como marca principal.
+        clean_name = (name or "").strip().split(" ")[0] if name else ""
+        if workspace_name:
+            brand_title = workspace_name
+            brand_subtitle = "Vía Trackfiz · Tu plataforma de entrenamiento"
+        else:
+            brand_title = f"Hola, {clean_name}" if clean_name else "Hola"
+            brand_subtitle = "Bienvenido a Trackfiz"
         welcome_line = (
             f"Gracias por registrarte en <strong>{workspace_name}</strong>. Para completar tu registro y empezar a entrenar, confirma tu dirección de email haciendo clic en el botón:"
             if workspace_name

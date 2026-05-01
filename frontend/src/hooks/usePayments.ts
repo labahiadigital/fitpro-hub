@@ -45,6 +45,8 @@ export interface Payment {
   payment_type: "subscription" | "one_time" | "package";
   created_at: string;
   paid_at?: string;
+  subscription_interval?: string | null;
+  subscription_id?: string | null;
 }
 
 export interface Subscription {

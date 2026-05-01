@@ -436,13 +436,45 @@ async def resend_invitation(
         custom_message=invitation.message,
     )
     
-    background_tasks.add_task(
-        send_email_task.delay,
-        to_email=invitation.email,
-        subject=f"Recordatorio: Invitación a {workspace.name}",
-        html_content=email_html,
-    )
-    
+    # Encolamos el envío en Celery. Antes el código envolvía
+    # ``send_email_task.delay`` dentro de ``background_tasks.add_task``,
+    # lo que añadía una capa redundante (delay() ya devuelve al instante)
+    # y, si Celery no respondía, el error se "tragaba" silenciosamente y
+    # nunca llegaba el correo al cliente. Ahora encolamos directamente y
+    # capturamos errores para hacer fallback síncrono usando el
+    # email_service: así el reenvío nunca se pierde aunque la cola esté
+    # caída.
+    email_sent = False
+    try:
+        send_email_task.delay(
+            to_email=invitation.email,
+            subject=f"Recordatorio: Invitación a {workspace.name}",
+            html_content=email_html,
+        )
+        email_sent = True
+        logger.info(f"Resend invitation email queued for {invitation.email}")
+    except Exception as exc:
+        logger.warning(
+            f"Could not queue resend email for {invitation.email} via Celery: {exc}. "
+            "Falling back to synchronous send."
+        )
+
+    if not email_sent:
+        try:
+            await email_service.send_email(
+                to_email=invitation.email,
+                to_name=client_name,
+                subject=f"Recordatorio: Invitación a {workspace.name}",
+                html_content=email_html,
+            )
+            logger.info(f"Resend invitation email sent synchronously to {invitation.email}")
+        except Exception as exc:
+            logger.error(f"Failed to resend invitation email to {invitation.email}: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="No se pudo reenviar el correo de invitación. Inténtalo en unos minutos.",
+            )
+
     return InvitationResponse(
         id=invitation.id,
         email=invitation.email,
@@ -947,6 +979,17 @@ async def complete_invitation(
         ws_name_for_email = workspace.name if workspace else None
         subject_brand = ws_name_for_email or "Trackfiz"
 
+        # Los emails se encolan en Celery EN VEZ de enviarse de forma
+        # síncrona. Cada send_email puede tardar varios segundos contra
+        # Brevo y, sumados al upload de la foto + creación de cuenta + 
+        # cliente + suscripción, hacían que la request superase los 30s
+        # de timeout del axios del frontend. El usuario veía "Error al
+        # completar registro" aunque internamente la cuenta SÍ se había
+        # creado; al reintentar, la idempotencia (status==accepted)
+        # devolvía OK rápido y "funcionaba" la segunda vez.
+        # Con la cola, el endpoint responde en <2s y los emails se
+        # entregan de forma asíncrona con reintentos automáticos.
+
         # Sólo enviamos email de verificación a usuarios completamente
         # nuevos. Si el usuario reutiliza una cuenta existente y ya tenía
         # el email validado, lo dejamos entrar directamente.
@@ -958,20 +1001,18 @@ async def complete_invitation(
                 workspace_name=ws_name_for_email,
             )
             try:
-                await email_service.send_email(
+                send_email_task.delay(
                     to_email=data.email,
-                    to_name=full_name,
                     subject=f"Confirma tu cuenta en {subject_brand}",
                     html_content=html_content,
                 )
-                logger.info(f"Verification email sent to {data.email}")
+                logger.info(f"Verification email queued for {data.email}")
             except Exception as e:
-                logger.error(f"Failed to send verification email: {e}")
+                logger.error(f"Failed to queue verification email: {e}")
 
         try:
-            await email_service.send_email(
+            send_email_task.delay(
                 to_email=data.email,
-                to_name=full_name,
                 subject="🚀 ¡Bienvenido/a a mi asesoría! Tus próximos pasos",
                 html_content=EmailTemplates.client_welcome_after_onboarding(
                     full_name,
@@ -979,8 +1020,9 @@ async def complete_invitation(
                     workspace_name=ws_name_for_email,
                 ),
             )
+            logger.info(f"Welcome email queued for {data.email}")
         except Exception as e:
-            logger.error(f"Failed to send welcome email: {e}")
+            logger.error(f"Failed to queue welcome email: {e}")
 
         if is_returning_user:
             # Login directo: la persona ya tenía cuenta y se ha vinculado a

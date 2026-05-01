@@ -4,7 +4,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, func, update
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,7 @@ from app.core.config import settings as app_settings
 from app.models.form import Form, FormSubmission
 from app.models.client import Client
 from app.models.workspace import Workspace
+from app.models.notification import Notification
 from app.middleware.auth import require_workspace, require_staff, require_any_role, CurrentUser
 from app.services.notification_service import notify
 from app.services.email import EmailTemplates
@@ -342,7 +343,41 @@ async def update_form(
             detail="Formulario no encontrado",
         )
 
+    # Capturamos el nombre actual ANTES de aplicar el payload para
+    # detectar cambios de nombre y poder propagarlos a las notificaciones
+    # in-app que ya se enviaron a clientes con el nombre antiguo. Sin
+    # esto, el cliente sigue viendo en su bandeja "Cuestionario X (copia)"
+    # aunque el entrenador lo haya renombrado a "Cuestionario X" desde la
+    # gestión de formularios.
+    old_name = (form.name or "").strip()
     _apply_payload(form, data)
+    new_name = (form.name or "").strip()
+
+    if old_name and new_name and old_name != new_name:
+        # Reemplazamos el nombre antiguo por el nuevo solo en
+        # notificaciones del mismo workspace que mencionen "formulario"
+        # (las generadas por ``form_pending``). Se restringe el filtro
+        # por título para minimizar el riesgo de tocar notificaciones
+        # ajenas que casualmente compartan substring.
+        await db.execute(
+            update(Notification)
+            .where(
+                Notification.workspace_id == form.workspace_id,
+                Notification.title.ilike("%formulario%"),
+                or_(
+                    Notification.title.ilike(f"%{old_name}%"),
+                    Notification.body.ilike(f"%{old_name}%"),
+                ),
+            )
+            .values(
+                title=func.replace(Notification.title, old_name, new_name),
+                body=func.replace(
+                    func.coalesce(Notification.body, ""), old_name, new_name
+                ),
+            )
+            .execution_options(synchronize_session=False)
+        )
+
     await db.commit()
     await db.refresh(form)
     return _serialize_form(form)

@@ -969,7 +969,14 @@ export function ClientsPage() {
                                 radius="xl"
                                 leftSection={actionIcon}
                                 onClick={() => resendInvitation.mutateAsync(inv.id)}
-                                loading={resendInvitation.isPending}
+                                loading={
+                                  resendInvitation.isPending &&
+                                  resendInvitation.variables === inv.id
+                                }
+                                disabled={
+                                  resendInvitation.isPending &&
+                                  resendInvitation.variables !== inv.id
+                                }
                                 styles={{ root: { fontSize: "11px" } }}
                               >
                                 {actionLabel}
@@ -980,7 +987,14 @@ export function ClientsPage() {
                               variant="subtle"
                               color="red"
                               onClick={() => cancelInvitation.mutateAsync(inv.id)}
-                              loading={cancelInvitation.isPending}
+                              loading={
+                                cancelInvitation.isPending &&
+                                cancelInvitation.variables === inv.id
+                              }
+                              disabled={
+                                cancelInvitation.isPending &&
+                                cancelInvitation.variables !== inv.id
+                              }
                               title="Eliminar invitación"
                             >
                               <IconTrash size={14} />

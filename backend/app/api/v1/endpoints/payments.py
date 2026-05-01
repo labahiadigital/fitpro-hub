@@ -89,6 +89,11 @@ class PaymentResponse(BaseModel):
     payment_type: Optional[str] = "one_time"
     paid_at: Optional[datetime] = None
     created_at: datetime
+    # Periodicidad de la suscripción asociada (si la hay). El frontend
+    # la convierte a etiqueta legible (mensual/trimestral/anual...).
+    # Para pagos puntuales viene como None.
+    subscription_interval: Optional[str] = None
+    subscription_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
@@ -447,9 +452,21 @@ async def list_payments(
     """
     Listar pagos del workspace con nombre del cliente.
     """
+    # LEFT JOIN a Subscription para poder devolver la periodicidad
+    # ("interval": month/quarter/year/...) sin tener que hacer un fetch
+    # extra desde el frontend. Para pagos puntuales o sueltos sin
+    # suscripción asociada, la columna sale como NULL y el frontend lo
+    # interpreta como "Pago único".
     query = (
-        select(Payment, Client.first_name, Client.last_name)
+        select(
+            Payment,
+            Client.first_name,
+            Client.last_name,
+            Subscription.interval,
+            Subscription.id.label("subscription_id"),
+        )
         .outerjoin(Client, Payment.client_id == Client.id)
+        .outerjoin(Subscription, Payment.subscription_id == Subscription.id)
         .where(Payment.workspace_id == current_user.workspace_id)
     )
 
@@ -463,7 +480,7 @@ async def list_payments(
     rows = result.all()
 
     payments = []
-    for pay, first_name, last_name in rows:
+    for pay, first_name, last_name, sub_interval, sub_id in rows:
         client_name = f"{first_name or ''} {last_name or ''}".strip() or None
         status_val = pay.status.value if hasattr(pay.status, 'value') else str(pay.status)
         # Map backend status to frontend-expected status
@@ -480,6 +497,8 @@ async def list_payments(
             payment_type=pay.payment_type or "one_time",
             paid_at=pay.paid_at,
             created_at=pay.created_at,
+            subscription_interval=sub_interval,
+            subscription_id=sub_id,
         ))
     return payments
 

@@ -476,10 +476,31 @@ export function BillingPage() {
   }, [invoiceSettingsData, settingsForm, openSettingsModal]);
 
   const handleSaveSettings = useCallback(async (values: typeof settingsForm.values) => {
+    // Reportes previos: la pantalla se quedaba en blanco al guardar.
+    // Causa probable: si la mutación lanzaba un error inesperado fuera
+    // del flujo normal (p. ej. un fallo de red en mitad del response),
+    // el ``catch`` silencioso comía la excepción Y aún así llegábamos a
+    // ``closeSettingsModal()`` antes de tiempo, dejando al usuario sin
+    // feedback. Aquí: si falla, mostramos un error visible y NO cerramos
+    // el modal, de modo que el usuario puede reintentar sin perder lo
+    // que tenía escrito. El hook ya muestra su propia notificación de
+    // ``onError``, así que solo añadimos un fallback genérico para
+    // errores no-HTTP (p. ej. cancelaciones, network down).
     try {
       await updateInvoiceSettings.mutateAsync(values);
       closeSettingsModal();
-    } catch { /* handled */ }
+    } catch (err) {
+      const httpErr = err as { response?: unknown; message?: string };
+      if (!httpErr.response) {
+        notifications.show({
+          title: "No se pudo guardar",
+          message: httpErr.message || "Error inesperado al guardar la configuración",
+          color: "red",
+        });
+      }
+      // Si tiene .response (HTTP error), el hook ``onError`` ya mostró
+      // su propio toast con el detalle del backend, no duplicamos.
+    }
   }, [updateInvoiceSettings, closeSettingsModal]);
 
   const handleClientSelectForInvoice = useCallback((clientId: string | null) => {
@@ -712,6 +733,23 @@ export function BillingPage() {
       case "one_time": return IconCash;
       default: return IconCreditCard;
     }
+  };
+
+  // Convierte el campo ``interval`` de la suscripción asociada al pago
+  // en una etiqueta legible. Coincide con los valores que el backend
+  // produce en ``Subscription.interval`` (ver Subscription model y el
+  // mapping de ``Product.interval`` en invitations.complete).
+  const getIntervalLabel = (interval?: string | null): string | null => {
+    if (!interval) return null;
+    const map: Record<string, string> = {
+      week: "Semanal",
+      biweekly: "Quincenal",
+      month: "Mensual",
+      quarter: "Trimestral",
+      semester: "Semestral",
+      year: "Anual",
+    };
+    return map[interval] || interval;
   };
 
   return (
@@ -1342,6 +1380,17 @@ export function BillingPage() {
               <Text c="dimmed" size="sm">Tipo</Text>
               <Text size="sm">{selectedPayment.payment_type === "subscription" ? "Suscripción" : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
             </Group>
+            {selectedPayment.payment_type === "subscription" && (
+              <>
+                <Divider style={{ borderColor: "var(--nv-border)" }} />
+                <Group justify="space-between">
+                  <Text c="dimmed" size="sm">Periodicidad</Text>
+                  <Text size="sm">
+                    {getIntervalLabel(selectedPayment.subscription_interval) || "—"}
+                  </Text>
+                </Group>
+              </>
+            )}
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
               <Text c="dimmed" size="sm">Fecha de creación</Text>
@@ -1890,7 +1939,7 @@ export function BillingPage() {
           </ScrollArea.Autosize>
 
           <Group justify="flex-end" mt="lg">
-            <Button onClick={closeSettingsModal} variant="default">Cancelar</Button>
+            <Button type="button" onClick={closeSettingsModal} variant="default">Cancelar</Button>
             <Button type="submit" loading={updateInvoiceSettings.isPending}>Guardar Configuración</Button>
           </Group>
         </form>

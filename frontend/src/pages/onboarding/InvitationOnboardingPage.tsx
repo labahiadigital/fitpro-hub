@@ -673,6 +673,12 @@ export function InvitationOnboardingPage() {
       }
       
       const progressPhotoDataUrl = progressPhoto ? await fileToDataUrl(progressPhoto) : undefined;
+      // Subimos el timeout a 90s para esta llamada concreta. Aunque el
+      // backend ya encola los emails en Celery, sigue habiendo trabajo
+      // síncrono importante en la request: subir la foto a R2 (varios MB
+      // en base64), crear cuenta + cliente + suscripción + medición, y
+      // hacer commit. En conexiones móviles flojas el upload solo puede
+      // tardar 20-30s, dejando muy poco margen para todo lo demás.
       const response = await api.post(`/invitations/complete/${token}`, {
         email: values.email,
         password: values.password,
@@ -706,6 +712,8 @@ export function InvitationOnboardingPage() {
         },
         progress_photo_data_url: progressPhotoDataUrl,
         progress_photo_type: "front",
+      }, {
+        timeout: 90_000,
       });
       
       // Check if email verification is required
