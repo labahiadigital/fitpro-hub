@@ -29,6 +29,7 @@ celery_app = Celery(
         "app.tasks.reports",
         "app.tasks.payments",
         "app.tasks.reminders",
+        "app.tasks.db_sync",
     ],
 )
 
@@ -94,6 +95,7 @@ celery_app.conf.task_routes = {
     "app.tasks.reports.*": {"queue": "reports"},
     "app.tasks.payments.*": {"queue": "payments"},
     "app.tasks.reminders.*": {"queue": "notifications"},
+    "app.tasks.db_sync.*": {"queue": "reports"},
 }
 
 celery_app.conf.beat_schedule = {
@@ -151,5 +153,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.reminders.process_due_reminders",
         "schedule": crontab(minute=0),
         "options": {"queue": "notifications"},
+    },
+    # Solo se ejecuta en entornos DEV (la tarea aborta sola si APP_ENV=production
+    # o si ENABLE_DB_SYNC != "true"). Programada en hora local Europe/Madrid.
+    "sync-supabase-prod-to-dev": {
+        "task": "app.tasks.db_sync.sync_prod_to_dev",
+        "schedule": crontab(hour=4, minute=0),
+        "options": {"queue": "reports"},
     },
 }

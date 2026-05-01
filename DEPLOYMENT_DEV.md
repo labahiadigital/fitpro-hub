@@ -126,16 +126,30 @@ hay que crear datos de prueba a mano en dev.
 
 ---
 
-## 4. Crear buckets R2 dev
+## 4. Buckets R2 dev (ya creados con wrangler)
 
-En Cloudflare → R2:
+Los dos buckets ya se han creado con `wrangler` (location hint `eeur` —
+European Union):
 
-1. Crear bucket `trackfiz-platform-dev`
-   - Custom domain: `platform-dev.trackfiz.com` (o subdominio que prefieras)
-2. Crear bucket `trackfiz-workspaces-dev`
-   - Custom domain: `workspaces-dev.trackfiz.com`
-3. Crear API token con permisos sobre estos dos buckets y pegarlo en
-   `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` de los recursos backend dev.
+```bash
+wrangler r2 bucket create trackfiz-platform-dev   --location eeur
+wrangler r2 bucket create trackfiz-workspaces-dev --location eeur
+```
+
+**Pendiente manual** (la wrangler-CLI no puede automatizar esto):
+
+1. **Custom domains** en cada bucket → Cloudflare Dashboard → R2 → bucket →
+   Settings → Custom Domains:
+   - `trackfiz-platform-dev`   → `platform-dev.trackfiz.com`
+   - `trackfiz-workspaces-dev` → `workspaces-dev.trackfiz.com`
+2. **API Token S3-compatible** → Cloudflare Dashboard → R2 → Manage R2 API
+   Tokens → Create API Token con permisos **Object Read & Write** sobre los
+   buckets dev. Pega los valores en:
+   - `R2_ACCESS_KEY_ID`
+   - `R2_SECRET_ACCESS_KEY`
+
+> Account ID ya conocido: `c6172efa331c20abf02f4f2e531ad0a4`
+> (devuelto por `wrangler whoami`).
 
 ---
 
@@ -218,7 +232,98 @@ Esto evita pushes accidentales a producción.
 
 ---
 
-## 10. Checklist de verificación
+## 10. Sincronización nocturna PROD → DEV (datos reales en pre)
+
+Hay una tarea Celery (`app.tasks.db_sync.sync_prod_to_dev`) programada en el
+beat schedule a las **04:00 Europe/Madrid**. Copia datos del schema `public`
+del proyecto Supabase de prod al de dev usando `pg_dump`/`pg_restore`.
+
+### 10.1 Cómo está protegida (defensa en profundidad)
+
+La tarea **se aborta** automáticamente si cualquiera de estas se cumple:
+
+| Condición | Por qué |
+|---|---|
+| `APP_ENV=production` | Nunca se sincroniza desde un entorno declarado prod |
+| `ENABLE_DB_SYNC` ≠ `"true"` | Activación opt-in |
+| `DEV_DATABASE_URL` o `DATABASE_URL` contiene `ougfmkbjrpnjvujhuuyy` | Tripwire hardcoded del ref de prod |
+| `PROD_DATABASE_URL` y la URL destino apuntan al mismo host | El script bash valida `prod_host != dev_host` |
+
+### 10.2 Configuración
+
+En las envs del recurso `trackfiz-dev-celery-worker` y `trackfiz-dev-celery-beat`:
+
+```env
+ENABLE_DB_SYNC=true
+PROD_DATABASE_URL=postgresql://postgres.ougfmkbjrpnjvujhuuyy:[PROD_PASSWORD]@aws-1-eu-west-3.pooler.supabase.com:6543/postgres
+# DEV_DATABASE_URL es opcional — si está vacío, usa DATABASE_URL como destino.
+DEV_DATABASE_URL=
+DB_SYNC_EXCLUDE_TABLES=alembic_version,google_calendar_tokens
+DB_SYNC_POST_SQL_FILE=
+```
+
+### 10.3 Tablas excluidas por defecto
+
+| Tabla | Motivo |
+|---|---|
+| `alembic_version` | No queremos pisar la versión Alembic de dev (las migraciones de dev pueden ir por delante de prod) |
+| `google_calendar_tokens` | Tokens OAcuth válidos = riesgo de seguridad (un atacante en pre podría leer calendarios de clientes reales) |
+
+Puedes añadir más tablas separándolas por comas en `DB_SYNC_EXCLUDE_TABLES`.
+
+### 10.4 ⚠️ Riesgo de credenciales reales
+
+Si tu sistema de auth es propio (`public.users` con `hashed_password`), después
+del sync los users de prod existen tal cual en dev → cualquiera con un email/
+password real podría loggearse en pre.
+
+**Recomendado**: copia `scripts/sync_supabase_post_dev.example.sql` a
+`scripts/sync_supabase_post_dev.sql` (gitignored), descomenta el bloque que
+quieras (resetear passwords, anonimizar, desactivar users), y configura:
+
+```env
+DB_SYNC_POST_SQL_FILE=/app/scripts/sync_supabase_post_dev.sql
+```
+
+El hook se ejecuta tras cada sync (en la BD de dev solamente).
+
+### 10.5 Primera carga inicial (manual)
+
+Antes de que se ejecute el sync automático, lanza la primera carga a mano para
+poblar dev:
+
+```bash
+# Desde tu máquina local, con backend/.env.dev rellenado:
+cd backend
+# Cargar las variables. En PowerShell:
+Get-Content .env.dev | ForEach-Object { if ($_ -match '^([^#=]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') } }
+
+# Aplicar migraciones a dev (SI no lo hiciste ya):
+alembic upgrade head
+
+# Lanzar sync (requiere bash + postgresql-client-17 instalados localmente)
+bash ../scripts/sync_supabase_prod_to_dev.sh
+```
+
+### 10.6 Disparo manual desde Coolify (sin esperar a las 04:00)
+
+```bash
+# SSH al container del worker y ejecuta:
+celery -A app.celery_app call app.tasks.db_sync.sync_prod_to_dev
+# O directamente el script:
+bash /app/scripts/sync_supabase_prod_to_dev.sh
+```
+
+### 10.7 Coste y duración
+
+- pg_dump del schema `public` para una BD de unos cuantos MB: < 1 minuto.
+- Transferencia salida desde Supabase: incluida (mismo project en eu-west-3,
+  pero cruza redes). Plan Free Supabase = 5 GB de bandwidth/mes; vigílalo.
+- `task_time_limit=30 min` configurado en la tarea por si la BD crece.
+
+---
+
+## 11. Checklist de verificación
 
 Antes de dar el entorno dev por bueno:
 
@@ -232,3 +337,6 @@ Antes de dar el entorno dev por bueno:
 - [ ] Lanzar un cobro Redsys de prueba → callback llega a `preapi.trackfiz.com`
 - [ ] Stripe webhook → CLI `stripe trigger checkout.session.completed --forward-to preapi.trackfiz.com/api/v1/payments/webhook`
 - [ ] **Comprobar que prod sigue funcionando** (`api.trackfiz.com/health`)
+- [ ] Disparar `app.tasks.db_sync.sync_prod_to_dev` manualmente y verificar
+      que no aborta y que dev queda con los datos copiados (revisa
+      `select count(*) from public.clients` antes/después)
