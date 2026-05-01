@@ -261,9 +261,39 @@ pnpm build
 # El build se genera en frontend/dist/
 ```
 
+## 🌳 Entornos y workflow Git
+
+| Rama | Entorno | Frontend | Backend | Supabase |
+|---|---|---|---|---|
+| `master` | **producción** | `app.trackfiz.com` | `api.trackfiz.com` | proyecto principal |
+| `dev` | **pre / staging** | `preapp.trackfiz.com` | `preapi.trackfiz.com` | proyecto `trackfiz-dev` |
+
+**Flujo de trabajo:**
+
+1. Cualquier cambio entra primero en la rama `dev` (o en una `feature/*` que se mergea a `dev` vía PR).
+2. Coolify auto-deploya `dev` a `preapp.trackfiz.com` / `preapi.trackfiz.com`.
+3. Cuando el cambio está validado, abrir un Pull Request `dev → master`.
+4. Tras revisión, merge → Coolify auto-deploya `master` a producción.
+
+> Está activada (o **debes** activarla, ver [DEPLOYMENT_DEV.md](DEPLOYMENT_DEV.md) §9) protección de rama en `master` para impedir pushes directos.
+
+### Comandos típicos
+
+```bash
+git checkout dev
+git pull
+# ... cambios ...
+git commit -am "feat: ..."
+git push origin dev
+# Probar en preapp.trackfiz.com → si OK, abrir PR dev → master en GitHub
+```
+
+---
+
 ## 🚀 Despliegue en Coolify
 
-Ver la guía completa de despliegue en [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Producción** (rama `master`): ver [DEPLOYMENT.md](DEPLOYMENT.md)
+- **Pre / staging** (rama `dev`): ver [DEPLOYMENT_DEV.md](DEPLOYMENT_DEV.md)
 
 ### Resumen rápido:
 

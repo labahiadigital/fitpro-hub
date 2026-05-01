@@ -1,0 +1,234 @@
+# Despliegue del entorno **DEV** (rama `dev`)
+
+Esta guía describe cómo desplegar el entorno **dev** de Trackfiz en paralelo al
+de producción, sin tocar nada de prod.
+
+> **Convención de dominios**
+> - Frontend dev: `https://preapp.trackfiz.com`
+> - Backend  dev: `https://preapi.trackfiz.com`
+>
+> **Convención de ramas**
+> - `master` → entorno **producción** (`app.trackfiz.com` / `api.trackfiz.com`)
+> - `dev`    → entorno **pre / staging** (`preapp.trackfiz.com` / `preapi.trackfiz.com`)
+>
+> **Workflow**
+> Todo cambio entra primero en `dev` → se prueba en preapp/preapi → cuando está
+> listo se promociona a `master` mediante un Pull Request.
+
+---
+
+## 0. Resumen visual
+
+```
+                            ┌──────────────────┐
+   feature/*  ──── PR ────► │   rama  dev      │ ──┐
+                            └──────────────────┘   │
+                                                   │  PR (review + tests)
+                                                   ▼
+                            ┌──────────────────┐
+                            │   rama  master   │ ────► auto-deploy a PROD
+                            └──────────────────┘
+```
+
+| Recurso | DEV (rama `dev`) | PROD (rama `master`) |
+|---|---|---|
+| Frontend  | `preapp.trackfiz.com`  | `app.trackfiz.com` |
+| Backend   | `preapi.trackfiz.com`  | `api.trackfiz.com` |
+| Supabase  | `trackfiz-dev` (`girvemeyzfctxtcmhrup`) | `e13fitnessofficial's Project` (`ougfmkbjrpnjvujhuuyy`) |
+| R2 platform   | `trackfiz-platform-dev` | `trackfiz-platform` |
+| R2 workspaces | `trackfiz-workspaces-dev` | `trackfiz-workspaces` |
+| Redis     | `trackfiz-dev-redis`  | `trackfiz-redis` |
+| Stripe webhook | `https://preapi.trackfiz.com/api/v1/payments/webhook` | `https://api.trackfiz.com/api/v1/payments/webhook` |
+
+---
+
+## 1. Crear los 5 recursos en Coolify
+
+Repite el flujo de `DEPLOYMENT.md`, pero con **branch `dev`** y nombres
+prefijados con `trackfiz-dev-…`. Resumen:
+
+| # | Recurso | Tipo | Branch | Dockerfile | Dominio |
+|---|---|---|---|---|---|
+| 1 | `trackfiz-dev-redis`         | DB Redis           | —     | —                   | — |
+| 2 | `trackfiz-dev-backend`       | Public repo (Docker) | `dev` | `backend/Dockerfile`        | `preapi.trackfiz.com` |
+| 3 | `trackfiz-dev-celery-worker` | Public repo (Docker) | `dev` | `backend/Dockerfile.celery` | — |
+| 4 | `trackfiz-dev-celery-beat`   | Public repo (Docker) | `dev` | `backend/Dockerfile.beat`   | — |
+| 5 | `trackfiz-dev-frontend`      | Public repo (Docker) | `dev` | `frontend/Dockerfile`       | `preapp.trackfiz.com` |
+
+Activa **"Auto deploy"** en los 5 recursos: cada `git push origin dev` re-deploya
+solo el entorno dev.
+
+---
+
+## 2. Variables de entorno
+
+### 2.1 Backend / worker / beat
+
+Copia el contenido de [`backend/env.dev.example`](backend/env.dev.example) en
+los **tres** recursos (backend, worker, beat). Las **mismas** envs.
+
+Variables que **DEBES** rellenar manualmente (no están en el template):
+
+| Variable | Dónde se obtiene |
+|---|---|
+| `SECRET_KEY` | `python -c "import secrets; print(secrets.token_urlsafe(64))"` |
+| `CERTIFICATE_ENCRYPTION_KEY` | `python -c "import os; print(os.urandom(32).hex())"` |
+| `SUPABASE_SERVICE_KEY` | Supabase dashboard `trackfiz-dev` → Settings → API → service_role |
+| `SUPABASE_JWT_SECRET`  | Supabase dashboard `trackfiz-dev` → Settings → API → JWT Settings |
+| `DATABASE_URL` (password) | Supabase dashboard `trackfiz-dev` → Settings → Database → Connection Pooling (Transaction). Si no recuerdas el password, "Reset database password". |
+| `STRIPE_WEBHOOK_SECRET` | Crear webhook nuevo en Stripe (paso 5) |
+| `KAPSO_API_KEY` y `KAPSO_WEBHOOK_SECRET` | Cuenta Kapso de pruebas (paso 6) |
+| `BREVO_API_KEY` | API key separada de Brevo, idealmente con sender `noreply-dev@…` |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Cloudflare R2 dashboard (paso 4) |
+
+### 2.2 Frontend (Build Arguments en Coolify)
+
+Pega el contenido de [`frontend/env.dev.example`](frontend/env.dev.example) en
+**Build Arguments** del recurso `trackfiz-dev-frontend` (NO en environment
+variables — Vite las inyecta en build time).
+
+---
+
+## 3. Aplicar migraciones a la nueva BD Supabase
+
+El proyecto `trackfiz-dev` arranca **vacío**. Hay que ejecutar todas las
+migraciones Alembic una vez:
+
+```bash
+cd backend
+# Activar venv
+python -m venv venv
+.\venv\Scripts\activate          # Windows
+# source venv/bin/activate       # macOS/Linux
+pip install -r requirements.txt
+
+# Configurar SOLO la DATABASE_URL del entorno dev (con el password real)
+$env:DATABASE_URL = "postgresql://postgres.girvemeyzfctxtcmhrup:<PASSWORD>@aws-1-eu-west-3.pooler.supabase.com:6543/postgres"
+
+# Aplicar todas las migraciones
+alembic upgrade head
+```
+
+Las migraciones incluyen seeds globales (ejercicios, alimentos, bebidas, formas
+de sistema). Lo que **no** se copia: clientes, programas, planes, usuarios →
+hay que crear datos de prueba a mano en dev.
+
+> **Imágenes/assets** de los seeds (foods, exercises, beverages) viven en R2
+> de prod. Para que se vean en dev tienes dos opciones:
+>
+> 1. **Recomendado**: copia el bucket `trackfiz-platform` → `trackfiz-platform-dev`
+>    una sola vez (los assets globales son inmutables). Usa `rclone` o el script
+>    `scripts/_rescue_food_uploads.py` adaptado.
+> 2. **Alternativa rápida**: en dev, deja `R2_PLATFORM_BUCKET=trackfiz-platform`
+>    (compartido con prod) — el bucket es de solo lectura para assets globales,
+>    así que es seguro mientras nunca escribas a él desde dev. Pero `trackfiz-workspaces-dev`
+>    SÍ debe ser independiente (ahí van fotos de progreso, certificados FNMT, etc.).
+
+---
+
+## 4. Crear buckets R2 dev
+
+En Cloudflare → R2:
+
+1. Crear bucket `trackfiz-platform-dev`
+   - Custom domain: `platform-dev.trackfiz.com` (o subdominio que prefieras)
+2. Crear bucket `trackfiz-workspaces-dev`
+   - Custom domain: `workspaces-dev.trackfiz.com`
+3. Crear API token con permisos sobre estos dos buckets y pegarlo en
+   `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` de los recursos backend dev.
+
+---
+
+## 5. Configurar webhook Stripe dev
+
+En [Stripe Dashboard](https://dashboard.stripe.com/test/webhooks) (modo TEST):
+
+1. **Add endpoint**
+2. URL: `https://preapi.trackfiz.com/api/v1/payments/webhook`
+3. Eventos:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.paid`
+   - `invoice.payment_failed`
+4. Copia el **Signing secret** y pégalo en `STRIPE_WEBHOOK_SECRET` del backend dev.
+
+> El webhook de prod sigue intocado y apunta a `api.trackfiz.com`.
+
+---
+
+## 6. Configurar WhatsApp (Kapso) dev
+
+> **Riesgo**: con la API key de prod, los webhooks entrantes están registrados
+> en el backend de prod. Si reutilizas la key en dev, los mensajes que envíes
+> desde dev saldrán de la cuenta de WhatsApp Business de prod.
+
+Opciones (de mayor a menor coste):
+
+1. **Recomendado**: crear cuenta/proyecto Kapso aparte para dev y usar otro
+   número de WhatsApp Business.
+2. **Aceptable para empezar**: usar la misma API key, pero NO crear webhooks
+   nuevos desde dev (`auto_register_webhook=false`) y solo enviar mensajes
+   manualmente a tu propio número.
+3. **No hacer**: re-registrar webhook desde dev → te roba los webhooks de prod.
+
+`KAPSO_WEBHOOK_SECRET` debe ser distinto al de prod (genera uno nuevo).
+
+---
+
+## 7. Configurar Google OAuth (Calendar)
+
+En [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
+del cliente OAuth existente:
+
+1. Edita el OAuth 2.0 Client ID actual.
+2. En **Authorized redirect URIs** añade:
+   - `https://preapp.trackfiz.com/auth/google/callback`
+3. Guarda.
+
+`GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` pueden ser los mismos que prod.
+
+---
+
+## 8. DNS
+
+Añade estos registros A/CNAME apuntando a tu servidor Coolify:
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| A | `preapp` | IP del servidor Coolify |
+| A | `preapi` | IP del servidor Coolify |
+| A | `platform-dev`   | IP del worker R2 público (o CNAME a R2) |
+| A | `workspaces-dev` | IP del worker R2 público (o CNAME a R2) |
+
+---
+
+## 9. GitHub – branch protection (master)
+
+En GitHub → Settings → Branches → Add rule:
+
+- **Branch name pattern**: `master`
+- ✅ Require a pull request before merging
+- ✅ Require approvals (1)
+- ✅ Require status checks to pass before merging (cuando montes CI)
+- ✅ Do not allow bypassing the above settings
+
+Esto evita pushes accidentales a producción.
+
+---
+
+## 10. Checklist de verificación
+
+Antes de dar el entorno dev por bueno:
+
+- [ ] `https://preapi.trackfiz.com/health` devuelve `{"status":"healthy"}`
+- [ ] `https://preapi.trackfiz.com/docs` carga la documentación
+- [ ] `https://preapp.trackfiz.com/login` carga la app y se ve el dominio dev
+- [ ] Crear un workspace + un usuario admin de prueba en dev
+- [ ] Subir una foto de progreso (verifica `trackfiz-workspaces-dev`)
+- [ ] Provocar un email transaccional (invitar a un cliente con email tuyo)
+      → llega desde `noreply-dev@…`
+- [ ] Lanzar un cobro Redsys de prueba → callback llega a `preapi.trackfiz.com`
+- [ ] Stripe webhook → CLI `stripe trigger checkout.session.completed --forward-to preapi.trackfiz.com/api/v1/payments/webhook`
+- [ ] **Comprobar que prod sigue funcionando** (`api.trackfiz.com/health`)
