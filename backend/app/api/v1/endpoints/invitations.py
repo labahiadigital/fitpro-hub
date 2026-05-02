@@ -29,7 +29,6 @@ from app.middleware.auth import require_staff, require_workspace, CurrentUser
 from app.core.security import (
     get_password_hash,
     create_tokens,
-    generate_verification_token,
     verify_password,
 )
 import logging
@@ -671,18 +670,30 @@ async def complete_invitation(
         # Idempotencia: si ya fue aceptada pero el usuario vuelve a enviar el
         # formulario (doble clic, reintento tras timeout, StrictMode en dev,
         # etc.), consideramos éxito silencioso en lugar de mostrar un error,
-        # porque la cuenta ya existe. El cliente debe confirmar por email.
+        # porque la cuenta ya existe.
         existing_user_result = await db.execute(
             select(User).where(User.email == data.email.lower())
         )
         existing_user = existing_user_result.scalar_one_or_none()
         if existing_user:
+            # Si arrastraba email_verified=False de cuentas creadas con el
+            # flujo antiguo, lo auto-verificamos ahora: completar la
+            # invitación con el token correcto demuestra control del buzón.
+            if not existing_user.email_verified:
+                existing_user.email_verified = True
+                existing_user.email_verification_token = None
+                existing_user.email_verification_sent_at = None
+                await db.commit()
+
+            access_token, refresh_token = create_tokens(
+                {"sub": str(existing_user.id), "email": existing_user.email}
+            )
             return {
-                "access_token": "pending_email_confirmation",
+                "access_token": access_token,
                 "token_type": "bearer",
-                "expires_in": 0,
-                "refresh_token": "",
-                "requires_email_verification": not existing_user.email_verified,
+                "expires_in": settings.access_token_expire_minutes * 60,
+                "refresh_token": refresh_token,
+                "requires_email_verification": False,
                 "user": {
                     "id": str(existing_user.id),
                     "email": existing_user.email,
@@ -793,7 +804,6 @@ async def complete_invitation(
             weight_kg=data.weight_kg,
         )
 
-        verification_token: Optional[str] = None
         is_returning_user = existing_user is not None
 
         if is_returning_user:
@@ -808,15 +818,23 @@ async def complete_invitation(
                 user.email_verification_token = None
                 user.email_verification_sent_at = None
         else:
-            verification_token = generate_verification_token()
+            # Damos por verificado el email: la persona ha completado el
+            # onboarding usando un token de invitación único que sólo existe
+            # en el correo que el entrenador envió a esa dirección. Llegar
+            # hasta aquí significa que controla el buzón.
+            #
+            # Esto evita el bug crónico "no me llega el email de verificación"
+            # con clientes Hotmail/Outlook (filtros agresivos contra remitentes
+            # transaccionales) que dejaba clientes legítimos sin poder entrar
+            # tras pagar y rellenar el cuestionario.
             user = User(
                 email=email_lc,
                 full_name=full_name,
                 phone=data.phone,
                 password_hash=get_password_hash(data.password),
-                email_verified=False,
-                email_verification_token=verification_token,
-                email_verification_sent_at=datetime.now(timezone.utc),
+                email_verified=True,
+                email_verification_token=None,
+                email_verification_sent_at=None,
                 is_active=True,
             )
             db.add(user)
@@ -977,7 +995,6 @@ async def complete_invitation(
         await db.commit()
         
         ws_name_for_email = workspace.name if workspace else None
-        subject_brand = ws_name_for_email or "Trackfiz"
 
         # Los emails se encolan en Celery EN VEZ de enviarse de forma
         # síncrona. Cada send_email puede tardar varios segundos contra
@@ -990,26 +1007,8 @@ async def complete_invitation(
         # Con la cola, el endpoint responde en <2s y los emails se
         # entregan de forma asíncrona con reintentos automáticos.
 
-        # Sólo enviamos email de verificación a usuarios completamente
-        # nuevos. Si el usuario reutiliza una cuenta existente y ya tenía
-        # el email validado, lo dejamos entrar directamente.
-        if not is_returning_user and verification_token:
-            confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
-            html_content = EmailTemplates.email_confirmation(
-                full_name,
-                confirmation_url,
-                workspace_name=ws_name_for_email,
-            )
-            try:
-                send_email_task.delay(
-                    to_email=data.email,
-                    subject=f"Confirma tu cuenta en {subject_brand}",
-                    html_content=html_content,
-                )
-                logger.info(f"Verification email queued for {data.email}")
-            except Exception as e:
-                logger.error(f"Failed to queue verification email: {e}")
-
+        # Email de bienvenida (no de verificación: ya hemos auto-verificado
+        # arriba porque el token de invitación demuestra control del buzón).
         try:
             send_email_task.delay(
                 to_email=data.email,
@@ -1024,37 +1023,23 @@ async def complete_invitation(
         except Exception as e:
             logger.error(f"Failed to queue welcome email: {e}")
 
-        if is_returning_user:
-            # Login directo: la persona ya tenía cuenta y se ha vinculado a
-            # este nuevo workspace usando su contraseña actual.
-            access_token, refresh_token = create_tokens(
-                {"sub": str(user.id), "email": user.email}
-            )
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "expires_in": settings.access_token_expire_minutes * 60,
-                "refresh_token": refresh_token,
-                "requires_email_verification": False,
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "full_name": user.full_name,
-                },
-            }
-
-        # Cuenta nueva: pedimos confirmación por email.
+        # Login directo en todos los casos: el cliente acaba de demostrar
+        # control del email (token de invitación único) o de la cuenta
+        # existente (contraseña), así que no le exigimos un paso extra.
+        access_token, refresh_token = create_tokens(
+            {"sub": str(user.id), "email": user.email}
+        )
         return {
-            "access_token": "pending_email_confirmation",
+            "access_token": access_token,
             "token_type": "bearer",
-            "expires_in": 0,
-            "refresh_token": "",
-            "requires_email_verification": True,
+            "expires_in": settings.access_token_expire_minutes * 60,
+            "refresh_token": refresh_token,
+            "requires_email_verification": False,
             "user": {
                 "id": str(user.id),
                 "email": user.email,
-                "full_name": user.full_name
-            }
+                "full_name": user.full_name,
+            },
         }
         
     except HTTPException:
