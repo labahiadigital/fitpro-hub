@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
+from sqlalchemy.orm import undefer
 from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
@@ -109,6 +110,11 @@ class ValidateTokenResponse(BaseModel):
     # de bienvenida. Vienen de Settings → Workspace → Soporte.
     support_phone: Optional[str] = None
     support_email: Optional[str] = None
+    # Si la invitación trae ya móvil + contraseña + consentimientos
+    # pre-rellenados (flujo público de producto que captura todo antes
+    # del pago) la página de invitación salta el formulario de registro
+    # y completa automáticamente al detectar el pago.
+    data_complete: bool = False
 
 
 # ============ Email Templates ============
@@ -601,6 +607,7 @@ async def validate_invitation_token(
         payment_completed=payment_completed,
         support_phone=support_phone,
         support_email=support_email,
+        data_complete=invitation.is_data_complete,
     )
 
 
@@ -642,10 +649,10 @@ async def accept_invitation(
 
 # Schema for invitation completion
 class InvitationCompleteRequest(BaseModel):
-    email: str
-    password: str
-    first_name: str
-    last_name: str
+    email: Optional[str] = None
+    password: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     phone: Optional[str] = None
     birth_date: Optional[str] = None
     gender: Optional[str] = None
@@ -679,7 +686,29 @@ async def complete_invitation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Invitación no encontrada"
         )
-    
+
+    # Fusionamos los datos de la invitación con los del request: cuando el
+    # cliente ha rellenado todo en el flujo público de producto (móvil,
+    # contraseña y consentimientos antes del pago) la invitación trae
+    # esos valores pre-guardados y la pantalla post-pago invoca este
+    # endpoint sin volver a pedirlos al usuario.
+    if not data.email and invitation.email:
+        data.email = invitation.email
+    if not data.first_name and invitation.first_name:
+        data.first_name = invitation.first_name
+    if not data.last_name and invitation.last_name:
+        data.last_name = invitation.last_name
+    if not data.phone and invitation.phone:
+        data.phone = invitation.phone
+    if not data.consents and isinstance(invitation.consent_data, dict):
+        data.consents = invitation.consent_data
+
+    # Validación mínima: tras el merge necesitamos sí o sí email + nombre.
+    if not data.email:
+        raise HTTPException(status_code=400, detail="Email requerido")
+    if not data.first_name or not data.last_name:
+        raise HTTPException(status_code=400, detail="Nombre y apellidos requeridos")
+
     if invitation.status == STATUS_ACCEPTED:
         # Idempotencia: si ya fue aceptada pero el usuario vuelve a enviar el
         # formulario (doble clic, reintento tras timeout, StrictMode en dev,
@@ -748,19 +777,27 @@ async def complete_invitation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Esta cuenta no está disponible. Contacta con soporte.",
             )
-        # Verificamos que conoce la contraseña: para vincularse a otro
-        # workspace debe demostrar que es el dueño de la cuenta.
-        if not existing_user.password_hash or not verify_password(
-            data.password, existing_user.password_hash
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Ese email ya tiene cuenta en Trackfiz. Usa la misma "
-                    "contraseña que ya tenías para vincular este perfil al "
-                    "nuevo entrenador, o inicia sesión con tu cuenta."
-                ),
-            )
+        # Si la invitación trae password pre-rellenado (flujo público) o
+        # el cliente acaba de completar el pago y no introdujo password,
+        # confiamos en que controla el buzón (token de invitación único)
+        # y, si hay producto, que su tarjeta validó la identidad. No le
+        # forzamos a teclear su password antigua para no bloquearle.
+        skip_password_check = (
+            not data.password
+            or (invitation.password_hash and invitation.password_hash == existing_user.password_hash)
+        )
+        if not skip_password_check:
+            if not existing_user.password_hash or not verify_password(
+                data.password, existing_user.password_hash
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Ese email ya tiene cuenta en Trackfiz. Usa la misma "
+                        "contraseña que ya tenías para vincular este perfil al "
+                        "nuevo entrenador, o inicia sesión con tu cuenta."
+                    ),
+                )
         # ¿ya es cliente activo de ESTE workspace?
         existing_client_q = await db.execute(
             select(Client).where(
@@ -841,11 +878,25 @@ async def complete_invitation(
             # con clientes Hotmail/Outlook (filtros agresivos contra remitentes
             # transaccionales) que dejaba clientes legítimos sin poder entrar
             # tras pagar y rellenar el cuestionario.
+            #
+            # Para la contraseña usamos lo que mandó el cliente. Si vino
+            # vacío (caso del flujo público que ya la guardó al pre-rellenar
+            # la invitación) reutilizamos el hash almacenado. Si tampoco
+            # hay hash en la invitación es un error de cliente.
+            if data.password:
+                password_hash_value = get_password_hash(data.password)
+            elif invitation.password_hash:
+                password_hash_value = invitation.password_hash
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Contraseña requerida",
+                )
             user = User(
                 email=email_lc,
                 full_name=full_name,
                 phone=data.phone,
-                password_hash=get_password_hash(data.password),
+                password_hash=password_hash_value,
                 email_verified=True,
                 email_verification_token=None,
                 email_verification_sent_at=None,
@@ -1036,6 +1087,49 @@ async def complete_invitation(
         except Exception as e:
             logger.error(f"Failed to create system form submission: {e}")
 
+        # ── Formularios del workspace marcados "Enviar en onboarding" ─────
+        # Cualquier Form propio del workspace cuyo flag
+        # ``settings.send_on_onboarding`` esté activo se asigna al cliente
+        # como un FormSubmission pendiente en el momento del registro. Si
+        # el formulario tiene ``product_ids`` vinculados, sólo se asigna
+        # cuando el cliente compra uno de esos productos; si el array está
+        # vacío se considera "para todos los onboarding" del workspace.
+        try:
+            ws_forms_result = await db.execute(
+                select(Form)
+                .where(
+                    Form.workspace_id == invitation.workspace_id,
+                    Form.is_active.is_(True),
+                    Form.settings["send_on_onboarding"].astext == "true",
+                )
+                .options(undefer(Form.product_ids))
+            )
+            ws_forms = ws_forms_result.scalars().all()
+            current_product_id = invitation.product_id
+            for f in ws_forms:
+                product_ids = list(getattr(f, "product_ids", None) or [])
+                if product_ids and current_product_id and current_product_id not in product_ids:
+                    continue
+                # No duplicar si ya existe una submission pendiente para
+                # ese par cliente+form (idempotencia).
+                already_q = await db.execute(
+                    select(FormSubmission.id).where(
+                        FormSubmission.form_id == f.id,
+                        FormSubmission.client_id == client.id,
+                    ).limit(1)
+                )
+                if already_q.scalar_one_or_none():
+                    continue
+                db.add(FormSubmission(
+                    form_id=f.id,
+                    client_id=client.id,
+                    status="pending",
+                    answers={},
+                ))
+            await db.flush()
+        except Exception as e:
+            logger.error(f"Failed to auto-assign onboarding forms: {e}")
+
         await db.commit()
 
         ws_name_for_email = workspace.name if workspace else None
@@ -1117,6 +1211,11 @@ class PublicProductSignupRequest(BaseModel):
     email: EmailStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    # Datos pre-rellenados ANTES del pago para que la pantalla post-pago
+    # no tenga que pedir un segundo formulario.
+    phone: Optional[str] = None
+    password: Optional[str] = None
+    consents: Optional[dict] = None
 
 
 class PublicProductSignupResponse(BaseModel):
@@ -1198,6 +1297,18 @@ async def public_product_signup(
     token = secrets.token_urlsafe(48)
     expires_at = datetime.utcnow() + timedelta(days=7)
 
+    # Pre-rellenamos contraseña / móvil / consentimientos si vienen en el
+    # signup. La página pública del producto los pide ANTES del pago para
+    # que la pantalla post-pago sólo muestre la confirmación.
+    consent_data = data.consents if isinstance(data.consents, dict) else None
+    marketing_flag = None
+    if isinstance(consent_data, dict) and "marketing" in consent_data:
+        marketing_flag = bool(consent_data.get("marketing"))
+
+    password_hash_value = (
+        get_password_hash(data.password) if data.password else None
+    )
+
     invitation = ClientInvitation(
         workspace_id=workspace.id,
         invited_by=owner_id,
@@ -1208,6 +1319,10 @@ async def public_product_signup(
         status=STATUS_PENDING,
         expires_at=expires_at,
         product_id=product_id,
+        phone=data.phone,
+        password_hash=password_hash_value,
+        consent_data=consent_data,
+        marketing_consent=marketing_flag,
     )
 
     db.add(invitation)

@@ -1,5 +1,6 @@
 import {
   Alert,
+  Anchor,
   Box,
   Button,
   Checkbox,
@@ -36,6 +37,7 @@ import {
   IconHeartbeat,
   IconLock,
   IconMail,
+  IconPhone,
   IconPhoto,
   IconTarget,
   IconUser,
@@ -233,19 +235,24 @@ export function ClientOnboardingPage() {
     // motivo se llamara a este handler, lo abortamos.
     if (soldOutState) return;
 
-    const emailVal = form.values.email;
-    const confirmEmailVal = form.values.confirmEmail;
-    const firstNameVal = form.values.firstName;
-    const lastNameVal = form.values.lastName;
-
-    if (!emailVal || !firstNameVal) {
-      notifications.show({ title: "Error", message: "Completa al menos tu nombre y email", color: "red" });
+    // Validamos todos los campos del form de "Datos Personales" antes
+    // del pago: el cliente nos da nombre + email + móvil + contraseña +
+    // los 3 consentimientos en una sola pantalla y luego pasa al pago.
+    const errors = form.validate();
+    if (errors.hasErrors) {
+      notifications.show({
+        title: "Faltan datos",
+        message: "Completa todos los campos obligatorios para continuar",
+        color: "red",
+      });
       return;
     }
-    if (confirmEmailVal !== emailVal) {
+
+    const v = form.values;
+    if (!v.acceptTerms || !v.acceptPrivacy) {
       notifications.show({
-        title: "Los emails no coinciden",
-        message: "Revisa el campo de confirmación de email",
+        title: "Faltan consentimientos",
+        message: "Debes aceptar los términos y la política de privacidad",
         color: "red",
       });
       return;
@@ -254,9 +261,17 @@ export function ClientOnboardingPage() {
     setCreatingInvitation(true);
     try {
       const res = await api.post(`/invitations/public-signup/${workspaceSlug}/${productId}`, {
-        email: emailVal,
-        first_name: firstNameVal,
-        last_name: lastNameVal,
+        email: v.email,
+        first_name: v.firstName,
+        last_name: v.lastName,
+        phone: v.phone,
+        password: v.password,
+        consents: {
+          data_processing: v.acceptTerms,
+          health_data: v.acceptPrivacy,
+          marketing: v.acceptMarketing,
+          consent_date: new Date().toISOString(),
+        },
       });
       if (res.data?.invitation_token) {
         navigate(`/onboarding/invite/${res.data.invitation_token}`);
@@ -317,6 +332,31 @@ export function ClientOnboardingPage() {
       acceptMarketing: false,
     },
     validate: (values) => {
+      // Cuando entramos por la URL pública con producto el formulario es
+      // de un único paso (Datos personales + móvil + 3 checkboxes de
+      // consentimiento) y se valida todo a la vez antes de redirigir al
+      // pago. Cuando entramos por el flujo legacy (workspaceSlug sin
+      // product) se mantiene el validador por pasos del Stepper.
+      if (productId) {
+        const phoneOk = /^[+]?[\d\s().-]{6,}$/.test(values.phone || "");
+        return {
+          firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
+          lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
+          email: /^\S+@\S+$/.test(values.email) ? null : "Email inválido",
+          confirmEmail:
+            values.confirmEmail !== values.email
+              ? "Los emails no coinciden"
+              : null,
+          password: isStrongPassword(values.password)
+            ? null
+            : "Mínimo 8 caracteres con mayúscula, minúscula y número",
+          phone: phoneOk ? null : "Móvil obligatorio",
+          acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
+          acceptPrivacy: values.acceptPrivacy
+            ? null
+            : "Debes aceptar la política de privacidad",
+        };
+      }
       if (active === 0) {
         return {
           firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
@@ -744,6 +784,7 @@ export function ClientOnboardingPage() {
               <TextInput
                 label="Apellidos"
                 placeholder="Tus apellidos"
+                required
                 {...form.getInputProps("lastName")}
               />
             </SimpleGrid>
@@ -767,6 +808,55 @@ export function ClientOnboardingPage() {
                   : undefined
               }
             />
+            <PasswordInput
+              label="Contraseña"
+              placeholder="Mínimo 8 caracteres"
+              required
+              leftSection={<IconLock size={16} />}
+              {...form.getInputProps("password")}
+            />
+            <PasswordRulesIndicator value={form.values.password} />
+            <TextInput
+              label="Móvil"
+              placeholder="+34 600 000 000"
+              required
+              leftSection={<IconPhone size={16} />}
+              description="Lo necesitamos para contactarte por WhatsApp"
+              {...form.getInputProps("phone")}
+            />
+
+            <Divider my="xs" label="Consentimientos" labelPosition="center" />
+
+            <Checkbox
+              label={
+                <Text size="sm">
+                  Acepto los{" "}
+                  <Anchor href="#" size="sm">
+                    Términos y Condiciones
+                  </Anchor>{" "}
+                  del servicio *
+                </Text>
+              }
+              {...form.getInputProps("acceptTerms", { type: "checkbox" })}
+              error={form.errors.acceptTerms}
+            />
+            <Checkbox
+              label={
+                <Text size="sm">
+                  Acepto la{" "}
+                  <Anchor href="#" size="sm">
+                    Política de Privacidad
+                  </Anchor>{" "}
+                  y el tratamiento de mis datos *
+                </Text>
+              }
+              {...form.getInputProps("acceptPrivacy", { type: "checkbox" })}
+              error={form.errors.acceptPrivacy}
+            />
+            <Checkbox
+              label="Deseo recibir comunicaciones comerciales y novedades (opcional)"
+              {...form.getInputProps("acceptMarketing", { type: "checkbox" })}
+            />
 
             <Button
               size="lg"
@@ -779,7 +869,7 @@ export function ClientOnboardingPage() {
                 form.values.confirmEmail !== form.values.email
               }
             >
-              Continuar con el registro
+              Continuar al pago
             </Button>
           </Stack>
         </Paper>

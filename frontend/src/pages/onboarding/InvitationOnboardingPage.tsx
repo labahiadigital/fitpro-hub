@@ -61,6 +61,10 @@ interface InvitationData {
   // muestran al cliente en la pantalla post-pago si no recibe el email.
   support_phone?: string | null;
   support_email?: string | null;
+  // Si es ``true``, la invitación trae móvil + contraseña + consentimientos
+  // pre-rellenados (flujo público de producto). Tras el pago la pantalla
+  // completa el registro automáticamente sin pedir un segundo formulario.
+  data_complete?: boolean;
 }
 
 interface OnboardingFormData {
@@ -536,6 +540,53 @@ export function InvitationOnboardingPage() {
     }
   };
 
+  // Auto-complete tras el pago cuando la invitación trae los datos
+  // pre-rellenados (flujo público de producto). El cliente ya nos dio
+  // móvil + contraseña + consentimientos antes del pago, así que tras
+  // confirmar el pago no debe rellenar otra vez nada: simplemente
+  // ejecutamos /invitations/complete con un body vacío y el backend
+  // reutiliza los valores guardados en la invitación.
+  const autoCompletedRef = useRef(false);
+  useEffect(() => {
+    if (autoCompletedRef.current) return;
+    if (!invitationData?.data_complete) return;
+    if (!paymentCompleted) return;
+    if (completed || loading) return;
+    if (!token) return;
+
+    autoCompletedRef.current = true;
+    setLoading(true);
+    (async () => {
+      try {
+        const response = await api.post(
+          `/invitations/complete/${token}`,
+          {},
+          { timeout: 90_000 },
+        );
+        if (response.data?.access_token && response.data.access_token !== "pending_email_confirmation") {
+          setUser({
+            id: response.data.user?.id,
+            email: invitationData?.email || "",
+            full_name: `${invitationData?.first_name || ""} ${invitationData?.last_name || ""}`.trim(),
+            is_active: true,
+          });
+          setTokens(response.data.access_token, response.data.refresh_token);
+        }
+        setCompleted(true);
+      } catch (error: unknown) {
+        autoCompletedRef.current = false;
+        const err = error as { response?: { data?: { detail?: string } }; message?: string };
+        notifications.show({
+          title: "Error",
+          message: err.response?.data?.detail || err.message || "Error al completar el registro",
+          color: "red",
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [invitationData, paymentCompleted, completed, loading, token, setUser, setTokens]);
+
   if (loadingInvitation) {
     return (
       <Container py="xl" size="sm">
@@ -828,6 +879,23 @@ export function InvitationOnboardingPage() {
               </Group>
             </Stack>
           )}
+        </Paper>
+      </Container>
+    );
+  }
+
+  // Si la invitación viene del flujo público con datos pre-rellenados y
+  // el pago acaba de completarse (o el producto era gratis y ya
+  // saltamos la pasarela), enseñamos un loader mientras el useEffect de
+  // auto-complete trabaja, en lugar del formulario completo.
+  if (invitationData.data_complete) {
+    return (
+      <Container py="xl" size="sm">
+        <Paper p="xl" radius="lg" ta="center" withBorder>
+          <Loader size="lg" />
+          <Text c="dimmed" mt="md">
+            Estamos finalizando tu registro y enviándote el email de bienvenida...
+          </Text>
         </Paper>
       </Container>
     );

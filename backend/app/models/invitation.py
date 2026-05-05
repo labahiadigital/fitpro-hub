@@ -2,7 +2,7 @@
 from enum import Enum as PyEnum
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import Column, String, Boolean, Enum, ForeignKey, DateTime
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -62,6 +62,13 @@ class ClientInvitation(BaseModel):
     # invitación creada antes del consentimiento (o todavía sin aceptar).
     marketing_consent = Column(Boolean, nullable=True)
 
+    # Datos pre-rellenados del cliente en el flujo público (signup antes
+    # del pago). Si están presentes, /invitations/complete reutiliza estos
+    # valores tras el pago sin pedir un segundo formulario.
+    phone = Column(String(50), nullable=True)
+    password_hash = Column(String(255), nullable=True)
+    consent_data = Column(JSONB, nullable=True, default=lambda: {})
+
     # Relationships
     workspace = relationship("Workspace")
     inviter = relationship("User")
@@ -88,6 +95,15 @@ class ClientInvitation(BaseModel):
         """Whether this invitation requires payment before completing."""
         return self.product_id is not None
     
+    @property
+    def is_data_complete(self) -> bool:
+        """Whether all client data was pre-filled before payment.
+
+        When True the post-payment flow can skip the registration form and
+        complete the invitation automatically using the stored values.
+        """
+        return bool(self.password_hash and self.phone and self.first_name)
+
     @property
     def is_payment_completed(self) -> bool:
         """Whether the required payment has been completed."""
