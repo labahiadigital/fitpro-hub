@@ -104,6 +104,8 @@ interface FormTemplate {
   is_active: boolean;
   is_required: boolean;
   send_on_onboarding: boolean;
+  send_on_signup: boolean;
+  send_on_product_purchase: boolean;
   is_global: boolean;
   product_ids: string[];
   submissions_count: number;
@@ -173,6 +175,8 @@ export function FormsPage() {
     is_active: f.is_active === true || f.is_active === "Y" || f.is_active === "true",
     is_required: f.is_required ?? false,
     send_on_onboarding: f.send_on_onboarding ?? false,
+    send_on_signup: f.send_on_signup ?? false,
+    send_on_product_purchase: f.send_on_product_purchase ?? false,
     is_global: f.is_global ?? false,
     product_ids: f.product_ids ?? [],
     submissions_count: f.submissions_count ?? 0,
@@ -324,7 +328,8 @@ export function FormsPage() {
       name: "",
       description: "",
       type: "custom",
-      send_on_onboarding: false,
+      send_on_signup: false,
+      send_on_product_purchase: false,
       product_ids: [] as string[],
     },
     validate: {
@@ -339,7 +344,8 @@ export function FormsPage() {
         name: formTemplate.name,
         description: formTemplate.description || "",
         type: formTemplate.type,
-        send_on_onboarding: formTemplate.send_on_onboarding,
+        send_on_signup: formTemplate.send_on_signup,
+        send_on_product_purchase: formTemplate.send_on_product_purchase,
         product_ids: formTemplate.product_ids ?? [],
       });
       setFormFields(formTemplate.fields);
@@ -357,7 +363,9 @@ export function FormsPage() {
       name: "Canal de Denuncias",
       description: "Formulario para reportar incidentes de forma confidencial",
       type: "custom",
-      send_on_onboarding: false,
+      send_on_signup: false,
+      send_on_product_purchase: false,
+      product_ids: [],
     });
     setFormFields([
       {
@@ -437,14 +445,23 @@ export function FormsPage() {
       feedback: "survey",
     };
 
+    // Si el coach activa "enviar al contratar productos" pero no
+    // selecciona ninguno aún, lo dejamos en false hasta que añada al
+    // menos uno (evita un form fantasma que nunca se asignará).
+    const productPurchaseActive = values.send_on_product_purchase && (values.product_ids?.length ?? 0) > 0;
+
     const formData = {
       name: values.name,
       description: values.description || undefined,
       form_type: (formTypeMap[values.type] || "custom") as "health" | "consent" | "assessment" | "survey" | "custom",
       fields: formFields,
       is_active: editingForm?.is_active ?? true,
-      send_on_onboarding: values.send_on_onboarding,
-      product_ids: values.product_ids ?? [],
+      send_on_signup: values.send_on_signup,
+      send_on_product_purchase: productPurchaseActive,
+      // Mantenemos el flag legacy sincronizado para integraciones que
+      // aún consulten ``send_on_onboarding`` (export, informes, etc.).
+      send_on_onboarding: values.send_on_signup || productPurchaseActive,
+      product_ids: productPurchaseActive ? (values.product_ids ?? []) : [],
     };
 
     try {
@@ -714,9 +731,14 @@ export function FormsPage() {
         </Text>
 
         <Group gap="xs" mb="md">
-          {formTemplate.send_on_onboarding && (
+          {formTemplate.send_on_signup && (
             <Badge color="blue" size="xs" variant="outline">
-              Onboarding
+              Al registrarse
+            </Badge>
+          )}
+          {formTemplate.send_on_product_purchase && (
+            <Badge color="teal" size="xs" variant="outline">
+              Al contratar
             </Badge>
           )}
           {formTemplate.is_required && (
@@ -1204,9 +1226,14 @@ export function FormsPage() {
                       Plantilla del sistema
                     </Badge>
                   )}
-                  {previewForm.send_on_onboarding && (
+                  {previewForm.send_on_signup && (
                     <Badge color="blue" variant="outline">
-                      Onboarding
+                      Al registrarse
+                    </Badge>
+                  )}
+                  {previewForm.send_on_product_purchase && (
+                    <Badge color="teal" variant="outline">
+                      Al contratar
                     </Badge>
                   )}
                 </Group>
@@ -1271,7 +1298,7 @@ export function FormsPage() {
           <Button onClick={closePreview} variant="default">
             Cerrar
           </Button>
-          {previewForm?.is_global && (
+          {previewForm?.is_global && previewForm?.type !== "system" && (
             <Button
               leftSection={<IconCopy size={16} />}
               loading={copyFormMutation.isPending}
@@ -1429,23 +1456,35 @@ export function FormsPage() {
                   />
                 </Group>
 
-                <Switch
-                  label="Enviar automáticamente en el onboarding"
-                  {...form.getInputProps("send_on_onboarding", {
-                    type: "checkbox",
-                  })}
-                />
+                <Stack gap={6}>
+                  <Switch
+                    label="Enviar automáticamente al registrarse el cliente"
+                    description="Se asigna a TODO cliente que completa el onboarding. Útil para protección de datos, consentimientos generales, etc."
+                    {...form.getInputProps("send_on_signup", {
+                      type: "checkbox",
+                    })}
+                  />
+                  <Switch
+                    label="Enviar al contratar uno de los siguientes productos"
+                    description="Se asigna SÓLO cuando el cliente compra uno de los productos seleccionados. Útil para cuestionarios específicos por servicio."
+                    {...form.getInputProps("send_on_product_purchase", {
+                      type: "checkbox",
+                    })}
+                  />
+                </Stack>
 
-                <MultiSelect
-                  label="Vincular a productos"
-                  description="El formulario se enviará automáticamente cuando un cliente contrate uno de estos productos"
-                  placeholder="Selecciona uno o varios productos"
-                  data={productOptions}
-                  searchable
-                  clearable
-                  nothingFoundMessage="No hay productos activos"
-                  {...form.getInputProps("product_ids")}
-                />
+                {form.values.send_on_product_purchase && (
+                  <MultiSelect
+                    label="Productos vinculados"
+                    description="Selecciona los productos para los que este formulario se enviará automáticamente al contratarse."
+                    placeholder="Selecciona uno o varios productos"
+                    data={productOptions}
+                    searchable
+                    clearable
+                    nothingFoundMessage="No hay productos activos"
+                    {...form.getInputProps("product_ids")}
+                  />
+                )}
               </Stack>
             </Paper>
 

@@ -1087,31 +1087,59 @@ async def complete_invitation(
         except Exception as e:
             logger.error(f"Failed to create system form submission: {e}")
 
-        # ── Formularios del workspace marcados "Enviar en onboarding" ─────
-        # Cualquier Form propio del workspace cuyo flag
-        # ``settings.send_on_onboarding`` esté activo se asigna al cliente
-        # como un FormSubmission pendiente en el momento del registro. Si
-        # el formulario tiene ``product_ids`` vinculados, sólo se asigna
-        # cuando el cliente compra uno de esos productos; si el array está
-        # vacío se considera "para todos los onboarding" del workspace.
+        # ── Formularios del workspace con auto-asignación ────────────────
+        # Hay dos motivos por los que un Form del workspace se asigna
+        # automáticamente al completar onboarding:
+        #
+        # 1. ``settings.send_on_signup``: se asigna a TODO cliente que
+        #    se registra (consentimientos, protección de datos, etc.).
+        # 2. ``settings.send_on_product_purchase`` + ``product_ids``: se
+        #    asigna SÓLO cuando el cliente acaba de contratar uno de los
+        #    productos vinculados (cuestionarios específicos por servicio).
+        #
+        # Para retrocompatibilidad seguimos respetando el flag legacy
+        # ``settings.send_on_onboarding=true``: si está activo y no
+        # tiene los nuevos flags, se evalúa con la regla histórica
+        # (product_ids vacío → todos; product_ids con items → sólo esos).
         try:
             ws_forms_result = await db.execute(
                 select(Form)
                 .where(
                     Form.workspace_id == invitation.workspace_id,
                     Form.is_active.is_(True),
-                    Form.settings["send_on_onboarding"].astext == "true",
                 )
                 .options(undefer(Form.product_ids))
             )
-            ws_forms = ws_forms_result.scalars().all()
+            ws_forms_all = ws_forms_result.scalars().all()
             current_product_id = invitation.product_id
-            for f in ws_forms:
+            for f in ws_forms_all:
+                f_settings = f.settings or {}
                 product_ids = list(getattr(f, "product_ids", None) or [])
-                if product_ids and current_product_id and current_product_id not in product_ids:
+
+                send_on_signup = bool(f_settings.get("send_on_signup", False))
+                send_on_purchase = bool(f_settings.get("send_on_product_purchase", False))
+                legacy_flag = bool(f_settings.get("send_on_onboarding", False))
+
+                should_assign = False
+                if send_on_signup:
+                    # Para todos los onboardings.
+                    should_assign = True
+                elif send_on_purchase:
+                    # Sólo si el cliente compró uno de los productos.
+                    if current_product_id and current_product_id in product_ids:
+                        should_assign = True
+                elif legacy_flag and "send_on_signup" not in f_settings and "send_on_product_purchase" not in f_settings:
+                    # Comportamiento histórico para forms creados antes de
+                    # 2026-05 que aún no tienen los flags granulares.
+                    if not product_ids:
+                        should_assign = True
+                    elif current_product_id and current_product_id in product_ids:
+                        should_assign = True
+
+                if not should_assign:
                     continue
-                # No duplicar si ya existe una submission pendiente para
-                # ese par cliente+form (idempotencia).
+
+                # Idempotencia: no duplicar la submission si ya existe.
                 already_q = await db.execute(
                     select(FormSubmission.id).where(
                         FormSubmission.form_id == f.id,

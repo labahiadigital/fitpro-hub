@@ -11,7 +11,12 @@ export interface Form {
   fields: FormField[];
   is_active: boolean | string; // Backend may return "Y"/"N"
   is_required?: boolean;
+  /** Legacy - derivado de send_on_signup OR send_on_product_purchase. */
   send_on_onboarding?: boolean;
+  /** Se asigna automáticamente a TODO cliente que completa onboarding. */
+  send_on_signup?: boolean;
+  /** Se asigna sólo cuando el cliente contrata uno de los ``product_ids``. */
+  send_on_product_purchase?: boolean;
   is_global?: boolean;
   /** IDs de productos a los que está vinculado el formulario. */
   product_ids?: string[];

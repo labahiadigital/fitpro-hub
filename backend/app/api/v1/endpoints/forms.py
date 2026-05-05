@@ -48,7 +48,18 @@ class FormSettingsSchema(BaseModel):
     send_reminder: bool = True
     reminder_days: int = 3
     allow_edit: bool = False
+    # ``send_on_onboarding`` se mantiene como flag legacy/master derivado
+    # (``send_on_signup`` o ``send_on_product_purchase``). Lo conservamos
+    # para no romper integraciones externas y migraciones existentes.
     send_on_onboarding: bool = False
+    # Nuevos flags granulares:
+    # - ``send_on_signup`` se asigna automáticamente a TODO cliente que
+    #   completa onboarding (consentimientos, protección de datos, etc.).
+    # - ``send_on_product_purchase`` se asigna SÓLO cuando el cliente
+    #   contrata uno de los productos en ``product_ids`` (cuestionarios
+    #   específicos del servicio).
+    send_on_signup: bool = False
+    send_on_product_purchase: bool = False
 
 
 class FormCreate(BaseModel):
@@ -72,6 +83,8 @@ class FormCreate(BaseModel):
     is_active: Optional[bool] = None
     is_required: Optional[bool] = None
     send_on_onboarding: Optional[bool] = None
+    send_on_signup: Optional[bool] = None
+    send_on_product_purchase: Optional[bool] = None
     product_ids: Optional[List[UUID]] = None
 
 
@@ -89,6 +102,8 @@ class FormResponse(BaseModel):
     is_global: bool = False
     is_required: bool = False
     send_on_onboarding: bool = False
+    send_on_signup: bool = False
+    send_on_product_purchase: bool = False
     product_ids: List[UUID] = []
     submissions_count: int = 0
     created_at: datetime
@@ -140,6 +155,18 @@ def _serialize_form(form: Form, submissions_count: int = 0) -> FormResponse:
     if isinstance(is_active_val, str):
         is_active_val = is_active_val.lower() in ("y", "true", "1")
 
+    # Retrocompatibilidad: si la fila aún no tiene los flags granulares
+    # (forms creados antes de 2026-05) los inferimos del flag legacy
+    # ``send_on_onboarding`` + ``product_ids``.
+    legacy_on_onboarding = bool(settings.get("send_on_onboarding", False))
+    legacy_product_ids = _safe_product_ids(form)
+    send_on_signup_val = settings.get("send_on_signup")
+    if send_on_signup_val is None:
+        send_on_signup_val = legacy_on_onboarding and not legacy_product_ids
+    send_on_product_purchase_val = settings.get("send_on_product_purchase")
+    if send_on_product_purchase_val is None:
+        send_on_product_purchase_val = legacy_on_onboarding and bool(legacy_product_ids)
+
     return FormResponse(
         id=form.id,
         workspace_id=form.workspace_id,
@@ -151,8 +178,10 @@ def _serialize_form(form: Form, submissions_count: int = 0) -> FormResponse:
         is_active=bool(is_active_val),
         is_global=bool(getattr(form, "is_global", False)),
         is_required=bool(getattr(form, "is_required", False)),
-        send_on_onboarding=bool(settings.get("send_on_onboarding", False)),
-        product_ids=_safe_product_ids(form),
+        send_on_onboarding=legacy_on_onboarding,
+        send_on_signup=bool(send_on_signup_val),
+        send_on_product_purchase=bool(send_on_product_purchase_val),
+        product_ids=legacy_product_ids,
         submissions_count=submissions_count,
         created_at=form.created_at,
         updated_at=form.updated_at,
@@ -175,12 +204,30 @@ def _apply_payload(form: Form, data: FormCreate) -> None:
     elif data.form_schema is not None:
         form.schema = data.form_schema
 
-    # Settings (+ send_on_onboarding como atajo)
+    # Settings (+ send_on_onboarding/signup/product_purchase como atajos
+    # de primer nivel para no obligar al frontend a anidar todo dentro
+    # de ``settings``).
     current_settings = dict(form.settings or {})
     if data.settings is not None:
         current_settings.update(data.settings.model_dump())
+    if data.send_on_signup is not None:
+        current_settings["send_on_signup"] = bool(data.send_on_signup)
+    if data.send_on_product_purchase is not None:
+        current_settings["send_on_product_purchase"] = bool(data.send_on_product_purchase)
     if data.send_on_onboarding is not None:
-        current_settings["send_on_onboarding"] = data.send_on_onboarding
+        current_settings["send_on_onboarding"] = bool(data.send_on_onboarding)
+    # Sincronizamos el flag legacy ``send_on_onboarding`` con los nuevos:
+    # se considera "se envía en el onboarding" cuando alguno de los dos
+    # checks granulares está activo. Así código antiguo que aún consulta
+    # ``send_on_onboarding`` (informes, exports) sigue funcionando.
+    if (
+        "send_on_signup" in current_settings
+        or "send_on_product_purchase" in current_settings
+    ):
+        current_settings["send_on_onboarding"] = bool(
+            current_settings.get("send_on_signup")
+            or current_settings.get("send_on_product_purchase")
+        )
     form.settings = current_settings
 
     if data.is_active is not None:
@@ -443,6 +490,21 @@ async def copy_form(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Formulario no encontrado",
+        )
+
+    # Los "Formularios del Sistema" (form_type == "system" + is_global)
+    # son built-in de Trackfiz y se asignan automáticamente a TODO cliente
+    # que completa el onboarding (Cuestionario Inicial Trackfiz). No se
+    # pueden duplicar al workspace porque son inmutables: si el coach
+    # quiere su propio cuestionario inicial debe crearlo desde cero.
+    if source.is_global and (source.form_type or "").lower() == "system":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "El Cuestionario Inicial Trackfiz es un formulario del sistema "
+                "y no se puede copiar. Ya se asigna automáticamente a todos "
+                "los clientes que completan el onboarding."
+            ),
         )
 
     clone = Form(
