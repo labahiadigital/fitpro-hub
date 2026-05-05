@@ -1160,17 +1160,33 @@ async def complete_invitation(
 
         await db.commit()
 
-        ws_name_for_email = workspace.name if workspace else None
-        # Datos públicos de soporte del workspace (Settings → Workspace).
-        ws_settings = (workspace.settings if workspace and workspace.settings else {}) or {}
-        ws_support = ws_settings.get("support", {}) if isinstance(ws_settings, dict) else {}
-        support_phone = ws_support.get("phone") if isinstance(ws_support, dict) else None
-        support_email = ws_support.get("email") if isinstance(ws_support, dict) else None
-        email_footer = ws_support.get("email_footer") if isinstance(ws_support, dict) else None
+        # ── A PARTIR DE AQUÍ NUNCA DEVOLVEMOS 5XX ──────────────────────
+        # El commit anterior YA creó Usuario + Cliente + Subscription
+        # en base de datos. Si lanzamos una excepción ahora, el
+        # frontend entra en bucle de reintentos contra un endpoint que
+        # ya no puede triunfar (la invitación ya está en ACCEPTED) y
+        # el cliente nunca obtiene sus tokens. Por eso envolvemos toda
+        # la sección post-commit en try amplios que loguean pero
+        # SIEMPRE terminan devolviendo 200.
+        ws_name_for_email: Optional[str] = None
+        support_phone: Optional[str] = None
+        support_email: Optional[str] = None
+        email_footer: Optional[str] = None
+        try:
+            ws_name_for_email = workspace.name if workspace else None
+            raw_ws_settings = workspace.settings if workspace else None
+            ws_settings = raw_ws_settings if isinstance(raw_ws_settings, dict) else {}
+            ws_support_raw = ws_settings.get("support") if isinstance(ws_settings, dict) else None
+            ws_support = ws_support_raw if isinstance(ws_support_raw, dict) else {}
+            support_phone = ws_support.get("phone")
+            support_email = ws_support.get("email")
+            email_footer = ws_support.get("email_footer")
+        except Exception as e:
+            logger.error(f"Could not read workspace support settings post-commit: {e}")
 
-        # URL al cuestionario del sistema. Si por algún motivo no se pudo
-        # crear el FormSubmission (no existe el form global) caemos al
-        # dashboard del cliente para no enviar un enlace roto.
+        # URL al cuestionario del sistema. Si por algún motivo no se
+        # pudo crear el FormSubmission (no existe el form global)
+        # caemos al dashboard del cliente para no enviar un enlace roto.
         if system_form_submission_id:
             system_form_url = (
                 f"{settings.FRONTEND_URL}/onboarding/system-form/{system_form_submission_id}"
@@ -1183,9 +1199,6 @@ async def complete_invitation(
         # Brevo y, sumados al upload de la foto + creación de cuenta +
         # cliente + suscripción, hacían que la request superase los 30s
         # de timeout del axios del frontend.
-
-        # Email 1 de bienvenida tras el pago: pide rellenar el Formulario
-        # del Sistema con un enlace único al FormSubmission pendiente.
         try:
             send_email_task.delay(
                 to_email=data.email,
@@ -1201,27 +1214,51 @@ async def complete_invitation(
             )
             logger.info(f"Welcome (post-payment) email queued for {data.email}")
         except Exception as e:
+            # Si Celery/Redis no responde o el render del template peta,
+            # NO rompemos el registro. El cliente puede entrar igual y
+            # rellenar el cuestionario desde /my-forms.
             logger.error(f"Failed to queue welcome email: {e}")
 
         # Login directo en todos los casos: el cliente acaba de demostrar
         # control del email (token de invitación único) o de la cuenta
         # existente (contraseña), así que no le exigimos un paso extra.
-        access_token, refresh_token = create_tokens(
-            {"sub": str(user.id), "email": user.email}
-        )
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "expires_in": settings.access_token_expire_minutes * 60,
-            "refresh_token": refresh_token,
-            "requires_email_verification": False,
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "full_name": user.full_name,
-            },
-        }
-        
+        try:
+            access_token, refresh_token = create_tokens(
+                {"sub": str(user.id), "email": user.email}
+            )
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "expires_in": settings.access_token_expire_minutes * 60,
+                "refresh_token": refresh_token,
+                "requires_email_verification": False,
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "full_name": user.full_name,
+                },
+            }
+        except Exception as e:
+            # Si por lo que sea no podemos firmar tokens (config rota),
+            # devolvemos 200 sin sesión: el frontend mostrará el mensaje
+            # pidiéndole que inicie sesión manualmente. No es válido
+            # devolver 500 porque la cuenta YA existe.
+            logger.error(f"Token signing failed after commit: {e}")
+            logger.error(traceback.format_exc())
+            return {
+                "access_token": "pending_login",
+                "token_type": "bearer",
+                "expires_in": 0,
+                "refresh_token": "",
+                "requires_email_verification": False,
+                "user": {
+                    "id": str(getattr(user, "id", "")),
+                    "email": getattr(user, "email", data.email),
+                    "full_name": getattr(user, "full_name", full_name),
+                },
+                "requires_manual_login": True,
+            }
+
     except HTTPException:
         await db.rollback()
         raise

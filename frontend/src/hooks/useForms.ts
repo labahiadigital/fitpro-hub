@@ -249,11 +249,17 @@ export function useMyForms(
 }
 
 export function useMyPendingRequiredCount(options?: { enabled?: boolean }) {
-  return useQuery<{ pending_required: number }>({
+  return useQuery<{ pending_total: number; pending_required: number }>({
     queryKey: ["my-forms", "pending-required-count"],
     queryFn: async () => {
       const response = await api.get("/forms/my/pending/count");
-      return response.data;
+      const data = response.data || {};
+      return {
+        pending_total: Number(
+          data.pending_total ?? data.pending_required ?? 0
+        ),
+        pending_required: Number(data.pending_required ?? 0),
+      };
     },
     refetchInterval: 60_000,
     enabled: options?.enabled ?? true,

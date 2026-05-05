@@ -188,7 +188,10 @@ function filterNavEntries(entries: NavEntry[], permissions?: Record<string, stri
 
 const getClientNavItems = (
   unreadCount: number,
-  pendingRequiredForms = 0
+  // Antes era ``pendingRequiredForms`` y solo contábamos los obligatorios.
+  // Ahora pintamos TODOS los pendientes, porque si el entrenador envía un
+  // cuestionario opcional el cliente también tiene que verlo en el badge.
+  pendingFormsTotal = 0
 ): NavItemProps[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
   { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/my-workouts" },
@@ -201,7 +204,7 @@ const getClientNavItems = (
     icon: <IconForms size={20} />,
     label: "Formularios",
     to: "/my-forms",
-    badge: pendingRequiredForms,
+    badge: pendingFormsTotal,
   },
   { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
 ];
@@ -599,12 +602,19 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   
   const unreadCount = unreadData?.unread_count || 0;
 
-  // Badge de formularios obligatorios pendientes (solo para cliente)
+  // Badge de formularios pendientes (solo para cliente).
+  // Mostramos TODOS los formularios pendientes en el menú lateral, no solo
+  // los obligatorios: si el entrenador le envía un cuestionario opcional el
+  // cliente también debe verlo en el badge para acordarse de rellenarlo.
   const { data: pendingRequiredData } = useMyPendingRequiredCount({ enabled: isClient });
-  const pendingRequired = isClient ? pendingRequiredData?.pending_required || 0 : 0;
+  const pendingTotal = isClient
+    ? pendingRequiredData?.pending_total ??
+      pendingRequiredData?.pending_required ??
+      0
+    : 0;
 
   const navEntries = isClient
-    ? getClientNavItems(unreadCount, pendingRequired)
+    ? getClientNavItems(unreadCount, pendingTotal)
     : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount), user?.permissions);
   const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 

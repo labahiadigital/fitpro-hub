@@ -546,7 +546,16 @@ export function InvitationOnboardingPage() {
   // confirmar el pago no debe rellenar otra vez nada: simplemente
   // ejecutamos /invitations/complete con un body vacío y el backend
   // reutiliza los valores guardados en la invitación.
+  //
+  // CRÍTICO: este intento es ONE-SHOT. Una vez disparado, NUNCA se
+  // vuelve a disparar aunque falle, porque la cuenta ya queda creada
+  // en el primer intento (el endpoint commitea Cliente+Usuario antes
+  // de encolar el email de bienvenida). Si reintentásemos en error,
+  // entraríamos en bucle infinito de 500 ya que ese commit no es
+  // reversible. Cuando falle, mostramos al usuario un mensaje útil
+  // pidiéndole que inicie sesión con el email/password que ya nos dio.
   const autoCompletedRef = useRef(false);
+  const [autoCompleteError, setAutoCompleteError] = useState<string | null>(null);
   useEffect(() => {
     if (autoCompletedRef.current) return;
     if (!invitationData?.data_complete) return;
@@ -574,12 +583,18 @@ export function InvitationOnboardingPage() {
         }
         setCompleted(true);
       } catch (error: unknown) {
-        autoCompletedRef.current = false;
+        // NO reseteamos autoCompletedRef: el primer intento ya pudo
+        // crear la cuenta del lado del backend (el flujo del endpoint
+        // commitea Usuario+Cliente antes de encolar el email). Volver a
+        // llamarlo provocaría bucle de 500. Mostramos al usuario que
+        // inicie sesión.
         const err = error as { response?: { data?: { detail?: string } }; message?: string };
+        const detail = err.response?.data?.detail || err.message || "Error al completar el registro";
+        setAutoCompleteError(detail);
         notifications.show({
-          title: "Error",
-          message: err.response?.data?.detail || err.message || "Error al completar el registro",
-          color: "red",
+          title: "Tu cuenta puede haberse creado",
+          message: "Si ves un error, intenta iniciar sesión con el email y contraseña que registraste. Tu pago está confirmado.",
+          color: "yellow",
         });
       } finally {
         setLoading(false);
@@ -892,10 +907,38 @@ export function InvitationOnboardingPage() {
     return (
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
-          <Loader size="lg" />
-          <Text c="dimmed" mt="md">
-            Estamos finalizando tu registro y enviándote el email de bienvenida...
-          </Text>
+          {autoCompleteError && !completed ? (
+            <Stack gap="md" align="center">
+              <ThemeIcon color="yellow" radius="xl" size={48} variant="light">
+                <IconMail size={24} />
+              </ThemeIcon>
+              <Title order={4}>Tu pago está confirmado</Title>
+              <Text c="dimmed">
+                Tu cuenta puede haberse creado correctamente. Por favor, inicia
+                sesión con el email y la contraseña que registraste antes del
+                pago. Te hemos enviado un email de bienvenida con los siguientes
+                pasos.
+              </Text>
+              <Text size="xs" c="dimmed">
+                Si el problema persiste, contacta con tu entrenador adjuntando
+                este código: <strong>{token?.slice(0, 12)}…</strong>
+              </Text>
+              <Button
+                fullWidth
+                onClick={() => navigate("/login")}
+                color="teal"
+              >
+                Iniciar sesión
+              </Button>
+            </Stack>
+          ) : (
+            <>
+              <Loader size="lg" />
+              <Text c="dimmed" mt="md">
+                Estamos finalizando tu registro y enviándote el email de bienvenida...
+              </Text>
+            </>
+          )}
         </Paper>
       </Container>
     );

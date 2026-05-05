@@ -1178,9 +1178,25 @@ async def count_my_pending_required(
     current_user: CurrentUser = Depends(require_any_role),
     db: AsyncSession = Depends(get_db),
 ):
-    """Devuelve cuántos formularios obligatorios siguen pendientes para el cliente actual."""
+    """Devuelve cuántos formularios siguen pendientes para el cliente actual.
+
+    Devolvemos dos contadores:
+    - ``pending_total``: TODOS los formularios pendientes (obligatorios o no).
+      Es el que pinta el badge del menú lateral, porque el cliente debe
+      ver todos los pendientes, no solo los obligatorios.
+    - ``pending_required``: solo los marcados como ``is_required``.
+      Lo dejamos por compatibilidad con clientes antiguos.
+    """
     client = await _get_client_for_current_user(current_user, db)
-    result = await db.execute(
+    total_result = await db.execute(
+        select(func.count(FormSubmission.id))
+        .join(Form, FormSubmission.form_id == Form.id)
+        .where(
+            FormSubmission.client_id == client.id,
+            FormSubmission.status == "pending",
+        )
+    )
+    required_result = await db.execute(
         select(func.count(FormSubmission.id))
         .join(Form, FormSubmission.form_id == Form.id)
         .where(
@@ -1189,7 +1205,12 @@ async def count_my_pending_required(
             Form.is_required == True,  # noqa: E712
         )
     )
-    return {"pending_required": int(result.scalar() or 0)}
+    pending_total = int(total_result.scalar() or 0)
+    pending_required = int(required_result.scalar() or 0)
+    return {
+        "pending_total": pending_total,
+        "pending_required": pending_required,
+    }
 
 
 class MyFormAnswerPayload(BaseModel):
