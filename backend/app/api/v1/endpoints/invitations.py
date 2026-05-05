@@ -43,6 +43,7 @@ from app.services.product_capacity import ensure_product_capacity
 from app.tasks.notifications import send_email_task
 from app.services.onboarding import (
     attach_onboarding_progress_photo,
+    attach_onboarding_progress_photo_background,
     enrich_onboarding_health_data,
 )
 
@@ -669,11 +670,17 @@ class InvitationCompleteRequest(BaseModel):
 async def complete_invitation(
     token: str,
     data: InvitationCompleteRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Complete an invitation by creating user account and client profile.
     Uses local authentication (not Supabase).
+
+    El upload de la foto de progreso a R2 se realiza en un background
+    task DESPUÉS de devolver el response, para no bloquear al cliente
+    durante varios segundos (en redes lentas era el principal motivo de
+    los ~30 s percibidos en el onboarding).
     """
     # Find invitation
     result = await db.execute(
@@ -884,7 +891,14 @@ async def complete_invitation(
             # la invitación) reutilizamos el hash almacenado. Si tampoco
             # hay hash en la invitación es un error de cliente.
             if data.password:
-                password_hash_value = get_password_hash(data.password)
+                # bcrypt es CPU-bound y bloquea el event loop. Lo movemos
+                # a un thread para no congelar otras requests durante los
+                # ~250-400 ms que tarda el hash con BCRYPT_ROUNDS=12.
+                import asyncio  # noqa: WPS433
+
+                password_hash_value = await asyncio.to_thread(
+                    get_password_hash, data.password
+                )
             elif invitation.password_hash:
                 password_hash_value = invitation.password_hash
             else:
@@ -969,12 +983,20 @@ async def complete_invitation(
             )
             db.add(client)
             await db.flush()
-        await attach_onboarding_progress_photo(
-            db=db,
-            client=client,
-            data_url=data.progress_photo_data_url,
-            photo_type=data.progress_photo_type or "front",
-        )
+        # Encolamos el upload como background task: se ejecutará DESPUÉS
+        # de que enviemos el response al cliente, así que no bloquea al
+        # usuario en la pantalla de "Cargando..." mientras la imagen
+        # (hasta 10 MB en base64) viaja a R2. Si por algún motivo
+        # ``progress_photo_data_url`` viene vacío, el helper hace early
+        # return y no se hace nada.
+        if data.progress_photo_data_url:
+            background_tasks.add_task(
+                attach_onboarding_progress_photo_background,
+                client_id=client.id,
+                workspace_id=invitation.workspace_id,
+                data_url=data.progress_photo_data_url,
+                photo_type=data.progress_photo_type or "front",
+            )
         
         # Create subscription if invitation has a product
         if invitation.product_id:
@@ -1370,9 +1392,14 @@ async def public_product_signup(
     if isinstance(consent_data, dict) and "marketing" in consent_data:
         marketing_flag = bool(consent_data.get("marketing"))
 
-    password_hash_value = (
-        get_password_hash(data.password) if data.password else None
-    )
+    if data.password:
+        import asyncio  # noqa: WPS433
+
+        password_hash_value = await asyncio.to_thread(
+            get_password_hash, data.password
+        )
+    else:
+        password_hash_value = None
 
     invitation = ClientInvitation(
         workspace_id=workspace.id,

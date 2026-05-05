@@ -72,6 +72,10 @@ import {
     IconCalendar,
     IconForms,
     IconBolt,
+    IconShieldCheck,
+    IconShieldOff,
+    IconCircleCheck,
+    IconCircleX,
 } from "@tabler/icons-react";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -2413,6 +2417,157 @@ export function ClientDetailPage() {
                   size="lg"
                 />
               </Group>
+            </Box>
+
+            {/* Consentimientos RGPD del registro */}
+            <Box className="nv-card" p="xl">
+              <Group gap="sm" mb="lg" align="center">
+                {(() => {
+                  const c = client.consents;
+                  const allGood = !!(c && c.data_processing && c.health_data);
+                  return (
+                    <ThemeIcon
+                      size={36}
+                      radius="xl"
+                      variant="light"
+                      color={allGood ? "green" : "yellow"}
+                    >
+                      {allGood ? (
+                        <IconShieldCheck size={20} />
+                      ) : (
+                        <IconShieldOff size={20} />
+                      )}
+                    </ThemeIcon>
+                  );
+                })()}
+                <div>
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Consentimientos del registro (RGPD)
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Checkboxes que el cliente marcó al completar el alta.
+                  </Text>
+                </div>
+              </Group>
+
+              {(() => {
+                const consents = client.consents;
+                if (!consents) {
+                  return (
+                    <Text size="sm" c="dimmed" fs="italic">
+                      Este cliente fue creado manualmente o se registró antes
+                      de que existiera el flujo de consentimientos. No hay
+                      registro de los checkboxes de RGPD.
+                    </Text>
+                  );
+                }
+                const items: Array<{
+                  key: string;
+                  label: string;
+                  hint: string;
+                  required: boolean;
+                  value: boolean;
+                }> = [
+                  {
+                    key: "data_processing",
+                    label: "Términos y Condiciones del servicio",
+                    hint: "Obligatorio. Aceptación del contrato de prestación.",
+                    required: true,
+                    value: !!consents.data_processing,
+                  },
+                  {
+                    key: "health_data",
+                    label: "Política de Privacidad y tratamiento de datos de salud",
+                    hint: "Obligatorio. Permite al entrenador tratar datos sensibles (dieta, lesiones…).",
+                    required: true,
+                    value: !!consents.health_data,
+                  },
+                  {
+                    key: "marketing",
+                    label: "Comunicaciones comerciales y novedades",
+                    hint: "Opcional. Permite enviarle campañas y descuentos por email.",
+                    required: false,
+                    value: !!consents.marketing,
+                  },
+                ];
+                return (
+                  <Stack gap="xs">
+                    {items.map((it) => (
+                      <Paper
+                        key={it.key}
+                        withBorder
+                        radius="md"
+                        p="sm"
+                        style={{
+                          borderColor: it.value
+                            ? "var(--mantine-color-green-3)"
+                            : it.required
+                              ? "var(--mantine-color-red-3)"
+                              : "var(--mantine-color-gray-3)",
+                          background: it.value
+                            ? "rgba(34,197,94,0.06)"
+                            : it.required
+                              ? "rgba(239,68,68,0.05)"
+                              : undefined,
+                        }}
+                      >
+                        <Group justify="space-between" align="flex-start" wrap="nowrap">
+                          <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+                            {it.value ? (
+                              <IconCircleCheck
+                                size={20}
+                                color="var(--mantine-color-green-6)"
+                                style={{ flexShrink: 0, marginTop: 2 }}
+                              />
+                            ) : (
+                              <IconCircleX
+                                size={20}
+                                color={
+                                  it.required
+                                    ? "var(--mantine-color-red-6)"
+                                    : "var(--mantine-color-gray-5)"
+                                }
+                                style={{ flexShrink: 0, marginTop: 2 }}
+                              />
+                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <Group gap={6} mb={2}>
+                                <Text size="sm" fw={600} lineClamp={1}>
+                                  {it.label}
+                                </Text>
+                                {it.required && (
+                                  <Badge color="red" size="xs" variant="light">
+                                    Obligatorio
+                                  </Badge>
+                                )}
+                              </Group>
+                              <Text size="xs" c="dimmed">
+                                {it.hint}
+                              </Text>
+                            </div>
+                          </Group>
+                          <Badge
+                            color={it.value ? "green" : it.required ? "red" : "gray"}
+                            variant={it.value ? "filled" : "light"}
+                            size="sm"
+                          >
+                            {it.value ? "Aceptado" : "No aceptado"}
+                          </Badge>
+                        </Group>
+                      </Paper>
+                    ))}
+                    {consents.consent_date && (
+                      <Text size="xs" c="dimmed" mt={4}>
+                        Aceptado el{" "}
+                        {new Date(consents.consent_date).toLocaleString("es-ES", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </Text>
+                    )}
+                  </Stack>
+                );
+              })()}
             </Box>
           </SimpleGrid>
         </Tabs.Panel>

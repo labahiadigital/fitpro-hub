@@ -24,6 +24,15 @@ export interface SegmentClient {
   subscription_cancelled_at: string | null;
   marketing_consent: boolean | null;
   pending_submission_id: string | null;
+  /**
+   * Tracking del último email "welcome_after_payment*". Sirve para
+   * que la pestaña "Pendiente formulario" muestre si el cliente ya
+   * leyó el correo con el CTA al cuestionario.
+   */
+  last_email_sent_at?: string | null;
+  last_email_subject?: string | null;
+  last_email_status?: string | null;
+  email_read?: boolean;
 }
 
 export interface AbandonedCartItem {
@@ -38,8 +47,24 @@ export interface AbandonedCartItem {
   last_email_sent_at: string | null;
   last_email_subject: string | null;
   last_email_status: string | null;
+  last_email_event_at: string | null;
   marketing_consent: boolean | null;
+  /**
+   * `true` cuando la invitación se aceptó/pagó después de haber estado
+   * en el listado de carritos abandonados. Lo usamos para mostrar un
+   * badge "Ganado" y conservar el histórico de conversión.
+   */
+  won: boolean;
+  invitation_status: string;
+  accepted_at: string | null;
+  /**
+   * Atajo derivado de `last_email_status`: `true` cuando ha habido un
+   * evento `opened`/`clicked` del último email enviado.
+   */
+  email_read: boolean;
 }
+
+export type AbandonedCartFilter = "abandoned" | "won" | "all";
 
 export interface InvitationTrackingItem {
   id: string;
@@ -78,15 +103,46 @@ export function useInactiveSubscriptionClients(marketingOnly?: boolean | null) {
   });
 }
 
-export function useAbandonedCart(marketingOnly?: boolean | null) {
+export function useAbandonedCart(
+  marketingOnly?: boolean | null,
+  statusFilter: AbandonedCartFilter = "abandoned",
+) {
   return useQuery({
-    queryKey: ["clients", "segment", "abandoned-cart", marketingOnly],
+    queryKey: ["clients", "segment", "abandoned-cart", marketingOnly, statusFilter],
     queryFn: async () => {
-      const params = marketingOnly === null || marketingOnly === undefined
-        ? {}
-        : { marketing_only: marketingOnly };
+      const params: Record<string, unknown> = {};
+      if (marketingOnly !== null && marketingOnly !== undefined) {
+        params.marketing_only = marketingOnly;
+      }
+      if (statusFilter && statusFilter !== "abandoned") {
+        params.status_filter = statusFilter;
+      }
       const res = await api.get<AbandonedCartItem[]>("/clients/segments/abandoned-cart", { params });
       return res.data;
+    },
+  });
+}
+
+export function useDeleteAbandonedCart() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      await api.delete(`/clients/segments/abandoned-cart/${invitationId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clients", "segment", "abandoned-cart"] });
+      notifications.show({
+        title: "Carrito eliminado",
+        message: "Se ha quitado del listado de carritos abandonados.",
+        color: "blue",
+      });
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      notifications.show({
+        title: "Error",
+        message: err?.response?.data?.detail || "No se pudo eliminar el carrito.",
+        color: "red",
+      });
     },
   });
 }
@@ -120,6 +176,36 @@ export function useResendSystemForm() {
       notifications.show({
         title: "Error",
         message: err?.response?.data?.detail || "No se pudo reenviar el email.",
+        color: "red",
+      });
+    },
+  });
+}
+
+export function useCancelPendingSystemForm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (clientId: string) => {
+      const res = await api.post<{ status: string; cancelled: number }>(
+        `/clients/${clientId}/cancel-system-form`,
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["clients", "segment", "pending-system-form"] });
+      notifications.show({
+        title: "Solicitud cancelada",
+        message:
+          data.cancelled > 0
+            ? "La solicitud del cuestionario inicial se ha cancelado correctamente."
+            : "No había solicitudes pendientes que cancelar.",
+        color: "blue",
+      });
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      notifications.show({
+        title: "Error",
+        message: err?.response?.data?.detail || "No se pudo cancelar la solicitud.",
         color: "red",
       });
     },

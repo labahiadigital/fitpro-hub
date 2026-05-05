@@ -134,6 +134,38 @@ def _html_to_text(html: str) -> str:
     return text.strip()
 
 
+# Sender de fallback siempre verificado en Brevo. Si el ``FROM_EMAIL`` del
+# entorno (típicamente DEV con ``noreply-dev@trackfiz.com``) NO está
+# registrado en Brevo, el envío falla con ``sender_not_valid``. Para no
+# romper el endpoint y que los emails sigan llegando, reintentamos con
+# este sender verificado y dejamos un log explicando lo que pasó.
+_BREVO_FALLBACK_SENDER_EMAIL = "no-reply@trackfiz.com"
+_BREVO_FALLBACK_SENDER_NAME = "Trackfiz"
+
+
+def _is_invalid_sender_error(exc: ApiException) -> bool:
+    """Detecta si Brevo rechazó el envío porque el sender no está dado de
+    alta. Esos errores llegan típicamente con HTTP 400 y un body como::
+
+        {"code": "invalid_parameter",
+         "message": "Sender 'foo@bar.com' is not registered..."}
+    """
+    try:
+        status = int(getattr(exc, "status", 0) or 0)
+    except (TypeError, ValueError):
+        status = 0
+    body = (getattr(exc, "body", "") or "").lower()
+    if status not in (400, 401, 403):
+        return False
+    return (
+        "not registered" in body
+        or "is not valid" in body
+        or "sender_not_valid" in body
+        or "sender_not_found" in body
+        or "invalid_parameter" in body and "sender" in body
+    )
+
+
 class EmailService:
     def __init__(self):
         self.configuration = sib_api_v3_sdk.Configuration()
@@ -188,21 +220,48 @@ class EmailService:
                 headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
             headers["X-Mailer"] = "Trackfiz"
 
-            send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-                to=[{"email": to_email, "name": to_name or to_email}],
-                sender={"email": settings.FROM_EMAIL, "name": settings.FROM_NAME},
-                subject=subject,
-                html_content=html_content,
-                text_content=text,
-                reply_to={"email": reply_to or settings.FROM_EMAIL},
-                attachment=attachments,
-                headers=headers or None,
-            )
+            sender_email = settings.FROM_EMAIL
+            sender_name = settings.FROM_NAME
+
+            def _build_payload(s_email: str, s_name: str) -> sib_api_v3_sdk.SendSmtpEmail:
+                return sib_api_v3_sdk.SendSmtpEmail(
+                    to=[{"email": to_email, "name": to_name or to_email}],
+                    sender={"email": s_email, "name": s_name},
+                    subject=subject,
+                    html_content=html_content,
+                    text_content=text,
+                    reply_to={"email": reply_to or s_email},
+                    attachment=attachments,
+                    headers=headers or None,
+                )
+
+            send_smtp_email = _build_payload(sender_email, sender_name)
 
             loop = asyncio.get_running_loop()
-            response = await loop.run_in_executor(
-                None, self.api_instance.send_transac_email, send_smtp_email
-            )
+            try:
+                response = await loop.run_in_executor(
+                    None, self.api_instance.send_transac_email, send_smtp_email
+                )
+            except ApiException as initial_err:
+                # Reintento con sender verificado si el FROM_EMAIL del entorno
+                # no está dado de alta en Brevo (típico en DEV).
+                if (
+                    _is_invalid_sender_error(initial_err)
+                    and sender_email.lower() != _BREVO_FALLBACK_SENDER_EMAIL.lower()
+                ):
+                    logger.warning(
+                        "Brevo rechazó sender %r (no registrado). Reintento con %r.",
+                        sender_email,
+                        _BREVO_FALLBACK_SENDER_EMAIL,
+                    )
+                    sender_email = _BREVO_FALLBACK_SENDER_EMAIL
+                    sender_name = sender_name or _BREVO_FALLBACK_SENDER_NAME
+                    send_smtp_email = _build_payload(sender_email, sender_name)
+                    response = await loop.run_in_executor(
+                        None, self.api_instance.send_transac_email, send_smtp_email
+                    )
+                else:
+                    raise
             # Brevo devuelve un objeto ``CreateSmtpEmail`` con
             # ``message_id`` (string entre ``<>``). Si la API cambia y no
             # llega, capturamos la excepción y seguimos sin tracking.
@@ -243,16 +302,34 @@ class EmailService:
             return EmailSendResult(success=True, message_id=message_id)
 
         except ApiException as e:
+            status_code = getattr(e, "status", "?")
+            body = getattr(e, "body", "")
+            reason = getattr(e, "reason", "?")
             logger.error(
                 "Brevo ApiException to=%s status=%s reason=%s body=%s",
                 to_email,
-                getattr(e, "status", "?"),
-                getattr(e, "reason", "?"),
-                getattr(e, "body", "?"),
+                status_code,
+                reason,
+                body,
             )
+            # Intentamos extraer el ``message`` de Brevo para que el endpoint
+            # pueda devolver al frontend un detalle accionable (ej. "sender
+            # not registered"). Si el body no es JSON, devolvemos el texto.
+            detail = ""
+            try:
+                import json as _json  # noqa: WPS433
+
+                if isinstance(body, (bytes, bytearray)):
+                    body = body.decode("utf-8", errors="ignore")
+                if isinstance(body, str) and body.strip().startswith("{"):
+                    detail = (_json.loads(body) or {}).get("message") or ""
+                else:
+                    detail = (body or "").strip()[:300]
+            except Exception:  # pragma: no cover - defensivo
+                detail = (body or "").strip()[:300] if isinstance(body, str) else ""
             return EmailSendResult(
                 success=False,
-                errors=[f"api:{getattr(e, 'status', '?')}"],
+                errors=[f"brevo:{status_code}", detail or str(reason)],
             )
         except Exception as exc:
             logger.exception("Error inesperado enviando email a %s", to_email)

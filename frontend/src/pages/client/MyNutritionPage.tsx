@@ -647,6 +647,8 @@ interface SupplementData {
   carbs: string | number;
   fat: string | number;
   serving_size: string;
+  /** Enlace externo donde el cliente puede comprar el suplemento. */
+  purchase_url?: string | null;
 }
 
 interface PlanMeal {

@@ -773,19 +773,24 @@ export function DashboardLayout() {
     actionUrl: n.link || undefined,
   }));
 
-  // Formularios obligatorios pendientes (solo para cliente) — alertas persistentes
+  // Formularios pendientes (solo para cliente) — alertas persistentes.
+  // Mostramos TODOS los pendientes (obligatorios y opcionales): el cliente
+  // tiene que ver el indicador y la notificación de cualquier formulario
+  // que el entrenador le haya enviado, no sólo de los obligatorios.
   const { data: myPendingForms = [] } = useMyForms("pending", { enabled: isClientLayout });
-  const requiredPendingForms = (myPendingForms || [])
-    .filter((f) => f.is_required)
-    .map((f) => ({
-      id: f.submission_id,
-      form_id: f.form_id,
-      title: f.form_name,
-      message:
-        f.form_description || "Tienes un formulario obligatorio pendiente.",
-      link: "/my-forms",
-    }));
-  const hasPersistentAlert = requiredPendingForms.length > 0;
+  const pendingFormsForBell = (myPendingForms || []).map((f) => ({
+    id: f.submission_id,
+    form_id: f.form_id,
+    title: f.form_name,
+    message:
+      f.form_description ||
+      (f.is_required
+        ? "Tienes un formulario obligatorio pendiente."
+        : "Tienes un formulario pendiente por completar."),
+    link: "/my-forms",
+    is_required: f.is_required,
+  }));
+  const hasPersistentAlert = pendingFormsForBell.length > 0;
 
   useHotkeys([["mod+K", () => openPalette()]]);
 
@@ -931,7 +936,7 @@ export function DashboardLayout() {
         opened={notifOpen}
         onClose={closeNotif}
         notifications={mappedNotifications}
-        requiredPendingForms={requiredPendingForms}
+        requiredPendingForms={pendingFormsForBell}
         onMarkAsRead={(id) => markRead.mutate(id)}
         onMarkAllAsRead={() => markAllRead.mutate()}
         onDelete={(id) => deleteNotif.mutate(id)}

@@ -47,6 +47,12 @@ export interface RequiredPendingForm {
   title: string;
   message?: string;
   link?: string;
+  /**
+   * Si el formulario es obligatorio. Si no se indica se asume `true`
+   * por compatibilidad con el comportamiento previo (cuando sólo se
+   * pasaban formularios obligatorios).
+   */
+  is_required?: boolean;
 }
 
 interface NotificationCenterProps {
@@ -236,57 +242,78 @@ export function NotificationCenter({
       }
     >
       <Stack gap={0} h="100%">
-        {/* Formularios obligatorios pendientes (persistentes) */}
+        {/* Formularios pendientes (persistentes).
+            Mostramos TODOS los formularios pendientes (obligatorios y
+            opcionales) y diferenciamos visualmente los obligatorios con
+            un badge rojo y un fondo rojizo. Los opcionales usan amarillo
+            para que no compitan con alertas críticas pero el cliente
+            siga viendo que tiene algo pendiente. */}
         {requiredPendingForms.length > 0 && (
           <Stack gap={0} px="md" pt="xs" pb="sm">
-            {requiredPendingForms.map((f) => (
-              <Paper
-                key={f.id}
-                withBorder
-                p="sm"
-                mb={8}
-                radius="md"
-                style={{
-                  borderColor: "var(--mantine-color-red-3)",
-                  background:
-                    "linear-gradient(90deg, rgba(255,82,82,0.07), rgba(255,82,82,0.02))",
-                }}
-                onClick={() => {
-                  onClose();
-                  navigate(f.link || "/my-forms");
-                }}
-              >
-                <Group align="flex-start" gap="sm" wrap="nowrap">
-                  <ThemeIcon color="red" radius="xl" size="md" variant="light">
-                    <IconForms size={16} />
-                  </ThemeIcon>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Group gap={6} mb={2}>
-                      <Text fw={700} size="sm" lineClamp={1}>
-                        {f.title}
+            {requiredPendingForms.map((f) => {
+              const required = f.is_required !== false;
+              return (
+                <Paper
+                  key={f.id}
+                  withBorder
+                  p="sm"
+                  mb={8}
+                  radius="md"
+                  style={{
+                    borderColor: required
+                      ? "var(--mantine-color-red-3)"
+                      : "var(--mantine-color-yellow-3)",
+                    background: required
+                      ? "linear-gradient(90deg, rgba(255,82,82,0.07), rgba(255,82,82,0.02))"
+                      : "linear-gradient(90deg, rgba(234,179,8,0.10), rgba(234,179,8,0.02))",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    onClose();
+                    navigate(f.link || "/my-forms");
+                  }}
+                >
+                  <Group align="flex-start" gap="sm" wrap="nowrap">
+                    <ThemeIcon
+                      color={required ? "red" : "yellow"}
+                      radius="xl"
+                      size="md"
+                      variant="light"
+                    >
+                      <IconForms size={16} />
+                    </ThemeIcon>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Group gap={6} mb={2}>
+                        <Text fw={700} size="sm" lineClamp={1}>
+                          {f.title}
+                        </Text>
+                        <Badge
+                          color={required ? "red" : "yellow"}
+                          size="xs"
+                          variant="filled"
+                        >
+                          {required ? "Obligatorio" : "Pendiente"}
+                        </Badge>
+                      </Group>
+                      <Text c="dimmed" size="xs" lineClamp={2}>
+                        {f.message || "Pendiente de responder."}
                       </Text>
-                      <Badge color="red" size="xs" variant="filled">
-                        Obligatorio
-                      </Badge>
-                    </Group>
-                    <Text c="dimmed" size="xs" lineClamp={2}>
-                      {f.message || "Pendiente de responder."}
-                    </Text>
-                  </div>
-                  <Box
-                    aria-hidden
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: "#EF4444",
-                      flexShrink: 0,
-                      marginTop: 4,
-                    }}
-                  />
-                </Group>
-              </Paper>
-            ))}
+                    </div>
+                    <Box
+                      aria-hidden
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: required ? "#EF4444" : "#EAB308",
+                        flexShrink: 0,
+                        marginTop: 4,
+                      }}
+                    />
+                  </Group>
+                </Paper>
+              );
+            })}
           </Stack>
         )}
 

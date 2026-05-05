@@ -59,6 +59,13 @@ class SegmentClient(BaseModel):
     marketing_consent: Optional[bool] = None
     # Para "pending_system_form": id del FormSubmission pendiente
     pending_submission_id: Optional[UUID] = None
+    # Tracking del último email "welcome_after_payment*" (sólo aplica a
+    # "pending_system_form"). Sirve para que el entrenador sepa si el
+    # cliente ya leyó el email con el CTA al cuestionario.
+    last_email_sent_at: Optional[datetime] = None
+    last_email_subject: Optional[str] = None
+    last_email_status: Optional[str] = None
+    email_read: bool = False
 
 
 class AbandonedCartItem(BaseModel):
@@ -73,7 +80,18 @@ class AbandonedCartItem(BaseModel):
     last_email_sent_at: Optional[datetime] = None
     last_email_subject: Optional[str] = None
     last_email_status: Optional[str] = None
+    last_email_event_at: Optional[datetime] = None
     marketing_consent: Optional[bool] = None
+    # ``won = True`` cuando la invitación finalmente se aceptó (cliente
+    # convertido). Se mantiene en el listado para tener histórico de
+    # conversión. ``status`` permite distinguir pending/expired/cancelled.
+    won: bool = False
+    invitation_status: str = "pending"
+    accepted_at: Optional[datetime] = None
+    # Atajo para la UI: ``true`` si conocemos un evento ``opened`` o
+    # ``clicked`` del último email. La columna "leído" se pinta en base a
+    # este flag.
+    email_read: bool = False
 
 
 class InvitationTrackingItem(BaseModel):
@@ -179,20 +197,73 @@ async def list_pending_system_form_clients(
     )
 
     rows = (await db.execute(base_q)).all()
-    return [
-        SegmentClient(
-            id=client.id,
-            first_name=client.first_name,
-            last_name=client.last_name,
-            email=client.email,
-            phone=client.phone,
-            avatar_url=client.avatar_url,
-            full_name=client.full_name,
-            last_payment_at=last_paid_at,
-            pending_submission_id=submission_id,
+    if not rows:
+        return []
+
+    # Recogemos los últimos eventos de email asociados al cliente con
+    # template_kind del flujo de bienvenida tras pago. Nos quedamos con
+    # el evento más reciente y resolvemos el estado más significativo.
+    client_ids = [client.id for client, _sid, _p in rows]
+    welcome_kinds = (
+        "welcome_after_payment",
+        "welcome_after_payment_resend",
+    )
+    ev_q = await db.execute(
+        select(EmailEvent)
+        .where(
+            EmailEvent.client_id.in_(client_ids),
+            EmailEvent.template_kind.in_(welcome_kinds),
         )
-        for client, submission_id, last_paid_at in rows
-    ]
+        .order_by(EmailEvent.occurred_at.desc())
+    )
+    # Agrupar por cliente y por message_id para resolver el último email
+    # enviado a cada cliente y su estado (delivered/opened/clicked).
+    last_msg_by_client: dict[UUID, str] = {}
+    events_by_msg: dict[str, List[EmailEvent]] = {}
+    sent_at_by_msg: dict[str, datetime] = {}
+    subject_by_msg: dict[str, Optional[str]] = {}
+    for ev in ev_q.scalars():
+        if ev.client_id is None or ev.brevo_message_id is None:
+            continue
+        events_by_msg.setdefault(ev.brevo_message_id, []).append(ev)
+        # last_msg_by_client guarda el message_id de la PRIMERA aparición
+        # (la más reciente porque hemos ordenado DESC).
+        if ev.client_id not in last_msg_by_client:
+            last_msg_by_client[ev.client_id] = ev.brevo_message_id
+        if ev.event_type == "request":
+            sent_at_by_msg[ev.brevo_message_id] = ev.occurred_at
+            subject_by_msg[ev.brevo_message_id] = ev.subject
+
+    out: List[SegmentClient] = []
+    for client, submission_id, last_paid_at in rows:
+        msg_id = last_msg_by_client.get(client.id)
+        last_status: Optional[str] = None
+        last_sent_at: Optional[datetime] = None
+        last_subject: Optional[str] = None
+        if msg_id:
+            evts = events_by_msg.get(msg_id, [])
+            last_status, _ = _resolve_email_status(evts)
+            last_sent_at = sent_at_by_msg.get(msg_id)
+            last_subject = subject_by_msg.get(msg_id)
+        email_read = last_status in ("opened", "unique_opened", "clicked")
+        out.append(
+            SegmentClient(
+                id=client.id,
+                first_name=client.first_name,
+                last_name=client.last_name,
+                email=client.email,
+                phone=client.phone,
+                avatar_url=client.avatar_url,
+                full_name=client.full_name,
+                last_payment_at=last_paid_at,
+                pending_submission_id=submission_id,
+                last_email_sent_at=last_sent_at,
+                last_email_subject=last_subject,
+                last_email_status=last_status,
+                email_read=email_read,
+            )
+        )
+    return out
 
 
 @router.get("/clients/segments/inactive-subscription", response_model=List[SegmentClient])
@@ -263,14 +334,25 @@ async def list_inactive_subscription_clients(
 @router.get("/clients/segments/abandoned-cart", response_model=List[AbandonedCartItem])
 async def list_abandoned_cart(
     marketing_only: Optional[bool] = Query(None),
+    status_filter: Optional[str] = Query(
+        None,
+        description=(
+            "Filtra por estado del carrito: 'abandoned' (pending sin pago,"
+            " comportamiento histórico), 'won' (convertido en cliente),"
+            " 'all' (todo). Por defecto sólo abandonados."
+        ),
+    ),
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
-    """Invitaciones con producto asignado pero sin pago completado.
+    """Invitaciones con producto asignado y su estado de conversión.
 
-    No se acotan a las que están ``pending`` para que también veamos
-    invitaciones expiradas en las que el cliente abandonó el flujo. La
-    UI las marca por separado.
+    Comparado con la versión legacy, este endpoint deja también pasar
+    invitaciones aceptadas (``won = True``) para que la UI pueda
+    mostrar el histórico de conversión: el entrenador quiere saber si
+    un carrito que estuvo abandonado finalmente se ganó. El filtro por
+    defecto sigue siendo "abandonados" para no romper a quien sólo
+    quiere ver lo pendiente de cerrar.
     """
     from app.models.product import Product  # import perezoso
 
@@ -281,13 +363,8 @@ async def list_abandoned_cart(
         .where(
             ClientInvitation.workspace_id == current_user.workspace_id,
             ClientInvitation.product_id.isnot(None),
-            ClientInvitation.status != "accepted",
-            or_(
-                Payment.id.is_(None),
-                Payment.status != PaymentStatus.succeeded,
-            ),
         )
-        .order_by(desc(ClientInvitation.last_email_sent_at), desc(ClientInvitation.created_at))
+        .order_by(desc(ClientInvitation.last_email_sent_at).nulls_last(), desc(ClientInvitation.created_at))
     )
 
     rows = (await db.execute(q)).all()
@@ -303,14 +380,34 @@ async def list_abandoned_cart(
         for ev in ev_q.scalars():
             events_by_msg.setdefault(ev.brevo_message_id, []).append(ev)
 
+    requested_filter = (status_filter or "abandoned").lower()
+    if requested_filter not in ("abandoned", "won", "all"):
+        requested_filter = "abandoned"
+
     out: List[AbandonedCartItem] = []
-    for inv, product, _payment_status in rows:
+    for inv, product, payment_status in rows:
         if marketing_only is True and not inv.marketing_consent:
             continue
         if marketing_only is False and inv.marketing_consent:
             continue
+
+        # Detectamos si el carrito se ha "ganado": invitación aceptada o
+        # con pago completado. Tener payment != succeeded y status !=
+        # accepted = abandono real.
+        won = (
+            inv.status == "accepted"
+            or payment_status == PaymentStatus.succeeded
+        )
+        if requested_filter == "abandoned" and won:
+            continue
+        if requested_filter == "won" and not won:
+            continue
+
         events = events_by_msg.get(inv.brevo_message_id, []) if inv.brevo_message_id else []
-        last_status, _ = _resolve_email_status(events)
+        last_status, last_status_at = _resolve_email_status(events)
+        # ``opened``/``clicked`` se considera "leído" para la UI.
+        email_read = last_status in ("opened", "unique_opened", "clicked")
+
         out.append(
             AbandonedCartItem(
                 invitation_id=inv.id,
@@ -324,10 +421,52 @@ async def list_abandoned_cart(
                 last_email_sent_at=inv.last_email_sent_at,
                 last_email_subject=inv.last_email_subject,
                 last_email_status=last_status,
+                last_email_event_at=last_status_at,
                 marketing_consent=inv.marketing_consent,
+                won=won,
+                invitation_status=inv.status,
+                accepted_at=inv.accepted_at,
+                email_read=email_read,
             )
         )
     return out
+
+
+@router.delete("/clients/segments/abandoned-cart/{invitation_id}", status_code=204)
+async def delete_abandoned_cart_entry(
+    invitation_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Borra del listado un carrito abandonado.
+
+    Se hace borrando físicamente la invitación si todavía está
+    ``pending`` o ``expired`` (no perdemos histórico relevante porque
+    el cliente nunca se registró). Para invitaciones aceptadas
+    devolvemos 409 para evitar que el entrenador borre por error un
+    cliente convertido. Si lo necesita en el futuro tendremos que
+    soportar soft-delete.
+    """
+    res = await db.execute(
+        select(ClientInvitation).where(
+            ClientInvitation.id == invitation_id,
+            ClientInvitation.workspace_id == current_user.workspace_id,
+        )
+    )
+    inv = res.scalar_one_or_none()
+    if inv is None:
+        raise HTTPException(status_code=404, detail="Invitación no encontrada")
+    if inv.status == "accepted":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "No puedes borrar un carrito ganado: el cliente ya está"
+                " registrado. Usa el listado de clientes para gestionarlo."
+            ),
+        )
+    await db.delete(inv)
+    await db.commit()
+    return None
 
 
 @router.get("/clients/segments/tracking", response_model=List[InvitationTrackingItem])
@@ -398,9 +537,123 @@ async def resend_system_form_email(
     """Reenvía al cliente el email "Bienvenido tras el pago" con el CTA al
     Cuestionario Inicial. Útil cuando el correo automático se perdió o
     cayó en SPAM.
-    """
-    from app.services.email import EmailTemplates, email_service  # import perezoso
 
+    Capturamos cualquier excepción inesperada para evitar que el endpoint
+    devuelva un 500 genérico (que el frontend muestra como "Internal
+    Server Error" sin detalle): siempre que sea posible respondemos con
+    un 502/422 y el motivo concreto. Esto facilita el diagnóstico cuando,
+    por ejemplo, Brevo rechaza el sender porque no está registrado.
+    """
+    import logging  # noqa: WPS433
+
+    log = logging.getLogger(__name__)
+
+    try:
+        from app.services.email import EmailTemplates, email_service  # noqa: WPS433
+
+        res = await db.execute(
+            select(Client).where(
+                Client.id == client_id,
+                Client.workspace_id == current_user.workspace_id,
+                Client.deleted_at.is_(None),
+            )
+        )
+        client = res.scalar_one_or_none()
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        if not client.email:
+            raise HTTPException(status_code=400, detail="El cliente no tiene email configurado")
+
+        # Buscar el FormSubmission pendiente del system form para construir el CTA
+        sys_form_q = await db.execute(
+            select(Form.id).where(Form.is_global.is_(True), Form.form_type == "system").limit(1)
+        )
+        sys_form_id = sys_form_q.scalar_one_or_none()
+        submission_id: Optional[UUID] = None
+        if sys_form_id is not None:
+            sub_q = await db.execute(
+                select(FormSubmission.id)
+                .where(
+                    FormSubmission.client_id == client.id,
+                    FormSubmission.form_id == sys_form_id,
+                    FormSubmission.status == "pending",
+                )
+                .limit(1)
+            )
+            submission_id = sub_q.scalar_one_or_none()
+
+        from app.core.config import settings as app_settings  # noqa: WPS433
+        base = (app_settings.FRONTEND_URL or "").rstrip("/") or "https://app.trackfiz.com"
+        cta_url = (
+            f"{base}/onboarding/system-form/{submission_id}"
+            if submission_id is not None
+            else f"{base}/my-dashboard"
+        )
+
+        from app.models.workspace import Workspace  # noqa: WPS433
+        workspace = await db.get(Workspace, current_user.workspace_id)
+        settings_dict = (getattr(workspace, "settings", None) or {}) if workspace else {}
+        support = (settings_dict.get("support") or {}) if isinstance(settings_dict, dict) else {}
+        email_footer = settings_dict.get("email_footer") if isinstance(settings_dict, dict) else None
+
+        html = EmailTemplates.client_welcome_after_payment(
+            name=client.full_name,
+            system_form_url=cta_url,
+            workspace_name=workspace.name if workspace else "Trackfiz",
+            support_email=support.get("email"),
+            support_phone=support.get("phone"),
+            email_footer=email_footer,
+        )
+
+        result = await email_service.send_email(
+            to_email=client.email,
+            to_name=client.full_name,
+            subject="🚀 ¡Bienvenido/a a mi asesoría! Tus próximos pasos",
+            html_content=html,
+            tracking={
+                "workspace_id": current_user.workspace_id,
+                "client_id": client.id,
+                "template_kind": "welcome_after_payment_resend",
+            },
+        )
+        if not result:
+            # ``result.errors`` ya viene formateado como
+            # ``["brevo:400", "Sender 'foo@bar.com' is not registered..."]``.
+            # Devolvemos 502 (bad gateway) porque el fallo es del proveedor
+            # externo, y el segundo elemento como detail accionable.
+            err_detail = "No se pudo reenviar el email."
+            try:
+                if result.errors and len(result.errors) >= 2 and result.errors[1]:
+                    err_detail = f"No se pudo reenviar el email: {result.errors[1]}"
+            except Exception:  # pragma: no cover - defensivo
+                pass
+            raise HTTPException(status_code=502, detail=err_detail)
+        return {"status": "ok", "message_id": result.message_id}
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("resend_system_form_email failed for client_id=%s", client_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al reenviar el email: {type(exc).__name__}: {exc}",
+        )
+
+
+@router.post("/clients/{client_id}/cancel-system-form")
+async def cancel_pending_system_form(
+    client_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancela la solicitud del Cuestionario Inicial para este cliente.
+
+    Marca todos los FormSubmission del system form que estén
+    ``pending`` como ``expired`` para que el cliente deje de verlos en
+    su lista de tareas pendientes y desaparezcan de la pestaña
+    "Pendiente formulario" del entrenador. No borramos la fila para
+    conservar el histórico (auditoría / re-emisión).
+    """
     res = await db.execute(
         select(Client).where(
             Client.id == client_id,
@@ -411,62 +664,23 @@ async def resend_system_form_email(
     client = res.scalar_one_or_none()
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    if not client.email:
-        raise HTTPException(status_code=400, detail="El cliente no tiene email configurado")
 
-    # Buscar el FormSubmission pendiente del system form para construir el CTA
     sys_form_q = await db.execute(
         select(Form.id).where(Form.is_global.is_(True), Form.form_type == "system").limit(1)
     )
     sys_form_id = sys_form_q.scalar_one_or_none()
-    submission_id: Optional[UUID] = None
-    if sys_form_id is not None:
-        sub_q = await db.execute(
-            select(FormSubmission.id)
-            .where(
-                FormSubmission.client_id == client.id,
-                FormSubmission.form_id == sys_form_id,
-                FormSubmission.status == "pending",
-            )
-            .limit(1)
+    if sys_form_id is None:
+        return {"status": "ok", "cancelled": 0}
+
+    pending_q = await db.execute(
+        select(FormSubmission).where(
+            FormSubmission.client_id == client.id,
+            FormSubmission.form_id == sys_form_id,
+            FormSubmission.status == "pending",
         )
-        submission_id = sub_q.scalar_one_or_none()
-
-    from app.core.config import settings as app_settings  # noqa: WPS433
-    base = (app_settings.FRONTEND_URL or "").rstrip("/") or "https://app.trackfiz.com"
-    cta_url = (
-        f"{base}/onboarding/system-form/{submission_id}"
-        if submission_id is not None
-        else f"{base}/my-dashboard"
     )
-
-    # Datos de soporte del workspace
-    from app.models.workspace import Workspace  # noqa: WPS433
-    workspace = await db.get(Workspace, current_user.workspace_id)
-    settings_dict = (getattr(workspace, "settings", None) or {}) if workspace else {}
-    support = (settings_dict.get("support") or {}) if isinstance(settings_dict, dict) else {}
-    email_footer = settings_dict.get("email_footer") if isinstance(settings_dict, dict) else None
-
-    html = EmailTemplates.client_welcome_after_payment(
-        name=client.full_name,
-        system_form_url=cta_url,
-        workspace_name=workspace.name if workspace else "Trackfiz",
-        support_email=support.get("email"),
-        support_phone=support.get("phone"),
-        email_footer=email_footer,
-    )
-
-    result = await email_service.send_email(
-        to_email=client.email,
-        to_name=client.full_name,
-        subject="🚀 ¡Bienvenido/a a mi asesoría! Tus próximos pasos",
-        html_content=html,
-        tracking={
-            "workspace_id": current_user.workspace_id,
-            "client_id": client.id,
-            "template_kind": "welcome_after_payment_resend",
-        },
-    )
-    if not result:
-        raise HTTPException(status_code=500, detail="No se pudo reenviar el email")
-    return {"status": "ok", "message_id": result.message_id}
+    pending = pending_q.scalars().all()
+    for sub in pending:
+        sub.status = "expired"
+    await db.commit()
+    return {"status": "ok", "cancelled": len(pending)}

@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 import {
   IconEdit,
+  IconExternalLink,
   IconEye,
   IconPill,
   IconSearch,
@@ -195,6 +196,29 @@ export function SupplementsTab({
                   <Text size="xs" c="dimmed" lineClamp={2} style={{ paddingTop: "var(--space-xs)", borderTop: "1px solid var(--border-subtle)" }}>
                     <Text component="span" fw={600} c="violet">Cómo tomar:</Text> {supp.how_to_take}
                   </Text>
+                )}
+
+                {supp.purchase_url && (
+                  <Box
+                    style={{ paddingTop: "var(--space-xs)", borderTop: supp.how_to_take ? undefined : "1px solid var(--border-subtle)" }}
+                  >
+                    <Tooltip label="Abrir enlace de compra" withArrow>
+                      <Button
+                        component="a"
+                        href={supp.purchase_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        leftSection={<IconExternalLink size={12} />}
+                        size="compact-xs"
+                        variant="light"
+                        color="violet"
+                        radius="xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Comprar
+                      </Button>
+                    </Tooltip>
+                  </Box>
                 )}
               </Box>
             ))}

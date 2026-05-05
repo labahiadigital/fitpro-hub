@@ -46,6 +46,10 @@ import {
   IconBellRinging,
   IconActivityHeartbeat,
   IconMailOpened,
+  IconMailX,
+  IconBan,
+  IconTrophy,
+  IconX,
 } from "@tabler/icons-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -72,10 +76,13 @@ import {
   usePendingSystemFormClients,
   useInactiveSubscriptionClients,
   useAbandonedCart,
+  useDeleteAbandonedCart,
+  useCancelPendingSystemForm,
   useInvitationsTracking,
   useResendSystemForm,
   useCampaignTemplates,
   useSendCampaign,
+  type AbandonedCartFilter,
 } from "../../hooks/useClientSegments";
 import { useQuery } from "@tanstack/react-query";
 import { api, productsApi } from "../../services/api";
@@ -220,6 +227,10 @@ interface SegmentClientItem {
   subscription_cancelled_at: string | null;
   marketing_consent: boolean | null;
   pending_submission_id: string | null;
+  last_email_sent_at?: string | null;
+  last_email_subject?: string | null;
+  last_email_status?: string | null;
+  email_read?: boolean;
 }
 
 interface SegmentClientListProps {
@@ -361,6 +372,9 @@ interface AbandonedCartItemView {
   last_email_subject: string | null;
   last_email_status: string | null;
   marketing_consent: boolean | null;
+  won: boolean;
+  invitation_status: string;
+  email_read: boolean;
 }
 
 function AbandonedCartList({
@@ -368,18 +382,26 @@ function AbandonedCartList({
   items,
   marketingFilter,
   onMarketingFilterChange,
+  statusFilter,
+  onStatusFilterChange,
   selectedRecipients,
   onSelectionChange,
   onSendCampaign,
+  onDelete,
+  isDeleting,
   onRowClick,
 }: {
   loading: boolean;
   items: AbandonedCartItemView[];
   marketingFilter: null | true | false;
   onMarketingFilterChange: (v: null | true | false) => void;
+  statusFilter: AbandonedCartFilter;
+  onStatusFilterChange: (v: AbandonedCartFilter) => void;
   selectedRecipients: Set<string>;
   onSelectionChange: (s: Set<string>) => void;
   onSendCampaign: () => void;
+  onDelete: (invitationId: string) => void;
+  isDeleting: boolean;
   onRowClick: (invId: string) => void;
 }) {
   if (loading) {
@@ -396,23 +418,42 @@ function AbandonedCartList({
       />
     );
   }
-  const allSelected = selectedRecipients.size > 0 && items.every((i) => selectedRecipients.has(i.invitation_id));
+  // Sólo dejamos seleccionar abandonados para enviar recordatorio: no
+  // tiene sentido enviar otro email a quien ya pagó.
+  const selectableItems = items.filter((i) => !i.won);
+  const allSelected =
+    selectedRecipients.size > 0 &&
+    selectableItems.length > 0 &&
+    selectableItems.every((i) => selectedRecipients.has(i.invitation_id));
   return (
     <Box className="nv-card" style={{ border: "1px solid var(--border-subtle)" }}>
-      <Group justify="space-between" p="sm" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-        <SegmentedControl
-          size="xs"
-          radius="xl"
-          value={marketingFilter === null ? "all" : marketingFilter ? "yes" : "no"}
-          onChange={(value) =>
-            onMarketingFilterChange(value === "all" ? null : value === "yes" ? true : false)
-          }
-          data={[
-            { label: "Todos", value: "all" },
-            { label: "Acepta marketing", value: "yes" },
-            { label: "No acepta", value: "no" },
-          ]}
-        />
+      <Group justify="space-between" p="sm" style={{ borderBottom: "1px solid var(--border-subtle)" }} wrap="wrap">
+        <Group gap="xs" wrap="wrap">
+          <SegmentedControl
+            size="xs"
+            radius="xl"
+            value={statusFilter}
+            onChange={(value) => onStatusFilterChange(value as AbandonedCartFilter)}
+            data={[
+              { label: "Abandonados", value: "abandoned" },
+              { label: "Ganados", value: "won" },
+              { label: "Todos", value: "all" },
+            ]}
+          />
+          <SegmentedControl
+            size="xs"
+            radius="xl"
+            value={marketingFilter === null ? "all" : marketingFilter ? "yes" : "no"}
+            onChange={(value) =>
+              onMarketingFilterChange(value === "all" ? null : value === "yes" ? true : false)
+            }
+            data={[
+              { label: "Todos", value: "all" },
+              { label: "Acepta marketing", value: "yes" },
+              { label: "No acepta", value: "no" },
+            ]}
+          />
+        </Group>
         <Button
           size="xs"
           variant="filled"
@@ -434,7 +475,7 @@ function AbandonedCartList({
                   type="checkbox"
                   checked={allSelected}
                   onChange={(e) => {
-                    if (e.target.checked) onSelectionChange(new Set(items.map((i) => i.invitation_id)));
+                    if (e.target.checked) onSelectionChange(new Set(selectableItems.map((i) => i.invitation_id)));
                     else onSelectionChange(new Set());
                   }}
                 />
@@ -442,8 +483,10 @@ function AbandonedCartList({
               <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
               <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Producto</Text></Table.Th>
               <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Invitado</Text></Table.Th>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Último email</Text></Table.Th>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Marketing</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Estado</Text></Table.Th>
+              <Table.Th visibleFrom="md"><Text fw={700} size="xs" tt="uppercase">Marketing</Text></Table.Th>
+              <Table.Th />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -460,6 +503,7 @@ function AbandonedCartList({
                   <input
                     type="checkbox"
                     checked={selectedRecipients.has(i.invitation_id)}
+                    disabled={i.won}
                     onChange={(e) => {
                       const next = new Set(selectedRecipients);
                       if (e.target.checked) next.add(i.invitation_id);
@@ -496,36 +540,95 @@ function AbandonedCartList({
                 <Table.Td>
                   {i.last_email_sent_at ? (
                     <Stack gap={2}>
-                      <Text size="xs" c="dimmed">
-                        {new Date(i.last_email_sent_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                      </Text>
-                      {i.last_email_status && (
-                        <Badge
-                          size="xs"
-                          variant="light"
-                          color={
-                            i.last_email_status === "clicked" ? "green"
-                            : i.last_email_status === "opened" ? "teal"
-                            : i.last_email_status === "delivered" ? "blue"
-                            : i.last_email_status.includes("bounce") ? "red"
-                            : "gray"
-                          }
-                        >
-                          {i.last_email_status}
-                        </Badge>
+                      <Group gap={4} wrap="nowrap">
+                        <Tooltip label="Email enviado" withArrow>
+                          <Badge
+                            size="xs"
+                            color="blue"
+                            variant="light"
+                            leftSection={<IconSend size={10} />}
+                          >
+                            {new Date(i.last_email_sent_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                          </Badge>
+                        </Tooltip>
+                        {i.email_read ? (
+                          <Tooltip label="Leído por el destinatario" withArrow>
+                            <Badge
+                              size="xs"
+                              color="teal"
+                              variant="filled"
+                              leftSection={<IconMailOpened size={10} />}
+                            >
+                              Leído
+                            </Badge>
+                          </Tooltip>
+                        ) : i.last_email_status === "delivered" ? (
+                          <Tooltip label="Entregado, sin abrir aún" withArrow>
+                            <Badge size="xs" color="gray" variant="light">Sin leer</Badge>
+                          </Tooltip>
+                        ) : i.last_email_status && i.last_email_status.includes("bounce") ? (
+                          <Tooltip label="Rebote del servidor" withArrow>
+                            <Badge size="xs" color="red" variant="light" leftSection={<IconMailX size={10} />}>
+                              Rebote
+                            </Badge>
+                          </Tooltip>
+                        ) : null}
+                      </Group>
+                      {i.last_email_subject && (
+                        <Text size="10px" c="dimmed" lineClamp={1} style={{ maxWidth: 220 }}>
+                          {i.last_email_subject}
+                        </Text>
                       )}
                     </Stack>
                   ) : (
-                    <Text size="xs" c="dimmed">—</Text>
+                    <Tooltip label="Aún no se ha enviado ningún email" withArrow>
+                      <Badge size="xs" color="gray" variant="light">Sin enviar</Badge>
+                    </Tooltip>
                   )}
                 </Table.Td>
                 <Table.Td>
+                  {i.won ? (
+                    <Badge size="xs" color="green" variant="filled" leftSection={<IconTrophy size={10} />}>
+                      Ganado
+                    </Badge>
+                  ) : i.invitation_status === "expired" ? (
+                    <Badge size="xs" color="red" variant="light">Expirado</Badge>
+                  ) : i.invitation_status === "cancelled" ? (
+                    <Badge size="xs" color="gray" variant="light">Cancelado</Badge>
+                  ) : (
+                    <Badge size="xs" color="orange" variant="light">Pendiente</Badge>
+                  )}
+                </Table.Td>
+                <Table.Td visibleFrom="md">
                   {i.marketing_consent === true ? (
                     <Badge color="green" variant="light" size="xs">Sí</Badge>
                   ) : i.marketing_consent === false ? (
                     <Badge color="gray" variant="light" size="xs">No</Badge>
                   ) : (
                     <Text size="xs" c="dimmed">—</Text>
+                  )}
+                </Table.Td>
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                  {!i.won && (
+                    <Tooltip label="Eliminar carrito" withArrow>
+                      <ActionIcon
+                        size="sm"
+                        color="red"
+                        variant="subtle"
+                        loading={isDeleting}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `¿Eliminar el carrito abandonado de ${i.email}? Esta acción no se puede deshacer.`,
+                            )
+                          ) {
+                            onDelete(i.invitation_id);
+                          }
+                        }}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Tooltip>
                   )}
                 </Table.Td>
               </Table.Tr>
@@ -625,10 +728,16 @@ function TrackingList({
   loading,
   items,
   onResend,
+  onCancel,
+  isResending,
+  isCancelling,
 }: {
   loading: boolean;
   items: TrackingListItem[];
   onResend: (id: string) => void;
+  onCancel: (id: string) => void;
+  isResending: boolean;
+  isCancelling: boolean;
 }) {
   if (loading) {
     return (
@@ -659,14 +768,28 @@ function TrackingList({
           </Table.Thead>
           <Table.Tbody>
             {items.map((item) => {
-              const status = item.last_email_status || (item.last_email_sent_at ? "request" : null);
+              const isClosedStatus =
+                item.status === "accepted" || item.status === "cancelled";
+              // Mapeo legible de estados de Brevo. ``request`` es el
+              // evento de envío inicial; significa "enviado, sin
+              // respuesta del servidor todavía".
+              const rawStatus = item.last_email_status;
+              const status = rawStatus || (item.last_email_sent_at ? "request" : null);
               const color =
                 status === "clicked" ? "green"
-                : status === "opened" ? "teal"
+                : status === "opened" || status === "unique_opened" ? "teal"
                 : status === "delivered" ? "blue"
                 : status && status.includes("bounce") ? "red"
                 : status === "request" ? "yellow"
                 : "gray";
+              const statusLabel =
+                status === "request" ? "Enviado"
+                : status === "delivered" ? "Entregado"
+                : status === "opened" || status === "unique_opened" ? "Leído"
+                : status === "clicked" ? "Click"
+                : status === "soft_bounce" ? "Rebote leve"
+                : status === "hard_bounce" ? "Rebote fuerte"
+                : status || "—";
               return (
                 <Table.Tr key={item.id}>
                   <Table.Td>
@@ -679,21 +802,54 @@ function TrackingList({
                   </Table.Td>
                   <Table.Td visibleFrom="sm">
                     {item.last_email_sent_at ? (
-                      <Text size="xs" c="dimmed">
-                        {new Date(item.last_email_sent_at).toLocaleDateString("es-ES", {
-                          day: "numeric", month: "short", year: "2-digit",
-                        })}
-                      </Text>
+                      <Stack gap={2}>
+                        <Text size="xs" c="dimmed">
+                          {new Date(item.last_email_sent_at).toLocaleDateString("es-ES", {
+                            day: "numeric", month: "short", year: "2-digit",
+                          })}
+                        </Text>
+                        {item.last_email_event_at && (
+                          <Text size="10px" c="dimmed">
+                            Último evento: {new Date(item.last_email_event_at).toLocaleString("es-ES", {
+                              day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                            })}
+                          </Text>
+                        )}
+                      </Stack>
                     ) : (
                       <Text size="xs" c="dimmed">Sin envíos</Text>
                     )}
                   </Table.Td>
                   <Table.Td>
-                    {status ? (
-                      <Badge size="xs" variant="light" color={color}>{status}</Badge>
-                    ) : (
-                      <Text size="xs" c="dimmed">—</Text>
-                    )}
+                    <Stack gap={4}>
+                      {status ? (
+                        <Tooltip
+                          label={
+                            status === "request" ? "Enviado al servidor de Brevo"
+                            : status === "delivered" ? "Entregado al destinatario"
+                            : status === "opened" || status === "unique_opened" ? "El destinatario abrió el email"
+                            : status === "clicked" ? "El destinatario hizo click en un enlace"
+                            : status === "soft_bounce" ? "Rebote temporal: bandeja llena u otro problema reversible"
+                            : status === "hard_bounce" ? "Rebote permanente: dirección inexistente"
+                            : status
+                          }
+                          withArrow
+                        >
+                          <Badge size="xs" variant="light" color={color}>{statusLabel}</Badge>
+                        </Tooltip>
+                      ) : (
+                        <Text size="xs" c="dimmed">—</Text>
+                      )}
+                      {item.status === "accepted" && (
+                        <Badge size="xs" variant="filled" color="green">Aceptada</Badge>
+                      )}
+                      {item.status === "cancelled" && (
+                        <Badge size="xs" variant="light" color="gray">Cancelada</Badge>
+                      )}
+                      {item.status === "expired" && (
+                        <Badge size="xs" variant="light" color="orange">Expirada</Badge>
+                      )}
+                    </Stack>
                   </Table.Td>
                   <Table.Td visibleFrom="sm">
                     <Text size="xs" lineClamp={1} style={{ maxWidth: 280 }}>
@@ -701,15 +857,52 @@ function TrackingList({
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <Tooltip label="Reenviar invitación">
-                      <ActionIcon
-                        variant="subtle"
-                        color="blue"
-                        onClick={() => onResend(item.id)}
+                    <Group gap={4} justify="flex-end" wrap="nowrap">
+                      <Tooltip
+                        label={
+                          isClosedStatus
+                            ? "No puedes reenviar una invitación cerrada"
+                            : "Reenviar invitación"
+                        }
+                        withArrow
                       >
-                        <IconRefresh size={14} />
-                      </ActionIcon>
-                    </Tooltip>
+                        <ActionIcon
+                          variant="subtle"
+                          color="blue"
+                          disabled={isClosedStatus}
+                          loading={isResending}
+                          onClick={() => onResend(item.id)}
+                        >
+                          <IconRefresh size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip
+                        label={
+                          isClosedStatus
+                            ? "Esta invitación ya está cerrada"
+                            : "Cancelar invitación (no se podrá usar el enlace)"
+                        }
+                        withArrow
+                      >
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          disabled={isClosedStatus}
+                          loading={isCancelling}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `¿Cancelar la invitación a ${item.email}? El enlace dejará de funcionar y no se podrá enviar más emails sobre esta invitación.`,
+                              )
+                            ) {
+                              onCancel(item.id);
+                            }
+                          }}
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Table.Td>
                 </Table.Tr>
               );
@@ -748,6 +941,10 @@ export function ClientsPage() {
   // Filtro consentimiento marketing para "Carrito abandonado" e "Inactivo".
   // null = todos, true = sólo opt-in, false = sólo opt-out.
   const [marketingFilter, setMarketingFilter] = useState<null | true | false>(null);
+  // Filtro de estado para "Carrito abandonado": abandoned (default) /
+  // won / all. Permite revisar el histórico de conversión sin perder
+  // de vista los abandonados activos.
+  const [abandonedStatusFilter, setAbandonedStatusFilter] = useState<AbandonedCartFilter>("abandoned");
   // Selección de destinatarios y modal para envío de campañas.
   const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
   const [campaignModalOpen, setCampaignModalOpen] = useState<false | "abandoned_cart" | "inactive">(false);
@@ -785,10 +982,12 @@ export function ClientsPage() {
   // para que los contadores de cada tab se vean correctos sin tener
   // que entrar en ellas (similar a "stats").
   const pendingFormQuery = usePendingSystemFormClients();
-  const abandonedCartQuery = useAbandonedCart(marketingFilter);
+  const abandonedCartQuery = useAbandonedCart(marketingFilter, abandonedStatusFilter);
   const inactiveSubQuery = useInactiveSubscriptionClients(marketingFilter);
   const trackingQuery = useInvitationsTracking();
   const resendSystemForm = useResendSystemForm();
+  const cancelPendingSystemForm = useCancelPendingSystemForm();
+  const deleteAbandonedCart = useDeleteAbandonedCart();
   const sendCampaign = useSendCampaign();
   const campaignTemplatesQuery = useCampaignTemplates(
     campaignModalOpen === "abandoned_cart"
@@ -1378,27 +1577,90 @@ export function ClientsPage() {
           emptyTitle="Nadie pendiente del formulario"
           emptyDesc="Todos tus clientes pagados ya completaron el cuestionario inicial."
           extraColumn={{
-            title: "Último pago",
-            render: (c) =>
-              c.last_payment_at
-                ? new Date(c.last_payment_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
-                : "—",
+            title: "Email cuestionario",
+            render: (c) => {
+              if (!c.last_email_sent_at) {
+                return (
+                  <Tooltip label="Aún no se ha enviado el correo del cuestionario" withArrow>
+                    <Badge size="xs" color="gray" variant="light">Sin enviar</Badge>
+                  </Tooltip>
+                );
+              }
+              return (
+                <Stack gap={4}>
+                  <Group gap={4} wrap="nowrap">
+                    <Tooltip label="Email enviado" withArrow>
+                      <Badge size="xs" color="blue" variant="light" leftSection={<IconSend size={10} />}>
+                        {new Date(c.last_email_sent_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                      </Badge>
+                    </Tooltip>
+                    {c.email_read ? (
+                      <Tooltip label="Cliente abrió el email" withArrow>
+                        <Badge size="xs" color="teal" variant="filled" leftSection={<IconMailOpened size={10} />}>
+                          Leído
+                        </Badge>
+                      </Tooltip>
+                    ) : c.last_email_status === "delivered" ? (
+                      <Tooltip label="Entregado, sin abrir" withArrow>
+                        <Badge size="xs" color="gray" variant="light">Sin leer</Badge>
+                      </Tooltip>
+                    ) : c.last_email_status && c.last_email_status.includes("bounce") ? (
+                      <Tooltip label="Rebote del servidor" withArrow>
+                        <Badge size="xs" color="red" variant="light" leftSection={<IconMailX size={10} />}>
+                          Rebote
+                        </Badge>
+                      </Tooltip>
+                    ) : null}
+                  </Group>
+                  {c.last_payment_at && (
+                    <Text size="10px" c="dimmed">
+                      Pago: {new Date(c.last_payment_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "2-digit" })}
+                    </Text>
+                  )}
+                </Stack>
+              );
+            },
           }}
           rowAction={(c) => (
-            <Button
-              size="xs"
-              variant="light"
-              color="blue"
-              radius="xl"
-              leftSection={<IconBellRinging size={14} />}
-              loading={resendSystemForm.isPending && resendSystemForm.variables === c.id}
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                resendSystemForm.mutate(c.id);
-              }}
-            >
-              Reenviar formulario
-            </Button>
+            <Group gap={4} wrap="nowrap">
+              <Tooltip label="Reenviar email del cuestionario" withArrow>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="blue"
+                  radius="xl"
+                  leftSection={<IconBellRinging size={14} />}
+                  loading={resendSystemForm.isPending && resendSystemForm.variables === c.id}
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    resendSystemForm.mutate(c.id);
+                  }}
+                >
+                  Reenviar
+                </Button>
+              </Tooltip>
+              <Tooltip label="Cancelar la solicitud del cuestionario" withArrow>
+                <ActionIcon
+                  size="lg"
+                  variant="subtle"
+                  color="red"
+                  radius="xl"
+                  loading={cancelPendingSystemForm.isPending && cancelPendingSystemForm.variables === c.id}
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (
+                      window.confirm(
+                        `¿Cancelar la solicitud del cuestionario inicial para ${c.full_name}? El cliente dejará de verlo en su panel.`,
+                      )
+                    ) {
+                      cancelPendingSystemForm.mutate(c.id);
+                    }
+                  }}
+                >
+                  <IconBan size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
           )}
           onRowClick={(c) => navigate(`/clients/${c.id}`)}
         />
@@ -1410,9 +1672,13 @@ export function ClientsPage() {
           items={abandonedCartQuery.data || []}
           marketingFilter={marketingFilter}
           onMarketingFilterChange={setMarketingFilter}
+          statusFilter={abandonedStatusFilter}
+          onStatusFilterChange={setAbandonedStatusFilter}
           selectedRecipients={selectedRecipients}
           onSelectionChange={setSelectedRecipients}
           onSendCampaign={() => setCampaignModalOpen("abandoned_cart")}
+          onDelete={(invitationId) => deleteAbandonedCart.mutate(invitationId)}
+          isDeleting={deleteAbandonedCart.isPending}
           onRowClick={(invId) => {
             const inv = invitations?.find((i) => i.id === invId);
             if (inv) {
@@ -1499,6 +1765,9 @@ export function ClientsPage() {
           loading={trackingQuery.isLoading}
           items={trackingQuery.data || []}
           onResend={(id) => resendInvitation.mutate(id)}
+          onCancel={(id) => cancelInvitation.mutate(id)}
+          isResending={resendInvitation.isPending}
+          isCancelling={cancelInvitation.isPending}
         />
       )}
 
