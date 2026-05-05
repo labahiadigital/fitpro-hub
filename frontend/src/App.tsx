@@ -41,6 +41,7 @@ const ResetPasswordPage = lazyRetry(() => import("./pages/auth/ResetPasswordPage
 const GoogleCallbackPage = lazyRetry(() => import("./pages/auth/GoogleCallbackPage").then(m => ({ default: m.GoogleCallbackPage })));
 const InvitationOnboardingPage = lazyRetry(() => import("./pages/onboarding/InvitationOnboardingPage").then(m => ({ default: m.InvitationOnboardingPage })));
 const ClientOnboardingPage = lazyRetry(() => import("./pages/onboarding/ClientOnboardingPage").then(m => ({ default: m.ClientOnboardingPage })));
+const SystemFormPage = lazyRetry(() => import("./pages/onboarding/SystemFormPage").then(m => ({ default: m.SystemFormPage })));
 const OnboardingPage = lazyRetry(() => import("./pages/onboarding/OnboardingPage").then(m => ({ default: m.OnboardingPage })));
 const AcceptStaffInvitePage = lazyRetry(() => import("./pages/auth/AcceptStaffInvitePage").then(m => ({ default: m.AcceptStaffInvitePage })));
 
@@ -53,6 +54,7 @@ const NutritionPage = lazyRetry(() => import("./pages/nutrition/NutritionPage").
 const MealPlanDetailPage = lazyRetry(() => import("./pages/nutrition/MealPlanDetailPage").then(m => ({ default: m.MealPlanDetailPage })));
 const SupplementsPage = lazyRetry(() => import("./pages/supplements/SupplementsPage").then(m => ({ default: m.SupplementsPage })));
 const FormsPage = lazyRetry(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
+const EmailTemplatesPage = lazyRetry(() => import("./pages/email-templates/EmailTemplatesPage").then(m => ({ default: m.EmailTemplatesPage })));
 const CatalogPage = lazyRetry(() => import("./pages/payments/CatalogPage").then(m => ({ default: m.CatalogPage })));
 const StockPage = lazyRetry(() => import("./pages/stock/StockPage").then(m => ({ default: m.StockPage })));
 const SuppliersPage = lazyRetry(() => import("./pages/suppliers/SuppliersPage"));
@@ -227,6 +229,15 @@ export default function App() {
                 <Route
                   element={
                     <ProtectedRoute>
+                      <SystemFormPage />
+                    </ProtectedRoute>
+                  }
+                  path="/onboarding/system-form/:submissionId"
+                />
+
+                <Route
+                  element={
+                    <ProtectedRoute>
                       <OnboardingPage />
                     </ProtectedRoute>
                   }
@@ -288,6 +299,7 @@ export default function App() {
                   <Route element={<TrainerRoute><MealPlanDetailPage /></TrainerRoute>} path="/nutrition/:id" />
                   <Route element={<TrainerRoute><SupplementsPage /></TrainerRoute>} path="/supplements" />
                   <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
+                  <Route element={<TrainerRoute><EmailTemplatesPage /></TrainerRoute>} path="/email-templates" />
                   <Route element={<TrainerRoute><CatalogPage /></TrainerRoute>} path="/catalog" />
                   <Route element={<TrainerRoute><StockPage /></TrainerRoute>} path="/stock" />
                   <Route element={<TrainerRoute><SuppliersPage /></TrainerRoute>} path="/suppliers" />

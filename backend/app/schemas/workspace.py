@@ -32,6 +32,16 @@ class WorkspaceContactSchema(BaseSchema):
     website: Optional[str] = None
 
 
+class WorkspaceSupportSchema(BaseSchema):
+    """Datos públicos de soporte que se enseñan al cliente y se incluyen al
+    pie de los emails. Distinto de `contact` (que es info comercial).
+    """
+
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    email_footer: Optional[str] = None  # texto libre para el pie del email
+
+
 class TimeSlotSchema(BaseSchema):
     start: str  # HH:MM
     end: str    # HH:MM
@@ -52,6 +62,7 @@ class WorkspaceSettingsSchema(BaseSchema):
     currency: str = "EUR"
     language: str = "es"
     contact: WorkspaceContactSchema = WorkspaceContactSchema()
+    support: WorkspaceSupportSchema = WorkspaceSupportSchema()
     booking_policies: BookingPoliciesSchema = BookingPoliciesSchema()
     weekly_schedule: Optional[WeeklyScheduleSchema] = None
 

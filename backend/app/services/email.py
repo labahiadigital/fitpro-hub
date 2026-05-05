@@ -5,13 +5,117 @@ import asyncio
 import html as html_mod
 import logging
 import re
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
+from uuid import UUID
+
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class EmailSendResult:
+    """Resultado del envío. Se evalúa como ``bool`` para no romper código
+    legacy (``if await email_service.send_email(...): ...``) y, además,
+    expone el ``message_id`` que devuelve Brevo.
+
+    El ``message_id`` se usa para correlacionar el envío con los webhooks
+    de tracking (``opened``, ``clicked``...) que también devuelve Brevo
+    con el mismo ID.
+    """
+
+    success: bool
+    message_id: Optional[str] = None
+    errors: list = field(default_factory=list)
+
+    def __bool__(self) -> bool:  # legacy: ``if email_service.send_email(...)``
+        return self.success
+
+
+async def _record_email_event(
+    *,
+    event_type: str,
+    recipient_email: str,
+    subject: Optional[str],
+    message_id: Optional[str],
+    tracking: Dict[str, Any],
+) -> None:
+    """Registra un :class:`EmailEvent` cuando enviamos o recibimos un
+    callback de Brevo.
+
+    ``tracking`` admite las siguientes claves opcionales:
+
+    - ``workspace_id``, ``user_id``, ``client_id``, ``invitation_id``
+    - ``template_kind`` (``welcome_after_payment``, ``welcome_after_form``,
+      ``campaign``, ``invoice``, ``invitation``, ...)
+    - ``payload``: dict libre con metadatos extra
+    - ``update_invitation`` (bool): si está y hay ``invitation_id``,
+      actualiza ``client_invitations.last_email_sent_at``,
+      ``last_email_subject`` y ``brevo_message_id`` (útil para
+      reenvíos manuales que disparan la pestaña *Seguimiento*).
+
+    Best-effort: si la sesión falla no propagamos para no bloquear el
+    envío del email.
+    """
+    # Importaciones locales para evitar ciclos de import a la carga
+    # (services/email <- models/__init__ <- ... <- services/email).
+    from app.core.database import AsyncSessionLocal  # noqa: WPS433
+    from app.models.email_tracking import EmailEvent  # noqa: WPS433
+    from app.models.invitation import ClientInvitation  # noqa: WPS433
+
+    workspace_id = tracking.get("workspace_id")
+    user_id = tracking.get("user_id")
+    client_id = tracking.get("client_id")
+    invitation_id = tracking.get("invitation_id")
+    template_kind = tracking.get("template_kind")
+    payload = tracking.get("payload") or {}
+    update_invitation = bool(tracking.get("update_invitation"))
+
+    def _to_uuid(value: Any) -> Optional[UUID]:
+        if value is None:
+            return None
+        if isinstance(value, UUID):
+            return value
+        try:
+            return UUID(str(value))
+        except (ValueError, TypeError):
+            return None
+
+    async with AsyncSessionLocal() as session:
+        try:
+            now = datetime.now(timezone.utc)
+            event = EmailEvent(
+                workspace_id=_to_uuid(workspace_id),
+                brevo_message_id=message_id,
+                recipient_email=recipient_email,
+                user_id=_to_uuid(user_id),
+                client_id=_to_uuid(client_id),
+                invitation_id=_to_uuid(invitation_id),
+                event_type=event_type,
+                subject=subject,
+                template_kind=template_kind,
+                occurred_at=now,
+                payload=payload,
+            )
+            session.add(event)
+
+            inv_uuid = _to_uuid(invitation_id)
+            if update_invitation and inv_uuid is not None and event_type == "request":
+                inv = await session.get(ClientInvitation, inv_uuid)
+                if inv is not None:
+                    inv.last_email_sent_at = now.replace(tzinfo=None)
+                    inv.last_email_subject = subject
+                    inv.brevo_message_id = message_id
+
+            await session.commit()
+        except Exception:  # pragma: no cover - defensivo
+            await session.rollback()
+            raise
 
 
 def _html_to_text(html: str) -> str:
@@ -47,7 +151,8 @@ class EmailService:
         text_content: Optional[str] = None,
         reply_to: Optional[str] = None,
         attachments: Optional[List[Dict[str, Any]]] = None,
-    ) -> bool:
+        tracking: Optional[Dict[str, Any]] = None,
+    ) -> EmailSendResult:
         """
         Send a transactional email using Brevo.
 
@@ -67,7 +172,7 @@ class EmailService:
                 to_email,
                 subject,
             )
-            return False
+            return EmailSendResult(success=False, errors=["brevo_api_key_missing"])
 
         try:
             text = text_content or _html_to_text(html_content)
@@ -95,16 +200,47 @@ class EmailService:
             )
 
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(
+            response = await loop.run_in_executor(
                 None, self.api_instance.send_transac_email, send_smtp_email
             )
+            # Brevo devuelve un objeto ``CreateSmtpEmail`` con
+            # ``message_id`` (string entre ``<>``). Si la API cambia y no
+            # llega, capturamos la excepción y seguimos sin tracking.
+            message_id = None
+            try:
+                raw = getattr(response, "message_id", None)
+                if raw:
+                    message_id = raw.strip("<>") if isinstance(raw, str) else str(raw)
+            except Exception:  # pragma: no cover - defensivo
+                message_id = None
+
             logger.info(
-                "Email enviado via Brevo to=%s subject=%r from=%s",
+                "Email enviado via Brevo to=%s subject=%r from=%s msg_id=%s",
                 to_email,
                 subject,
                 settings.FROM_EMAIL,
+                message_id,
             )
-            return True
+
+            # Persistir el evento ``request`` (envío) si nos pasaron
+            # contexto suficiente. Es best-effort: si falla, no bloquea
+            # la respuesta al cliente del email.
+            if tracking is not None:
+                try:
+                    await _record_email_event(
+                        event_type="request",
+                        recipient_email=to_email,
+                        subject=subject,
+                        message_id=message_id,
+                        tracking=tracking,
+                    )
+                except Exception:  # pragma: no cover - defensivo
+                    logger.exception(
+                        "No se pudo registrar EmailEvent(request) for %s",
+                        to_email,
+                    )
+
+            return EmailSendResult(success=True, message_id=message_id)
 
         except ApiException as e:
             logger.error(
@@ -114,10 +250,13 @@ class EmailService:
                 getattr(e, "reason", "?"),
                 getattr(e, "body", "?"),
             )
-            return False
-        except Exception:
+            return EmailSendResult(
+                success=False,
+                errors=[f"api:{getattr(e, 'status', '?')}"],
+            )
+        except Exception as exc:
             logger.exception("Error inesperado enviando email a %s", to_email)
-            return False
+            return EmailSendResult(success=False, errors=[str(exc)])
     
     async def send_template_email(
         self,
@@ -207,7 +346,164 @@ def _cta_button(
 """.strip()
 
 
+def _render_workspace_signoff(
+    *,
+    email_footer: Optional[str] = None,
+    coach_name: Optional[str] = None,
+    workspace_name: Optional[str] = None,
+) -> str:
+    """Renderiza el bloque de firma/cierre que aparece al pie de los emails
+    enviados a clientes. Prioridad:
+
+    1. ``email_footer`` (texto libre que el entrenador configura en
+       Settings → Workspace → "Pie de email"). Lo renderizamos preservando
+       saltos de línea con ``<br>``.
+    2. Fallback: si no hay pie de email pero sí ``coach_name``, mostramos
+       "Vamos a darle GAS 💪🏽 / [nombre]".
+    3. Último recurso: el nombre del workspace.
+    """
+    if email_footer:
+        safe_footer = html_mod.escape(email_footer).replace("\n", "<br>")
+        return (
+            '<p style="margin:18px 0 0;color:#374151;line-height:1.7;'
+            'font-size:15px;white-space:pre-line;">'
+            f"{safe_footer}"
+            "</p>"
+        )
+    label = (coach_name or workspace_name or "").strip()
+    if not label:
+        return ""
+    safe_label = html_mod.escape(label)
+    return (
+        '<p style="margin:0 0 8px;font-weight:700;font-size:18px;">Vamos a darle GAS 💪🏽</p>'
+        f'<p style="margin:18px 0 0;color:#374151;font-weight:600;">{safe_label}</p>'
+    )
+
+
+def _render_workspace_support_block(
+    *,
+    workspace_name: Optional[str] = None,
+    support_phone: Optional[str] = None,
+    support_email: Optional[str] = None,
+) -> str:
+    """Bloque "Soporte" con los datos públicos de contacto del workspace.
+
+    Se inyecta al pie de los emails para que el cliente pueda contactar al
+    entrenador si tiene problemas. Si no se proporciona ningún dato, el
+    bloque se omite por completo.
+    """
+    if not (support_phone or support_email):
+        return ""
+    rows: List[str] = []
+    if support_phone:
+        safe_phone = html_mod.escape(support_phone)
+        rows.append(
+            f'<li style="margin:0 0 4px 0;">📞 <a href="tel:{safe_phone}" '
+            f'style="color:#2D6A4F;text-decoration:none;font-weight:600;">{safe_phone}</a></li>'
+        )
+    if support_email:
+        safe_email = html_mod.escape(support_email)
+        rows.append(
+            f'<li style="margin:0 0 4px 0;">✉️ <a href="mailto:{safe_email}" '
+            f'style="color:#2D6A4F;text-decoration:none;font-weight:600;">{safe_email}</a></li>'
+        )
+    safe_brand = html_mod.escape(workspace_name) if workspace_name else "tu entrenador"
+    return (
+        '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+        'style="margin:18px 0 0 0;background:#f0fdf4;border:1px solid #bbf7d0;'
+        'border-radius:12px;">'
+        '<tr><td style="padding:14px 18px;font-size:14px;color:#1f2937;">'
+        '<p style="margin:0 0 6px;color:#15803d;font-weight:700;font-size:14px;">¿Tienes algún problema?</p>'
+        f'<p style="margin:0 0 6px;color:#374151;">Estos son los datos de soporte de {safe_brand}:</p>'
+        f'<ul style="margin:0;padding-left:18px;color:#374151;">{"".join(rows)}</ul>'
+        '</td></tr></table>'
+    )
+
+
 class EmailTemplates:
+    @staticmethod
+    def client_welcome_after_payment(
+        name: str,
+        system_form_url: str,
+        workspace_name: Optional[str] = None,
+        support_phone: Optional[str] = None,
+        support_email: Optional[str] = None,
+        email_footer: Optional[str] = None,
+    ) -> str:
+        """Email 1 — se envía justo después de que el cliente complete el
+        onboarding y el pago. Le pide rellenar el "Formulario del Sistema"
+        (cuestionario inicial) con un CTA al ``system_form_url`` único.
+        """
+        safe_name = html_mod.escape(name.strip() if name else "atleta")
+        safe_brand = html_mod.escape(workspace_name or "Trackfiz")
+        form_href = html_mod.escape(system_form_url, quote=True)
+        signoff_html = _render_workspace_signoff(
+            email_footer=email_footer,
+            workspace_name=workspace_name,
+        )
+        support_html = _render_workspace_support_block(
+            workspace_name=workspace_name,
+            support_phone=support_phone,
+            support_email=support_email,
+        )
+        return f"""
+        <!DOCTYPE html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bienvenido a Trackfiz</title>
+        </head>
+        <body style="margin:0;padding:0;background:#f4f7f6;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;color:#1f2937;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td align="center" style="padding:40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.10);">
+                            <tr>
+                                <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:38px 32px;text-align:center;">
+                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;line-height:1.3;">Bienvenido a Trackfiz</h1>
+                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.92);font-size:15px;">{safe_brand}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:32px 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <p style="margin:0 0 14px;">Hola, {safe_name},</p>
+                                    <p style="margin:0 0 14px;">Lo primero, gracias por confiar en mí.</p>
+                                    <p style="margin:0 0 14px;">Ya has dado el paso importante. Ahora vamos a trabajar juntos para conseguir ese cambio que buscas.</p>
+                                    <p style="margin:0 0 22px;">Para comenzar hoy mismo, si no lo has hecho todavía, necesito que hagas lo siguiente:</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <h3 style="margin:0 0 10px;color:#2D6A4F;font-size:18px;">Rellena este primer formulario</h3>
+                                    <p style="margin:0 0 18px;">Necesito conocerte un poco mejor antes de empezar.</p>
+                                    <div style="text-align:center;margin:18px 0 24px;">
+                                        {_cta_button("Rellenar el formulario", system_form_url)}
+                                    </div>
+                                    <p style="margin:0 0 8px;color:#718096;font-size:13px;text-align:center;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+                                    <p style="margin:0 0 22px;color:#2D6A4F;font-size:12px;word-break:break-all;text-align:center;background:#f0fdf4;padding:10px;border-radius:8px;">{form_href}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
+                                    <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">Soporte</h3>
+                                    <p style="margin:0 0 8px;">Recuerda que si tienes algún problema, puedes contactarme aquí:</p>
+                                    {support_html}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0 32px 32px 32px;font-size:16px;line-height:1.7;">
+                                    {signoff_html}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+
     @staticmethod
     def client_welcome_after_onboarding(
         name: str,
@@ -215,24 +511,41 @@ class EmailTemplates:
         workspace_name: Optional[str] = None,
         coach_name: Optional[str] = None,
         coach_phone: Optional[str] = None,
+        # Datos públicos de soporte del workspace (usados en el bloque
+        # "Soporte" del pie del email). Si no se pasan se cae al teléfono
+        # legacy ``coach_phone`` para no romper consumidores antiguos.
+        support_phone: Optional[str] = None,
+        support_email: Optional[str] = None,
+        email_footer: Optional[str] = None,
     ) -> str:
-        """Email de bienvenida tras completar el onboarding del cliente.
-
-        El copy lo proporciona el entrenador (Borja Sanfélix) y se renderiza
-        con tipografía limpia. Se hace HTML-escape de todos los datos
-        dinámicos para evitar problemas de inyección. Si no se pasa
-        ``coach_name``/``coach_phone`` se usan los valores por defecto.
+        """Email 2 — se envía cuando el cliente termina de rellenar el
+        Formulario del Sistema. Le indica los próximos pasos para empezar a
+        usar la plataforma. Mantiene la firma compatible con consumidores
+        antiguos (``coach_name``/``coach_phone``) pero acepta los nuevos
+        campos de soporte del workspace y el pie de email personalizado.
         """
         safe_name = html_mod.escape(name.strip() if name else "atleta")
-        safe_brand = html_mod.escape(workspace_name or "Trackfiz")
         safe_coach = html_mod.escape(coach_name) if coach_name else "Borja Sanfélix"
-        # "Soy [coach o nombre del negocio]" — usamos primero el nombre del coach;
+        # Si el entrenador no ha configurado los datos de soporte caemos a
+        # los valores antiguos para preservar el comportamiento.
+        effective_support_phone = support_phone or coach_phone or "+376 383 382"
+        # "Sigue desde Trackfiz" — usamos primero el nombre del coach;
         # si no se ha pasado, caemos al nombre del workspace (negocio).
-        intro_label = (coach_name or workspace_name or "Borja Sanfélix").strip()
+        intro_label = (coach_name or workspace_name or "Trackfiz").strip()
         safe_intro = html_mod.escape(intro_label)
-        phone_value = coach_phone or "+376 383 382"
+        phone_value = effective_support_phone
         safe_phone = html_mod.escape(phone_value)
         portal_href = html_mod.escape(portal_url, quote=True)
+        support_html = _render_workspace_support_block(
+            workspace_name=workspace_name,
+            support_phone=support_phone,
+            support_email=support_email,
+        )
+        signoff_html = _render_workspace_signoff(
+            email_footer=email_footer,
+            coach_name=coach_name,
+            workspace_name=workspace_name,
+        )
 
         return f"""
         <!DOCTYPE html>
@@ -249,16 +562,14 @@ class EmailTemplates:
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,.10);">
                             <tr>
                                 <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:38px 32px;text-align:center;">
-                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;line-height:1.3;">Soy {safe_intro}</h1>
-                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.92);font-size:15px;">Bienvenido a Trackfiz</p>
+                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;line-height:1.3;">Sigue desde Trackfiz</h1>
+                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.92);font-size:15px;">{safe_intro}</p>
                                 </td>
                             </tr>
                             <tr>
                                 <td style="padding:32px 32px 8px 32px;font-size:16px;line-height:1.7;">
-                                    <p style="margin:0 0 14px;">Hola, {safe_name},</p>
-                                    <p style="margin:0 0 14px;">Lo primero, gracias por confiar en mí.</p>
-                                    <p style="margin:0 0 22px;">Ya has dado el paso importante. Ahora vamos a trabajar juntos para conseguir ese cambio que buscas.</p>
-                                    <p style="margin:0 0 22px;">Para comenzar hoy mismo, si no lo has hecho todavía, necesito que hagas lo siguiente:</p>
+                                    <p style="margin:0 0 14px;">Hola de nuevo, {safe_name},</p>
+                                    <p style="margin:0 0 22px;">Si no lo has hecho todavía, nos queda muy poco:</p>
                                 </td>
                             </tr>
 
@@ -309,7 +620,8 @@ class EmailTemplates:
                                 <td style="padding:0 32px 8px 32px;font-size:16px;line-height:1.7;">
                                     <h3 style="margin:0 0 8px;color:#2D6A4F;font-size:18px;">Soporte</h3>
                                     <p style="margin:0 0 8px;">Estoy disponible de lunes a viernes para lo que necesites.</p>
-                                    <p style="margin:0 0 22px;">Intentaré responderte siempre en menos de 24h laborables.</p>
+                                    <p style="margin:0 0 8px;">Intentaré responderte siempre en menos de 24h laborables.</p>
+                                    {support_html}
                                 </td>
                             </tr>
 
@@ -318,8 +630,7 @@ class EmailTemplates:
                                 <td style="padding:0 32px 32px 32px;font-size:16px;line-height:1.7;">
                                     <p style="margin:0 0 8px;">A partir de aquí, empieza lo bueno.</p>
                                     <p style="margin:0 0 22px;">Yo me encargo de guiarte. Tú encárgate de darlo todo.</p>
-                                    <p style="margin:0 0 8px;font-weight:700;font-size:18px;">Vamos a darle GAS 💪🏽</p>
-                                    <p style="margin:18px 0 0;color:#374151;font-weight:600;">{safe_coach}</p>
+                                    {signoff_html or f'<p style="margin:0 0 8px;font-weight:700;font-size:18px;">Vamos a darle GAS 💪🏽</p><p style="margin:18px 0 0;color:#374151;font-weight:600;">{safe_coach}</p>'}
                                 </td>
                             </tr>
                         </table>

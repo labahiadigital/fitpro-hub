@@ -532,12 +532,20 @@ async def list_enrollments(
     db: AsyncSession = Depends(get_db),
     course_id: Optional[UUID] = Query(None),
 ):
-    """Listar inscripciones"""
-    query = select(CourseEnrollment)
-    
+    """Listar inscripciones del workspace.
+
+    Filtramos por ``Course.workspace_id`` para evitar exponer
+    inscripciones de cursos pertenecientes a otros workspaces.
+    """
+    query = (
+        select(CourseEnrollment)
+        .join(Course, Course.id == CourseEnrollment.course_id)
+        .where(Course.workspace_id == current_user.workspace_id)
+    )
+
     if course_id:
         query = query.where(CourseEnrollment.course_id == course_id)
-    
+
     result = await db.execute(query.order_by(CourseEnrollment.enrolled_at.desc()))
     return result.scalars().all()
 

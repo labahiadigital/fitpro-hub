@@ -1,47 +1,33 @@
 import {
   Alert,
+  Anchor,
   Badge,
   Box,
   Button,
   Checkbox,
   Container,
   Divider,
-  FileButton,
   Group,
-  Image,
   Loader,
-  MultiSelect,
-  NumberInput,
   Paper,
   PasswordInput,
-  Progress,
   Radio,
-  Select,
-  SimpleGrid,
   Stack,
-  Stepper,
   Text,
-  Textarea,
   TextInput,
   ThemeIcon,
   Title,
 } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
   IconCalendarDollar,
-  IconCheck,
   IconCreditCard,
-  IconFileText,
-  IconHeartbeat,
   IconLock,
   IconMail,
-  IconPhoto,
+  IconPhone,
   IconShieldCheck,
-  IconTarget,
   IconUser,
 } from "@tabler/icons-react";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -50,10 +36,6 @@ import { api, redsysApi, sequraApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
 import { sanitizeHtml } from "../../utils/safeHtml";
-import {
-  ALLERGENS_SELECT_DATA,
-  INTOLERANCES_SELECT_DATA,
-} from "../../constants/allergens";
 
 interface ProductInfo {
   id: string;
@@ -75,79 +57,31 @@ interface InvitationData {
   message?: string;
   product?: ProductInfo;
   payment_completed?: boolean;
+  // Datos públicos de soporte (Settings → Workspace → Soporte) que se
+  // muestran al cliente en la pantalla post-pago si no recibe el email.
+  support_phone?: string | null;
+  support_email?: string | null;
 }
 
 interface OnboardingFormData {
-  // Personal Info
   firstName: string;
   lastName: string;
   email: string;
   confirmEmail: string;
   password: string;
   phone: string;
-  birthDate: Date | null;
-  gender: string;
-  height: number | null;
-  weight: number | null;
-
-  // Goals
-  primaryGoal: string;
-  secondaryGoals: string[];
-  targetWeight: number | null;
-  activityLevel: string;
-  trainingDaysPerWeek: number;
-  goalsDescription: string;
-
-  // Health
-  hasInjuries: boolean;
-  injuries: string;
-  hasMedicalConditions: boolean;
-  medicalConditions: string;
-  medications: string;
-  allergies: string[];
-  intolerances: string[];
-
-  // PAR-Q
-  parqResponses: {
-    heartCondition: string; // "true" | "false"
-    heartConditionDetails: string;
-    chestPain: string;
-    chestPainDetails: string;
-    dizziness: string;
-    dizzinessDetails: string;
-    boneJoint: string;
-    boneJointDetails: string;
-    bloodPressure: string;
-    bloodPressureDetails: string;
-    otherReason: string;
-    otherReasonDetails: string;
-  };
-
-  // Consent
   acceptTerms: boolean;
   acceptPrivacy: boolean;
   acceptMarketing: boolean;
 }
 
-const ALLERGENS = ALLERGENS_SELECT_DATA;
-const INTOLERANCES = INTOLERANCES_SELECT_DATA;
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+const PHONE_REGEX = /^[+]?[\d\s().-]{6,}$/;
 
 export function InvitationOnboardingPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setUser, setTokens } = useAuthStore();
-  const [active, setActive] = useState(0);
-  const isMobile = useMediaQuery("(max-width: 48em)");
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
@@ -159,10 +93,7 @@ export function InvitationOnboardingPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
-  const [progressPhoto, setProgressPhoto] = useState<File | null>(null);
-  const [progressPhotoPreview, setProgressPhotoPreview] = useState<string | null>(null);
 
-  // Payment method selection: "redsys" (card) or "sequra" (installments)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"redsys" | "sequra">("redsys");
 
   // SeQura state
@@ -183,20 +114,17 @@ export function InvitationOnboardingPage() {
     };
   }, []);
 
-  // Check if returning from payment
   const paymentParam = searchParams.get("payment");
   const gatewayParam = searchParams.get("gateway");
   const dsSignatureVersion = searchParams.get("Ds_SignatureVersion");
   const dsMerchantParameters = searchParams.get("Ds_MerchantParameters");
   const dsSignature = searchParams.get("Ds_Signature");
 
-  // Check payment status after returning from payment gateway
   const checkPaymentStatus = useCallback(async () => {
     if (!token) return;
     setCheckingPayment(true);
     try {
       if (gatewayParam === "sequra") {
-        // SeQura return: check via SeQura status endpoint
         const res = await sequraApi.getOnboardingPaymentStatus(token);
         if (res.data.payment_completed) {
           setPaymentCompleted(true);
@@ -204,7 +132,6 @@ export function InvitationOnboardingPage() {
         } else if (res.data.status === "failed") {
           setPaymentError("El pago con SeQura no se ha completado. Puedes intentarlo de nuevo.");
         } else {
-          // Might be pending IPN, poll a few times
           let attempts = 0;
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = setInterval(async () => {
@@ -233,7 +160,6 @@ export function InvitationOnboardingPage() {
           return;
         }
       } else {
-        // Redsys return: confirm via backend if params present
         if (dsSignatureVersion && dsMerchantParameters && dsSignature) {
           try {
             await redsysApi.confirmReturn({
@@ -242,7 +168,7 @@ export function InvitationOnboardingPage() {
               Ds_Signature: dsSignature,
             });
           } catch {
-            // If confirm-return fails, still try checking status
+            // ignore
           }
         }
 
@@ -255,26 +181,25 @@ export function InvitationOnboardingPage() {
         }
       }
     } catch {
-      // Silently fail -- user can retry
+      // ignore
     } finally {
       setCheckingPayment(false);
     }
   }, [token, gatewayParam, dsSignatureVersion, dsMerchantParameters, dsSignature]);
 
-  // Verificar invitación
+  // Validar invitación
   useEffect(() => {
     const validateInvitation = async () => {
       if (!token) {
         setLoadingInvitation(false);
         return;
       }
-      
+
       try {
         const response = await api.get(`/invitations/validate/${token}`);
         setInvitationData(response.data);
-        
+
         if (response.data.valid) {
-          // Pre-fill form with invitation data
           form.setValues({
             ...form.values,
             email: response.data.email || "",
@@ -283,7 +208,6 @@ export function InvitationOnboardingPage() {
             lastName: response.data.last_name || "",
           });
 
-          // Determine if payment is required
           if (response.data.product && response.data.product.price > 0) {
             if (response.data.payment_completed) {
               setPaymentCompleted(true);
@@ -299,11 +223,10 @@ export function InvitationOnboardingPage() {
         setLoadingInvitation(false);
       }
     };
-    
+
     validateInvitation();
   }, [token]);
 
-  // If returning from payment, check status
   useEffect(() => {
     if (paymentParam === "success" && !paymentCompleted) {
       checkPaymentStatus();
@@ -312,7 +235,6 @@ export function InvitationOnboardingPage() {
     }
   }, [paymentParam, paymentCompleted, checkPaymentStatus]);
 
-  // Fetch SeQura available methods when payment is required
   useEffect(() => {
     if (!paymentRequired || !token || paymentCompleted) return;
 
@@ -335,7 +257,6 @@ export function InvitationOnboardingPage() {
     fetchSequraMethods();
   }, [paymentRequired, token, paymentCompleted]);
 
-  // Handle Redsys payment initiation
   const handleStartRedsysPayment = async () => {
     if (!token) return;
     setPaymentLoading(true);
@@ -369,7 +290,6 @@ export function InvitationOnboardingPage() {
     }
   };
 
-  // Handle SeQura payment initiation
   const handleStartSequraPayment = async () => {
     if (!token) return;
     setPaymentLoading(true);
@@ -392,22 +312,19 @@ export function InvitationOnboardingPage() {
     }
   };
 
-  // Whitelist for SeQura script sources (XSS protection)
   const SEQURA_ALLOWED_DOMAINS = ["sequrapi.com", "sequra.es"];
 
   const isAllowedScriptSrc = (src: string): boolean => {
     try {
       const url = new URL(src, window.location.origin);
       return SEQURA_ALLOWED_DOMAINS.some(
-        (domain) =>
-          url.hostname === domain || url.hostname.endsWith(`.${domain}`)
+        (domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`),
       );
     } catch {
       return false;
     }
   };
 
-  // Render SeQura form HTML and initialize it
   useEffect(() => {
     if (!showSequraForm || !sequraFormHtml || !sequraFormRef.current) return;
 
@@ -416,9 +333,6 @@ export function InvitationOnboardingPage() {
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = sequraFormHtml;
 
-    // Extract info from SeQura's inline scripts:
-    // 1) `window.SequraFormElement = '<id>'`
-    // 2) A dynamic script loader pointing to sequrapi.com
     let formElementId = "";
     let dynamicScriptSrc = "";
 
@@ -443,7 +357,6 @@ export function InvitationOnboardingPage() {
       script.remove();
     });
 
-    // Remove event handler attributes from all elements
     tempDiv.querySelectorAll("*").forEach((el) => {
       Array.from(el.attributes).forEach((attr) => {
         if (attr.name.startsWith("on") && attr.name.length > 2) {
@@ -454,19 +367,16 @@ export function InvitationOnboardingPage() {
 
     container.innerHTML = tempDiv.innerHTML;
 
-    // Set the global that SeQura's auth script expects
     if (formElementId) {
       (window as any).SequraFormElement = formElementId;
     }
 
-    // Load SeQura's auth script
     if (dynamicScriptSrc) {
       const newScript = document.createElement("script");
       newScript.src = dynamicScriptSrc;
       container.appendChild(newScript);
     }
 
-    // Poll for SequraFormInstance (created by the external script)
     let attempts = 0;
     const maxAttempts = 30;
     const pollInterval = setInterval(() => {
@@ -486,20 +396,16 @@ export function InvitationOnboardingPage() {
     return () => clearInterval(pollInterval);
   }, [showSequraForm, sequraFormHtml]);
 
-  // Load SeQura promotional widget script when SeQura is selected
   useEffect(() => {
     if (!sequraAvailable || selectedPaymentMethod !== "sequra" || !sequraAssetKey || !sequraMerchant || !sequraScriptUri) return;
 
-    // Check if script already loaded
     if ((window as any).SequraConfiguration) {
-      // Just refresh components if already loaded
       if ((window as any).Sequra?.refreshComponents) {
         (window as any).Sequra.refreshComponents();
       }
       return;
     }
 
-    // Set up SeQura configuration
     const sequraConfigParams = {
       merchant: sequraMerchant,
       assetKey: sequraAssetKey,
@@ -524,19 +430,13 @@ export function InvitationOnboardingPage() {
     script.src = sequraScriptUri;
     document.head.appendChild(script);
 
-    // Refresh components once loaded
     (window as any).Sequra.onLoad(() => {
       if ((window as any).Sequra?.refreshComponents) {
         (window as any).Sequra.refreshComponents();
       }
     });
-
-    return () => {
-      // Don't remove the script on cleanup to avoid re-loading
-    };
   }, [sequraAvailable, selectedPaymentMethod, sequraAssetKey, sequraMerchant, sequraScriptUri, sequraMethods]);
 
-  // Refresh SeQura widgets when the widget DOM elements change
   useEffect(() => {
     if (selectedPaymentMethod === "sequra" && (window as any).Sequra?.refreshComponents) {
       setTimeout(() => {
@@ -545,7 +445,6 @@ export function InvitationOnboardingPage() {
     }
   }, [selectedPaymentMethod]);
 
-  // Dispatch payment based on selected method
   const handleStartPayment = () => {
     if (selectedPaymentMethod === "sequra") {
       handleStartSequraPayment();
@@ -562,194 +461,69 @@ export function InvitationOnboardingPage() {
       confirmEmail: "",
       password: "",
       phone: "",
-      birthDate: null,
-      gender: "",
-      height: null,
-      weight: null,
-      primaryGoal: "",
-      secondaryGoals: [],
-      targetWeight: null,
-      activityLevel: "",
-      trainingDaysPerWeek: 3,
-      goalsDescription: "",
-      hasInjuries: false,
-      injuries: "",
-      hasMedicalConditions: false,
-      medicalConditions: "",
-      medications: "",
-      allergies: [],
-      intolerances: [],
-      parqResponses: {
-        heartCondition: "",
-        heartConditionDetails: "",
-        chestPain: "",
-        chestPainDetails: "",
-        dizziness: "",
-        dizzinessDetails: "",
-        boneJoint: "",
-        boneJointDetails: "",
-        bloodPressure: "",
-        bloodPressureDetails: "",
-        otherReason: "",
-        otherReasonDetails: "",
-      },
       acceptTerms: false,
       acceptPrivacy: false,
       acceptMarketing: false,
     },
     validate: (values) => {
-      if (active === 0) {
-        const emailPrefilled = !!invitationData?.email;
-        return {
-          firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
-          lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
-          email: /^\S+@\S+$/.test(values.email) ? null : "Email inválido",
-          confirmEmail: emailPrefilled
-            ? null
-            : values.confirmEmail !== values.email
-              ? "Los emails no coinciden"
-              : null,
-          password: values.password.length < 8 ? "Mínimo 8 caracteres" : null,
-        };
-      }
-      if (active === 1) {
-        return {
-          primaryGoal: values.primaryGoal ? null : "Selecciona un objetivo",
-          activityLevel: values.activityLevel ? null : "Selecciona tu nivel de actividad",
-        };
-      }
-      if (active === 4) {
-        return {
-          acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
-          acceptPrivacy: values.acceptPrivacy ? null : "Debes aceptar la política de privacidad",
-        };
-      }
-      return {};
+      const emailPrefilled = !!invitationData?.email;
+      return {
+        firstName: values.firstName.trim().length < 2 ? "Nombre requerido" : null,
+        lastName: values.lastName.trim().length < 2 ? "Apellido requerido" : null,
+        email: /^\S+@\S+\.\S+$/.test(values.email) ? null : "Email inválido",
+        confirmEmail: emailPrefilled
+          ? null
+          : values.confirmEmail !== values.email
+            ? "Los emails no coinciden"
+            : null,
+        password: values.password.length < 8 ? "Mínimo 8 caracteres" : null,
+        phone: PHONE_REGEX.test(values.phone.trim()) ? null : "Teléfono móvil obligatorio",
+        acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
+        acceptPrivacy: values.acceptPrivacy ? null : "Debes aceptar la política de privacidad",
+      };
     },
   });
 
-  const nextStep = () => {
-    if (form.validate().hasErrors) return;
-    if (active === 4) {
-      // Evitar dobles envíos: si ya estamos enviando o el registro se completó,
-      // no volvemos a llamar al backend (provocaría "La invitación ya fue utilizada").
-      if (loading || completed) return;
-      handleSubmit();
-    } else {
-      setActive((current) => current + 1);
-    }
-  };
-
-  const prevStep = () => setActive((current) => current - 1);
-
-  const hasParqRisk = [
-    form.values.parqResponses.heartCondition,
-    form.values.parqResponses.chestPain,
-    form.values.parqResponses.dizziness,
-    form.values.parqResponses.boneJoint,
-    form.values.parqResponses.bloodPressure,
-    form.values.parqResponses.otherReason,
-  ].some((v) => v === "true" || (typeof v === "boolean" && v));
-
   const handleSubmit = async () => {
     if (!invitationData || !token) return;
-    // Evitar dobles ejecuciones cuando React StrictMode o el usuario hacen doble clic.
     if (loading || completed) return;
+    if (form.validate().hasErrors) return;
 
     setLoading(true);
     try {
       const values = form.values;
-      
-      // Call the backend to complete registration via invitation
-      // Handle birthDate - could be Date object or string
-      let birthDateStr: string | undefined;
-      const birthDateValue = values.birthDate as Date | string | null;
-      if (birthDateValue) {
-        if (birthDateValue instanceof Date) {
-          birthDateStr = birthDateValue.toISOString().split("T")[0];
-        } else if (typeof birthDateValue === "string") {
-          birthDateStr = birthDateValue.split("T")[0];
-        }
-      }
-      
-      const progressPhotoDataUrl = progressPhoto ? await fileToDataUrl(progressPhoto) : undefined;
-      // Subimos el timeout a 90s para esta llamada concreta. Aunque el
-      // backend ya encola los emails en Celery, sigue habiendo trabajo
-      // síncrono importante en la request: subir la foto a R2 (varios MB
-      // en base64), crear cuenta + cliente + suscripción + medición, y
-      // hacer commit. En conexiones móviles flojas el upload solo puede
-      // tardar 20-30s, dejando muy poco margen para todo lo demás.
-      const response = await api.post(`/invitations/complete/${token}`, {
-        email: values.email,
-        password: values.password,
-        first_name: values.firstName,
-        last_name: values.lastName,
-        phone: values.phone,
-        birth_date: birthDateStr,
-        gender: values.gender,
-        height_cm: values.height,
-        weight_kg: values.weight,
-        goals: values.goalsDescription || values.primaryGoal,
-        health_data: {
-          activity_level: values.activityLevel,
-          fitness_goal: values.primaryGoal,
-          secondary_goals: values.secondaryGoals,
-          target_weight: values.targetWeight,
-          training_days_per_week: values.trainingDaysPerWeek,
-          allergies: values.allergies,
-          intolerances: values.intolerances,
-          injuries: values.hasInjuries ? [{ name: values.injuries, status: "active" }] : [],
-          medical_conditions: values.hasMedicalConditions ? values.medicalConditions : "",
-          medications: values.medications,
-          parq_responses: values.parqResponses,
-          parq_risk: hasParqRisk,
+      const response = await api.post(
+        `/invitations/complete/${token}`,
+        {
+          email: values.email,
+          password: values.password,
+          first_name: values.firstName.trim(),
+          last_name: values.lastName.trim(),
+          phone: values.phone.trim(),
+          // Ya no enviamos health_data desde el onboarding: el cliente
+          // rellenará el "Cuestionario Inicial Trackfiz" más adelante
+          // siguiendo el enlace del email de bienvenida.
+          consents: {
+            data_processing: values.acceptTerms,
+            health_data: values.acceptPrivacy,
+            marketing: values.acceptMarketing,
+            consent_date: new Date().toISOString(),
+          },
         },
-        consents: {
-          data_processing: values.acceptTerms,
-          health_data: values.acceptPrivacy,
-          marketing: values.acceptMarketing,
-          consent_date: new Date().toISOString(),
-        },
-        progress_photo_data_url: progressPhotoDataUrl,
-        progress_photo_type: "front",
-      }, {
-        timeout: 90_000,
-      });
-      
-      // Check if email verification is required
-      if (response.data?.requires_email_verification || response.data?.access_token === "pending_email_confirmation") {
-        setCompleted(true);
-        notifications.show({
-          title: "¡Registro completado!",
-          message: "Por favor, revisa tu email para confirmar tu cuenta antes de iniciar sesión.",
-          color: "blue",
-          autoClose: 10000,
-        });
-      } else if (response.data?.access_token && response.data?.access_token !== "pending_confirmation") {
-        // If registration succeeded and returned valid tokens, save them
+        { timeout: 90_000 },
+      );
+
+      if (response.data?.access_token && response.data.access_token !== "pending_email_confirmation") {
         setUser({
           id: response.data.user?.id,
           email: values.email,
-          full_name: `${values.firstName} ${values.lastName}`,
+          full_name: `${values.firstName.trim()} ${values.lastName.trim()}`,
           is_active: true,
         });
         setTokens(response.data.access_token, response.data.refresh_token);
-        
-        setCompleted(true);
-        notifications.show({
-          title: "¡Registro completado!",
-          message: "Tu perfil ha sido creado correctamente",
-          color: "green",
-        });
-      } else {
-        setCompleted(true);
-        notifications.show({
-          title: "¡Registro completado!",
-          message: "Por favor, revisa tu email para confirmar tu cuenta.",
-          color: "blue",
-        });
       }
-      
+
+      setCompleted(true);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
@@ -777,14 +551,7 @@ export function InvitationOnboardingPage() {
     return (
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
-          <ThemeIcon
-            color="red"
-            mb="lg"
-            mx="auto"
-            radius="xl"
-            size={80}
-            variant="light"
-          >
+          <ThemeIcon color="red" mb="lg" mx="auto" radius="xl" size={80} variant="light">
             <IconAlertCircle size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
@@ -800,38 +567,63 @@ export function InvitationOnboardingPage() {
     );
   }
 
+  // ── Pantalla post-pago / post-registro ────────────────────────────
   if (completed) {
+    const supportPhone = invitationData.support_phone || null;
+    const supportEmail = invitationData.support_email || null;
     return (
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
-          <ThemeIcon
-            color="green"
-            mb="lg"
-            mx="auto"
-            radius="xl"
-            size={80}
-            variant="light"
-          >
-            <IconCheck size={40} />
+          <ThemeIcon color="green" mb="lg" mx="auto" radius="xl" size={80} variant="light">
+            <IconMail size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            ¡Te has registrado con ÉXITO!
+            ¡Pago completado!
           </Title>
-          <Text c="dimmed" mb="md">
-            Tu onboarding se ha realizado con éxito.
+          <Text mb="md">
+            Te ha llegado un <strong>email de bienvenida</strong> a tu correo.
           </Text>
           <Text c="dimmed" mb="xl">
-            Gracias por completar tu registro en {invitationData.workspace_name}. 
-            <strong> Revisa tu email para confirmar tu cuenta</strong> y luego podrás iniciar sesión.
-            Tu entrenador revisará tu información y se pondrá en contacto contigo pronto.
+            Ábrelo y sigue desde ahí para continuar con tu primer cuestionario.
+            Es el siguiente paso para que tu entrenador pueda diseñarte un plan a medida.
           </Text>
-          <Button size="lg" onClick={() => navigate("/login")}>Ir a Iniciar Sesión</Button>
+
+          {(supportPhone || supportEmail) && (
+            <Paper p="md" radius="md" withBorder mb="lg" style={{ background: "rgba(45,106,79,0.04)" }}>
+              <Text fw={600} size="sm" mb={6}>
+                Si no recibes tu email o tienes algún problema
+              </Text>
+              <Text c="dimmed" size="sm" mb="xs">
+                Los datos de contacto de soporte son:
+              </Text>
+              <Stack gap={4} align="center">
+                {supportPhone && (
+                  <Group gap="xs" justify="center">
+                    <IconPhone size={14} />
+                    <Anchor href={`tel:${supportPhone}`} size="sm">
+                      {supportPhone}
+                    </Anchor>
+                  </Group>
+                )}
+                {supportEmail && (
+                  <Group gap="xs" justify="center">
+                    <IconMail size={14} />
+                    <Anchor href={`mailto:${supportEmail}`} size="sm">
+                      {supportEmail}
+                    </Anchor>
+                  </Group>
+                )}
+              </Stack>
+            </Paper>
+          )}
+
+          <Button size="lg" onClick={() => navigate("/login")}>Ir a iniciar sesión</Button>
         </Paper>
       </Container>
     );
   }
 
-  // Payment gate: show payment screen before the registration form
+  // ── Gate de pago ──────────────────────────────────────────────────
   if (paymentRequired && !paymentCompleted) {
     const product = invitationData.product!;
     const intervalLabel = product.interval === "week" ? "/semana" :
@@ -841,7 +633,6 @@ export function InvitationOnboardingPage() {
       product.interval === "semester" ? "/semestre" :
       product.interval === "year" ? "/año" : "";
 
-    // If SeQura form is being shown, render it full-screen
     if (showSequraForm) {
       return (
         <Container py="xl" size="sm">
@@ -892,7 +683,6 @@ export function InvitationOnboardingPage() {
             </Stack>
           ) : (
             <Stack gap="lg">
-              {/* Product info */}
               <Stack align="center" gap="md">
                 <div style={{ textAlign: "center" }}>
                   <Title order={3} mb="xs">{product.name}</Title>
@@ -922,9 +712,7 @@ export function InvitationOnboardingPage() {
 
               <Divider label="Elige tu método de pago" labelPosition="center" />
 
-              {/* Payment method selector */}
               <Stack gap="sm">
-                {/* Redsys (Card) option */}
                 <Paper
                   p="md"
                   radius="md"
@@ -958,7 +746,6 @@ export function InvitationOnboardingPage() {
                   </Group>
                 </Paper>
 
-                {/* SeQura (Installments) option */}
                 {sequraAvailable && (
                   <Paper
                     p="md"
@@ -991,7 +778,6 @@ export function InvitationOnboardingPage() {
                       </div>
                     </Group>
 
-                    {/* SeQura promotional widget placeholder */}
                     {selectedPaymentMethod === "sequra" && sequraAssetKey && (
                       <Box mt="sm" ml={58}>
                         <div
@@ -1047,14 +833,15 @@ export function InvitationOnboardingPage() {
     );
   }
 
+  // ── Formulario de registro reducido (un único paso) ───────────────
   return (
-    <Container py="xl" size="md">
+    <Container py="xl" size="sm">
       <Box mb="xl" ta="center">
         <Title mb="xs" order={2}>
           {invitationData.workspace_name}
         </Title>
         <Text c="dimmed">
-          Completa tu perfil para empezar tu transformación
+          Crea tu cuenta para empezar tu transformación
         </Text>
         {invitationData.message && (
           <Paper p="md" mt="md" radius="md" withBorder style={{ background: "rgba(45, 106, 79, 0.05)" }}>
@@ -1065,488 +852,104 @@ export function InvitationOnboardingPage() {
         )}
       </Box>
 
-      <Progress mb={isMobile ? "sm" : "xl"} radius="xl" size="sm" value={(active / 4) * 100} />
-      {isMobile && (
-        <Text size="xs" c="dimmed" ta="center" mb="md" fw={500}>
-          Paso {active + 1} de 5 · {[
-            "Datos Personales",
-            "Objetivos",
-            "Salud",
-            "PAR-Q",
-            "Consentimiento",
-          ][active]}
-        </Text>
-      )}
+      <Paper p="xl" radius="lg" withBorder>
+        <Group mb="lg" gap="sm">
+          <ThemeIcon color="teal" radius="xl" size={36} variant="light">
+            <IconUser size={18} />
+          </ThemeIcon>
+          <Title order={4}>Información personal</Title>
+        </Group>
 
-      <Stepper
-        active={active}
-        allowNextStepsSelect={false}
-        onStepClick={setActive}
-        size={isMobile ? "xs" : "sm"}
-        iconSize={isMobile ? 28 : undefined}
-        orientation="horizontal"
-        styles={isMobile ? {
-          steps: { flexWrap: "nowrap", gap: 4 },
-          stepBody: { display: "none" },
-          separator: { marginLeft: 4, marginRight: 4, minWidth: 0 },
-        } : undefined}
-      >
-        {/* Step 1: Personal Info */}
-        <Stepper.Step
-          description="Tu información básica"
-          icon={<IconUser size={18} />}
-          label="Datos Personales"
-        >
-          <Paper mt="xl" p="xl" radius="md" withBorder>
-            <Title mb="lg" order={4}>
-              Información Personal
-            </Title>
-            <Stack gap="md">
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <TextInput
-                  label="Nombre"
-                  placeholder="Tu nombre"
-                  required
-                  {...form.getInputProps("firstName")}
-                />
-                <TextInput
-                  label="Apellidos"
-                  placeholder="Tus apellidos"
-                  required
-                  {...form.getInputProps("lastName")}
-                />
-              </SimpleGrid>
-              <TextInput
-                label="Email"
-                placeholder="tu@email.com"
-                required
-                disabled={!!invitationData.email}
-                leftSection={<IconMail size={16} />}
-                {...form.getInputProps("email")}
-              />
-              {!invitationData.email && (
-                <TextInput
-                  label="Confirma tu email"
-                  placeholder="Repite tu email"
-                  required
-                  leftSection={<IconMail size={16} />}
-                  {...form.getInputProps("confirmEmail")}
-                  error={
-                    form.values.confirmEmail &&
-                    form.values.confirmEmail !== form.values.email
-                      ? "Los emails no coinciden"
-                      : undefined
-                  }
-                />
-              )}
-              <PasswordInput
-                label="Contraseña"
-                placeholder="Mínimo 8 caracteres"
-                required
-                leftSection={<IconLock size={16} />}
-                {...form.getInputProps("password")}
-              />
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <TextInput
-                  label="Teléfono"
-                  placeholder="+34 600 000 000"
-                  {...form.getInputProps("phone")}
-                />
-                <DatePickerInput
-                  label="Fecha de Nacimiento"
-                  placeholder="Selecciona fecha"
-                  {...form.getInputProps("birthDate")}
-                />
-              </SimpleGrid>
-              <Select
-                data={[
-                  { value: "male", label: "Masculino" },
-                  { value: "female", label: "Femenino" },
-                  { value: "other", label: "Otro" },
-                  { value: "prefer_not", label: "Prefiero no decir" },
-                ]}
-                label="Género"
-                placeholder="Selecciona"
-                {...form.getInputProps("gender")}
-              />
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <NumberInput
-                  label="Altura (cm)"
-                  placeholder="170"
-                  min={100}
-                  max={250}
-                  {...form.getInputProps("height")}
-                />
-                <NumberInput
-                  label="Peso actual (kg)"
-                  placeholder="70"
-                  min={30}
-                  max={300}
-                  decimalScale={1}
-                  {...form.getInputProps("weight")}
-                />
-              </SimpleGrid>
-            </Stack>
-          </Paper>
-        </Stepper.Step>
+        <Stack gap="md">
+          <TextInput
+            label="Nombre"
+            placeholder="Tu nombre"
+            required
+            {...form.getInputProps("firstName")}
+          />
+          <TextInput
+            label="Apellidos"
+            placeholder="Tus apellidos"
+            required
+            {...form.getInputProps("lastName")}
+          />
+          <TextInput
+            label="Email"
+            placeholder="tu@email.com"
+            required
+            disabled={!!invitationData.email}
+            leftSection={<IconMail size={16} />}
+            {...form.getInputProps("email")}
+          />
+          {!invitationData.email && (
+            <TextInput
+              label="Confirma tu email"
+              placeholder="Repite tu email"
+              required
+              leftSection={<IconMail size={16} />}
+              {...form.getInputProps("confirmEmail")}
+              error={
+                form.values.confirmEmail &&
+                form.values.confirmEmail !== form.values.email
+                  ? "Los emails no coinciden"
+                  : undefined
+              }
+            />
+          )}
+          <PasswordInput
+            label="Contraseña"
+            placeholder="Mínimo 8 caracteres"
+            required
+            leftSection={<IconLock size={16} />}
+            {...form.getInputProps("password")}
+          />
+          <TextInput
+            label="Móvil"
+            placeholder="+34 600 000 000"
+            required
+            leftSection={<IconPhone size={16} />}
+            description="Lo necesitamos para contactarte por WhatsApp"
+            {...form.getInputProps("phone")}
+          />
 
-        {/* Step 2: Goals */}
-        <Stepper.Step
-          description="¿Qué quieres lograr?"
-          icon={<IconTarget size={18} />}
-          label="Objetivos"
-        >
-          <Paper mt="xl" p="xl" radius="md" withBorder>
-            <Title mb="lg" order={4}>
-              Tus Objetivos
-            </Title>
-            <Stack gap="md">
-              <Select
-                data={[
-                  { value: "lose_weight", label: "Perder peso" },
-                  { value: "gain_muscle", label: "Ganar masa muscular" },
-                  { value: "improve_fitness", label: "Mejorar condición física" },
-                  { value: "maintain", label: "Mantener peso actual" },
-                  { value: "improve_health", label: "Mejorar salud general" },
-                  { value: "sports_performance", label: "Rendimiento deportivo" },
-                  { value: "rehabilitation", label: "Rehabilitación" },
-                ]}
-                label="Objetivo Principal"
-                placeholder="Selecciona tu objetivo"
-                required
-                {...form.getInputProps("primaryGoal")}
-              />
-              <MultiSelect
-                data={[
-                  { value: "flexibility", label: "Mejorar flexibilidad" },
-                  { value: "strength", label: "Aumentar fuerza" },
-                  { value: "endurance", label: "Mejorar resistencia" },
-                  { value: "posture", label: "Corregir postura" },
-                  { value: "stress", label: "Reducir estrés" },
-                  { value: "energy", label: "Aumentar energía" },
-                  { value: "sleep", label: "Mejorar sueño" },
-                ]}
-                label="Objetivos Secundarios"
-                placeholder="Selecciona todos los que apliquen"
-                {...form.getInputProps("secondaryGoals")}
-              />
-              {(form.values.primaryGoal === "lose_weight" ||
-                form.values.primaryGoal === "gain_muscle") && (
-                <NumberInput
-                  label="Peso Objetivo (kg)"
-                  placeholder="Ej: 70"
-                  {...form.getInputProps("targetWeight")}
-                />
-              )}
-              <Select
-                data={[
-                  { value: "sedentary", label: "Sedentario (poco o nada de ejercicio)" },
-                  { value: "light", label: "Ligero (1-2 días/semana)" },
-                  { value: "moderate", label: "Moderado (3-4 días/semana)" },
-                  { value: "active", label: "Activo (5-6 días/semana)" },
-                  { value: "very_active", label: "Muy activo (ejercicio intenso diario)" },
-                ]}
-                label="Nivel de Actividad Actual"
-                placeholder="Selecciona"
-                required
-                {...form.getInputProps("activityLevel")}
-              />
-              <NumberInput
-                label="¿Cuántos días a la semana puedes entrenar?"
-                placeholder="3"
-                min={1}
-                max={7}
-                {...form.getInputProps("trainingDaysPerWeek")}
-              />
-              <Textarea
-                label="Cuéntanos más sobre tus objetivos"
-                placeholder="Por ejemplo: Quiero perder 5kg en 3 meses, mejorar mi resistencia..."
-                minRows={3}
-                {...form.getInputProps("goalsDescription")}
-              />
-            </Stack>
-          </Paper>
-        </Stepper.Step>
+          <Divider my="sm" label="Consentimientos" labelPosition="center" />
 
-        {/* Step 3: Health */}
-        <Stepper.Step
-          description="Información médica"
-          icon={<IconHeartbeat size={18} />}
-          label="Salud"
-        >
-          <Paper mt="xl" p="xl" radius="md" withBorder>
-            <Title mb="lg" order={4}>
-              Historial de Salud
-            </Title>
-            <Stack gap="md">
-              <MultiSelect
-                label="¿Tienes alguna alergia alimentaria?"
-                placeholder="Selecciona si aplica"
-                data={ALLERGENS}
-                searchable
-                clearable
-                {...form.getInputProps("allergies")}
-              />
-              <MultiSelect
-                label="¿Tienes alguna intolerancia alimentaria?"
-                placeholder="Selecciona si aplica"
-                data={INTOLERANCES}
-                searchable
-                clearable
-                {...form.getInputProps("intolerances")}
-              />
-              <Divider my="sm" />
-              <Checkbox
-                label="¿Tienes alguna lesión actual o pasada?"
-                {...form.getInputProps("hasInjuries", { type: "checkbox" })}
-              />
-              {form.values.hasInjuries && (
-                <Textarea
-                  label="Describe tus lesiones"
-                  placeholder="Ej: Lesión de rodilla hace 2 años..."
-                  {...form.getInputProps("injuries")}
-                />
-              )}
-              <Checkbox
-                label="¿Tienes alguna condición médica?"
-                {...form.getInputProps("hasMedicalConditions", { type: "checkbox" })}
-              />
-              {form.values.hasMedicalConditions && (
-                <Textarea
-                  label="Describe tus condiciones médicas"
-                  placeholder="Ej: Diabetes tipo 2, hipertensión..."
-                  {...form.getInputProps("medicalConditions")}
-                />
-              )}
-              <Textarea
-                label="Medicamentos actuales"
-                placeholder="Lista los medicamentos que tomas actualmente (si aplica)"
-                {...form.getInputProps("medications")}
-              />
-              <Paper p="md" radius="md" withBorder>
-                <Group justify="space-between" align="center">
-                  <Box>
-                    <Text fw={600} size="sm">Foto inicial de progreso</Text>
-                    <Text c="dimmed" size="xs">
-                      Opcional. Sube una foto frontal para que tu entrenador tenga un primer punto de referencia.
-                    </Text>
-                  </Box>
-                  <FileButton
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(file) => {
-                      setProgressPhoto(file);
-                      setProgressPhotoPreview(file ? URL.createObjectURL(file) : null);
-                    }}
-                  >
-                    {(props) => (
-                      <Button {...props} variant="light" leftSection={<IconPhoto size={16} />} radius="xl" size="xs">
-                        {progressPhoto ? "Cambiar foto" : "Subir foto"}
-                      </Button>
-                    )}
-                  </FileButton>
-                </Group>
-                {progressPhotoPreview && (
-                  <Image src={progressPhotoPreview} alt="Foto inicial de progreso" radius="md" mt="md" mah={220} fit="cover" />
-                )}
-              </Paper>
-            </Stack>
-          </Paper>
-        </Stepper.Step>
+          <Checkbox
+            label={
+              <Text size="sm">
+                Acepto los{" "}
+                <Anchor href="#" size="sm">
+                  Términos y Condiciones
+                </Anchor>{" "}
+                del servicio *
+              </Text>
+            }
+            {...form.getInputProps("acceptTerms", { type: "checkbox" })}
+            error={form.errors.acceptTerms}
+          />
+          <Checkbox
+            label={
+              <Text size="sm">
+                Acepto la{" "}
+                <Anchor href="#" size="sm">
+                  Política de Privacidad
+                </Anchor>{" "}
+                y el tratamiento de mis datos de salud *
+              </Text>
+            }
+            {...form.getInputProps("acceptPrivacy", { type: "checkbox" })}
+            error={form.errors.acceptPrivacy}
+          />
+          <Checkbox
+            label="Deseo recibir comunicaciones comerciales y novedades (opcional)"
+            {...form.getInputProps("acceptMarketing", { type: "checkbox" })}
+          />
+        </Stack>
+      </Paper>
 
-        {/* Step 4: PAR-Q */}
-        <Stepper.Step
-          description="Cuestionario de aptitud"
-          icon={<IconFileText size={18} />}
-          label="PAR-Q"
-        >
-          <Paper mt="xl" p="xl" radius="md" withBorder>
-            <Title mb="xs" order={4}>
-              Cuestionario PAR-Q
-            </Title>
-            <Text c="dimmed" mb="lg" size="sm">
-              Por favor responde estas preguntas con honestidad. Si respondes
-              "Sí" a alguna, te recomendamos consultar con un médico antes de
-              comenzar un programa de ejercicio.
-            </Text>
-            <Stack gap="md">
-              <Radio.Group
-                label="1. ¿Alguna vez un médico te ha dicho que tienes una condición cardíaca?"
-                {...form.getInputProps("parqResponses.heartCondition")}
-              >
-                <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
-                </Group>
-              </Radio.Group>
-
-              {form.values.parqResponses.heartCondition === "true" && (
-                <Textarea
-                  label="Describe la condición cardíaca"
-                  placeholder="Ej: Arritmia, insuficiencia cardíaca, marcapasos..."
-                  minRows={2}
-                  {...form.getInputProps("parqResponses.heartConditionDetails")}
-                />
-              )}
-
-              <Radio.Group
-                label="2. ¿Sientes dolor en el pecho cuando realizas actividad física?"
-                {...form.getInputProps("parqResponses.chestPain")}
-              >
-                <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
-                </Group>
-              </Radio.Group>
-
-              {form.values.parqResponses.chestPain === "true" && (
-                <Textarea
-                  label="Describe el tipo de dolor y cuándo ocurre"
-                  placeholder="Ej: Dolor punzante al correr, presión en el pecho al subir escaleras..."
-                  minRows={2}
-                  {...form.getInputProps("parqResponses.chestPainDetails")}
-                />
-              )}
-
-              <Radio.Group
-                label="3. ¿Has experimentado mareos o pérdida de conocimiento?"
-                {...form.getInputProps("parqResponses.dizziness")}
-              >
-                <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
-                </Group>
-              </Radio.Group>
-
-              {form.values.parqResponses.dizziness === "true" && (
-                <Textarea
-                  label="Describe la frecuencia y circunstancias"
-                  placeholder="Ej: Me mareo al levantarme rápido, he perdido el conocimiento 2 veces..."
-                  minRows={2}
-                  {...form.getInputProps("parqResponses.dizzinessDetails")}
-                />
-              )}
-
-              <Radio.Group
-                label="4. ¿Tienes algún problema óseo o articular?"
-                {...form.getInputProps("parqResponses.boneJoint")}
-              >
-                <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
-                </Group>
-              </Radio.Group>
-
-              {form.values.parqResponses.boneJoint === "true" && (
-                <Textarea
-                  label="Describe tus limitaciones físicas"
-                  placeholder="Ej: No puedo doblar la rodilla derecha completamente, tengo dolor lumbar al agacharme..."
-                  minRows={2}
-                  {...form.getInputProps("parqResponses.boneJointDetails")}
-                />
-              )}
-
-              <Radio.Group
-                label="5. ¿Tomas medicamentos para la presión arterial o el corazón?"
-                {...form.getInputProps("parqResponses.bloodPressure")}
-              >
-                <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
-                </Group>
-              </Radio.Group>
-
-              {form.values.parqResponses.bloodPressure === "true" && (
-                <Textarea
-                  label="Lista los medicamentos que tomas"
-                  placeholder="Ej: Enalapril 10mg, Losartán 50mg..."
-                  minRows={2}
-                  {...form.getInputProps("parqResponses.bloodPressureDetails")}
-                />
-              )}
-
-              <Radio.Group
-                label="6. ¿Conoces otra razón por la que no deberías hacer ejercicio?"
-                {...form.getInputProps("parqResponses.otherReason")}
-              >
-                <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
-                </Group>
-              </Radio.Group>
-
-              {form.values.parqResponses.otherReason === "true" && (
-                <Textarea
-                  label="Explica el motivo"
-                  placeholder="Describe la razón por la que crees que no deberías hacer ejercicio..."
-                  minRows={2}
-                  {...form.getInputProps("parqResponses.otherReasonDetails")}
-                />
-              )}
-
-              {hasParqRisk && (
-                <Alert color="yellow" icon={<IconAlertCircle size={16} />}>
-                  Has respondido "Sí" a una o más preguntas. Te recomendamos
-                  consultar con un médico antes de comenzar cualquier programa
-                  de ejercicio.
-                </Alert>
-              )}
-            </Stack>
-          </Paper>
-        </Stepper.Step>
-
-        {/* Step 5: Consent */}
-        <Stepper.Step
-          description="Términos y privacidad"
-          icon={<IconCheck size={18} />}
-          label="Consentimiento"
-        >
-          <Paper mt="xl" p="xl" radius="md" withBorder>
-            <Title mb="lg" order={4}>
-              Consentimientos
-            </Title>
-            <Stack gap="md">
-              <Checkbox
-                label={
-                  <Text size="sm">
-                    Acepto los{" "}
-                    <Text c="blue" component="a" href="#" inherit>
-                      Términos y Condiciones
-                    </Text>{" "}
-                    del servicio *
-                  </Text>
-                }
-                {...form.getInputProps("acceptTerms", { type: "checkbox" })}
-                error={form.errors.acceptTerms}
-              />
-              <Checkbox
-                label={
-                  <Text size="sm">
-                    Acepto la{" "}
-                    <Text c="blue" component="a" href="#" inherit>
-                      Política de Privacidad
-                    </Text>{" "}
-                    y el tratamiento de mis datos de salud *
-                  </Text>
-                }
-                {...form.getInputProps("acceptPrivacy", { type: "checkbox" })}
-                error={form.errors.acceptPrivacy}
-              />
-              <Divider />
-              <Checkbox
-                label="Deseo recibir comunicaciones comerciales y novedades (opcional)"
-                {...form.getInputProps("acceptMarketing", { type: "checkbox" })}
-              />
-            </Stack>
-          </Paper>
-        </Stepper.Step>
-      </Stepper>
-
-      <Group justify="space-between" mt="xl">
-        <Button disabled={active === 0 || loading} onClick={prevStep} variant="default">
-          Anterior
-        </Button>
-        <Button onClick={nextStep} loading={loading}>
-          {active === 4 ? "Completar Registro" : "Siguiente"}
+      <Group justify="flex-end" mt="xl">
+        <Button onClick={handleSubmit} loading={loading} size="lg">
+          Completar registro
         </Button>
       </Group>
     </Container>

@@ -23,9 +23,9 @@ import {
 import { useForm } from "@mantine/form";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { 
-  IconTag, 
-  IconUsers, 
+import {
+  IconTag,
+  IconUsers,
   IconUserPlus,
   IconDotsVertical,
   IconEye,
@@ -41,6 +41,11 @@ import {
   IconRestore,
   IconRefresh,
   IconKey,
+  IconShoppingCartX,
+  IconClipboardList,
+  IconBellRinging,
+  IconActivityHeartbeat,
+  IconMailOpened,
 } from "@tabler/icons-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -63,6 +68,15 @@ import {
   useUpdateClient,
 } from "../../hooks/useClients";
 import { useCreateInvitation, useInvitations, useResendInvitation, useCancelInvitation } from "../../hooks/useInvitations";
+import {
+  usePendingSystemFormClients,
+  useInactiveSubscriptionClients,
+  useAbandonedCart,
+  useInvitationsTracking,
+  useResendSystemForm,
+  useCampaignTemplates,
+  useSendCampaign,
+} from "../../hooks/useClientSegments";
 import { useQuery } from "@tanstack/react-query";
 import { api, productsApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
@@ -190,6 +204,523 @@ function ClientCard({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Componentes auxiliares para los nuevos segmentos
+// ---------------------------------------------------------------------------
+
+interface SegmentClientItem {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  avatar_url: string | null;
+  full_name: string;
+  last_payment_at: string | null;
+  subscription_cancelled_at: string | null;
+  marketing_consent: boolean | null;
+  pending_submission_id: string | null;
+}
+
+interface SegmentClientListProps {
+  loading: boolean;
+  items: SegmentClientItem[];
+  emptyTitle: string;
+  emptyDesc: string;
+  extraColumn?: { title: string; render: (c: SegmentClientItem) => React.ReactNode };
+  rowAction?: (c: SegmentClientItem) => React.ReactNode;
+  headerExtras?: React.ReactNode;
+  checkboxes?: boolean;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (s: Set<string>) => void;
+  onRowClick?: (c: SegmentClientItem) => void;
+}
+
+function SegmentClientList({
+  loading,
+  items,
+  emptyTitle,
+  emptyDesc,
+  extraColumn,
+  rowAction,
+  headerExtras,
+  checkboxes,
+  selectedIds,
+  onSelectionChange,
+  onRowClick,
+}: SegmentClientListProps) {
+  if (loading) {
+    return (
+      <Box className="nv-card" p="lg">
+        <Group justify="center"><Text size="sm" c="dimmed">Cargando segmento…</Text></Group>
+      </Box>
+    );
+  }
+  if (items.length === 0) {
+    return <EmptyState icon={<IconUsers size={48} />} title={emptyTitle} description={emptyDesc} />;
+  }
+  const allSelected = checkboxes && selectedIds && items.length > 0 && items.every((c) => selectedIds.has(c.id));
+  return (
+    <Box className="nv-card" style={{ border: "1px solid var(--border-subtle)" }}>
+      {headerExtras && (
+        <Group justify="flex-end" p="sm" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          {headerExtras}
+        </Group>
+      )}
+      <ScrollArea type="auto">
+        <Table verticalSpacing="sm" horizontalSpacing="md">
+          <Table.Thead>
+            <Table.Tr>
+              {checkboxes && (
+                <Table.Th style={{ width: 40 }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected || false}
+                    onChange={(e) => {
+                      if (!onSelectionChange) return;
+                      if (e.target.checked) {
+                        onSelectionChange(new Set(items.map((c) => c.id)));
+                      } else {
+                        onSelectionChange(new Set());
+                      }
+                    }}
+                  />
+                </Table.Th>
+              )}
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Cliente</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
+              {extraColumn && <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{extraColumn.title}</Text></Table.Th>}
+              <Table.Th />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {items.map((c) => (
+              <Table.Tr
+                key={c.id}
+                style={{ cursor: onRowClick ? "pointer" : "default" }}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).tagName === "INPUT") return;
+                  if ((e.target as HTMLElement).closest("button")) return;
+                  if (onRowClick) onRowClick(c);
+                }}
+              >
+                {checkboxes && (
+                  <Table.Td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds?.has(c.id) || false}
+                      onChange={(e) => {
+                        if (!selectedIds || !onSelectionChange) return;
+                        const next = new Set(selectedIds);
+                        if (e.target.checked) next.add(c.id);
+                        else next.delete(c.id);
+                        onSelectionChange(next);
+                      }}
+                    />
+                  </Table.Td>
+                )}
+                <Table.Td>
+                  <Group gap="sm">
+                    <Avatar size={32} radius="xl" src={c.avatar_url || undefined}>
+                      {(c.first_name[0] || "")}{(c.last_name[0] || "")}
+                    </Avatar>
+                    <Box>
+                      <Text size="sm" fw={600}>{c.full_name}</Text>
+                      {c.phone && <Text size="xs" c="dimmed">{c.phone}</Text>}
+                    </Box>
+                  </Group>
+                </Table.Td>
+                <Table.Td visibleFrom="sm"><Text size="sm">{c.email}</Text></Table.Td>
+                {extraColumn && (
+                  <Table.Td visibleFrom="sm"><Text size="sm">{extraColumn.render(c)}</Text></Table.Td>
+                )}
+                <Table.Td>
+                  <Group gap="xs" justify="flex-end">
+                    {rowAction && rowAction(c)}
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </ScrollArea>
+    </Box>
+  );
+}
+
+interface AbandonedCartItemView {
+  invitation_id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  product_name: string | null;
+  product_amount: number | null;
+  invited_at: string;
+  expires_at: string;
+  last_email_sent_at: string | null;
+  last_email_subject: string | null;
+  last_email_status: string | null;
+  marketing_consent: boolean | null;
+}
+
+function AbandonedCartList({
+  loading,
+  items,
+  marketingFilter,
+  onMarketingFilterChange,
+  selectedRecipients,
+  onSelectionChange,
+  onSendCampaign,
+  onRowClick,
+}: {
+  loading: boolean;
+  items: AbandonedCartItemView[];
+  marketingFilter: null | true | false;
+  onMarketingFilterChange: (v: null | true | false) => void;
+  selectedRecipients: Set<string>;
+  onSelectionChange: (s: Set<string>) => void;
+  onSendCampaign: () => void;
+  onRowClick: (invId: string) => void;
+}) {
+  if (loading) {
+    return (
+      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">Cargando carrito abandonado…</Text></Box>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={<IconShoppingCartX size={48} />}
+        title="No hay carritos abandonados"
+        description="Aquí aparecerán las invitaciones con producto asignado pero sin pago completado."
+      />
+    );
+  }
+  const allSelected = selectedRecipients.size > 0 && items.every((i) => selectedRecipients.has(i.invitation_id));
+  return (
+    <Box className="nv-card" style={{ border: "1px solid var(--border-subtle)" }}>
+      <Group justify="space-between" p="sm" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <SegmentedControl
+          size="xs"
+          radius="xl"
+          value={marketingFilter === null ? "all" : marketingFilter ? "yes" : "no"}
+          onChange={(value) =>
+            onMarketingFilterChange(value === "all" ? null : value === "yes" ? true : false)
+          }
+          data={[
+            { label: "Todos", value: "all" },
+            { label: "Acepta marketing", value: "yes" },
+            { label: "No acepta", value: "no" },
+          ]}
+        />
+        <Button
+          size="xs"
+          variant="filled"
+          color="orange"
+          radius="xl"
+          leftSection={<IconSend size={14} />}
+          disabled={selectedRecipients.size === 0}
+          onClick={onSendCampaign}
+        >
+          Enviar recordatorio ({selectedRecipients.size})
+        </Button>
+      </Group>
+      <ScrollArea type="auto">
+        <Table verticalSpacing="sm" horizontalSpacing="md">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th style={{ width: 40 }}>
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={(e) => {
+                    if (e.target.checked) onSelectionChange(new Set(items.map((i) => i.invitation_id)));
+                    else onSelectionChange(new Set());
+                  }}
+                />
+              </Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Producto</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Invitado</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Último email</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Marketing</Text></Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {items.map((i) => (
+              <Table.Tr
+                key={i.invitation_id}
+                style={{ cursor: "pointer" }}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).tagName === "INPUT") return;
+                  onRowClick(i.invitation_id);
+                }}
+              >
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selectedRecipients.has(i.invitation_id)}
+                    onChange={(e) => {
+                      const next = new Set(selectedRecipients);
+                      if (e.target.checked) next.add(i.invitation_id);
+                      else next.delete(i.invitation_id);
+                      onSelectionChange(next);
+                    }}
+                  />
+                </Table.Td>
+                <Table.Td>
+                  <Box>
+                    <Text size="sm" fw={600}>{i.email}</Text>
+                    {(i.first_name || i.last_name) && (
+                      <Text size="xs" c="dimmed">{i.first_name || ""} {i.last_name || ""}</Text>
+                    )}
+                  </Box>
+                </Table.Td>
+                <Table.Td visibleFrom="sm">
+                  {i.product_name ? (
+                    <Box>
+                      <Text size="sm">{i.product_name}</Text>
+                      {i.product_amount != null && (
+                        <Text size="xs" c="dimmed">{i.product_amount.toFixed(2)} €</Text>
+                      )}
+                    </Box>
+                  ) : (
+                    <Text size="sm" c="dimmed">—</Text>
+                  )}
+                </Table.Td>
+                <Table.Td visibleFrom="sm">
+                  <Text size="sm" c="dimmed">
+                    {new Date(i.invited_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  {i.last_email_sent_at ? (
+                    <Stack gap={2}>
+                      <Text size="xs" c="dimmed">
+                        {new Date(i.last_email_sent_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                      </Text>
+                      {i.last_email_status && (
+                        <Badge
+                          size="xs"
+                          variant="light"
+                          color={
+                            i.last_email_status === "clicked" ? "green"
+                            : i.last_email_status === "opened" ? "teal"
+                            : i.last_email_status === "delivered" ? "blue"
+                            : i.last_email_status.includes("bounce") ? "red"
+                            : "gray"
+                          }
+                        >
+                          {i.last_email_status}
+                        </Badge>
+                      )}
+                    </Stack>
+                  ) : (
+                    <Text size="xs" c="dimmed">—</Text>
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  {i.marketing_consent === true ? (
+                    <Badge color="green" variant="light" size="xs">Sí</Badge>
+                  ) : i.marketing_consent === false ? (
+                    <Badge color="gray" variant="light" size="xs">No</Badge>
+                  ) : (
+                    <Text size="xs" c="dimmed">—</Text>
+                  )}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </ScrollArea>
+    </Box>
+  );
+}
+
+interface InvitedListInvitation {
+  id: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  status: string;
+  expires_at: string;
+}
+
+function InvitedList({
+  invitations,
+  onResend,
+  onCancel,
+  isPending,
+}: {
+  invitations: InvitedListInvitation[];
+  onResend: (id: string) => void;
+  onCancel: (id: string) => void;
+  isPending: boolean;
+}) {
+  if (invitations.length === 0) {
+    return (
+      <EmptyState
+        icon={<IconMail size={48} />}
+        title="Sin invitaciones pendientes"
+        description="Cuando un cliente acepte la invitación pasará a su tab correspondiente."
+      />
+    );
+  }
+  return (
+    <Box className="nv-card" style={{ border: "1px solid var(--border-subtle)" }}>
+      <ScrollArea type="auto">
+        <Table verticalSpacing="sm" horizontalSpacing="md">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Nombre</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Expira</Text></Table.Th>
+              <Table.Th />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {invitations.map((inv) => (
+              <Table.Tr key={inv.id}>
+                <Table.Td><Text size="sm" fw={500}>{inv.email}</Text></Table.Td>
+                <Table.Td visibleFrom="sm"><Text size="sm">{inv.first_name || ""} {inv.last_name || ""}</Text></Table.Td>
+                <Table.Td visibleFrom="sm">
+                  <Text size="sm" c="dimmed">
+                    {new Date(inv.expires_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Group gap="xs" justify="flex-end">
+                    <Button size="xs" variant="light" radius="xl" leftSection={<IconRefresh size={14} />} onClick={() => onResend(inv.id)} loading={isPending}>
+                      Reenviar
+                    </Button>
+                    <ActionIcon size="sm" variant="subtle" color="red" onClick={() => onCancel(inv.id)} title="Cancelar invitación">
+                      <IconTrash size={14} />
+                    </ActionIcon>
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </ScrollArea>
+    </Box>
+  );
+}
+
+interface TrackingListItem {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  status: string;
+  expires_at: string;
+  created_at: string;
+  last_email_sent_at: string | null;
+  last_email_subject: string | null;
+  last_email_status: string | null;
+  last_email_event_at: string | null;
+}
+
+function TrackingList({
+  loading,
+  items,
+  onResend,
+}: {
+  loading: boolean;
+  items: TrackingListItem[];
+  onResend: (id: string) => void;
+}) {
+  if (loading) {
+    return (
+      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">Cargando seguimiento…</Text></Box>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={<IconMailOpened size={48} />}
+        title="No hay invitaciones que seguir"
+        description="Aquí verás el estado (entregado, abierto, clicado) del último email enviado a cada invitación."
+      />
+    );
+  }
+  return (
+    <Box className="nv-card" style={{ border: "1px solid var(--border-subtle)" }}>
+      <ScrollArea type="auto">
+        <Table verticalSpacing="sm" horizontalSpacing="md">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Último email</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">Estado</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Asunto</Text></Table.Th>
+              <Table.Th />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {items.map((item) => {
+              const status = item.last_email_status || (item.last_email_sent_at ? "request" : null);
+              const color =
+                status === "clicked" ? "green"
+                : status === "opened" ? "teal"
+                : status === "delivered" ? "blue"
+                : status && status.includes("bounce") ? "red"
+                : status === "request" ? "yellow"
+                : "gray";
+              return (
+                <Table.Tr key={item.id}>
+                  <Table.Td>
+                    <Box>
+                      <Text size="sm" fw={600}>{item.email}</Text>
+                      {(item.first_name || item.last_name) && (
+                        <Text size="xs" c="dimmed">{item.first_name || ""} {item.last_name || ""}</Text>
+                      )}
+                    </Box>
+                  </Table.Td>
+                  <Table.Td visibleFrom="sm">
+                    {item.last_email_sent_at ? (
+                      <Text size="xs" c="dimmed">
+                        {new Date(item.last_email_sent_at).toLocaleDateString("es-ES", {
+                          day: "numeric", month: "short", year: "2-digit",
+                        })}
+                      </Text>
+                    ) : (
+                      <Text size="xs" c="dimmed">Sin envíos</Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td>
+                    {status ? (
+                      <Badge size="xs" variant="light" color={color}>{status}</Badge>
+                    ) : (
+                      <Text size="xs" c="dimmed">—</Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td visibleFrom="sm">
+                    <Text size="xs" lineClamp={1} style={{ maxWidth: 280 }}>
+                      {item.last_email_subject || "—"}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Tooltip label="Reenviar invitación">
+                      <ActionIcon
+                        variant="subtle"
+                        color="blue"
+                        onClick={() => onResend(item.id)}
+                      >
+                        <IconRefresh size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Table.Td>
+                </Table.Tr>
+              );
+            })}
+          </Table.Tbody>
+        </Table>
+      </ScrollArea>
+    </Box>
+  );
+}
+
 // KPI Card - Compact
 function KPICard({ title, value, subtitle, color }: { title: string; value: string | number; subtitle?: string; color: string }) {
   return (
@@ -214,7 +745,13 @@ export function ClientsPage() {
   const [search, setSearch] = useState("");
   const [viewMode] = useState<"table" | "grid">("table");
   const [activeTab, setActiveTab] = useState<string | null>("all");
-  const [invitationsFilter, setInvitationsFilter] = useState<string>("all");
+  // Filtro consentimiento marketing para "Carrito abandonado" e "Inactivo".
+  // null = todos, true = sólo opt-in, false = sólo opt-out.
+  const [marketingFilter, setMarketingFilter] = useState<null | true | false>(null);
+  // Selección de destinatarios y modal para envío de campañas.
+  const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
+  const [campaignModalOpen, setCampaignModalOpen] = useState<false | "abandoned_cart" | "inactive">(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [
     clientModalOpened,
     { open: openClientModal, close: closeClientModal },
@@ -222,8 +759,16 @@ export function ClientsPage() {
   const [tagModalOpened, { open: openTagModal, close: closeTagModal }] = useDisclosure(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const statusFilter = activeTab === "active" ? "active" : activeTab === "inactive" ? "inactive" : activeTab === "pending" ? "pending" : activeTab === "deleted" ? "deleted" : undefined;
-  const { data: clientsData, isLoading, isError, refetch } = useClients({ page, search, status: statusFilter });
+  // Sólo las tabs "legacy" usan el listado paginado de clientes. Las
+  // tabs nuevas (pending_form, abandoned_cart, inactive_sub, invited,
+  // tracking) usan sus propios endpoints y renderizan tablas
+  // específicas del segmento.
+  const showLegacyTable = activeTab === "all" || activeTab === "active" || activeTab === "deleted";
+  const statusFilter = activeTab === "active" ? "active" : activeTab === "deleted" ? "deleted" : undefined;
+  const { data: clientsData, isLoading, isError, refetch } = useClients(
+    { page, search, status: statusFilter },
+    { enabled: showLegacyTable },
+  );
   useClientTags();
   const createClient = useCreateClient();
   const createTag = useCreateClientTag();
@@ -235,6 +780,23 @@ export function ClientsPage() {
   const { data: invitations } = useInvitations();
   const resendInvitation = useResendInvitation();
   const cancelInvitation = useCancelInvitation();
+
+  // Segmentos nuevos. Las queries se ejecutan al cargar la página
+  // para que los contadores de cada tab se vean correctos sin tener
+  // que entrar en ellas (similar a "stats").
+  const pendingFormQuery = usePendingSystemFormClients();
+  const abandonedCartQuery = useAbandonedCart(marketingFilter);
+  const inactiveSubQuery = useInactiveSubscriptionClients(marketingFilter);
+  const trackingQuery = useInvitationsTracking();
+  const resendSystemForm = useResendSystemForm();
+  const sendCampaign = useSendCampaign();
+  const campaignTemplatesQuery = useCampaignTemplates(
+    campaignModalOpen === "abandoned_cart"
+      ? "abandoned_cart"
+      : campaignModalOpen === "inactive"
+      ? "inactive"
+      : undefined,
+  );
 
   // Estado para el modal de edición
   const [editModalOpened, { open: openEditModal, close: closeEditModal }] = useDisclosure(false);
@@ -723,8 +1285,11 @@ export function ClientsPage() {
             data={[
               { value: "all", label: `Todos (${stats.total})` },
               { value: "active", label: `Activos (${stats.active})` },
-              { value: "pending", label: `Pendientes (${stats.pending})` },
-              { value: "inactive", label: `Inactivos (${stats.inactive})` },
+              { value: "pending_form", label: `Pendiente formulario (${pendingFormQuery.data?.length ?? 0})` },
+              { value: "abandoned_cart", label: `Carrito abandonado (${abandonedCartQuery.data?.length ?? 0})` },
+              { value: "inactive_sub", label: `Inactivo (${inactiveSubQuery.data?.length ?? 0})` },
+              { value: "invited", label: `Invitados (${(invitations || []).filter((i) => i.status === "pending").length})` },
+              { value: "tracking", label: `Seguimiento (${trackingQuery.data?.length ?? 0})` },
               ...(stats.deleted > 0 ? [{ value: "deleted", label: `Eliminados (${stats.deleted})` }] : []),
               { value: "tags", label: "Etiquetas" },
             ]}
@@ -732,7 +1297,7 @@ export function ClientsPage() {
             radius="md"
           />
         ) : (
-          <Tabs value={activeTab} onChange={(value) => { setActiveTab(value); setPage(1); }}>
+          <Tabs value={activeTab} onChange={(value) => { setActiveTab(value); setPage(1); setSelectedRecipients(new Set()); }}>
             <Tabs.List style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               <Tabs.Tab
                 leftSection={<IconUsers size={14} />}
@@ -741,14 +1306,46 @@ export function ClientsPage() {
               >
                 Todos ({stats.total})
               </Tabs.Tab>
-              <Tabs.Tab value="active" style={{ fontWeight: 600, fontSize: "13px" }}>
+              <Tabs.Tab value="active" leftSection={<IconUserCheck size={14} />} style={{ fontWeight: 600, fontSize: "13px" }}>
                 Activos ({stats.active})
               </Tabs.Tab>
-              <Tabs.Tab value="pending" style={{ fontWeight: 600, fontSize: "13px" }}>
-                Pendientes ({stats.pending})
+              <Tabs.Tab
+                value="pending_form"
+                leftSection={<IconClipboardList size={14} />}
+                style={{ fontWeight: 600, fontSize: "13px" }}
+              >
+                Pendiente formulario ({pendingFormQuery.data?.length ?? 0})
               </Tabs.Tab>
-              <Tabs.Tab value="inactive" style={{ fontWeight: 600, fontSize: "13px" }}>
-                Inactivos ({stats.inactive})
+              <Tabs.Tab
+                value="abandoned_cart"
+                leftSection={<IconShoppingCartX size={14} />}
+                style={{ fontWeight: 600, fontSize: "13px" }}
+                color="orange"
+              >
+                Carrito abandonado ({abandonedCartQuery.data?.length ?? 0})
+              </Tabs.Tab>
+              <Tabs.Tab
+                value="inactive_sub"
+                leftSection={<IconActivityHeartbeat size={14} />}
+                style={{ fontWeight: 600, fontSize: "13px" }}
+                color="grape"
+              >
+                Inactivo ({inactiveSubQuery.data?.length ?? 0})
+              </Tabs.Tab>
+              <Tabs.Tab
+                value="invited"
+                leftSection={<IconMail size={14} />}
+                style={{ fontWeight: 600, fontSize: "13px" }}
+              >
+                Invitados ({(invitations || []).filter((i) => i.status === "pending").length})
+              </Tabs.Tab>
+              <Tabs.Tab
+                value="tracking"
+                leftSection={<IconMailOpened size={14} />}
+                style={{ fontWeight: 600, fontSize: "13px" }}
+                color="teal"
+              >
+                Seguimiento ({trackingQuery.data?.length ?? 0})
               </Tabs.Tab>
               {stats.deleted > 0 && (
                 <Tabs.Tab
@@ -773,8 +1370,140 @@ export function ClientsPage() {
         )}
       </Box>
 
-      {/* Contenido */}
-      {clientsData?.items && clientsData.items.length > 0 ? (
+      {/* Contenido — vistas específicas para cada segmento */}
+      {activeTab === "pending_form" && (
+        <SegmentClientList
+          loading={pendingFormQuery.isLoading}
+          items={pendingFormQuery.data || []}
+          emptyTitle="Nadie pendiente del formulario"
+          emptyDesc="Todos tus clientes pagados ya completaron el cuestionario inicial."
+          extraColumn={{
+            title: "Último pago",
+            render: (c) =>
+              c.last_payment_at
+                ? new Date(c.last_payment_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
+                : "—",
+          }}
+          rowAction={(c) => (
+            <Button
+              size="xs"
+              variant="light"
+              color="blue"
+              radius="xl"
+              leftSection={<IconBellRinging size={14} />}
+              loading={resendSystemForm.isPending && resendSystemForm.variables === c.id}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                resendSystemForm.mutate(c.id);
+              }}
+            >
+              Reenviar formulario
+            </Button>
+          )}
+          onRowClick={(c) => navigate(`/clients/${c.id}`)}
+        />
+      )}
+
+      {activeTab === "abandoned_cart" && (
+        <AbandonedCartList
+          loading={abandonedCartQuery.isLoading}
+          items={abandonedCartQuery.data || []}
+          marketingFilter={marketingFilter}
+          onMarketingFilterChange={setMarketingFilter}
+          selectedRecipients={selectedRecipients}
+          onSelectionChange={setSelectedRecipients}
+          onSendCampaign={() => setCampaignModalOpen("abandoned_cart")}
+          onRowClick={(invId) => {
+            const inv = invitations?.find((i) => i.id === invId);
+            if (inv) {
+              notifications.show({
+                title: inv.email,
+                message: `Invitación enviada el ${new Date(inv.created_at).toLocaleDateString("es-ES")}`,
+                color: "blue",
+              });
+            }
+          }}
+        />
+      )}
+
+      {activeTab === "inactive_sub" && (
+        <SegmentClientList
+          loading={inactiveSubQuery.isLoading}
+          items={inactiveSubQuery.data || []}
+          emptyTitle="No hay clientes inactivos"
+          emptyDesc="Aquí aparecerán los clientes que cancelen su suscripción."
+          headerExtras={
+            <Group gap="xs">
+              <SegmentedControl
+                size="xs"
+                radius="xl"
+                value={marketingFilter === null ? "all" : marketingFilter ? "yes" : "no"}
+                onChange={(value) =>
+                  setMarketingFilter(value === "all" ? null : value === "yes" ? true : false)
+                }
+                data={[
+                  { label: "Todos", value: "all" },
+                  { label: "Acepta marketing", value: "yes" },
+                  { label: "No acepta", value: "no" },
+                ]}
+              />
+              <Button
+                size="xs"
+                variant="filled"
+                color="grape"
+                radius="xl"
+                leftSection={<IconSend size={14} />}
+                disabled={selectedRecipients.size === 0}
+                onClick={() => setCampaignModalOpen("inactive")}
+              >
+                Enviar email descuento ({selectedRecipients.size})
+              </Button>
+            </Group>
+          }
+          extraColumn={{
+            title: "Cancelada",
+            render: (c) =>
+              c.subscription_cancelled_at
+                ? new Date(c.subscription_cancelled_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
+                : "—",
+          }}
+          checkboxes
+          selectedIds={selectedRecipients}
+          onSelectionChange={setSelectedRecipients}
+          rowAction={(c) =>
+            c.marketing_consent === true ? (
+              <Badge color="green" variant="light" size="xs">
+                Marketing OK
+              </Badge>
+            ) : c.marketing_consent === false ? (
+              <Badge color="gray" variant="light" size="xs">
+                Sin consentimiento
+              </Badge>
+            ) : null
+          }
+          onRowClick={(c) => navigate(`/clients/${c.id}`)}
+        />
+      )}
+
+      {activeTab === "invited" && (
+        <InvitedList
+          invitations={(invitations || []).filter((i) => i.status === "pending")}
+          onResend={(id) => resendInvitation.mutate(id)}
+          onCancel={(id) => cancelInvitation.mutate(id)}
+          isPending={resendInvitation.isPending}
+        />
+      )}
+
+      {activeTab === "tracking" && (
+        <TrackingList
+          loading={trackingQuery.isLoading}
+          items={trackingQuery.data || []}
+          onResend={(id) => resendInvitation.mutate(id)}
+        />
+      )}
+
+      {/* Contenido legacy (Todos / Activos / Eliminados) */}
+      {showLegacyTable && clientsData?.items && clientsData.items.length > 0 ? (
         viewMode === "table" ? (
           <DataTable
             columns={columns}
@@ -823,7 +1552,7 @@ export function ClientsPage() {
             ))}
           </SimpleGrid>
         )
-      ) : isError ? (
+      ) : showLegacyTable && isError ? (
         <EmptyState
           icon={<IconUsers size={48} />}
           title="Error al cargar clientes"
@@ -831,186 +1560,90 @@ export function ClientsPage() {
           actionLabel="Reintentar"
           onAction={() => refetch()}
         />
-      ) : isLoading ? null : (
+      ) : showLegacyTable && isLoading ? null : showLegacyTable ? (
         <EmptyState
           actionLabel={activeTab === "all" ? "Añadir Cliente" : undefined}
           description={
-            activeTab === "active" ? "No hay clientes activos con cuenta creada. Los clientes pendientes de registro aparecen en la pestaña \"Pendientes\"."
-            : activeTab === "pending" ? "No hay clientes pendientes de registro."
-            : activeTab === "inactive" ? "No hay clientes inactivos."
+            activeTab === "active" ? "No hay clientes activos con cuenta creada."
             : "Empieza añadiendo tu primer cliente para gestionar sus entrenamientos, nutrición y progreso."
           }
           icon={<IconUsers size={48} />}
           onAction={activeTab === "all" ? openClientModal : undefined}
           title={
             activeTab === "active" ? "No hay clientes activos"
-            : activeTab === "pending" ? "No hay clientes pendientes"
-            : activeTab === "inactive" ? "No hay clientes inactivos"
             : "No hay clientes"
           }
         />
-      )}
+      ) : null}
 
-      {/* Invitaciones pendientes - se muestran en Pendientes, Inactivos y Todos */}
-      {(activeTab === "pending" || activeTab === "inactive" || activeTab === "all") && (() => {
-        const allInvitations = (invitations || []).filter(
-          (inv: any) => inv.status === "pending" || inv.status === "expired"
-        );
-        if (allInvitations.length === 0) return null;
-
-        const pendingCount = allInvitations.filter((i: any) => i.status === "pending").length;
-        const expiredCount = allInvitations.filter((i: any) => i.status === "expired").length;
-
-        const filteredInvitations = invitationsFilter === "all"
-          ? allInvitations
-          : allInvitations.filter((i: any) => i.status === invitationsFilter);
-
-        const expiredInvitations = allInvitations.filter((i: any) => i.status === "expired");
-
-        const handleDeleteAllExpired = async () => {
-          if (expiredInvitations.length === 0) return;
-          if (!window.confirm(`¿Eliminar las ${expiredInvitations.length} invitaciones expiradas? Esta acción no se puede deshacer.`)) return;
-          await Promise.allSettled(
-            expiredInvitations.map((inv: any) => cancelInvitation.mutateAsync(inv.id))
-          );
-        };
-
-        return (
-          <Box mt="lg">
-            <Group gap="sm" mb="sm" wrap="wrap" justify="space-between">
-              <Group gap="xs">
-                <IconMail size={16} color="var(--nv-slate)" />
-                <Text fw={600} size="sm" style={{ color: "var(--nv-slate)" }}>
-                  Invitaciones ({allInvitations.length})
-                </Text>
-              </Group>
-              <Group gap="xs" wrap="wrap">
-                <SegmentedControl
-                  size="xs"
-                  radius="xl"
-                  value={invitationsFilter}
-                  onChange={setInvitationsFilter}
-                  data={[
-                    { label: `Todas (${allInvitations.length})`, value: "all" },
-                    { label: `Pendientes (${pendingCount})`, value: "pending" },
-                    { label: `Expiradas (${expiredCount})`, value: "expired" },
-                  ]}
-                />
-                {expiredCount > 0 && (
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color="red"
-                    radius="xl"
-                    leftSection={<IconTrashX size={14} />}
-                    onClick={handleDeleteAllExpired}
-                    loading={cancelInvitation.isPending}
-                  >
-                    Limpiar expiradas
-                  </Button>
-                )}
-              </Group>
-            </Group>
-            <Box
-              className="nv-card"
-              style={{
-                border: "1px solid var(--border-subtle)",
+      {/* Modal de envío de campaña (carrito abandonado / inactivos) */}
+      <BottomSheet
+        opened={!!campaignModalOpen}
+        onClose={() => { setCampaignModalOpen(false); setSelectedTemplateId(null); }}
+        size="md"
+        title={campaignModalOpen === "abandoned_cart" ? "Email recordatorio de pago" : "Email descuento reactivación"}
+        radius="lg"
+      >
+        <Stack gap="md">
+          <Group justify="space-between" align="center">
+            <Text size="sm" c="dimmed">
+              Selecciona la plantilla a enviar a {selectedRecipients.size} destinatario(s).
+            </Text>
+            <Button
+              size="xs"
+              variant="subtle"
+              radius="xl"
+              onClick={() => navigate("/email-templates")}
+            >
+              Gestionar plantillas →
+            </Button>
+          </Group>
+          {(campaignTemplatesQuery.data || []).length === 0 && !campaignTemplatesQuery.isLoading && (
+            <Text size="xs" c="orange">
+              No tienes plantillas para este segmento. Crea una desde "Gestionar plantillas".
+            </Text>
+          )}
+          <Select
+            label="Plantilla"
+            placeholder={campaignTemplatesQuery.isLoading ? "Cargando…" : "Selecciona una plantilla"}
+            data={(campaignTemplatesQuery.data || []).map((t) => ({
+              value: t.id,
+              label: t.discount_value
+                ? `${t.name} (${t.discount_type === "percent" ? `${t.discount_value}%` : `${t.discount_value}€`})`
+                : t.name,
+            }))}
+            value={selectedTemplateId}
+            onChange={setSelectedTemplateId}
+            disabled={campaignTemplatesQuery.isLoading}
+            radius="md"
+            searchable
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => { setCampaignModalOpen(false); setSelectedTemplateId(null); }} radius="xl">
+              Cancelar
+            </Button>
+            <Button
+              loading={sendCampaign.isPending}
+              radius="xl"
+              leftSection={<IconSend size={14} />}
+              disabled={!selectedTemplateId || selectedRecipients.size === 0}
+              onClick={async () => {
+                if (!selectedTemplateId) return;
+                const ids = Array.from(selectedRecipients);
+                const payload = campaignModalOpen === "abandoned_cart"
+                  ? { template_id: selectedTemplateId, recipient_invitation_ids: ids }
+                  : { template_id: selectedTemplateId, recipient_client_ids: ids };
+                await sendCampaign.mutateAsync(payload);
+                setCampaignModalOpen(false);
+                setSelectedTemplateId(null);
+                setSelectedRecipients(new Set());
               }}
             >
-              <ScrollArea type="auto">
-              <Table verticalSpacing="sm" horizontalSpacing="md">
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Email</Text></Table.Th>
-                    <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Nombre</Text></Table.Th>
-                    <Table.Th><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Estado</Text></Table.Th>
-                    <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase" style={{ letterSpacing: "0.08em", color: "var(--nv-slate)" }}>Expira</Text></Table.Th>
-                    <Table.Th />
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {filteredInvitations.map((inv: any) => {
-                    const isExpired = inv.status === "expired";
-                    const actionLabel = isExpired ? "Enviar de nuevo" : "Reenviar";
-                    const actionIcon = isExpired ? <IconRefresh size={14} /> : <IconSend size={14} />;
-                    const tooltip = isExpired
-                      ? "La invitación caducó. Se generará y enviará una nueva."
-                      : "Volver a enviar el correo de invitación.";
-                    return (
-                      <Table.Tr key={inv.id}>
-                        <Table.Td>
-                          <Text size="sm" fw={500} truncate>{inv.email}</Text>
-                        </Table.Td>
-                        <Table.Td visibleFrom="sm">
-                          <Text size="sm">{inv.first_name || ""} {inv.last_name || ""}</Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge
-                            size="xs"
-                            variant="light"
-                            color={inv.status === "pending" ? "yellow" : "red"}
-                            radius="md"
-                          >
-                            {inv.status === "pending" ? "Pendiente" : "Expirada"}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td visibleFrom="sm">
-                          <Text size="sm" c={isExpired ? "red.6" : "dimmed"}>
-                            {new Date(inv.expires_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Group gap="xs">
-                            <Tooltip label={tooltip} withArrow>
-                              <Button
-                                size="xs"
-                                variant="light"
-                                color={isExpired ? "orange" : "yellow"}
-                                radius="xl"
-                                leftSection={actionIcon}
-                                onClick={() => resendInvitation.mutateAsync(inv.id)}
-                                loading={
-                                  resendInvitation.isPending &&
-                                  resendInvitation.variables === inv.id
-                                }
-                                disabled={
-                                  resendInvitation.isPending &&
-                                  resendInvitation.variables !== inv.id
-                                }
-                                styles={{ root: { fontSize: "11px" } }}
-                              >
-                                {actionLabel}
-                              </Button>
-                            </Tooltip>
-                            <ActionIcon
-                              size="sm"
-                              variant="subtle"
-                              color="red"
-                              onClick={() => cancelInvitation.mutateAsync(inv.id)}
-                              loading={
-                                cancelInvitation.isPending &&
-                                cancelInvitation.variables === inv.id
-                              }
-                              disabled={
-                                cancelInvitation.isPending &&
-                                cancelInvitation.variables !== inv.id
-                              }
-                              title="Eliminar invitación"
-                            >
-                              <IconTrash size={14} />
-                            </ActionIcon>
-                          </Group>
-                        </Table.Td>
-                      </Table.Tr>
-                    );
-                  })}
-                </Table.Tbody>
-              </Table>
-              </ScrollArea>
-            </Box>
-          </Box>
-        );
-      })()}
+              Enviar
+            </Button>
+          </Group>
+        </Stack>
+      </BottomSheet>
 
       {/* Modal para crear cliente */}
       <BottomSheet

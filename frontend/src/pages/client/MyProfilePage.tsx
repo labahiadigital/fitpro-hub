@@ -19,7 +19,12 @@ import {
   Alert,
   ThemeIcon,
   FileButton,
+  ActionIcon,
+  Tooltip,
+  NumberInput,
+  SegmentedControl,
 } from "@mantine/core";
+import { MonthPickerInput } from "@mantine/dates";
 import {
   IconCamera,
   IconMail,
@@ -34,6 +39,10 @@ import {
   IconAlertCircle,
   IconX,
   IconCheck,
+  IconDownload,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconFileDownload,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -116,9 +125,26 @@ const paymentStatusConfig: Record<string, { label: string; color: string }> = {
   refunded: { label: "Devuelto", color: "gray" },
 };
 
+async function _downloadBlob(blob: Blob, filename: string): Promise<void> {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 function SubscriptionSection() {
   const queryClient = useQueryClient();
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [pauseModalOpen, setPauseModalOpen] = useState(false);
+  const [pauseUnit, setPauseUnit] = useState<"days" | "months">("days");
+  const [pauseAmount, setPauseAmount] = useState<number>(7);
+  const [bulkFrom, setBulkFrom] = useState<Date | null>(null);
+  const [bulkTo, setBulkTo] = useState<Date | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data: subscription, isLoading } = useQuery<SubscriptionData | null>({
     queryKey: ["my-subscription"],
@@ -147,6 +173,79 @@ function SubscriptionSection() {
       });
     },
   });
+
+  const pauseMutation = useMutation({
+    mutationFn: (vars: { id: string; data: { duration_days?: number; duration_months?: number } }) =>
+      clientPortalApi.pauseSubscription(vars.id, vars.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+      setPauseModalOpen(false);
+      notifications.show({
+        title: "Suscripción pausada",
+        message: "Tu suscripción se reanudará automáticamente al finalizar la pausa.",
+        color: "blue",
+      });
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      notifications.show({
+        title: "No se pudo pausar",
+        message: err?.response?.data?.detail || "Inténtalo de nuevo.",
+        color: "red",
+      });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (id: string) => clientPortalApi.resumeSubscription(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+      notifications.show({
+        title: "Suscripción reanudada",
+        message: "Vuelves a tener acceso completo.",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo reanudar la suscripción.",
+        color: "red",
+      });
+    },
+  });
+
+  async function handleDownloadInvoice(paymentId: string): Promise<void> {
+    setDownloadingId(paymentId);
+    try {
+      const res = await clientPortalApi.downloadInvoicePdf(paymentId);
+      await _downloadBlob(res.data, `Factura_${paymentId.slice(0, 8)}.pdf`);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      notifications.show({
+        title: "No se pudo descargar la factura",
+        message: e?.response?.data?.detail || "Inténtalo de nuevo más tarde.",
+        color: "red",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  async function handleDownloadBulk(): Promise<void> {
+    const fmt = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : undefined);
+    try {
+      const res = await clientPortalApi.downloadInvoicesBulk({ date_from: fmt(bulkFrom), date_to: fmt(bulkTo) });
+      const tag = `${fmt(bulkFrom) || "inicio"}_a_${fmt(bulkTo) || "hoy"}`;
+      await _downloadBlob(res.data, `Mis_Facturas_${tag}.pdf`);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      notifications.show({
+        title: "No se pudo descargar el PDF combinado",
+        message: e?.response?.data?.detail || "Comprueba el periodo seleccionado.",
+        color: "red",
+      });
+    }
+  }
 
   if (isLoading) {
     return (
@@ -262,11 +361,13 @@ function SubscriptionSection() {
                   <Table.Th>Descripción</Table.Th>
                   <Table.Th ta="right">Importe</Table.Th>
                   <Table.Th ta="center">Estado</Table.Th>
+                  <Table.Th ta="center">Factura</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {sub.payments.map((p) => {
                   const pConfig = paymentStatusConfig[p.status] || { label: p.status, color: "gray" };
+                  const canDownload = p.status === "succeeded";
                   return (
                     <Table.Tr key={p.id}>
                       <Table.Td>{formatDate(p.paid_at || p.created_at)}</Table.Td>
@@ -274,6 +375,22 @@ function SubscriptionSection() {
                       <Table.Td ta="right" fw={500}>{formatCurrencyLocal(p.amount, p.currency)}</Table.Td>
                       <Table.Td ta="center">
                         <Badge size="sm" color={pConfig.color} variant="light">{pConfig.label}</Badge>
+                      </Table.Td>
+                      <Table.Td ta="center">
+                        {canDownload ? (
+                          <Tooltip label="Descargar factura">
+                            <ActionIcon
+                              variant="subtle"
+                              color="green"
+                              loading={downloadingId === p.id}
+                              onClick={() => handleDownloadInvoice(p.id)}
+                            >
+                              <IconDownload size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        ) : (
+                          <Text size="xs" c="dimmed">—</Text>
+                        )}
                       </Table.Td>
                     </Table.Tr>
                   );
@@ -283,16 +400,84 @@ function SubscriptionSection() {
           </>
         )}
 
+        {/* Mis facturas: descargar todas las facturas en un PDF único */}
+        <Divider mt="md" mb="md" />
+        <Group mb="sm">
+          <IconFileDownload size={16} />
+          <Text size="sm" fw={600}>Mis facturas</Text>
+        </Group>
+        <Text size="xs" c="dimmed" mb="sm">
+          Selecciona el periodo y descarga todas tus facturas pagadas en un único PDF.
+        </Text>
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+          <MonthPickerInput
+            label="Desde"
+            value={bulkFrom}
+            onChange={(value) => setBulkFrom(value as Date | null)}
+            placeholder="Inicio"
+            clearable
+            valueFormat="MM/YYYY"
+            maxDate={new Date()}
+          />
+          <MonthPickerInput
+            label="Hasta"
+            value={bulkTo}
+            onChange={(value) => setBulkTo(value as Date | null)}
+            placeholder="Hoy"
+            clearable
+            valueFormat="MM/YYYY"
+            maxDate={new Date()}
+          />
+          <Button
+            mt={{ base: 0, sm: 24 }}
+            leftSection={<IconFileDownload size={16} />}
+            onClick={handleDownloadBulk}
+            disabled={!sub.payments || sub.payments.length === 0}
+          >
+            Descargar PDF combinado
+          </Button>
+        </SimpleGrid>
+
         {sub.status === "active" && (
           <>
             <Divider mt="md" mb="md" />
+            <Group justify="flex-start" gap="sm">
+              <Button
+                variant="light"
+                color="blue"
+                size="xs"
+                leftSection={<IconPlayerPause size={14} />}
+                onClick={() => setPauseModalOpen(true)}
+              >
+                Pausar suscripción
+              </Button>
+              <Button
+                variant="subtle"
+                color="red"
+                size="xs"
+                onClick={() => setCancelModalOpen(true)}
+              >
+                Cancelar suscripción
+              </Button>
+            </Group>
+          </>
+        )}
+
+        {sub.status === "paused" && (
+          <>
+            <Divider mt="md" mb="md" />
+            <Alert color="blue" variant="light" mb="sm" icon={<IconAlertCircle size={16} />}>
+              Tu suscripción está pausada. Reanudará automáticamente cuando termine la pausa.
+            </Alert>
             <Button
-              variant="subtle"
-              color="red"
+              variant="filled"
+              color="green"
               size="xs"
-              onClick={() => setCancelModalOpen(true)}
+              leftSection={<IconPlayerPlay size={14} />}
+              onClick={() => resumeMutation.mutate(sub.id)}
+              loading={resumeMutation.isPending}
             >
-              Cancelar suscripción
+              Reanudar ahora
             </Button>
           </>
         )}
@@ -323,6 +508,53 @@ function SubscriptionSection() {
               leftSection={<IconX size={16} />}
             >
               Confirmar cancelación
+            </Button>
+          </Group>
+        </Stack>
+      </NativeBottomSheet>
+
+      <NativeBottomSheet
+        opened={pauseModalOpen}
+        onClose={() => setPauseModalOpen(false)}
+        title="Pausar suscripción"
+      >
+        <Stack gap="md">
+          <Alert color="blue" variant="light" icon={<IconAlertCircle size={16} />}>
+            Mientras esté pausada no se realizarán cobros y tu plan quedará suspendido.
+            La suscripción se reanudará automáticamente al finalizar el periodo seleccionado.
+          </Alert>
+          <SegmentedControl
+            value={pauseUnit}
+            onChange={(v) => setPauseUnit(v as "days" | "months")}
+            data={[
+              { label: "Días", value: "days" },
+              { label: "Meses", value: "months" },
+            ]}
+          />
+          <NumberInput
+            label={`Pausar durante ${pauseUnit === "days" ? "X días" : "X meses"}`}
+            value={pauseAmount}
+            onChange={(v) => setPauseAmount(typeof v === "number" ? v : 1)}
+            min={1}
+            max={pauseUnit === "days" ? 180 : 6}
+            allowDecimal={false}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setPauseModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              color="blue"
+              loading={pauseMutation.isPending}
+              leftSection={<IconPlayerPause size={16} />}
+              onClick={() =>
+                pauseMutation.mutate({
+                  id: sub.id,
+                  data: pauseUnit === "days" ? { duration_days: pauseAmount } : { duration_months: pauseAmount },
+                })
+              }
+            >
+              Confirmar pausa
             </Button>
           </Group>
         </Stack>

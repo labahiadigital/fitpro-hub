@@ -129,7 +129,7 @@ const CLIENT_DETAIL_TABS_SELECT_DATA = [
   { value: "client-calendar", label: "Calendario" },
   { value: "photos", label: "Fotos" },
   { value: "documents", label: "Documentos" },
-  { value: "payments", label: "Pagos" },
+  { value: "payments", label: "Pagos y suscripciones" },
 ];
 
 const COMMON_INTOLERANCES = INTOLERANCES_SELECT_DATA;
@@ -2187,7 +2187,7 @@ export function ClientDetailPage() {
             <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconForms size={16} />} value="forms">Formularios</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos y suscripciones</Tabs.Tab>
           </Tabs.List>
         )}
 

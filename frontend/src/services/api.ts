@@ -777,6 +777,17 @@ export const clientPortalApi = {
   subscription: () => api.get("/my/subscription"),
   payments: (limit?: number) => api.get("/my/payments", { params: { limit } }),
   cancelSubscription: () => api.post("/my/subscription/cancel"),
+  // Pausa/reanuda la suscripción del cliente. Sólo aplica con Stripe; para
+  // pasarelas que no soportan pausa nativa el backend devolverá el error.
+  pauseSubscription: (subscriptionId: string, data: { duration_days?: number; duration_months?: number }) =>
+    api.post(`/payments/subscriptions/me/${subscriptionId}/pause`, data),
+  resumeSubscription: (subscriptionId: string) =>
+    api.post(`/payments/subscriptions/me/${subscriptionId}/resume`),
+  // Descarga de facturas (cliente)
+  downloadInvoicePdf: (paymentId: string) =>
+    api.get(`/payments/payments/me/${paymentId}/invoice/pdf`, { responseType: "blob" }),
+  downloadInvoicesBulk: (params: { date_from?: string; date_to?: string }) =>
+    api.get(`/payments/payments/me/invoices/bulk`, { params, responseType: "blob" }),
 
   // Documents
   documents: (category?: string) =>

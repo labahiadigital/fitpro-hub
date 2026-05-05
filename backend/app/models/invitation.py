@@ -51,7 +51,17 @@ class ClientInvitation(BaseModel):
     
     # Payment created during onboarding (set by create-onboarding-payment)
     payment_id = Column(UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL"), nullable=True)
-    
+
+    # Tracking del último email enviado (alimenta la pestaña "Seguimiento").
+    # ``brevo_message_id`` permite cruzar este registro con la tabla
+    # ``email_events`` poblada por el webhook de Brevo (delivered/opened/click).
+    last_email_sent_at = Column(DateTime, nullable=True)
+    last_email_subject = Column(String(255), nullable=True)
+    brevo_message_id = Column(String(255), nullable=True)
+    # Consentimiento de marketing recogido en el onboarding. NULL =
+    # invitación creada antes del consentimiento (o todavía sin aceptar).
+    marketing_consent = Column(Boolean, nullable=True)
+
     # Relationships
     workspace = relationship("Workspace")
     inviter = relationship("User")

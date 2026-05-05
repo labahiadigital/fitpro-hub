@@ -845,12 +845,19 @@ async def get_exercise_alternatives_for_client(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get predefined alternatives for an exercise (for swap modal)."""
+    """Get predefined alternatives for an exercise (for swap modal).
+
+    Solo expone alternativas globales o del workspace del cliente.
+    """
+    ws_filter = or_(
+        ExerciseAlternative.workspace_id.is_(None),
+        ExerciseAlternative.workspace_id == current_user.workspace_id,
+    )
     # Forward direction
     result = await db.execute(
         select(ExerciseAlternative, Exercise)
         .join(Exercise, Exercise.id == ExerciseAlternative.alternative_exercise_id)
-        .where(ExerciseAlternative.exercise_id == exercise_id)
+        .where(ExerciseAlternative.exercise_id == exercise_id, ws_filter)
         .order_by(ExerciseAlternative.priority)
     )
     rows = result.all()
@@ -858,7 +865,7 @@ async def get_exercise_alternatives_for_client(
     result_rev = await db.execute(
         select(ExerciseAlternative, Exercise)
         .join(Exercise, Exercise.id == ExerciseAlternative.exercise_id)
-        .where(ExerciseAlternative.alternative_exercise_id == exercise_id)
+        .where(ExerciseAlternative.alternative_exercise_id == exercise_id, ws_filter)
         .order_by(ExerciseAlternative.priority)
     )
     rows_rev = result_rev.all()

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
     whatsapp, google_calendar, storage, tasks, team_groups, rectifications, beverages, stock,
     boxes, machines, services, appointments, time_clock, schedules, suppliers,
+    client_segments, email_campaigns, webhooks_brevo,
 )
 
 api_router = APIRouter()
@@ -154,3 +155,12 @@ api_router.include_router(time_clock.router, prefix="/time-clock", tags=["Contro
 
 # Schedules (Horarios de personal, máquinas y boxes)
 api_router.include_router(schedules.router, prefix="/schedules", tags=["Horarios"])
+
+# Segmentos de clientes (carrito abandonado, inactivos, pendiente form…)
+api_router.include_router(client_segments.router, tags=["Segmentos de Clientes"])
+
+# Plantillas y envío de campañas de email (descuentos remarketing)
+api_router.include_router(email_campaigns.router, tags=["Campañas de Email"])
+
+# Brevo webhook (tracking opened/clicked/bounced)
+api_router.include_router(webhooks_brevo.router, tags=["Webhooks Brevo"])

@@ -389,6 +389,7 @@ export function SettingsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wsSettings = (currentWorkspace?.settings || {}) as Record<string, any>;
   const wsContact = wsSettings.contact || {};
+  const wsSupport = wsSettings.support || {};
 
   const workspaceForm = useForm({
     initialValues: {
@@ -399,6 +400,10 @@ export function SettingsPage() {
       address: wsContact.address || "",
       website: wsContact.website || "",
       description: currentWorkspace?.description || "",
+      // Datos de soporte públicos (visibles para clientes y al pie de emails)
+      support_phone: wsSupport.phone || "",
+      support_email: wsSupport.email || "",
+      email_footer: wsSupport.email_footer || "",
     },
   });
 
@@ -416,6 +421,11 @@ export function SettingsPage() {
             phone: values.phone || null,
             address: values.address || null,
             website: values.website || null,
+          },
+          support: {
+            phone: values.support_phone || null,
+            email: values.support_email || null,
+            email_footer: values.email_footer || null,
           },
         },
       });
@@ -784,6 +794,42 @@ export function SettingsPage() {
                   <TextInput label="Dirección" placeholder="Calle, número, ciudad" {...workspaceForm.getInputProps("address")} />
                   <TextInput label="Sitio web" placeholder="https://tuwebsite.com" {...workspaceForm.getInputProps("website")} />
                   <Textarea label="Descripción" minRows={3} placeholder="Describe tu negocio..." {...workspaceForm.getInputProps("description")} />
+
+                  <Divider
+                    my="sm"
+                    label="Datos de contacto de soporte de tu Workspace"
+                    labelPosition="left"
+                  />
+                  <Alert color="blue" variant="light" radius="md">
+                    <Text size="sm">
+                      Estos datos son <b>públicos</b>: aparecerán en la pantalla
+                      que ven los clientes tras pagar, en los emails que les
+                      enviamos y en sus avisos cuando tengan algún problema.
+                    </Text>
+                  </Alert>
+                  <Group grow>
+                    <TextInput
+                      label="Móvil de soporte"
+                      placeholder="+34 600 000 000"
+                      leftSection={<IconBrandWhatsapp size={16} />}
+                      {...workspaceForm.getInputProps("support_phone")}
+                    />
+                    <TextInput
+                      label="Email de soporte"
+                      placeholder="soporte@tudominio.com"
+                      leftSection={<IconMail size={16} />}
+                      {...workspaceForm.getInputProps("support_email")}
+                    />
+                  </Group>
+                  <Textarea
+                    label="Pie de email"
+                    description="Texto que aparecerá al final de los emails que reciben tus clientes (por ejemplo, tu nombre y una frase motivacional)."
+                    placeholder={"Vamos a darle GAS 💪🏽\nBorja Sanfélix"}
+                    minRows={3}
+                    autosize
+                    {...workspaceForm.getInputProps("email_footer")}
+                  />
+
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" loading={workspaceUpdateMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
                       Guardar Cambios

@@ -99,7 +99,7 @@ interface FormTemplate {
   id: string;
   name: string;
   description?: string;
-  type: "custom" | "par_q" | "consent" | "health" | "feedback";
+  type: "custom" | "par_q" | "consent" | "health" | "feedback" | "system";
   fields: FormField[];
   is_active: boolean;
   is_required: boolean;
@@ -179,8 +179,21 @@ export function FormsPage() {
     created_at: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
   })) : [];
 
-  // Separar plantillas del sistema de los formularios propios del workspace
-  const systemForms = useMemo(() => forms.filter((f) => f.is_global), [forms]);
+  // Tres bloques en la pestaña Formularios:
+  // 1. Formularios del Sistema (is_global + form_type='system'): los
+  //    formularios obligatorios que se asignan a cada cliente al completar
+  //    el onboarding. No se editan ni se copian.
+  // 2. Plantillas de Formularios (is_global y NO de sistema): plantillas
+  //    globales que el entrenador puede copiar a su workspace.
+  // 3. Mis formularios (no globales): formularios propios del workspace.
+  const systemBuiltinForms = useMemo(
+    () => forms.filter((f) => f.is_global && f.type === "system"),
+    [forms],
+  );
+  const systemTemplateForms = useMemo(
+    () => forms.filter((f) => f.is_global && f.type !== "system"),
+    [forms],
+  );
   const workspaceForms = useMemo(() => forms.filter((f) => !f.is_global), [forms]);
   type SubmissionApiItem = {
     id: string;
@@ -597,6 +610,8 @@ export function FormsPage() {
         return "red";
       case "feedback":
         return "orange";
+      case "system":
+        return "violet";
       default:
         return "gray";
     }
@@ -612,6 +627,8 @@ export function FormsPage() {
         return "Salud";
       case "feedback":
         return "Feedback";
+      case "system":
+        return "Sistema";
       default:
         return "Personalizado";
     }
@@ -642,6 +659,9 @@ export function FormsPage() {
 
   const renderFormCard = (formTemplate: FormTemplate) => {
     const isSystem = formTemplate.is_global;
+    // Los "Formularios del Sistema" (form_type=system) son built-in de
+    // Trackfiz: no se editan ni se pueden copiar al workspace.
+    const isBuiltinSystem = isSystem && formTemplate.type === "system";
     return (
       <Card key={formTemplate.id} padding="lg" radius="lg" withBorder>
         <Group justify="space-between" mb="sm">
@@ -732,7 +752,20 @@ export function FormsPage() {
 
         <Divider mb="md" />
 
-        {isSystem ? (
+        {isBuiltinSystem ? (
+          <Group gap="xs">
+            <Button
+              flex={1}
+              leftSection={<IconEye size={14} />}
+              onClick={() => openPreviewDrawer(formTemplate)}
+              size="xs"
+              variant="light"
+              color="violet"
+            >
+              Ver formulario
+            </Button>
+          </Group>
+        ) : isSystem ? (
           <Group gap="xs">
             <Button
               flex={1}
@@ -869,26 +902,54 @@ export function FormsPage() {
             </SimpleGrid>
           ) : forms.length > 0 ? (
             <Stack gap="xl">
-              {systemForms.length > 0 && (
+              {/* 1) Formularios del Sistema: el cuestionario que cada
+                  cliente completa tras el pago, asignado automáticamente
+                  por la plataforma. Solo lectura. */}
+              {systemBuiltinForms.length > 0 && (
                 <Box>
                   <Group gap="xs" mb="sm">
                     <Text fw={700} size="md">
-                      Plantillas del sistema
+                      Formularios del Sistema
                     </Text>
-                    <Badge color="violet" variant="light" size="sm">
-                      {systemForms.length}
+                    <Badge color="violet" variant="filled" size="sm">
+                      {systemBuiltinForms.length}
                     </Badge>
                   </Group>
                   <Text c="dimmed" size="sm" mb="md">
-                    Formularios predefinidos compartidos por toda la plataforma. No se
-                    pueden editar, pero puedes copiarlos a tu workspace para personalizarlos.
+                    Formularios obligatorios de Trackfiz que se asignan
+                    automáticamente a cada cliente tras completar la
+                    compra. No se pueden editar ni copiar.
                   </Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
-                    {systemForms.map(renderFormCard)}
+                    {systemBuiltinForms.map(renderFormCard)}
                   </SimpleGrid>
                 </Box>
               )}
 
+              {/* 2) Plantillas de Formularios: plantillas globales que el
+                  entrenador puede copiar a su workspace para
+                  personalizarlas. */}
+              {systemTemplateForms.length > 0 && (
+                <Box>
+                  <Group gap="xs" mb="sm">
+                    <Text fw={700} size="md">
+                      Plantillas de Formularios
+                    </Text>
+                    <Badge color="violet" variant="light" size="sm">
+                      {systemTemplateForms.length}
+                    </Badge>
+                  </Group>
+                  <Text c="dimmed" size="sm" mb="md">
+                    Plantillas predefinidas listas para copiar a tu
+                    workspace y personalizarlas a tu medida.
+                  </Text>
+                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
+                    {systemTemplateForms.map(renderFormCard)}
+                  </SimpleGrid>
+                </Box>
+              )}
+
+              {/* 3) Mis formularios: los del workspace propio. */}
               <Box>
                 <Group gap="xs" mb="sm">
                   <Text fw={700} size="md">

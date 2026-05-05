@@ -926,47 +926,125 @@ def _sync_health_data_from_answers(
     fields = schema.get("fields") or []
     known_ids = {f.get("id") for f in fields if isinstance(f, dict)}
 
-    if "sys_nut_allergies" not in known_ids:
-        return False
-
-    raw_values = answers.get("sys_nut_allergies") or []
-    if not isinstance(raw_values, list):
-        return False
-
-    ids = [label_to_id(v) for v in raw_values if isinstance(v, str)]
-    allergies = [i for i in ids if i in ALLERGY_IDS]
-    intolerances = [i for i in ids if i in INTOLERANCE_IDS]
-
-    current = dict(client.health_data or {}) if isinstance(client.health_data, dict) else {}
-
-    # Fusionar: añadir las nuevas a las existentes para no perder otras
-    # alergias registradas manualmente por el entrenador.
-    existing_allergens = list(current.get("allergens") or [])
-    existing_allergies = list(current.get("allergies") or [])
-    existing_intolerances = list(current.get("intolerances") or [])
-
-    merged_allergens = list(
-        dict.fromkeys([*existing_allergens, *existing_allergies, *allergies])
-    )
-    merged_intolerances = list(
-        dict.fromkeys([*existing_intolerances, *intolerances])
-    )
-
     changed = False
-    if merged_allergens != existing_allergens:
-        current["allergens"] = merged_allergens
-        changed = True
-    if merged_intolerances != existing_intolerances:
-        current["intolerances"] = merged_intolerances
-        changed = True
-    # Eliminamos la clave duplicada legacy del onboarding si existe;
-    # dejamos la fuente de verdad en "allergens" e "intolerances".
-    if "allergies" in current:
-        current.pop("allergies", None)
-        changed = True
 
-    if changed:
-        client.health_data = current
+    # ── Cuestionario alimentación (sys_nut_allergies) ──────────────────
+    if "sys_nut_allergies" in known_ids:
+        raw_values = answers.get("sys_nut_allergies") or []
+        if isinstance(raw_values, list):
+            ids = [label_to_id(v) for v in raw_values if isinstance(v, str)]
+            allergies = [i for i in ids if i in ALLERGY_IDS]
+            intolerances = [i for i in ids if i in INTOLERANCE_IDS]
+
+            current = dict(client.health_data or {}) if isinstance(client.health_data, dict) else {}
+            existing_allergens = list(current.get("allergens") or [])
+            existing_allergies = list(current.get("allergies") or [])
+            existing_intolerances = list(current.get("intolerances") or [])
+
+            merged_allergens = list(
+                dict.fromkeys([*existing_allergens, *existing_allergies, *allergies])
+            )
+            merged_intolerances = list(
+                dict.fromkeys([*existing_intolerances, *intolerances])
+            )
+
+            if merged_allergens != existing_allergens:
+                current["allergens"] = merged_allergens
+                changed = True
+            if merged_intolerances != existing_intolerances:
+                current["intolerances"] = merged_intolerances
+                changed = True
+            if "allergies" in current:
+                current.pop("allergies", None)
+                changed = True
+
+            if changed:
+                client.health_data = current
+
+    # ── Cuestionario inicial del Sistema (sys_init_*) ─────────────────
+    # Los IDs `sys_init_*` se introdujeron en la migración 051. Volcamos
+    # objetivos, salud y PAR-Q al `health_data` del cliente para que el
+    # entrenador los vea en la ficha sin tener que abrir la respuesta.
+    if any(k.startswith("sys_init_") for k in known_ids):
+        current = dict(client.health_data or {}) if isinstance(client.health_data, dict) else {}
+
+        # ── Objetivos / actividad ──
+        mapping_simple = {
+            "sys_init_primary_goal": "primary_goal",
+            "sys_init_secondary_goals": "secondary_goals",
+            "sys_init_target_weight": "target_weight",
+            "sys_init_activity_level": "activity_level",
+            "sys_init_training_days": "training_days_per_week",
+            "sys_init_goals_description": "goals_description",
+            # Lesiones / médico (texto libre)
+            "sys_init_injuries_detail": "injuries_detail",
+            "sys_init_medical_conditions_detail": "medical_conditions_detail",
+            "sys_init_medications": "medications",
+        }
+        for ans_key, hd_key in mapping_simple.items():
+            if ans_key in known_ids and ans_key in answers:
+                value = answers.get(ans_key)
+                if value not in (None, ""):
+                    if current.get(hd_key) != value:
+                        current[hd_key] = value
+                        changed = True
+
+        # Booleans tipo "Sí"/"No"
+        bool_mapping = {
+            "sys_init_has_injuries": "has_injuries",
+            "sys_init_has_medical_conditions": "has_medical_conditions",
+        }
+        for ans_key, hd_key in bool_mapping.items():
+            if ans_key in known_ids and ans_key in answers:
+                raw = answers.get(ans_key)
+                bool_val = (str(raw).strip().lower() == "sí") if raw is not None else None
+                if bool_val is not None and current.get(hd_key) != bool_val:
+                    current[hd_key] = bool_val
+                    changed = True
+
+        # ── PAR-Q ──
+        parq_keys = [
+            ("sys_init_parq_heart", "sys_init_parq_heart_detail", "heart"),
+            ("sys_init_parq_chest_pain", "sys_init_parq_chest_pain_detail", "chest_pain"),
+            ("sys_init_parq_dizziness", "sys_init_parq_dizziness_detail", "dizziness"),
+            ("sys_init_parq_bone_joint", "sys_init_parq_bone_joint_detail", "bone_joint"),
+            ("sys_init_parq_blood_pressure", "sys_init_parq_blood_pressure_detail", "blood_pressure"),
+            ("sys_init_parq_other", "sys_init_parq_other_detail", "other"),
+        ]
+        parq_block = dict(current.get("parq") or {}) if isinstance(current.get("parq"), dict) else {}
+        for radio_key, detail_key, bucket in parq_keys:
+            if radio_key in answers:
+                raw = answers.get(radio_key)
+                bool_val = (str(raw).strip().lower() == "sí") if raw is not None else None
+                if bool_val is not None and parq_block.get(bucket) != bool_val:
+                    parq_block[bucket] = bool_val
+                    changed = True
+            if detail_key in answers:
+                detail = answers.get(detail_key)
+                if detail not in (None, "") and parq_block.get(f"{bucket}_detail") != detail:
+                    parq_block[f"{bucket}_detail"] = detail
+                    changed = True
+        if parq_block:
+            current["parq"] = parq_block
+
+        # ── Alergias / intolerancias del cuestionario inicial ──
+        for ans_key, hd_key in (
+            ("sys_init_allergies", "allergens"),
+            ("sys_init_intolerances", "intolerances"),
+        ):
+            if ans_key in known_ids and ans_key in answers:
+                raw = answers.get(ans_key) or []
+                if isinstance(raw, list):
+                    cleaned = [v for v in raw if isinstance(v, str) and v.strip().lower() != "ninguna"]
+                    existing = list(current.get(hd_key) or [])
+                    merged = list(dict.fromkeys([*existing, *cleaned]))
+                    if merged != existing:
+                        current[hd_key] = merged
+                        changed = True
+
+        if changed:
+            client.health_data = current
+
     return changed
 
 
@@ -1080,6 +1158,8 @@ async def respond_my_form(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formulario no encontrado")
     sub, form = row
 
+    is_already_submitted = sub.status == "submitted"
+
     answers = payload.answers or {}
     sub.answers = answers
     if payload.signature_data is not None:
@@ -1089,10 +1169,50 @@ async def respond_my_form(
     flag_modified(sub, "answers")
 
     # Sincronizar health_data con las respuestas conocidas del sistema
-    # (p. ej. alergias declaradas en el Cuestionario alimentación).
+    # (p. ej. alergias declaradas en el Cuestionario alimentación o el
+    # Cuestionario Inicial Trackfiz).
     if _sync_health_data_from_answers(form, client, answers):
         flag_modified(client, "health_data")
 
     await db.commit()
     await db.refresh(sub)
+
+    # ── Email 2: tras completar el Formulario del Sistema ─────────────
+    # Sólo en la primera vez que se envía (no en edits posteriores) y
+    # sólo si es el cuestionario inicial (form_type='system' is_global).
+    is_system_form = bool(getattr(form, "is_global", False)) and form.form_type == "system"
+    if is_system_form and not is_already_submitted:
+        try:
+            from app.tasks.notifications import send_email_task
+
+            workspace = await db.get(Workspace, client.workspace_id)
+            ws_settings = (workspace.settings if workspace and workspace.settings else {}) or {}
+            ws_support = ws_settings.get("support", {}) if isinstance(ws_settings, dict) else {}
+            support_phone = ws_support.get("phone") if isinstance(ws_support, dict) else None
+            support_email = ws_support.get("email") if isinstance(ws_support, dict) else None
+            email_footer = ws_support.get("email_footer") if isinstance(ws_support, dict) else None
+            ws_name = workspace.name if workspace else None
+
+            full_name = (
+                f"{client.first_name or ''} {client.last_name or ''}".strip()
+                or client.email
+                or "atleta"
+            )
+            portal_url = (app_settings.FRONTEND_URL or "https://app.trackfiz.com").rstrip("/") + "/my-dashboard"
+
+            send_email_task.delay(
+                to_email=client.email,
+                subject="🚀 Necesito saber un poco más de ti. Tus próximos pasos",
+                html_content=EmailTemplates.client_welcome_after_onboarding(
+                    full_name,
+                    portal_url,
+                    workspace_name=ws_name,
+                    support_phone=support_phone,
+                    support_email=support_email,
+                    email_footer=email_footer,
+                ),
+            )
+        except Exception:  # pragma: no cover - best-effort
+            pass
+
     return sub

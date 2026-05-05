@@ -25,6 +25,7 @@ from app.models.client import Client
 from app.models.user import User, UserRole, RoleType
 from app.models.payment import Payment, PaymentStatus, Subscription, SubscriptionStatus
 from app.models.product import Product
+from app.models.form import Form, FormSubmission
 from app.middleware.auth import require_staff, require_workspace, CurrentUser
 from app.core.security import (
     get_password_hash,
@@ -103,6 +104,11 @@ class ValidateTokenResponse(BaseModel):
     message: Optional[str] = None
     product: Optional[ProductInfo] = None
     payment_completed: bool = False
+    # Datos públicos de soporte del workspace (movil + email) que se
+    # muestran al cliente en la pantalla post-pago si no recibe el email
+    # de bienvenida. Vienen de Settings → Workspace → Soporte.
+    support_phone: Optional[str] = None
+    support_email: Optional[str] = None
 
 
 # ============ Email Templates ============
@@ -577,6 +583,12 @@ async def validate_invitation_token(
         if payment and payment.status == PaymentStatus.succeeded:
             payment_completed = True
     
+    # Extraer datos públicos de soporte del workspace
+    ws_settings = (workspace.settings if workspace and workspace.settings else {}) or {}
+    ws_support = ws_settings.get("support", {}) if isinstance(ws_settings, dict) else {}
+    support_phone = ws_support.get("phone") if isinstance(ws_support, dict) else None
+    support_email = ws_support.get("email") if isinstance(ws_support, dict) else None
+
     return ValidateTokenResponse(
         valid=True,
         email=invitation.email,
@@ -587,6 +599,8 @@ async def validate_invitation_token(
         message=invitation.message,
         product=product_info,
         payment_completed=payment_completed,
+        support_phone=support_phone,
+        support_email=support_email,
     )
 
 
@@ -991,35 +1005,79 @@ async def complete_invitation(
         invitation.status = STATUS_ACCEPTED
         invitation.accepted_at = datetime.utcnow()
         invitation.client_id = client.id
-        
+
+        # ── Formulario del Sistema ────────────────────────────────────────
+        # Buscamos el "Cuestionario Inicial Trackfiz" (form_type=system,
+        # is_global=True) y creamos un FormSubmission pendiente para que el
+        # cliente pueda rellenarlo desde el enlace del email de bienvenida.
+        # Si no existe (entornos viejos sin la migración 051), seguimos
+        # adelante sin romper el onboarding: el cliente recibirá el email
+        # genérico al portal.
+        system_form_submission_id: Optional[UUID] = None
+        try:
+            system_form_result = await db.execute(
+                select(Form).where(
+                    Form.is_global.is_(True),
+                    Form.form_type == "system",
+                    Form.is_active.is_(True),
+                ).limit(1)
+            )
+            system_form = system_form_result.scalar_one_or_none()
+            if system_form:
+                submission = FormSubmission(
+                    form_id=system_form.id,
+                    client_id=client.id,
+                    status="pending",
+                    answers={},
+                )
+                db.add(submission)
+                await db.flush()
+                system_form_submission_id = submission.id
+        except Exception as e:
+            logger.error(f"Failed to create system form submission: {e}")
+
         await db.commit()
-        
+
         ws_name_for_email = workspace.name if workspace else None
+        # Datos públicos de soporte del workspace (Settings → Workspace).
+        ws_settings = (workspace.settings if workspace and workspace.settings else {}) or {}
+        ws_support = ws_settings.get("support", {}) if isinstance(ws_settings, dict) else {}
+        support_phone = ws_support.get("phone") if isinstance(ws_support, dict) else None
+        support_email = ws_support.get("email") if isinstance(ws_support, dict) else None
+        email_footer = ws_support.get("email_footer") if isinstance(ws_support, dict) else None
+
+        # URL al cuestionario del sistema. Si por algún motivo no se pudo
+        # crear el FormSubmission (no existe el form global) caemos al
+        # dashboard del cliente para no enviar un enlace roto.
+        if system_form_submission_id:
+            system_form_url = (
+                f"{settings.FRONTEND_URL}/onboarding/system-form/{system_form_submission_id}"
+            )
+        else:
+            system_form_url = f"{settings.FRONTEND_URL}/my-dashboard"
 
         # Los emails se encolan en Celery EN VEZ de enviarse de forma
         # síncrona. Cada send_email puede tardar varios segundos contra
-        # Brevo y, sumados al upload de la foto + creación de cuenta + 
+        # Brevo y, sumados al upload de la foto + creación de cuenta +
         # cliente + suscripción, hacían que la request superase los 30s
-        # de timeout del axios del frontend. El usuario veía "Error al
-        # completar registro" aunque internamente la cuenta SÍ se había
-        # creado; al reintentar, la idempotencia (status==accepted)
-        # devolvía OK rápido y "funcionaba" la segunda vez.
-        # Con la cola, el endpoint responde en <2s y los emails se
-        # entregan de forma asíncrona con reintentos automáticos.
+        # de timeout del axios del frontend.
 
-        # Email de bienvenida (no de verificación: ya hemos auto-verificado
-        # arriba porque el token de invitación demuestra control del buzón).
+        # Email 1 de bienvenida tras el pago: pide rellenar el Formulario
+        # del Sistema con un enlace único al FormSubmission pendiente.
         try:
             send_email_task.delay(
                 to_email=data.email,
                 subject="🚀 ¡Bienvenido/a a mi asesoría! Tus próximos pasos",
-                html_content=EmailTemplates.client_welcome_after_onboarding(
+                html_content=EmailTemplates.client_welcome_after_payment(
                     full_name,
-                    f"{settings.FRONTEND_URL}/my-dashboard",
+                    system_form_url,
                     workspace_name=ws_name_for_email,
+                    support_phone=support_phone,
+                    support_email=support_email,
+                    email_footer=email_footer,
                 ),
             )
-            logger.info(f"Welcome email queued for {data.email}")
+            logger.info(f"Welcome (post-payment) email queued for {data.email}")
         except Exception as e:
             logger.error(f"Failed to queue welcome email: {e}")
 
