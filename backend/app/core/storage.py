@@ -96,27 +96,55 @@ def generate_filename(original_filename: Optional[str] = None) -> str:
     return f"{_uuid.uuid4()}.{ext}"
 
 
+_PLATFORM_TOP_LEVELS: tuple[str, ...] = (
+    "exercises/",
+    "foods/",
+    "supplements/",
+    # Plantillas y otros recursos globales por carpeta de primer nivel.
+    # Si en el futuro añadimos otra carpeta nueva, solo hay que sumarla aqui
+    # para que los walkers de R2 reconozcan tanto las URLs canonicas como
+    # las firmadas (que vienen del endpoint S3 de R2).
+)
+
+
 def platform_key_from_url(url: str) -> Optional[str]:
-    """Extract the R2 key from a full platform URL (custom domain or presigned).
-    Returns None if the URL doesn't match the platform pattern.
+    """Extract the R2 key from a full platform URL.
+
+    Acepta tres formatos:
+      1. Canonical (custom domain): ``{R2_PLATFORM_PUBLIC_URL}/exercises/foo.png``
+      2. Presigned (R2 endpoint): ``https://{acc}.r2.cloudflarestorage.com/{bucket}/exercises/foo.png?X-Amz-...``
+      3. Cualquier URL que contenga ``/exercises/``, ``/foods/``,
+         ``/supplements/`` (las carpetas top-level del bucket platform).
+
+    Devolvemos solo la key relativa al bucket, sin querystring.
     """
     prefix = f"{settings.R2_PLATFORM_PUBLIC_URL}/"
     if url.startswith(prefix):
         return url[len(prefix):].split("?")[0]
-    if "/exercises/" in url:
-        idx = url.index("/exercises/")
-        return url[idx + 1:].split("?")[0]
+
+    base = url.split("?", 1)[0]
+    for top in _PLATFORM_TOP_LEVELS:
+        marker = f"/{top}"
+        idx = base.rfind(marker)
+        if idx >= 0:
+            return base[idx + 1:]
     return None
 
 
 def workspace_key_from_url(url: str) -> Optional[str]:
-    """Extract the R2 key from a full workspace URL."""
+    """Extract the R2 key from a full workspace URL.
+
+    Acepta el dominio personalizado ``{R2_WORKSPACES_PUBLIC_URL}/w/...`` y
+    cualquier URL (incluida la firmada del endpoint S3) que contenga
+    ``/w/{workspace_id}/...``.
+    """
     prefix = f"{settings.R2_WORKSPACES_PUBLIC_URL}/"
     if url.startswith(prefix):
         return url[len(prefix):].split("?")[0]
-    if "/w/" in url:
-        idx = url.index("/w/")
-        return url[idx + 1:].split("?")[0]
+    base = url.split("?", 1)[0]
+    idx = base.rfind("/w/")
+    if idx >= 0:
+        return base[idx + 1:]
     return None
 
 
@@ -286,3 +314,132 @@ async def resolve_url(url: Optional[str]) -> Optional[str]:
 async def resolve_urls(urls: list[Optional[str]]) -> list[Optional[str]]:
     """Batch-resolve multiple R2 reference URLs."""
     return list(await asyncio.gather(*(resolve_url(u) for u in urls)))
+
+
+# ---------------------------------------------------------------------------
+# Walker para JSONB (programa de entrenamiento, plan nutricional, etc.)
+# ---------------------------------------------------------------------------
+
+# Campos que tipicamente guardan URLs de R2 dentro de los snapshots JSONB
+# (template del programa, plan nutricional, ejercicios anidados...).
+# Si encuentras algun campo nuevo, simplemente anadelo a esta tupla.
+_IMAGE_URL_FIELDS: tuple[str, ...] = (
+    "image_url",
+    "thumbnail_url",
+    "imageUrl",
+    "thumbnailUrl",
+    "photo_url",
+    "avatar_url",
+)
+
+
+def _is_r2_url(url: str) -> bool:
+    if not url:
+        return False
+    if url.startswith(settings.R2_PLATFORM_PUBLIC_URL):
+        return True
+    if url.startswith(settings.R2_WORKSPACES_PUBLIC_URL):
+        return True
+    base = url.split("?", 1)[0]
+    if "/w/" in base:
+        return True
+    for top in _PLATFORM_TOP_LEVELS:
+        if f"/{top}" in base:
+            return True
+    return False
+
+
+def _normalize_to_canonical(url: Optional[str]) -> Optional[str]:
+    """Devuelve la URL canonica (sin querystring) si reconocemos la key.
+
+    La idea es que en BBDD guardemos la canonica (que no caduca) y solo
+    presigneemos en el momento de servir al cliente. Si la URL no es de R2
+    o no la reconocemos, la devolvemos tal cual para no romper nada.
+    """
+    if not url:
+        return url
+    if not _is_r2_url(url):
+        return url
+    key = platform_key_from_url(url)
+    if key is not None:
+        return platform_url(key)
+    key = workspace_key_from_url(url)
+    if key is not None:
+        return workspace_url(key)
+    return url
+
+
+def _walk_collect_image_urls(node, acc: list[str]) -> None:
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k in _IMAGE_URL_FIELDS and isinstance(v, str) and v:
+                if _is_r2_url(v):
+                    acc.append(v)
+            else:
+                _walk_collect_image_urls(v, acc)
+    elif isinstance(node, list):
+        for v in node:
+            _walk_collect_image_urls(v, acc)
+
+
+def _walk_replace_image_urls(node, mapping: dict[str, str]) -> None:
+    if isinstance(node, dict):
+        for k, v in list(node.items()):
+            if k in _IMAGE_URL_FIELDS and isinstance(v, str) and v in mapping:
+                node[k] = mapping[v]
+            else:
+                _walk_replace_image_urls(v, mapping)
+    elif isinstance(node, list):
+        for v in node:
+            _walk_replace_image_urls(v, mapping)
+
+
+async def resolve_image_urls_in_obj(obj):
+    """Recorre un dict/list (e.g. ``template`` JSONB) y refirma cada URL R2.
+
+    Idempotente y seguro: se aplica solo a campos cuyo nombre figura en
+    ``_IMAGE_URL_FIELDS`` y solo cuando la URL parece de R2. Devuelve el
+    mismo objeto mutado *in place* (mas la lista resuelta) para que el
+    caller pueda asignarlo directamente al response. Hacemos batching:
+    presignamos en un solo gather, sin romper el event loop con N hops.
+    """
+    if obj is None:
+        return obj
+    urls: list[str] = []
+    _walk_collect_image_urls(obj, urls)
+    if not urls:
+        return obj
+    # Deduplicamos para no firmar varias veces la misma URL en el mismo
+    # response. Mantiene el orden estable.
+    unique = list(dict.fromkeys(urls))
+    resolved = await asyncio.gather(*(resolve_url(u) for u in unique))
+    mapping = {orig: new for orig, new in zip(unique, resolved) if new}
+    _walk_replace_image_urls(obj, mapping)
+    return obj
+
+
+def normalize_image_urls_in_obj(obj):
+    """Convierte cada ``image_url`` R2 dentro del objeto a su forma canonica.
+
+    Util al GUARDAR el JSONB del template: nos quedamos con la URL sin
+    querystring, asi cuando lo leemos podemos refirmar de cero sin
+    arrastrar firmas caducadas. Mutamos in place y devolvemos el objeto.
+    """
+    if obj is None:
+        return obj
+
+    def _walk(node):
+        if isinstance(node, dict):
+            for k, v in list(node.items()):
+                if k in _IMAGE_URL_FIELDS and isinstance(v, str) and v:
+                    canonical = _normalize_to_canonical(v)
+                    if canonical != v:
+                        node[k] = canonical
+                else:
+                    _walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                _walk(v)
+
+    _walk(obj)
+    return obj

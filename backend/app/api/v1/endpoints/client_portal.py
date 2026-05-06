@@ -23,6 +23,7 @@ from app.core import ttl_cache
 from app.core.storage import (
     delete_workspace_file,
     generate_filename,
+    resolve_image_urls_in_obj,
     resolve_url,
     resolve_urls,
     upload_workspace_file,
@@ -407,19 +408,24 @@ async def _fetch_exercise_media(
 
 async def _hydrate_workout_program(db: AsyncSession, program: WorkoutProgram) -> WorkoutProgram:
     """Refresh the image_url / video_url of every exercise embedded in a
-    program's ``template`` and ``executed_template``."""
+    program's ``template`` and ``executed_template``.
+
+    Tras pisar los snapshots con la URL canonica viva del Exercise, pasamos
+    el JSONB por ``resolve_image_urls_in_obj`` para que las URLs lleguen al
+    cliente firmadas y con TTL fresco. Asi el navegador del cliente nunca
+    intenta cargar una URL R2 caducada (ExpiredRequest XML)."""
     ids = _collect_exercise_ids(program.template, program.executed_template)
-    if not ids:
-        return program
-    media = await _fetch_exercise_media(db, ids)
-    if not media:
-        return program
+    media = await _fetch_exercise_media(db, ids) if ids else {}
     if program.template:
         program.template = copy.deepcopy(program.template)
-        _apply_exercise_media(program.template, media)
+        if media:
+            _apply_exercise_media(program.template, media)
+        await resolve_image_urls_in_obj(program.template)
     if program.executed_template:
         program.executed_template = copy.deepcopy(program.executed_template)
-        _apply_exercise_media(program.executed_template, media)
+        if media:
+            _apply_exercise_media(program.executed_template, media)
+        await resolve_image_urls_in_obj(program.executed_template)
     return program
 
 
@@ -503,19 +509,23 @@ async def _fetch_food_media(db: AsyncSession, food_ids: set[str]) -> dict[str, s
 
 
 async def _hydrate_meal_plan(db: AsyncSession, plan: MealPlan) -> MealPlan:
-    """Refresh image_url for every food embedded in a meal plan."""
+    """Refresh image_url for every food embedded in a meal plan.
+
+    Como en ``_hydrate_workout_program``, despues de pisar la imagen con la
+    canonica de Food refirmamos todo el JSONB para que el cliente reciba
+    URLs presigned vigentes."""
     ids = _collect_food_ids(plan.plan, plan.executed_plan)
-    if not ids:
-        return plan
-    media = await _fetch_food_media(db, ids)
-    if not media:
-        return plan
+    media = await _fetch_food_media(db, ids) if ids else {}
     if plan.plan:
         plan.plan = copy.deepcopy(plan.plan)
-        _apply_food_media(plan.plan, media)
+        if media:
+            _apply_food_media(plan.plan, media)
+        await resolve_image_urls_in_obj(plan.plan)
     if plan.executed_plan:
         plan.executed_plan = copy.deepcopy(plan.executed_plan)
-        _apply_food_media(plan.executed_plan, media)
+        if media:
+            _apply_food_media(plan.executed_plan, media)
+        await resolve_image_urls_in_obj(plan.executed_plan)
     return plan
 
 
@@ -2248,6 +2258,11 @@ async def search_foods_for_client(
     result = await db.execute(query)
     foods = result.scalars().all()
 
+    # Refirmamos las imagenes en bloque para que el cliente las vea sin
+    # ExpiredRequest (canonical -> presigned). Si la URL no es de R2 o ya
+    # esta firmada y vigente, ``resolve_url`` la devuelve tal cual.
+    image_urls = await resolve_urls([f.image_url for f in foods])
+
     return {
         "items": [
             {
@@ -2262,9 +2277,9 @@ async def search_foods_for_client(
                 "carbs": float(f.carbs_g) if f.carbs_g else 0,
                 "fat": float(f.fat_g) if f.fat_g else 0,
                 "fiber": float(f.fiber_g) if f.fiber_g else 0,
-                "image_url": f.image_url,
+                "image_url": image_urls[idx],
             }
-            for f in foods
+            for idx, f in enumerate(foods)
         ],
         "total": total,
         "page": page,

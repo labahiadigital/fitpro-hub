@@ -9,6 +9,7 @@ import {
   Checkbox,
   Divider,
   Group,
+  Image,
   Loader,
   NumberInput,
   Pagination,
@@ -1453,14 +1454,33 @@ export function MealPlanBuilder({
                                     onClick={(e) => e.stopPropagation()}
                                   />
                                 )}
-                                {item.type === "supplement" && (
+                                {item.type === "supplement" ? (
                                   <ThemeIcon
-                                    size="sm"
+                                    size={36}
                                     color="grape"
                                     variant="light"
                                     radius="md"
                                   >
-                                    <IconPill size={12} />
+                                    <IconPill size={18} />
+                                  </ThemeIcon>
+                                ) : (item.type === "food" && item.food?.image_url) ? (
+                                  <Image
+                                    src={item.food.image_url}
+                                    alt={item.food.name}
+                                    w={36}
+                                    h={36}
+                                    fit="cover"
+                                    radius="md"
+                                    style={{ flexShrink: 0 }}
+                                  />
+                                ) : (
+                                  <ThemeIcon
+                                    size={36}
+                                    color="green"
+                                    variant="light"
+                                    radius="md"
+                                  >
+                                    <IconApple size={18} />
                                   </ThemeIcon>
                                 )}
                                 <Box>
@@ -1845,16 +1865,33 @@ export function MealPlanBuilder({
                       >
                         <Group justify="space-between">
                           <Box onClick={() => addFoodToMeal(food)} style={{ flex: 1, cursor: "pointer" }}>
-                            <Group gap="xs">
-                              {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}
-                              <Text fw={500} size="sm">
-                                {food.name}
-                              </Text>
-                            </Group>
-                            <Group gap="xs">
-                              <Badge size="xs" variant="light">
-                                {food.category}
-                              </Badge>
+                            <Group gap="xs" wrap="nowrap">
+                              {food.image_url ? (
+                                <Image
+                                  src={food.image_url}
+                                  alt={food.name}
+                                  w={36}
+                                  h={36}
+                                  fit="cover"
+                                  radius="md"
+                                  style={{ flexShrink: 0 }}
+                                />
+                              ) : (
+                                <ThemeIcon size={36} color="green" variant="light" radius="md">
+                                  <IconApple size={18} />
+                                </ThemeIcon>
+                              )}
+                              <Box>
+                                <Group gap={4} wrap="nowrap">
+                                  {isFav && <IconStarFilled size={14} color="var(--mantine-color-yellow-6)" />}
+                                  <Text fw={500} size="sm">
+                                    {food.name}
+                                  </Text>
+                                </Group>
+                                <Badge size="xs" variant="light" mt={2}>
+                                  {food.category}
+                                </Badge>
+                              </Box>
                             </Group>
                           </Box>
                           <Group gap="xs">

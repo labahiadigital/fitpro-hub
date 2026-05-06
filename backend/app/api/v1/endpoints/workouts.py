@@ -10,7 +10,11 @@ from sqlalchemy import select, or_, func, String, update
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.storage import resolve_url
+from app.core.storage import (
+    normalize_image_urls_in_obj,
+    resolve_image_urls_in_obj,
+    resolve_url,
+)
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative
 from app.models.client import Client
@@ -93,6 +97,7 @@ class WorkoutProgramResponse(BaseModel):
     duration_weeks: Optional[int] = 4
     difficulty: Optional[str] = "intermediate"
     template: Optional[dict] = None
+    executed_template: Optional[dict] = None
     tags: Optional[List[str]] = []
     is_template: bool = True
     is_active: Optional[bool] = None
@@ -103,6 +108,27 @@ class WorkoutProgramResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+async def _hydrate_program_image_urls(program: WorkoutProgram) -> WorkoutProgramResponse:
+    """Devuelve un Response con todas las URLs R2 del template refirmadas.
+
+    Las plantillas se persisten con un snapshot del ``Exercise`` (incluida la
+    ``image_url`` que en su momento era una URL firmada). Cuando el cliente
+    abre el editor el TTL ya ha caducado y R2 devuelve XML
+    ``ExpiredRequest``. Aqui caminamos el JSONB y refirmamos sobre la
+    marcha, usando el cache de presigns para que el coste sea casi cero.
+    """
+    resp = WorkoutProgramResponse.model_validate(program)
+    if resp.template:
+        # Trabajamos con copia para no mutar el objeto ORM (que volveria a
+        # escribirse en BBDD si SQLAlchemy detecta el cambio).
+        resp.template = copy.deepcopy(resp.template)
+        await resolve_image_urls_in_obj(resp.template)
+    if resp.executed_template:
+        resp.executed_template = copy.deepcopy(resp.executed_template)
+        await resolve_image_urls_in_obj(resp.executed_template)
+    return resp
 
 
 class WorkoutLogCreate(BaseModel):
@@ -489,7 +515,8 @@ async def list_programs(
         query = query.where(WorkoutProgram.client_id == client_id)
 
     result = await db.execute(query.order_by(WorkoutProgram.created_at.desc()))
-    return result.scalars().all()
+    programs = result.scalars().all()
+    return await asyncio.gather(*(_hydrate_program_image_urls(p) for p in programs))
 
 
 @router.post("/programs", response_model=WorkoutProgramResponse, status_code=status.HTTP_201_CREATED)
@@ -534,6 +561,10 @@ async def create_program(
     if review_interval and review_interval > 0 and parsed_start:
         next_review = parsed_start + timedelta(days=review_interval)
 
+    # Normalizamos las URLs R2 del template a su forma canonica antes de
+    # persistir. Asi las firmas que el frontend acaba de obtener no se
+    # quedan congeladas en BBDD y, al releer, podemos refirmar siempre.
+    template_canonical = normalize_image_urls_in_obj(copy.deepcopy(data.template))
     program = WorkoutProgram(
         workspace_id=current_user.workspace_id,
         created_by=current_user.id,
@@ -542,8 +573,8 @@ async def create_program(
         description=data.description,
         duration_weeks=data.duration_weeks,
         difficulty=data.difficulty,
-        template=data.template,
-        executed_template=copy.deepcopy(data.template) if should_activate else None,
+        template=template_canonical,
+        executed_template=copy.deepcopy(template_canonical) if should_activate else None,
         tags=data.tags,
         is_template=data.is_template,
         is_active=should_activate,
@@ -588,7 +619,7 @@ async def create_program(
             client_notification_link="/my-workouts",
         )
 
-    return program
+    return await _hydrate_program_image_urls(program)
 
 
 @router.get("/programs/{program_id}", response_model=WorkoutProgramResponse)
@@ -607,14 +638,14 @@ async def get_program(
         )
     )
     program = result.scalar_one_or_none()
-    
+
     if not program:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Programa no encontrado"
         )
-    
-    return program
+
+    return await _hydrate_program_image_urls(program)
 
 
 @router.put("/programs/{program_id}", response_model=WorkoutProgramResponse)
@@ -651,11 +682,15 @@ async def update_program(
                 setattr(program, field, date.fromisoformat(value) if value else None)
             except (ValueError, TypeError):
                 pass
+        elif field == "template":
+            # Normalizamos URLs R2 a canonica antes de persistir (ver
+            # ``create_program``).
+            setattr(program, field, normalize_image_urls_in_obj(copy.deepcopy(value)))
         else:
             setattr(program, field, value)
 
     if data.template is not None and program.client_id and not program.is_template:
-        program.executed_template = copy.deepcopy(data.template)
+        program.executed_template = copy.deepcopy(program.template)
 
     if data.review_interval_days is not None and program.start_date:
         if data.review_interval_days > 0:
@@ -700,7 +735,7 @@ async def update_program(
                 client_notification_link="/my-workouts",
             )
 
-    return program
+    return await _hydrate_program_image_urls(program)
 
 
 @router.delete("/programs/{program_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -761,7 +796,7 @@ async def activate_program(
     program.is_active = True
     await db.commit()
     await db.refresh(program)
-    return program
+    return await _hydrate_program_image_urls(program)
 
 
 @router.post("/programs/{program_id}/deactivate", response_model=WorkoutProgramResponse)
@@ -784,7 +819,7 @@ async def deactivate_program(
     program.is_active = False
     await db.commit()
     await db.refresh(program)
-    return program
+    return await _hydrate_program_image_urls(program)
 
 
 # Schema for assign request
@@ -940,7 +975,7 @@ async def assign_program_to_client(
         import logging
         logging.getLogger(__name__).exception("Failed to notify client for program assignment")
 
-    return assigned_program
+    return await _hydrate_program_image_urls(assigned_program)
 
 
 # ============ LOGS ============
