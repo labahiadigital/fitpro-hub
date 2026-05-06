@@ -559,7 +559,13 @@ export function InvitationOnboardingPage() {
   useEffect(() => {
     if (autoCompletedRef.current) return;
     if (!invitationData?.data_complete) return;
-    if (!paymentCompleted) return;
+    // Disparamos el auto-complete cuando no queda nada que pagar: o bien
+    // el pago YA está confirmado, o bien la invitación nunca exigió pago
+    // (producto gratuito, o invitación manual sin producto). Antes solo
+    // se permitía la primera rama, lo que dejaba a los productos gratis
+    // colgados eternamente en el loader "Estamos finalizando tu
+    // registro…" porque ``payment_completed`` se quedaba en ``false``.
+    if (!paymentCompleted && paymentRequired) return;
     if (completed || loading) return;
     if (!token) return;
 
@@ -600,7 +606,7 @@ export function InvitationOnboardingPage() {
         setLoading(false);
       }
     })();
-  }, [invitationData, paymentCompleted, completed, loading, token, setUser, setTokens]);
+  }, [invitationData, paymentCompleted, paymentRequired, completed, loading, token, setUser, setTokens]);
 
   if (loadingInvitation) {
     return (

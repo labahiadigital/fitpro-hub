@@ -1224,8 +1224,13 @@ async def resend_invitation(
     user = result.scalar_one_or_none()
     trainer_name = user.full_name if user else "Tu entrenador"
     
-    # Extend expiration
-    invitation.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    # Extend expiration. La columna ``client_invitations.expires_at`` está
+    # mapeada como ``DateTime`` *naive* (sin tz) en el modelo (mientras que
+    # en Postgres es ``timestamptz``); pasarle un ``datetime`` con tzinfo
+    # provoca ``asyncpg.DataError: can't subtract offset-naive and
+    # offset-aware datetimes`` y devuelve 500. Mantenemos coherencia con
+    # ``create_invitation`` y el modelo usando ``utcnow`` (naive).
+    invitation.expires_at = datetime.utcnow() + timedelta(days=7)
     await db.commit()
     
     # Build invitation link

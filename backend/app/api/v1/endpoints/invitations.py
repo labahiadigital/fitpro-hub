@@ -580,15 +580,30 @@ async def validate_invitation_token(
                 product_type=product.product_type,
             )
     
-    # Check if payment already completed
-    payment_completed = False
-    if invitation.payment_id:
-        payment_result = await db.execute(
-            select(Payment).where(Payment.id == invitation.payment_id)
-        )
-        payment = payment_result.scalar_one_or_none()
-        if payment and payment.status == PaymentStatus.succeeded:
-            payment_completed = True
+    # Check if payment already completed.
+    #
+    # Importante: el frontend (``InvitationOnboardingPage``) usa este flag
+    # para decidir si dispara el auto-complete del onboarding tras un flujo
+    # público con datos pre-rellenados. Cuando NO se requiere pago
+    # (producto gratuito o invitación sin producto), debemos devolver
+    # ``True`` para que el cliente no se quede colgado en la pantalla
+    # "Estamos finalizando tu registro…" esperando a un pago que nunca
+    # va a ocurrir. Antes solo devolvíamos True con ``payment_id`` válido,
+    # lo que dejaba bloqueado el onboarding de productos gratis.
+    requires_payment = bool(
+        product_info is not None and (product_info.price or 0) > 0
+    )
+    if not requires_payment:
+        payment_completed = True
+    else:
+        payment_completed = False
+        if invitation.payment_id:
+            payment_result = await db.execute(
+                select(Payment).where(Payment.id == invitation.payment_id)
+            )
+            payment = payment_result.scalar_one_or_none()
+            if payment and payment.status == PaymentStatus.succeeded:
+                payment_completed = True
     
     # Extraer datos públicos de soporte del workspace
     ws_settings = (workspace.settings if workspace and workspace.settings else {}) or {}
