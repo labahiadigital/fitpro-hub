@@ -1,7 +1,7 @@
 """Client invitation model."""
 from enum import Enum as PyEnum
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import Column, String, Boolean, Enum, ForeignKey, DateTime
+from sqlalchemy import Column, String, Text, Boolean, Enum, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -68,6 +68,17 @@ class ClientInvitation(BaseModel):
     phone = Column(String(50), nullable=True)
     password_hash = Column(String(255), nullable=True)
     consent_data = Column(JSONB, nullable=True, default=lambda: {})
+
+    # Datos fiscales para emitir la factura tras el pago. Se piden en el
+    # formulario público y se transportan hasta ``/complete`` para crear
+    # el ``Client`` con la información ya pre-rellenada.
+    fiscal_type = Column(String(20), nullable=True, default="individual")
+    legal_name = Column(String(255), nullable=True)
+    tax_id = Column(String(25), nullable=True)
+    billing_address = Column(Text, nullable=True)
+    billing_city = Column(String(100), nullable=True)
+    billing_postal_code = Column(String(20), nullable=True)
+    billing_country = Column(String(100), nullable=True, default="España")
 
     # Relationships
     workspace = relationship("Workspace")

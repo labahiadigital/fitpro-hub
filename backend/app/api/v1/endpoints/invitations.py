@@ -317,12 +317,20 @@ async def create_invitation(
         custom_message=data.message,
     )
     
-    # Send email in background
+    # Send email in background. ``tracking`` permite que el webhook de
+    # Brevo cruce los eventos (delivered/opened/clicked) con la
+    # invitación correcta y que aparezcan en /clients.
     background_tasks.add_task(
         send_email_task.delay,
         to_email=data.email,
         subject=f"Invitación a {workspace.name}",
         html_content=email_html,
+        tracking={
+            "workspace_id": str(workspace.id),
+            "invitation_id": str(invitation.id),
+            "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+            "template_kind": "invitation",
+        },
     )
     
     return InvitationResponse(
@@ -462,6 +470,12 @@ async def resend_invitation(
             to_email=invitation.email,
             subject=f"Recordatorio: Invitación a {workspace.name}",
             html_content=email_html,
+            tracking={
+                "workspace_id": str(workspace.id),
+                "invitation_id": str(invitation.id),
+                "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+                "template_kind": "invitation_resend",
+            },
         )
         email_sent = True
         logger.info(f"Resend invitation email queued for {invitation.email}")
@@ -979,6 +993,29 @@ async def complete_invitation(
                 client.consents = data.consents
             client.is_active = True
             client.deleted_at = None
+            # Propagar facturación heredada de la invitación (sin pisar
+            # valores ya existentes en el Client salvo que vengan vacíos).
+            inv_fiscal = getattr(invitation, "fiscal_type", None)
+            if inv_fiscal and not client.fiscal_type:
+                client.fiscal_type = inv_fiscal
+            inv_legal = getattr(invitation, "legal_name", None)
+            if inv_legal and not client.legal_name:
+                client.legal_name = inv_legal
+            inv_tax = getattr(invitation, "tax_id", None)
+            if inv_tax and not client.tax_id:
+                client.tax_id = inv_tax
+            inv_addr = getattr(invitation, "billing_address", None)
+            if inv_addr and not client.billing_address:
+                client.billing_address = inv_addr
+            inv_city = getattr(invitation, "billing_city", None)
+            if inv_city and not client.billing_city:
+                client.billing_city = inv_city
+            inv_cp = getattr(invitation, "billing_postal_code", None)
+            if inv_cp and not client.billing_postal_code:
+                client.billing_postal_code = inv_cp
+            inv_country = getattr(invitation, "billing_country", None)
+            if inv_country and not client.billing_country:
+                client.billing_country = inv_country
         else:
             client = Client(
                 workspace_id=invitation.workspace_id,
@@ -995,6 +1032,17 @@ async def complete_invitation(
                 health_data=enriched_health_data,
                 consents=data.consents or {},
                 is_active=True,
+                # Datos fiscales heredados de la invitación. Si la
+                # invitación los trae (flujo público con producto), los
+                # propagamos al ``Client`` para que la facturación
+                # automática los use desde el primer pago.
+                fiscal_type=getattr(invitation, "fiscal_type", None) or "individual",
+                legal_name=getattr(invitation, "legal_name", None),
+                tax_id=getattr(invitation, "tax_id", None),
+                billing_address=getattr(invitation, "billing_address", None),
+                billing_city=getattr(invitation, "billing_city", None),
+                billing_postal_code=getattr(invitation, "billing_postal_code", None),
+                billing_country=getattr(invitation, "billing_country", None) or "España",
             )
             db.add(client)
             await db.flush()
@@ -1248,6 +1296,13 @@ async def complete_invitation(
                     support_email=support_email,
                     email_footer=email_footer,
                 ),
+                tracking={
+                    "workspace_id": str(invitation.workspace_id),
+                    "invitation_id": str(invitation.id),
+                    "client_id": str(client.id) if client else None,
+                    "user_id": str(user.id) if user else None,
+                    "template_kind": "welcome_after_payment",
+                },
             )
             logger.info(f"Welcome (post-payment) email queued for {data.email}")
         except Exception as e:
@@ -1318,6 +1373,17 @@ class PublicProductSignupRequest(BaseModel):
     phone: Optional[str] = None
     password: Optional[str] = None
     consents: Optional[dict] = None
+    # Datos fiscales para emitir la factura tras el pago. ``fiscal_type``
+    # vale "individual" (Persona Física) o "company" (Persona Jurídica).
+    # Si es ``company`` el cliente factura como empresa y ``legal_name``
+    # se usa como Razón Social en lugar de ``first_name + last_name``.
+    fiscal_type: Optional[str] = None
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
 
 
 class PublicProductSignupResponse(BaseModel):
@@ -1416,6 +1482,10 @@ async def public_product_signup(
     else:
         password_hash_value = None
 
+    fiscal_type_value = (data.fiscal_type or "individual").strip().lower()
+    if fiscal_type_value not in ("individual", "company"):
+        fiscal_type_value = "individual"
+
     invitation = ClientInvitation(
         workspace_id=workspace.id,
         invited_by=owner_id,
@@ -1430,6 +1500,13 @@ async def public_product_signup(
         password_hash=password_hash_value,
         consent_data=consent_data,
         marketing_consent=marketing_flag,
+        fiscal_type=fiscal_type_value,
+        legal_name=(data.legal_name or None) if fiscal_type_value == "company" else None,
+        tax_id=data.tax_id,
+        billing_address=data.billing_address,
+        billing_city=data.billing_city,
+        billing_postal_code=data.billing_postal_code,
+        billing_country=data.billing_country or "España",
     )
 
     db.add(invitation)

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Optional, Dict
+from typing import Any, List, Optional, Dict
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
 import secrets
@@ -449,6 +449,13 @@ async def create_client(
 <p>Has sido dado de alta como cliente. Para activar tu cuenta y acceder a tu portal, haz clic en el siguiente enlace:</p>
 <p><a href="{invitation_url}" style="display:inline-block;padding:12px 24px;background:#228be6;color:white;text-decoration:none;border-radius:8px;">Activar mi cuenta</a></p>
 <p>Este enlace expira en 7 días.</p>""",
+            tracking={
+                "workspace_id": str(invitation.workspace_id),
+                "invitation_id": str(invitation.id),
+                "client_id": str(client.id),
+                "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+                "template_kind": "client_invitation",
+            },
         )
     except Exception as e:
         logger.warning("Could not send validation email to new client %s: %s", client.email, e)
@@ -972,8 +979,16 @@ async def send_invitation_email(
     trainer_name: str,
     first_name: Optional[str] = None,
     message: Optional[str] = None,
+    tracking: Optional[Dict[str, Any]] = None,
 ) -> bool:
-    """Send invitation email using Brevo API."""
+    """Send invitation email using Brevo API.
+
+    ``tracking`` opcional permite registrar el envío en
+    ``email_events`` para que el webhook de Brevo cruce los eventos
+    posteriores (delivered/opened/clicked) con la invitación correcta.
+    Esperamos un dict con ``workspace_id`` / ``invitation_id`` /
+    ``client_id`` / ``user_id`` (todo string UUID, opcionales).
+    """
     if not settings.BREVO_API_KEY:
         logger.warning("BREVO_API_KEY not configured, skipping email send")
         return False
@@ -1052,8 +1067,67 @@ async def send_invitation_email(
                 timeout=30,
             )
             response.raise_for_status()
-        
-        logger.info("Invitation email sent to %s", email)
+
+        message_id: Optional[str] = None
+        try:
+            data = response.json()
+            raw = data.get("messageId") if isinstance(data, dict) else None
+            if isinstance(raw, str):
+                message_id = raw.strip("<>")
+        except Exception:  # pragma: no cover - defensivo
+            message_id = None
+
+        # Registrar request event para que el webhook de Brevo pueda
+        # cruzar los eventos posteriores (delivered/opened/clicked) con
+        # la invitación. Es best-effort: si falla, no rompemos el envío.
+        if tracking:
+            try:
+                from datetime import datetime as _dt, timezone as _tz
+                from sqlalchemy import select as _select  # noqa: WPS433
+                from app.core.database import AsyncSessionLocal
+                from app.models.email_tracking import EmailEvent
+                from app.models.invitation import ClientInvitation as _CI
+
+                async with AsyncSessionLocal() as session:
+                    now = _dt.now(_tz.utc)
+                    session.add(EmailEvent(
+                        workspace_id=tracking.get("workspace_id"),
+                        brevo_message_id=message_id,
+                        recipient_email=email.lower(),
+                        user_id=tracking.get("user_id"),
+                        client_id=tracking.get("client_id"),
+                        invitation_id=tracking.get("invitation_id"),
+                        event_type="request",
+                        subject=payload["subject"],
+                        template_kind=tracking.get("template_kind") or "invitation",
+                        occurred_at=now,
+                        payload={
+                            "to": email,
+                            "subject": payload["subject"],
+                            "tracking": {
+                                k: str(v) if v is not None else None
+                                for k, v in tracking.items()
+                            },
+                        },
+                    ))
+                    inv_id = tracking.get("invitation_id")
+                    if inv_id:
+                        inv_row = await session.execute(
+                            _select(_CI).where(_CI.id == inv_id)
+                        )
+                        inv = inv_row.scalar_one_or_none()
+                        if inv is not None:
+                            # ``last_email_sent_at`` es naive en BD.
+                            inv.last_email_sent_at = now.replace(tzinfo=None)
+                            inv.last_email_subject = payload["subject"]
+                            inv.brevo_message_id = message_id
+                    await session.commit()
+            except Exception:  # pragma: no cover - defensivo
+                logger.exception(
+                    "No se pudo registrar EmailEvent(request) for %s", email
+                )
+
+        logger.info("Invitation email sent to %s msg_id=%s", email, message_id)
         return True
         
     except Exception as e:
@@ -1168,7 +1242,14 @@ async def create_invitation(
         workspace_name=workspace_name,
         trainer_name=trainer_name,
         first_name=data.first_name,
-        message=data.message
+        message=data.message,
+        tracking={
+            "workspace_id": str(invitation.workspace_id),
+            "invitation_id": str(invitation.id),
+            "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+            "client_id": str(existing_client.id) if existing_client else None,
+            "template_kind": "invitation",
+        },
     )
     
     if not email_sent:
@@ -1243,7 +1324,14 @@ async def resend_invitation(
         workspace_name=workspace_name,
         trainer_name=trainer_name,
         first_name=invitation.first_name,
-        message=invitation.message
+        message=invitation.message,
+        tracking={
+            "workspace_id": str(invitation.workspace_id),
+            "invitation_id": str(invitation.id),
+            "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+            "client_id": str(invitation.client_id) if invitation.client_id else None,
+            "template_kind": "invitation_resend",
+        },
     )
     
     return {

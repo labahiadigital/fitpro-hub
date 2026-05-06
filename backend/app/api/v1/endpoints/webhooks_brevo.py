@@ -36,7 +36,9 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.models.client import Client
 from app.models.email_tracking import EmailEvent
+from app.models.invitation import ClientInvitation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -121,7 +123,39 @@ async def brevo_event_webhook(
     base_event_q = await db.execute(base_q)
     base_event = base_event_q.scalars().first()
 
-    if base_event is None:
+    # Fallback de correlación: aunque ``email_events`` no tenga el evento
+    # ``request`` (por ej. emails enviados por la tarea Celery legacy
+    # antes de que añadiésemos tracking), podemos rescatar workspace +
+    # invitación a partir del propio ``client_invitations`` que sí guarda
+    # ``brevo_message_id`` cuando se manda la invitación. Lo mismo si no
+    # tenemos message-id pero el email coincide con un cliente activo.
+    invitation_match: Optional[ClientInvitation] = None
+    client_match: Optional[Client] = None
+    if base_event is None and message_id:
+        inv_q = await db.execute(
+            select(ClientInvitation).where(
+                ClientInvitation.brevo_message_id == message_id
+            ).limit(1)
+        )
+        invitation_match = inv_q.scalar_one_or_none()
+
+    if base_event is None and invitation_match is None and recipient_email:
+        # Último recurso: email del destinatario coincide con un cliente
+        # del workspace. Lo usamos sólo para enriquecer (workspace +
+        # cliente) eventos huérfanos. Si hay varios clientes con el mismo
+        # email, nos quedamos con el más reciente activo.
+        client_q = await db.execute(
+            select(Client)
+            .where(
+                Client.email == recipient_email,
+                Client.deleted_at.is_(None),
+            )
+            .order_by(desc(Client.updated_at))
+            .limit(1)
+        )
+        client_match = client_q.scalar_one_or_none()
+
+    if base_event is None and invitation_match is None and client_match is None:
         # Mensaje desconocido: no nos llega de nuestro propio envío.
         # Lo registramos como evento huérfano para no perder
         # información, pero no propagamos a workspace.
@@ -142,6 +176,43 @@ async def brevo_event_webhook(
         db.add(orphan)
         await db.commit()
         return {"status": "ok", "orphan": True}
+
+    if base_event is None:
+        # Reconstruimos un base_event sintético a partir del fallback
+        # para que el resto del flujo (que ya sabe enriquecer eventos
+        # nuevos heredando workspace/cliente) siga funcionando.
+        if invitation_match is not None:
+            new_event = EmailEvent(
+                workspace_id=invitation_match.workspace_id,
+                brevo_message_id=message_id or invitation_match.brevo_message_id,
+                recipient_email=recipient_email or invitation_match.email,
+                user_id=None,
+                client_id=invitation_match.client_id,
+                invitation_id=invitation_match.id,
+                event_type=event_type,
+                subject=payload.get("subject") or invitation_match.last_email_subject,
+                template_kind=payload.get("tag"),
+                occurred_at=_parse_brevo_date(payload),
+                payload=payload,
+            )
+        else:
+            assert client_match is not None
+            new_event = EmailEvent(
+                workspace_id=client_match.workspace_id,
+                brevo_message_id=message_id,
+                recipient_email=recipient_email or client_match.email,
+                user_id=None,
+                client_id=client_match.id,
+                invitation_id=None,
+                event_type=event_type,
+                subject=payload.get("subject"),
+                template_kind=payload.get("tag"),
+                occurred_at=_parse_brevo_date(payload),
+                payload=payload,
+            )
+        db.add(new_event)
+        await db.commit()
+        return {"status": "ok", "fallback": True}
 
     new_event = EmailEvent(
         workspace_id=base_event.workspace_id,

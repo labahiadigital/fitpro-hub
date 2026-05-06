@@ -33,6 +33,8 @@ import {
   IconForms,
   IconFileText,
   IconMessage,
+  IconMail,
+  IconMessages,
   IconPackage,
   IconReceipt,
   IconTrophy,
@@ -120,7 +122,14 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
       { icon: <IconBuildingStore size={18} />, label: "Proveedores", to: "/suppliers", requiredResource: "billing" },
     ],
   },
-  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
+  {
+    icon: <IconMessages size={20} />,
+    label: "Comunicación",
+    children: [
+      { icon: <IconMessage size={18} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
+      { icon: <IconMail size={18} />, label: "Email", to: "/email-templates", requiredResource: "chat" },
+    ],
+  },
   { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
   { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
   {
@@ -727,6 +736,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/settings": "Configuración",
   "/live-classes": "Clases en Vivo",
   "/chat": "Chat",
+  "/email-templates": "Email",
   "/lms": "Academia",
   "/tasks": "Tareas",
   "/my-workouts": "Mis Entrenamientos",
