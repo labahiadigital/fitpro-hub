@@ -12,7 +12,6 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.storage import (
     normalize_image_urls_in_obj,
-    resolve_image_urls_in_obj,
     resolve_url,
 )
 from app.models.workout import WorkoutProgram, WorkoutLog
@@ -20,6 +19,7 @@ from app.models.exercise import Exercise, ExerciseAlternative
 from app.models.client import Client
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 from app.api.v1.endpoints.tasks import create_auto_task
+from app.services.template_hydration import hydrate_workout_templates
 
 router = APIRouter()
 
@@ -110,24 +110,25 @@ class WorkoutProgramResponse(BaseModel):
         from_attributes = True
 
 
-async def _hydrate_program_image_urls(program: WorkoutProgram) -> WorkoutProgramResponse:
-    """Devuelve un Response con todas las URLs R2 del template refirmadas.
+async def _hydrate_program_image_urls(
+    db: AsyncSession, program: WorkoutProgram
+) -> WorkoutProgramResponse:
+    """Devuelve un Response con cada Exercise embebido refrescado.
 
-    Las plantillas se persisten con un snapshot del ``Exercise`` (incluida la
-    ``image_url`` que en su momento era una URL firmada). Cuando el cliente
-    abre el editor el TTL ya ha caducado y R2 devuelve XML
-    ``ExpiredRequest``. Aqui caminamos el JSONB y refirmamos sobre la
-    marcha, usando el cache de presigns para que el coste sea casi cero.
+    Hace dos cosas:
+      1. Pisa la ``image_url`` / ``video_url`` de cada snapshot con la
+         versión actual de la tabla ``exercises`` (asi vemos siempre la
+         foto vigente, aunque el template se guardara antes de que el
+         ejercicio tuviera imagen).
+      2. Refirma las URLs R2 a TTL fresco para que el navegador no se
+         encuentre con ``ExpiredRequest``.
     """
     resp = WorkoutProgramResponse.model_validate(program)
-    if resp.template:
-        # Trabajamos con copia para no mutar el objeto ORM (que volveria a
-        # escribirse en BBDD si SQLAlchemy detecta el cambio).
-        resp.template = copy.deepcopy(resp.template)
-        await resolve_image_urls_in_obj(resp.template)
-    if resp.executed_template:
-        resp.executed_template = copy.deepcopy(resp.executed_template)
-        await resolve_image_urls_in_obj(resp.executed_template)
+    new_tpl, new_exec = await hydrate_workout_templates(
+        db, resp.template, resp.executed_template
+    )
+    resp.template = new_tpl
+    resp.executed_template = new_exec
     return resp
 
 
@@ -516,7 +517,7 @@ async def list_programs(
 
     result = await db.execute(query.order_by(WorkoutProgram.created_at.desc()))
     programs = result.scalars().all()
-    return await asyncio.gather(*(_hydrate_program_image_urls(p) for p in programs))
+    return await asyncio.gather(*(_hydrate_program_image_urls(db, p) for p in programs))
 
 
 @router.post("/programs", response_model=WorkoutProgramResponse, status_code=status.HTTP_201_CREATED)
@@ -619,7 +620,7 @@ async def create_program(
             client_notification_link="/my-workouts",
         )
 
-    return await _hydrate_program_image_urls(program)
+    return await _hydrate_program_image_urls(db, program)
 
 
 @router.get("/programs/{program_id}", response_model=WorkoutProgramResponse)
@@ -645,7 +646,7 @@ async def get_program(
             detail="Programa no encontrado"
         )
 
-    return await _hydrate_program_image_urls(program)
+    return await _hydrate_program_image_urls(db, program)
 
 
 @router.put("/programs/{program_id}", response_model=WorkoutProgramResponse)
@@ -735,7 +736,7 @@ async def update_program(
                 client_notification_link="/my-workouts",
             )
 
-    return await _hydrate_program_image_urls(program)
+    return await _hydrate_program_image_urls(db, program)
 
 
 @router.delete("/programs/{program_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -796,7 +797,7 @@ async def activate_program(
     program.is_active = True
     await db.commit()
     await db.refresh(program)
-    return await _hydrate_program_image_urls(program)
+    return await _hydrate_program_image_urls(db, program)
 
 
 @router.post("/programs/{program_id}/deactivate", response_model=WorkoutProgramResponse)
@@ -819,7 +820,7 @@ async def deactivate_program(
     program.is_active = False
     await db.commit()
     await db.refresh(program)
-    return await _hydrate_program_image_urls(program)
+    return await _hydrate_program_image_urls(db, program)
 
 
 # Schema for assign request
@@ -975,7 +976,7 @@ async def assign_program_to_client(
         import logging
         logging.getLogger(__name__).exception("Failed to notify client for program assignment")
 
-    return await _hydrate_program_image_urls(assigned_program)
+    return await _hydrate_program_image_urls(db, assigned_program)
 
 
 # ============ LOGS ============

@@ -17,13 +17,13 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.core.database import get_db
 from app.core.storage import (
     normalize_image_urls_in_obj,
-    resolve_image_urls_in_obj,
     resolve_url,
 )
 from app.middleware.auth import CurrentUser, get_current_user, require_staff, require_workspace
 from app.models.client import Client
 from app.models.nutrition import Food, FoodFavorite, FoodGroup, MealPlan, Recipe
 from app.api.v1.endpoints.tasks import create_auto_task
+from app.services.template_hydration import hydrate_meal_plans
 
 router = APIRouter()
 
@@ -118,17 +118,19 @@ class MealPlanResponse(BaseModel):
         from_attributes = True
 
 
-async def _hydrate_meal_plan_image_urls(plan_obj: MealPlan) -> MealPlanResponse:
+async def _hydrate_meal_plan_image_urls(
+    db: AsyncSession, plan_obj: MealPlan
+) -> MealPlanResponse:
     """Como ``_hydrate_program_image_urls`` pero para planes nutricionales.
 
-    Camina ``plan`` (JSONB) y refirma cada ``image_url`` R2 (alimento,
-    receta, etc.) a TTL fresco. Usa cache, asi que su coste para cargas
-    repetidas es negligible.
+    1. Pisa ``image_url`` de cada food embebido con la version actual de
+       la tabla ``foods`` (asi vemos la foto vigente aunque el plan se
+       guardara antes de subir imagenes).
+    2. Refirma URLs R2 a TTL fresco para evitar ``ExpiredRequest``.
     """
     resp = MealPlanResponse.model_validate(plan_obj)
-    if resp.plan:
-        resp.plan = copy.deepcopy(resp.plan)
-        await resolve_image_urls_in_obj(resp.plan)
+    (new_plan,) = await hydrate_meal_plans(db, resp.plan)
+    resp.plan = new_plan
     return resp
 
 
@@ -331,7 +333,7 @@ async def list_meal_plans(
         query.order_by(MealPlan.created_at.desc()).limit(limit).offset(offset)
     )
     plans = result.scalars().all()
-    return await asyncio.gather(*(_hydrate_meal_plan_image_urls(p) for p in plans))
+    return await asyncio.gather(*(_hydrate_meal_plan_image_urls(db, p) for p in plans))
 
 
 @router.post("/meal-plans", response_model=MealPlanResponse, status_code=status.HTTP_201_CREATED)
@@ -435,7 +437,7 @@ async def create_meal_plan(
             client_notification_link="/my-nutrition",
         )
 
-    return await _hydrate_meal_plan_image_urls(meal_plan)
+    return await _hydrate_meal_plan_image_urls(db, meal_plan)
 
 
 @router.get("/meal-plans/{plan_id}", response_model=MealPlanResponse)
@@ -461,7 +463,7 @@ async def get_meal_plan(
             detail="Plan nutricional no encontrado"
         )
 
-    return await _hydrate_meal_plan_image_urls(plan)
+    return await _hydrate_meal_plan_image_urls(db, plan)
 
 
 @router.put("/meal-plans/{plan_id}", response_model=MealPlanResponse)
@@ -546,7 +548,7 @@ async def update_meal_plan(
                 client_notification_link="/my-nutrition",
             )
 
-    return await _hydrate_meal_plan_image_urls(plan)
+    return await _hydrate_meal_plan_image_urls(db, plan)
 
 
 @router.delete("/meal-plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)

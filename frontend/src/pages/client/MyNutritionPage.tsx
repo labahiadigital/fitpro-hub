@@ -609,7 +609,11 @@ function LogMealModal({
       <Group gap="xs" mb="xs" wrap="nowrap">
         {food.image_url ? (
           <Image src={food.image_url} alt={food.name} w={40} h={40} fit="cover" radius="md" style={{ flexShrink: 0 }} />
-        ) : null}
+        ) : (
+          <ThemeIcon variant="light" color="green" size={40} radius="md" style={{ flexShrink: 0 }}>
+            <IconApple size={20} />
+          </ThemeIcon>
+        )}
         {food.is_manual ? (
           <ManualFoodNameInput
             value={food.name}
@@ -2669,6 +2673,92 @@ export function MyNutritionPage() {
                         </>
                       )}
                     </Group>
+                    {/* Preview de los alimentos previstos / registrados con
+                        miniatura, identico al estilo de "Tu plan" para que
+                        el cliente vea siempre la misma ficha visual. */}
+                    {(() => {
+                      const previewItems: Array<{
+                        key: string;
+                        name: string;
+                        imageUrl?: string | null;
+                        quantity?: string;
+                      }> = [];
+                      if (isRegistered) {
+                        mealLogs.forEach((log, logIdx) => {
+                          (log.foods || []).forEach((f, fIdx) => {
+                            previewItems.push({
+                              key: `${meal.id}-l${logIdx}-f${fIdx}`,
+                              name: f.name,
+                              imageUrl: (f as { image_url?: string | null }).image_url,
+                              quantity: f.quantity ? `${f.quantity}g` : undefined,
+                            });
+                          });
+                        });
+                      } else if (meal.foods && meal.foods.length > 0) {
+                        meal.foods.forEach((f: PlanMealFoodItem, i: number) => {
+                          previewItems.push({
+                            key: `${meal.id}-pf-${i}`,
+                            name: f.name,
+                            imageUrl: f.image_url,
+                            quantity: `${f.quantity}${f.unit || "g"}`,
+                          });
+                        });
+                      } else if (meal.items && meal.items.length > 0) {
+                        meal.items.forEach((item, i: number) => {
+                          const data = item.food || item.supplement;
+                          if (!data) return;
+                          previewItems.push({
+                            key: `${meal.id}-it-${i}`,
+                            name: data.name,
+                            imageUrl: (item.food && (item.food.image_url ?? null)) || null,
+                            quantity: `${item.quantity_grams}g`,
+                          });
+                        });
+                      }
+                      if (previewItems.length === 0) return null;
+                      return (
+                        <Stack gap={4} mt={6}>
+                          {previewItems.slice(0, 8).map((it) => (
+                            <Group key={it.key} gap={8} wrap="nowrap">
+                              {it.imageUrl ? (
+                                <Image
+                                  src={it.imageUrl}
+                                  alt={it.name}
+                                  w={28}
+                                  h={28}
+                                  fit="cover"
+                                  radius="sm"
+                                  style={{ flexShrink: 0 }}
+                                />
+                              ) : (
+                                <ThemeIcon
+                                  variant="light"
+                                  color="green"
+                                  size={28}
+                                  radius="sm"
+                                  style={{ flexShrink: 0 }}
+                                >
+                                  <IconApple size={14} />
+                                </ThemeIcon>
+                              )}
+                              <Text size="xs" lineClamp={1} style={{ flex: 1 }}>
+                                {it.name}
+                              </Text>
+                              {it.quantity && (
+                                <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+                                  {it.quantity}
+                                </Text>
+                              )}
+                            </Group>
+                          ))}
+                          {previewItems.length > 8 && (
+                            <Text size="xs" c="dimmed">
+                              +{previewItems.length - 8} más…
+                            </Text>
+                          )}
+                        </Stack>
+                      );
+                    })()}
                   </Box>
                 </Group>
               </Box>
