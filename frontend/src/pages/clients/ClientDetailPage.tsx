@@ -136,7 +136,6 @@ const CLIENT_DETAIL_TABS_SELECT_DATA = [
   { value: "photos", label: "Fotos" },
   { value: "documents", label: "Documentos" },
   { value: "payments", label: "Pagos y suscripciones" },
-  { value: "billing", label: "Datos de facturación" },
 ];
 
 const COMMON_INTOLERANCES = INTOLERANCES_SELECT_DATA;
@@ -214,228 +213,16 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
   );
 }
 
-/**
- * Pestaña "Datos de facturación" del detalle de cliente (vista entrenador).
- *
- * Muestra los datos fiscales que el cliente rellenó en el onboarding y
- * permite al entrenador corregirlos cuando el cliente se equivoca de NIF
- * o de dirección. Los campos viven en la propia tabla ``clients`` (los
- * añadimos en la migración 055), así que reusamos ``useUpdateClient``
- * para persistir cambios sin endpoints nuevos.
- */
-function ClientBillingTab({
+
+function ClientPaymentsTab({
+  clientId,
   client,
-  onSaved,
+  onClientSaved,
 }: {
-  client: any;
-  onSaved?: () => void;
+  clientId: string;
+  client?: any;
+  onClientSaved?: () => void;
 }) {
-  const updateClient = useUpdateClient();
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    fiscal_type: (client?.fiscal_type as "individual" | "company") || "individual",
-    legal_name: client?.legal_name || "",
-    tax_id: client?.tax_id || "",
-    billing_address: client?.billing_address || "",
-    billing_city: client?.billing_city || "",
-    billing_postal_code: client?.billing_postal_code || "",
-    billing_country: client?.billing_country || "España",
-  });
-
-  useEffect(() => {
-    if (!editing && client) {
-      setForm({
-        fiscal_type: (client.fiscal_type as "individual" | "company") || "individual",
-        legal_name: client.legal_name || "",
-        tax_id: client.tax_id || "",
-        billing_address: client.billing_address || "",
-        billing_city: client.billing_city || "",
-        billing_postal_code: client.billing_postal_code || "",
-        billing_country: client.billing_country || "España",
-      });
-    }
-  }, [client, editing]);
-
-  if (!client) return null;
-
-  const isCompany = form.fiscal_type === "company";
-  const displayName = isCompany
-    ? client.legal_name || "—"
-    : `${client.first_name || ""} ${client.last_name || ""}`.trim() || "—";
-
-  const handleSave = async () => {
-    try {
-      await updateClient.mutateAsync({
-        id: client.id,
-        data: {
-          fiscal_type: form.fiscal_type,
-          legal_name: isCompany ? form.legal_name || null : null,
-          tax_id: form.tax_id || null,
-          billing_address: form.billing_address || null,
-          billing_city: form.billing_city || null,
-          billing_postal_code: form.billing_postal_code || null,
-          billing_country: form.billing_country || null,
-        } as any,
-      });
-      setEditing(false);
-      onSaved?.();
-    } catch {
-      // useUpdateClient ya muestra notificación
-    }
-  };
-
-  if (editing) {
-    return (
-      <Paper p="lg" withBorder radius="md">
-        <Stack gap="md">
-          <Group justify="space-between">
-            <Text fw={700} size="lg">Editar datos de facturación</Text>
-          </Group>
-
-          <Radio.Group
-            label="Tipo de cliente"
-            value={form.fiscal_type}
-            onChange={(v) =>
-              setForm((s) => ({ ...s, fiscal_type: v as "individual" | "company" }))
-            }
-          >
-            <Group mt="xs">
-              <Radio value="individual" label="Persona Física" />
-              <Radio value="company" label="Persona Jurídica" />
-            </Group>
-          </Radio.Group>
-
-          {isCompany ? (
-            <TextInput
-              label="Razón Social"
-              placeholder="Empresa S.L."
-              value={form.legal_name}
-              onChange={(e) => setForm((s) => ({ ...s, legal_name: e.currentTarget.value }))}
-            />
-          ) : (
-            <Text size="xs" c="dimmed">
-              Para Persona Física se factura con nombre y apellidos del cliente.
-            </Text>
-          )}
-
-          <TextInput
-            label={isCompany ? "CIF / NRT" : "NIF (DNI, NIE, etc.)"}
-            placeholder={isCompany ? "B12345678" : "12345678A"}
-            value={form.tax_id}
-            onChange={(e) => setForm((s) => ({ ...s, tax_id: e.currentTarget.value }))}
-          />
-          <TextInput
-            label="Dirección"
-            placeholder="Calle Mayor 12, 3ºB"
-            value={form.billing_address}
-            onChange={(e) => setForm((s) => ({ ...s, billing_address: e.currentTarget.value }))}
-          />
-          <SimpleGrid cols={{ base: 1, sm: 3 }}>
-            <TextInput
-              label="Población"
-              value={form.billing_city}
-              onChange={(e) => setForm((s) => ({ ...s, billing_city: e.currentTarget.value }))}
-            />
-            <TextInput
-              label="Código postal"
-              value={form.billing_postal_code}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, billing_postal_code: e.currentTarget.value }))
-              }
-            />
-            <TextInput
-              label="País"
-              value={form.billing_country}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, billing_country: e.currentTarget.value }))
-              }
-            />
-          </SimpleGrid>
-
-          <Group justify="flex-end" mt="md">
-            <Button variant="subtle" onClick={() => setEditing(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} loading={updateClient.isPending}>
-              Guardar
-            </Button>
-          </Group>
-        </Stack>
-      </Paper>
-    );
-  }
-
-  const hasAnyData =
-    client.fiscal_type ||
-    client.legal_name ||
-    client.tax_id ||
-    client.billing_address ||
-    client.billing_city ||
-    client.billing_postal_code ||
-    client.billing_country;
-
-  return (
-    <Stack gap="md">
-      <Paper p="lg" withBorder radius="md">
-        <Group justify="space-between" mb="md">
-          <Group gap="xs">
-            <ThemeIcon size="md" radius="md" variant="light" color="yellow">
-              <IconReceipt size={18} />
-            </ThemeIcon>
-            <Text fw={700} size="lg">Datos de facturación</Text>
-          </Group>
-          <Button
-            size="xs"
-            variant="light"
-            leftSection={<IconEdit size={14} />}
-            onClick={() => setEditing(true)}
-          >
-            Editar
-          </Button>
-        </Group>
-
-        {!hasAnyData ? (
-          <Text size="sm" c="dimmed">
-            Este cliente todavía no tiene datos de facturación registrados.
-          </Text>
-        ) : (
-          <Stack gap={0}>
-            <InfoRow
-              label="Tipo de cliente"
-              value={isCompany ? "Persona Jurídica" : "Persona Física"}
-            />
-            <InfoRow
-              label={isCompany ? "Razón Social" : "Nombre fiscal"}
-              value={displayName}
-            />
-            <InfoRow
-              label={isCompany ? "CIF / NRT" : "NIF / DNI / NIE"}
-              value={client.tax_id || "—"}
-            />
-            <InfoRow
-              label="Dirección"
-              value={client.billing_address || "—"}
-            />
-            <InfoRow
-              label="Población"
-              value={client.billing_city || "—"}
-            />
-            <InfoRow
-              label="Código postal"
-              value={client.billing_postal_code || "—"}
-            />
-            <InfoRow
-              label="País"
-              value={client.billing_country || "—"}
-            />
-          </Stack>
-        )}
-      </Paper>
-    </Stack>
-  );
-}
-
-function ClientPaymentsTab({ clientId }: { clientId: string }) {
   const { data: paymentsData = [], isLoading: loadingPayments } = useQuery({
     queryKey: ["client-payments", clientId],
     queryFn: async () => {
@@ -558,11 +345,6 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
                           </Badge>
                         )}
                       </Group>
-                      {s.description && (
-                        <Text size="xs" c="dimmed" lineClamp={2}>
-                          {s.description}
-                        </Text>
-                      )}
                       <Group gap="lg" mt={4}>
                         <Box>
                           <Text size="xs" c="dimmed">Precio</Text>
@@ -659,7 +441,237 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
           </ScrollArea>
         )}
       </Box>
+
+      {/* Datos de facturación: integrados en este tab para mantener todo
+          lo "fiscal/financiero" del cliente en un único sitio. Lo
+          renderizamos en formato compacto (rejilla de 3 columnas) para
+          no dejar el espacio en blanco que generaba el ``InfoRow``. */}
+      {client && (
+        <ClientBillingCompact client={client} onSaved={onClientSaved} />
+      )}
     </Stack>
+  );
+}
+
+/**
+ * Bloque compacto de datos de facturación dentro de "Pagos y
+ * suscripciones". Mantiene el mismo modelo de datos que el antiguo
+ * ``ClientBillingTab`` pero pinta dos columnas/tres columnas de pares
+ * etiqueta-valor para no desperdiciar espacio horizontal.
+ */
+function ClientBillingCompact({
+  client,
+  onSaved,
+}: {
+  client: any;
+  onSaved?: () => void;
+}) {
+  const updateClient = useUpdateClient();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    fiscal_type:
+      (client?.fiscal_type as "individual" | "company") || "individual",
+    legal_name: client?.legal_name || "",
+    tax_id: client?.tax_id || "",
+    billing_address: client?.billing_address || "",
+    billing_city: client?.billing_city || "",
+    billing_postal_code: client?.billing_postal_code || "",
+    billing_country: client?.billing_country || "España",
+  });
+
+  useEffect(() => {
+    if (!editing && client) {
+      setForm({
+        fiscal_type:
+          (client.fiscal_type as "individual" | "company") || "individual",
+        legal_name: client.legal_name || "",
+        tax_id: client.tax_id || "",
+        billing_address: client.billing_address || "",
+        billing_city: client.billing_city || "",
+        billing_postal_code: client.billing_postal_code || "",
+        billing_country: client.billing_country || "España",
+      });
+    }
+  }, [client, editing]);
+
+  const isCompany = form.fiscal_type === "company";
+  const displayName = isCompany
+    ? client.legal_name || "—"
+    : `${client.first_name || ""} ${client.last_name || ""}`.trim() || "—";
+  const hasAnyData =
+    client.fiscal_type ||
+    client.legal_name ||
+    client.tax_id ||
+    client.billing_address ||
+    client.billing_city ||
+    client.billing_postal_code ||
+    client.billing_country;
+
+  const handleSave = async () => {
+    try {
+      await updateClient.mutateAsync({
+        id: client.id,
+        data: {
+          fiscal_type: form.fiscal_type,
+          legal_name: isCompany ? form.legal_name || null : null,
+          tax_id: form.tax_id || null,
+          billing_address: form.billing_address || null,
+          billing_city: form.billing_city || null,
+          billing_postal_code: form.billing_postal_code || null,
+          billing_country: form.billing_country || null,
+        } as any,
+      });
+      setEditing(false);
+      onSaved?.();
+    } catch {
+      // useUpdateClient ya lanza notificación
+    }
+  };
+
+  // Pequeño helper para celdas etiqueta+valor en 1 sola columna.
+  const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <Box>
+      <Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: 0.4 }}>
+        {label}
+      </Text>
+      <Text size="sm" fw={600} mt={2}>
+        {value || "—"}
+      </Text>
+    </Box>
+  );
+
+  return (
+    <Box className="nv-card" p="xl">
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon size="md" radius="md" variant="light" color="yellow">
+            <IconReceipt size={18} />
+          </ThemeIcon>
+          <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Datos de facturación
+          </Text>
+        </Group>
+        {!editing && (
+          <Button
+            size="xs"
+            variant="light"
+            leftSection={<IconEdit size={14} />}
+            onClick={() => setEditing(true)}
+          >
+            Editar
+          </Button>
+        )}
+      </Group>
+
+      {editing ? (
+        <Stack gap="sm">
+          <Radio.Group
+            label="Tipo de cliente"
+            value={form.fiscal_type}
+            onChange={(v) =>
+              setForm((s) => ({
+                ...s,
+                fiscal_type: v as "individual" | "company",
+              }))
+            }
+          >
+            <Group mt={4}>
+              <Radio value="individual" label="Persona Física" />
+              <Radio value="company" label="Persona Jurídica" />
+            </Group>
+          </Radio.Group>
+
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            {isCompany && (
+              <TextInput
+                label="Razón Social"
+                placeholder="Empresa S.L."
+                value={form.legal_name}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, legal_name: e.currentTarget.value }))
+                }
+              />
+            )}
+            <TextInput
+              label={isCompany ? "CIF / NRT" : "NIF (DNI, NIE, etc.)"}
+              placeholder={isCompany ? "B12345678" : "12345678A"}
+              value={form.tax_id}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, tax_id: e.currentTarget.value }))
+              }
+            />
+          </SimpleGrid>
+
+          <TextInput
+            label="Dirección"
+            placeholder="Calle Mayor 12, 3ºB"
+            value={form.billing_address}
+            onChange={(e) =>
+              setForm((s) => ({ ...s, billing_address: e.currentTarget.value }))
+            }
+          />
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+            <TextInput
+              label="Población"
+              value={form.billing_city}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, billing_city: e.currentTarget.value }))
+              }
+            />
+            <TextInput
+              label="Código postal"
+              value={form.billing_postal_code}
+              onChange={(e) =>
+                setForm((s) => ({
+                  ...s,
+                  billing_postal_code: e.currentTarget.value,
+                }))
+              }
+            />
+            <TextInput
+              label="País"
+              value={form.billing_country}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, billing_country: e.currentTarget.value }))
+              }
+            />
+          </SimpleGrid>
+          <Group justify="flex-end" mt="xs">
+            <Button variant="subtle" size="xs" onClick={() => setEditing(false)}>
+              Cancelar
+            </Button>
+            <Button size="xs" onClick={handleSave} loading={updateClient.isPending}>
+              Guardar
+            </Button>
+          </Group>
+        </Stack>
+      ) : !hasAnyData ? (
+        <Text size="sm" c="dimmed">
+          Este cliente todavía no tiene datos de facturación registrados.
+        </Text>
+      ) : (
+        <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md" verticalSpacing="sm">
+          <Field
+            label="Tipo"
+            value={isCompany ? "Persona Jurídica" : "Persona Física"}
+          />
+          <Field
+            label={isCompany ? "Razón Social" : "Nombre fiscal"}
+            value={displayName}
+          />
+          <Field
+            label={isCompany ? "CIF / NRT" : "NIF / DNI / NIE"}
+            value={client.tax_id}
+          />
+          <Field label="País" value={client.billing_country} />
+          <Box style={{ gridColumn: "span 2" }}>
+            <Field label="Dirección" value={client.billing_address} />
+          </Box>
+          <Field label="Población" value={client.billing_city} />
+          <Field label="Código postal" value={client.billing_postal_code} />
+        </SimpleGrid>
+      )}
+    </Box>
   );
 }
 
@@ -2475,7 +2487,6 @@ export function ClientDetailPage() {
             <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconForms size={16} />} value="forms">Formularios</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos y suscripciones</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconReceipt size={16} />} value="billing">Datos de facturación</Tabs.Tab>
           </Tabs.List>
         )}
 
@@ -4634,16 +4645,12 @@ export function ClientDetailPage() {
           />
         </Tabs.Panel>
 
-        {/* Pagos */}
+        {/* Pagos y suscripciones (incluye datos de facturación inline) */}
         <Tabs.Panel value="payments">
-          <ClientPaymentsTab clientId={id || ""} />
-        </Tabs.Panel>
-
-        {/* Datos de facturación */}
-        <Tabs.Panel value="billing">
-          <ClientBillingTab
+          <ClientPaymentsTab
+            clientId={id || ""}
             client={client}
-            onSaved={() => refetch()}
+            onClientSaved={() => refetch()}
           />
         </Tabs.Panel>
 

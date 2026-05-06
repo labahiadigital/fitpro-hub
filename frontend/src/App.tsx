@@ -62,6 +62,8 @@ const BoxesPage = lazyRetry(() => import("./pages/boxes/BoxesPage"));
 const MachinesPage = lazyRetry(() => import("./pages/machines/MachinesPage"));
 const BillingPage = lazyRetry(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
 const CommunityPage = lazyRetry(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
+const CommunityBenefitsPage = lazyRetry(() => import("./pages/community/CommunityBenefitsPage").then(m => ({ default: m.CommunityBenefitsPage })));
+const MyCommunityPage = lazyRetry(() => import("./pages/client/MyCommunityPage").then(m => ({ default: m.MyCommunityPage })));
 const DocumentsPage = lazyRetry(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
 const TeamPage = lazyRetry(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
 const TimeClockPage = lazyRetry(() => import("./pages/team/TimeClockPage"));
@@ -284,6 +286,7 @@ export default function App() {
                   <Route element={<MyCalendarPage />} path="/my-calendar" />
                   <Route element={<MyDocumentsPage />} path="/my-documents" />
                   <Route element={<MyFormsPage />} path="/my-forms" />
+                  <Route element={<MyCommunityPage />} path="/my-community" />
                   <Route element={<MyProfilePage />} path="/my-profile" />
                   <Route element={<MyMessagesPage />} path="/my-messages" />
                   
@@ -309,6 +312,7 @@ export default function App() {
                   <Route element={<Navigate replace to="/billing" />} path="/payments" />
                   <Route element={<Navigate replace to="/catalog" />} path="/packages" />
                   <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
+                  <Route element={<TrainerRoute><CommunityBenefitsPage /></TrainerRoute>} path="/community/benefits" />
                   <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
                   <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
                   <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team/members" />

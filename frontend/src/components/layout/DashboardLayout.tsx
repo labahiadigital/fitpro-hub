@@ -38,6 +38,7 @@ import {
   IconPackage,
   IconReceipt,
   IconTrophy,
+  IconGift,
   IconUsersGroup,
   IconChartBar,
   IconBook,
@@ -166,7 +167,14 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
       { icon: <IconClock size={18} />, label: "Control Horario", to: "/time-clock", requiredResource: "team" },
     ],
   },
-  { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community", requiredResource: "community" },
+  {
+    icon: <IconTrophy size={20} />,
+    label: "Comunidad",
+    children: [
+      { icon: <IconGift size={18} />, label: "Beneficios", to: "/community/benefits", requiredResource: "community" },
+      { icon: <IconTrophy size={18} />, label: "Gamificación", to: "/community", requiredResource: "community" },
+    ],
+  },
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
   { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
 ];
@@ -215,6 +223,7 @@ const getClientNavItems = (
     to: "/my-forms",
     badge: pendingFormsTotal,
   },
+  { icon: <IconGift size={20} />, label: "Beneficios", to: "/my-community" },
   { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
 ];
 
@@ -725,7 +734,9 @@ const ROUTE_LABELS: Record<string, string> = {
   "/boxes": "Boxes",
   "/machines": "Maquinaria",
   "/billing": "Facturación",
-  "/community": "Comunidad",
+  "/community": "Gamificación",
+  "/community/benefits": "Beneficios",
+  "/my-community": "Beneficios",
   "/documents": "Documentos",
   "/team": "Equipo",
   "/team/members": "Miembros",

@@ -7,7 +7,7 @@ from app.api.v1.endpoints import (
     live_classes, ai, wearables, reminders, health, invitations, client_portal, account,
     whatsapp, google_calendar, storage, tasks, team_groups, rectifications, beverages, stock,
     boxes, machines, services, appointments, time_clock, schedules, suppliers,
-    client_segments, email_campaigns, webhooks_brevo,
+    client_segments, email_campaigns, webhooks_brevo, community_benefits,
 )
 
 api_router = APIRouter()
@@ -164,3 +164,6 @@ api_router.include_router(email_campaigns.router, tags=["Campañas de Email"])
 
 # Brevo webhook (tracking opened/clicked/bounced)
 api_router.include_router(webhooks_brevo.router, tags=["Webhooks Brevo"])
+
+# Community → Beneficios (códigos / URLs de descuento del entrenador)
+api_router.include_router(community_benefits.router, tags=["Comunidad - Beneficios"])

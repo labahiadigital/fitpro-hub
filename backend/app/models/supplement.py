@@ -40,8 +40,10 @@ class Supplement(BaseModel):
     # Media
     image_url = Column(Text, nullable=True)
     
-    # Purchase / affiliate link
+    # Purchase / affiliate link y código de descuento que el cliente
+    # podrá copiar desde su "Cesta de suplementos".
     purchase_url = Column(Text, nullable=True)
+    discount_code = Column(String(80), nullable=True)
     
     # Visibility
     is_global = Column(Boolean, default=False)

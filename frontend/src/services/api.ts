@@ -559,6 +559,44 @@ export const supplementsApi = {
     api.delete(`/clients/${clientId}/supplements/${assignmentId}`),
 };
 
+export interface CommunityBenefit {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string | null;
+  brand: string | null;
+  url: string | null;
+  discount_code: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommunityBenefitInput {
+  title: string;
+  description?: string | null;
+  brand?: string | null;
+  url?: string | null;
+  discount_code?: string | null;
+  image_url?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export const communityBenefitsApi = {
+  list: () => api.get<CommunityBenefit[]>("/community/benefits"),
+  create: (data: CommunityBenefitInput) =>
+    api.post<CommunityBenefit>("/community/benefits", data),
+  update: (id: string, data: Partial<CommunityBenefitInput>) =>
+    api.put<CommunityBenefit>(`/community/benefits/${id}`, data),
+  remove: (id: string) => api.delete(`/community/benefits/${id}`),
+
+  // Cliente: lista de beneficios activos
+  listMine: () => api.get<CommunityBenefit[]>("/my-community/benefits"),
+};
+
 // Automations API
 export const automationsApi = {
   list: () => api.get("/automations"),

@@ -40,6 +40,7 @@ from app.models.workspace import Workspace
 from app.models.feedback import ClientDietFeedback, ClientEmotion, ClientFeedback, ClientWorkoutFeedback
 from app.models.payment import Payment, Subscription, SubscriptionStatus
 from app.models.document import Document
+from app.models.supplement import ClientSupplement, Supplement
 from app.services.notification_service import notify
 
 logger = logging.getLogger(__name__)
@@ -3953,3 +3954,77 @@ async def client_delete_document(
 
     await db.delete(doc)
     await db.commit()
+
+
+# ============ MIS SUPLEMENTOS (Cesta de suplementos) ============
+
+
+class ClientSupplementCartItem(BaseModel):
+    """Suplemento asignado al cliente con la info de compra del catálogo.
+
+    Solo exponemos los campos que nos interesa pintar en el frontend
+    (cesta de suplementos). El resto los dejamos opcionales para no
+    romper la integración cuando un campo del catálogo esté vacío.
+    """
+
+    id: UUID
+    supplement_id: UUID
+    name: str
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    purchase_url: Optional[str] = None
+    discount_code: Optional[str] = None
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool = True
+
+
+@router.get("/supplements", response_model=List[ClientSupplementCartItem])
+async def client_list_supplements(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista los suplementos asignados al cliente para su Cesta.
+
+    Cruzamos ``client_supplements`` con ``supplements`` (catálogo) para
+    devolver, además de la pauta del entrenador, la URL de compra y el
+    código de descuento que el cliente puede copiar para comprarlos.
+    Solo devolvemos asignaciones activas (``is_active = TRUE``).
+    """
+    client = await get_client_for_user(
+        current_user.id, db, current_user.workspace_id
+    )
+
+    rows = (
+        await db.execute(
+            select(ClientSupplement, Supplement)
+            .join(Supplement, Supplement.id == ClientSupplement.supplement_id)
+            .where(
+                ClientSupplement.client_id == client.id,
+                ClientSupplement.is_active.is_(True),
+            )
+            .order_by(desc(ClientSupplement.created_at))
+        )
+    ).all()
+
+    out: List[ClientSupplementCartItem] = []
+    for assignment, supplement in rows:
+        out.append(
+            ClientSupplementCartItem(
+                id=assignment.id,
+                supplement_id=supplement.id,
+                name=supplement.name,
+                brand=getattr(supplement, "brand", None),
+                category=getattr(supplement, "category", None),
+                image_url=await resolve_url(getattr(supplement, "image_url", None)),
+                purchase_url=getattr(supplement, "purchase_url", None),
+                discount_code=getattr(supplement, "discount_code", None),
+                dosage=assignment.dosage,
+                frequency=assignment.frequency,
+                notes=assignment.notes,
+                is_active=assignment.is_active,
+            )
+        )
+    return out

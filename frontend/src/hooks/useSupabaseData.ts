@@ -427,6 +427,8 @@ export function useCreateSupplement() {
       // ecommerce propio, Amazon, Bulk...). Se renderiza como un botón
       // "Comprar" en la ficha del cliente.
       purchase_url?: string;
+      // Código de descuento copiable que aparece junto al botón "Comprar".
+      discount_code?: string;
     }) => {
       const response = await api.post("/supplements", supplement);
       return response.data;

@@ -161,7 +161,8 @@ export function CommunityPage() {
           onClick: openGroupModal,
           variant: "default",
         }}
-        title="Comunidad"
+        title="Gamificación"
+        subtitle="Retos, grupos y leaderboard de tu comunidad"
       />
 
       {isMobile && (

@@ -31,6 +31,7 @@ class SupplementCreate(BaseModel):
     warnings: Optional[str] = None
     image_url: Optional[str] = None
     purchase_url: Optional[str] = None
+    discount_code: Optional[str] = None
 
 
 class SupplementResponse(BaseModel):
@@ -50,6 +51,7 @@ class SupplementResponse(BaseModel):
     warnings: Optional[str] = None
     image_url: Optional[str] = None
     purchase_url: Optional[str] = None
+    discount_code: Optional[str] = None
     is_global: bool = False
     
     class Config:
@@ -110,6 +112,7 @@ async def create_supplement(
         warnings=data.warnings,
         image_url=data.image_url,
         purchase_url=data.purchase_url,
+        discount_code=data.discount_code,
         is_global=False
     )
     db.add(supplement)
@@ -230,6 +233,7 @@ async def seed_supplements(
             warnings=data.warnings,
             image_url=data.image_url,
             purchase_url=data.purchase_url,
+            discount_code=data.discount_code,
             is_global=False,
         )
         db.add(supplement)

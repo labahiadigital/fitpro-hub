@@ -1286,55 +1286,80 @@ async def send_invitation_email(
         except Exception:  # pragma: no cover - defensivo
             message_id = None
 
-        # Registrar request event para que el webhook de Brevo pueda
-        # cruzar los eventos posteriores (delivered/opened/clicked) con
-        # la invitación. Es best-effort: si falla, no rompemos el envío.
-        if tracking:
-            try:
-                from datetime import datetime as _dt, timezone as _tz
-                from sqlalchemy import select as _select  # noqa: WPS433
-                from app.core.database import AsyncSessionLocal
-                from app.models.email_tracking import EmailEvent
-                from app.models.invitation import ClientInvitation as _CI
+        # Persistir tracking del envío. Lo hacemos en DOS pasos
+        # *independientes* y con sesiones separadas para que un fallo
+        # aislado (por ejemplo en el insert del EmailEvent) no impida
+        # marcar la invitación como "ya enviada", que es lo que alimenta
+        # la pestaña "Seguimiento" del entrenador.
+        from datetime import datetime as _dt, timezone as _tz
+        from sqlalchemy import update as _update  # noqa: WPS433
+        from app.core.database import AsyncSessionLocal
+        from app.models.email_tracking import EmailEvent
+        from app.models.invitation import ClientInvitation as _CI
 
-                async with AsyncSessionLocal() as session:
-                    now = _dt.now(_tz.utc)
-                    session.add(EmailEvent(
-                        workspace_id=tracking.get("workspace_id"),
-                        brevo_message_id=message_id,
-                        recipient_email=email.lower(),
-                        user_id=tracking.get("user_id"),
-                        client_id=tracking.get("client_id"),
-                        invitation_id=tracking.get("invitation_id"),
-                        event_type="request",
-                        subject=payload["subject"],
-                        template_kind=tracking.get("template_kind") or "invitation",
-                        occurred_at=now,
-                        payload={
-                            "to": email,
-                            "subject": payload["subject"],
-                            "tracking": {
-                                k: str(v) if v is not None else None
-                                for k, v in tracking.items()
-                            },
-                        },
-                    ))
-                    inv_id = tracking.get("invitation_id")
-                    if inv_id:
-                        inv_row = await session.execute(
-                            _select(_CI).where(_CI.id == inv_id)
+        now_utc = _dt.now(_tz.utc)
+        now_naive = now_utc.replace(tzinfo=None)
+        invitation_id = (tracking or {}).get("invitation_id")
+
+        # 1) Marcar la invitación como enviada. Usamos UPDATE directo
+        #    (no ORM fetch) porque PgBouncer en transaction mode puede
+        #    invalidar caches de prepared statements y queremos máxima
+        #    robustez. Si la columna queda a NULL la pestaña dice "Sin
+        #    envío" aunque el correo haya salido — eso es lo que estaba
+        #    pasando en DEV antes de este parche.
+        if invitation_id:
+            try:
+                async with AsyncSessionLocal() as session_inv:
+                    res = await session_inv.execute(
+                        _update(_CI)
+                        .where(_CI.id == invitation_id)
+                        .values(
+                            last_email_sent_at=now_naive,
+                            last_email_subject=payload["subject"],
+                            brevo_message_id=message_id,
                         )
-                        inv = inv_row.scalar_one_or_none()
-                        if inv is not None:
-                            # ``last_email_sent_at`` es naive en BD.
-                            inv.last_email_sent_at = now.replace(tzinfo=None)
-                            inv.last_email_subject = payload["subject"]
-                            inv.brevo_message_id = message_id
-                    await session.commit()
+                    )
+                    await session_inv.commit()
+                    logger.info(
+                        "invitation %s marked as sent (rows=%s, msg_id=%s)",
+                        invitation_id, res.rowcount, message_id,
+                    )
             except Exception:  # pragma: no cover - defensivo
                 logger.exception(
-                    "No se pudo registrar EmailEvent(request) for %s", email
+                    "Failed to mark invitation %s as sent", invitation_id
                 )
+
+        # 2) Registrar el evento ``request`` para correlacionar con los
+        #    eventos posteriores que mande el webhook de Brevo
+        #    (delivered/opened/clicked/bounced). Si esto falla no rompe
+        #    nada: la invitación ya quedó marcada como enviada arriba.
+        try:
+            async with AsyncSessionLocal() as session_evt:
+                session_evt.add(EmailEvent(
+                    workspace_id=(tracking or {}).get("workspace_id"),
+                    brevo_message_id=message_id,
+                    recipient_email=email.lower(),
+                    user_id=(tracking or {}).get("user_id"),
+                    client_id=(tracking or {}).get("client_id"),
+                    invitation_id=invitation_id,
+                    event_type="request",
+                    subject=payload["subject"],
+                    template_kind=(tracking or {}).get("template_kind") or "invitation",
+                    occurred_at=now_utc,
+                    payload={
+                        "to": email,
+                        "subject": payload["subject"],
+                        "tracking": {
+                            k: str(v) if v is not None else None
+                            for k, v in (tracking or {}).items()
+                        },
+                    },
+                ))
+                await session_evt.commit()
+        except Exception:  # pragma: no cover - defensivo
+            logger.exception(
+                "No se pudo registrar EmailEvent(request) for %s", email
+            )
 
         logger.info("Invitation email sent to %s msg_id=%s", email, message_id)
         return True

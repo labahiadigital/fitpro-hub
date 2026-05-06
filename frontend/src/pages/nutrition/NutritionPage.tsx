@@ -1264,7 +1264,7 @@ export function NutritionPage() {
 
       {/* Supplement Create Modal */}
       <BottomSheet onClose={closeSupplementModal} opened={supplementModalOpened} size="md" title="Nuevo Suplemento" radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
-        <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); try { await createSupplement.mutateAsync({ name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || undefined }); notifications.show({ title: "Suplemento creado", message: "El suplemento se ha creado correctamente", color: "green" }); closeSupplementModal(); } catch { notifications.show({ title: "Error", message: "No se pudo crear el suplemento", color: "red" }); } }}>
+        <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); const discountCodeRaw = ((formData.get("discount_code") as string) || "").trim(); try { await createSupplement.mutateAsync({ name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || undefined, discount_code: discountCodeRaw || undefined }); notifications.show({ title: "Suplemento creado", message: "El suplemento se ha creado correctamente", color: "green" }); closeSupplementModal(); } catch { notifications.show({ title: "Error", message: "No se pudo crear el suplemento", color: "red" }); } }}>
           <Stack>
             <TextInput label="Nombre" name="name" placeholder="Proteína Whey" required />
             <Group grow><TextInput label="Marca" name="brand" placeholder="Optimum Nutrition" /><Select name="category" data={[{ value: "protein", label: "Proteína" }, { value: "creatine", label: "Creatina" }, { value: "pre_workout", label: "Pre-entreno" }, { value: "vitamins", label: "Vitaminas" }, { value: "minerals", label: "Minerales" }, { value: "amino_acids", label: "Aminoácidos" }, { value: "fat_burner", label: "Quemador de grasa" }, { value: "general", label: "General" }]} label="Categoría" placeholder="Selecciona" defaultValue="general" /></Group>
@@ -1279,6 +1279,12 @@ export function NutritionPage() {
               type="url"
               description="Se compartirá con el cliente para que pueda comprarlo (afiliación, ecommerce propio, etc.)."
             />
+            <TextInput
+              label="Código de descuento"
+              name="discount_code"
+              placeholder="TRACKFIZ10"
+              description="El cliente lo verá en su Cesta de suplementos con un botón de copiar."
+            />
             <Group justify="flex-end" mt="md"><Button onClick={closeSupplementModal} variant="default">Cancelar</Button><Button loading={createSupplement.isPending} type="submit">Crear Suplemento</Button></Group>
           </Stack>
         </form>
@@ -1287,7 +1293,7 @@ export function NutritionPage() {
       {/* Supplement Edit Modal */}
       <BottomSheet onClose={() => { closeEditSupplementModal(); setEditingSupplement(null); }} opened={editSupplementModalOpened} size="md" title="Editar Suplemento" radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
         {editingSupplement && (
-          <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); try { await updateSupplement.mutateAsync({ id: editingSupplement.id, name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || null }); notifications.show({ title: "Suplemento actualizado", message: "El suplemento se ha actualizado correctamente", color: "green" }); closeEditSupplementModal(); setEditingSupplement(null); } catch { notifications.show({ title: "Error", message: "No se pudo actualizar el suplemento", color: "red" }); } }}>
+          <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); const discountCodeRaw = ((formData.get("discount_code") as string) || "").trim(); try { await updateSupplement.mutateAsync({ id: editingSupplement.id, name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || null, discount_code: discountCodeRaw || null }); notifications.show({ title: "Suplemento actualizado", message: "El suplemento se ha actualizado correctamente", color: "green" }); closeEditSupplementModal(); setEditingSupplement(null); } catch { notifications.show({ title: "Error", message: "No se pudo actualizar el suplemento", color: "red" }); } }}>
             <Stack>
               <TextInput label="Nombre" name="name" placeholder="Proteína Whey" required defaultValue={editingSupplement.name} />
               <Group grow><TextInput label="Marca" name="brand" placeholder="Optimum Nutrition" defaultValue={editingSupplement.brand || ""} /><Select name="category" data={[{ value: "protein", label: "Proteína" }, { value: "creatine", label: "Creatina" }, { value: "pre_workout", label: "Pre-entreno" }, { value: "vitamins", label: "Vitaminas" }, { value: "minerals", label: "Minerales" }, { value: "amino_acids", label: "Aminoácidos" }, { value: "fat_burner", label: "Quemador de grasa" }, { value: "general", label: "General" }]} label="Categoría" defaultValue={editingSupplement.category || "general"} /></Group>
@@ -1302,6 +1308,13 @@ export function NutritionPage() {
                 type="url"
                 defaultValue={editingSupplement.purchase_url || ""}
                 description="Se compartirá con el cliente para que pueda comprarlo (afiliación, ecommerce propio, etc.)."
+              />
+              <TextInput
+                label="Código de descuento"
+                name="discount_code"
+                placeholder="TRACKFIZ10"
+                defaultValue={editingSupplement.discount_code || ""}
+                description="El cliente lo verá en su Cesta de suplementos con un botón de copiar."
               />
               <Group justify="flex-end" mt="md"><Button onClick={() => { closeEditSupplementModal(); setEditingSupplement(null); }} variant="default">Cancelar</Button><Button loading={updateSupplement.isPending} type="submit">Guardar Cambios</Button></Group>
             </Stack>

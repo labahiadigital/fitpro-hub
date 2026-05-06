@@ -32,7 +32,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Depends, Request
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -228,5 +228,35 @@ async def brevo_event_webhook(
         payload=payload,
     )
     db.add(new_event)
+
+    # Backfill defensivo: si la invitación asociada no quedó marcada
+    # como "enviada" cuando disparamos el correo (porque la sesión que
+    # actualizaba ``last_email_sent_at`` falló silenciosamente), el
+    # primer evento que veamos de Brevo sirve como fuente de verdad.
+    # Esto garantiza que la pestaña "Seguimiento" del entrenador se
+    # rellena aunque la persistencia local hubiera fallado.
+    inv_id_to_backfill = base_event.invitation_id
+    if inv_id_to_backfill and event_type in {
+        "request", "delivered", "opened", "clicked"
+    }:
+        await db.execute(
+            update(ClientInvitation)
+            .where(
+                ClientInvitation.id == inv_id_to_backfill,
+                ClientInvitation.last_email_sent_at.is_(None),
+            )
+            .values(
+                last_email_sent_at=_parse_brevo_date(payload),
+                last_email_subject=(
+                    payload.get("subject")
+                    or base_event.subject
+                    or ClientInvitation.last_email_subject
+                ),
+                brevo_message_id=(
+                    message_id or base_event.brevo_message_id
+                ),
+            )
+        )
+
     await db.commit()
     return {"status": "ok"}

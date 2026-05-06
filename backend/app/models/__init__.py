@@ -38,6 +38,8 @@ from app.models.resource import Box, Machine, Service, ServiceStaff, ServiceStoc
 from app.models.time_clock import TimeRecord, LeaveRequest, PublicHoliday
 from app.models.schedule import StaffSchedule, MachineSchedule, BoxSchedule
 from app.models.email_tracking import EmailEvent, EmailCampaignTemplate
+from app.models.community import CommunityBenefit
+from app.models.supplement import ClientSupplement
 
 __all__ = [
     "Base",
@@ -129,4 +131,6 @@ __all__ = [
     "product_boxes",
     "EmailEvent",
     "EmailCampaignTemplate",
+    "CommunityBenefit",
+    "ClientSupplement",
 ]
