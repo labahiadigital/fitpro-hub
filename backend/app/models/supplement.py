@@ -1,5 +1,5 @@
 """Supplement library models - matches Supabase schema."""
-from sqlalchemy import Column, Text, Numeric, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Text, Numeric, Boolean, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -40,8 +40,10 @@ class Supplement(BaseModel):
     # Media
     image_url = Column(Text, nullable=True)
     
-    # Purchase / affiliate link
+    # Purchase / affiliate link y código de descuento que el cliente
+    # podrá copiar desde su "Cesta de suplementos".
     purchase_url = Column(Text, nullable=True)
+    discount_code = Column(String(80), nullable=True)
     
     # Visibility
     is_global = Column(Boolean, default=False)
@@ -73,3 +75,46 @@ class SupplementFavorite(BaseModel):
     
     def __repr__(self):
         return f"<SupplementFavorite user={self.user_id} supplement={self.supplement_id}>"
+
+
+class ClientSupplement(BaseModel):
+    """Suplementos asignados a un cliente concreto.
+
+    Pareja (client_id, supplement_id) NO es única: el entrenador puede
+    repetir el mismo suplemento con dosis o frecuencias distintas.
+    Por eso no añadimos UniqueConstraint.
+    """
+
+    __tablename__ = "client_supplements"
+
+    workspace_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    client_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("clients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    supplement_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("supplements.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    dosage = Column(String(100), nullable=True)
+    frequency = Column(String(100), nullable=True)
+    notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    supplement = relationship("Supplement")
+
+    def __repr__(self):
+        return (
+            f"<ClientSupplement client={self.client_id} "
+            f"supplement={self.supplement_id}>"
+        )

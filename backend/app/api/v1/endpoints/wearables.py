@@ -171,8 +171,10 @@ class ClientHealthDashboard(BaseModel):
 # =====================================================
 
 @router.get("/supported-devices", response_model=List[SupportedDeviceInfo])
-async def list_supported_devices():
-    """Listar dispositivos wearables soportados"""
+async def list_supported_devices(
+    _current_user: Any = Depends(require_workspace),
+):
+    """Listar dispositivos wearables soportados (solo usuarios autenticados)."""
     return [
         SupportedDeviceInfo(
             device_type=device_type,

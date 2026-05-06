@@ -38,6 +38,8 @@ export interface Payment {
   id: string;
   client_id?: string;
   client_name?: string;
+  client_email?: string | null;
+  client_phone?: string | null;
   description: string;
   amount: number;
   currency: string;
@@ -47,6 +49,10 @@ export interface Payment {
   paid_at?: string;
   subscription_interval?: string | null;
   subscription_id?: string | null;
+  subscription_started_at?: string | null;
+  subscription_ends_at?: string | null;
+  // Pasarela usada para el cobro: redsys, sequra, stripe, manual…
+  payment_method?: string | null;
 }
 
 export interface Subscription {

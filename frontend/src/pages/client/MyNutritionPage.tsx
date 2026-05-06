@@ -23,6 +23,7 @@ import {
   ScrollArea,
   Tabs,
   Tooltip,
+  CopyButton,
   Checkbox,
   Divider,
   Image,
@@ -52,10 +53,15 @@ import {
   IconMoodEmpty,
   IconDownload,
   IconShoppingCart,
+  IconPill,
+  IconCopy,
+  IconExternalLink,
   IconX,
 } from "@tabler/icons-react";
 import { DateInput } from "@mantine/dates";
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../../services/api";
 import {
   useMyMealPlan,
   useNutritionLogs,
@@ -215,6 +221,153 @@ interface SearchableFoodResult {
   carbs: number;
   fat: number;
   image_url?: string | null;
+}
+
+/**
+ * Input para el nombre de una fila "manual" del modal de registro de
+ * comida. A diferencia de ``FoodSearchInput`` (que añade una nueva
+ * fila al hacer clic en un resultado), este componente *transforma*
+ * la fila manual existente en una fila enlazada al alimento de BBDD
+ * cuando el usuario escoge un resultado, manteniendo la cantidad que
+ * ya hubiese tecleado. Si el usuario sigue tecleando un nombre que no
+ * existe, simplemente persiste como texto libre.
+ *
+ * Esto cubre la queja de UX: "cuando el cliente registra una comida
+ * manual, debería buscar en la base de datos y sólo si no la encuentra
+ * dejarle el manual".
+ */
+function ManualFoodNameInput({
+  value,
+  grams,
+  onChangeName,
+  onPickFromDatabase,
+}: {
+  value: string;
+  grams: number;
+  onChangeName: (name: string) => void;
+  onPickFromDatabase: (food: SearchableFoodResult) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [debounced] = useDebouncedValue(value, 250);
+  const queryActive = debounced.trim().length >= 2;
+  const { data: searchResults, isFetching } = useClientFoodSearch(
+    queryActive ? debounced : ""
+  );
+  const items = (queryActive ? searchResults?.items : []) as
+    | SearchableFoodResult[]
+    | undefined;
+
+  return (
+    <Box pos="relative" style={{ flex: 1 }}>
+      <TextInput
+        placeholder="Nombre del alimento"
+        value={value}
+        onChange={(e) => {
+          onChangeName(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          // Pequeño delay para permitir el click en el dropdown.
+          window.setTimeout(() => setOpen(false), 150);
+        }}
+        size="sm"
+        rightSection={
+          isFetching && queryActive ? <Loader size={12} /> : null
+        }
+        styles={{ input: { height: 44, borderRadius: 10 } }}
+      />
+      {open && queryActive && items && items.length > 0 && (
+        <Paper
+          shadow="lg"
+          radius="md"
+          withBorder
+          pos="absolute"
+          left={0}
+          right={0}
+          top={48}
+          style={{ zIndex: 80, maxHeight: 220, overflowY: "auto" }}
+        >
+          <Box px="xs" py={4}>
+            <Text size="10px" c="dimmed" tt="uppercase" fw={700}>
+              Coincidencias en la base de datos
+            </Text>
+          </Box>
+          {items.slice(0, 6).map((food) => (
+            <Box
+              key={food.id}
+              px="sm"
+              py="xs"
+              onMouseDown={(e) => {
+                // ``onMouseDown`` antes que ``blur`` del TextInput.
+                e.preventDefault();
+                onPickFromDatabase(food);
+                setOpen(false);
+              }}
+              style={{
+                cursor: "pointer",
+                borderTop: "1px solid var(--mantine-color-gray-1)",
+                transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background =
+                  "var(--mantine-color-gray-0)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background =
+                  "transparent";
+              }}
+            >
+              <Group justify="space-between" wrap="nowrap">
+                <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                  {food.image_url ? (
+                    <Image
+                      src={food.image_url}
+                      alt={food.name}
+                      w={26}
+                      h={26}
+                      fit="cover"
+                      radius="sm"
+                    />
+                  ) : null}
+                  <Box style={{ minWidth: 0 }}>
+                    <Text size="sm" fw={500} lineClamp={1}>
+                      {food.name}
+                    </Text>
+                    {food.brand && (
+                      <Text size="10px" c="dimmed">
+                        {food.brand}
+                      </Text>
+                    )}
+                  </Box>
+                </Group>
+                <Badge size="xs" variant="light" color="orange">
+                  {Math.round((food.calories * grams) / 100)} kcal
+                </Badge>
+              </Group>
+            </Box>
+          ))}
+        </Paper>
+      )}
+      {open && queryActive && !isFetching && items && items.length === 0 && (
+        <Paper
+          shadow="md"
+          radius="md"
+          withBorder
+          pos="absolute"
+          left={0}
+          right={0}
+          top={48}
+          style={{ zIndex: 80 }}
+          p="xs"
+        >
+          <Text size="11px" c="dimmed" ta="center">
+            Sin coincidencias. Se guardará como manual.
+          </Text>
+        </Paper>
+      )}
+    </Box>
+  );
 }
 
 function FoodSearchInput({
@@ -418,20 +571,62 @@ function LogMealModal({
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
+  // Cuando el usuario añade un alimento "manual" y empieza a teclear,
+  // primero buscamos en la base de datos y, si encuentra una coincidencia,
+  // *transformamos* esa fila manual en una fila enlazada al alimento real
+  // (rellenando macros, foto, food_id…). Si no encuentra nada, se queda
+  // como manual y el usuario rellena los macros a mano. Esto evita el
+  // caso "sfdsfd" del bug report donde el cliente teclea el nombre de
+  // un producto que sí existe en BBDD pero acaba registrado como manual.
+  const promoteManualToDatabase = (
+    index: number,
+    food: SearchableFoodResult
+  ) => {
+    setFoods((prev) => {
+      const updated = [...prev];
+      const existing = updated[index];
+      const grams = Number(existing.quantity) || food.serving_size || 100;
+      const factor = grams / 100;
+      updated[index] = {
+        ...existing,
+        name: food.name,
+        food_id: food.id,
+        is_manual: false,
+        image_url: food.image_url ?? null,
+        quantity: grams,
+        calories: Math.round(food.calories * factor),
+        protein: Math.round(food.protein * factor * 10) / 10,
+        carbs: Math.round(food.carbs * factor * 10) / 10,
+        fat: Math.round(food.fat * factor * 10) / 10,
+        food_category: food.category || existing.food_category,
+      };
+      return updated;
+    });
+  };
+
   const foodRows = foods.map((food, index) => (
     <Box key={index} px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}>
       <Group gap="xs" mb="xs" wrap="nowrap">
         {food.image_url ? (
           <Image src={food.image_url} alt={food.name} w={40} h={40} fit="cover" radius="md" style={{ flexShrink: 0 }} />
         ) : null}
-        <TextInput
-          placeholder="Nombre del alimento"
-          value={food.name}
-          onChange={(e) => updateFood(index, "name", e.target.value)}
-          size="sm"
-          style={{ flex: 1 }}
-          styles={{ input: { height: 44, borderRadius: 10 } }}
-        />
+        {food.is_manual ? (
+          <ManualFoodNameInput
+            value={food.name}
+            grams={Number(food.quantity) || 100}
+            onChangeName={(name) => updateFood(index, "name", name)}
+            onPickFromDatabase={(picked) => promoteManualToDatabase(index, picked)}
+          />
+        ) : (
+          <TextInput
+            placeholder="Nombre del alimento"
+            value={food.name}
+            onChange={(e) => updateFood(index, "name", e.target.value)}
+            size="sm"
+            style={{ flex: 1 }}
+            styles={{ input: { height: 44, borderRadius: 10 } }}
+          />
+        )}
         <NumberInput
           placeholder="g"
           value={food.quantity}
@@ -647,6 +842,8 @@ interface SupplementData {
   carbs: string | number;
   fat: string | number;
   serving_size: string;
+  /** Enlace externo donde el cliente puede comprar el suplemento. */
+  purchase_url?: string | null;
 }
 
 interface PlanMeal {
@@ -2105,6 +2302,7 @@ export function MyNutritionPage() {
             { value: "history", label: "Historial" },
             { value: "recipes", label: "Recetas" },
             { value: "shopping", label: "Cesta de la compra" },
+            { value: "supplements", label: "Cesta de suplementos" },
           ]}
           size="sm"
           radius="md"
@@ -2128,6 +2326,9 @@ export function MyNutritionPage() {
           </Tabs.Tab>
           <Tabs.Tab value="shopping" leftSection={<IconShoppingCart size={16} />}>
             Cesta de la compra
+          </Tabs.Tab>
+          <Tabs.Tab value="supplements" leftSection={<IconPill size={16} />}>
+            Cesta de suplementos
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -3437,6 +3638,10 @@ export function MyNutritionPage() {
             </Stack>
           )}
         </Tabs.Panel>
+
+        <Tabs.Panel value="supplements">
+          <SupplementCartPanel />
+        </Tabs.Panel>
       </Tabs>
 
       {/* Modal para registrar comida manual */}
@@ -3482,5 +3687,162 @@ export function MyNutritionPage() {
         }
       />
     </Box>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Cesta de suplementos
+//
+// Pestaña hermana de "Cesta de la compra" en la vista del cliente.
+// Lista los suplementos asignados por el entrenador con un botón
+// "Comprar aquí" cuando hay URL del producto y un código de descuento
+// copiable. Al pulsar el botón de copiar el código se copia y damos
+// feedback visual con ``CopyButton``.
+// ─────────────────────────────────────────────────────────────────────
+
+interface ClientSupplementCartItem {
+  id: string;
+  supplement_id: string;
+  name: string;
+  brand?: string | null;
+  category?: string | null;
+  image_url?: string | null;
+  purchase_url?: string | null;
+  discount_code?: string | null;
+  dosage?: string | null;
+  frequency?: string | null;
+  notes?: string | null;
+  is_active: boolean;
+}
+
+function SupplementCartPanel() {
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["my-supplements-cart"],
+    queryFn: async () => {
+      const { data } = await api.get<ClientSupplementCartItem[]>(
+        "/my/supplements"
+      );
+      return data || [];
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Center py="xl">
+        <Loader />
+      </Center>
+    );
+  }
+
+  if (!items || items.length === 0) {
+    return (
+      <Paper p="xl" ta="center" radius="lg" withBorder>
+        <Text size="xl" mb="sm">💊</Text>
+        <Title order={4} mb="xs">
+          Tu cesta de suplementos está vacía
+        </Title>
+        <Text c="dimmed" size="sm">
+          Cuando tu entrenador te asigne suplementos aparecerán aquí con su URL
+          de compra y código de descuento si los tiene configurados.
+        </Text>
+      </Paper>
+    );
+  }
+
+  return (
+    <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+      {items.map((s) => (
+        <Paper key={s.id} p="md" radius="md" withBorder>
+          <Group align="flex-start" gap="sm" wrap="nowrap">
+            {s.image_url ? (
+              <Image
+                src={s.image_url}
+                alt={s.name}
+                w={56}
+                h={56}
+                fit="cover"
+                radius="md"
+              />
+            ) : (
+              <ThemeIcon size={56} radius="md" color="grape" variant="light">
+                <IconPill size={28} />
+              </ThemeIcon>
+            )}
+            <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
+              {s.brand && (
+                <Text size="xs" c="dimmed" fw={600} tt="uppercase">
+                  {s.brand}
+                </Text>
+              )}
+              <Text fw={700} lineClamp={2}>
+                {s.name}
+              </Text>
+              {(s.dosage || s.frequency) && (
+                <Text size="xs" c="dimmed">
+                  {[s.dosage, s.frequency].filter(Boolean).join(" · ")}
+                </Text>
+              )}
+            </Stack>
+          </Group>
+
+          {s.notes && (
+            <Text size="xs" c="dimmed" mt="xs" lineClamp={3}>
+              {s.notes}
+            </Text>
+          )}
+
+          <Stack gap={8} mt="md">
+            {s.discount_code && (
+              <Group gap="xs" wrap="nowrap">
+                <Badge
+                  variant="light"
+                  color="yellow"
+                  size="lg"
+                  radius="sm"
+                  style={{ flex: 1, justifyContent: "center" }}
+                >
+                  {s.discount_code}
+                </Badge>
+                <CopyButton value={s.discount_code}>
+                  {({ copied, copy }) => (
+                    <Tooltip
+                      label={copied ? "Copiado" : "Copiar código"}
+                      withArrow
+                    >
+                      <ActionIcon
+                        variant="light"
+                        color={copied ? "teal" : "gray"}
+                        onClick={copy}
+                        size="lg"
+                        radius="md"
+                        aria-label="Copiar código"
+                      >
+                        {copied ? (
+                          <IconCheck size={16} />
+                        ) : (
+                          <IconCopy size={16} />
+                        )}
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </CopyButton>
+              </Group>
+            )}
+            {s.purchase_url && (
+              <Button
+                component="a"
+                href={s.purchase_url}
+                target="_blank"
+                rel="noreferrer noopener"
+                color="yellow"
+                rightSection={<IconExternalLink size={16} />}
+              >
+                Comprar aquí
+              </Button>
+            )}
+          </Stack>
+        </Paper>
+      ))}
+    </SimpleGrid>
   );
 }

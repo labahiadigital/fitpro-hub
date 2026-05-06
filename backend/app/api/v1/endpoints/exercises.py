@@ -435,13 +435,23 @@ async def get_alternatives_counts(
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get count of alternatives for each exercise that has any (for UI indicators)."""
+    """Get count of alternatives for each exercise that has any (for UI indicators).
+
+    Limita el conteo a alternativas globales (workspace_id IS NULL) o del
+    workspace actual; nunca expone alternativas privadas de otros workspaces.
+    """
+    ws_filter = or_(
+        ExerciseAlternative.workspace_id.is_(None),
+        ExerciseAlternative.workspace_id == current_user.workspace_id,
+    )
     # Forward
     fwd = await db.execute(
         select(
             ExerciseAlternative.exercise_id,
             func.count(ExerciseAlternative.id).label("cnt")
-        ).group_by(ExerciseAlternative.exercise_id)
+        )
+        .where(ws_filter)
+        .group_by(ExerciseAlternative.exercise_id)
     )
     counts: dict = {}
     for row in fwd:
@@ -452,7 +462,9 @@ async def get_alternatives_counts(
         select(
             ExerciseAlternative.alternative_exercise_id,
             func.count(ExerciseAlternative.id).label("cnt")
-        ).group_by(ExerciseAlternative.alternative_exercise_id)
+        )
+        .where(ws_filter)
+        .group_by(ExerciseAlternative.alternative_exercise_id)
     )
     for row in rev:
         eid = str(row.alternative_exercise_id)
@@ -466,11 +478,19 @@ async def list_exercise_alternatives(
     current_user: CurrentUser = Depends(require_workspace),
     db: AsyncSession = Depends(get_db),
 ):
-    """List predefined alternatives for an exercise (bidirectional)."""
+    """List predefined alternatives for an exercise (bidirectional).
+
+    Solo muestra alternativas globales (workspace_id IS NULL) o del propio
+    workspace.
+    """
+    ws_filter = or_(
+        ExerciseAlternative.workspace_id.is_(None),
+        ExerciseAlternative.workspace_id == current_user.workspace_id,
+    )
     result = await db.execute(
         select(ExerciseAlternative, Exercise)
         .join(Exercise, Exercise.id == ExerciseAlternative.alternative_exercise_id)
-        .where(ExerciseAlternative.exercise_id == exercise_id)
+        .where(ExerciseAlternative.exercise_id == exercise_id, ws_filter)
         .order_by(ExerciseAlternative.priority)
     )
     rows = result.all()
@@ -479,7 +499,7 @@ async def list_exercise_alternatives(
     result_reverse = await db.execute(
         select(ExerciseAlternative, Exercise)
         .join(Exercise, Exercise.id == ExerciseAlternative.exercise_id)
-        .where(ExerciseAlternative.alternative_exercise_id == exercise_id)
+        .where(ExerciseAlternative.alternative_exercise_id == exercise_id, ws_filter)
         .order_by(ExerciseAlternative.priority)
     )
     rows_reverse = result_reverse.all()
@@ -560,9 +580,18 @@ async def remove_exercise_alternative(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
-    """Remove an exercise alternative."""
+    """Remove an exercise alternative.
+
+    Solo se permite borrar alternativas que pertenezcan al workspace del
+    usuario. Las alternativas globales (workspace_id IS NULL) son
+    inmutables desde aquí; cualquier otro workspace queda fuera por
+    construcción.
+    """
     result = await db.execute(
-        select(ExerciseAlternative).where(ExerciseAlternative.id == alternative_id)
+        select(ExerciseAlternative).where(
+            ExerciseAlternative.id == alternative_id,
+            ExerciseAlternative.workspace_id == current_user.workspace_id,
+        )
     )
     alt = result.scalar_one_or_none()
     if alt:

@@ -1165,9 +1165,16 @@ async def register_client(
             await db.commit()
 
             # Login automático: el usuario ya está vinculado al nuevo
-            # workspace y puede entrar.
-            access_token, refresh_token = create_tokens(
-                {"sub": str(existing_user.id), "email": existing_user.email}
+            # workspace y puede entrar. Pasamos workspace_id + role
+            # explícitamente para que el JWT lleve ``role="client"`` y
+            # el frontend muestre el portal del cliente, no el del
+            # entrenador. ``create_tokens`` devuelve 3 valores
+            # (access_token, refresh_token, expires_in).
+            access_token, refresh_token, _expires_in = create_tokens(
+                user_id=str(existing_user.id),
+                email=existing_user.email,
+                workspace_id=str(data.workspace_id),
+                role="client",
             )
             set_refresh_cookie(response, refresh_token)
 

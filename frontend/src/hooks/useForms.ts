@@ -11,7 +11,12 @@ export interface Form {
   fields: FormField[];
   is_active: boolean | string; // Backend may return "Y"/"N"
   is_required?: boolean;
+  /** Legacy - derivado de send_on_signup OR send_on_product_purchase. */
   send_on_onboarding?: boolean;
+  /** Se asigna automáticamente a TODO cliente que completa onboarding. */
+  send_on_signup?: boolean;
+  /** Se asigna sólo cuando el cliente contrata uno de los ``product_ids``. */
+  send_on_product_purchase?: boolean;
   is_global?: boolean;
   /** IDs de productos a los que está vinculado el formulario. */
   product_ids?: string[];
@@ -244,11 +249,17 @@ export function useMyForms(
 }
 
 export function useMyPendingRequiredCount(options?: { enabled?: boolean }) {
-  return useQuery<{ pending_required: number }>({
+  return useQuery<{ pending_total: number; pending_required: number }>({
     queryKey: ["my-forms", "pending-required-count"],
     queryFn: async () => {
       const response = await api.get("/forms/my/pending/count");
-      return response.data;
+      const data = response.data || {};
+      return {
+        pending_total: Number(
+          data.pending_total ?? data.pending_required ?? 0
+        ),
+        pending_required: Number(data.pending_required ?? 0),
+      };
     },
     refetchInterval: 60_000,
     enabled: options?.enabled ?? true,

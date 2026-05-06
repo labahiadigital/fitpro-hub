@@ -40,6 +40,7 @@ from app.models.workspace import Workspace
 from app.models.feedback import ClientDietFeedback, ClientEmotion, ClientFeedback, ClientWorkoutFeedback
 from app.models.payment import Payment, Subscription, SubscriptionStatus
 from app.models.document import Document
+from app.models.supplement import ClientSupplement, Supplement
 from app.services.notification_service import notify
 
 logger = logging.getLogger(__name__)
@@ -99,17 +100,38 @@ class ClientProfileResponse(BaseModel):
     weight_kg: Optional[str] = None
     goals: Optional[str] = None
     health_data: dict = {}
-    
+    # Datos fiscales: el cliente debe verlos siempre en /my-profile.
+    fiscal_type: Optional[str] = None
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
+
     class Config:
         from_attributes = True
 
 
 class ClientProfileUpdate(BaseModel):
-    """Update client profile."""
+    """Update client profile.
+
+    Permitimos al cliente actualizar sus propios datos fiscales: si se
+    equivocó en el NIF o se mudó, debería poder corregirlo sin tener
+    que escribir al entrenador. Igualmente el entrenador conserva la
+    posibilidad de hacerlo desde /clients.
+    """
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
     avatar_url: Optional[str] = None
+    fiscal_type: Optional[str] = None
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
 
 
 class WorkoutProgramClientResponse(BaseModel):
@@ -845,12 +867,19 @@ async def get_exercise_alternatives_for_client(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get predefined alternatives for an exercise (for swap modal)."""
+    """Get predefined alternatives for an exercise (for swap modal).
+
+    Solo expone alternativas globales o del workspace del cliente.
+    """
+    ws_filter = or_(
+        ExerciseAlternative.workspace_id.is_(None),
+        ExerciseAlternative.workspace_id == current_user.workspace_id,
+    )
     # Forward direction
     result = await db.execute(
         select(ExerciseAlternative, Exercise)
         .join(Exercise, Exercise.id == ExerciseAlternative.alternative_exercise_id)
-        .where(ExerciseAlternative.exercise_id == exercise_id)
+        .where(ExerciseAlternative.exercise_id == exercise_id, ws_filter)
         .order_by(ExerciseAlternative.priority)
     )
     rows = result.all()
@@ -858,7 +887,7 @@ async def get_exercise_alternatives_for_client(
     result_rev = await db.execute(
         select(ExerciseAlternative, Exercise)
         .join(Exercise, Exercise.id == ExerciseAlternative.exercise_id)
-        .where(ExerciseAlternative.alternative_exercise_id == exercise_id)
+        .where(ExerciseAlternative.alternative_exercise_id == exercise_id, ws_filter)
         .order_by(ExerciseAlternative.priority)
     )
     rows_rev = result_rev.all()
@@ -3925,3 +3954,77 @@ async def client_delete_document(
 
     await db.delete(doc)
     await db.commit()
+
+
+# ============ MIS SUPLEMENTOS (Cesta de suplementos) ============
+
+
+class ClientSupplementCartItem(BaseModel):
+    """Suplemento asignado al cliente con la info de compra del catálogo.
+
+    Solo exponemos los campos que nos interesa pintar en el frontend
+    (cesta de suplementos). El resto los dejamos opcionales para no
+    romper la integración cuando un campo del catálogo esté vacío.
+    """
+
+    id: UUID
+    supplement_id: UUID
+    name: str
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    purchase_url: Optional[str] = None
+    discount_code: Optional[str] = None
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool = True
+
+
+@router.get("/supplements", response_model=List[ClientSupplementCartItem])
+async def client_list_supplements(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista los suplementos asignados al cliente para su Cesta.
+
+    Cruzamos ``client_supplements`` con ``supplements`` (catálogo) para
+    devolver, además de la pauta del entrenador, la URL de compra y el
+    código de descuento que el cliente puede copiar para comprarlos.
+    Solo devolvemos asignaciones activas (``is_active = TRUE``).
+    """
+    client = await get_client_for_user(
+        current_user.id, db, current_user.workspace_id
+    )
+
+    rows = (
+        await db.execute(
+            select(ClientSupplement, Supplement)
+            .join(Supplement, Supplement.id == ClientSupplement.supplement_id)
+            .where(
+                ClientSupplement.client_id == client.id,
+                ClientSupplement.is_active.is_(True),
+            )
+            .order_by(desc(ClientSupplement.created_at))
+        )
+    ).all()
+
+    out: List[ClientSupplementCartItem] = []
+    for assignment, supplement in rows:
+        out.append(
+            ClientSupplementCartItem(
+                id=assignment.id,
+                supplement_id=supplement.id,
+                name=supplement.name,
+                brand=getattr(supplement, "brand", None),
+                category=getattr(supplement, "category", None),
+                image_url=await resolve_url(getattr(supplement, "image_url", None)),
+                purchase_url=getattr(supplement, "purchase_url", None),
+                discount_code=getattr(supplement, "discount_code", None),
+                dosage=assignment.dosage,
+                frequency=assignment.frequency,
+                notes=assignment.notes,
+                is_active=assignment.is_active,
+            )
+        )
+    return out

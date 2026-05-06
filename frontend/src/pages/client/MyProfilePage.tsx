@@ -19,7 +19,16 @@ import {
   Alert,
   ThemeIcon,
   FileButton,
+  ActionIcon,
+  Tooltip,
+  NumberInput,
+  SegmentedControl,
+  Tabs,
+  Select,
+  Radio,
 } from "@mantine/core";
+import { useMediaQuery, useDisclosure } from "@mantine/hooks";
+import { MonthPickerInput } from "@mantine/dates";
 import {
   IconCamera,
   IconMail,
@@ -34,9 +43,12 @@ import {
   IconAlertCircle,
   IconX,
   IconCheck,
+  IconDownload,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconFileDownload,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
 import { useAuthStore } from "../../stores/auth";
 import { authApi, clientPortalApi, notificationsApi } from "../../services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -116,9 +128,26 @@ const paymentStatusConfig: Record<string, { label: string; color: string }> = {
   refunded: { label: "Devuelto", color: "gray" },
 };
 
+async function _downloadBlob(blob: Blob, filename: string): Promise<void> {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 function SubscriptionSection() {
   const queryClient = useQueryClient();
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [pauseModalOpen, setPauseModalOpen] = useState(false);
+  const [pauseUnit, setPauseUnit] = useState<"days" | "months">("days");
+  const [pauseAmount, setPauseAmount] = useState<number>(7);
+  const [bulkFrom, setBulkFrom] = useState<Date | null>(null);
+  const [bulkTo, setBulkTo] = useState<Date | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data: subscription, isLoading } = useQuery<SubscriptionData | null>({
     queryKey: ["my-subscription"],
@@ -147,6 +176,79 @@ function SubscriptionSection() {
       });
     },
   });
+
+  const pauseMutation = useMutation({
+    mutationFn: (vars: { id: string; data: { duration_days?: number; duration_months?: number } }) =>
+      clientPortalApi.pauseSubscription(vars.id, vars.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+      setPauseModalOpen(false);
+      notifications.show({
+        title: "Suscripción pausada",
+        message: "Tu suscripción se reanudará automáticamente al finalizar la pausa.",
+        color: "blue",
+      });
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      notifications.show({
+        title: "No se pudo pausar",
+        message: err?.response?.data?.detail || "Inténtalo de nuevo.",
+        color: "red",
+      });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (id: string) => clientPortalApi.resumeSubscription(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
+      notifications.show({
+        title: "Suscripción reanudada",
+        message: "Vuelves a tener acceso completo.",
+        color: "green",
+      });
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo reanudar la suscripción.",
+        color: "red",
+      });
+    },
+  });
+
+  async function handleDownloadInvoice(paymentId: string): Promise<void> {
+    setDownloadingId(paymentId);
+    try {
+      const res = await clientPortalApi.downloadInvoicePdf(paymentId);
+      await _downloadBlob(res.data, `Factura_${paymentId.slice(0, 8)}.pdf`);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      notifications.show({
+        title: "No se pudo descargar la factura",
+        message: e?.response?.data?.detail || "Inténtalo de nuevo más tarde.",
+        color: "red",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  async function handleDownloadBulk(): Promise<void> {
+    const fmt = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : undefined);
+    try {
+      const res = await clientPortalApi.downloadInvoicesBulk({ date_from: fmt(bulkFrom), date_to: fmt(bulkTo) });
+      const tag = `${fmt(bulkFrom) || "inicio"}_a_${fmt(bulkTo) || "hoy"}`;
+      await _downloadBlob(res.data, `Mis_Facturas_${tag}.pdf`);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      notifications.show({
+        title: "No se pudo descargar el PDF combinado",
+        message: e?.response?.data?.detail || "Comprueba el periodo seleccionado.",
+        color: "red",
+      });
+    }
+  }
 
   if (isLoading) {
     return (
@@ -262,11 +364,13 @@ function SubscriptionSection() {
                   <Table.Th>Descripción</Table.Th>
                   <Table.Th ta="right">Importe</Table.Th>
                   <Table.Th ta="center">Estado</Table.Th>
+                  <Table.Th ta="center">Factura</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {sub.payments.map((p) => {
                   const pConfig = paymentStatusConfig[p.status] || { label: p.status, color: "gray" };
+                  const canDownload = p.status === "succeeded";
                   return (
                     <Table.Tr key={p.id}>
                       <Table.Td>{formatDate(p.paid_at || p.created_at)}</Table.Td>
@@ -274,6 +378,22 @@ function SubscriptionSection() {
                       <Table.Td ta="right" fw={500}>{formatCurrencyLocal(p.amount, p.currency)}</Table.Td>
                       <Table.Td ta="center">
                         <Badge size="sm" color={pConfig.color} variant="light">{pConfig.label}</Badge>
+                      </Table.Td>
+                      <Table.Td ta="center">
+                        {canDownload ? (
+                          <Tooltip label="Descargar factura">
+                            <ActionIcon
+                              variant="subtle"
+                              color="green"
+                              loading={downloadingId === p.id}
+                              onClick={() => handleDownloadInvoice(p.id)}
+                            >
+                              <IconDownload size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        ) : (
+                          <Text size="xs" c="dimmed">—</Text>
+                        )}
                       </Table.Td>
                     </Table.Tr>
                   );
@@ -283,16 +403,84 @@ function SubscriptionSection() {
           </>
         )}
 
+        {/* Mis facturas: descargar todas las facturas en un PDF único */}
+        <Divider mt="md" mb="md" />
+        <Group mb="sm">
+          <IconFileDownload size={16} />
+          <Text size="sm" fw={600}>Mis facturas</Text>
+        </Group>
+        <Text size="xs" c="dimmed" mb="sm">
+          Selecciona el periodo y descarga todas tus facturas pagadas en un único PDF.
+        </Text>
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+          <MonthPickerInput
+            label="Desde"
+            value={bulkFrom}
+            onChange={(value) => setBulkFrom(value as Date | null)}
+            placeholder="Inicio"
+            clearable
+            valueFormat="MM/YYYY"
+            maxDate={new Date()}
+          />
+          <MonthPickerInput
+            label="Hasta"
+            value={bulkTo}
+            onChange={(value) => setBulkTo(value as Date | null)}
+            placeholder="Hoy"
+            clearable
+            valueFormat="MM/YYYY"
+            maxDate={new Date()}
+          />
+          <Button
+            mt={{ base: 0, sm: 24 }}
+            leftSection={<IconFileDownload size={16} />}
+            onClick={handleDownloadBulk}
+            disabled={!sub.payments || sub.payments.length === 0}
+          >
+            Descargar PDF combinado
+          </Button>
+        </SimpleGrid>
+
         {sub.status === "active" && (
           <>
             <Divider mt="md" mb="md" />
+            <Group justify="flex-start" gap="sm">
+              <Button
+                variant="light"
+                color="blue"
+                size="xs"
+                leftSection={<IconPlayerPause size={14} />}
+                onClick={() => setPauseModalOpen(true)}
+              >
+                Pausar suscripción
+              </Button>
+              <Button
+                variant="subtle"
+                color="red"
+                size="xs"
+                onClick={() => setCancelModalOpen(true)}
+              >
+                Cancelar suscripción
+              </Button>
+            </Group>
+          </>
+        )}
+
+        {sub.status === "paused" && (
+          <>
+            <Divider mt="md" mb="md" />
+            <Alert color="blue" variant="light" mb="sm" icon={<IconAlertCircle size={16} />}>
+              Tu suscripción está pausada. Reanudará automáticamente cuando termine la pausa.
+            </Alert>
             <Button
-              variant="subtle"
-              color="red"
+              variant="filled"
+              color="green"
               size="xs"
-              onClick={() => setCancelModalOpen(true)}
+              leftSection={<IconPlayerPlay size={14} />}
+              onClick={() => resumeMutation.mutate(sub.id)}
+              loading={resumeMutation.isPending}
             >
-              Cancelar suscripción
+              Reanudar ahora
             </Button>
           </>
         )}
@@ -323,6 +511,53 @@ function SubscriptionSection() {
               leftSection={<IconX size={16} />}
             >
               Confirmar cancelación
+            </Button>
+          </Group>
+        </Stack>
+      </NativeBottomSheet>
+
+      <NativeBottomSheet
+        opened={pauseModalOpen}
+        onClose={() => setPauseModalOpen(false)}
+        title="Pausar suscripción"
+      >
+        <Stack gap="md">
+          <Alert color="blue" variant="light" icon={<IconAlertCircle size={16} />}>
+            Mientras esté pausada no se realizarán cobros y tu plan quedará suspendido.
+            La suscripción se reanudará automáticamente al finalizar el periodo seleccionado.
+          </Alert>
+          <SegmentedControl
+            value={pauseUnit}
+            onChange={(v) => setPauseUnit(v as "days" | "months")}
+            data={[
+              { label: "Días", value: "days" },
+              { label: "Meses", value: "months" },
+            ]}
+          />
+          <NumberInput
+            label={`Pausar durante ${pauseUnit === "days" ? "X días" : "X meses"}`}
+            value={pauseAmount}
+            onChange={(v) => setPauseAmount(typeof v === "number" ? v : 1)}
+            min={1}
+            max={pauseUnit === "days" ? 180 : 6}
+            allowDecimal={false}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setPauseModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              color="blue"
+              loading={pauseMutation.isPending}
+              leftSection={<IconPlayerPause size={16} />}
+              onClick={() =>
+                pauseMutation.mutate({
+                  id: sub.id,
+                  data: pauseUnit === "days" ? { duration_days: pauseAmount } : { duration_months: pauseAmount },
+                })
+              }
+            >
+              Confirmar pausa
             </Button>
           </Group>
         </Stack>
@@ -481,16 +716,48 @@ function NotificationsSection() {
   );
 }
 
+/**
+ * Pestañas de ``/my-profile``. El cliente las elige bien por el control
+ * Tabs (escritorio) o un Select (móvil), porque con 6 pestañas el
+ * Tabs.List ocupa demasiado horizontal y los iconos solos no son lo
+ * bastante descriptivos en pantallas pequeñas.
+ */
+const PROFILE_TABS = [
+  { value: "datos", label: "Datos" },
+  { value: "subscription", label: "Mi suscripción y pagos" },
+  { value: "security", label: "Seguridad" },
+  { value: "email", label: "Cambiar email" },
+  { value: "notifications", label: "Notificaciones" },
+  { value: "trainer", label: "Mi entrenador" },
+] as const;
+
+type ProfileTab = (typeof PROFILE_TABS)[number]["value"];
+
 export function MyProfilePage() {
   const { user, currentWorkspace } = useAuthStore();
   const [passwordModalOpened, { open: openPasswordModal, close: closePasswordModal }] = useDisclosure(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileTab>("datos");
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const profileForm = useForm({
     initialValues: {
       full_name: user?.full_name || "",
       phone: "",
     },
+  });
+
+  // Datos fiscales: estado local del formulario. Se hidrata desde
+  // ``profileData`` cuando llega y se persiste con el mismo endpoint
+  // ``PUT /my/profile`` que ahora también acepta los billing_*.
+  const [billingForm, setBillingForm] = useState({
+    fiscal_type: "individual" as "individual" | "company",
+    legal_name: "",
+    tax_id: "",
+    billing_address: "",
+    billing_city: "",
+    billing_postal_code: "",
+    billing_country: "España",
   });
 
   useEffect(() => {
@@ -515,9 +782,35 @@ export function MyProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileData?.phone]);
 
+  useEffect(() => {
+    if (profileData) {
+      setBillingForm({
+        fiscal_type:
+          (profileData.fiscal_type as "individual" | "company") || "individual",
+        legal_name: profileData.legal_name || "",
+        tax_id: profileData.tax_id || "",
+        billing_address: profileData.billing_address || "",
+        billing_city: profileData.billing_city || "",
+        billing_postal_code: profileData.billing_postal_code || "",
+        billing_country: profileData.billing_country || "España",
+      });
+    }
+  }, [profileData]);
+
+  const profileQueryClient = useQueryClient();
   const updateProfileMutation = useMutation({
-    mutationFn: (data: { first_name?: string; last_name?: string; phone?: string }) =>
-      clientPortalApi.updateProfile(data),
+    mutationFn: (data: {
+      first_name?: string;
+      last_name?: string;
+      phone?: string;
+      fiscal_type?: string | null;
+      legal_name?: string | null;
+      tax_id?: string | null;
+      billing_address?: string | null;
+      billing_city?: string | null;
+      billing_postal_code?: string | null;
+      billing_country?: string | null;
+    }) => clientPortalApi.updateProfile(data),
     onSuccess: (_res, variables) => {
       const parts = [variables.first_name, variables.last_name].filter(Boolean);
       if (parts.length > 0) {
@@ -526,6 +819,7 @@ export function MyProfilePage() {
           full_name: parts.join(" "),
         });
       }
+      profileQueryClient.invalidateQueries({ queryKey: ["my-profile"] });
       notifications.show({
         title: "Perfil actualizado",
         message: "Tus datos han sido guardados correctamente.",
@@ -551,6 +845,19 @@ export function MyProfilePage() {
       last_name: lastName,
       phone: profileForm.values.phone || undefined,
     });
+  };
+
+  const handleSaveBilling = () => {
+    const isCompany = billingForm.fiscal_type === "company";
+    updateProfileMutation.mutate({
+      fiscal_type: billingForm.fiscal_type,
+      legal_name: isCompany ? billingForm.legal_name || null : null,
+      tax_id: billingForm.tax_id || null,
+      billing_address: billingForm.billing_address || null,
+      billing_city: billingForm.billing_city || null,
+      billing_postal_code: billingForm.billing_postal_code || null,
+      billing_country: billingForm.billing_country || null,
+    } as any);
   };
 
   const handleAvatarUpload = async (file: File | null) => {
@@ -656,96 +963,262 @@ export function MyProfilePage() {
     },
   });
 
+  const isCompany = billingForm.fiscal_type === "company";
+
   return (
     <Box p="xl">
       <Title order={2} mb="xl">Mi Perfil</Title>
 
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
-        <Card shadow="sm" padding="xl" radius="lg" withBorder>
-          <Group mb="xl">
-            <Box pos="relative">
-              <Avatar
-                size={100}
-                radius="xl"
-                color="yellow"
-                src={user?.avatar_url}
-              >
-                {user?.full_name?.[0] || "U"}
-              </Avatar>
-              <FileButton
-                onChange={handleAvatarUpload}
-                accept="image/png,image/jpeg,image/webp"
-              >
-                {(props) => (
-                  <Button
-                    {...props}
-                    size="xs"
-                    variant="filled"
-                    color="dark"
-                    radius="xl"
-                    pos="absolute"
-                    bottom={0}
-                    right={0}
-                    p={4}
-                    loading={avatarUploading}
-                  >
-                    <IconCamera size={14} />
-                  </Button>
-                )}
-              </FileButton>
-            </Box>
-            <Box>
-              <Title order={3}>{user?.full_name || "Usuario"}</Title>
-              <Text c="dimmed">{user?.email}</Text>
-              <Badge color="yellow" variant="light" mt="xs">Cliente</Badge>
-            </Box>
-          </Group>
-
-          <Stack gap="md">
-            <TextInput
-              label="Nombre completo"
-              placeholder="Tu nombre"
-              leftSection={<IconUser size={16} />}
-              {...profileForm.getInputProps("full_name")}
-            />
-            <TextInput
-              label="Email"
-              placeholder="tu@email.com"
-              value={user?.email || ""}
-              leftSection={<IconMail size={16} />}
-              disabled
-            />
-            <TextInput
-              label="Teléfono"
-              placeholder="+34 600 000 000"
-              leftSection={<IconPhone size={16} />}
-              {...profileForm.getInputProps("phone")}
-            />
-            <Button
+      {/* Header con avatar siempre visible — el cliente quiere identificarse
+          de un vistazo independientemente de la pestaña activa. */}
+      <Card shadow="sm" padding="lg" radius="lg" withBorder mb="lg">
+        <Group>
+          <Box pos="relative">
+            <Avatar
+              size={72}
+              radius="xl"
               color="yellow"
-              mt="md"
-              onClick={handleSaveProfile}
-              loading={updateProfileMutation.isPending}
-              leftSection={<IconCheck size={16} />}
+              src={user?.avatar_url}
             >
-              Guardar cambios
-            </Button>
-          </Stack>
-        </Card>
+              {user?.full_name?.[0] || "U"}
+            </Avatar>
+            <FileButton onChange={handleAvatarUpload} accept="image/png,image/jpeg,image/webp">
+              {(props) => (
+                <Button
+                  {...props}
+                  size="xs"
+                  variant="filled"
+                  color="dark"
+                  radius="xl"
+                  pos="absolute"
+                  bottom={0}
+                  right={0}
+                  p={4}
+                  loading={avatarUploading}
+                >
+                  <IconCamera size={14} />
+                </Button>
+              )}
+            </FileButton>
+          </Box>
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <Title order={3}>{user?.full_name || "Usuario"}</Title>
+            <Text c="dimmed" truncate>{user?.email}</Text>
+            <Badge color="yellow" variant="light" mt="xs">Cliente</Badge>
+          </Box>
+        </Group>
+      </Card>
 
-        <Stack gap="lg">
+      <Tabs
+        value={activeTab}
+        onChange={(v) => v && setActiveTab(v as ProfileTab)}
+        keepMounted={false}
+      >
+        {isMobile ? (
+          // En móvil con 6 pestañas el ``Tabs.List`` se desborda. Usamos un
+          // ``Select`` para que el cliente cambie de pestaña con un único
+          // tap, manteniendo el mismo estado interno.
+          <Select
+            data={PROFILE_TABS.map((t) => ({ value: t.value, label: t.label }))}
+            value={activeTab}
+            onChange={(v) => v && setActiveTab(v as ProfileTab)}
+            allowDeselect={false}
+            size="md"
+            radius="md"
+            mb="md"
+          />
+        ) : (
+          <Tabs.List mb="lg">
+            <Tabs.Tab leftSection={<IconUser size={16} />} value="datos">Datos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="subscription">
+              Mi suscripción y pagos
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconLock size={16} />} value="security">Seguridad</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconMail size={16} />} value="email">Cambiar email</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications">
+              Notificaciones
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPalette size={16} />} value="trainer">
+              Mi entrenador
+            </Tabs.Tab>
+          </Tabs.List>
+        )}
+
+        {/* Datos: incluye datos personales y SIEMPRE los datos de
+            facturación (el usuario quiere verlos para validar que están
+            bien antes de la siguiente factura). */}
+        <Tabs.Panel value="datos">
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+            <Card shadow="sm" padding="xl" radius="lg" withBorder>
+              <Group mb="md">
+                <IconUser size={20} />
+                <Text fw={600}>Datos personales</Text>
+              </Group>
+              <Stack gap="md">
+                <TextInput
+                  label="Nombre completo"
+                  placeholder="Tu nombre"
+                  leftSection={<IconUser size={16} />}
+                  {...profileForm.getInputProps("full_name")}
+                />
+                <TextInput
+                  label="Email"
+                  placeholder="tu@email.com"
+                  value={user?.email || ""}
+                  leftSection={<IconMail size={16} />}
+                  disabled
+                />
+                <TextInput
+                  label="Teléfono"
+                  placeholder="+34 600 000 000"
+                  leftSection={<IconPhone size={16} />}
+                  {...profileForm.getInputProps("phone")}
+                />
+                <Button
+                  color="yellow"
+                  mt="md"
+                  onClick={handleSaveProfile}
+                  loading={updateProfileMutation.isPending}
+                  leftSection={<IconCheck size={16} />}
+                >
+                  Guardar cambios
+                </Button>
+              </Stack>
+            </Card>
+
+            <Card shadow="sm" padding="xl" radius="lg" withBorder>
+              <Group mb="md">
+                <IconReceipt size={20} />
+                <Text fw={600}>Datos de facturación</Text>
+              </Group>
+              <Text size="xs" c="dimmed" mb="md">
+                Estos datos aparecen en cada factura. Puedes corregirlos en
+                cualquier momento.
+              </Text>
+              <Stack gap="md">
+                <Radio.Group
+                  label="Tipo de cliente"
+                  value={billingForm.fiscal_type}
+                  onChange={(v) =>
+                    setBillingForm((s) => ({
+                      ...s,
+                      fiscal_type: v as "individual" | "company",
+                    }))
+                  }
+                >
+                  <Group mt="xs">
+                    <Radio value="individual" label="Persona Física" />
+                    <Radio value="company" label="Persona Jurídica" />
+                  </Group>
+                </Radio.Group>
+
+                {isCompany ? (
+                  <TextInput
+                    label="Razón Social"
+                    placeholder="Empresa S.L."
+                    value={billingForm.legal_name}
+                    onChange={(e) =>
+                      setBillingForm((s) => ({
+                        ...s,
+                        legal_name: e.currentTarget.value,
+                      }))
+                    }
+                  />
+                ) : (
+                  <Text size="xs" c="dimmed">
+                    Para Persona Física se factura con tu nombre y apellidos.
+                  </Text>
+                )}
+
+                <TextInput
+                  label={isCompany ? "CIF / NRT" : "NIF (DNI, NIE, etc.)"}
+                  placeholder={isCompany ? "B12345678" : "12345678A"}
+                  value={billingForm.tax_id}
+                  onChange={(e) =>
+                    setBillingForm((s) => ({
+                      ...s,
+                      tax_id: e.currentTarget.value,
+                    }))
+                  }
+                />
+                <TextInput
+                  label="Dirección"
+                  placeholder="Calle Mayor 12, 3ºB"
+                  value={billingForm.billing_address}
+                  onChange={(e) =>
+                    setBillingForm((s) => ({
+                      ...s,
+                      billing_address: e.currentTarget.value,
+                    }))
+                  }
+                />
+                <SimpleGrid cols={{ base: 1, sm: 3 }}>
+                  <TextInput
+                    label="Población"
+                    value={billingForm.billing_city}
+                    onChange={(e) =>
+                      setBillingForm((s) => ({
+                        ...s,
+                        billing_city: e.currentTarget.value,
+                      }))
+                    }
+                  />
+                  <TextInput
+                    label="CP"
+                    value={billingForm.billing_postal_code}
+                    onChange={(e) =>
+                      setBillingForm((s) => ({
+                        ...s,
+                        billing_postal_code: e.currentTarget.value,
+                      }))
+                    }
+                  />
+                  <TextInput
+                    label="País"
+                    value={billingForm.billing_country}
+                    onChange={(e) =>
+                      setBillingForm((s) => ({
+                        ...s,
+                        billing_country: e.currentTarget.value,
+                      }))
+                    }
+                  />
+                </SimpleGrid>
+                <Button
+                  color="yellow"
+                  mt="md"
+                  onClick={handleSaveBilling}
+                  loading={updateProfileMutation.isPending}
+                  leftSection={<IconCheck size={16} />}
+                >
+                  Guardar datos de facturación
+                </Button>
+              </Stack>
+            </Card>
+          </SimpleGrid>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="subscription">
           <SubscriptionSection />
+        </Tabs.Panel>
 
+        <Tabs.Panel value="security">
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconLock size={20} />
               <Text fw={600}>Seguridad</Text>
             </Group>
-            <Button variant="light" fullWidth onClick={openPasswordModal}>
+            <Text size="sm" c="dimmed" mb="md">
+              Cambia tu contraseña cada cierto tiempo para mantener tu cuenta
+              segura.
+            </Text>
+            <Button variant="light" onClick={openPasswordModal}>
               Cambiar contraseña
             </Button>
           </Card>
+        </Tabs.Panel>
 
+        <Tabs.Panel value="email">
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconMail size={20} />
@@ -780,7 +1253,6 @@ export function MyProfilePage() {
                 <Button
                   type="submit"
                   color="yellow"
-                  fullWidth
                   loading={changeEmailMutation.isPending}
                 >
                   Cambiar email
@@ -788,9 +1260,13 @@ export function MyProfilePage() {
               </Stack>
             </form>
           </Card>
+        </Tabs.Panel>
 
+        <Tabs.Panel value="notifications">
           <NotificationsSection />
+        </Tabs.Panel>
 
+        <Tabs.Panel value="trainer">
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconPalette size={20} />
@@ -808,8 +1284,8 @@ export function MyProfilePage() {
               </Group>
             </Paper>
           </Card>
-        </Stack>
-      </SimpleGrid>
+        </Tabs.Panel>
+      </Tabs>
 
       <NativeBottomSheet
         opened={passwordModalOpened}

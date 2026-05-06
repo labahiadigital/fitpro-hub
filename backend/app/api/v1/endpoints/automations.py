@@ -248,9 +248,24 @@ async def list_automation_logs(
     current_user: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db)
 ):
+    """Listar historial de ejecuciones de una automatización del workspace.
+
+    Comprobamos que la automation pertenece al workspace del usuario antes
+    de devolver logs: sin esta validación cualquier staff podía consultar
+    logs de automations de otros workspaces si conocía el UUID.
     """
-    Listar historial de ejecuciones de una automatización.
-    """
+    automation_check = await db.execute(
+        select(Automation.id).where(
+            Automation.id == automation_id,
+            Automation.workspace_id == current_user.workspace_id,
+        )
+    )
+    if not automation_check.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Automatización no encontrada",
+        )
+
     result = await db.execute(
         select(AutomationLog)
         .where(AutomationLog.automation_id == automation_id)

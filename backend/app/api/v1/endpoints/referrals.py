@@ -857,8 +857,9 @@ async def list_supplement_referrals(
     db: AsyncSession = Depends(get_db),
     category: Optional[str] = Query(None),
     featured_only: bool = Query(False),
+    _current_user: Any = Depends(require_workspace),
 ):
-    """Listar suplementos con programa de referidos (público)"""
+    """Listar suplementos con programa de referidos (solo usuarios autenticados)."""
     query = select(SupplementReferral).where(SupplementReferral.is_active == True)
 
     if category:

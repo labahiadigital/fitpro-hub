@@ -72,7 +72,12 @@ class Subscription(BaseModel):
     current_period_start = Column(DateTime(timezone=True), nullable=True)
     current_period_end = Column(DateTime(timezone=True), nullable=True)
     cancelled_at = Column(DateTime(timezone=True), nullable=True)
-    
+    # Pausa temporal de la suscripción. ``paused_at`` registra cuándo
+    # se pausó y ``paused_until`` la fecha (UTC) en la que reanudará la
+    # facturación. Si ``paused_until`` es NULL la pausa es indefinida.
+    paused_at = Column(DateTime(timezone=True), nullable=True)
+    paused_until = Column(DateTime(timezone=True), nullable=True)
+
     # Extra metadata (DB column is 'metadata', but we use different attr name to avoid SQLAlchemy conflict)
     extra_data = Column("metadata", JSONB, default=lambda: {})
     

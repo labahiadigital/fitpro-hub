@@ -1,6 +1,6 @@
 """Notification tasks for Celery."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 from uuid import UUID
 
@@ -10,6 +10,93 @@ import httpx
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _record_request_event_sync(
+    *,
+    to_email: str,
+    subject: str,
+    message_id: Optional[str],
+    tracking: Dict[str, Any],
+) -> None:
+    """Persistencia síncrona del ``EmailEvent(request)`` desde Celery.
+
+    Estamos en un worker síncrono, así que no podemos usar la sesión
+    asíncrona de SQLAlchemy. Abrimos una conexión directa a la BD usando
+    ``psycopg2`` (la dependencia ya está disponible) e insertamos el
+    evento. Es best-effort: si falla, lo logueamos y seguimos para no
+    bloquear el envío del email.
+    """
+    if not (tracking.get("workspace_id") or tracking.get("client_id") or tracking.get("invitation_id")):
+        # Sin contexto suficiente no merece la pena guardar el evento:
+        # los tabs de /clients filtran por workspace_id.
+        return
+    try:
+        # Importación local para no penalizar el arranque del worker si
+        # no se acaba enviando ningún email.
+        import json
+        import psycopg2  # type: ignore[import-not-found]
+
+        # ``DATABASE_URL`` puede venir con prefijo ``postgresql+asyncpg``:
+        # psycopg2 no lo reconoce, así que normalizamos.
+        dsn = settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql")
+        conn = psycopg2.connect(dsn)
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO email_events (
+                            id, workspace_id, brevo_message_id, recipient_email,
+                            user_id, client_id, invitation_id,
+                            event_type, subject, template_kind, occurred_at,
+                            payload, created_at, updated_at
+                        ) VALUES (
+                            gen_random_uuid(), %s, %s, %s,
+                            %s, %s, %s,
+                            'request', %s, %s, NOW(),
+                            %s::jsonb, NOW(), NOW()
+                        )
+                        """,
+                        (
+                            tracking.get("workspace_id"),
+                            message_id,
+                            to_email.lower(),
+                            tracking.get("user_id"),
+                            tracking.get("client_id"),
+                            tracking.get("invitation_id"),
+                            subject,
+                            tracking.get("template_kind"),
+                            json.dumps({
+                                "to": to_email,
+                                "subject": subject,
+                                "tracking": {
+                                    k: str(v) if v is not None else None
+                                    for k, v in tracking.items()
+                                },
+                            }),
+                        ),
+                    )
+
+                    # Si la invitación viene con id, actualizamos su
+                    # ``brevo_message_id`` para que el webhook pueda
+                    # cruzar eventos posteriores.
+                    inv_id = tracking.get("invitation_id")
+                    if inv_id:
+                        cur.execute(
+                            """
+                            UPDATE client_invitations
+                            SET brevo_message_id = %s,
+                                last_email_sent_at = NOW(),
+                                last_email_subject = %s
+                            WHERE id = %s
+                            """,
+                            (message_id, subject, inv_id),
+                        )
+        finally:
+            conn.close()
+    except Exception:  # pragma: no cover - defensivo
+        logger.exception("No se pudo registrar EmailEvent(request) desde Celery")
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -23,8 +110,25 @@ def send_email_task(
     reply_to: Optional[str] = None,
     template_id: Optional[str] = None,
     template_params: Optional[Dict[str, Any]] = None,
+    tracking: Optional[Dict[str, Any]] = None,
 ):
-    """Send an email via Brevo (Sendinblue)."""
+    """Send an email via Brevo (Sendinblue).
+
+    ``tracking`` opcional permite que el webhook de Brevo cruze los
+    eventos (delivered/opened/clicked) con el cliente / invitación
+    correctos. Esperamos un dict con cualquiera de estas claves
+    (todas string UUID o ``None``):
+
+    - ``workspace_id``
+    - ``client_id``
+    - ``invitation_id``
+    - ``user_id``
+    - ``template_kind`` (string corto: ``invitation``, ``invitation_resend``,
+      ``welcome_after_payment`` ...)
+
+    Si no se pasa ``tracking`` el envío sigue funcionando pero los
+    tabs de /clients no podrán mostrar el estado del email.
+    """
     try:
         headers = {
             "api-key": settings.BREVO_API_KEY,
@@ -60,10 +164,32 @@ def send_email_task(
                 timeout=30,
             )
             response.raise_for_status()
-        
-        logger.info(f"Email sent successfully to {to_email}")
-        return {"status": "sent", "to": to_email}
-        
+
+        message_id: Optional[str] = None
+        try:
+            data = response.json()
+            raw = data.get("messageId") if isinstance(data, dict) else None
+            if isinstance(raw, str):
+                message_id = raw.strip("<>")
+        except Exception:  # pragma: no cover - defensivo
+            message_id = None
+
+        if tracking:
+            _record_request_event_sync(
+                to_email=to_email,
+                subject=subject,
+                message_id=message_id,
+                tracking=tracking,
+            )
+
+        logger.info(
+            "Email sent to %s msg_id=%s tracking=%s",
+            to_email,
+            message_id,
+            bool(tracking),
+        )
+        return {"status": "sent", "to": to_email, "message_id": message_id}
+
     except Exception as exc:
         logger.error(f"Failed to send email to {to_email}: {exc}")
         raise self.retry(exc=exc)

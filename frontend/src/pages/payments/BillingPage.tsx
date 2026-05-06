@@ -52,10 +52,13 @@ import {
   IconTrash,
   IconTrendingUp,
   IconUpload,
+  IconUser,
+  IconUserCircle,
   IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 import { openConfirm, openDangerConfirm } from "../../utils/confirmModal";
 import { PageHeader } from "../../components/common/PageHeader";
@@ -101,6 +104,7 @@ import { formatDecimal } from "../../utils/format";
 
 export function BillingPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [chargeModalOpened, { open: openChargeModal, close: closeChargeModal }] = useDisclosure(false);
   const [paymentDetailOpened, { open: openPaymentDetail, close: closePaymentDetail }] = useDisclosure(false);
@@ -752,6 +756,25 @@ export function BillingPage() {
     return map[interval] || interval;
   };
 
+  // Pasarela usada en el cobro: viene como string corto desde backend
+  // (`Payment.extra_data.gateway`). Mapeamos a etiquetas amigables.
+  const getPaymentMethodLabel = (method?: string | null): string => {
+    if (!method) return "—";
+    const map: Record<string, string> = {
+      redsys: "Redsys",
+      sequra: "SeQura",
+      stripe: "Stripe",
+      manual: "Manual",
+      transferencia: "Transferencia",
+    };
+    return map[method] || method;
+  };
+
+  const goToClientProfile = useCallback((clientId?: string | null) => {
+    if (!clientId) return;
+    navigate(`/clients/${clientId}`);
+  }, [navigate]);
+
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
@@ -839,7 +862,7 @@ export function BillingPage() {
           onChange={setActiveTab}
           data={[
             { value: "overview", label: "Resumen" },
-            { value: "payments", label: "Cobros" },
+            { value: "payments", label: "Pagos y suscripciones" },
             { value: "invoices", label: "Facturas" },
           ]}
           size="sm"
@@ -854,7 +877,7 @@ export function BillingPage() {
               Resumen
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
-              Cobros
+              Pagos y suscripciones
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileInvoice size={14} />} value="invoices" style={{ fontWeight: 500 }}>
               Facturas
@@ -1069,6 +1092,17 @@ export function BillingPage() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs" justify="flex-end">
+                          <Tooltip label="Ir a ficha del cliente">
+                            <ActionIcon
+                              color="gray"
+                              variant="subtle"
+                              radius="xl"
+                              disabled={!payment.client_id}
+                              onClick={() => goToClientProfile(payment.client_id)}
+                            >
+                              <IconUserCircle size={16} />
+                            </ActionIcon>
+                          </Tooltip>
                           <Tooltip label="Ver detalle">
                             <ActionIcon color="blue" variant="subtle" radius="xl" onClick={() => handleViewPayment(payment)}><IconEye size={16} /></ActionIcon>
                           </Tooltip>
@@ -1356,14 +1390,58 @@ export function BillingPage() {
       >
         {selectedPayment && (
           <Stack>
-            <Group justify="space-between">
-              <Text c="dimmed" size="sm">Cliente</Text>
-              <Text fw={500} size="sm">{resolveClientName(selectedPayment)}</Text>
-            </Group>
-            <Divider style={{ borderColor: "var(--nv-border)" }} />
+            {/* Cabecera con nombre del cliente (el del onboarding) y atajo
+                a la ficha. Aparece justo encima del bloque "Detalles del
+                pago" para que el entrenador pueda saltar al cliente sin
+                cerrar el modal. */}
+            <Box
+              p="md"
+              style={{
+                background: "var(--nv-surface)",
+                border: "1px solid var(--nv-border)",
+                borderRadius: "var(--radius-item)",
+              }}
+            >
+              <Group justify="space-between" align="flex-start" wrap="nowrap">
+                <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+                  <ThemeIcon size={42} radius="xl" variant="light" color="primary">
+                    <IconUser size={20} />
+                  </ThemeIcon>
+                  <Box style={{ minWidth: 0 }}>
+                    <Text fw={600} size="md" style={{ color: "var(--nv-text-primary)" }}>
+                      {resolveClientName(selectedPayment)}
+                    </Text>
+                    {selectedPayment.client_email && (
+                      <Group gap={4} wrap="nowrap">
+                        <IconMail size={12} color="var(--mantine-color-dimmed)" />
+                        <Text c="dimmed" size="xs" truncate>{selectedPayment.client_email}</Text>
+                      </Group>
+                    )}
+                    {selectedPayment.client_phone && (
+                      <Text c="dimmed" size="xs">📞 {selectedPayment.client_phone}</Text>
+                    )}
+                  </Box>
+                </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  leftSection={<IconUserCircle size={14} />}
+                  disabled={!selectedPayment.client_id}
+                  onClick={() => {
+                    goToClientProfile(selectedPayment.client_id);
+                    closePaymentDetail();
+                  }}
+                >
+                  Ir a ficha del cliente
+                </Button>
+              </Group>
+            </Box>
+
+            <Divider label="Detalles del pago" labelPosition="left" />
+
             <Group justify="space-between">
               <Text c="dimmed" size="sm">Descripción</Text>
-              <Text fw={500} size="sm">{selectedPayment.description || "—"}</Text>
+              <Text fw={500} size="sm" ta="right" style={{ maxWidth: "60%" }}>{selectedPayment.description || "—"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
@@ -1380,13 +1458,36 @@ export function BillingPage() {
               <Text c="dimmed" size="sm">Tipo</Text>
               <Text size="sm">{selectedPayment.payment_type === "subscription" ? "Suscripción" : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
             </Group>
+            <Divider style={{ borderColor: "var(--nv-border)" }} />
+            <Group justify="space-between">
+              <Text c="dimmed" size="sm">Método de pago</Text>
+              <Badge variant="light" color="grape" radius="xl">{getPaymentMethodLabel(selectedPayment.payment_method)}</Badge>
+            </Group>
             {selectedPayment.payment_type === "subscription" && (
               <>
                 <Divider style={{ borderColor: "var(--nv-border)" }} />
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Periodicidad</Text>
+                  <Text c="dimmed" size="sm">Periodicidad del servicio</Text>
                   <Text size="sm">
                     {getIntervalLabel(selectedPayment.subscription_interval) || "—"}
+                  </Text>
+                </Group>
+                <Divider style={{ borderColor: "var(--nv-border)" }} />
+                <Group justify="space-between">
+                  <Text c="dimmed" size="sm">Inicio de la suscripción</Text>
+                  <Text size="sm">
+                    {selectedPayment.subscription_started_at
+                      ? new Date(selectedPayment.subscription_started_at).toLocaleDateString("es-ES")
+                      : "—"}
+                  </Text>
+                </Group>
+                <Divider style={{ borderColor: "var(--nv-border)" }} />
+                <Group justify="space-between">
+                  <Text c="dimmed" size="sm">Fin de la suscripción</Text>
+                  <Text size="sm">
+                    {selectedPayment.subscription_ends_at
+                      ? new Date(selectedPayment.subscription_ends_at).toLocaleDateString("es-ES")
+                      : "—"}
                   </Text>
                 </Group>
               </>

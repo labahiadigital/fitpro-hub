@@ -31,6 +31,7 @@ import {
   Collapse,
   Paper,
   Modal,
+  Radio,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
@@ -72,6 +73,11 @@ import {
     IconCalendar,
     IconForms,
     IconBolt,
+    IconShieldCheck,
+    IconShieldOff,
+    IconCircleCheck,
+    IconCircleX,
+    IconReceipt,
 } from "@tabler/icons-react";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -105,7 +111,7 @@ import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calor
 import { generateClientPlanPDF, generateMealPlanPDF, generateWorkoutProgramPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
 import { IconArrowLeft, IconEye } from "@tabler/icons-react";
-import { paymentsApi, api } from "../../services/api";
+import { paymentsApi, api, supplementsApi } from "../../services/api";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { formatDecimal } from "../../utils/format";
@@ -129,7 +135,7 @@ const CLIENT_DETAIL_TABS_SELECT_DATA = [
   { value: "client-calendar", label: "Calendario" },
   { value: "photos", label: "Fotos" },
   { value: "documents", label: "Documentos" },
-  { value: "payments", label: "Pagos" },
+  { value: "payments", label: "Pagos y suscripciones" },
 ];
 
 const COMMON_INTOLERANCES = INTOLERANCES_SELECT_DATA;
@@ -207,7 +213,16 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
   );
 }
 
-function ClientPaymentsTab({ clientId }: { clientId: string }) {
+
+function ClientPaymentsTab({
+  clientId,
+  client,
+  onClientSaved,
+}: {
+  clientId: string;
+  client?: any;
+  onClientSaved?: () => void;
+}) {
   const { data: paymentsData = [], isLoading: loadingPayments } = useQuery({
     queryKey: ["client-payments", clientId],
     queryFn: async () => {
@@ -330,11 +345,6 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
                           </Badge>
                         )}
                       </Group>
-                      {s.description && (
-                        <Text size="xs" c="dimmed" lineClamp={2}>
-                          {s.description}
-                        </Text>
-                      )}
                       <Group gap="lg" mt={4}>
                         <Box>
                           <Text size="xs" c="dimmed">Precio</Text>
@@ -431,7 +441,237 @@ function ClientPaymentsTab({ clientId }: { clientId: string }) {
           </ScrollArea>
         )}
       </Box>
+
+      {/* Datos de facturación: integrados en este tab para mantener todo
+          lo "fiscal/financiero" del cliente en un único sitio. Lo
+          renderizamos en formato compacto (rejilla de 3 columnas) para
+          no dejar el espacio en blanco que generaba el ``InfoRow``. */}
+      {client && (
+        <ClientBillingCompact client={client} onSaved={onClientSaved} />
+      )}
     </Stack>
+  );
+}
+
+/**
+ * Bloque compacto de datos de facturación dentro de "Pagos y
+ * suscripciones". Mantiene el mismo modelo de datos que el antiguo
+ * ``ClientBillingTab`` pero pinta dos columnas/tres columnas de pares
+ * etiqueta-valor para no desperdiciar espacio horizontal.
+ */
+function ClientBillingCompact({
+  client,
+  onSaved,
+}: {
+  client: any;
+  onSaved?: () => void;
+}) {
+  const updateClient = useUpdateClient();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    fiscal_type:
+      (client?.fiscal_type as "individual" | "company") || "individual",
+    legal_name: client?.legal_name || "",
+    tax_id: client?.tax_id || "",
+    billing_address: client?.billing_address || "",
+    billing_city: client?.billing_city || "",
+    billing_postal_code: client?.billing_postal_code || "",
+    billing_country: client?.billing_country || "España",
+  });
+
+  useEffect(() => {
+    if (!editing && client) {
+      setForm({
+        fiscal_type:
+          (client.fiscal_type as "individual" | "company") || "individual",
+        legal_name: client.legal_name || "",
+        tax_id: client.tax_id || "",
+        billing_address: client.billing_address || "",
+        billing_city: client.billing_city || "",
+        billing_postal_code: client.billing_postal_code || "",
+        billing_country: client.billing_country || "España",
+      });
+    }
+  }, [client, editing]);
+
+  const isCompany = form.fiscal_type === "company";
+  const displayName = isCompany
+    ? client.legal_name || "—"
+    : `${client.first_name || ""} ${client.last_name || ""}`.trim() || "—";
+  const hasAnyData =
+    client.fiscal_type ||
+    client.legal_name ||
+    client.tax_id ||
+    client.billing_address ||
+    client.billing_city ||
+    client.billing_postal_code ||
+    client.billing_country;
+
+  const handleSave = async () => {
+    try {
+      await updateClient.mutateAsync({
+        id: client.id,
+        data: {
+          fiscal_type: form.fiscal_type,
+          legal_name: isCompany ? form.legal_name || null : null,
+          tax_id: form.tax_id || null,
+          billing_address: form.billing_address || null,
+          billing_city: form.billing_city || null,
+          billing_postal_code: form.billing_postal_code || null,
+          billing_country: form.billing_country || null,
+        } as any,
+      });
+      setEditing(false);
+      onSaved?.();
+    } catch {
+      // useUpdateClient ya lanza notificación
+    }
+  };
+
+  // Pequeño helper para celdas etiqueta+valor en 1 sola columna.
+  const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <Box>
+      <Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: 0.4 }}>
+        {label}
+      </Text>
+      <Text size="sm" fw={600} mt={2}>
+        {value || "—"}
+      </Text>
+    </Box>
+  );
+
+  return (
+    <Box className="nv-card" p="xl">
+      <Group justify="space-between" mb="md">
+        <Group gap="xs">
+          <ThemeIcon size="md" radius="md" variant="light" color="yellow">
+            <IconReceipt size={18} />
+          </ThemeIcon>
+          <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Datos de facturación
+          </Text>
+        </Group>
+        {!editing && (
+          <Button
+            size="xs"
+            variant="light"
+            leftSection={<IconEdit size={14} />}
+            onClick={() => setEditing(true)}
+          >
+            Editar
+          </Button>
+        )}
+      </Group>
+
+      {editing ? (
+        <Stack gap="sm">
+          <Radio.Group
+            label="Tipo de cliente"
+            value={form.fiscal_type}
+            onChange={(v) =>
+              setForm((s) => ({
+                ...s,
+                fiscal_type: v as "individual" | "company",
+              }))
+            }
+          >
+            <Group mt={4}>
+              <Radio value="individual" label="Persona Física" />
+              <Radio value="company" label="Persona Jurídica" />
+            </Group>
+          </Radio.Group>
+
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            {isCompany && (
+              <TextInput
+                label="Razón Social"
+                placeholder="Empresa S.L."
+                value={form.legal_name}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, legal_name: e.currentTarget.value }))
+                }
+              />
+            )}
+            <TextInput
+              label={isCompany ? "CIF / NRT" : "NIF (DNI, NIE, etc.)"}
+              placeholder={isCompany ? "B12345678" : "12345678A"}
+              value={form.tax_id}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, tax_id: e.currentTarget.value }))
+              }
+            />
+          </SimpleGrid>
+
+          <TextInput
+            label="Dirección"
+            placeholder="Calle Mayor 12, 3ºB"
+            value={form.billing_address}
+            onChange={(e) =>
+              setForm((s) => ({ ...s, billing_address: e.currentTarget.value }))
+            }
+          />
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+            <TextInput
+              label="Población"
+              value={form.billing_city}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, billing_city: e.currentTarget.value }))
+              }
+            />
+            <TextInput
+              label="Código postal"
+              value={form.billing_postal_code}
+              onChange={(e) =>
+                setForm((s) => ({
+                  ...s,
+                  billing_postal_code: e.currentTarget.value,
+                }))
+              }
+            />
+            <TextInput
+              label="País"
+              value={form.billing_country}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, billing_country: e.currentTarget.value }))
+              }
+            />
+          </SimpleGrid>
+          <Group justify="flex-end" mt="xs">
+            <Button variant="subtle" size="xs" onClick={() => setEditing(false)}>
+              Cancelar
+            </Button>
+            <Button size="xs" onClick={handleSave} loading={updateClient.isPending}>
+              Guardar
+            </Button>
+          </Group>
+        </Stack>
+      ) : !hasAnyData ? (
+        <Text size="sm" c="dimmed">
+          Este cliente todavía no tiene datos de facturación registrados.
+        </Text>
+      ) : (
+        <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md" verticalSpacing="sm">
+          <Field
+            label="Tipo"
+            value={isCompany ? "Persona Jurídica" : "Persona Física"}
+          />
+          <Field
+            label={isCompany ? "Razón Social" : "Nombre fiscal"}
+            value={displayName}
+          />
+          <Field
+            label={isCompany ? "CIF / NRT" : "NIF / DNI / NIE"}
+            value={client.tax_id}
+          />
+          <Field label="País" value={client.billing_country} />
+          <Box style={{ gridColumn: "span 2" }}>
+            <Field label="Dirección" value={client.billing_address} />
+          </Box>
+          <Field label="Población" value={client.billing_city} />
+          <Field label="Código postal" value={client.billing_postal_code} />
+        </SimpleGrid>
+      )}
+    </Box>
   );
 }
 
@@ -794,6 +1034,13 @@ export function ClientDetailPage() {
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [assignProgramModalOpened, { open: openAssignProgramModal, close: closeAssignProgramModal }] = useDisclosure(false);
   const [assignMealPlanModalOpened, { open: openAssignMealPlanModal, close: closeAssignMealPlanModal }] = useDisclosure(false);
+
+  // Modal "Añadir suplemento": permite al entrenador asignar un
+  // suplemento de su catálogo al cliente con dosis/frecuencia.
+  const [
+    assignSupplementModalOpened,
+    { open: openAssignSupplementModal, close: closeAssignSupplementModal },
+  ] = useDisclosure(false);
   
   // Templates are only needed when the trainer opens the "Asignar programa" /
   // "Asignar plan" modals. Defer these 1.5 s queries until then.
@@ -903,7 +1150,59 @@ export function ClientDetailPage() {
     };
   });
 
-  const supplements: { id: string; name: string; dosage: string; frequency: string }[] = [];
+  // Suplementos asignados al cliente desde el catálogo del entrenador.
+  // Se cargan vía /clients/{id}/supplements (endpoint nuevo) y se
+  // refrescan cuando se añade/elimina una asignación.
+  const {
+    data: clientSupplementsResp,
+    refetch: refetchClientSupplements,
+  } = useQuery({
+    queryKey: ["client-supplements", id],
+    queryFn: async () => {
+      const res = await supplementsApi.listForClient(id || "");
+      return res.data as Array<{
+        id: string;
+        client_id: string;
+        supplement_id: string;
+        dosage?: string | null;
+        frequency?: string | null;
+        notes?: string | null;
+        is_active: boolean;
+        supplement_name?: string | null;
+        supplement_brand?: string | null;
+        supplement_category?: string | null;
+        supplement_image_url?: string | null;
+      }>;
+    },
+    enabled: !!id,
+  });
+  const supplements = clientSupplementsResp || [];
+
+  // Catálogo de suplementos del entrenador: se carga sólo cuando se abre
+  // la modal de asignación para no malgastar bandwidth en cada visita
+  // al detalle del cliente.
+  const { data: catalogSupplementsResp } = useQuery({
+    queryKey: ["supplements-catalog"],
+    queryFn: async () => {
+      const res = await supplementsApi.list();
+      return res.data as Array<{
+        id: string;
+        name: string;
+        brand?: string | null;
+        category?: string | null;
+        image_url?: string | null;
+      }>;
+    },
+    enabled: assignSupplementModalOpened,
+  });
+  const catalogSupplements = catalogSupplementsResp || [];
+
+  const [supplementForm, setSupplementForm] = useState({
+    supplement_id: "",
+    dosage: "",
+    frequency: "",
+    notes: "",
+  });
 
   // Sync formula from saved client data when loaded
   useEffect(() => {
@@ -2187,7 +2486,7 @@ export function ClientDetailPage() {
             <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconForms size={16} />} value="forms">Formularios</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos y suscripciones</Tabs.Tab>
           </Tabs.List>
         )}
 
@@ -2413,6 +2712,157 @@ export function ClientDetailPage() {
                   size="lg"
                 />
               </Group>
+            </Box>
+
+            {/* Consentimientos RGPD del registro */}
+            <Box className="nv-card" p="xl">
+              <Group gap="sm" mb="lg" align="center">
+                {(() => {
+                  const c = client.consents;
+                  const allGood = !!(c && c.data_processing && c.health_data);
+                  return (
+                    <ThemeIcon
+                      size={36}
+                      radius="xl"
+                      variant="light"
+                      color={allGood ? "green" : "yellow"}
+                    >
+                      {allGood ? (
+                        <IconShieldCheck size={20} />
+                      ) : (
+                        <IconShieldOff size={20} />
+                      )}
+                    </ThemeIcon>
+                  );
+                })()}
+                <div>
+                  <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Consentimientos del registro (RGPD)
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Checkboxes que el cliente marcó al completar el alta.
+                  </Text>
+                </div>
+              </Group>
+
+              {(() => {
+                const consents = client.consents;
+                if (!consents) {
+                  return (
+                    <Text size="sm" c="dimmed" fs="italic">
+                      Este cliente fue creado manualmente o se registró antes
+                      de que existiera el flujo de consentimientos. No hay
+                      registro de los checkboxes de RGPD.
+                    </Text>
+                  );
+                }
+                const items: Array<{
+                  key: string;
+                  label: string;
+                  hint: string;
+                  required: boolean;
+                  value: boolean;
+                }> = [
+                  {
+                    key: "data_processing",
+                    label: "Términos y Condiciones del servicio",
+                    hint: "Obligatorio. Aceptación del contrato de prestación.",
+                    required: true,
+                    value: !!consents.data_processing,
+                  },
+                  {
+                    key: "health_data",
+                    label: "Política de Privacidad y tratamiento de datos de salud",
+                    hint: "Obligatorio. Permite al entrenador tratar datos sensibles (dieta, lesiones…).",
+                    required: true,
+                    value: !!consents.health_data,
+                  },
+                  {
+                    key: "marketing",
+                    label: "Comunicaciones comerciales y novedades",
+                    hint: "Opcional. Permite enviarle campañas y descuentos por email.",
+                    required: false,
+                    value: !!consents.marketing,
+                  },
+                ];
+                return (
+                  <Stack gap="xs">
+                    {items.map((it) => (
+                      <Paper
+                        key={it.key}
+                        withBorder
+                        radius="md"
+                        p="sm"
+                        style={{
+                          borderColor: it.value
+                            ? "var(--mantine-color-green-3)"
+                            : it.required
+                              ? "var(--mantine-color-red-3)"
+                              : "var(--mantine-color-gray-3)",
+                          background: it.value
+                            ? "rgba(34,197,94,0.06)"
+                            : it.required
+                              ? "rgba(239,68,68,0.05)"
+                              : undefined,
+                        }}
+                      >
+                        <Group justify="space-between" align="flex-start" wrap="nowrap">
+                          <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+                            {it.value ? (
+                              <IconCircleCheck
+                                size={20}
+                                color="var(--mantine-color-green-6)"
+                                style={{ flexShrink: 0, marginTop: 2 }}
+                              />
+                            ) : (
+                              <IconCircleX
+                                size={20}
+                                color={
+                                  it.required
+                                    ? "var(--mantine-color-red-6)"
+                                    : "var(--mantine-color-gray-5)"
+                                }
+                                style={{ flexShrink: 0, marginTop: 2 }}
+                              />
+                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <Group gap={6} mb={2}>
+                                <Text size="sm" fw={600} lineClamp={1}>
+                                  {it.label}
+                                </Text>
+                                {it.required && (
+                                  <Badge color="red" size="xs" variant="light">
+                                    Obligatorio
+                                  </Badge>
+                                )}
+                              </Group>
+                              <Text size="xs" c="dimmed">
+                                {it.hint}
+                              </Text>
+                            </div>
+                          </Group>
+                          <Badge
+                            color={it.value ? "green" : it.required ? "red" : "gray"}
+                            variant={it.value ? "filled" : "light"}
+                            size="sm"
+                          >
+                            {it.value ? "Aceptado" : "No aceptado"}
+                          </Badge>
+                        </Group>
+                      </Paper>
+                    ))}
+                    {consents.consent_date && (
+                      <Text size="xs" c="dimmed" mt={4}>
+                        Aceptado el{" "}
+                        {new Date(consents.consent_date).toLocaleString("es-ES", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </Text>
+                    )}
+                  </Stack>
+                );
+              })()}
             </Box>
           </SimpleGrid>
         </Tabs.Panel>
@@ -3343,34 +3793,96 @@ export function ClientDetailPage() {
                         Suplementos
                       </Text>
                     </Group>
-                    <Button 
-                      size="sm" 
-                      variant="light" 
+                    <Button
+                      size="sm"
+                      variant="light"
                       leftSection={<IconPlus size={16} />}
                       radius="xl"
+                      onClick={() => {
+                        setSupplementForm({
+                          supplement_id: "",
+                          dosage: "",
+                          frequency: "",
+                          notes: "",
+                        });
+                        openAssignSupplementModal();
+                      }}
                     >
                       Añadir
                     </Button>
                   </Group>
 
                   <Stack gap="sm">
+                    {supplements.length === 0 && (
+                      <Text c="dimmed" size="sm">
+                        No hay suplementos asignados todavía. Pulsa "Añadir" para
+                        elegir uno de tu catálogo.
+                      </Text>
+                    )}
                     {supplements.map((supp) => (
-                      <Box 
-                        key={supp.id} 
-                        p="md" 
-                        style={{ 
-                          border: "1px solid var(--border-subtle)", 
-                          borderRadius: "var(--radius-md)" 
+                      <Box
+                        key={supp.id}
+                        p="md"
+                        style={{
+                          border: "1px solid var(--border-subtle)",
+                          borderRadius: "var(--radius-md)",
                         }}
                       >
-                        <Group justify="space-between">
-                          <Box>
-                            <Text fw={600} size="sm">{supp.name}</Text>
-                            <Text c="dimmed" size="xs">{supp.dosage}</Text>
+                        <Group justify="space-between" wrap="nowrap">
+                          <Box style={{ minWidth: 0 }}>
+                            <Text fw={600} size="sm" truncate>
+                              {supp.supplement_name || "(sin nombre)"}
+                            </Text>
+                            <Text c="dimmed" size="xs" truncate>
+                              {[supp.dosage, supp.frequency]
+                                .filter(Boolean)
+                                .join(" · ") ||
+                                supp.supplement_brand ||
+                                "Sin pauta"}
+                            </Text>
+                            {supp.notes && (
+                              <Text c="dimmed" size="xs" mt={4} lineClamp={2}>
+                                {supp.notes}
+                              </Text>
+                            )}
                           </Box>
-                          <Badge size="sm" variant="light" radius="xl" color="blue">
-                            {supp.frequency}
-                          </Badge>
+                          <Group gap="xs" wrap="nowrap">
+                            {supp.supplement_category && (
+                              <Badge size="sm" variant="light" radius="xl" color="blue">
+                                {supp.supplement_category}
+                              </Badge>
+                            )}
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="red"
+                              onClick={async () => {
+                                try {
+                                  await supplementsApi.removeFromClient(
+                                    id || "",
+                                    supp.id,
+                                  );
+                                  notifications.show({
+                                    title: "Suplemento eliminado",
+                                    message:
+                                      "Se ha quitado el suplemento del cliente",
+                                    color: "green",
+                                  });
+                                  refetchClientSupplements();
+                                } catch (err: any) {
+                                  notifications.show({
+                                    title: "Error",
+                                    message:
+                                      err?.response?.data?.detail ||
+                                      "No se pudo eliminar",
+                                    color: "red",
+                                  });
+                                }
+                              }}
+                            >
+                              <IconTrash size={14} />
+                            </ActionIcon>
+                          </Group>
                         </Group>
                       </Box>
                     ))}
@@ -4133,9 +4645,13 @@ export function ClientDetailPage() {
           />
         </Tabs.Panel>
 
-        {/* Pagos */}
+        {/* Pagos y suscripciones (incluye datos de facturación inline) */}
         <Tabs.Panel value="payments">
-          <ClientPaymentsTab clientId={id || ""} />
+          <ClientPaymentsTab
+            clientId={id || ""}
+            client={client}
+            onClientSaved={() => refetch()}
+          />
         </Tabs.Panel>
 
         {/* Tasks Tab */}
@@ -4576,6 +5092,110 @@ export function ClientDetailPage() {
             </Group>
           </Stack>
         </form>
+      </BottomSheet>
+
+      {/* Modal "Añadir suplemento" — pinta el catálogo del entrenador */}
+      <BottomSheet
+        opened={assignSupplementModalOpened}
+        onClose={closeAssignSupplementModal}
+        title="Añadir suplemento al cliente"
+        size="md"
+        radius="lg"
+        centered
+      >
+        <Stack gap="md">
+          <Select
+            label="Suplemento del catálogo"
+            placeholder="Elige un suplemento de tu sección Suplementos"
+            searchable
+            required
+            value={supplementForm.supplement_id || null}
+            onChange={(v) =>
+              setSupplementForm((s) => ({ ...s, supplement_id: v || "" }))
+            }
+            data={catalogSupplements.map((s) => ({
+              value: s.id,
+              label: s.brand ? `${s.name} — ${s.brand}` : s.name,
+            }))}
+            nothingFoundMessage={
+              catalogSupplements.length === 0
+                ? "Tu catálogo está vacío. Crea suplementos en la sección Suplementos."
+                : "Sin coincidencias"
+            }
+          />
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <TextInput
+              label="Dosis"
+              placeholder="Ej: 1 cápsula / 5 g"
+              value={supplementForm.dosage}
+              onChange={(e) =>
+                setSupplementForm((s) => ({
+                  ...s,
+                  dosage: e.currentTarget.value,
+                }))
+              }
+            />
+            <TextInput
+              label="Frecuencia"
+              placeholder="Ej: Mañana, post-entreno"
+              value={supplementForm.frequency}
+              onChange={(e) =>
+                setSupplementForm((s) => ({
+                  ...s,
+                  frequency: e.currentTarget.value,
+                }))
+              }
+            />
+          </SimpleGrid>
+          <Textarea
+            label="Notas"
+            placeholder="Indicaciones específicas para el cliente"
+            minRows={2}
+            value={supplementForm.notes}
+            onChange={(e) =>
+              setSupplementForm((s) => ({
+                ...s,
+                notes: e.currentTarget.value,
+              }))
+            }
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeAssignSupplementModal} radius="xl">
+              Cancelar
+            </Button>
+            <Button
+              radius="xl"
+              disabled={!supplementForm.supplement_id}
+              onClick={async () => {
+                try {
+                  await supplementsApi.addToClient(id || "", {
+                    supplement_id: supplementForm.supplement_id,
+                    dosage: supplementForm.dosage || null,
+                    frequency: supplementForm.frequency || null,
+                    notes: supplementForm.notes || null,
+                  });
+                  notifications.show({
+                    title: "Suplemento añadido",
+                    message: "Se ha asignado el suplemento al cliente",
+                    color: "green",
+                  });
+                  refetchClientSupplements();
+                  closeAssignSupplementModal();
+                } catch (err: any) {
+                  notifications.show({
+                    title: "Error",
+                    message:
+                      err?.response?.data?.detail ||
+                      "No se pudo añadir el suplemento",
+                    color: "red",
+                  });
+                }
+              }}
+            >
+              Añadir
+            </Button>
+          </Group>
+        </Stack>
       </BottomSheet>
 
       {/* Modal de confirmación para eliminar cliente */}

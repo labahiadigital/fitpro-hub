@@ -33,9 +33,12 @@ import {
   IconForms,
   IconFileText,
   IconMessage,
+  IconMail,
+  IconMessages,
   IconPackage,
   IconReceipt,
   IconTrophy,
+  IconGift,
   IconUsersGroup,
   IconChartBar,
   IconBook,
@@ -68,6 +71,7 @@ import {
 } from "../../hooks/useNotifications";
 import { useMyForms, useMyPendingRequiredCount } from "../../hooks/useForms";
 import { usePWAInstall } from "../../hooks/usePWAInstall";
+import { DevModeBanner } from "../common/DevModeBanner";
 
 // --- TIPOS Y DATOS ---
 
@@ -119,7 +123,14 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
       { icon: <IconBuildingStore size={18} />, label: "Proveedores", to: "/suppliers", requiredResource: "billing" },
     ],
   },
-  { icon: <IconMessage size={20} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
+  {
+    icon: <IconMessages size={20} />,
+    label: "Comunicación",
+    children: [
+      { icon: <IconMessage size={18} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
+      { icon: <IconMail size={18} />, label: "Email", to: "/email-templates", requiredResource: "chat" },
+    ],
+  },
   { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
   { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
   {
@@ -156,7 +167,14 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
       { icon: <IconClock size={18} />, label: "Control Horario", to: "/time-clock", requiredResource: "team" },
     ],
   },
-  { icon: <IconTrophy size={20} />, label: "Comunidad", to: "/community", requiredResource: "community" },
+  {
+    icon: <IconTrophy size={20} />,
+    label: "Comunidad",
+    children: [
+      { icon: <IconGift size={18} />, label: "Beneficios", to: "/community/benefits", requiredResource: "community" },
+      { icon: <IconTrophy size={18} />, label: "Gamificación", to: "/community", requiredResource: "community" },
+    ],
+  },
   { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
   { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
 ];
@@ -187,7 +205,10 @@ function filterNavEntries(entries: NavEntry[], permissions?: Record<string, stri
 
 const getClientNavItems = (
   unreadCount: number,
-  pendingRequiredForms = 0
+  // Antes era ``pendingRequiredForms`` y solo contábamos los obligatorios.
+  // Ahora pintamos TODOS los pendientes, porque si el entrenador envía un
+  // cuestionario opcional el cliente también tiene que verlo en el badge.
+  pendingFormsTotal = 0
 ): NavItemProps[] => [
   { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
   { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/my-workouts" },
@@ -200,8 +221,9 @@ const getClientNavItems = (
     icon: <IconForms size={20} />,
     label: "Formularios",
     to: "/my-forms",
-    badge: pendingRequiredForms,
+    badge: pendingFormsTotal,
   },
+  { icon: <IconGift size={20} />, label: "Beneficios", to: "/my-community" },
   { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
 ];
 
@@ -598,12 +620,19 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   
   const unreadCount = unreadData?.unread_count || 0;
 
-  // Badge de formularios obligatorios pendientes (solo para cliente)
+  // Badge de formularios pendientes (solo para cliente).
+  // Mostramos TODOS los formularios pendientes en el menú lateral, no solo
+  // los obligatorios: si el entrenador le envía un cuestionario opcional el
+  // cliente también debe verlo en el badge para acordarse de rellenarlo.
   const { data: pendingRequiredData } = useMyPendingRequiredCount({ enabled: isClient });
-  const pendingRequired = isClient ? pendingRequiredData?.pending_required || 0 : 0;
+  const pendingTotal = isClient
+    ? pendingRequiredData?.pending_total ??
+      pendingRequiredData?.pending_required ??
+      0
+    : 0;
 
   const navEntries = isClient
-    ? getClientNavItems(unreadCount, pendingRequired)
+    ? getClientNavItems(unreadCount, pendingTotal)
     : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount), user?.permissions);
   const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 
@@ -705,7 +734,9 @@ const ROUTE_LABELS: Record<string, string> = {
   "/boxes": "Boxes",
   "/machines": "Maquinaria",
   "/billing": "Facturación",
-  "/community": "Comunidad",
+  "/community": "Gamificación",
+  "/community/benefits": "Beneficios",
+  "/my-community": "Beneficios",
   "/documents": "Documentos",
   "/team": "Equipo",
   "/team/members": "Miembros",
@@ -716,6 +747,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/settings": "Configuración",
   "/live-classes": "Clases en Vivo",
   "/chat": "Chat",
+  "/email-templates": "Email",
   "/lms": "Academia",
   "/tasks": "Tareas",
   "/my-workouts": "Mis Entrenamientos",
@@ -762,19 +794,24 @@ export function DashboardLayout() {
     actionUrl: n.link || undefined,
   }));
 
-  // Formularios obligatorios pendientes (solo para cliente) — alertas persistentes
+  // Formularios pendientes (solo para cliente) — alertas persistentes.
+  // Mostramos TODOS los pendientes (obligatorios y opcionales): el cliente
+  // tiene que ver el indicador y la notificación de cualquier formulario
+  // que el entrenador le haya enviado, no sólo de los obligatorios.
   const { data: myPendingForms = [] } = useMyForms("pending", { enabled: isClientLayout });
-  const requiredPendingForms = (myPendingForms || [])
-    .filter((f) => f.is_required)
-    .map((f) => ({
-      id: f.submission_id,
-      form_id: f.form_id,
-      title: f.form_name,
-      message:
-        f.form_description || "Tienes un formulario obligatorio pendiente.",
-      link: "/my-forms",
-    }));
-  const hasPersistentAlert = requiredPendingForms.length > 0;
+  const pendingFormsForBell = (myPendingForms || []).map((f) => ({
+    id: f.submission_id,
+    form_id: f.form_id,
+    title: f.form_name,
+    message:
+      f.form_description ||
+      (f.is_required
+        ? "Tienes un formulario obligatorio pendiente."
+        : "Tienes un formulario pendiente por completar."),
+    link: "/my-forms",
+    is_required: f.is_required,
+  }));
+  const hasPersistentAlert = pendingFormsForBell.length > 0;
 
   useHotkeys([["mod+K", () => openPalette()]]);
 
@@ -821,6 +858,9 @@ export function DashboardLayout() {
 
       {/* --- MAIN CONTENT AREA --- */}
       <Box style={{ position: "relative", flex: 1, minWidth: 0 }}>
+        {/* Banner de entorno NO productivo (DEV/staging) */}
+        <DevModeBanner />
+
         {/* Floating Header */}
         <Box
           py="lg"
@@ -917,7 +957,7 @@ export function DashboardLayout() {
         opened={notifOpen}
         onClose={closeNotif}
         notifications={mappedNotifications}
-        requiredPendingForms={requiredPendingForms}
+        requiredPendingForms={pendingFormsForBell}
         onMarkAsRead={(id) => markRead.mutate(id)}
         onMarkAllAsRead={() => markAllRead.mutate()}
         onDelete={(id) => deleteNotif.mutate(id)}

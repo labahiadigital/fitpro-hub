@@ -38,6 +38,7 @@ from app.tasks.reminders import (
     process_due_reminders,
     create_default_reminders_for_client,
 )
+from app.tasks.db_sync import sync_prod_to_dev
 
 __all__ = [
     "celery_app",
@@ -69,4 +70,5 @@ __all__ = [
     "calculate_workspace_metrics",
     "process_due_reminders",
     "create_default_reminders_for_client",
+    "sync_prod_to_dev",
 ]

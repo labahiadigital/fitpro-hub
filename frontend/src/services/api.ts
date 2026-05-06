@@ -531,6 +531,70 @@ export const supplementsApi = {
   delete: (id: string) => api.delete(`/supplements/${id}`),
   seed: (data: object[], replaceAll?: boolean) =>
     api.post("/supplements/seed", data, { params: { replace_all: replaceAll } }),
+
+  // Asignaciones de suplementos por cliente
+  listForClient: (clientId: string) =>
+    api.get(`/clients/${clientId}/supplements`),
+  addToClient: (
+    clientId: string,
+    data: {
+      supplement_id: string;
+      dosage?: string | null;
+      frequency?: string | null;
+      notes?: string | null;
+      is_active?: boolean;
+    },
+  ) => api.post(`/clients/${clientId}/supplements`, data),
+  updateForClient: (
+    clientId: string,
+    assignmentId: string,
+    data: {
+      dosage?: string | null;
+      frequency?: string | null;
+      notes?: string | null;
+      is_active?: boolean;
+    },
+  ) => api.put(`/clients/${clientId}/supplements/${assignmentId}`, data),
+  removeFromClient: (clientId: string, assignmentId: string) =>
+    api.delete(`/clients/${clientId}/supplements/${assignmentId}`),
+};
+
+export interface CommunityBenefit {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string | null;
+  brand: string | null;
+  url: string | null;
+  discount_code: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommunityBenefitInput {
+  title: string;
+  description?: string | null;
+  brand?: string | null;
+  url?: string | null;
+  discount_code?: string | null;
+  image_url?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export const communityBenefitsApi = {
+  list: () => api.get<CommunityBenefit[]>("/community/benefits"),
+  create: (data: CommunityBenefitInput) =>
+    api.post<CommunityBenefit>("/community/benefits", data),
+  update: (id: string, data: Partial<CommunityBenefitInput>) =>
+    api.put<CommunityBenefit>(`/community/benefits/${id}`, data),
+  remove: (id: string) => api.delete(`/community/benefits/${id}`),
+
+  // Cliente: lista de beneficios activos
+  listMine: () => api.get<CommunityBenefit[]>("/my-community/benefits"),
 };
 
 // Automations API
@@ -777,6 +841,17 @@ export const clientPortalApi = {
   subscription: () => api.get("/my/subscription"),
   payments: (limit?: number) => api.get("/my/payments", { params: { limit } }),
   cancelSubscription: () => api.post("/my/subscription/cancel"),
+  // Pausa/reanuda la suscripción del cliente. Sólo aplica con Stripe; para
+  // pasarelas que no soportan pausa nativa el backend devolverá el error.
+  pauseSubscription: (subscriptionId: string, data: { duration_days?: number; duration_months?: number }) =>
+    api.post(`/payments/subscriptions/me/${subscriptionId}/pause`, data),
+  resumeSubscription: (subscriptionId: string) =>
+    api.post(`/payments/subscriptions/me/${subscriptionId}/resume`),
+  // Descarga de facturas (cliente)
+  downloadInvoicePdf: (paymentId: string) =>
+    api.get(`/payments/payments/me/${paymentId}/invoice/pdf`, { responseType: "blob" }),
+  downloadInvoicesBulk: (params: { date_from?: string; date_to?: string }) =>
+    api.get(`/payments/payments/me/invoices/bulk`, { params, responseType: "blob" }),
 
   // Documents
   documents: (category?: string) =>

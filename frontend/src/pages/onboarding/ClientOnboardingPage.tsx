@@ -1,5 +1,6 @@
 import {
   Alert,
+  Anchor,
   Box,
   Button,
   Checkbox,
@@ -36,6 +37,7 @@ import {
   IconHeartbeat,
   IconLock,
   IconMail,
+  IconPhone,
   IconPhoto,
   IconTarget,
   IconUser,
@@ -100,6 +102,20 @@ interface OnboardingFormData {
     otherReason: string;
     otherReasonDetails: string;
   };
+
+  // Datos de facturación (Persona Física / Jurídica). Sólo se piden en
+  // el flujo público con producto, antes del pago, para poder emitir la
+  // factura cuando se cobre.
+  fiscalType: "individual" | "company";
+  // Persona Física: name + lastName ya cubren el nombre fiscal; estos
+  // tres son los nuevos campos que aparecen en la sección "Datos de
+  // facturación".
+  legalName: string; // sólo Persona Jurídica (Razón Social)
+  taxId: string;
+  billingAddress: string;
+  billingCity: string;
+  billingCountry: string;
+  billingPostalCode: string;
 
   // Consent
   acceptTerms: boolean;
@@ -233,19 +249,24 @@ export function ClientOnboardingPage() {
     // motivo se llamara a este handler, lo abortamos.
     if (soldOutState) return;
 
-    const emailVal = form.values.email;
-    const confirmEmailVal = form.values.confirmEmail;
-    const firstNameVal = form.values.firstName;
-    const lastNameVal = form.values.lastName;
-
-    if (!emailVal || !firstNameVal) {
-      notifications.show({ title: "Error", message: "Completa al menos tu nombre y email", color: "red" });
+    // Validamos todos los campos del form de "Datos Personales" antes
+    // del pago: el cliente nos da nombre + email + móvil + contraseña +
+    // los 3 consentimientos en una sola pantalla y luego pasa al pago.
+    const errors = form.validate();
+    if (errors.hasErrors) {
+      notifications.show({
+        title: "Faltan datos",
+        message: "Completa todos los campos obligatorios para continuar",
+        color: "red",
+      });
       return;
     }
-    if (confirmEmailVal !== emailVal) {
+
+    const v = form.values;
+    if (!v.acceptTerms || !v.acceptPrivacy) {
       notifications.show({
-        title: "Los emails no coinciden",
-        message: "Revisa el campo de confirmación de email",
+        title: "Faltan consentimientos",
+        message: "Debes aceptar los términos y la política de privacidad",
         color: "red",
       });
       return;
@@ -254,9 +275,26 @@ export function ClientOnboardingPage() {
     setCreatingInvitation(true);
     try {
       const res = await api.post(`/invitations/public-signup/${workspaceSlug}/${productId}`, {
-        email: emailVal,
-        first_name: firstNameVal,
-        last_name: lastNameVal,
+        email: v.email,
+        first_name: v.firstName,
+        last_name: v.lastName,
+        phone: v.phone,
+        password: v.password,
+        consents: {
+          data_processing: v.acceptTerms,
+          health_data: v.acceptPrivacy,
+          marketing: v.acceptMarketing,
+          consent_date: new Date().toISOString(),
+        },
+        // Facturación: todos los campos van obligatorios; ``legal_name``
+        // sólo aplica a Persona Jurídica.
+        fiscal_type: v.fiscalType,
+        legal_name: v.fiscalType === "company" ? v.legalName.trim() : null,
+        tax_id: v.taxId.trim(),
+        billing_address: v.billingAddress.trim(),
+        billing_city: v.billingCity.trim(),
+        billing_country: v.billingCountry.trim(),
+        billing_postal_code: v.billingPostalCode.trim(),
       });
       if (res.data?.invitation_token) {
         navigate(`/onboarding/invite/${res.data.invitation_token}`);
@@ -312,11 +350,66 @@ export function ClientOnboardingPage() {
         otherReason: "",
         otherReasonDetails: "",
       },
+      fiscalType: "individual",
+      legalName: "",
+      taxId: "",
+      billingAddress: "",
+      billingCity: "",
+      billingCountry: "España",
+      billingPostalCode: "",
       acceptTerms: false,
       acceptPrivacy: false,
       acceptMarketing: false,
     },
     validate: (values) => {
+      // Cuando entramos por la URL pública con producto el formulario es
+      // de un único paso (Datos personales + móvil + 3 checkboxes de
+      // consentimiento) y se valida todo a la vez antes de redirigir al
+      // pago. Cuando entramos por el flujo legacy (workspaceSlug sin
+      // product) se mantiene el validador por pasos del Stepper.
+      if (productId) {
+        const phoneOk = /^[+]?[\d\s().-]{6,}$/.test(values.phone || "");
+        const isCompany = values.fiscalType === "company";
+        return {
+          firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
+          lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
+          email: /^\S+@\S+$/.test(values.email) ? null : "Email inválido",
+          confirmEmail:
+            values.confirmEmail !== values.email
+              ? "Los emails no coinciden"
+              : null,
+          password: isStrongPassword(values.password)
+            ? null
+            : "Mínimo 8 caracteres con mayúscula, minúscula y número",
+          phone: phoneOk ? null : "Móvil obligatorio",
+          // Datos fiscales: todos obligatorios. Para Persona Jurídica
+          // exigimos además ``legalName`` (Razón Social); en Persona
+          // Física usamos ``firstName + lastName`` como nombre fiscal,
+          // así que no se valida ``legalName``.
+          legalName: isCompany && values.legalName.trim().length < 2
+            ? "Razón social obligatoria"
+            : null,
+          taxId: values.taxId.trim().length < 5
+            ? (isCompany ? "NIF/CIF obligatorio" : "NIF/DNI obligatorio")
+            : null,
+          billingAddress: values.billingAddress.trim().length < 4
+            ? "Dirección obligatoria"
+            : null,
+          billingCity: values.billingCity.trim().length < 2
+            ? (isCompany ? "Ciudad o población obligatoria" : "Población obligatoria")
+            : null,
+          billingCountry: values.billingCountry.trim().length < 2
+            ? "País obligatorio"
+            : null,
+          billingPostalCode: values.billingPostalCode.trim().length < 3
+            ? "Código postal obligatorio"
+            : null,
+          acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
+          acceptPrivacy: values.acceptPrivacy
+            ? null
+            : "Debes aceptar la política de privacidad",
+        };
+      }
       if (active === 0) {
         return {
           firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
@@ -744,6 +837,7 @@ export function ClientOnboardingPage() {
               <TextInput
                 label="Apellidos"
                 placeholder="Tus apellidos"
+                required
                 {...form.getInputProps("lastName")}
               />
             </SimpleGrid>
@@ -767,6 +861,152 @@ export function ClientOnboardingPage() {
                   : undefined
               }
             />
+            <PasswordInput
+              label="Contraseña"
+              placeholder="Mínimo 8 caracteres"
+              required
+              leftSection={<IconLock size={16} />}
+              {...form.getInputProps("password")}
+            />
+            <PasswordRulesIndicator value={form.values.password} />
+            <TextInput
+              label="Móvil"
+              placeholder="+34 600 000 000"
+              required
+              leftSection={<IconPhone size={16} />}
+              description="Lo necesitamos para contactarte por WhatsApp"
+              {...form.getInputProps("phone")}
+            />
+
+            <Divider my="xs" label="Datos de facturación" labelPosition="center" />
+            <Text size="sm" fw={500}>
+              Para realizar tu factura, necesitamos los siguientes datos
+            </Text>
+            <Radio.Group
+              label="Tipo de cliente"
+              required
+              {...form.getInputProps("fiscalType")}
+            >
+              <Group mt="xs">
+                <Radio value="individual" label="Persona Física" />
+                <Radio value="company" label="Persona Jurídica" />
+              </Group>
+            </Radio.Group>
+
+            {form.values.fiscalType === "individual" ? (
+              <>
+                <Text size="xs" c="dimmed">
+                  Tu nombre y apellidos del apartado anterior se usarán como
+                  nombre fiscal en la factura.
+                </Text>
+                <TextInput
+                  label="NIF (DNI, NIE, etc.)"
+                  placeholder="12345678A"
+                  required
+                  {...form.getInputProps("taxId")}
+                />
+                <TextInput
+                  label="Dirección (calle, número, etc.)"
+                  placeholder="Calle Mayor 12, 3ºB"
+                  required
+                  {...form.getInputProps("billingAddress")}
+                />
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                  <TextInput
+                    label="Población"
+                    placeholder="Madrid"
+                    required
+                    {...form.getInputProps("billingCity")}
+                  />
+                  <TextInput
+                    label="País"
+                    placeholder="España"
+                    required
+                    {...form.getInputProps("billingCountry")}
+                  />
+                </SimpleGrid>
+                <TextInput
+                  label="CP (Código postal, Zip Code, etc.)"
+                  placeholder="28001"
+                  required
+                  {...form.getInputProps("billingPostalCode")}
+                />
+              </>
+            ) : (
+              <>
+                <TextInput
+                  label="Razón Social"
+                  placeholder="Mi Empresa S.L."
+                  required
+                  {...form.getInputProps("legalName")}
+                />
+                <TextInput
+                  label="NIF (CIF, NRT, etc.)"
+                  placeholder="B12345678"
+                  required
+                  {...form.getInputProps("taxId")}
+                />
+                <TextInput
+                  label="Dirección (calle, número, etc.)"
+                  placeholder="Calle Mayor 12, 3ºB"
+                  required
+                  {...form.getInputProps("billingAddress")}
+                />
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                  <TextInput
+                    label="Ciudad o Población"
+                    placeholder="Madrid"
+                    required
+                    {...form.getInputProps("billingCity")}
+                  />
+                  <TextInput
+                    label="País"
+                    placeholder="España"
+                    required
+                    {...form.getInputProps("billingCountry")}
+                  />
+                </SimpleGrid>
+                <TextInput
+                  label="CP (Código postal, Zip Code, etc.)"
+                  placeholder="28001"
+                  required
+                  {...form.getInputProps("billingPostalCode")}
+                />
+              </>
+            )}
+
+            <Divider my="xs" label="Consentimientos" labelPosition="center" />
+
+            <Checkbox
+              label={
+                <Text size="sm">
+                  Acepto los{" "}
+                  <Anchor href="#" size="sm">
+                    Términos y Condiciones
+                  </Anchor>{" "}
+                  del servicio *
+                </Text>
+              }
+              {...form.getInputProps("acceptTerms", { type: "checkbox" })}
+              error={form.errors.acceptTerms}
+            />
+            <Checkbox
+              label={
+                <Text size="sm">
+                  Acepto la{" "}
+                  <Anchor href="#" size="sm">
+                    Política de Privacidad
+                  </Anchor>{" "}
+                  y el tratamiento de mis datos *
+                </Text>
+              }
+              {...form.getInputProps("acceptPrivacy", { type: "checkbox" })}
+              error={form.errors.acceptPrivacy}
+            />
+            <Checkbox
+              label="Deseo recibir comunicaciones comerciales y novedades (opcional)"
+              {...form.getInputProps("acceptMarketing", { type: "checkbox" })}
+            />
 
             <Button
               size="lg"
@@ -779,7 +1019,7 @@ export function ClientOnboardingPage() {
                 form.values.confirmEmail !== form.values.email
               }
             >
-              Continuar con el registro
+              Continuar al pago
             </Button>
           </Stack>
         </Paper>

@@ -36,7 +36,10 @@ venv.bak/
 .env.test.local
 .env.production.local
 backend/.env
+backend/.env.dev
+backend/.env.local
 frontend/.env
+frontend/.env.dev
 frontend/.env.local
 
 # IDE
@@ -135,4 +138,10 @@ scripts/generated_images/
 scripts/generated_food_images/
 scripts/generate_all_foods_failures.json
 scripts/_broken_exercises.json
+
+# Wrangler cache
+.wrangler/
+
+# Hook SQL local (puede contener anonimización con datos sensibles)
+scripts/sync_supabase_post_dev.sql
 

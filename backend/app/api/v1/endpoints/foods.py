@@ -3,14 +3,18 @@
 NOTE: This module is mostly redundant with /nutrition/foods endpoints.
 Kept for backward compatibility but FoodCategory is disabled (table doesn't exist).
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.middleware.auth import require_workspace, CurrentUser
 
 router = APIRouter()
 
 
 @router.get("/status")
-async def foods_status():
-    """Check foods module status."""
+async def foods_status(
+    _current_user: CurrentUser = Depends(require_workspace),
+):
+    """Check foods module status (solo usuarios autenticados)."""
     return {
         "status": "active",
         "message": "Use /nutrition/foods endpoints for full food functionality"

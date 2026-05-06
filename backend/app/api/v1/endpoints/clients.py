@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Optional, Dict
+from typing import Any, List, Optional, Dict
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
 import secrets
@@ -21,6 +21,7 @@ from app.models.exercise import ClientMeasurement
 from app.models.user import UserRole, User
 from app.models.invitation import ClientInvitation
 from app.models.product import Product
+from app.models.supplement import ClientSupplement, Supplement
 from app.models.workspace import Workspace
 from app.schemas.client import (
     ClientCreate, ClientUpdate, ClientResponse, ClientListResponse,
@@ -449,6 +450,13 @@ async def create_client(
 <p>Has sido dado de alta como cliente. Para activar tu cuenta y acceder a tu portal, haz clic en el siguiente enlace:</p>
 <p><a href="{invitation_url}" style="display:inline-block;padding:12px 24px;background:#228be6;color:white;text-decoration:none;border-radius:8px;">Activar mi cuenta</a></p>
 <p>Este enlace expira en 7 días.</p>""",
+            tracking={
+                "workspace_id": str(invitation.workspace_id),
+                "invitation_id": str(invitation.id),
+                "client_id": str(client.id),
+                "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+                "template_kind": "client_invitation",
+            },
         )
     except Exception as e:
         logger.warning("Could not send validation email to new client %s: %s", client.email, e)
@@ -963,6 +971,214 @@ async def get_client_progress_summary(
     }
 
 
+# ============ CLIENT SUPPLEMENTS ============
+
+class ClientSupplementCreate(BaseModel):
+    """Body para asignar un suplemento del catálogo a un cliente.
+
+    Solo el ``supplement_id`` es obligatorio: el entrenador puede dejar
+    los demás campos vacíos y rellenarlos luego desde la UI. La pauta
+    (``dosage`` + ``frequency``) y las notas son texto libre porque cada
+    suplemento se toma de forma distinta y no queremos forzar un esquema
+    rígido por ahora.
+    """
+
+    supplement_id: UUID
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool = True
+
+
+class ClientSupplementUpdate(BaseModel):
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ClientSupplementResponse(BaseModel):
+    id: UUID
+    client_id: UUID
+    supplement_id: UUID
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool
+    # Datos planos del suplemento para que el frontend pueda renderizar
+    # nombre/marca/categoría sin un segundo round-trip.
+    supplement_name: Optional[str] = None
+    supplement_brand: Optional[str] = None
+    supplement_category: Optional[str] = None
+    supplement_image_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+@router.get(
+    "/{client_id}/supplements",
+    response_model=List[ClientSupplementResponse],
+)
+async def list_client_supplements(
+    client_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Lista los suplementos asignados a un cliente del workspace."""
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    rows = await db.execute(
+        select(ClientSupplement, Supplement)
+        .join(Supplement, ClientSupplement.supplement_id == Supplement.id)
+        .where(ClientSupplement.client_id == client_id)
+        .order_by(desc(ClientSupplement.created_at))
+    )
+    items: List[ClientSupplementResponse] = []
+    for cs, supp in rows.all():
+        items.append(
+            ClientSupplementResponse(
+                id=cs.id,
+                client_id=cs.client_id,
+                supplement_id=cs.supplement_id,
+                dosage=cs.dosage,
+                frequency=cs.frequency,
+                notes=cs.notes,
+                is_active=cs.is_active,
+                supplement_name=supp.name,
+                supplement_brand=supp.brand,
+                supplement_category=supp.category,
+                supplement_image_url=supp.image_url,
+            )
+        )
+    return items
+
+
+@router.post(
+    "/{client_id}/supplements",
+    response_model=ClientSupplementResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_client_supplement(
+    client_id: UUID,
+    payload: ClientSupplementCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Asigna un suplemento del catálogo al cliente.
+
+    Validamos que el ``supplement_id`` exista y sea visible para el
+    workspace del entrenador (suplemento propio o ``is_global=True``).
+    Esto evita que un entrenador asigne suplementos de otro workspace
+    pasándole su UUID a mano.
+    """
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    supp = await db.get(Supplement, payload.supplement_id)
+    if not supp:
+        raise HTTPException(status_code=404, detail="Suplemento no encontrado")
+    if not supp.is_global and supp.workspace_id != current_user.workspace_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Suplemento no accesible para este workspace",
+        )
+
+    cs = ClientSupplement(
+        workspace_id=current_user.workspace_id,
+        client_id=client_id,
+        supplement_id=payload.supplement_id,
+        dosage=payload.dosage,
+        frequency=payload.frequency,
+        notes=payload.notes,
+        is_active=payload.is_active,
+    )
+    db.add(cs)
+    await db.commit()
+    await db.refresh(cs)
+
+    return ClientSupplementResponse(
+        id=cs.id,
+        client_id=cs.client_id,
+        supplement_id=cs.supplement_id,
+        dosage=cs.dosage,
+        frequency=cs.frequency,
+        notes=cs.notes,
+        is_active=cs.is_active,
+        supplement_name=supp.name,
+        supplement_brand=supp.brand,
+        supplement_category=supp.category,
+        supplement_image_url=supp.image_url,
+    )
+
+
+@router.put(
+    "/{client_id}/supplements/{assignment_id}",
+    response_model=ClientSupplementResponse,
+)
+async def update_client_supplement(
+    client_id: UUID,
+    assignment_id: UUID,
+    payload: ClientSupplementUpdate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Edita pauta/dosis/notas o activa/desactiva una asignación."""
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    cs = await db.get(ClientSupplement, assignment_id)
+    if not cs or cs.client_id != client_id:
+        raise HTTPException(status_code=404, detail="Asignación no encontrada")
+
+    data = payload.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(cs, k, v)
+    await db.commit()
+    await db.refresh(cs)
+
+    supp = await db.get(Supplement, cs.supplement_id)
+    return ClientSupplementResponse(
+        id=cs.id,
+        client_id=cs.client_id,
+        supplement_id=cs.supplement_id,
+        dosage=cs.dosage,
+        frequency=cs.frequency,
+        notes=cs.notes,
+        is_active=cs.is_active,
+        supplement_name=supp.name if supp else None,
+        supplement_brand=supp.brand if supp else None,
+        supplement_category=supp.category if supp else None,
+        supplement_image_url=supp.image_url if supp else None,
+    )
+
+
+@router.delete(
+    "/{client_id}/supplements/{assignment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_client_supplement(
+    client_id: UUID,
+    assignment_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Quita la asignación de un suplemento del cliente."""
+    client = await db.get(Client, client_id)
+    if not client or client.workspace_id != current_user.workspace_id:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    cs = await db.get(ClientSupplement, assignment_id)
+    if not cs or cs.client_id != client_id:
+        raise HTTPException(status_code=404, detail="Asignación no encontrada")
+    await db.delete(cs)
+    await db.commit()
+
+
 # ============ CLIENT INVITATIONS ============
 
 async def send_invitation_email(
@@ -972,8 +1188,16 @@ async def send_invitation_email(
     trainer_name: str,
     first_name: Optional[str] = None,
     message: Optional[str] = None,
+    tracking: Optional[Dict[str, Any]] = None,
 ) -> bool:
-    """Send invitation email using Brevo API."""
+    """Send invitation email using Brevo API.
+
+    ``tracking`` opcional permite registrar el envío en
+    ``email_events`` para que el webhook de Brevo cruce los eventos
+    posteriores (delivered/opened/clicked) con la invitación correcta.
+    Esperamos un dict con ``workspace_id`` / ``invitation_id`` /
+    ``client_id`` / ``user_id`` (todo string UUID, opcionales).
+    """
     if not settings.BREVO_API_KEY:
         logger.warning("BREVO_API_KEY not configured, skipping email send")
         return False
@@ -1052,8 +1276,92 @@ async def send_invitation_email(
                 timeout=30,
             )
             response.raise_for_status()
-        
-        logger.info("Invitation email sent to %s", email)
+
+        message_id: Optional[str] = None
+        try:
+            data = response.json()
+            raw = data.get("messageId") if isinstance(data, dict) else None
+            if isinstance(raw, str):
+                message_id = raw.strip("<>")
+        except Exception:  # pragma: no cover - defensivo
+            message_id = None
+
+        # Persistir tracking del envío. Lo hacemos en DOS pasos
+        # *independientes* y con sesiones separadas para que un fallo
+        # aislado (por ejemplo en el insert del EmailEvent) no impida
+        # marcar la invitación como "ya enviada", que es lo que alimenta
+        # la pestaña "Seguimiento" del entrenador.
+        from datetime import datetime as _dt, timezone as _tz
+        from sqlalchemy import update as _update  # noqa: WPS433
+        from app.core.database import AsyncSessionLocal
+        from app.models.email_tracking import EmailEvent
+        from app.models.invitation import ClientInvitation as _CI
+
+        now_utc = _dt.now(_tz.utc)
+        now_naive = now_utc.replace(tzinfo=None)
+        invitation_id = (tracking or {}).get("invitation_id")
+
+        # 1) Marcar la invitación como enviada. Usamos UPDATE directo
+        #    (no ORM fetch) porque PgBouncer en transaction mode puede
+        #    invalidar caches de prepared statements y queremos máxima
+        #    robustez. Si la columna queda a NULL la pestaña dice "Sin
+        #    envío" aunque el correo haya salido — eso es lo que estaba
+        #    pasando en DEV antes de este parche.
+        if invitation_id:
+            try:
+                async with AsyncSessionLocal() as session_inv:
+                    res = await session_inv.execute(
+                        _update(_CI)
+                        .where(_CI.id == invitation_id)
+                        .values(
+                            last_email_sent_at=now_naive,
+                            last_email_subject=payload["subject"],
+                            brevo_message_id=message_id,
+                        )
+                    )
+                    await session_inv.commit()
+                    logger.info(
+                        "invitation %s marked as sent (rows=%s, msg_id=%s)",
+                        invitation_id, res.rowcount, message_id,
+                    )
+            except Exception:  # pragma: no cover - defensivo
+                logger.exception(
+                    "Failed to mark invitation %s as sent", invitation_id
+                )
+
+        # 2) Registrar el evento ``request`` para correlacionar con los
+        #    eventos posteriores que mande el webhook de Brevo
+        #    (delivered/opened/clicked/bounced). Si esto falla no rompe
+        #    nada: la invitación ya quedó marcada como enviada arriba.
+        try:
+            async with AsyncSessionLocal() as session_evt:
+                session_evt.add(EmailEvent(
+                    workspace_id=(tracking or {}).get("workspace_id"),
+                    brevo_message_id=message_id,
+                    recipient_email=email.lower(),
+                    user_id=(tracking or {}).get("user_id"),
+                    client_id=(tracking or {}).get("client_id"),
+                    invitation_id=invitation_id,
+                    event_type="request",
+                    subject=payload["subject"],
+                    template_kind=(tracking or {}).get("template_kind") or "invitation",
+                    occurred_at=now_utc,
+                    payload={
+                        "to": email,
+                        "subject": payload["subject"],
+                        "tracking": {
+                            k: str(v) if v is not None else None
+                            for k, v in (tracking or {}).items()
+                        },
+                    },
+                ))
+                await session_evt.commit()
+        except Exception:  # pragma: no cover - defensivo
+            logger.exception(
+                "No se pudo registrar EmailEvent(request) for %s", email
+            )
+
+        logger.info("Invitation email sent to %s msg_id=%s", email, message_id)
         return True
         
     except Exception as e:
@@ -1168,7 +1476,14 @@ async def create_invitation(
         workspace_name=workspace_name,
         trainer_name=trainer_name,
         first_name=data.first_name,
-        message=data.message
+        message=data.message,
+        tracking={
+            "workspace_id": str(invitation.workspace_id),
+            "invitation_id": str(invitation.id),
+            "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+            "client_id": str(existing_client.id) if existing_client else None,
+            "template_kind": "invitation",
+        },
     )
     
     if not email_sent:
@@ -1224,8 +1539,13 @@ async def resend_invitation(
     user = result.scalar_one_or_none()
     trainer_name = user.full_name if user else "Tu entrenador"
     
-    # Extend expiration
-    invitation.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    # Extend expiration. La columna ``client_invitations.expires_at`` está
+    # mapeada como ``DateTime`` *naive* (sin tz) en el modelo (mientras que
+    # en Postgres es ``timestamptz``); pasarle un ``datetime`` con tzinfo
+    # provoca ``asyncpg.DataError: can't subtract offset-naive and
+    # offset-aware datetimes`` y devuelve 500. Mantenemos coherencia con
+    # ``create_invitation`` y el modelo usando ``utcnow`` (naive).
+    invitation.expires_at = datetime.utcnow() + timedelta(days=7)
     await db.commit()
     
     # Build invitation link
@@ -1238,7 +1558,14 @@ async def resend_invitation(
         workspace_name=workspace_name,
         trainer_name=trainer_name,
         first_name=invitation.first_name,
-        message=invitation.message
+        message=invitation.message,
+        tracking={
+            "workspace_id": str(invitation.workspace_id),
+            "invitation_id": str(invitation.id),
+            "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+            "client_id": str(invitation.client_id) if invitation.client_id else None,
+            "template_kind": "invitation_resend",
+        },
     )
     
     return {

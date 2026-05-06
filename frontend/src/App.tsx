@@ -41,6 +41,7 @@ const ResetPasswordPage = lazyRetry(() => import("./pages/auth/ResetPasswordPage
 const GoogleCallbackPage = lazyRetry(() => import("./pages/auth/GoogleCallbackPage").then(m => ({ default: m.GoogleCallbackPage })));
 const InvitationOnboardingPage = lazyRetry(() => import("./pages/onboarding/InvitationOnboardingPage").then(m => ({ default: m.InvitationOnboardingPage })));
 const ClientOnboardingPage = lazyRetry(() => import("./pages/onboarding/ClientOnboardingPage").then(m => ({ default: m.ClientOnboardingPage })));
+const SystemFormPage = lazyRetry(() => import("./pages/onboarding/SystemFormPage").then(m => ({ default: m.SystemFormPage })));
 const OnboardingPage = lazyRetry(() => import("./pages/onboarding/OnboardingPage").then(m => ({ default: m.OnboardingPage })));
 const AcceptStaffInvitePage = lazyRetry(() => import("./pages/auth/AcceptStaffInvitePage").then(m => ({ default: m.AcceptStaffInvitePage })));
 
@@ -53,6 +54,7 @@ const NutritionPage = lazyRetry(() => import("./pages/nutrition/NutritionPage").
 const MealPlanDetailPage = lazyRetry(() => import("./pages/nutrition/MealPlanDetailPage").then(m => ({ default: m.MealPlanDetailPage })));
 const SupplementsPage = lazyRetry(() => import("./pages/supplements/SupplementsPage").then(m => ({ default: m.SupplementsPage })));
 const FormsPage = lazyRetry(() => import("./pages/forms/FormsPage").then(m => ({ default: m.FormsPage })));
+const EmailTemplatesPage = lazyRetry(() => import("./pages/email-templates/EmailTemplatesPage").then(m => ({ default: m.EmailTemplatesPage })));
 const CatalogPage = lazyRetry(() => import("./pages/payments/CatalogPage").then(m => ({ default: m.CatalogPage })));
 const StockPage = lazyRetry(() => import("./pages/stock/StockPage").then(m => ({ default: m.StockPage })));
 const SuppliersPage = lazyRetry(() => import("./pages/suppliers/SuppliersPage"));
@@ -60,6 +62,8 @@ const BoxesPage = lazyRetry(() => import("./pages/boxes/BoxesPage"));
 const MachinesPage = lazyRetry(() => import("./pages/machines/MachinesPage"));
 const BillingPage = lazyRetry(() => import("./pages/payments/BillingPage").then(m => ({ default: m.BillingPage })));
 const CommunityPage = lazyRetry(() => import("./pages/community/CommunityPage").then(m => ({ default: m.CommunityPage })));
+const CommunityBenefitsPage = lazyRetry(() => import("./pages/community/CommunityBenefitsPage").then(m => ({ default: m.CommunityBenefitsPage })));
+const MyCommunityPage = lazyRetry(() => import("./pages/client/MyCommunityPage").then(m => ({ default: m.MyCommunityPage })));
 const DocumentsPage = lazyRetry(() => import("./pages/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
 const TeamPage = lazyRetry(() => import("./pages/team/TeamPage").then(m => ({ default: m.TeamPage })));
 const TimeClockPage = lazyRetry(() => import("./pages/team/TimeClockPage"));
@@ -227,6 +231,15 @@ export default function App() {
                 <Route
                   element={
                     <ProtectedRoute>
+                      <SystemFormPage />
+                    </ProtectedRoute>
+                  }
+                  path="/onboarding/system-form/:submissionId"
+                />
+
+                <Route
+                  element={
+                    <ProtectedRoute>
                       <OnboardingPage />
                     </ProtectedRoute>
                   }
@@ -273,6 +286,7 @@ export default function App() {
                   <Route element={<MyCalendarPage />} path="/my-calendar" />
                   <Route element={<MyDocumentsPage />} path="/my-documents" />
                   <Route element={<MyFormsPage />} path="/my-forms" />
+                  <Route element={<MyCommunityPage />} path="/my-community" />
                   <Route element={<MyProfilePage />} path="/my-profile" />
                   <Route element={<MyMessagesPage />} path="/my-messages" />
                   
@@ -288,6 +302,7 @@ export default function App() {
                   <Route element={<TrainerRoute><MealPlanDetailPage /></TrainerRoute>} path="/nutrition/:id" />
                   <Route element={<TrainerRoute><SupplementsPage /></TrainerRoute>} path="/supplements" />
                   <Route element={<TrainerRoute><FormsPage /></TrainerRoute>} path="/forms" />
+                  <Route element={<TrainerRoute><EmailTemplatesPage /></TrainerRoute>} path="/email-templates" />
                   <Route element={<TrainerRoute><CatalogPage /></TrainerRoute>} path="/catalog" />
                   <Route element={<TrainerRoute><StockPage /></TrainerRoute>} path="/stock" />
                   <Route element={<TrainerRoute><SuppliersPage /></TrainerRoute>} path="/suppliers" />
@@ -297,6 +312,7 @@ export default function App() {
                   <Route element={<Navigate replace to="/billing" />} path="/payments" />
                   <Route element={<Navigate replace to="/catalog" />} path="/packages" />
                   <Route element={<TrainerRoute><CommunityPage /></TrainerRoute>} path="/community" />
+                  <Route element={<TrainerRoute><CommunityBenefitsPage /></TrainerRoute>} path="/community/benefits" />
                   <Route element={<TrainerRoute><DocumentsPage /></TrainerRoute>} path="/documents" />
                   <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team" />
                   <Route element={<TrainerRoute><TeamPage /></TrainerRoute>} path="/team/members" />

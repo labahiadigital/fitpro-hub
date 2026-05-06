@@ -82,6 +82,11 @@ class PaymentResponse(BaseModel):
     workspace_id: UUID
     client_id: Optional[UUID] = None
     client_name: Optional[str] = None
+    # Datos del cliente que el entrenador necesita en el modal expandido del
+    # listado de pagos: email y teléfono se muestran junto al nombre, y los
+    # campos de suscripción permiten ver el ciclo contratado.
+    client_email: Optional[str] = None
+    client_phone: Optional[str] = None
     description: Optional[str] = None
     amount: float
     currency: str
@@ -94,6 +99,13 @@ class PaymentResponse(BaseModel):
     # Para pagos puntuales viene como None.
     subscription_interval: Optional[str] = None
     subscription_id: Optional[UUID] = None
+    # Inicio/fin del periodo actual de la suscripción asociada (None para
+    # pagos puntuales sin suscripción).
+    subscription_started_at: Optional[datetime] = None
+    subscription_ends_at: Optional[datetime] = None
+    # Pasarela usada (redsys, sequra, stripe, manual). Lo extraemos de
+    # ``Payment.extra_data["gateway"]`` para no romper el modelo.
+    payment_method: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -457,13 +469,20 @@ async def list_payments(
     # extra desde el frontend. Para pagos puntuales o sueltos sin
     # suscripción asociada, la columna sale como NULL y el frontend lo
     # interpreta como "Pago único".
+    # Devolvemos los datos del cliente (email/teléfono) y de la suscripción
+    # asociada (fechas + intervalo) en el mismo SELECT para evitar N+1 al
+    # expandir el detalle de cada pago en el frontend.
     query = (
         select(
             Payment,
             Client.first_name,
             Client.last_name,
+            Client.email.label("client_email"),
+            Client.phone.label("client_phone"),
             Subscription.interval,
             Subscription.id.label("subscription_id"),
+            Subscription.current_period_start.label("sub_started_at"),
+            Subscription.current_period_end.label("sub_ends_at"),
         )
         .outerjoin(Client, Payment.client_id == Client.id)
         .outerjoin(Subscription, Payment.subscription_id == Subscription.id)
@@ -480,16 +499,36 @@ async def list_payments(
     rows = result.all()
 
     payments = []
-    for pay, first_name, last_name, sub_interval, sub_id in rows:
+    for (
+        pay,
+        first_name,
+        last_name,
+        client_email,
+        client_phone,
+        sub_interval,
+        sub_id,
+        sub_started_at,
+        sub_ends_at,
+    ) in rows:
         client_name = f"{first_name or ''} {last_name or ''}".strip() or None
         status_val = pay.status.value if hasattr(pay.status, 'value') else str(pay.status)
         # Map backend status to frontend-expected status
         display_status = "completed" if status_val == "succeeded" else status_val
+        # La pasarela vive en extra_data["gateway"] (redsys, sequra, stripe…).
+        # Si no hay info caemos a "manual" porque los pagos creados a mano
+        # desde Billing no llevan gateway asociado.
+        gateway = None
+        if pay.extra_data and isinstance(pay.extra_data, dict):
+            gateway = pay.extra_data.get("gateway")
+        if not gateway and pay.stripe_payment_intent_id:
+            gateway = "stripe"
         payments.append(PaymentResponse(
             id=pay.id,
             workspace_id=pay.workspace_id,
             client_id=pay.client_id,
             client_name=client_name,
+            client_email=client_email,
+            client_phone=client_phone,
             description=pay.description,
             amount=float(pay.amount),
             currency=pay.currency,
@@ -499,6 +538,9 @@ async def list_payments(
             created_at=pay.created_at,
             subscription_interval=sub_interval,
             subscription_id=sub_id,
+            subscription_started_at=sub_started_at,
+            subscription_ends_at=sub_ends_at,
+            payment_method=gateway or "manual",
         ))
     return payments
 
@@ -833,6 +875,40 @@ async def _get_or_create_invoice_for_payment(
     return refreshed_q.scalar_one()
 
 
+async def _generate_invoice_pdf_bytes(
+    db: AsyncSession,
+    payment: Payment,
+    *,
+    user_id_value: Optional[UUID] = None,
+    user_name_value: Optional[str] = None,
+) -> tuple[Invoice, bytes]:
+    """Devuelve la factura ligada al pago + el PDF renderizado.
+
+    Centralizamos la lógica para reutilizarla tanto en el endpoint de
+    descarga individual del entrenador como en los endpoints de cliente
+    (descarga unitaria y descarga combinada por periodo).
+    """
+    invoice = await _get_or_create_invoice_for_payment(
+        db, payment,
+        user_id=user_id_value,
+        user_name=user_name_value,
+    )
+
+    settings_q = await db.execute(
+        select(InvoiceSettings).where(InvoiceSettings.workspace_id == payment.workspace_id)
+    )
+    invoice_settings = settings_q.scalar_one_or_none()
+
+    generator = InvoicePDFGenerator()
+    pdf_bytes = generator.generate(
+        invoice=_invoice_to_pdf_dict(invoice),
+        items=_items_to_pdf_dicts(invoice.items or []),
+        settings=_invoice_settings_to_pdf_dict(invoice_settings),
+        qr_data=invoice.verifactu_qr_data,
+    )
+    return invoice, pdf_bytes
+
+
 @router.get("/payments/{payment_id}/invoice/pdf")
 async def download_payment_invoice_pdf(
     payment_id: UUID,
@@ -1071,6 +1147,290 @@ async def send_payment_invoice_email(
         "invoice_number": invoice.invoice_number,
         "sent_to": target_email,
     }
+
+
+# ============ CLIENT-FACING (MI SUSCRIPCIÓN) ============
+
+
+async def _get_my_client(db: AsyncSession, current_user: CurrentUser) -> Client:
+    """Devuelve el ``Client`` ligado al usuario actual o 404 si no existe."""
+    res = await db.execute(
+        select(Client).where(
+            Client.user_id == current_user.id,
+            Client.workspace_id == current_user.workspace_id,
+        )
+    )
+    client = res.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return client
+
+
+@router.get("/payments/me/{payment_id}/invoice/pdf")
+async def download_my_invoice_pdf(
+    payment_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permite al cliente descargar la factura PDF de uno de sus propios pagos.
+
+    Solo se devuelve si el ``Payment`` está completado y pertenece al
+    cliente que hace la petición (``Payment.client_id``→``Client.user_id``).
+    """
+    client = await _get_my_client(db, current_user)
+    res = await db.execute(
+        select(Payment).where(
+            Payment.id == payment_id,
+            Payment.client_id == client.id,
+            Payment.workspace_id == current_user.workspace_id,
+        )
+    )
+    payment = res.scalar_one_or_none()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+    if payment.status != PaymentStatus.succeeded:
+        raise HTTPException(status_code=400, detail="Solo se pueden descargar facturas de pagos completados")
+
+    try:
+        invoice, pdf_bytes = await _generate_invoice_pdf_bytes(db, payment)
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - defensivo
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+        logger.exception("Error generando factura del cliente para %s: %s", payment.id, exc)
+        raise HTTPException(status_code=500, detail="No se pudo generar la factura.")
+
+    filename = f"Factura_{(invoice.invoice_number or 'sin_numero').replace('/', '-')}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/payments/me/invoices/bulk")
+async def download_my_invoices_bulk(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Combina todas las facturas del cliente del periodo solicitado en un único PDF.
+
+    Acepta ``date_from`` / ``date_to`` en formato ``YYYY-MM`` o ``YYYY-MM-DD``
+    para filtrar por mes; si no se pasan, devuelve todas las facturas.
+    Las facturas se ordenan cronológicamente (issue_date asc) y se
+    fusionan con :mod:`pypdf`.
+    """
+    from pypdf import PdfReader, PdfWriter  # import perezoso
+
+    client = await _get_my_client(db, current_user)
+
+    def _parse_bound(value: Optional[str], end: bool) -> Optional[datetime]:
+        if not value:
+            return None
+        try:
+            if len(value) == 7:  # YYYY-MM
+                year, month = map(int, value.split("-"))
+                if end:
+                    next_month = month + 1
+                    next_year = year
+                    if next_month > 12:
+                        next_month = 1
+                        next_year += 1
+                    return datetime(next_year, next_month, 1)
+                return datetime(year, month, 1)
+            return datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Formato de fecha inválido (usa YYYY-MM o YYYY-MM-DD).",
+            )
+
+    lower = _parse_bound(date_from, end=False)
+    upper = _parse_bound(date_to, end=True)
+
+    pay_q = (
+        select(Payment)
+        .where(
+            Payment.client_id == client.id,
+            Payment.workspace_id == current_user.workspace_id,
+            Payment.status == PaymentStatus.succeeded,
+        )
+        .order_by(Payment.paid_at.asc(), Payment.created_at.asc())
+    )
+    if lower is not None:
+        pay_q = pay_q.where(Payment.paid_at >= lower)
+    if upper is not None:
+        pay_q = pay_q.where(Payment.paid_at < upper)
+
+    payments = (await db.execute(pay_q)).scalars().all()
+    if not payments:
+        raise HTTPException(status_code=404, detail="No hay facturas en el periodo seleccionado.")
+
+    writer = PdfWriter()
+    rendered = 0
+    for payment in payments:
+        try:
+            _, pdf_bytes = await _generate_invoice_pdf_bytes(db, payment)
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            for page in reader.pages:
+                writer.add_page(page)
+            rendered += 1
+        except HTTPException:
+            # Saltamos pagos sin factura (p.ej. workspace sin config) en
+            # vez de romper el zip completo. El cliente recibe el resto.
+            continue
+        except Exception:
+            logger.exception(
+                "Error añadiendo factura del pago %s al PDF combinado",
+                payment.id,
+            )
+            continue
+
+    if rendered == 0:
+        raise HTTPException(status_code=400, detail="No se pudo generar ninguna factura del periodo.")
+
+    output = io.BytesIO()
+    writer.write(output)
+    output.seek(0)
+
+    period_tag = ""
+    if date_from or date_to:
+        period_tag = f"_{(date_from or 'inicio')}_a_{(date_to or 'hoy')}"
+    filename = f"Mis_Facturas{period_tag}.pdf"
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ============ PAUSAR / REANUDAR SUSCRIPCIÓN (CLIENTE) ============
+
+
+class SubscriptionPauseRequest(BaseModel):
+    duration_days: Optional[int] = None
+    duration_months: Optional[int] = None
+
+
+@router.post("/subscriptions/me/{subscription_id}/pause")
+async def pause_my_subscription(
+    subscription_id: UUID,
+    data: SubscriptionPauseRequest,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pausa temporalmente la suscripción del cliente.
+
+    En Stripe se aplica ``pause_collection={'behavior': 'mark_uncollectible'}``
+    con ``resumes_at`` cuando la pausa tiene fin definido. En Redsys / pagos
+    manuales no hay API de pausa, así que solo registramos la pausa
+    interna y bloqueamos el acceso desde la app (la lógica de bloqueo se
+    aplica en otros endpoints comprobando ``Subscription.status``).
+    """
+    if not data.duration_days and not data.duration_months:
+        raise HTTPException(
+            status_code=400,
+            detail="Indica una duración de pausa (días o meses).",
+        )
+
+    client = await _get_my_client(db, current_user)
+    res = await db.execute(
+        select(Subscription).where(
+            Subscription.id == subscription_id,
+            Subscription.client_id == client.id,
+            Subscription.workspace_id == current_user.workspace_id,
+        )
+    )
+    subscription = res.scalar_one_or_none()
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Suscripción no encontrada")
+    if subscription.status not in (SubscriptionStatus.active, SubscriptionStatus.trialing):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden pausar suscripciones activas.",
+        )
+
+    days = data.duration_days or 0
+    if data.duration_months:
+        days += int(data.duration_months) * 30
+    paused_until = datetime.utcnow() + relativedelta(days=days)
+
+    if subscription.stripe_subscription_id:
+        try:
+            stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                pause_collection={
+                    "behavior": "mark_uncollectible",
+                    "resumes_at": int(paused_until.timestamp()),
+                },
+            )
+        except stripe.error.StripeError as exc:
+            logger.error("Error pausando suscripción Stripe %s: %s", subscription.id, exc)
+            raise HTTPException(
+                status_code=502,
+                detail="No se pudo pausar la suscripción en Stripe.",
+            )
+
+    subscription.status = SubscriptionStatus.paused
+    subscription.paused_at = datetime.utcnow()
+    subscription.paused_until = paused_until
+    await db.commit()
+    await db.refresh(subscription)
+
+    return {
+        "status": "paused",
+        "paused_until": subscription.paused_until.isoformat() if subscription.paused_until else None,
+    }
+
+
+@router.post("/subscriptions/me/{subscription_id}/resume")
+async def resume_my_subscription(
+    subscription_id: UUID,
+    current_user: CurrentUser = Depends(require_workspace),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reanuda una suscripción pausada antes de tiempo (a petición del cliente)."""
+    client = await _get_my_client(db, current_user)
+    res = await db.execute(
+        select(Subscription).where(
+            Subscription.id == subscription_id,
+            Subscription.client_id == client.id,
+            Subscription.workspace_id == current_user.workspace_id,
+        )
+    )
+    subscription = res.scalar_one_or_none()
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Suscripción no encontrada")
+    if subscription.status != SubscriptionStatus.paused:
+        raise HTTPException(
+            status_code=400,
+            detail="La suscripción no está pausada.",
+        )
+
+    if subscription.stripe_subscription_id:
+        try:
+            stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                pause_collection="",
+            )
+        except stripe.error.StripeError as exc:
+            logger.error("Error reanudando suscripción Stripe %s: %s", subscription.id, exc)
+            raise HTTPException(
+                status_code=502,
+                detail="No se pudo reanudar la suscripción en Stripe.",
+            )
+
+    subscription.status = SubscriptionStatus.active
+    subscription.paused_at = None
+    subscription.paused_until = None
+    await db.commit()
+    await db.refresh(subscription)
+    return {"status": "active"}
 
 
 # ============ WEBHOOKS ============

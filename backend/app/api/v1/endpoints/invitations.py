@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func
+from sqlalchemy.orm import undefer
 from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
@@ -25,11 +26,11 @@ from app.models.client import Client
 from app.models.user import User, UserRole, RoleType
 from app.models.payment import Payment, PaymentStatus, Subscription, SubscriptionStatus
 from app.models.product import Product
+from app.models.form import Form, FormSubmission
 from app.middleware.auth import require_staff, require_workspace, CurrentUser
 from app.core.security import (
     get_password_hash,
     create_tokens,
-    generate_verification_token,
     verify_password,
 )
 import logging
@@ -42,6 +43,7 @@ from app.services.product_capacity import ensure_product_capacity
 from app.tasks.notifications import send_email_task
 from app.services.onboarding import (
     attach_onboarding_progress_photo,
+    attach_onboarding_progress_photo_background,
     enrich_onboarding_health_data,
 )
 
@@ -104,6 +106,16 @@ class ValidateTokenResponse(BaseModel):
     message: Optional[str] = None
     product: Optional[ProductInfo] = None
     payment_completed: bool = False
+    # Datos públicos de soporte del workspace (movil + email) que se
+    # muestran al cliente en la pantalla post-pago si no recibe el email
+    # de bienvenida. Vienen de Settings → Workspace → Soporte.
+    support_phone: Optional[str] = None
+    support_email: Optional[str] = None
+    # Si la invitación trae ya móvil + contraseña + consentimientos
+    # pre-rellenados (flujo público de producto que captura todo antes
+    # del pago) la página de invitación salta el formulario de registro
+    # y completa automáticamente al detectar el pago.
+    data_complete: bool = False
 
 
 # ============ Email Templates ============
@@ -305,12 +317,20 @@ async def create_invitation(
         custom_message=data.message,
     )
     
-    # Send email in background
+    # Send email in background. ``tracking`` permite que el webhook de
+    # Brevo cruce los eventos (delivered/opened/clicked) con la
+    # invitación correcta y que aparezcan en /clients.
     background_tasks.add_task(
         send_email_task.delay,
         to_email=data.email,
         subject=f"Invitación a {workspace.name}",
         html_content=email_html,
+        tracking={
+            "workspace_id": str(workspace.id),
+            "invitation_id": str(invitation.id),
+            "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+            "template_kind": "invitation",
+        },
     )
     
     return InvitationResponse(
@@ -450,6 +470,12 @@ async def resend_invitation(
             to_email=invitation.email,
             subject=f"Recordatorio: Invitación a {workspace.name}",
             html_content=email_html,
+            tracking={
+                "workspace_id": str(workspace.id),
+                "invitation_id": str(invitation.id),
+                "user_id": str(current_user.id) if getattr(current_user, "id", None) else None,
+                "template_kind": "invitation_resend",
+            },
         )
         email_sent = True
         logger.info(f"Resend invitation email queued for {invitation.email}")
@@ -568,16 +594,37 @@ async def validate_invitation_token(
                 product_type=product.product_type,
             )
     
-    # Check if payment already completed
-    payment_completed = False
-    if invitation.payment_id:
-        payment_result = await db.execute(
-            select(Payment).where(Payment.id == invitation.payment_id)
-        )
-        payment = payment_result.scalar_one_or_none()
-        if payment and payment.status == PaymentStatus.succeeded:
-            payment_completed = True
+    # Check if payment already completed.
+    #
+    # Importante: el frontend (``InvitationOnboardingPage``) usa este flag
+    # para decidir si dispara el auto-complete del onboarding tras un flujo
+    # público con datos pre-rellenados. Cuando NO se requiere pago
+    # (producto gratuito o invitación sin producto), debemos devolver
+    # ``True`` para que el cliente no se quede colgado en la pantalla
+    # "Estamos finalizando tu registro…" esperando a un pago que nunca
+    # va a ocurrir. Antes solo devolvíamos True con ``payment_id`` válido,
+    # lo que dejaba bloqueado el onboarding de productos gratis.
+    requires_payment = bool(
+        product_info is not None and (product_info.price or 0) > 0
+    )
+    if not requires_payment:
+        payment_completed = True
+    else:
+        payment_completed = False
+        if invitation.payment_id:
+            payment_result = await db.execute(
+                select(Payment).where(Payment.id == invitation.payment_id)
+            )
+            payment = payment_result.scalar_one_or_none()
+            if payment and payment.status == PaymentStatus.succeeded:
+                payment_completed = True
     
+    # Extraer datos públicos de soporte del workspace
+    ws_settings = (workspace.settings if workspace and workspace.settings else {}) or {}
+    ws_support = ws_settings.get("support", {}) if isinstance(ws_settings, dict) else {}
+    support_phone = ws_support.get("phone") if isinstance(ws_support, dict) else None
+    support_email = ws_support.get("email") if isinstance(ws_support, dict) else None
+
     return ValidateTokenResponse(
         valid=True,
         email=invitation.email,
@@ -588,6 +635,9 @@ async def validate_invitation_token(
         message=invitation.message,
         product=product_info,
         payment_completed=payment_completed,
+        support_phone=support_phone,
+        support_email=support_email,
+        data_complete=invitation.is_data_complete,
     )
 
 
@@ -629,10 +679,10 @@ async def accept_invitation(
 
 # Schema for invitation completion
 class InvitationCompleteRequest(BaseModel):
-    email: str
-    password: str
-    first_name: str
-    last_name: str
+    email: Optional[str] = None
+    password: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     phone: Optional[str] = None
     birth_date: Optional[str] = None
     gender: Optional[str] = None
@@ -649,11 +699,17 @@ class InvitationCompleteRequest(BaseModel):
 async def complete_invitation(
     token: str,
     data: InvitationCompleteRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Complete an invitation by creating user account and client profile.
     Uses local authentication (not Supabase).
+
+    El upload de la foto de progreso a R2 se realiza en un background
+    task DESPUÉS de devolver el response, para no bloquear al cliente
+    durante varios segundos (en redes lentas era el principal motivo de
+    los ~30 s percibidos en el onboarding).
     """
     # Find invitation
     result = await db.execute(
@@ -666,27 +722,75 @@ async def complete_invitation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Invitación no encontrada"
         )
-    
+
+    # Fusionamos los datos de la invitación con los del request: cuando el
+    # cliente ha rellenado todo en el flujo público de producto (móvil,
+    # contraseña y consentimientos antes del pago) la invitación trae
+    # esos valores pre-guardados y la pantalla post-pago invoca este
+    # endpoint sin volver a pedirlos al usuario.
+    if not data.email and invitation.email:
+        data.email = invitation.email
+    if not data.first_name and invitation.first_name:
+        data.first_name = invitation.first_name
+    if not data.last_name and invitation.last_name:
+        data.last_name = invitation.last_name
+    if not data.phone and invitation.phone:
+        data.phone = invitation.phone
+    if not data.consents and isinstance(invitation.consent_data, dict):
+        data.consents = invitation.consent_data
+
+    # Validación mínima: tras el merge necesitamos sí o sí email + nombre.
+    if not data.email:
+        raise HTTPException(status_code=400, detail="Email requerido")
+    if not data.first_name or not data.last_name:
+        raise HTTPException(status_code=400, detail="Nombre y apellidos requeridos")
+
     if invitation.status == STATUS_ACCEPTED:
         # Idempotencia: si ya fue aceptada pero el usuario vuelve a enviar el
         # formulario (doble clic, reintento tras timeout, StrictMode en dev,
         # etc.), consideramos éxito silencioso en lugar de mostrar un error,
-        # porque la cuenta ya existe. El cliente debe confirmar por email.
+        # porque la cuenta ya existe.
         existing_user_result = await db.execute(
             select(User).where(User.email == data.email.lower())
         )
         existing_user = existing_user_result.scalar_one_or_none()
         if existing_user:
+            # Si arrastraba email_verified=False de cuentas creadas con el
+            # flujo antiguo, lo auto-verificamos ahora: completar la
+            # invitación con el token correcto demuestra control del buzón.
+            if not existing_user.email_verified:
+                existing_user.email_verified = True
+                existing_user.email_verification_token = None
+                existing_user.email_verification_sent_at = None
+                await db.commit()
+
+            # IMPORTANTE: pasamos workspace_id + role="client" en el JWT.
+            # Si los omitimos, el frontend pone ``user.role = null`` y
+            # ``DashboardLayout`` cae al menú del entrenador (los clientes
+            # acababan viendo /dashboard del coach con todas las pestañas
+            # privadas — bug crítico de aislamiento). Además
+            # ``create_tokens`` devuelve 3 valores, no 2, así que antes
+            # esto explotaba en TypeError y caíamos al ``return Token``
+            # con ``access_token='pending_login'`` sin que el cliente
+            # quedase nunca autenticado.
+            access_token, refresh_token, _expires_in = create_tokens(
+                user_id=str(existing_user.id),
+                email=existing_user.email,
+                workspace_id=str(invitation.workspace_id),
+                role="client",
+            )
             return {
-                "access_token": "pending_email_confirmation",
+                "access_token": access_token,
                 "token_type": "bearer",
-                "expires_in": 0,
-                "refresh_token": "",
-                "requires_email_verification": not existing_user.email_verified,
+                "expires_in": settings.access_token_expire_minutes * 60,
+                "refresh_token": refresh_token,
+                "requires_email_verification": False,
                 "user": {
                     "id": str(existing_user.id),
                     "email": existing_user.email,
                     "full_name": existing_user.full_name,
+                    "role": "client",
+                    "workspace_id": str(invitation.workspace_id),
                 },
                 "already_completed": True,
             }
@@ -723,19 +827,27 @@ async def complete_invitation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Esta cuenta no está disponible. Contacta con soporte.",
             )
-        # Verificamos que conoce la contraseña: para vincularse a otro
-        # workspace debe demostrar que es el dueño de la cuenta.
-        if not existing_user.password_hash or not verify_password(
-            data.password, existing_user.password_hash
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Ese email ya tiene cuenta en Trackfiz. Usa la misma "
-                    "contraseña que ya tenías para vincular este perfil al "
-                    "nuevo entrenador, o inicia sesión con tu cuenta."
-                ),
-            )
+        # Si la invitación trae password pre-rellenado (flujo público) o
+        # el cliente acaba de completar el pago y no introdujo password,
+        # confiamos en que controla el buzón (token de invitación único)
+        # y, si hay producto, que su tarjeta validó la identidad. No le
+        # forzamos a teclear su password antigua para no bloquearle.
+        skip_password_check = (
+            not data.password
+            or (invitation.password_hash and invitation.password_hash == existing_user.password_hash)
+        )
+        if not skip_password_check:
+            if not existing_user.password_hash or not verify_password(
+                data.password, existing_user.password_hash
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Ese email ya tiene cuenta en Trackfiz. Usa la misma "
+                        "contraseña que ya tenías para vincular este perfil al "
+                        "nuevo entrenador, o inicia sesión con tu cuenta."
+                    ),
+                )
         # ¿ya es cliente activo de ESTE workspace?
         existing_client_q = await db.execute(
             select(Client).where(
@@ -793,7 +905,6 @@ async def complete_invitation(
             weight_kg=data.weight_kg,
         )
 
-        verification_token: Optional[str] = None
         is_returning_user = existing_user is not None
 
         if is_returning_user:
@@ -808,15 +919,44 @@ async def complete_invitation(
                 user.email_verification_token = None
                 user.email_verification_sent_at = None
         else:
-            verification_token = generate_verification_token()
+            # Damos por verificado el email: la persona ha completado el
+            # onboarding usando un token de invitación único que sólo existe
+            # en el correo que el entrenador envió a esa dirección. Llegar
+            # hasta aquí significa que controla el buzón.
+            #
+            # Esto evita el bug crónico "no me llega el email de verificación"
+            # con clientes Hotmail/Outlook (filtros agresivos contra remitentes
+            # transaccionales) que dejaba clientes legítimos sin poder entrar
+            # tras pagar y rellenar el cuestionario.
+            #
+            # Para la contraseña usamos lo que mandó el cliente. Si vino
+            # vacío (caso del flujo público que ya la guardó al pre-rellenar
+            # la invitación) reutilizamos el hash almacenado. Si tampoco
+            # hay hash en la invitación es un error de cliente.
+            if data.password:
+                # bcrypt es CPU-bound y bloquea el event loop. Lo movemos
+                # a un thread para no congelar otras requests durante los
+                # ~250-400 ms que tarda el hash con BCRYPT_ROUNDS=12.
+                import asyncio  # noqa: WPS433
+
+                password_hash_value = await asyncio.to_thread(
+                    get_password_hash, data.password
+                )
+            elif invitation.password_hash:
+                password_hash_value = invitation.password_hash
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Contraseña requerida",
+                )
             user = User(
                 email=email_lc,
                 full_name=full_name,
                 phone=data.phone,
-                password_hash=get_password_hash(data.password),
-                email_verified=False,
-                email_verification_token=verification_token,
-                email_verification_sent_at=datetime.now(timezone.utc),
+                password_hash=password_hash_value,
+                email_verified=True,
+                email_verification_token=None,
+                email_verification_sent_at=None,
                 is_active=True,
             )
             db.add(user)
@@ -867,6 +1007,29 @@ async def complete_invitation(
                 client.consents = data.consents
             client.is_active = True
             client.deleted_at = None
+            # Propagar facturación heredada de la invitación (sin pisar
+            # valores ya existentes en el Client salvo que vengan vacíos).
+            inv_fiscal = getattr(invitation, "fiscal_type", None)
+            if inv_fiscal and not client.fiscal_type:
+                client.fiscal_type = inv_fiscal
+            inv_legal = getattr(invitation, "legal_name", None)
+            if inv_legal and not client.legal_name:
+                client.legal_name = inv_legal
+            inv_tax = getattr(invitation, "tax_id", None)
+            if inv_tax and not client.tax_id:
+                client.tax_id = inv_tax
+            inv_addr = getattr(invitation, "billing_address", None)
+            if inv_addr and not client.billing_address:
+                client.billing_address = inv_addr
+            inv_city = getattr(invitation, "billing_city", None)
+            if inv_city and not client.billing_city:
+                client.billing_city = inv_city
+            inv_cp = getattr(invitation, "billing_postal_code", None)
+            if inv_cp and not client.billing_postal_code:
+                client.billing_postal_code = inv_cp
+            inv_country = getattr(invitation, "billing_country", None)
+            if inv_country and not client.billing_country:
+                client.billing_country = inv_country
         else:
             client = Client(
                 workspace_id=invitation.workspace_id,
@@ -883,15 +1046,34 @@ async def complete_invitation(
                 health_data=enriched_health_data,
                 consents=data.consents or {},
                 is_active=True,
+                # Datos fiscales heredados de la invitación. Si la
+                # invitación los trae (flujo público con producto), los
+                # propagamos al ``Client`` para que la facturación
+                # automática los use desde el primer pago.
+                fiscal_type=getattr(invitation, "fiscal_type", None) or "individual",
+                legal_name=getattr(invitation, "legal_name", None),
+                tax_id=getattr(invitation, "tax_id", None),
+                billing_address=getattr(invitation, "billing_address", None),
+                billing_city=getattr(invitation, "billing_city", None),
+                billing_postal_code=getattr(invitation, "billing_postal_code", None),
+                billing_country=getattr(invitation, "billing_country", None) or "España",
             )
             db.add(client)
             await db.flush()
-        await attach_onboarding_progress_photo(
-            db=db,
-            client=client,
-            data_url=data.progress_photo_data_url,
-            photo_type=data.progress_photo_type or "front",
-        )
+        # Encolamos el upload como background task: se ejecutará DESPUÉS
+        # de que enviemos el response al cliente, así que no bloquea al
+        # usuario en la pantalla de "Cargando..." mientras la imagen
+        # (hasta 10 MB en base64) viaja a R2. Si por algún motivo
+        # ``progress_photo_data_url`` viene vacío, el helper hace early
+        # return y no se hace nada.
+        if data.progress_photo_data_url:
+            background_tasks.add_task(
+                attach_onboarding_progress_photo_background,
+                client_id=client.id,
+                workspace_id=invitation.workspace_id,
+                data_url=data.progress_photo_data_url,
+                photo_type=data.progress_photo_type or "front",
+            )
         
         # Create subscription if invitation has a product
         if invitation.product_id:
@@ -973,62 +1155,196 @@ async def complete_invitation(
         invitation.status = STATUS_ACCEPTED
         invitation.accepted_at = datetime.utcnow()
         invitation.client_id = client.id
-        
+
+        # ── Formulario del Sistema ────────────────────────────────────────
+        # Buscamos el "Cuestionario Inicial Trackfiz" (form_type=system,
+        # is_global=True) y creamos un FormSubmission pendiente para que el
+        # cliente pueda rellenarlo desde el enlace del email de bienvenida.
+        # Si no existe (entornos viejos sin la migración 051), seguimos
+        # adelante sin romper el onboarding: el cliente recibirá el email
+        # genérico al portal.
+        system_form_submission_id: Optional[UUID] = None
+        try:
+            system_form_result = await db.execute(
+                select(Form).where(
+                    Form.is_global.is_(True),
+                    Form.form_type == "system",
+                    Form.is_active.is_(True),
+                ).limit(1)
+            )
+            system_form = system_form_result.scalar_one_or_none()
+            if system_form:
+                submission = FormSubmission(
+                    form_id=system_form.id,
+                    client_id=client.id,
+                    status="pending",
+                    answers={},
+                )
+                db.add(submission)
+                await db.flush()
+                system_form_submission_id = submission.id
+        except Exception as e:
+            logger.error(f"Failed to create system form submission: {e}")
+
+        # ── Formularios del workspace con auto-asignación ────────────────
+        # Hay dos motivos por los que un Form del workspace se asigna
+        # automáticamente al completar onboarding:
+        #
+        # 1. ``settings.send_on_signup``: se asigna a TODO cliente que
+        #    se registra (consentimientos, protección de datos, etc.).
+        # 2. ``settings.send_on_product_purchase`` + ``product_ids``: se
+        #    asigna SÓLO cuando el cliente acaba de contratar uno de los
+        #    productos vinculados (cuestionarios específicos por servicio).
+        #
+        # Para retrocompatibilidad seguimos respetando el flag legacy
+        # ``settings.send_on_onboarding=true``: si está activo y no
+        # tiene los nuevos flags, se evalúa con la regla histórica
+        # (product_ids vacío → todos; product_ids con items → sólo esos).
+        try:
+            ws_forms_result = await db.execute(
+                select(Form)
+                .where(
+                    Form.workspace_id == invitation.workspace_id,
+                    Form.is_active.is_(True),
+                )
+                .options(undefer(Form.product_ids))
+            )
+            ws_forms_all = ws_forms_result.scalars().all()
+            current_product_id = invitation.product_id
+            for f in ws_forms_all:
+                f_settings = f.settings or {}
+                product_ids = list(getattr(f, "product_ids", None) or [])
+
+                send_on_signup = bool(f_settings.get("send_on_signup", False))
+                send_on_purchase = bool(f_settings.get("send_on_product_purchase", False))
+                legacy_flag = bool(f_settings.get("send_on_onboarding", False))
+
+                should_assign = False
+                if send_on_signup:
+                    # Para todos los onboardings.
+                    should_assign = True
+                elif send_on_purchase:
+                    # Sólo si el cliente compró uno de los productos.
+                    if current_product_id and current_product_id in product_ids:
+                        should_assign = True
+                elif legacy_flag and "send_on_signup" not in f_settings and "send_on_product_purchase" not in f_settings:
+                    # Comportamiento histórico para forms creados antes de
+                    # 2026-05 que aún no tienen los flags granulares.
+                    if not product_ids:
+                        should_assign = True
+                    elif current_product_id and current_product_id in product_ids:
+                        should_assign = True
+
+                if not should_assign:
+                    continue
+
+                # Idempotencia: no duplicar la submission si ya existe.
+                already_q = await db.execute(
+                    select(FormSubmission.id).where(
+                        FormSubmission.form_id == f.id,
+                        FormSubmission.client_id == client.id,
+                    ).limit(1)
+                )
+                if already_q.scalar_one_or_none():
+                    continue
+                db.add(FormSubmission(
+                    form_id=f.id,
+                    client_id=client.id,
+                    status="pending",
+                    answers={},
+                ))
+            await db.flush()
+        except Exception as e:
+            logger.error(f"Failed to auto-assign onboarding forms: {e}")
+
         await db.commit()
-        
-        ws_name_for_email = workspace.name if workspace else None
-        subject_brand = ws_name_for_email or "Trackfiz"
+
+        # ── A PARTIR DE AQUÍ NUNCA DEVOLVEMOS 5XX ──────────────────────
+        # El commit anterior YA creó Usuario + Cliente + Subscription
+        # en base de datos. Si lanzamos una excepción ahora, el
+        # frontend entra en bucle de reintentos contra un endpoint que
+        # ya no puede triunfar (la invitación ya está en ACCEPTED) y
+        # el cliente nunca obtiene sus tokens. Por eso envolvemos toda
+        # la sección post-commit en try amplios que loguean pero
+        # SIEMPRE terminan devolviendo 200.
+        ws_name_for_email: Optional[str] = None
+        support_phone: Optional[str] = None
+        support_email: Optional[str] = None
+        email_footer: Optional[str] = None
+        try:
+            ws_name_for_email = workspace.name if workspace else None
+            raw_ws_settings = workspace.settings if workspace else None
+            ws_settings = raw_ws_settings if isinstance(raw_ws_settings, dict) else {}
+            ws_support_raw = ws_settings.get("support") if isinstance(ws_settings, dict) else None
+            ws_support = ws_support_raw if isinstance(ws_support_raw, dict) else {}
+            support_phone = ws_support.get("phone")
+            support_email = ws_support.get("email")
+            email_footer = ws_support.get("email_footer")
+        except Exception as e:
+            logger.error(f"Could not read workspace support settings post-commit: {e}")
+
+        # URL al cuestionario del sistema. Si por algún motivo no se
+        # pudo crear el FormSubmission (no existe el form global)
+        # caemos al dashboard del cliente para no enviar un enlace roto.
+        if system_form_submission_id:
+            system_form_url = (
+                f"{settings.FRONTEND_URL}/onboarding/system-form/{system_form_submission_id}"
+            )
+        else:
+            system_form_url = f"{settings.FRONTEND_URL}/my-dashboard"
 
         # Los emails se encolan en Celery EN VEZ de enviarse de forma
         # síncrona. Cada send_email puede tardar varios segundos contra
-        # Brevo y, sumados al upload de la foto + creación de cuenta + 
+        # Brevo y, sumados al upload de la foto + creación de cuenta +
         # cliente + suscripción, hacían que la request superase los 30s
-        # de timeout del axios del frontend. El usuario veía "Error al
-        # completar registro" aunque internamente la cuenta SÍ se había
-        # creado; al reintentar, la idempotencia (status==accepted)
-        # devolvía OK rápido y "funcionaba" la segunda vez.
-        # Con la cola, el endpoint responde en <2s y los emails se
-        # entregan de forma asíncrona con reintentos automáticos.
-
-        # Sólo enviamos email de verificación a usuarios completamente
-        # nuevos. Si el usuario reutiliza una cuenta existente y ya tenía
-        # el email validado, lo dejamos entrar directamente.
-        if not is_returning_user and verification_token:
-            confirmation_url = f"{settings.FRONTEND_URL}/auth/confirm?token={verification_token}&type=signup"
-            html_content = EmailTemplates.email_confirmation(
-                full_name,
-                confirmation_url,
-                workspace_name=ws_name_for_email,
-            )
-            try:
-                send_email_task.delay(
-                    to_email=data.email,
-                    subject=f"Confirma tu cuenta en {subject_brand}",
-                    html_content=html_content,
-                )
-                logger.info(f"Verification email queued for {data.email}")
-            except Exception as e:
-                logger.error(f"Failed to queue verification email: {e}")
-
+        # de timeout del axios del frontend.
         try:
             send_email_task.delay(
                 to_email=data.email,
                 subject="🚀 ¡Bienvenido/a a mi asesoría! Tus próximos pasos",
-                html_content=EmailTemplates.client_welcome_after_onboarding(
+                html_content=EmailTemplates.client_welcome_after_payment(
                     full_name,
-                    f"{settings.FRONTEND_URL}/my-dashboard",
+                    system_form_url,
                     workspace_name=ws_name_for_email,
+                    support_phone=support_phone,
+                    support_email=support_email,
+                    email_footer=email_footer,
                 ),
+                tracking={
+                    "workspace_id": str(invitation.workspace_id),
+                    "invitation_id": str(invitation.id),
+                    "client_id": str(client.id) if client else None,
+                    "user_id": str(user.id) if user else None,
+                    "template_kind": "welcome_after_payment",
+                },
             )
-            logger.info(f"Welcome email queued for {data.email}")
+            logger.info(f"Welcome (post-payment) email queued for {data.email}")
         except Exception as e:
+            # Si Celery/Redis no responde o el render del template peta,
+            # NO rompemos el registro. El cliente puede entrar igual y
+            # rellenar el cuestionario desde /my-forms.
             logger.error(f"Failed to queue welcome email: {e}")
 
-        if is_returning_user:
-            # Login directo: la persona ya tenía cuenta y se ha vinculado a
-            # este nuevo workspace usando su contraseña actual.
-            access_token, refresh_token = create_tokens(
-                {"sub": str(user.id), "email": user.email}
+        # Login directo en todos los casos: el cliente acaba de demostrar
+        # control del email (token de invitación único) o de la cuenta
+        # existente (contraseña), así que no le exigimos un paso extra.
+        #
+        # IMPORTANTE: pasamos workspace_id y role="client" en el JWT.
+        # Si los omitimos, /auth/me responde con ``role = null`` y
+        # ``DashboardLayout`` muestra el menú COMPLETO del entrenador
+        # al cliente recién registrado (bug crítico de aislamiento).
+        # Además ``create_tokens`` devuelve un 3-tuple
+        # (access, refresh, expires_in), no un 2-tuple: el código
+        # anterior ``access_token, refresh_token = create_tokens({..})``
+        # rompía con TypeError y caía al fallback de ``pending_login``,
+        # que el frontend interpretaba como un token válido y dejaba
+        # al cliente con sesión rota.
+        try:
+            access_token, refresh_token, _expires_in = create_tokens(
+                user_id=str(user.id),
+                email=user.email,
+                workspace_id=str(invitation.workspace_id),
+                role="client",
             )
             return {
                 "access_token": access_token,
@@ -1040,23 +1356,31 @@ async def complete_invitation(
                     "id": str(user.id),
                     "email": user.email,
                     "full_name": user.full_name,
+                    "role": "client",
+                    "workspace_id": str(invitation.workspace_id),
                 },
             }
-
-        # Cuenta nueva: pedimos confirmación por email.
-        return {
-            "access_token": "pending_email_confirmation",
-            "token_type": "bearer",
-            "expires_in": 0,
-            "refresh_token": "",
-            "requires_email_verification": True,
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "full_name": user.full_name
+        except Exception as e:
+            # Si por lo que sea no podemos firmar tokens (config rota),
+            # devolvemos 200 sin sesión: el frontend mostrará el mensaje
+            # pidiéndole que inicie sesión manualmente. No es válido
+            # devolver 500 porque la cuenta YA existe.
+            logger.error(f"Token signing failed after commit: {e}")
+            logger.error(traceback.format_exc())
+            return {
+                "access_token": "pending_login",
+                "token_type": "bearer",
+                "expires_in": 0,
+                "refresh_token": "",
+                "requires_email_verification": False,
+                "user": {
+                    "id": str(getattr(user, "id", "")),
+                    "email": getattr(user, "email", data.email),
+                    "full_name": getattr(user, "full_name", full_name),
+                },
+                "requires_manual_login": True,
             }
-        }
-        
+
     except HTTPException:
         await db.rollback()
         raise
@@ -1074,6 +1398,22 @@ class PublicProductSignupRequest(BaseModel):
     email: EmailStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    # Datos pre-rellenados ANTES del pago para que la pantalla post-pago
+    # no tenga que pedir un segundo formulario.
+    phone: Optional[str] = None
+    password: Optional[str] = None
+    consents: Optional[dict] = None
+    # Datos fiscales para emitir la factura tras el pago. ``fiscal_type``
+    # vale "individual" (Persona Física) o "company" (Persona Jurídica).
+    # Si es ``company`` el cliente factura como empresa y ``legal_name``
+    # se usa como Razón Social en lugar de ``first_name + last_name``.
+    fiscal_type: Optional[str] = None
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
 
 
 class PublicProductSignupResponse(BaseModel):
@@ -1155,6 +1495,27 @@ async def public_product_signup(
     token = secrets.token_urlsafe(48)
     expires_at = datetime.utcnow() + timedelta(days=7)
 
+    # Pre-rellenamos contraseña / móvil / consentimientos si vienen en el
+    # signup. La página pública del producto los pide ANTES del pago para
+    # que la pantalla post-pago sólo muestre la confirmación.
+    consent_data = data.consents if isinstance(data.consents, dict) else None
+    marketing_flag = None
+    if isinstance(consent_data, dict) and "marketing" in consent_data:
+        marketing_flag = bool(consent_data.get("marketing"))
+
+    if data.password:
+        import asyncio  # noqa: WPS433
+
+        password_hash_value = await asyncio.to_thread(
+            get_password_hash, data.password
+        )
+    else:
+        password_hash_value = None
+
+    fiscal_type_value = (data.fiscal_type or "individual").strip().lower()
+    if fiscal_type_value not in ("individual", "company"):
+        fiscal_type_value = "individual"
+
     invitation = ClientInvitation(
         workspace_id=workspace.id,
         invited_by=owner_id,
@@ -1165,6 +1526,17 @@ async def public_product_signup(
         status=STATUS_PENDING,
         expires_at=expires_at,
         product_id=product_id,
+        phone=data.phone,
+        password_hash=password_hash_value,
+        consent_data=consent_data,
+        marketing_consent=marketing_flag,
+        fiscal_type=fiscal_type_value,
+        legal_name=(data.legal_name or None) if fiscal_type_value == "company" else None,
+        tax_id=data.tax_id,
+        billing_address=data.billing_address,
+        billing_city=data.billing_city,
+        billing_postal_code=data.billing_postal_code,
+        billing_country=data.billing_country or "España",
     )
 
     db.add(invitation)

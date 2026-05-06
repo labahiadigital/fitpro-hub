@@ -64,11 +64,16 @@ class Client(BaseModel):
     avatar_url = Column(String(500), nullable=True)
     
     # Billing / invoicing info
+    # ``fiscal_type`` distingue Persona Física (default) de Persona
+    # Jurídica. ``legal_name`` se usa SÓLO para empresas (Razón Social);
+    # en Persona Física la facturación usa ``first_name + last_name``.
+    fiscal_type = Column(String(20), nullable=True, default="individual")
+    legal_name = Column(String(255), nullable=True)
     tax_id = Column(String(25), nullable=True)  # NIF/CIF/NIE
     billing_address = Column(Text, nullable=True)
     billing_city = Column(String(100), nullable=True)
-    billing_postal_code = Column(String(10), nullable=True)
-    billing_country = Column(String(50), default="España")
+    billing_postal_code = Column(String(20), nullable=True)
+    billing_country = Column(String(100), default="España")
 
     # Health data
     birth_date = Column(String(10), nullable=True)  # YYYY-MM-DD

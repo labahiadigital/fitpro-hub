@@ -99,11 +99,13 @@ interface FormTemplate {
   id: string;
   name: string;
   description?: string;
-  type: "custom" | "par_q" | "consent" | "health" | "feedback";
+  type: "custom" | "par_q" | "consent" | "health" | "feedback" | "system";
   fields: FormField[];
   is_active: boolean;
   is_required: boolean;
   send_on_onboarding: boolean;
+  send_on_signup: boolean;
+  send_on_product_purchase: boolean;
   is_global: boolean;
   product_ids: string[];
   submissions_count: number;
@@ -173,14 +175,29 @@ export function FormsPage() {
     is_active: f.is_active === true || f.is_active === "Y" || f.is_active === "true",
     is_required: f.is_required ?? false,
     send_on_onboarding: f.send_on_onboarding ?? false,
+    send_on_signup: f.send_on_signup ?? false,
+    send_on_product_purchase: f.send_on_product_purchase ?? false,
     is_global: f.is_global ?? false,
     product_ids: f.product_ids ?? [],
     submissions_count: f.submissions_count ?? 0,
     created_at: f.created_at ? f.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
   })) : [];
 
-  // Separar plantillas del sistema de los formularios propios del workspace
-  const systemForms = useMemo(() => forms.filter((f) => f.is_global), [forms]);
+  // Tres bloques en la pestaña Formularios:
+  // 1. Formularios del Sistema (is_global + form_type='system'): los
+  //    formularios obligatorios que se asignan a cada cliente al completar
+  //    el onboarding. No se editan ni se copian.
+  // 2. Plantillas de Formularios (is_global y NO de sistema): plantillas
+  //    globales que el entrenador puede copiar a su workspace.
+  // 3. Mis formularios (no globales): formularios propios del workspace.
+  const systemBuiltinForms = useMemo(
+    () => forms.filter((f) => f.is_global && f.type === "system"),
+    [forms],
+  );
+  const systemTemplateForms = useMemo(
+    () => forms.filter((f) => f.is_global && f.type !== "system"),
+    [forms],
+  );
   const workspaceForms = useMemo(() => forms.filter((f) => !f.is_global), [forms]);
   type SubmissionApiItem = {
     id: string;
@@ -311,7 +328,8 @@ export function FormsPage() {
       name: "",
       description: "",
       type: "custom",
-      send_on_onboarding: false,
+      send_on_signup: false,
+      send_on_product_purchase: false,
       product_ids: [] as string[],
     },
     validate: {
@@ -326,7 +344,8 @@ export function FormsPage() {
         name: formTemplate.name,
         description: formTemplate.description || "",
         type: formTemplate.type,
-        send_on_onboarding: formTemplate.send_on_onboarding,
+        send_on_signup: formTemplate.send_on_signup,
+        send_on_product_purchase: formTemplate.send_on_product_purchase,
         product_ids: formTemplate.product_ids ?? [],
       });
       setFormFields(formTemplate.fields);
@@ -344,7 +363,9 @@ export function FormsPage() {
       name: "Canal de Denuncias",
       description: "Formulario para reportar incidentes de forma confidencial",
       type: "custom",
-      send_on_onboarding: false,
+      send_on_signup: false,
+      send_on_product_purchase: false,
+      product_ids: [],
     });
     setFormFields([
       {
@@ -424,14 +445,23 @@ export function FormsPage() {
       feedback: "survey",
     };
 
+    // Si el coach activa "enviar al contratar productos" pero no
+    // selecciona ninguno aún, lo dejamos en false hasta que añada al
+    // menos uno (evita un form fantasma que nunca se asignará).
+    const productPurchaseActive = values.send_on_product_purchase && (values.product_ids?.length ?? 0) > 0;
+
     const formData = {
       name: values.name,
       description: values.description || undefined,
       form_type: (formTypeMap[values.type] || "custom") as "health" | "consent" | "assessment" | "survey" | "custom",
       fields: formFields,
       is_active: editingForm?.is_active ?? true,
-      send_on_onboarding: values.send_on_onboarding,
-      product_ids: values.product_ids ?? [],
+      send_on_signup: values.send_on_signup,
+      send_on_product_purchase: productPurchaseActive,
+      // Mantenemos el flag legacy sincronizado para integraciones que
+      // aún consulten ``send_on_onboarding`` (export, informes, etc.).
+      send_on_onboarding: values.send_on_signup || productPurchaseActive,
+      product_ids: productPurchaseActive ? (values.product_ids ?? []) : [],
     };
 
     try {
@@ -597,6 +627,8 @@ export function FormsPage() {
         return "red";
       case "feedback":
         return "orange";
+      case "system":
+        return "violet";
       default:
         return "gray";
     }
@@ -612,6 +644,8 @@ export function FormsPage() {
         return "Salud";
       case "feedback":
         return "Feedback";
+      case "system":
+        return "Sistema";
       default:
         return "Personalizado";
     }
@@ -642,6 +676,9 @@ export function FormsPage() {
 
   const renderFormCard = (formTemplate: FormTemplate) => {
     const isSystem = formTemplate.is_global;
+    // Los "Formularios del Sistema" (form_type=system) son built-in de
+    // Trackfiz: no se editan ni se pueden copiar al workspace.
+    const isBuiltinSystem = isSystem && formTemplate.type === "system";
     return (
       <Card key={formTemplate.id} padding="lg" radius="lg" withBorder>
         <Group justify="space-between" mb="sm">
@@ -694,9 +731,14 @@ export function FormsPage() {
         </Text>
 
         <Group gap="xs" mb="md">
-          {formTemplate.send_on_onboarding && (
+          {formTemplate.send_on_signup && (
             <Badge color="blue" size="xs" variant="outline">
-              Onboarding
+              Al registrarse
+            </Badge>
+          )}
+          {formTemplate.send_on_product_purchase && (
+            <Badge color="teal" size="xs" variant="outline">
+              Al contratar
             </Badge>
           )}
           {formTemplate.is_required && (
@@ -732,7 +774,20 @@ export function FormsPage() {
 
         <Divider mb="md" />
 
-        {isSystem ? (
+        {isBuiltinSystem ? (
+          <Group gap="xs">
+            <Button
+              flex={1}
+              leftSection={<IconEye size={14} />}
+              onClick={() => openPreviewDrawer(formTemplate)}
+              size="xs"
+              variant="light"
+              color="violet"
+            >
+              Ver formulario
+            </Button>
+          </Group>
+        ) : isSystem ? (
           <Group gap="xs">
             <Button
               flex={1}
@@ -869,26 +924,54 @@ export function FormsPage() {
             </SimpleGrid>
           ) : forms.length > 0 ? (
             <Stack gap="xl">
-              {systemForms.length > 0 && (
+              {/* 1) Formularios del Sistema: el cuestionario que cada
+                  cliente completa tras el pago, asignado automáticamente
+                  por la plataforma. Solo lectura. */}
+              {systemBuiltinForms.length > 0 && (
                 <Box>
                   <Group gap="xs" mb="sm">
                     <Text fw={700} size="md">
-                      Plantillas del sistema
+                      Formularios del Sistema
                     </Text>
-                    <Badge color="violet" variant="light" size="sm">
-                      {systemForms.length}
+                    <Badge color="violet" variant="filled" size="sm">
+                      {systemBuiltinForms.length}
                     </Badge>
                   </Group>
                   <Text c="dimmed" size="sm" mb="md">
-                    Formularios predefinidos compartidos por toda la plataforma. No se
-                    pueden editar, pero puedes copiarlos a tu workspace para personalizarlos.
+                    Formularios obligatorios de Trackfiz que se asignan
+                    automáticamente a cada cliente tras completar la
+                    compra. No se pueden editar ni copiar.
                   </Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
-                    {systemForms.map(renderFormCard)}
+                    {systemBuiltinForms.map(renderFormCard)}
                   </SimpleGrid>
                 </Box>
               )}
 
+              {/* 2) Plantillas de Formularios: plantillas globales que el
+                  entrenador puede copiar a su workspace para
+                  personalizarlas. */}
+              {systemTemplateForms.length > 0 && (
+                <Box>
+                  <Group gap="xs" mb="sm">
+                    <Text fw={700} size="md">
+                      Plantillas de Formularios
+                    </Text>
+                    <Badge color="violet" variant="light" size="sm">
+                      {systemTemplateForms.length}
+                    </Badge>
+                  </Group>
+                  <Text c="dimmed" size="sm" mb="md">
+                    Plantillas predefinidas listas para copiar a tu
+                    workspace y personalizarlas a tu medida.
+                  </Text>
+                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
+                    {systemTemplateForms.map(renderFormCard)}
+                  </SimpleGrid>
+                </Box>
+              )}
+
+              {/* 3) Mis formularios: los del workspace propio. */}
               <Box>
                 <Group gap="xs" mb="sm">
                   <Text fw={700} size="md">
@@ -1143,9 +1226,14 @@ export function FormsPage() {
                       Plantilla del sistema
                     </Badge>
                   )}
-                  {previewForm.send_on_onboarding && (
+                  {previewForm.send_on_signup && (
                     <Badge color="blue" variant="outline">
-                      Onboarding
+                      Al registrarse
+                    </Badge>
+                  )}
+                  {previewForm.send_on_product_purchase && (
+                    <Badge color="teal" variant="outline">
+                      Al contratar
                     </Badge>
                   )}
                 </Group>
@@ -1210,7 +1298,7 @@ export function FormsPage() {
           <Button onClick={closePreview} variant="default">
             Cerrar
           </Button>
-          {previewForm?.is_global && (
+          {previewForm?.is_global && previewForm?.type !== "system" && (
             <Button
               leftSection={<IconCopy size={16} />}
               loading={copyFormMutation.isPending}
@@ -1368,23 +1456,35 @@ export function FormsPage() {
                   />
                 </Group>
 
-                <Switch
-                  label="Enviar automáticamente en el onboarding"
-                  {...form.getInputProps("send_on_onboarding", {
-                    type: "checkbox",
-                  })}
-                />
+                <Stack gap={6}>
+                  <Switch
+                    label="Enviar automáticamente al registrarse el cliente"
+                    description="Se asigna a TODO cliente que completa el onboarding. Útil para protección de datos, consentimientos generales, etc."
+                    {...form.getInputProps("send_on_signup", {
+                      type: "checkbox",
+                    })}
+                  />
+                  <Switch
+                    label="Enviar al contratar uno de los siguientes productos"
+                    description="Se asigna SÓLO cuando el cliente compra uno de los productos seleccionados. Útil para cuestionarios específicos por servicio."
+                    {...form.getInputProps("send_on_product_purchase", {
+                      type: "checkbox",
+                    })}
+                  />
+                </Stack>
 
-                <MultiSelect
-                  label="Vincular a productos"
-                  description="El formulario se enviará automáticamente cuando un cliente contrate uno de estos productos"
-                  placeholder="Selecciona uno o varios productos"
-                  data={productOptions}
-                  searchable
-                  clearable
-                  nothingFoundMessage="No hay productos activos"
-                  {...form.getInputProps("product_ids")}
-                />
+                {form.values.send_on_product_purchase && (
+                  <MultiSelect
+                    label="Productos vinculados"
+                    description="Selecciona los productos para los que este formulario se enviará automáticamente al contratarse."
+                    placeholder="Selecciona uno o varios productos"
+                    data={productOptions}
+                    searchable
+                    clearable
+                    nothingFoundMessage="No hay productos activos"
+                    {...form.getInputProps("product_ids")}
+                  />
+                )}
               </Stack>
             </Paper>
 

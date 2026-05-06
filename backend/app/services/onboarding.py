@@ -3,15 +3,20 @@ from __future__ import annotations
 
 import base64
 import binascii
+import logging
 from datetime import date, datetime
 from typing import Any
+from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.storage import generate_filename, upload_workspace_file
 from app.models.client import Client
 from app.models.exercise import ClientMeasurement
+
+logger = logging.getLogger(__name__)
 
 
 ACTIVITY_MULTIPLIERS = {
@@ -212,3 +217,53 @@ async def attach_onboarding_progress_photo(
     )
     db.add(measurement)
     flag_modified(measurement, "photos")
+
+
+async def attach_onboarding_progress_photo_background(
+    *,
+    client_id: UUID,
+    workspace_id: UUID,
+    data_url: str | None,
+    photo_type: str = "front",
+) -> None:
+    """Versión "fire-and-forget" del attach: abre su propia sesión.
+
+    Se invoca con ``fastapi.BackgroundTasks.add_task`` desde
+    ``/invitations/complete`` para que la subida de la foto a R2 (que
+    puede tardar varios segundos cuando la imagen pesa varios MB) no
+    bloquee la respuesta al cliente. El cliente ve su dashboard de
+    inmediato y la foto aparece en la pestaña *Mediciones* unos segundos
+    después.
+
+    Cualquier error se loguea pero NUNCA se propaga: este background
+    task se ejecuta DESPUÉS de devolver 200 al cliente y un fallo no
+    debe ensuciar la sesión de la request original (ya cerrada).
+    """
+    if not data_url:
+        return
+    from app.core.database import AsyncSessionLocal  # noqa: WPS433
+
+    try:
+        async with AsyncSessionLocal() as session:
+            client_obj = await session.get(Client, client_id)
+            if client_obj is None or client_obj.workspace_id != workspace_id:
+                logger.warning(
+                    "attach_onboarding_progress_photo_background: cliente "
+                    "%s no encontrado en workspace %s",
+                    client_id,
+                    workspace_id,
+                )
+                return
+            await attach_onboarding_progress_photo(
+                db=session,
+                client=client_obj,
+                data_url=data_url,
+                photo_type=photo_type,
+            )
+            await session.commit()
+    except Exception as exc:  # pragma: no cover - defensivo
+        logger.exception(
+            "Background upload de foto de onboarding falló para client_id=%s: %s",
+            client_id,
+            exc,
+        )
