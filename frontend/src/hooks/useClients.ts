@@ -112,6 +112,8 @@ export interface ClientDetail extends Client {
   body_fat_pct?: number;
   activity_level?: string;
   health_data?: ClientHealthData;
+  fiscal_type?: "individual" | "company";
+  legal_name?: string;
   tax_id?: string;
   billing_address?: string;
   billing_city?: string;

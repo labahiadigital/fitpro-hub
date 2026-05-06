@@ -531,6 +531,32 @@ export const supplementsApi = {
   delete: (id: string) => api.delete(`/supplements/${id}`),
   seed: (data: object[], replaceAll?: boolean) =>
     api.post("/supplements/seed", data, { params: { replace_all: replaceAll } }),
+
+  // Asignaciones de suplementos por cliente
+  listForClient: (clientId: string) =>
+    api.get(`/clients/${clientId}/supplements`),
+  addToClient: (
+    clientId: string,
+    data: {
+      supplement_id: string;
+      dosage?: string | null;
+      frequency?: string | null;
+      notes?: string | null;
+      is_active?: boolean;
+    },
+  ) => api.post(`/clients/${clientId}/supplements`, data),
+  updateForClient: (
+    clientId: string,
+    assignmentId: string,
+    data: {
+      dosage?: string | null;
+      frequency?: string | null;
+      notes?: string | null;
+      is_active?: boolean;
+    },
+  ) => api.put(`/clients/${clientId}/supplements/${assignmentId}`, data),
+  removeFromClient: (clientId: string, assignmentId: string) =>
+    api.delete(`/clients/${clientId}/supplements/${assignmentId}`),
 };
 
 // Automations API

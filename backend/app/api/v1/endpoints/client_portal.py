@@ -99,17 +99,38 @@ class ClientProfileResponse(BaseModel):
     weight_kg: Optional[str] = None
     goals: Optional[str] = None
     health_data: dict = {}
-    
+    # Datos fiscales: el cliente debe verlos siempre en /my-profile.
+    fiscal_type: Optional[str] = None
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
+
     class Config:
         from_attributes = True
 
 
 class ClientProfileUpdate(BaseModel):
-    """Update client profile."""
+    """Update client profile.
+
+    Permitimos al cliente actualizar sus propios datos fiscales: si se
+    equivocó en el NIF o se mudó, debería poder corregirlo sin tener
+    que escribir al entrenador. Igualmente el entrenador conserva la
+    posibilidad de hacerlo desde /clients.
+    """
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
     avatar_url: Optional[str] = None
+    fiscal_type: Optional[str] = None
+    legal_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_postal_code: Optional[str] = None
+    billing_country: Optional[str] = None
 
 
 class WorkoutProgramClientResponse(BaseModel):

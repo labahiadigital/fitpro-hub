@@ -517,11 +517,22 @@ export function InvitationOnboardingPage() {
         { timeout: 90_000 },
       );
 
-      if (response.data?.access_token && response.data.access_token !== "pending_email_confirmation") {
+      // ``pending_email_confirmation`` lo devolvía el flujo legacy de
+      // /auth/register-client; ``pending_login`` lo devuelve /complete
+      // cuando el firmado del JWT falló (en ese caso pedimos al cliente
+      // que inicie sesión manualmente con su email + contraseña). Ningún
+      // token literal debe guardarse en el storage como si fuera válido.
+      if (
+        response.data?.access_token &&
+        response.data.access_token !== "pending_email_confirmation" &&
+        response.data.access_token !== "pending_login"
+      ) {
         setUser({
           id: response.data.user?.id,
           email: values.email,
           full_name: `${values.firstName.trim()} ${values.lastName.trim()}`,
+          role: response.data.user?.role || "client",
+          workspace_id: response.data.user?.workspace_id,
           is_active: true,
         });
         setTokens(response.data.access_token, response.data.refresh_token);
@@ -578,11 +589,17 @@ export function InvitationOnboardingPage() {
           {},
           { timeout: 90_000 },
         );
-        if (response.data?.access_token && response.data.access_token !== "pending_email_confirmation") {
+        if (
+          response.data?.access_token &&
+          response.data.access_token !== "pending_email_confirmation" &&
+          response.data.access_token !== "pending_login"
+        ) {
           setUser({
             id: response.data.user?.id,
             email: invitationData?.email || "",
             full_name: `${invitationData?.first_name || ""} ${invitationData?.last_name || ""}`.trim(),
+            role: response.data.user?.role || "client",
+            workspace_id: response.data.user?.workspace_id,
             is_active: true,
           });
           setTokens(response.data.access_token, response.data.refresh_token);

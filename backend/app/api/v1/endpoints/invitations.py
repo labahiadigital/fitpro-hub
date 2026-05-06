@@ -764,8 +764,20 @@ async def complete_invitation(
                 existing_user.email_verification_sent_at = None
                 await db.commit()
 
-            access_token, refresh_token = create_tokens(
-                {"sub": str(existing_user.id), "email": existing_user.email}
+            # IMPORTANTE: pasamos workspace_id + role="client" en el JWT.
+            # Si los omitimos, el frontend pone ``user.role = null`` y
+            # ``DashboardLayout`` cae al menú del entrenador (los clientes
+            # acababan viendo /dashboard del coach con todas las pestañas
+            # privadas — bug crítico de aislamiento). Además
+            # ``create_tokens`` devuelve 3 valores, no 2, así que antes
+            # esto explotaba en TypeError y caíamos al ``return Token``
+            # con ``access_token='pending_login'`` sin que el cliente
+            # quedase nunca autenticado.
+            access_token, refresh_token, _expires_in = create_tokens(
+                user_id=str(existing_user.id),
+                email=existing_user.email,
+                workspace_id=str(invitation.workspace_id),
+                role="client",
             )
             return {
                 "access_token": access_token,
@@ -777,6 +789,8 @@ async def complete_invitation(
                     "id": str(existing_user.id),
                     "email": existing_user.email,
                     "full_name": existing_user.full_name,
+                    "role": "client",
+                    "workspace_id": str(invitation.workspace_id),
                 },
                 "already_completed": True,
             }
@@ -1314,9 +1328,23 @@ async def complete_invitation(
         # Login directo en todos los casos: el cliente acaba de demostrar
         # control del email (token de invitación único) o de la cuenta
         # existente (contraseña), así que no le exigimos un paso extra.
+        #
+        # IMPORTANTE: pasamos workspace_id y role="client" en el JWT.
+        # Si los omitimos, /auth/me responde con ``role = null`` y
+        # ``DashboardLayout`` muestra el menú COMPLETO del entrenador
+        # al cliente recién registrado (bug crítico de aislamiento).
+        # Además ``create_tokens`` devuelve un 3-tuple
+        # (access, refresh, expires_in), no un 2-tuple: el código
+        # anterior ``access_token, refresh_token = create_tokens({..})``
+        # rompía con TypeError y caía al fallback de ``pending_login``,
+        # que el frontend interpretaba como un token válido y dejaba
+        # al cliente con sesión rota.
         try:
-            access_token, refresh_token = create_tokens(
-                {"sub": str(user.id), "email": user.email}
+            access_token, refresh_token, _expires_in = create_tokens(
+                user_id=str(user.id),
+                email=user.email,
+                workspace_id=str(invitation.workspace_id),
+                role="client",
             )
             return {
                 "access_token": access_token,
@@ -1328,6 +1356,8 @@ async def complete_invitation(
                     "id": str(user.id),
                     "email": user.email,
                     "full_name": user.full_name,
+                    "role": "client",
+                    "workspace_id": str(invitation.workspace_id),
                 },
             }
         except Exception as e:
