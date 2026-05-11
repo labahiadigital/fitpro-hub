@@ -47,6 +47,7 @@ import {
   IconPlayerPause,
   IconPlayerPlay,
   IconFileDownload,
+  IconHeartbeat,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
 import { useAuthStore } from "../../stores/auth";
@@ -760,6 +761,17 @@ export function MyProfilePage() {
     billing_country: "España",
   });
 
+  // Datos físicos: fecha de nacimiento, género, altura y peso. Son
+  // imprescindibles para que el entrenador calcule la dieta, así que
+  // los exponemos al cliente para que pueda completarlos él mismo si la
+  // invitación inicial no los pidió.
+  const [physicalForm, setPhysicalForm] = useState({
+    birth_date: "" as string, // YYYY-MM-DD
+    gender: "" as "" | "male" | "female" | "other",
+    height_cm: "" as string,
+    weight_kg: "" as string,
+  });
+
   useEffect(() => {
     if (user) {
       profileForm.setFieldValue("full_name", user.full_name || "");
@@ -794,6 +806,23 @@ export function MyProfilePage() {
         billing_postal_code: profileData.billing_postal_code || "",
         billing_country: profileData.billing_country || "España",
       });
+      setPhysicalForm({
+        birth_date: (profileData.birth_date || "").slice(0, 10),
+        gender:
+          profileData.gender === "male" ||
+          profileData.gender === "female" ||
+          profileData.gender === "other"
+            ? profileData.gender
+            : "",
+        height_cm:
+          profileData.height_cm != null && profileData.height_cm !== ""
+            ? String(profileData.height_cm)
+            : "",
+        weight_kg:
+          profileData.weight_kg != null && profileData.weight_kg !== ""
+            ? String(profileData.weight_kg)
+            : "",
+      });
     }
   }, [profileData]);
 
@@ -810,6 +839,10 @@ export function MyProfilePage() {
       billing_city?: string | null;
       billing_postal_code?: string | null;
       billing_country?: string | null;
+      birth_date?: string | null;
+      gender?: string | null;
+      height_cm?: number | null;
+      weight_kg?: number | null;
     }) => clientPortalApi.updateProfile(data),
     onSuccess: (_res, variables) => {
       const parts = [variables.first_name, variables.last_name].filter(Boolean);
@@ -858,6 +891,19 @@ export function MyProfilePage() {
       billing_postal_code: billingForm.billing_postal_code || null,
       billing_country: billingForm.billing_country || null,
     } as any);
+  };
+
+  const handleSavePhysical = () => {
+    const heightNum = Number(physicalForm.height_cm);
+    const weightNum = Number(physicalForm.weight_kg);
+    updateProfileMutation.mutate({
+      birth_date: physicalForm.birth_date || null,
+      gender: physicalForm.gender || null,
+      height_cm:
+        Number.isFinite(heightNum) && heightNum > 0 ? heightNum : null,
+      weight_kg:
+        Number.isFinite(weightNum) && weightNum > 0 ? weightNum : null,
+    });
   };
 
   const handleAvatarUpload = async (file: File | null) => {
@@ -1082,6 +1128,96 @@ export function MyProfilePage() {
                   leftSection={<IconCheck size={16} />}
                 >
                   Guardar cambios
+                </Button>
+              </Stack>
+            </Card>
+
+            <Card shadow="sm" padding="xl" radius="lg" withBorder>
+              <Group mb="md">
+                <IconHeartbeat size={20} />
+                <Text fw={600}>Datos físicos</Text>
+              </Group>
+              <Text size="xs" c="dimmed" mb="md">
+                Tu entrenador los necesita para calcular las calorías y
+                macros de tu dieta. Puedes actualizarlos cuando quieras.
+              </Text>
+              <Stack gap="md">
+                <TextInput
+                  label="Fecha de nacimiento"
+                  type="date"
+                  leftSection={<IconCalendar size={16} />}
+                  value={physicalForm.birth_date}
+                  onChange={(e) =>
+                    setPhysicalForm((s) => ({
+                      ...s,
+                      birth_date: e.currentTarget.value,
+                    }))
+                  }
+                />
+                <Select
+                  label="Género"
+                  placeholder="Selecciona"
+                  data={[
+                    { value: "male", label: "Hombre" },
+                    { value: "female", label: "Mujer" },
+                    { value: "other", label: "Otro" },
+                  ]}
+                  value={physicalForm.gender || null}
+                  onChange={(v) =>
+                    setPhysicalForm((s) => ({
+                      ...s,
+                      gender:
+                        v === "male" || v === "female" || v === "other"
+                          ? v
+                          : "",
+                    }))
+                  }
+                />
+                <SimpleGrid cols={2} spacing="md">
+                  <NumberInput
+                    label="Altura (cm)"
+                    placeholder="165"
+                    min={100}
+                    max={250}
+                    value={
+                      physicalForm.height_cm === ""
+                        ? ""
+                        : Number(physicalForm.height_cm)
+                    }
+                    onChange={(v) =>
+                      setPhysicalForm((s) => ({
+                        ...s,
+                        height_cm: v === "" || v == null ? "" : String(v),
+                      }))
+                    }
+                  />
+                  <NumberInput
+                    label="Peso (kg)"
+                    placeholder="65"
+                    min={30}
+                    max={300}
+                    decimalScale={1}
+                    value={
+                      physicalForm.weight_kg === ""
+                        ? ""
+                        : Number(physicalForm.weight_kg)
+                    }
+                    onChange={(v) =>
+                      setPhysicalForm((s) => ({
+                        ...s,
+                        weight_kg: v === "" || v == null ? "" : String(v),
+                      }))
+                    }
+                  />
+                </SimpleGrid>
+                <Button
+                  color="yellow"
+                  mt="md"
+                  onClick={handleSavePhysical}
+                  loading={updateProfileMutation.isPending}
+                  leftSection={<IconCheck size={16} />}
+                >
+                  Guardar datos físicos
                 </Button>
               </Stack>
             </Card>
