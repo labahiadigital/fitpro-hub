@@ -53,7 +53,7 @@ import {
   IconInfoCircle,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
 import { useAlternativesCounts } from "../../hooks/useExercises";
 import {
@@ -1411,17 +1411,34 @@ export function WorkoutBuilderWithDays({
 
   const currentDay = days.find((d) => d.id === activeDay);
 
+  // Guardamos el ``day`` (1..7) del activeDay actual para poder mantener el
+  // mismo día de la semana si los IDs cambian (p.ej. tras copiar semana,
+  // donde los ids pasan de ``day-3`` a ``day-2-3``).
+  const lastSeenDayNumRef = useRef<number | null>(null);
   useEffect(() => {
-    const active = days.find((d) => d.id === activeDay);
-    if (!active || active.isRestDay || getDayExerciseCount(active) === 0) {
-      const firstTraining = days.find((d) => !d.isRestDay && getDayExerciseCount(d) > 0);
-      if (firstTraining) {
-        setActiveDay(firstTraining.id);
-      } else if (days.length > 0 && !days.find((d) => d.id === activeDay)) {
-        setActiveDay(days[0].id);
-      }
+    const d = days.find((x) => x.id === activeDay);
+    if (d) lastSeenDayNumRef.current = d.day;
+  }, [days, activeDay]);
+
+  // Resetear el día activo SOLO cuando el actual ha dejado de existir
+  // (cambio de semana con ids distintos, borrado de día, etc.). NO lo
+  // tocamos en cada edición porque sacaría al usuario del día que está
+  // editando y le mandaría al "primer día con ejercicios" (lunes), que
+  // es justo el bug histórico que veía el entrenador.
+  useEffect(() => {
+    if (days.length === 0) return;
+    if (days.find((d) => d.id === activeDay)) return;
+    const prevDayNum = lastSeenDayNumRef.current;
+    const sameWeekday = prevDayNum != null
+      ? days.find((d) => d.day === prevDayNum)
+      : null;
+    if (sameWeekday) {
+      setActiveDay(sameWeekday.id);
+      return;
     }
-  }, [currentWeek, days]);
+    const firstTraining = days.find((d) => !d.isRestDay && getDayExerciseCount(d) > 0);
+    setActiveDay(firstTraining?.id ?? days[0].id);
+  }, [days, activeDay]);
 
   const handleBlocksChange = useCallback((newBlocks: WorkoutBlock[]) => {
     onChangeDays(
