@@ -958,6 +958,10 @@ def _build_prefill_for_client(form: Form, client: Client) -> dict:
 
     prefill: dict = {}
 
+    # Mapeo género código → etiqueta del form (inverso al de
+    # ``_sync_health_data_from_answers``).
+    gender_label_map = {"male": "Hombre", "female": "Mujer", "other": "Otro"}
+
     for field in fields:
         if not isinstance(field, dict):
             continue
@@ -971,6 +975,27 @@ def _build_prefill_for_client(form: Form, client: Client) -> dict:
             labels = [l for l in labels if l in options]
             if labels:
                 prefill[field_id] = labels
+        elif field_id == "sys_init_birth_date":
+            # Prefill con la fecha de nacimiento del cliente si ya está
+            # guardada (p.ej. porque el entrenador la introdujo a mano
+            # desde la ficha antes de que el cliente abriese el form).
+            if client.birth_date:
+                prefill[field_id] = str(client.birth_date)[:10]
+        elif field_id == "sys_init_gender":
+            if client.gender and client.gender in gender_label_map:
+                prefill[field_id] = gender_label_map[client.gender]
+        elif field_id == "sys_init_height_cm":
+            if client.height_cm not in (None, ""):
+                try:
+                    prefill[field_id] = float(client.height_cm)
+                except (TypeError, ValueError):
+                    pass
+        elif field_id == "sys_init_weight_kg":
+            if client.weight_kg not in (None, ""):
+                try:
+                    prefill[field_id] = float(client.weight_kg)
+                except (TypeError, ValueError):
+                    pass
     return prefill
 
 
@@ -1028,6 +1053,60 @@ def _sync_health_data_from_answers(
     # objetivos, salud y PAR-Q al `health_data` del cliente para que el
     # entrenador los vea en la ficha sin tener que abrir la respuesta.
     if any(k.startswith("sys_init_") for k in known_ids):
+        # ── Datos físicos básicos (migración 060) ──
+        # Estos 4 campos NO se guardan en ``health_data`` sino en las
+        # columnas directas del cliente, igual que cuando el entrenador
+        # los edita desde la ficha. Así la ficha del entrenador y los
+        # cálculos de BMR/TDEE leen exactamente el mismo dato sin tener
+        # que mirar dos sitios distintos.
+        if "sys_init_birth_date" in known_ids and "sys_init_birth_date" in answers:
+            raw = answers.get("sys_init_birth_date")
+            if isinstance(raw, str) and raw.strip():
+                bd = raw.strip()[:10]
+                if client.birth_date != bd:
+                    client.birth_date = bd
+                    changed = True
+
+        if "sys_init_gender" in known_ids and "sys_init_gender" in answers:
+            raw = answers.get("sys_init_gender")
+            if isinstance(raw, str) and raw.strip():
+                # El form muestra "Hombre"/"Mujer"/"Otro" en español;
+                # internamente usamos el código en inglés que ya emplean
+                # el resto de endpoints (BMR, cálculo nutricional…).
+                gmap = {"hombre": "male", "mujer": "female", "otro": "other"}
+                code = gmap.get(raw.strip().lower())
+                if code and client.gender != code:
+                    client.gender = code
+                    changed = True
+
+        if "sys_init_height_cm" in known_ids and "sys_init_height_cm" in answers:
+            raw = answers.get("sys_init_height_cm")
+            if raw not in (None, ""):
+                try:
+                    h_num = float(raw)
+                    if h_num > 0:
+                        # ``clients.height_cm`` es TEXT en BD. Si es
+                        # entero exacto, evitamos el ".0".
+                        h_str = str(int(h_num)) if h_num.is_integer() else str(h_num)
+                        if client.height_cm != h_str:
+                            client.height_cm = h_str
+                            changed = True
+                except (TypeError, ValueError):
+                    pass
+
+        if "sys_init_weight_kg" in known_ids and "sys_init_weight_kg" in answers:
+            raw = answers.get("sys_init_weight_kg")
+            if raw not in (None, ""):
+                try:
+                    w_num = float(raw)
+                    if w_num > 0:
+                        w_str = str(int(w_num)) if w_num.is_integer() else str(w_num)
+                        if client.weight_kg != w_str:
+                            client.weight_kg = w_str
+                            changed = True
+                except (TypeError, ValueError):
+                    pass
+
         current = dict(client.health_data or {}) if isinstance(client.health_data, dict) else {}
 
         # ── Objetivos / actividad ──

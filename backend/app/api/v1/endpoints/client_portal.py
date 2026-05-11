@@ -8,11 +8,11 @@ import logging
 import re as _re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
@@ -124,11 +124,24 @@ class ClientProfileUpdate(BaseModel):
     equivocó en el NIF o se mudó, debería poder corregirlo sin tener
     que escribir al entrenador. Igualmente el entrenador conserva la
     posibilidad de hacerlo desde /clients.
+
+    Además permitimos al cliente completar sus datos físicos básicos
+    (fecha de nacimiento, género, altura y peso) porque son
+    imprescindibles para que el entrenador pueda calcular la dieta y
+    los objetivos calóricos. Si la invitación inicial no los pidió, el
+    cliente debe poder rellenarlos desde el portal sin esperar al
+    entrenador.
     """
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
     avatar_url: Optional[str] = None
+    # Datos físicos básicos para cálculo de dieta
+    birth_date: Optional[str] = None  # YYYY-MM-DD
+    gender: Optional[str] = None  # "male" | "female" | "other"
+    height_cm: Optional[Union[int, float, str]] = None
+    weight_kg: Optional[Union[int, float, str]] = None
+    # Datos fiscales
     fiscal_type: Optional[str] = None
     legal_name: Optional[str] = None
     tax_id: Optional[str] = None
@@ -136,6 +149,56 @@ class ClientProfileUpdate(BaseModel):
     billing_city: Optional[str] = None
     billing_postal_code: Optional[str] = None
     billing_country: Optional[str] = None
+
+    @field_validator("height_cm", "weight_kg", mode="before")
+    @classmethod
+    def _normalize_numeric_strings(cls, v):
+        # Acepta números del frontend (Mantine NumberInput) pero los
+        # persiste como string porque la columna en BD es VARCHAR(10).
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return s or None
+        if isinstance(v, bool):
+            raise ValueError("Valor numérico inválido")
+        if isinstance(v, (int, float)):
+            if isinstance(v, float) and v.is_integer():
+                return str(int(v))
+            return str(v)
+        raise ValueError("Valor numérico inválido")
+
+    @field_validator("gender", mode="before")
+    @classmethod
+    def _normalize_gender(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if not s:
+                return None
+            if s not in {"male", "female", "other"}:
+                raise ValueError("Género debe ser 'male', 'female' u 'other'")
+            return s
+        raise ValueError("Género inválido")
+
+    @field_validator("birth_date", mode="before")
+    @classmethod
+    def _normalize_birth_date(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return None
+            # Si llega ISO completo (de un date-picker), recortamos a la
+            # parte de fecha YYYY-MM-DD para que coincida con el modelo.
+            return s[:10]
+        # ``datetime``/``date`` se serializa con isoformat.
+        try:
+            return v.isoformat()[:10]
+        except Exception:
+            raise ValueError("Fecha de nacimiento inválida")
 
 
 class WorkoutProgramClientResponse(BaseModel):

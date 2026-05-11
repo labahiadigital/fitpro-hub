@@ -48,6 +48,50 @@ class TestClientSchemas:
         assert data.first_name == "Jane"
         assert data.last_name is None
 
+    def test_client_update_height_weight_accept_numbers(self):
+        """El frontend manda ``height_cm``/``weight_kg`` como números
+        (Mantine ``NumberInput``). El schema debe aceptarlos y
+        normalizarlos a string porque en BD la columna es ``VARCHAR``.
+        Regresión por el error 422 "Input should be a valid string"
+        reportado por el cliente Berta el 11/5/2026.
+        """
+        # int → "160"
+        d1 = ClientUpdate(height_cm=160, weight_kg=70)
+        assert d1.height_cm == "160"
+        assert d1.weight_kg == "70"
+
+        # float con parte decimal → conserva decimales
+        d2 = ClientUpdate(height_cm=160.5, weight_kg=57.5)
+        assert d2.height_cm == "160.5"
+        assert d2.weight_kg == "57.5"
+
+        # str sigue funcionando
+        d3 = ClientUpdate(height_cm="170", weight_kg="65.3")
+        assert d3.height_cm == "170"
+        assert d3.weight_kg == "65.3"
+
+        # None se preserva (campo opcional sin tocar)
+        d4 = ClientUpdate()
+        assert d4.height_cm is None
+        assert d4.weight_kg is None
+
+        # cadenas vacías o sólo espacios se normalizan a None
+        d5 = ClientUpdate(height_cm="   ", weight_kg="")
+        assert d5.height_cm is None
+        assert d5.weight_kg is None
+
+    def test_client_create_height_weight_accept_numbers(self):
+        """Mismo contrato en el endpoint de creación."""
+        d = ClientCreate(
+            first_name="Jane",
+            last_name="Doe",
+            email="jane@example.com",
+            height_cm=165,
+            weight_kg=58.2,
+        )
+        assert d.height_cm == "165"
+        assert d.weight_kg == "58.2"
+
 
 class TestAuthSchemas:
     """Tests for Auth schemas."""

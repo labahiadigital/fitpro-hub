@@ -1225,26 +1225,45 @@ export function ClientDetailPage() {
     muscle_gain: "Ganancia Muscular",
   };
 
-  // Calcular edad del cliente
-  const clientAge = client.birth_date 
+  // Calcular edad del cliente. Devuelve ``null`` si no hay fecha de
+  // nacimiento, para no inventarnos un valor por defecto (antes "30
+  // años") que el entrenador ya nos reportó como confuso.
+  const clientAge = client.birth_date
     ? Math.floor((Date.now() - new Date(client.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-    : 30;
+    : null;
 
   // Obtener datos de health_data o valores por defecto
   const activityLevel = client.health_data?.activity_level || "moderate";
   const goalType = client.health_data?.goal_type || "maintenance";
 
+  // Datos mínimos para que BMR/TDEE/objetivos sean reales. Si faltan
+  // mostramos "—" en lugar de números inventados (peso 70, altura 170,
+  // edad 30) que producían un objetivo calórico aleatorio.
+  const clientWeightNum = parseFloat(String(client.weight_kg));
+  const clientHeightNum = parseFloat(String(client.height_cm));
+  const hasClientWeight = Number.isFinite(clientWeightNum) && clientWeightNum > 0;
+  const hasClientHeight = Number.isFinite(clientHeightNum) && clientHeightNum > 0;
+  const hasClientAge = clientAge !== null && clientAge > 0;
+  const hasMinimumNutritionData = hasClientWeight && hasClientHeight && hasClientAge;
+
   // Calcular BMR (Mifflin-St Jeor o Harris-Benedict según fórmula seleccionada)
   const clientBMR = (() => {
-    const weight = parseFloat(String(client.weight_kg)) || 70;
-    const height = parseFloat(String(client.height_cm)) || 170;
-    const age = clientAge;
+    if (!hasMinimumNutritionData) return 0;
     const gender = (client.gender === "female" ? "female" : "male") as "male" | "female";
-    return calculateBMR({ weight_kg: weight, height_cm: height, age, gender, body_fat_pct: client.body_fat_pct }, selectedFormula);
+    return calculateBMR(
+      {
+        weight_kg: clientWeightNum,
+        height_cm: clientHeightNum,
+        age: clientAge as number,
+        gender,
+        body_fat_pct: client.body_fat_pct,
+      },
+      selectedFormula
+    );
   })();
 
   // Calcular TDEE
-  const clientTDEE = Math.round(calculateTDEE(clientBMR, activityLevel));
+  const clientTDEE = hasMinimumNutritionData ? Math.round(calculateTDEE(clientBMR, activityLevel)) : 0;
 
   // Calcular objetivos según tipo de objetivo.
   // Prioridad:
@@ -1254,7 +1273,6 @@ export function ClientDetailPage() {
   // De esta forma, al asignar o editar un plan, los objetivos mostrados siempre
   // reflejan o bien el onboarding inicial o bien el último cálculo del trainer.
   const nutritionalTargets = (() => {
-    const weight = parseFloat(String(client.weight_kg)) || 70;
     const healthData = (client as { health_data?: {
       target_calories?: number;
       target_protein?: number;
@@ -1278,6 +1296,12 @@ export function ClientDetailPage() {
       };
     }
 
+    // Sin objetivos guardados Y sin datos mínimos del cliente: devolvemos
+    // ceros para que la UI muestre "—" en lugar de un cálculo aleatorio.
+    if (!hasMinimumNutritionData) {
+      return { calories: 0, protein: 0, carbs: 0, fat: 0, bmr: 0, tdee: 0 };
+    }
+
     let targetCalories = clientTDEE;
     if (goalType === "fat_loss") {
       targetCalories = Math.round(clientTDEE * 0.8); // -20%
@@ -1286,7 +1310,7 @@ export function ClientDetailPage() {
     }
 
     const proteinMultiplier = goalType === "maintenance" ? 1.8 : 2.2;
-    const targetProtein = Math.round(weight * proteinMultiplier);
+    const targetProtein = Math.round(clientWeightNum * proteinMultiplier);
 
     const fatCalories = targetCalories * 0.28;
     const targetFat = Math.round(fatCalories / 9);
@@ -1498,12 +1522,18 @@ export function ClientDetailPage() {
     }
     
     try {
+      // Mantine ``NumberInput`` puede devolver ``""`` cuando el usuario
+      // borra el campo, o un número. Solo enviamos al backend valores
+      // realmente numéricos (>0) para evitar persistir "NaN" o "0" como
+      // peso/altura.
+      const heightNum = Number(values.height_cm);
+      const weightNum = Number(values.weight_kg);
       const data = {
         ...values,
         birth_date: values.birth_date || undefined,
         gender: values.gender || undefined,
-        height_cm: values.height_cm ? Number(values.height_cm) : undefined,
-        weight_kg: values.weight_kg ? Number(values.weight_kg) : undefined,
+        height_cm: Number.isFinite(heightNum) && heightNum > 0 ? heightNum : undefined,
+        weight_kg: Number.isFinite(weightNum) && weightNum > 0 ? weightNum : undefined,
         internal_notes: values.internal_notes || undefined,
       };
       await updateClient.mutateAsync({ id, data });
@@ -3272,7 +3302,7 @@ export function ClientDetailPage() {
                   first_name: client.first_name,
                   last_name: client.last_name,
                   gender: (client.gender as "male" | "female") || "male",
-                  age: clientAge,
+                  age: clientAge ?? 0,
                   weight_kg: client.weight_kg || 70,
                   height_cm: client.height_cm || 170,
                   activity_level: activityLevel as any,
@@ -3477,15 +3507,15 @@ export function ClientDetailPage() {
                 <SimpleGrid cols={{ base: 2, sm: 3, md: 6 }} spacing="md" mb="lg">
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
                     <Text size="xs" c="dimmed" mb={4}>Peso</Text>
-                    <Text fw={700} size="lg">{client.weight_kg || "—"} kg</Text>
+                    <Text fw={700} size="lg">{hasClientWeight ? `${client.weight_kg} kg` : "—"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
                     <Text size="xs" c="dimmed" mb={4}>Altura</Text>
-                    <Text fw={700} size="lg">{client.height_cm || "—"} cm</Text>
+                    <Text fw={700} size="lg">{hasClientHeight ? `${client.height_cm} cm` : "—"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
                     <Text size="xs" c="dimmed" mb={4}>Edad</Text>
-                    <Text fw={700} size="lg">{clientAge} años</Text>
+                    <Text fw={700} size="lg">{hasClientAge ? `${clientAge} años` : "—"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
                     <Text size="xs" c="dimmed" mb={4}>Actividad</Text>
@@ -3493,13 +3523,40 @@ export function ClientDetailPage() {
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
                     <Text size="xs" c="dimmed" mb={4}>BMR</Text>
-                    <Text fw={700} size="lg">{nutritionalTargets.bmr} kcal</Text>
+                    <Text fw={700} size="lg">{nutritionalTargets.bmr > 0 ? `${nutritionalTargets.bmr} kcal` : "—"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
                     <Text size="xs" c="dimmed" mb={4}>TDEE</Text>
-                    <Text fw={700} size="lg">{nutritionalTargets.tdee} kcal</Text>
+                    <Text fw={700} size="lg">{nutritionalTargets.tdee > 0 ? `${nutritionalTargets.tdee} kcal` : "—"}</Text>
                   </Box>
                 </SimpleGrid>
+
+                {!hasMinimumNutritionData && (
+                  <Box
+                    p="md"
+                    mb="lg"
+                    style={{
+                      background: "rgba(254, 226, 226, 0.95)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      borderRadius: "var(--radius-md)",
+                    }}
+                  >
+                    <Text size="sm" fw={700} c="red.7" mb={4}>
+                      Faltan datos para calcular la dieta
+                    </Text>
+                    <Text size="xs" c="red.7">
+                      Para que el cálculo sea realista necesitamos {[
+                        !hasClientWeight ? "peso" : null,
+                        !hasClientHeight ? "altura" : null,
+                        !hasClientAge ? "fecha de nacimiento" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}. Pulsa "Editar información personal" en
+                      la pestaña Resumen, o pide al cliente que los complete
+                      desde su perfil.
+                    </Text>
+                  </Box>
+                )}
 
                 {!isDemoClient && id && (
                 <Button
@@ -3508,6 +3565,7 @@ export function ClientDetailPage() {
                   radius="md"
                   mb="lg"
                   loading={updateClient.isPending}
+                  disabled={!hasMinimumNutritionData}
                   onClick={async () => {
                     if (!id) return;
                     try {
@@ -3549,7 +3607,7 @@ export function ClientDetailPage() {
                   <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="lg">
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#3B82F6", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.calories}
+                        {nutritionalTargets.calories > 0 ? nutritionalTargets.calories : "—"}
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Calorías</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_calories && mealPlans[0].target_calories !== nutritionalTargets.calories && (
@@ -3560,7 +3618,7 @@ export function ClientDetailPage() {
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#22C55E", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.protein}g
+                        {nutritionalTargets.protein > 0 ? `${nutritionalTargets.protein}g` : "—"}
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Proteínas</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_protein && mealPlans[0].target_protein !== nutritionalTargets.protein && (
@@ -3571,7 +3629,7 @@ export function ClientDetailPage() {
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#F59E0B", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.carbs}g
+                        {nutritionalTargets.carbs > 0 ? `${nutritionalTargets.carbs}g` : "—"}
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Carbohidratos</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_carbs && mealPlans[0].target_carbs !== nutritionalTargets.carbs && (
@@ -3582,7 +3640,7 @@ export function ClientDetailPage() {
                     </Box>
                     <Box ta="center">
                       <Text size="2rem" fw={700} style={{ color: "#8B5CF6", fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {nutritionalTargets.fat}g
+                        {nutritionalTargets.fat > 0 ? `${nutritionalTargets.fat}g` : "—"}
                       </Text>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Grasas</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_fat && mealPlans[0].target_fat !== nutritionalTargets.fat && (

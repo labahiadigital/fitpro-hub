@@ -211,6 +211,28 @@ export function MealPlanBuilder({
   const { data: beveragesList = [] } = useBeverages(beverageSearch || undefined);
   
   const [activeDay, setActiveDay] = useState<string>(days[0]?.id || "");
+
+  // Guardamos el ``day`` (1..7) del activeDay actual para mantener el mismo
+  // día de la semana al cambiar de semana o al copiar (los IDs incluyen la
+  // semana: ``day-{week}-{day}``, así que cambian al moverse entre semanas).
+  const lastSeenDayNumRef = useRef<number | null>(null);
+  useEffect(() => {
+    const d = days.find((x) => x.id === activeDay);
+    if (d) lastSeenDayNumRef.current = d.day;
+  }, [days, activeDay]);
+
+  // Solo cambiamos el día activo cuando el actual ha dejado de existir
+  // (cambio de semana, borrado de día…). NO tocamos activeDay por cambios
+  // de contenido para evitar el bug histórico de "se resetea al lunes al
+  // editar texto" que también se daba en el constructor de entrenamientos.
+  useEffect(() => {
+    if (days.length === 0) return;
+    if (days.find((d) => d.id === activeDay)) return;
+    const prev = lastSeenDayNumRef.current;
+    const sameWeekday = prev != null ? days.find((d) => d.day === prev) : null;
+    setActiveDay(sameWeekday?.id ?? days[0].id);
+  }, [days, activeDay]);
+
   const [foodModalOpened, { open: openFoodModal, close: closeFoodModal }] =
     useDisclosure(false);
   const [createFoodModalOpened, { open: openCreateFoodModal, close: closeCreateFoodModal }] = useDisclosure(false);
@@ -934,7 +956,7 @@ export function MealPlanBuilder({
                   label: `Semana ${i + 1}`,
                 }))}
                 value={String(currentWeek)}
-                onChange={(v) => { onWeekChange?.(Number(v) || 1); setActiveDay(days[0]?.id || ""); }}
+                onChange={(v) => onWeekChange?.(Number(v) || 1)}
                 size="xs"
                 radius="md"
                 w={140}

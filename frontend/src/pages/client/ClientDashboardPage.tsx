@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Card,
   Grid,
@@ -18,6 +19,7 @@ import {
   Loader,
 } from "@mantine/core";
 import {
+  IconAlertCircle,
   IconBarbell,
   IconCalendarEvent,
   IconChartLine,
@@ -30,7 +32,7 @@ import {
   IconClock,
   IconPlayerPlay,
 } from "@tabler/icons-react";
-import { useClientDashboard } from "../../hooks/useClientPortal";
+import { useClientDashboard, useClientProfile } from "../../hooks/useClientPortal";
 import { useNavigate } from "react-router-dom";
 import { generateClientPlanPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
@@ -90,8 +92,25 @@ function NutrientProgress({
 
 export function ClientDashboardPage() {
   const { data: dashboardData, isLoading } = useClientDashboard();
+  const { data: profileData } = useClientProfile();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+
+  // Detectamos qué datos físicos faltan para mostrar un aviso al
+  // cliente. Si su entrenador aún no puede calcularle la dieta
+  // (objetivo calórico aleatorio), no es por error suyo: simplemente
+  // faltan estos valores básicos en su ficha.
+  const missingPhysical = (() => {
+    if (!profileData) return [] as string[];
+    const missing: string[] = [];
+    if (!profileData.birth_date) missing.push("fecha de nacimiento");
+    if (!profileData.gender) missing.push("género");
+    const h = Number(profileData.height_cm);
+    if (!Number.isFinite(h) || h <= 0) missing.push("altura");
+    const w = Number(profileData.weight_kg);
+    if (!Number.isFinite(w) || w <= 0) missing.push("peso");
+    return missing;
+  })();
 
   // Prefer the client's own name from the dashboard; fall back to the logged
   // user's name so the greeting never shows the generic "Cliente" label
@@ -154,6 +173,38 @@ export function ClientDashboardPage() {
           </Button>
         </Group>
       </Box>
+
+      {/* Aviso de datos físicos incompletos. Es importante que el cliente
+          vea esto en cuanto entra: sin estos datos su entrenador no puede
+          calcularle la dieta y las calorías que aparecen en otras
+          pantallas no son fiables. */}
+      {missingPhysical.length > 0 && (
+        <Alert
+          icon={<IconAlertCircle size={18} />}
+          color="orange"
+          variant="light"
+          radius="md"
+          mb="xl"
+          title="Completa tus datos físicos"
+        >
+          <Stack gap="xs">
+            <Text size="sm">
+              Para que tu entrenador pueda calcular tu dieta nos faltan:{" "}
+              <b>{missingPhysical.join(", ")}</b>.
+            </Text>
+            <Group>
+              <Button
+                size="xs"
+                color="orange"
+                radius="md"
+                onClick={() => navigate("/my-profile")}
+              >
+                Completar ahora
+              </Button>
+            </Group>
+          </Stack>
+        </Alert>
+      )}
 
       {/* Next Session Banner */}
       {data.nextSession && (

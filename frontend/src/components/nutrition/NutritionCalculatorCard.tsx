@@ -126,15 +126,31 @@ export function NutritionCalculatorCard({
   onSave,
   isSaving,
 }: NutritionCalculatorCardProps) {
-  const defaultAge = client.birth_date
+  const clientAge = client.birth_date
     ? Math.floor(
         (Date.now() - new Date(client.birth_date).getTime()) /
           (365.25 * 24 * 60 * 60 * 1000)
       )
-    : 30;
+    : null;
 
-  const getInitialWeight = () =>
-    Number(latestMeasurement?.weight_kg ?? client.weight_kg) || 70;
+  // Datos críticos para que el cálculo sea fiable. Si faltan, mostramos
+  // un aviso y desactivamos el guardado: no tiene sentido fijar
+  // objetivos calóricos sobre valores inventados (resultado que el
+  // entrenador después no puede explicar al cliente).
+  const measuredWeight = Number(latestMeasurement?.weight_kg ?? client.weight_kg);
+  const clientHeight = Number(client.height_cm);
+  const hasWeight = Number.isFinite(measuredWeight) && measuredWeight > 0;
+  const hasHeight = Number.isFinite(clientHeight) && clientHeight > 0;
+  const hasAge = clientAge !== null && clientAge > 0;
+  const hasGender = client.gender === "male" || client.gender === "female";
+
+  const missingFields: string[] = [];
+  if (!hasAge) missingFields.push("fecha de nacimiento");
+  if (!hasHeight) missingFields.push("altura");
+  if (!hasWeight) missingFields.push("peso");
+  if (!hasGender) missingFields.push("género");
+
+  const getInitialWeight = () => (hasWeight ? measuredWeight : 0);
   const getInitialBodyFat = () => {
     const bf =
       latestMeasurement?.body_fat_percentage ?? client.body_fat_pct ?? null;
@@ -142,8 +158,8 @@ export function NutritionCalculatorCard({
   };
 
   const [weight, setWeight] = useState<number>(getInitialWeight());
-  const [height, setHeight] = useState<number>(Number(client.height_cm) || 170);
-  const [age, setAge] = useState<number>(defaultAge);
+  const [height, setHeight] = useState<number>(hasHeight ? clientHeight : 0);
+  const [age, setAge] = useState<number>(hasAge ? (clientAge as number) : 0);
   const [gender, setGender] = useState<"male" | "female">(
     client.gender === "female" ? "female" : "male"
   );
@@ -172,8 +188,8 @@ export function NutritionCalculatorCard({
 
   const resetFromProgress = () => {
     setWeight(getInitialWeight());
-    setHeight(Number(client.height_cm) || 170);
-    setAge(defaultAge);
+    setHeight(hasHeight ? clientHeight : 0);
+    setAge(hasAge ? (clientAge as number) : 0);
     setGender(client.gender === "female" ? "female" : "male");
     setBodyFat(getInitialBodyFat());
     setActivity(client.health_data?.activity_level || "moderate");
@@ -185,10 +201,25 @@ export function NutritionCalculatorCard({
     setFormula((client.health_data?.formula_used as FormulaType) || "mifflin");
   };
 
-  const preview = useMemo(
-    () => computeTargets(weight, height, age, gender, bodyFat, activity, goal, formula),
-    [weight, height, age, gender, bodyFat, activity, goal, formula]
-  );
+  // Necesitamos peso > 0, altura > 0 y edad > 0 para que la fórmula tenga
+  // sentido. Si el formulario está incompleto NO renderizamos números
+  // calculados (mostramos "—"), así nadie confunde un placeholder con un
+  // resultado real.
+  const canCompute = weight > 0 && height > 0 && age > 0;
+
+  const preview = useMemo(() => {
+    if (!canCompute) {
+      return {
+        bmr: 0,
+        tdee: 0,
+        targetCalories: 0,
+        targetProtein: 0,
+        targetCarbs: 0,
+        targetFat: 0,
+      };
+    }
+    return computeTargets(weight, height, age, gender, bodyFat, activity, goal, formula);
+  }, [canCompute, weight, height, age, gender, bodyFat, activity, goal, formula]);
 
   const handleSave = async () => {
     const entry: NutritionCalculationEntry = {
@@ -242,6 +273,23 @@ export function NutritionCalculatorCard({
       <Text size="sm" c="dimmed" mb="sm">
         Calcula nuevas calorías y macros a partir de los últimos datos de progreso del cliente.
       </Text>
+
+      {missingFields.length > 0 && (
+        <Alert
+          icon={<IconInfoCircle size={16} />}
+          color="red"
+          variant="light"
+          radius="md"
+          mb="md"
+          title="Faltan datos del cliente"
+        >
+          <Text size="xs">
+            No se puede calcular la dieta sin {missingFields.join(", ")}. Puedes
+            rellenarlos manualmente más abajo, o pedir al cliente que los complete
+            desde su perfil ("Mi perfil → Datos físicos").
+          </Text>
+        </Alert>
+      )}
 
       {usedFromMeasurement ? (
         <Alert
@@ -405,7 +453,9 @@ export function NutritionCalculatorCard({
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
               <Text size="xs" c="dimmed">Calorías</Text>
-              <Text fw={700} size="lg" c="blue">{preview.targetCalories}</Text>
+              <Text fw={700} size="lg" c="blue">
+                {canCompute ? preview.targetCalories : "—"}
+              </Text>
             </Box>
             <Box
               p="xs"
@@ -413,7 +463,9 @@ export function NutritionCalculatorCard({
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
               <Text size="xs" c="dimmed">Proteínas</Text>
-              <Text fw={700} size="lg" c="green">{preview.targetProtein}g</Text>
+              <Text fw={700} size="lg" c="green">
+                {canCompute ? `${preview.targetProtein}g` : "—"}
+              </Text>
             </Box>
             <Box
               p="xs"
@@ -421,7 +473,9 @@ export function NutritionCalculatorCard({
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
               <Text size="xs" c="dimmed">Carbos</Text>
-              <Text fw={700} size="lg" c="orange">{preview.targetCarbs}g</Text>
+              <Text fw={700} size="lg" c="orange">
+                {canCompute ? `${preview.targetCarbs}g` : "—"}
+              </Text>
             </Box>
             <Box
               p="xs"
@@ -429,15 +483,17 @@ export function NutritionCalculatorCard({
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
               <Text size="xs" c="dimmed">Grasas</Text>
-              <Text fw={700} size="lg" c="grape">{preview.targetFat}g</Text>
+              <Text fw={700} size="lg" c="grape">
+                {canCompute ? `${preview.targetFat}g` : "—"}
+              </Text>
             </Box>
           </SimpleGrid>
           <Group justify="center" gap="md" mt="xs">
             <Text size="xs" c="white">
-              BMR: <b>{preview.bmr}</b> kcal
+              BMR: <b>{canCompute ? preview.bmr : "—"}</b> kcal
             </Text>
             <Text size="xs" c="white">
-              TDEE: <b>{preview.tdee}</b> kcal
+              TDEE: <b>{canCompute ? preview.tdee : "—"}</b> kcal
             </Text>
           </Group>
         </Box>
@@ -447,9 +503,11 @@ export function NutritionCalculatorCard({
           leftSection={<IconDeviceFloppy size={16} />}
           onClick={handleSave}
           loading={isSaving}
-          disabled={formula === "katch" && !bodyFat}
+          disabled={!canCompute || (formula === "katch" && !bodyFat)}
         >
-          Guardar y aplicar objetivos
+          {canCompute
+            ? "Guardar y aplicar objetivos"
+            : "Rellena peso, altura y edad para guardar"}
         </Button>
       </Stack>
     </Box>
