@@ -1268,7 +1268,12 @@ export function ClientDetailPage() {
   // Calcular objetivos según tipo de objetivo.
   // Prioridad:
   //  1. Último cálculo guardado por el entrenador en "Calculadora Nutricional"
-  //     (health_data.target_calories / target_protein / target_carbs / target_fat).
+  //     (health_data.target_calories / target_protein / target_carbs / target_fat),
+  //     siempre que el ``calc_snapshot`` guardado coincida con los datos
+  //     físicos actuales del cliente. Si peso/altura/edad/género han cambiado
+  //     desde que se guardó el cálculo, descartamos el cache y recalculamos
+  //     en vivo (de lo contrario, BMR/TDEE/Macros se quedarían "congelados"
+  //     con los valores anteriores tras editar la ficha).
   //  2. Valores iniciales derivados de los datos del onboarding (BMR + TDEE + objetivo).
   // De esta forma, al asignar o editar un plan, los objetivos mostrados siempre
   // reflejan o bien el onboarding inicial o bien el último cálculo del trainer.
@@ -1280,12 +1285,44 @@ export function ClientDetailPage() {
       target_fat?: number;
       bmr?: number;
       tdee?: number;
+      calc_snapshot?: {
+        weight_kg?: number;
+        height_cm?: number;
+        age?: number;
+        gender?: string;
+      };
     } }).health_data || {};
 
     const hasSavedObjectives =
       typeof healthData.target_calories === "number" && healthData.target_calories > 0;
 
-    if (hasSavedObjectives) {
+    // Decide si el snapshot que generó los objetivos guardados sigue siendo
+    // coherente con el estado actual del cliente. Usamos un margen de 0.5kg
+    // / 0.5cm / 1 año para no invalidar el cache por ruidos de redondeo.
+    const snapshotMatches = (() => {
+      const snap = healthData.calc_snapshot;
+      if (!snap) {
+        // Sin snapshot no podemos verificar; por compatibilidad con cálculos
+        // antiguos asumimos que es válido. La invalidación explícita ocurre
+        // en ``handleEditInfo`` al detectar cambios de datos físicos.
+        return true;
+      }
+      if (typeof snap.weight_kg === "number" && hasClientWeight) {
+        if (Math.abs(snap.weight_kg - clientWeightNum) > 0.5) return false;
+      }
+      if (typeof snap.height_cm === "number" && hasClientHeight) {
+        if (Math.abs(snap.height_cm - clientHeightNum) > 0.5) return false;
+      }
+      if (typeof snap.age === "number" && hasClientAge) {
+        if (Math.abs(snap.age - (clientAge as number)) > 1) return false;
+      }
+      if (typeof snap.gender === "string" && client.gender) {
+        if (snap.gender !== client.gender) return false;
+      }
+      return true;
+    })();
+
+    if (hasSavedObjectives && snapshotMatches) {
       return {
         calories: healthData.target_calories || 0,
         protein: Math.round(healthData.target_protein ?? 0),
@@ -1528,14 +1565,57 @@ export function ClientDetailPage() {
       // peso/altura.
       const heightNum = Number(values.height_cm);
       const weightNum = Number(values.weight_kg);
-      const data = {
+      const newHeight = Number.isFinite(heightNum) && heightNum > 0 ? heightNum : undefined;
+      const newWeight = Number.isFinite(weightNum) && weightNum > 0 ? weightNum : undefined;
+      const newBirth = values.birth_date || undefined;
+      const newGender = values.gender || undefined;
+
+      // Detectamos si los datos físicos han cambiado respecto a los que
+      // dieron lugar al último cálculo nutricional guardado. Si han
+      // cambiado, los objetivos guardados (target_calories, target_protein,
+      // target_carbs, target_fat, bmr, tdee) quedan obsoletos: representan
+      // las calorías para una persona con otro peso/altura/edad/género y
+      // mostrarlos en la pestaña "Nutrición" induce a error al entrenador
+      // y al cliente. Los borramos para que el render siguiente caiga al
+      // cálculo derivado en vivo (BMR/TDEE/Macros frescos) y la
+      // Calculadora Nutricional vuelva a ofrecer "Guardar y aplicar
+      // objetivos" sobre los nuevos datos. Mantenemos las preferencias
+      // del trainer (activity_level, goal_type, formula_used,
+      // nutrition_calculations_history, parq, supplements...) que no
+      // dependen del cuerpo del cliente.
+      const physicalChanged =
+        (newHeight !== undefined &&
+          Number(client.height_cm) !== newHeight) ||
+        (newWeight !== undefined &&
+          Number(client.weight_kg) !== newWeight) ||
+        (newBirth !== undefined && client.birth_date !== newBirth) ||
+        (newGender !== undefined && client.gender !== newGender);
+
+      const baseHealthData =
+        (client as { health_data?: Record<string, unknown> }).health_data ||
+        {};
+      const data: Record<string, unknown> = {
         ...values,
-        birth_date: values.birth_date || undefined,
-        gender: values.gender || undefined,
-        height_cm: Number.isFinite(heightNum) && heightNum > 0 ? heightNum : undefined,
-        weight_kg: Number.isFinite(weightNum) && weightNum > 0 ? weightNum : undefined,
+        birth_date: newBirth,
+        gender: newGender,
+        height_cm: newHeight,
+        weight_kg: newWeight,
         internal_notes: values.internal_notes || undefined,
       };
+
+      if (physicalChanged) {
+        const cleanedHealthData: Record<string, unknown> = { ...baseHealthData };
+        delete cleanedHealthData.target_calories;
+        delete cleanedHealthData.target_protein;
+        delete cleanedHealthData.target_carbs;
+        delete cleanedHealthData.target_fat;
+        delete cleanedHealthData.bmr;
+        delete cleanedHealthData.tdee;
+        delete cleanedHealthData.calculated_at;
+        delete cleanedHealthData.calc_snapshot;
+        data.health_data = cleanedHealthData;
+      }
+
       await updateClient.mutateAsync({ id, data });
       notifications.show({
         title: "Información actualizada",
@@ -2150,6 +2230,17 @@ export function ClientDetailPage() {
             activity_level: entry.activity_level,
             goal_type: entry.goal_type,
             calculated_at: entry.calculated_at,
+            // Snapshot de los datos físicos usados en este cálculo. Sirve
+            // como "huella" para que, si después se editan peso/altura/edad
+            // /género del cliente, ``nutritionalTargets`` detecte que los
+            // objetivos guardados ya no son coherentes y caiga al cálculo
+            // en vivo (en lugar de mostrar BMR/TDEE/Macros "congelados").
+            calc_snapshot: {
+              weight_kg: entry.weight_kg,
+              height_cm: entry.height_cm,
+              age: entry.age,
+              gender: entry.gender,
+            },
             nutrition_calculations_history: [...existingHistory, entry],
           },
         },
