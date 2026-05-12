@@ -174,14 +174,24 @@ export function NutritionCalculatorCard({
     (client.health_data?.formula_used as FormulaType) || "mifflin"
   );
 
-  // Cuando cambia el cliente o la última medida, re-sincronizamos el peso
-  // pre-rellenado (siempre que el usuario no haya editado aún). Usamos una
-  // clave estable para disparar el reset.
-  const syncKey = `${client.id}|${latestMeasurement?.weight_kg ?? ""}|${
-    latestMeasurement?.measured_at ?? latestMeasurement?.created_at ?? ""
-  }`;
+  // Cuando cambia el cliente, sus datos físicos (peso/altura/fecha de
+  // nacimiento/género) o la última medida, re-sincronizamos los valores
+  // pre-rellenados. Antes solo se sincronizaban ``weight`` y ``bodyFat``;
+  // si el entrenador editaba la fecha de nacimiento o la altura desde la
+  // ficha del cliente y volvía a abrir la calculadora, los inputs
+  // ``Altura``, ``Edad`` y ``Género`` se quedaban en el valor original con
+  // el que se montó el componente y los cálculos eran incorrectos.
+  // Usamos una clave estable que cubre todas las variables que influyen.
+  const syncKey = `${client.id}|${client.birth_date ?? ""}|${
+    client.height_cm ?? ""
+  }|${client.weight_kg ?? ""}|${client.gender ?? ""}|${
+    latestMeasurement?.weight_kg ?? ""
+  }|${latestMeasurement?.measured_at ?? latestMeasurement?.created_at ?? ""}`;
   useEffect(() => {
     setWeight(getInitialWeight());
+    setHeight(hasHeight ? clientHeight : 0);
+    setAge(hasAge ? (clientAge as number) : 0);
+    setGender(client.gender === "female" ? "female" : "male");
     setBodyFat(getInitialBodyFat());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncKey]);
