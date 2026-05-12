@@ -1,9 +1,18 @@
+# -----------------------------------------------------------------------------
+# .dockerignore — minimiza el contexto del build y el tamaño de la imagen
+# runtime. Cada MB que se ahorra aqui acelera el `COPY . .` y, sobre todo,
+# el `#14 unpacking` final del docker daemon de Coolify, que estaba muriendo
+# con exit code 255 al desempaquetar 4 imagenes en paralelo.
+# -----------------------------------------------------------------------------
+
 # Environment files - NEVER bundle local config into the image
 .env
 .env.*
 .env.local
 .env.development
 .env.production
+env.example
+env.dev.example
 
 # Python
 __pycache__/
@@ -26,11 +35,29 @@ env/
 *.swp
 *.swo
 
-# Testing
+# Testing — los tests no se ejecutan en runtime. pytest/black/flake8 ya no se
+# instalan en la imagen (estan en requirements-dev.txt), asi que la carpeta
+# tests/ tampoco hace falta dentro del contenedor.
+tests/
 .pytest_cache/
 htmlcov/
 .coverage
+.coverage.*
 .tox/
+pytest.ini
+test.db
+*.sqlite
+*.sqlite3
+
+# Scripts y SQL auxiliares de exploracion/desarrollo local
+run_server.py
+_mig_fk.sql
+_fk_indexes.sql
+*.bak.sql
+
+# Docs (Markdown) — no se sirven desde la API
+*.md
+docs/
 
 # Docker
 .dockerignore
@@ -39,6 +66,13 @@ Dockerfile*
 # Git
 .git/
 .gitignore
+.gitattributes
+
+# CI / linters
+.github/
+.flake8
+.isort.cfg
+pyproject.toml
 
 # Misc
 *.log

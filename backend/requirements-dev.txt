@@ -1,0 +1,19 @@
+# Dev / test / lint dependencies. Estas NO se instalan en la imagen Docker
+# de producción (ver backend/Dockerfile). Se cargan en local con:
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# Motivo: pytest + black + flake8 + coverage + aiosqlite suman ~80 MB
+# instalados, y el unpacking concurrente de las 4 imagenes (backend,
+# celery-beat, celery-worker, frontend) en Coolify estaba agotando disk/IO
+# del VPS y matando el deploy con exit code 255 (#14 unpacking cortado).
+
+# Testing
+pytest==8.4.2
+pytest-asyncio==0.26.0
+pytest-cov==6.2.1
+aiosqlite==0.22.1
+
+# Linting / Formatting
+black==25.9.0
+isort==6.1.0
+flake8==7.3.0
