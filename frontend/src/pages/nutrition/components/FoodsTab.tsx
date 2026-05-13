@@ -71,6 +71,11 @@ interface FoodsTabProps {
   foodsPerPage: number;
   viewMode?: "grid" | "list";
   onViewModeChange?: (mode: "grid" | "list") => void;
+  // Cuando es true permitimos mostrar los botones de editar/eliminar
+  // también sobre los foods del sistema (``is_global=true``). El backend
+  // valida en cada PUT/DELETE que SOLO el admin de contenido pueda
+  // ejecutarlos, así que este flag es puramente para UX (no de seguridad).
+  canEditSystemFoods?: boolean;
 }
 
 export function FoodsTab({
@@ -102,7 +107,13 @@ export function FoodsTab({
   foodsPerPage,
   viewMode = "grid",
   onViewModeChange,
+  canEditSystemFoods = false,
 }: FoodsTabProps) {
+  // Helper para decidir si renderizar los botones de editar/eliminar de
+  // un food. Foods propios del workspace: siempre. Foods globales del
+  // sistema: solo si el usuario tiene permiso (lo concede el backend a
+  // través de ``/nutrition/foods-admin/me``).
+  const canManage = (food: Food) => !food.is_global || canEditSystemFoods;
   return (
     <>
       <Group mb="md" gap="sm">
@@ -195,8 +206,8 @@ export function FoodsTab({
                     <Table.Td>
                       <Group gap={4} wrap="nowrap">
                         <ActionIcon color="gray" onClick={() => onView(food)} size="sm" variant="subtle"><IconEye size={14} /></ActionIcon>
-                        {!food.is_global && <ActionIcon color="gray" onClick={() => onEdit(food)} size="sm" variant="subtle"><IconEdit size={14} /></ActionIcon>}
-                        {!food.is_global && <ActionIcon color="red" onClick={() => onDelete(food.id, food.name)} size="sm" variant="subtle"><IconTrash size={14} /></ActionIcon>}
+                        {canManage(food) && <ActionIcon color="gray" onClick={() => onEdit(food)} size="sm" variant="subtle"><IconEdit size={14} /></ActionIcon>}
+                        {canManage(food) && <ActionIcon color="red" onClick={() => onDelete(food.id, food.name)} size="sm" variant="subtle"><IconTrash size={14} /></ActionIcon>}
                       </Group>
                     </Table.Td>
                   </Table.Tr>
@@ -275,15 +286,15 @@ export function FoodsTab({
                           <IconEye size={16} />
                         </ActionIcon>
                       </Tooltip>
-                      {!food.is_global && (
-                        <Tooltip label="Editar">
+                      {canManage(food) && (
+                        <Tooltip label={food.is_global ? "Editar (Sistema)" : "Editar"}>
                           <ActionIcon color="gray" onClick={() => onEdit(food)} size="sm" variant="subtle" radius="md">
                             <IconEdit size={16} />
                           </ActionIcon>
                         </Tooltip>
                       )}
-                      {!food.is_global && (
-                        <Tooltip label="Eliminar">
+                      {canManage(food) && (
+                        <Tooltip label={food.is_global ? "Eliminar (Sistema)" : "Eliminar"}>
                           <ActionIcon color="red" onClick={() => onDelete(food.id, food.name)} size="sm" variant="subtle" radius="md">
                             <IconTrash size={16} />
                           </ActionIcon>

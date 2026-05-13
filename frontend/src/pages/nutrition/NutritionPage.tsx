@@ -38,10 +38,11 @@ import {
   IconGlass,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useClient, useClients } from "../../hooks/useClients";
 import { PageHeader } from "../../components/common/PageHeader";
-import { clientsApi } from "../../services/api";
+import { api, clientsApi } from "../../services/api";
 import { calculateBMR, calculateTDEE, gramsFromPercentages } from "../../utils/calories";
 import {
   type DayPlan,
@@ -473,6 +474,22 @@ export function NutritionPage() {
   const createFood = useCreateFood();
   const updateFood = useUpdateFood();
   const deleteFood = useDeleteFood();
+
+  // ¿Puede este trainer editar foods globales del catálogo "Sistema"?
+  // El backend devuelve un booleano y nosotros lo usamos solo para
+  // mostrar los botones de UI. La autorización real vive en el backend
+  // (ver ``_check_food_edit_permission`` en nutrition.py), así que
+  // cualquier intento de tocar foods globales sin permiso devuelve 403
+  // aunque el frontend pase ``canEditSystemFoods=true``.
+  const { data: foodAdminStatus } = useQuery<{ is_system_content_admin: boolean }>({
+    queryKey: ["foods-admin-status"],
+    queryFn: async () => {
+      const { data } = await api.get("/nutrition/foods-admin/me");
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const canEditSystemFoods = !!foodAdminStatus?.is_system_content_admin;
   const createSupplement = useCreateSupplement();
   const updateSupplement = useUpdateSupplement();
   void useDeleteSupplement;
@@ -942,6 +959,7 @@ export function NutritionPage() {
             onView={(food) => { const orig = paginatedFoods?.items?.find((f: any) => f.id === food.id); setViewingFood(orig || food); openFoodDetailModal(); }}
             onDelete={handleDeleteFood} onNewFood={openFoodModal} togglePending={toggleFoodFavorite.isPending} foodsPerPage={FOODS_PER_PAGE}
             viewMode={viewMode} onViewModeChange={setViewMode}
+            canEditSystemFoods={canEditSystemFoods}
           />
         </Tabs.Panel>
 

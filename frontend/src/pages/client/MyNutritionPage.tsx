@@ -59,7 +59,8 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { DateInput } from "@mantine/dates";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../services/api";
 import {
@@ -1734,10 +1735,51 @@ function parseDateLocal(dateStr: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// Pestañas válidas dentro de "Mi Nutrición". El query param ``?tab=`` se
+// valida contra esta lista para evitar que un enlace externo coloque la UI
+// en un valor desconocido (con la consiguiente Tabs.Panel vacía).
+const NUTRITION_TAB_VALUES = new Set([
+  "today",
+  "week",
+  "history",
+  "recipes",
+  "shopping",
+  "supplements",
+]);
+
 export function MyNutritionPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isMdUp = useMediaQuery("(min-width: 1024px)");
-  const [activeTab, setActiveTab] = useState<string | null>("today");
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Inicializamos directamente desde el query param para no parpadear
+  // mostrando "today" durante un render si el cliente entra con
+  // ``/my-nutrition?tab=supplements`` (caso típico al venir desde la card
+  // "Mis suplementos" del dashboard del cliente).
+  const initialTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<string | null>(
+    initialTab && NUTRITION_TAB_VALUES.has(initialTab) ? initialTab : "today"
+  );
+
+  // Si el cliente cambia el query param desde el navegador (back/forward,
+  // o un enlace en la app), seguimos la URL como fuente de verdad.
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && NUTRITION_TAB_VALUES.has(t) && t !== activeTab) {
+      setActiveTab(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Cuando el usuario toca una pestaña, reflejamos el cambio en la URL
+  // para que sea bookmarkeable y compatible con back/forward.
+  const handleTabChange = (value: string | null) => {
+    setActiveTab(value);
+    if (value && NUTRITION_TAB_VALUES.has(value)) {
+      const next = new URLSearchParams(searchParams);
+      next.set("tab", value);
+      setSearchParams(next, { replace: true });
+    }
+  };
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [planMealModalOpened, { open: openPlanMealModal, close: closePlanMealModal }] = useDisclosure(false);
   const [selectedPlanMeal, setSelectedPlanMeal] = useState<PlanMeal | null>(null);
@@ -2299,7 +2341,7 @@ export function MyNutritionPage() {
       {isMobile && (
         <Select
           value={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           data={[
             { value: "today", label: "Registrar comida" },
             { value: "week", label: "Tu plan" },
@@ -2313,7 +2355,7 @@ export function MyNutritionPage() {
           mb="md"
         />
       )}
-      <Tabs value={activeTab} onChange={setActiveTab} variant="pills">
+      <Tabs value={activeTab} onChange={handleTabChange} variant="pills">
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
