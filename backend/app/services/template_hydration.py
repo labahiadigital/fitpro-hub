@@ -93,7 +93,17 @@ def collect_exercise_ids(*templates) -> set[str]:
 
 
 def _apply_exercise_media(template: dict | None, media: dict[str, dict]) -> None:
-    """Pisa ``image_url`` / ``video_url`` de cada ejercicio con la info viva."""
+    """Pisa ``image_url`` / ``video_url`` / ``category`` de cada ejercicio
+    con la info viva.
+
+    ``category`` viene del catalogo (``exercises.category``: 'fuerza' /
+    'cardio' / 'core' / 'calentamiento' / 'estiramiento'). Es el unico
+    discriminador fiable para que el cliente sepa renderizar la tabla de
+    "Registrar Entrenamiento" con columnas Series x Reps (fuerza) vs
+    Min/Km/Km-h (cardio). Antes la UI heuristicaba el cardio buscando
+    palabras como "remo" en el nombre, lo que confundia "Remo Gironda en
+    Polea Baja" (category=fuerza) con remo aerobico (category=cardio).
+    """
     if not isinstance(template, dict) or not media:
         return
     for ex in _iter_workout_exercise_dicts(template):
@@ -116,12 +126,18 @@ def _apply_exercise_media(template: dict | None, media: dict[str, dict]) -> None
             nested["image_url"] = info["image_url"]
         if info.get("video_url") and not nested.get("video_url"):
             nested["video_url"] = info["video_url"]
+        # category: pisamos siempre con el valor canonico vivo aunque ya
+        # hubiera un snapshot, porque el trainer puede haberla corregido
+        # despues de crear la plantilla (e.g. "Remo Gironda" reclasificado
+        # de "cardio" a "fuerza"). Es metadata pequeña y barata.
+        if info.get("category"):
+            nested["category"] = info["category"]
 
 
 async def fetch_exercise_media(
     db: AsyncSession, exercise_ids: Iterable[str]
 ) -> dict[str, dict]:
-    """``{exercise_id: {name, image_url, video_url}}`` para los ids dados."""
+    """``{exercise_id: {name, image_url, video_url, category}}`` para los ids dados."""
     valid_ids: list[UUID] = []
     for raw in exercise_ids or []:
         try:
@@ -131,15 +147,20 @@ async def fetch_exercise_media(
     if not valid_ids:
         return {}
     result = await db.execute(
-        select(Exercise.id, Exercise.name, Exercise.image_url, Exercise.video_url).where(
-            Exercise.id.in_(valid_ids)
-        )
+        select(
+            Exercise.id,
+            Exercise.name,
+            Exercise.image_url,
+            Exercise.video_url,
+            Exercise.category,
+        ).where(Exercise.id.in_(valid_ids))
     )
     return {
         str(row.id): {
             "name": row.name,
             "image_url": row.image_url,
             "video_url": row.video_url,
+            "category": row.category,
         }
         for row in result.all()
     }

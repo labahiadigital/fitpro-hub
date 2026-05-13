@@ -15,6 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.database import get_db
+from app.core.permissions import (
+    SYSTEM_CONTENT_ADMIN_EMAIL,
+    is_system_content_admin,
+)
 from app.core.storage import (
     normalize_image_urls_in_obj,
     resolve_url,
@@ -278,6 +282,207 @@ async def create_food(
     await db.commit()
     await db.refresh(food)
     return FoodResponse.model_validate(food)
+
+
+class FoodUpdate(BaseModel):
+    """Campos editables de un alimento.
+
+    Todos opcionales: el frontend manda solo lo que cambia. Los foods
+    globales (``is_global=True``) solo pueden ser editados por el
+    administrador de contenido del sistema (ver
+    ``app.core.permissions.SYSTEM_CONTENT_ADMIN_EMAIL``); los demás
+    foods son del workspace y solo el workspace propietario puede
+    modificarlos.
+    """
+
+    name: Optional[str] = None
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    generic_name: Optional[str] = None
+    quantity: Optional[str] = None
+    barcode: Optional[str] = None
+    serving_size: Optional[float] = None
+    serving_unit: Optional[str] = None
+    calories: Optional[float] = None
+    protein_g: Optional[float] = None
+    carbs_g: Optional[float] = None
+    fat_g: Optional[float] = None
+    fiber_g: Optional[float] = None
+    sugars_g: Optional[float] = None
+    saturated_fat_g: Optional[float] = None
+    salt_g: Optional[float] = None
+    sodium_mg: Optional[float] = None
+    ingredients_text: Optional[str] = None
+    allergens: Optional[str] = None
+    image_url: Optional[str] = None
+    # Aliases que envía el frontend en algunos formularios.
+    protein: Optional[float] = None
+    carbs: Optional[float] = None
+    fat: Optional[float] = None
+    fiber: Optional[float] = None
+    sugars: Optional[float] = None
+    saturated_fat: Optional[float] = None
+    salt: Optional[float] = None
+    sodium: Optional[float] = None
+    ingredients: Optional[str] = None
+
+
+# Campos del modelo ``Food`` que aceptamos en updates. Cualquier otro
+# campo del payload se ignora explícitamente para evitar que llegue
+# basura del frontend o intentos de tocar columnas internas
+# (workspace_id, is_global, created_at, ...).
+_FOOD_EDITABLE_COLUMNS = {
+    "name",
+    "brand",
+    "category",
+    "generic_name",
+    "quantity",
+    "barcode",
+    "serving_size",
+    "serving_unit",
+    "calories",
+    "protein_g",
+    "carbs_g",
+    "fat_g",
+    "fiber_g",
+    "sugars_g",
+    "saturated_fat_g",
+    "salt_g",
+    "sodium_mg",
+    "ingredients_text",
+    "allergens",
+    "image_url",
+}
+
+# Mapeo de aliases del frontend a las columnas reales del modelo.
+_FOOD_FIELD_ALIASES = {
+    "protein": "protein_g",
+    "carbs": "carbs_g",
+    "fat": "fat_g",
+    "fiber": "fiber_g",
+    "sugars": "sugars_g",
+    "saturated_fat": "saturated_fat_g",
+    "salt": "salt_g",
+    "sodium": "sodium_mg",
+    "ingredients": "ingredients_text",
+}
+
+
+def _check_food_edit_permission(food: Food, current_user: CurrentUser) -> None:
+    """Aborta con 403/404 si ``current_user`` no puede editar ``food``.
+
+    Reglas:
+    - Si el food es **global** (``is_global=True``, catálogo del sistema)
+      SOLO el ``SYSTEM_CONTENT_ADMIN_EMAIL`` puede modificarlo o
+      borrarlo. Los demás obtienen 403 (no 404 a propósito: queremos que
+      la UI distinga "no tienes permiso" de "no existe").
+    - Si el food es de un workspace, solo el workspace propietario lo
+      puede editar. Si no es del workspace del usuario devolvemos 404
+      para no filtrar la existencia del food a otros workspaces.
+    """
+    if food.is_global:
+        if not is_system_content_admin(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Solo el administrador del sistema puede modificar "
+                    "alimentos del catálogo global"
+                ),
+            )
+        return
+    if food.workspace_id != current_user.workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alimento no encontrado",
+        )
+
+
+@router.put("/foods/{food_id}", response_model=FoodResponse)
+async def update_food(
+    food_id: UUID,
+    data: FoodUpdate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Actualiza un alimento.
+
+    Autorización:
+      * Foods del workspace → solo si pertenece al workspace del usuario.
+      * Foods globales (``is_global=True``) → solo el
+        ``SYSTEM_CONTENT_ADMIN_EMAIL``. Para todos los demás devolvemos
+        403 explícitamente; aunque el frontend oculte el botón, el
+        backend es la fuente de verdad.
+    """
+    food = await db.get(Food, food_id)
+    if not food:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alimento no encontrado",
+        )
+    _check_food_edit_permission(food, current_user)
+
+    payload = data.model_dump(exclude_unset=True)
+    applied = 0
+    for raw_key, value in payload.items():
+        # Resolvemos alias del frontend (protein → protein_g, etc.).
+        key = _FOOD_FIELD_ALIASES.get(raw_key, raw_key)
+        if key not in _FOOD_EDITABLE_COLUMNS:
+            continue
+        setattr(food, key, value)
+        applied += 1
+
+    if applied == 0:
+        # Nada que actualizar: devolvemos el estado actual sin tocar DB.
+        resp = FoodResponse.model_validate(food)
+        resp.image_url = await resolve_url(resp.image_url)
+        return resp
+
+    await db.commit()
+    await db.refresh(food)
+    resp = FoodResponse.model_validate(food)
+    resp.image_url = await resolve_url(resp.image_url)
+    return resp
+
+
+@router.delete("/foods/{food_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_food(
+    food_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Elimina un alimento.
+
+    Misma matriz de permisos que ``update_food``: foods globales solo
+    los puede borrar el ``SYSTEM_CONTENT_ADMIN_EMAIL``.
+    """
+    food = await db.get(Food, food_id)
+    if not food:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alimento no encontrado",
+        )
+    _check_food_edit_permission(food, current_user)
+    await db.delete(food)
+    await db.commit()
+
+
+# Endpoint auxiliar para que el frontend sepa si debe mostrar los
+# controles de edición de alimentos del sistema. Mantiene la lógica de
+# autorización en el servidor y evita que un frontend mal compilado
+# decida por su cuenta a quién enseñar los botones.
+@router.get("/foods-admin/me")
+async def get_food_admin_status(
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Indica al frontend si el usuario actual puede editar foods globales."""
+    return {
+        "is_system_content_admin": is_system_content_admin(current_user),
+        # No exponemos el email en el response para que un cliente
+        # comprometido no pueda derivar quién es el admin si llegase a
+        # invocar el endpoint sin estar autorizado (require_workspace ya
+        # filtra usuarios sin auth).
+        "system_admin_hint": SYSTEM_CONTENT_ADMIN_EMAIL.split("@")[0][:3] + "***",
+    }
 
 
 # ============ MEAL PLANS ============

@@ -26,17 +26,32 @@ import {
   IconDownload,
   IconFlame,
   IconMessage,
+  IconPill,
   IconSalad,
   IconTarget,
   IconTrendingUp,
   IconClock,
   IconPlayerPlay,
 } from "@tabler/icons-react";
+import { useQuery } from "@tanstack/react-query";
 import { useClientDashboard, useClientProfile } from "../../hooks/useClientPortal";
 import { useNavigate } from "react-router-dom";
 import { generateClientPlanPDF } from "../../services/pdfGenerator";
+import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
+
+// Shape mínima del item de la "Cesta de suplementos" que el endpoint
+// ``GET /my/supplements`` devuelve. Definida aquí para no acoplar este
+// dashboard con el archivo donde vive la pestaña completa.
+interface DashboardSupplementItem {
+  id: string;
+  name: string;
+  brand?: string | null;
+  dosage?: string | null;
+  frequency?: string | null;
+  is_active: boolean;
+}
 
 function StatCard({ 
   icon: Icon, 
@@ -95,6 +110,24 @@ export function ClientDashboardPage() {
   const { data: profileData } = useClientProfile();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+
+  // Suplementos asignados por el entrenador. Antes solo eran accesibles
+  // bajo "Mi Nutrición → Cesta de suplementos" (pestaña terciaria) y los
+  // clientes no se enteraban de que tenían suplementos pautados. Los
+  // sacamos al dashboard como tarjeta destacada con un link directo a la
+  // pestaña completa.
+  const { data: supplementItems = [] } = useQuery<DashboardSupplementItem[]>({
+    queryKey: ["my-supplements-cart", "dashboard"],
+    queryFn: async () => {
+      const { data } = await api.get<DashboardSupplementItem[]>(
+        "/my/supplements"
+      );
+      return (data || []).filter((s) => s.is_active);
+    },
+    staleTime: 30 * 1000,
+  });
+  const supplementCount = supplementItems.length;
+  const supplementsPreview = supplementItems.slice(0, 3);
 
   // Detectamos qué datos físicos faltan para mostrar un aviso al
   // cliente. Si su entrenador aún no puede calcularle la dieta
@@ -437,6 +470,54 @@ export function ClientDashboardPage() {
             </Button>
           </Card>
 
+          {/* Mis Suplementos — visible solo si el entrenador le ha asignado
+              al menos uno. Antes los suplementos pautados solo se veían
+              bajo "Mi Nutrición → Cesta de suplementos" y los clientes
+              reportaban no encontrarlos. */}
+          {supplementCount > 0 && (
+            <Card shadow="sm" padding="lg" radius="lg" withBorder mb="lg">
+              <Group justify="space-between" mb="sm" wrap="nowrap">
+                <Group gap="xs">
+                  <ThemeIcon variant="light" color="grape" size="md" radius="md">
+                    <IconPill size={16} />
+                  </ThemeIcon>
+                  <Text fw={600} size="lg">Mis Suplementos</Text>
+                </Group>
+                <Badge variant="light" color="grape" size="sm">
+                  {supplementCount}
+                </Badge>
+              </Group>
+              <Stack gap="xs" mb="sm">
+                {supplementsPreview.map((s) => (
+                  <Paper key={s.id} p="xs" radius="md" withBorder>
+                    <Text size="sm" fw={600} lineClamp={1}>
+                      {s.name}
+                    </Text>
+                    {(s.dosage || s.frequency) && (
+                      <Text size="xs" c="dimmed" lineClamp={1}>
+                        {[s.dosage, s.frequency].filter(Boolean).join(" · ")}
+                      </Text>
+                    )}
+                  </Paper>
+                ))}
+                {supplementCount > supplementsPreview.length && (
+                  <Text size="xs" c="dimmed">
+                    +{supplementCount - supplementsPreview.length} más
+                  </Text>
+                )}
+              </Stack>
+              <Button
+                variant="light"
+                color="grape"
+                fullWidth
+                leftSection={<IconPill size={16} />}
+                onClick={() => navigate("/my-nutrition?tab=supplements")}
+              >
+                Ver detalle de suplementos
+              </Button>
+            </Card>
+          )}
+
           {/* Recent Activity */}
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Text fw={600} size="lg" mb="md">Actividad Reciente</Text>
@@ -500,6 +581,18 @@ export function ClientDashboardPage() {
               >
                 Registrar progreso
               </Button>
+              {supplementCount > 0 && (
+                <Button
+                  variant="light"
+                  leftSection={<IconPill size={16} />}
+                  fullWidth
+                  justify="flex-start"
+                  color="grape"
+                  onClick={() => navigate("/my-nutrition?tab=supplements")}
+                >
+                  Mis suplementos
+                </Button>
+              )}
             </Stack>
           </Card>
         </Grid.Col>

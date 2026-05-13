@@ -258,6 +258,12 @@ interface ExerciseForLog {
   name: string;
   sets: number;
   reps: string;
+  // Categoría del ejercicio en el catálogo: 'fuerza' | 'cardio' | 'core' |
+  // 'calentamiento' | 'estiramiento'. La hidratación del programa la
+  // copia desde ``exercises.category`` para que el cliente pueda decidir
+  // qué tabla renderizar (Series×Reps vs Min/Km/Km-h) sin tirar de
+  // heurística por nombre.
+  category?: string;
   target_weight?: number;
   target_reps?: number;
   target_duration_minutes?: number;
@@ -343,6 +349,13 @@ function parseRepsFromString(reps?: string): number | undefined {
   return match ? parseInt(match[1], 10) : undefined;
 }
 
+// Palabras clave para detectar cardio por nombre cuando el ejercicio NO
+// tiene ``category`` en el catálogo (ejercicios legacy o muy antiguos).
+// IMPORTANTE: hemos quitado "remo" y "remar" — pillaban "Remo Gironda en
+// Polea Baja", "Remo máquina agarre neutro" y otros remos de fuerza,
+// renderizando columnas Min/Km/Km-h en lugar de Series×Reps. El criterio
+// canónico es ``exercise.category`` (ver _apply_exercise_media en el
+// backend); estos keywords son solo fallback defensivo.
 const CARDIO_KEYWORDS = [
   "caminar",
   "correr",
@@ -352,17 +365,47 @@ const CARDIO_KEYWORDS = [
   "elíptica",
   "eliptica",
   "nadar",
-  "remo",
-  "remar",
-  "saltar",
+  "natacion",
+  "natación",
   "cardio",
   "cinta",
   "andar",
   "rodar",
   "spinning",
+  "ergómetro",
+  "ergometro",
 ];
 
-function isCardioExercise(name: string): boolean {
+function isCardioExercise(
+  name: string,
+  category?: string | null,
+  targets?: {
+    target_duration_minutes?: number;
+    target_distance_km?: number;
+    target_speed_kmh?: number;
+    target_weight?: number;
+    target_reps?: number;
+  }
+): boolean {
+  // 1. La categoría del catálogo es la fuente de verdad.
+  if (typeof category === "string" && category.trim().length > 0) {
+    return category.toLowerCase() === "cardio";
+  }
+  // 2. Sin categoría: si el ejercicio tiene targets de duración / distancia /
+  //    velocidad y NO tiene targets de peso/reps, es claramente cardio.
+  if (targets) {
+    const hasCardioTargets =
+      (targets.target_duration_minutes != null &&
+        targets.target_duration_minutes > 0) ||
+      (targets.target_distance_km != null && targets.target_distance_km > 0) ||
+      (targets.target_speed_kmh != null && targets.target_speed_kmh > 0);
+    const hasStrengthTargets =
+      (targets.target_weight != null && targets.target_weight > 0) ||
+      (targets.target_reps != null && targets.target_reps > 0);
+    if (hasCardioTargets && !hasStrengthTargets) return true;
+    if (hasStrengthTargets) return false;
+  }
+  // 3. Último recurso: heurística por palabras clave en el nombre.
   if (!name) return false;
   const lower = name.toLowerCase();
   return CARDIO_KEYWORDS.some((kw) => lower.includes(kw));
@@ -404,7 +447,13 @@ function ExerciseLogRow({
 }) {
   const { data: history } = useExerciseHistory(exercise.exercise_id, 1);
   const lastSession = history?.[0];
-  const cardio = isCardioExercise(exercise.name);
+  const cardio = isCardioExercise(exercise.name, exercise.category, {
+    target_duration_minutes: exercise.target_duration_minutes,
+    target_distance_km: exercise.target_distance_km,
+    target_speed_kmh: exercise.target_speed_kmh,
+    target_weight: exercise.target_weight,
+    target_reps: exercise.target_reps,
+  });
 
   const updateSet = (index: number, updates: Partial<SetLog>) => {
     const newSets = [...setData];
@@ -1225,13 +1274,29 @@ function getExercisePrescriptionChips(ex: PrescribedExercise): string[] {
   const chips: string[] = [];
   const exerciseName = ex.exercise?.name || ex.name || "";
   const category = (ex.exercise?.category || ex.exercise?.exercise_type || "").toLowerCase();
-  const isCardio =
-    ex.duration_type === "cardio" ||
+  // ``category`` (cuando viene del catalogo) manda: si el ejercicio está
+  // clasificado como fuerza/core/calentamiento/estiramiento NO debemos
+  // tratarlo como cardio aunque tenga ``target_duration_minutes`` (a un
+  // entreno de fuerza también se le puede poner un tiempo máximo por
+  // serie). Antes el OR empezaba por los targets y eso pintaba a
+  // ejercicios como "Remo Gironda en Polea Baja" como cardio en cuanto
+  // se les configuraba duración.
+  let isCardio: boolean;
+  if (category) {
+    isCardio = category === "cardio";
+  } else if (ex.duration_type === "cardio") {
+    isCardio = true;
+  } else if (
     ex.target_duration_minutes != null ||
     ex.target_distance_km != null ||
-    ex.target_speed_kmh != null ||
-    category.includes("cardio") ||
-    isCardioExercise(exerciseName);
+    ex.target_speed_kmh != null
+  ) {
+    // Sin categoría y con targets de cardio: lo tratamos como cardio,
+    // pero solo si NO hay targets de fuerza compitiendo.
+    isCardio = !(ex.target_weight != null || ex.target_reps != null);
+  } else {
+    isCardio = isCardioExercise(exerciseName);
+  }
 
   // Para ejercicios cardio NO mostramos reps ni peso objetivo; mostramos
   // exclusivamente las métricas cardio (series × min/km/km·h⁻¹) que haya
@@ -1584,12 +1649,16 @@ export function MyWorkoutsPage() {
   const isTodayRestDay = todayWorkoutDay?.isRestDay ?? false;
   
   // Flatten all exercises from today's blocks (with exercise_id for history/targets)
-  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; target_weight?: number; target_reps?: number; target_duration_minutes?: number; target_distance_km?: number; target_speed_kmh?: number }> }) =>
+  const allExercises: ExerciseForLog[] = todayBlocks.flatMap((block: { exercises?: Array<{ exercise_id?: string; exercise?: { id?: string; name?: string; alias?: string; image_url?: string; video_url?: string; description?: string; category?: string }; name?: string; sets?: number; reps?: string; rest_seconds?: number; notes?: string; video_url?: string; category?: string; target_weight?: number; target_reps?: number; target_duration_minutes?: number; target_distance_km?: number; target_speed_kmh?: number }> }) =>
     (block.exercises || []).map(ex => ({
       exercise_id: ex.exercise_id || ex.exercise?.id || "",
       name: ex.exercise?.name || ex.name || "Ejercicio",
       sets: ex.sets || 3,
       reps: ex.reps || "10-12",
+      // ``category`` viene de la hidratación del template: el backend lo
+      // copia desde ``exercises.category`` al servir el programa. Es el
+      // discriminador fiable para Series×Reps vs Min/Km/Km-h.
+      category: ex.exercise?.category || ex.category,
       target_weight: ex.target_weight,
       target_reps: ex.target_reps,
       target_duration_minutes: ex.target_duration_minutes,
