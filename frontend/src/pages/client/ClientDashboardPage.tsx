@@ -34,7 +34,7 @@ import {
   IconPlayerPlay,
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { useClientDashboard, useClientProfile } from "../../hooks/useClientPortal";
+import { useClientDashboard, useClientProfile, usePendingReviews } from "../../hooks/useClientPortal";
 import { useNavigate } from "react-router-dom";
 import { generateClientPlanPDF } from "../../services/pdfGenerator";
 import { api } from "../../services/api";
@@ -108,6 +108,7 @@ function NutrientProgress({
 export function ClientDashboardPage() {
   const { data: dashboardData, isLoading } = useClientDashboard();
   const { data: profileData } = useClientProfile();
+  const { data: pendingReviews = [] } = usePendingReviews();
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
@@ -238,6 +239,47 @@ export function ClientDashboardPage() {
           </Stack>
         </Alert>
       )}
+
+      {/* Aviso de revisión pendiente. Cuando el entrenador define un
+          intervalo de revisión en la dieta o el programa, se crea una
+          tarea automática para esa fecha. El cliente debe subir peso,
+          medidas y fotos para que el entrenador valore el progreso. */}
+      {pendingReviews.length > 0 && (() => {
+        const overdue = pendingReviews.filter((r) => r.is_overdue);
+        const next = overdue[0] || pendingReviews[0];
+        const isOverdue = !!next.is_overdue;
+        const dueLabel = next.due_date
+          ? new Date(next.due_date).toLocaleDateString("es-ES", { day: "numeric", month: "long" })
+          : "";
+        return (
+          <Alert
+            icon={<IconChartLine size={18} />}
+            color={isOverdue ? "red" : "yellow"}
+            variant="light"
+            radius="md"
+            mb="xl"
+            title={isOverdue ? "Tienes una revisión pendiente" : "Próxima revisión"}
+          >
+            <Stack gap="xs">
+              <Text size="sm">
+                {isOverdue
+                  ? `Tu entrenador te asignó una revisión para el ${dueLabel}. Sube tu peso, medidas y fotos para que pueda actualizar tu plan.`
+                  : `Te toca revisión el ${dueLabel}. Cuando llegue el día, recuerda actualizar tu peso, medidas y fotos.`}
+              </Text>
+              <Group>
+                <Button
+                  size="xs"
+                  color={isOverdue ? "red" : "yellow"}
+                  radius="md"
+                  onClick={() => navigate("/my-progress")}
+                >
+                  Registrar revisión
+                </Button>
+              </Group>
+            </Stack>
+          </Alert>
+        );
+      })()}
 
       {/* Next Session Banner */}
       {data.nextSession && (

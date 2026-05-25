@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Alert,
   Badge,
   Box,
   Button,
@@ -165,6 +166,17 @@ export function CalendarPage() {
   const { data: tasksData } = useTasksList({
     due_from: dateParams.start_date,
     due_to: dateParams.end_date,
+  });
+  // Tareas de revisión/fin de plan en los próximos 14 días, para
+  // mostrar un banner siempre visible. El usuario Borja se quejaba de
+  // que "las revisiones no le salen" en el calendario porque las
+  // celdas mensuales podían ocultarlas; este aviso garantiza que las
+  // vea aunque la vista activa no sea "lista".
+  const upcomingFrom = useMemo(() => dayjs().startOf("day").toISOString(), []);
+  const upcomingTo = useMemo(() => dayjs().add(14, "day").endOf("day").toISOString(), []);
+  const { data: upcomingTasksData } = useTasksList({
+    due_from: upcomingFrom,
+    due_to: upcomingTo,
   });
   const { data: clientsData } = useClients({ page: 1 });
   const { data: teamMembers } = useTeamMembers();
@@ -689,6 +701,60 @@ export function CalendarPage() {
         </Group>
       </PageHeader>
 
+      {/* Aviso de revisiones próximas. Siempre visible si hay tareas
+          automáticas de revisión o fin de plan en los próximos 14 días,
+          independientemente de la vista activa. Antes podían quedar
+          ocultas en la celda del mes y los coaches no las veían. */}
+      {(() => {
+        const upcoming = (upcomingTasksData || [])
+          .filter((t) => {
+            const ref = (t.source_ref || "").toLowerCase();
+            return (
+              t.status !== "done" &&
+              (ref.startsWith("meal_plan_review:") ||
+                ref.startsWith("workout_program_review:") ||
+                ref.startsWith("meal_plan_end:") ||
+                ref.startsWith("workout_program_end:"))
+            );
+          })
+          .sort((a, b) => (a.due_date || "").localeCompare(b.due_date || ""))
+          .slice(0, 4);
+        if (upcoming.length === 0) return null;
+        return (
+          <Alert
+            icon={<IconAlertCircle size={18} />}
+            color="yellow"
+            variant="light"
+            radius="md"
+            mb="md"
+            title="Próximas revisiones y fines de plan"
+          >
+            <Stack gap={4}>
+              {upcoming.map((t) => {
+                const due = t.due_date ? dayjs(t.due_date) : null;
+                const dueLabel = due ? due.format("ddd D MMM") : "";
+                const overdue = due ? due.isBefore(dayjs(), "day") : false;
+                return (
+                  <Group key={t.id} gap="xs" wrap="nowrap">
+                    <Badge size="sm" variant="light" color={overdue ? "red" : "yellow"}>
+                      {overdue ? "Atrasada" : dueLabel}
+                    </Badge>
+                    <Text size="sm" style={{ flex: 1, minWidth: 0 }} truncate>
+                      {t.title}
+                    </Text>
+                  </Group>
+                );
+              })}
+              <Group justify="flex-end">
+                <Button size="xs" variant="subtle" onClick={() => navigate("/tasks")}>
+                  Ver todas las tareas
+                </Button>
+              </Group>
+            </Stack>
+          </Alert>
+        );
+      })()}
+
       {/* Today's Summary */}
       <SimpleGrid
         cols={{ base: 1, sm: 3 }}
@@ -819,7 +885,6 @@ export function CalendarPage() {
             {getMonthDays().map((day, index) => {
               const isCurrentMonth = day.month() === dayjs(currentDate).month();
               const isToday = day.isSame(dayjs(), "day");
-              const dayBookings = getBookingsForDay(day);
 
               return (
                 <Box
@@ -864,77 +929,92 @@ export function CalendarPage() {
                     {day.format("D")}
                   </Text>
                   <Stack gap={2}>
-                    {dayBookings.slice(0, 2).map((booking) => {
-                      const statusInfo = STATUS_LABELS[booking.status] || STATUS_LABELS.pending;
-                      return (
-                        <Box
-                          key={booking.id}
-                          p={2}
-                          style={{
-                            backgroundColor: `var(--mantine-color-${getStatusColor(booking.status)}-1)`,
-                            borderLeft: `2px solid var(--mantine-color-${getStatusColor(booking.status)}-6)`,
-                            borderRadius: 2,
-                            cursor: "pointer",
-                          }}
-                        >
-                          <Group gap={2} wrap="nowrap" justify="space-between">
-                            <Text size="xs" truncate style={{ flex: 1, minWidth: 0 }}>
-                              {booking.title}
-                            </Text>
-                            <Menu shadow="md" width={160} position="bottom-end" withinPortal>
-                              <Menu.Target>
-                                <ActionIcon size={14} variant="transparent" color="gray" onClick={(e) => e.stopPropagation()}>
-                                  <IconDotsVertical size={10} />
-                                </ActionIcon>
-                              </Menu.Target>
-                              <Menu.Dropdown>
-                                <Menu.Item onClick={() => setSelectedBooking(booking)}>Ver detalle</Menu.Item>
-                                {booking.status === "pending" && (
-                                  <>
-                                    <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleConfirmBooking(booking.id)}>Aprobar</Menu.Item>
-                                    <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Rechazar</Menu.Item>
-                                  </>
-                                )}
-                                {booking.status === "confirmed" && (
-                                  <>
-                                    <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleCompleteBooking(booking.id)}>Completar</Menu.Item>
-                                    <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Cancelar</Menu.Item>
-                                  </>
-                                )}
-                                <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => { setSelectedBooking(booking); handleOpenEdit(booking); }}>Modificar</Menu.Item>
-                              </Menu.Dropdown>
-                            </Menu>
-                          </Group>
-                          <Badge size="xs" variant="dot" color={statusInfo.color} style={{ fontSize: 7 }}>
-                            {statusInfo.label}
-                          </Badge>
-                        </Box>
-                      );
-                    })}
                     {(() => {
-                      const otherEvents = getEventsForDay(day).filter((ev) => ev.type !== "booking");
-                      const totalExtra = (dayBookings.length > 2 ? dayBookings.length - 2 : 0) + otherEvents.length;
+                      // Antes la celda mensual reservaba 2 huecos para
+                      // bookings y solo mostraba tareas/citas si quedaba
+                      // sitio. En workspaces con 1-2 sesiones al día las
+                      // revisiones de planes desaparecían y los coaches
+                      // no las veían en el calendario.
+                      // Ahora unificamos todos los eventos (booking, task,
+                      // appointment, google) y mostramos los 3 más
+                      // tempranos del día, garantizando que las tareas
+                      // siempre tengan visibilidad.
+                      const all = getEventsForDay(day).slice().sort(
+                        (a, b) => dayjs(a.start_time).valueOf() - dayjs(b.start_time).valueOf()
+                      );
+                      const visible = all.slice(0, 3);
+                      const totalExtra = all.length - visible.length;
                       return (
                         <>
-                          {otherEvents.slice(0, Math.max(0, 2 - dayBookings.length)).map((ev) => (
-                            <Box
-                              key={ev.id}
-                              p={2}
-                              title={ev.title}
-                              style={{
-                                backgroundColor: `var(--mantine-color-${ev.color}-1)`,
-                                borderLeft: `2px solid var(--mantine-color-${ev.color}-6)`,
-                                borderRadius: 2,
-                                cursor: "pointer",
-                              }}
-                              onClick={() => {
-                                if (ev.type === "task") navigate("/tasks");
-                                else if (ev.type === "appointment") navigate("/appointments");
-                              }}
-                            >
-                              <Text size="xs" truncate>{ev.title}</Text>
-                            </Box>
-                          ))}
+                          {visible.map((ev) => {
+                            if (ev.type === "booking" && ev.booking) {
+                              const booking = ev.booking;
+                              const statusInfo = STATUS_LABELS[booking.status] || STATUS_LABELS.pending;
+                              return (
+                                <Box
+                                  key={booking.id}
+                                  p={2}
+                                  style={{
+                                    backgroundColor: `var(--mantine-color-${getStatusColor(booking.status)}-1)`,
+                                    borderLeft: `2px solid var(--mantine-color-${getStatusColor(booking.status)}-6)`,
+                                    borderRadius: 2,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <Group gap={2} wrap="nowrap" justify="space-between">
+                                    <Text size="xs" truncate style={{ flex: 1, minWidth: 0 }}>
+                                      {booking.title}
+                                    </Text>
+                                    <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+                                      <Menu.Target>
+                                        <ActionIcon size={14} variant="transparent" color="gray" onClick={(e) => e.stopPropagation()}>
+                                          <IconDotsVertical size={10} />
+                                        </ActionIcon>
+                                      </Menu.Target>
+                                      <Menu.Dropdown>
+                                        <Menu.Item onClick={() => setSelectedBooking(booking)}>Ver detalle</Menu.Item>
+                                        {booking.status === "pending" && (
+                                          <>
+                                            <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleConfirmBooking(booking.id)}>Aprobar</Menu.Item>
+                                            <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Rechazar</Menu.Item>
+                                          </>
+                                        )}
+                                        {booking.status === "confirmed" && (
+                                          <>
+                                            <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleCompleteBooking(booking.id)}>Completar</Menu.Item>
+                                            <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Cancelar</Menu.Item>
+                                          </>
+                                        )}
+                                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => { setSelectedBooking(booking); handleOpenEdit(booking); }}>Modificar</Menu.Item>
+                                      </Menu.Dropdown>
+                                    </Menu>
+                                  </Group>
+                                  <Badge size="xs" variant="dot" color={statusInfo.color} style={{ fontSize: 7 }}>
+                                    {statusInfo.label}
+                                  </Badge>
+                                </Box>
+                              );
+                            }
+                            return (
+                              <Box
+                                key={ev.id}
+                                p={2}
+                                title={ev.title}
+                                style={{
+                                  backgroundColor: `var(--mantine-color-${ev.color}-1)`,
+                                  borderLeft: `2px solid var(--mantine-color-${ev.color}-6)`,
+                                  borderRadius: 2,
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => {
+                                  if (ev.type === "task") navigate("/tasks");
+                                  else if (ev.type === "appointment") navigate("/appointments");
+                                }}
+                              >
+                                <Text size="xs" truncate>{ev.title}</Text>
+                              </Box>
+                            );
+                          })}
                           {totalExtra > 0 && (
                             <Text c="dimmed" size="xs">
                               +{totalExtra} más

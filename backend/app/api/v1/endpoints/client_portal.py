@@ -45,6 +45,7 @@ from app.models.feedback import ClientDietFeedback, ClientEmotion, ClientFeedbac
 from app.models.payment import Payment, Subscription, SubscriptionStatus
 from app.models.document import Document
 from app.models.supplement import ClientSupplement, Supplement
+from app.models.task import Task
 from app.services.notification_service import notify
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,68 @@ async def get_client_for_user(user_id: UUID, db: AsyncSession, workspace_id: UUI
         )
 
     return client
+
+
+async def _close_pending_reviews(
+    db: AsyncSession,
+    *,
+    workspace_id: UUID,
+    client_id: UUID,
+    client_name: str,
+) -> None:
+    """Marca como completadas las tareas auto de revisión próximas/pasadas
+    cuando el cliente acaba de subir peso/medidas/foto, y avisa al
+    entrenador.
+
+    Sin esto, el banner "Tienes una revisión pendiente" seguía apareciendo
+    en el portal del cliente aunque ya hubiera subido los datos, y el
+    entrenador no se enteraba de que tocaba abrir su ficha.
+    """
+    try:
+        horizon = datetime.utcnow() + timedelta(days=14)
+        result = await db.execute(
+            select(Task).where(
+                Task.workspace_id == workspace_id,
+                Task.client_id == client_id,
+                Task.deleted_at.is_(None),
+                Task.archived_at.is_(None),
+                Task.status != "done",
+                Task.source == "auto",
+                or_(
+                    Task.source_ref.like("meal_plan_review:%"),
+                    Task.source_ref.like("workout_program_review:%"),
+                ),
+                Task.due_date.isnot(None),
+                Task.due_date <= horizon,
+            )
+        )
+        pending = result.scalars().all()
+        if not pending:
+            return
+
+        coach_user_ids: set[UUID] = set()
+        for t in pending:
+            t.status = "done"
+            if t.assigned_to:
+                coach_user_ids.add(t.assigned_to)
+        await db.commit()
+
+        for coach_id in coach_user_ids:
+            try:
+                await notify(
+                    db=db,
+                    event="client_review_submitted",
+                    user_id=coach_id,
+                    workspace_id=workspace_id,
+                    title=f"{client_name} ha registrado su revisión",
+                    body="Ha subido peso, medidas o fotos. Revisa su progreso para ajustar el plan.",
+                    notification_type="info",
+                    link=f"/clients/{client_id}",
+                )
+            except Exception:
+                logger.exception("client review notify failed coach=%s", coach_id)
+    except Exception:
+        logger.exception("Failed to close pending review tasks for client=%s", client_id)
 
 
 # ============ SCHEMAS ============
@@ -2267,7 +2330,14 @@ async def create_measurement(
     if data.weight_kg:
         client.weight_kg = str(data.weight_kg)
         await db.commit()
-    
+
+    await _close_pending_reviews(
+        db,
+        workspace_id=client.workspace_id,
+        client_id=client.id,
+        client_name=f"{client.first_name} {client.last_name}".strip() or "El cliente",
+    )
+
     return measurement
 
 
@@ -2349,6 +2419,13 @@ async def upload_progress_photo(
             db.add(measurement)
 
         await db.commit()
+
+        await _close_pending_reviews(
+            db,
+            workspace_id=client.workspace_id,
+            client_id=client.id,
+            client_name=f"{client.first_name} {client.last_name}".strip() or "El cliente",
+        )
 
         return {
             "success": True,
@@ -2510,6 +2587,58 @@ async def get_progress_summary(
         "measurements_count": len(measurements),
         "goals": client.goals,
     }
+
+
+@router.get("/progress/pending-reviews")
+async def get_my_pending_reviews(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Devuelve las revisiones pendientes del cliente (tareas auto de tipo
+    'meal_plan_review:*' o 'workout_program_review:*' no completadas).
+
+    Se incluyen las atrasadas y las que vencen en los próximos 14 días para
+    que el cliente vea siempre el aviso "te toca actualizar peso/medidas/
+    fotos" en su portal aunque la tarea estuviera prevista hace unos días.
+    """
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    horizon = datetime.utcnow() + timedelta(days=14)
+    result = await db.execute(
+        select(Task)
+        .where(
+            Task.workspace_id == current_user.workspace_id,
+            Task.client_id == client.id,
+            Task.deleted_at.is_(None),
+            Task.archived_at.is_(None),
+            Task.status != "done",
+            Task.source == "auto",
+            or_(
+                Task.source_ref.like("meal_plan_review:%"),
+                Task.source_ref.like("workout_program_review:%"),
+            ),
+            Task.due_date.isnot(None),
+            Task.due_date <= horizon,
+        )
+        .order_by(Task.due_date)
+    )
+    tasks = result.scalars().all()
+
+    today = date.today()
+    items = []
+    for t in tasks:
+        kind = "nutrition" if (t.source_ref or "").startswith("meal_plan_review:") else "workout"
+        due = t.due_date.date() if t.due_date else None
+        items.append({
+            "id": str(t.id),
+            "title": t.title,
+            "description": t.description,
+            "type": kind,
+            "due_date": due.isoformat() if due else None,
+            "is_overdue": bool(due and due < today),
+            "days_until": (due - today).days if due else None,
+        })
+    return items
 
 
 # ============ CALENDAR / BOOKINGS ============

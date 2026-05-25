@@ -874,6 +874,9 @@ export function useCreateMeasurement() {
       queryClient.invalidateQueries({ queryKey: ["my-measurements"] });
       queryClient.invalidateQueries({ queryKey: ["progress-summary"] });
       queryClient.invalidateQueries({ queryKey: ["client-dashboard"] });
+      // El backend cierra automáticamente las tareas de revisión pendientes
+      // al recibir nuevas medidas. Refrescamos la cola de avisos.
+      queryClient.invalidateQueries({ queryKey: ["my-pending-reviews"] });
       notifications.show({
         title: "Medidas registradas",
         message: "Tu progreso ha sido guardado",
@@ -897,6 +900,33 @@ export function useProgressSummary() {
       const response = await clientPortalApi.progressSummary();
       return response.data;
     },
+    staleTime: 60 * 1000,
+  });
+}
+
+// Revisión pendiente del cliente: cuando el entrenador asigna un plan
+// nutricional o un programa con "intervalo de revisión", se crea una tarea
+// automática (`meal_plan_review:*` / `workout_program_review:*`). Este
+// endpoint la expone al cliente para que vea siempre un aviso "te toca
+// actualizar peso/medidas/fotos" en el portal.
+export interface PendingReview {
+  id: string;
+  title: string;
+  description?: string | null;
+  type: "nutrition" | "workout";
+  due_date: string | null;
+  is_overdue: boolean;
+  days_until: number | null;
+}
+
+export function usePendingReviews(options?: { enabled?: boolean }) {
+  return useQuery<PendingReview[]>({
+    queryKey: ["my-pending-reviews"],
+    queryFn: async () => {
+      const response = await clientPortalApi.pendingReviews();
+      return response.data;
+    },
+    enabled: options?.enabled ?? true,
     staleTime: 60 * 1000,
   });
 }
@@ -939,6 +969,7 @@ export function useUploadProgressPhoto() {
       queryClient.invalidateQueries({ queryKey: ["progress-photos"] });
       queryClient.invalidateQueries({ queryKey: ["my-measurements"] });
       queryClient.invalidateQueries({ queryKey: ["progress-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["my-pending-reviews"] });
       notifications.show({
         title: "Foto subida",
         message: "Tu foto de progreso ha sido guardada",

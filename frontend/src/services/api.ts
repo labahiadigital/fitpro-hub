@@ -750,7 +750,8 @@ export const clientPortalApi = {
     notes?: string;
   }) => api.post("/my/progress/measurements", data),
   progressSummary: () => api.get("/my/progress/summary"),
-  
+  pendingReviews: () => api.get("/my/progress/pending-reviews"),
+
   // Photos
   getPhotos: (limit?: number) =>
     api.get("/my/progress/photos", { params: { limit } }),

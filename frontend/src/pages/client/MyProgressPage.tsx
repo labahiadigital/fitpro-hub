@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Card,
   Group,
@@ -43,7 +44,7 @@ import {
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { openDangerConfirm } from "../../utils/confirmModal";
-import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos, useDeleteProgressPhoto } from "../../hooks/useClientPortal";
+import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadProgressPhoto, useProgressPhotos, useDeleteProgressPhoto, usePendingReviews } from "../../hooks/useClientPortal";
 import { formatDecimal } from "../../utils/format";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 import { IconArrowLeft } from "@tabler/icons-react";
@@ -497,6 +498,7 @@ export function MyProgressPage() {
   const { data: summary, isLoading: isLoadingSummary } = useProgressSummary();
   const { data: measurements } = useMeasurements(50);
   const { data: photos = [] } = useProgressPhotos(50);
+  const { data: pendingReviews = [] } = usePendingReviews();
   const createMeasurementMutation = useCreateMeasurement();
   const uploadPhotoMutation = useUploadProgressPhoto();
   const deletePhotoMutation = useDeleteProgressPhoto();
@@ -649,6 +651,57 @@ export function MyProgressPage() {
           </Button>
         </Group>
       </Group>
+
+      {/* Aviso de revisión pendiente. Aparece cuando el entrenador ha
+          puesto un intervalo de revisión y toca actualizar peso/medidas/
+          fotos. Antes el cliente no veía nada y nos llegaban quejas. */}
+      {pendingReviews.length > 0 && (() => {
+        const overdue = pendingReviews.filter((r) => r.is_overdue);
+        const next = overdue[0] || pendingReviews[0];
+        const isOverdue = !!next.is_overdue;
+        const dueLabel = next.due_date
+          ? new Date(next.due_date).toLocaleDateString("es-ES", { day: "numeric", month: "long" })
+          : "";
+        return (
+          <Alert
+            icon={<IconChartLine size={18} />}
+            color={isOverdue ? "red" : "yellow"}
+            variant="light"
+            radius="md"
+            mb="lg"
+            title={isOverdue ? "Tienes una revisión pendiente" : "Próxima revisión"}
+          >
+            <Stack gap="xs">
+              <Text size="sm">
+                {isOverdue
+                  ? `Tu entrenador te asignó una revisión para el ${dueLabel}. Sube tu peso, medidas y fotos para que pueda actualizar tu plan.`
+                  : `Te toca revisión el ${dueLabel}. Cuando llegue el día, recuerda actualizar tu peso, medidas y fotos.`}
+              </Text>
+              <Group gap="xs">
+                <Button
+                  size="xs"
+                  color={isOverdue ? "red" : "yellow"}
+                  radius="md"
+                  leftSection={<IconRuler size={14} />}
+                  onClick={openModal}
+                >
+                  Registrar medidas
+                </Button>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color={isOverdue ? "red" : "yellow"}
+                  radius="md"
+                  leftSection={<IconCamera size={14} />}
+                  onClick={openPhotoModal}
+                >
+                  Subir foto
+                </Button>
+              </Group>
+            </Stack>
+          </Alert>
+        );
+      })()}
 
       {isMobile && (
         <Select

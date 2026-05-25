@@ -639,7 +639,9 @@ async def create_meal_plan(
             description=f"Revisar progreso del plan nutricional '{data.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/nutrition",
             also_notify_client=True,
-            client_notification_link="/my-nutrition",
+            # La revisión exige al cliente subir peso/medidas/fotos -> le
+            # llevamos directamente a /my-progress en lugar de a la dieta.
+            client_notification_link="/my-progress",
         )
 
     return await _hydrate_meal_plan_image_urls(db, meal_plan)
@@ -734,7 +736,7 @@ async def update_meal_plan(
                 notification_link="/nutrition",
                 replace_existing=True,
                 also_notify_client=True,
-                client_notification_link="/my-nutrition",
+                client_notification_link="/my-progress",
             )
         if plan.end_date:
             await create_auto_task(
@@ -961,7 +963,7 @@ async def assign_meal_plan_to_client(
             description=f"Revisar progreso del plan nutricional '{template.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/nutrition",
             also_notify_client=True,
-            client_notification_link="/my-nutrition",
+            client_notification_link="/my-progress",
         )
 
     try:
