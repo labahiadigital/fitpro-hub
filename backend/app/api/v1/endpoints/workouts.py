@@ -617,7 +617,9 @@ async def create_program(
             description=f"Revisar progreso del programa '{data.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/workouts",
             also_notify_client=True,
-            client_notification_link="/my-workouts",
+            # La revisión exige al cliente subir peso/medidas/fotos -> le
+            # llevamos directamente a /my-progress en lugar de al programa.
+            client_notification_link="/my-progress",
         )
 
     return await _hydrate_program_image_urls(db, program)
@@ -717,7 +719,7 @@ async def update_program(
                 notification_link="/workouts",
                 replace_existing=True,
                 also_notify_client=True,
-                client_notification_link="/my-workouts",
+                client_notification_link="/my-progress",
             )
         if program.end_date:
             await create_auto_task(
@@ -952,7 +954,7 @@ async def assign_program_to_client(
             description=f"Revisar progreso del programa '{template.name}'. Intervalo: cada {review_interval} días.",
             notification_link="/workouts",
             also_notify_client=True,
-            client_notification_link="/my-workouts",
+            client_notification_link="/my-progress",
         )
 
     try:
