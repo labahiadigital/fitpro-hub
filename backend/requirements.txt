@@ -15,7 +15,7 @@ python-jose[cryptography]==3.5.0
 
 # Validation
 pydantic==2.13.1
-pydantic-settings==2.13.1
+pydantic-settings==2.14.2
 email-validator==2.3.0
 
 # Caching and Background Tasks
