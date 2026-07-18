@@ -2372,7 +2372,7 @@ export function MyWorkoutsPage() {
                                       key={idx}
                                       onClick={(e: React.MouseEvent) => {
                                         e.stopPropagation();
-                                        swapWorkoutDaysMutation.mutate({ programId: activeProgram.id, sourceDay: dayNum, targetDay: targetDayNum });
+                                        swapWorkoutDaysMutation.mutate({ programId: activeProgram.id, sourceDay: dayNum, targetDay: targetDayNum, week: activeWeekNum });
                                       }}
                                     >
                                       {label}
@@ -2674,6 +2674,7 @@ export function MyWorkoutsPage() {
                     source_block_index: exerciseSwapState.sourceBlockIndex,
                     source_exercise_index: exerciseSwapState.sourceExerciseIndex,
                     target_day: exerciseSwapState.targetDay!,
+                    week: activeWeekNum,
                   });
                   setExerciseSwapState(null);
                 }}
@@ -2698,6 +2699,7 @@ export function MyWorkoutsPage() {
                           target_day: exerciseSwapState.targetDay!,
                           target_block_index: tex.blockIndex,
                           target_exercise_index: tex.exerciseIndex,
+                          week: activeWeekNum,
                         });
                         setExerciseSwapState(null);
                       }}
@@ -2734,7 +2736,7 @@ export function MyWorkoutsPage() {
                 leftSection={<IconArrowsExchange size={14} />}
                 onClick={() => {
                   if (activeProgram && daySwapSourceDay != null) {
-                    swapWorkoutDaysMutation.mutate({ programId: activeProgram.id, sourceDay: daySwapSourceDay, targetDay: dayNum });
+                    swapWorkoutDaysMutation.mutate({ programId: activeProgram.id, sourceDay: daySwapSourceDay, targetDay: dayNum, week: activeWeekNum });
                   }
                   setDaySwapSourceDay(null);
                 }}

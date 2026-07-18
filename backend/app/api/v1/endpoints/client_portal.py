@@ -1011,17 +1011,24 @@ def _ensure_executed_template(program: WorkoutProgram):
         program.executed_template = copy.deepcopy(program.template) if program.template else {}
 
 
-def _get_template_days_mutable(tmpl: dict) -> list:
-    """Get the mutable days list from a workout template."""
-    if "days" in tmpl:
-        return tmpl["days"]
-    return []
+def _get_template_days_mutable(tmpl: dict, week_num: int = 1) -> list:
+    """Get a mutable days list from a workout template (supports weeks + flat days)."""
+    if "weeks" in tmpl:
+        weeks = tmpl.get("weeks") or []
+        wk = next((w for w in weeks if w.get("week") == week_num), None)
+        if wk:
+            return wk.get("days", []) or []
+        if weeks:
+            return weeks[0].get("days", []) or []
+        return []
+    return tmpl.get("days", []) or []
 
 
 class SwapWorkoutDaysRequest(BaseModel):
     program_id: UUID
     source_day: int
     target_day: int
+    week: int = 1
 
 
 @router.post("/workouts/swap-days")
@@ -1045,7 +1052,7 @@ async def swap_workout_days(
 
     _ensure_executed_template(program)
     tmpl = dict(program.executed_template) if program.executed_template else {}
-    days = _get_template_days_mutable(tmpl)
+    days = _get_template_days_mutable(tmpl, data.week)
 
     src = next((d for d in days if d.get("day") == data.source_day), None)
     dst = next((d for d in days if d.get("day") == data.target_day), None)
@@ -1067,6 +1074,7 @@ class SwapWorkoutsRequest(BaseModel):
     source_block_index: int
     target_day: int
     target_block_index: int
+    week: int = 1
 
 
 @router.post("/workouts/swap-workouts")
@@ -1090,7 +1098,7 @@ async def swap_specific_workouts(
 
     _ensure_executed_template(program)
     tmpl = dict(program.executed_template) if program.executed_template else {}
-    days = _get_template_days_mutable(tmpl)
+    days = _get_template_days_mutable(tmpl, data.week)
 
     src = next((d for d in days if d.get("day") == data.source_day), None)
     dst = next((d for d in days if d.get("day") == data.target_day), None)
@@ -1121,6 +1129,7 @@ class MoveExerciseRequest(BaseModel):
     source_exercise_index: int
     target_day: int
     target_block_index: int = 0
+    week: int = 1
 
 
 @router.post("/workouts/move-exercise")
@@ -1144,7 +1153,7 @@ async def move_exercise_between_days(
 
     _ensure_executed_template(program)
     tmpl = dict(program.executed_template) if program.executed_template else {}
-    days = _get_template_days_mutable(tmpl)
+    days = _get_template_days_mutable(tmpl, data.week)
 
     src = next((d for d in days if d.get("day") == data.source_day), None)
     dst = next((d for d in days if d.get("day") == data.target_day), None)
@@ -1182,6 +1191,7 @@ class SwapExercisesRequest(BaseModel):
     target_day: int
     target_block_index: int
     target_exercise_index: int
+    week: int = 1
 
 
 @router.post("/workouts/swap-exercises")
@@ -1205,7 +1215,7 @@ async def swap_exercises_between_days(
 
     _ensure_executed_template(program)
     tmpl = dict(program.executed_template) if program.executed_template else {}
-    days = _get_template_days_mutable(tmpl)
+    days = _get_template_days_mutable(tmpl, data.week)
 
     src = next((d for d in days if d.get("day") == data.source_day), None)
     dst = next((d for d in days if d.get("day") == data.target_day), None)
@@ -2353,11 +2363,23 @@ async def upload_progress_photo(
     """Upload a progress photo. Returns the photo URL."""
     client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
     
-    allowed_types = ["image/jpeg", "image/png", "image/webp"]
-    if file.content_type not in allowed_types:
+    allowed_types = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif",
+        "image/heic-sequence",
+        "image/heif-sequence",
+    ]
+    # Algunos móviles (iOS) envían content_type vacío o application/octet-stream
+    # para fotos HEIC/JPEG sacadas de la cámara.
+    content_type = (file.content_type or "").lower().strip()
+    if content_type and content_type not in allowed_types and content_type != "application/octet-stream":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Tipo de archivo {file.content_type} no permitido. Usa JPEG, PNG o WebP."
+            detail=f"Tipo de archivo {file.content_type} no permitido. Usa JPEG, PNG, WebP o HEIC."
         )
     
 
