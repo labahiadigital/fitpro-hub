@@ -1,12 +1,23 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-function isTokenExpired(token: string): boolean {
+export function isTokenExpired(token: string, skewMs = 0): boolean {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.exp * 1000 < Date.now();
+    return payload.exp * 1000 < Date.now() + skewMs;
   } catch {
     return true;
+  }
+}
+
+/** Seconds until access token expiry, or 0 if missing/invalid. */
+export function getTokenExpiresIn(token: string | null): number {
+  if (!token) return 0;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return Math.max(0, Math.floor((payload.exp * 1000 - Date.now()) / 1000));
+  } catch {
+    return 0;
   }
 }
 
@@ -63,12 +74,15 @@ interface AuthState {
   currentWorkspace: Workspace | null;
   isAuthenticated: boolean;
   _hasHydrated: boolean;
+  /** True after bootstrap has attempted silent cookie refresh. */
+  _authReady: boolean;
 
   setUser: (user: User | null) => void;
   setTokens: (accessToken: string, refreshToken?: string) => void;
   setWorkspace: (workspace: Workspace | null) => void;
   logout: () => void;
   setHasHydrated: (state: boolean) => void;
+  setAuthReady: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -80,8 +94,12 @@ export const useAuthStore = create<AuthState>()(
       currentWorkspace: null,
       isAuthenticated: false,
       _hasHydrated: false,
+      _authReady: false,
 
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      setUser: (user) => set((state) => ({
+        user,
+        isAuthenticated: !!user || !!state.accessToken,
+      })),
 
       setTokens: (accessToken, refreshToken) =>
         set({
@@ -102,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
         }),
         
       setHasHydrated: (state) => set({ _hasHydrated: state }),
+      setAuthReady: (state) => set({ _authReady: state }),
     }),
     {
       name: "trackfiz-auth",
@@ -132,10 +151,12 @@ export const useAuthStore = create<AuthState>()(
           state._hasHydrated = true;
           state.isAuthenticated = hasValidToken;
           if (!hasValidToken) {
+            // Clear the expired access token but KEEP user + workspace so the
+            // AuthBootstrap can try a silent cookie refresh before kicking the
+            // user to /login. Clearing everything here caused "la app no carga"
+            // after ~1h (ACCESS_TOKEN_EXPIRE_MINUTES) on mobile/PWA.
             state.accessToken = null;
             state.refreshToken = null;
-            state.user = null;
-            state.currentWorkspace = null;
           }
         }
       },

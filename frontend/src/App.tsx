@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ComponentType } from "react";
+import { Suspense, lazy, useEffect, type ComponentType } from "react";
 import { Center, Loader, MantineProvider } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
 import { ModalsProvider } from "@mantine/modals";
@@ -8,7 +8,8 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
-import { useAuthStore } from "./stores/auth";
+import { useAuthStore, waitForHydration } from "./stores/auth";
+import { authApi, scheduleProactiveRefresh, trySilentRefresh } from "./services/api";
 import { getApiErrorMessage } from "./utils/getApiErrorMessage";
 import { theme } from "./theme";
 
@@ -114,10 +115,97 @@ function PageLoader() {
   );
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, _hasHydrated } = useAuthStore();
+/**
+ * After Zustand rehydrates, try a silent cookie refresh when the access token
+ * is missing/expired. Prevents the "app stops loading after ~1 hour" symptom
+ * on mobile/PWA where the short-lived JWT dies but the refresh cookie is still valid.
+ */
+function AuthBootstrap({ children }: { children: React.ReactNode }) {
+  const authReady = useAuthStore((s) => s._authReady);
 
-  if (!_hasHydrated) {
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      await waitForHydration();
+      if (cancelled) return;
+
+      const state = useAuthStore.getState();
+      if (!state.isAuthenticated) {
+        const refreshed = await trySilentRefresh();
+        if (cancelled) return;
+        if (refreshed) {
+          try {
+            const me = await authApi.me();
+            if (cancelled) return;
+            const data = me.data as {
+              id: string;
+              email: string;
+              full_name?: string;
+              avatar_url?: string;
+              is_active: boolean;
+              role?: "owner" | "collaborator" | "client";
+              workspace_id?: string;
+              permissions?: Record<string, string[]>;
+              workspaces?: Array<{ id: string; name: string; slug: string; logo_url?: string; role: "owner" | "collaborator" | "client" }>;
+            };
+            useAuthStore.getState().setUser({
+              id: data.id,
+              email: data.email,
+              full_name: data.full_name,
+              avatar_url: data.avatar_url,
+              is_active: data.is_active,
+              role: data.role,
+              workspace_id: data.workspace_id,
+              permissions: data.permissions,
+              workspaces: data.workspaces,
+            });
+            if (data.workspace_id && data.workspaces?.length) {
+              const ws = data.workspaces.find((w) => w.id === data.workspace_id) || data.workspaces[0];
+              if (ws) {
+                useAuthStore.getState().setWorkspace({
+                  id: ws.id,
+                  name: ws.name,
+                  slug: ws.slug,
+                  logo_url: ws.logo_url,
+                });
+              }
+            }
+          } catch {
+            useAuthStore.getState().logout();
+          }
+        } else if (!state.user) {
+          // No cookie refresh and no leftover session → clean logout.
+          useAuthStore.getState().logout();
+        } else {
+          // Had a stale session but cookie refresh failed → force login.
+          useAuthStore.getState().logout();
+        }
+      } else {
+        scheduleProactiveRefresh();
+      }
+
+      if (!cancelled) {
+        useAuthStore.getState().setAuthReady(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!authReady) {
+    return <PageLoader />;
+  }
+
+  return <>{children}</>;
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, _hasHydrated, _authReady } = useAuthStore();
+
+  if (!_hasHydrated || !_authReady) {
     return <PageLoader />;
   }
 
@@ -129,9 +217,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, _authReady } = useAuthStore();
 
-  if (!_hasHydrated) {
+  if (!_hasHydrated || !_authReady) {
     return <PageLoader />;
   }
 
@@ -177,10 +265,10 @@ const ROUTE_RESOURCE_MAP: Record<string, string> = {
 };
 
 function TrainerRoute({ children }: { children: React.ReactNode }) {
-  const { user, _hasHydrated } = useAuthStore();
+  const { user, _hasHydrated, _authReady } = useAuthStore();
   const { pathname } = useLocation();
 
-  if (!_hasHydrated) {
+  if (!_hasHydrated || !_authReady) {
     return <PageLoader />;
   }
 
@@ -214,6 +302,7 @@ export default function App() {
           <Notifications position="top-right" />
           <ErrorBoundary>
           <BrowserRouter>
+            <AuthBootstrap>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route element={<Navigate replace to="/login" />} path="/" />
@@ -329,6 +418,7 @@ export default function App() {
                 <Route element={<NotFoundPage />} path="*" />
               </Routes>
             </Suspense>
+            </AuthBootstrap>
           </BrowserRouter>
           </ErrorBoundary>
           </ModalsProvider>

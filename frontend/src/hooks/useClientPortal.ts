@@ -493,8 +493,8 @@ export function useLogWorkoutDetailed() {
 export function useSwapWorkoutDays() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { programId: string; sourceDay: number; targetDay: number }) => {
-      await clientPortalApi.swapWorkoutDays(data.programId, data.sourceDay, data.targetDay);
+    mutationFn: async (data: { programId: string; sourceDay: number; targetDay: number; week?: number }) => {
+      await clientPortalApi.swapWorkoutDays(data.programId, data.sourceDay, data.targetDay, data.week);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
@@ -506,8 +506,8 @@ export function useSwapWorkoutDays() {
 export function useSwapWorkouts() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { programId: string; sourceDay: number; sourceBlockIndex: number; targetDay: number; targetBlockIndex: number }) => {
-      await clientPortalApi.swapWorkouts(data.programId, data.sourceDay, data.sourceBlockIndex, data.targetDay, data.targetBlockIndex);
+    mutationFn: async (data: { programId: string; sourceDay: number; sourceBlockIndex: number; targetDay: number; targetBlockIndex: number; week?: number }) => {
+      await clientPortalApi.swapWorkouts(data.programId, data.sourceDay, data.sourceBlockIndex, data.targetDay, data.targetBlockIndex, data.week);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-workouts"] });
@@ -519,7 +519,7 @@ export function useSwapWorkouts() {
 export function useMoveExercise() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index?: number }) => {
+    mutationFn: async (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index?: number; week?: number }) => {
       await clientPortalApi.moveExercise(data);
     },
     onSuccess: () => {
@@ -532,7 +532,7 @@ export function useMoveExercise() {
 export function useSwapExercises() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index: number; target_exercise_index: number }) => {
+    mutationFn: async (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index: number; target_exercise_index: number; week?: number }) => {
       await clientPortalApi.swapExercises(data);
     },
     onSuccess: () => {

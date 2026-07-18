@@ -440,20 +440,22 @@ function UploadPhotoModal({
           size="sm"
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
-        <Select
-          label="Tipo de foto"
-          data={[
-            { value: "front", label: "Frontal" },
-            { value: "back", label: "Espalda" },
-            { value: "side", label: "Lateral" },
-          ]}
-          value={photoType}
-          onChange={(v) => setPhotoType(v || "front")}
-          size="sm"
-          styles={{ input: { height: 44, borderRadius: 10 } }}
-        />
+        <Box>
+          <Text size="sm" fw={500} mb={6}>Tipo de foto</Text>
+          <SegmentedControl
+            fullWidth
+            value={photoType}
+            onChange={setPhotoType}
+            data={[
+              { value: "front", label: "Frontal" },
+              { value: "back", label: "Espalda" },
+              { value: "side", label: "Lateral" },
+            ]}
+            styles={{ root: { height: 44 }, label: { height: 40, lineHeight: "40px", fontWeight: 600 } }}
+          />
+        </Box>
 
-        <FileButton onChange={handleFileSelect} accept="image/png,image/jpeg,image/webp">
+        <FileButton onChange={handleFileSelect} accept="image/*,image/heic,image/heif,.heic,.heif">
           {(props) => (
             <Button 
               {...props} 

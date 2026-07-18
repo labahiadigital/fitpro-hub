@@ -1,5 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { useAuthStore, waitForHydration } from "../stores/auth";
+import { getTokenExpiresIn, useAuthStore, waitForHydration } from "../stores/auth";
 
 let API_URL = import.meta.env.VITE_API_URL || "/api/v1";
 if (typeof window !== "undefined" && window.location.protocol === "https:" && API_URL.startsWith("http://")) {
@@ -24,6 +24,7 @@ let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (reason?: unknown) => void;
 }> = [];
+let proactiveRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -35,6 +36,78 @@ const processQueue = (error: unknown, token: string | null = null) => {
   });
   failedQueue = [];
 };
+
+async function performTokenRefresh(): Promise<string> {
+  const currentWs = useAuthStore.getState().currentWorkspace;
+  const legacyRefresh = useAuthStore.getState().refreshToken;
+  const body: Record<string, string> = {};
+  if (legacyRefresh) body.refresh_token = legacyRefresh;
+  if (currentWs?.id) body.workspace_id = currentWs.id;
+
+  const response = await axios.post<{ access_token: string; refresh_token?: string }>(
+    `${API_URL}/auth/refresh`,
+    body,
+    { withCredentials: true },
+  );
+
+  const { access_token, refresh_token } = response.data;
+  useAuthStore.getState().setTokens(access_token, refresh_token);
+  scheduleProactiveRefresh();
+  return access_token;
+}
+
+/** Schedule a silent refresh ~2 min before the access token expires. */
+export function scheduleProactiveRefresh() {
+  if (proactiveRefreshTimer) {
+    clearTimeout(proactiveRefreshTimer);
+    proactiveRefreshTimer = null;
+  }
+  const token = useAuthStore.getState().accessToken;
+  const expiresIn = getTokenExpiresIn(token);
+  if (expiresIn <= 0) return;
+
+  // Refresh 2 minutes before expiry, with a minimum delay of 30s.
+  const delayMs = Math.max(30_000, (expiresIn - 120) * 1000);
+  proactiveRefreshTimer = setTimeout(() => {
+    void trySilentRefresh().catch(() => {
+      // Interceptor will handle the next 401 if refresh fails.
+    });
+  }, delayMs);
+}
+
+/**
+ * Attempt cookie-based refresh without requiring a 401 first.
+ * Used on app bootstrap (expired access token) and proactive renewal.
+ */
+export async function trySilentRefresh(): Promise<boolean> {
+  if (isRefreshing) {
+    return new Promise((resolve) => {
+      failedQueue.push({
+        resolve: (token) => resolve(!!token),
+        reject: () => resolve(false),
+      });
+    });
+  }
+
+  isRefreshing = true;
+  refreshTimeout = setTimeout(() => {
+    isRefreshing = false;
+    processQueue(new Error("Token refresh timeout"), null);
+  }, 15000);
+
+  try {
+    const accessToken = await performTokenRefresh();
+    if (refreshTimeout) clearTimeout(refreshTimeout);
+    processQueue(null, accessToken);
+    isRefreshing = false;
+    return true;
+  } catch {
+    if (refreshTimeout) clearTimeout(refreshTimeout);
+    processQueue(new Error("Silent refresh failed"), null);
+    isRefreshing = false;
+    return false;
+  }
+}
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -89,11 +162,6 @@ api.interceptors.response.use(
       
       originalRequest._retry = true;
 
-      // Refresh is driven by the httpOnly cookie set by the backend.
-      // A legacy refresh_token in memory is still forwarded so clients that
-      // haven't received a fresh cookie yet keep working during rollout.
-      const legacyRefresh = useAuthStore.getState().refreshToken;
-
       isRefreshing = true;
       refreshTimeout = setTimeout(() => {
         isRefreshing = false;
@@ -101,19 +169,7 @@ api.interceptors.response.use(
       }, 15000);
 
       try {
-        const currentWs = useAuthStore.getState().currentWorkspace;
-        const body: Record<string, string> = {};
-        if (legacyRefresh) body.refresh_token = legacyRefresh;
-        if (currentWs?.id) body.workspace_id = currentWs.id;
-
-        const response = await axios.post<{ access_token: string; refresh_token?: string }>(
-          `${API_URL}/auth/refresh`,
-          body,
-          { withCredentials: true },
-        );
-
-        const { access_token, refresh_token } = response.data;
-        useAuthStore.getState().setTokens(access_token, refresh_token);
+        const access_token = await performTokenRefresh();
 
         if (refreshTimeout) clearTimeout(refreshTimeout);
         processQueue(null, access_token);
@@ -702,13 +758,13 @@ export const clientPortalApi = {
     api.get(`/my/workouts/exercise-history/${exerciseId}`, { params: { limit } }),
   workoutHistory: (limit?: number) => 
     api.get("/my/workouts/logs/history", { params: { limit } }),
-  swapWorkoutDays: (programId: string, sourceDay: number, targetDay: number) =>
-    api.post("/my/workouts/swap-days", { program_id: programId, source_day: sourceDay, target_day: targetDay }),
-  swapWorkouts: (programId: string, sourceDay: number, sourceBlockIndex: number, targetDay: number, targetBlockIndex: number) =>
-    api.post("/my/workouts/swap-workouts", { program_id: programId, source_day: sourceDay, source_block_index: sourceBlockIndex, target_day: targetDay, target_block_index: targetBlockIndex }),
-  moveExercise: (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index?: number }) =>
+  swapWorkoutDays: (programId: string, sourceDay: number, targetDay: number, week?: number) =>
+    api.post("/my/workouts/swap-days", { program_id: programId, source_day: sourceDay, target_day: targetDay, week: week ?? 1 }),
+  swapWorkouts: (programId: string, sourceDay: number, sourceBlockIndex: number, targetDay: number, targetBlockIndex: number, week?: number) =>
+    api.post("/my/workouts/swap-workouts", { program_id: programId, source_day: sourceDay, source_block_index: sourceBlockIndex, target_day: targetDay, target_block_index: targetBlockIndex, week: week ?? 1 }),
+  moveExercise: (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index?: number; week?: number }) =>
     api.post("/my/workouts/move-exercise", data),
-  swapExercises: (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index: number; target_exercise_index: number }) =>
+  swapExercises: (data: { program_id: string; source_day: number; source_block_index: number; source_exercise_index: number; target_day: number; target_block_index: number; target_exercise_index: number; week?: number }) =>
     api.post("/my/workouts/swap-exercises", data),
   todayWorkoutLogs: () => api.get("/my/workouts/logs/today"),
   
