@@ -647,32 +647,54 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
         height: "100%",
       }}
     >
-      {/* Logo */}
+      {/* Logo / white-label brand */}
       <Group mb="xl" align="center">
-        <Box
-          style={{
-            width: 36,
-            height: 36,
-            background: "var(--nv-accent)",
-            borderRadius: "10px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 800,
-            fontSize: "20px",
-            color: "#2A2822",
-            boxShadow: "0 0 20px rgba(231, 226, 71, 0.15)",
-          }}
-        >
-          T
-        </Box>
-        <Box>
-          <Text c="white" fw={700} size="lg" style={{ fontFamily: "Space Grotesk", lineHeight: 1 }}>
-            Trackfiz
+        {currentWorkspace?.logo_url ? (
+          <Avatar
+            src={currentWorkspace.logo_url}
+            size={36}
+            radius={10}
+            alt={currentWorkspace.name || "Logo"}
+          />
+        ) : (
+          <Box
+            style={{
+              width: 36,
+              height: 36,
+              background: "var(--nv-accent)",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "18px",
+              color: "#2A2822",
+              boxShadow: "0 0 20px var(--nv-accent-glow)",
+            }}
+          >
+            {(currentWorkspace?.name || "T").charAt(0).toUpperCase()}
+          </Box>
+        )}
+        <Box style={{ minWidth: 0, flex: 1 }}>
+          <Text
+            c="white"
+            fw={700}
+            size="lg"
+            style={{
+              fontFamily: "Space Grotesk",
+              lineHeight: 1.15,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {currentWorkspace?.name || "Trackfiz"}
           </Text>
-          <Text c="dimmed" size="xs" fw={500} style={{ fontSize: "11px" }}>
-            {currentWorkspace?.name || "Espacio de Trabajo"}
-          </Text>
+          {currentWorkspace?.slug ? (
+            <Text c="dimmed" size="xs" fw={500} style={{ fontSize: "11px" }}>
+              /{currentWorkspace.slug}
+            </Text>
+          ) : null}
         </Box>
       </Group>
 

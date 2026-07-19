@@ -1,6 +1,7 @@
 import {
   Alert,
   Anchor,
+  Avatar,
   Box,
   Button,
   Checkbox,
@@ -46,6 +47,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+import { applyWorkspaceCssVars } from "../../theme/workspaceBranding";
 import { formatDecimal } from "../../utils/format";
 import { sanitizeHtml } from "../../utils/safeHtml";
 import {
@@ -145,7 +147,11 @@ export function ClientOnboardingPage() {
   const isMobile = useMediaQuery("(max-width: 48em)");
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [workspaceInfo, setWorkspaceInfo] = useState<{ name: string; id: string } | null>(null);
+  const [workspaceInfo, setWorkspaceInfo] = useState<{
+    name: string;
+    id: string;
+    logo_url?: string | null;
+  } | null>(null);
   const [loadingWorkspace, setLoadingWorkspace] = useState(true);
   const [productInfo, setProductInfo] = useState<{ name: string; description?: string; price: number; interval?: string } | null>(null);
   const [creatingInvitation, setCreatingInvitation] = useState(false);
@@ -183,7 +189,14 @@ export function ClientOnboardingPage() {
           return;
         }
         
-        setWorkspaceInfo({ name: data.name, id: data.id });
+        setWorkspaceInfo({
+          name: data.name,
+          id: data.id,
+          logo_url: data.logo_url,
+        });
+        if (data.branding) {
+          applyWorkspaceCssVars(data.branding);
+        }
 
         if (productId) {
           try {
@@ -681,7 +694,12 @@ export function ClientOnboardingPage() {
       return (
         <Container py="xl" size="sm">
           <Box mb="xl" ta="center">
-            <Title mb="xs" order={2}>
+            <Group justify="center" mb="sm">
+              {workspaceInfo.logo_url ? (
+                <Avatar src={workspaceInfo.logo_url} size={64} radius="md" alt={workspaceInfo.name} />
+              ) : null}
+            </Group>
+            <Title mb="xs" order={2} style={{ color: "var(--nv-primary)" }}>
               {workspaceInfo.name}
             </Title>
             <Text c="dimmed">{productInfo.name}</Text>
@@ -795,7 +813,12 @@ export function ClientOnboardingPage() {
     return (
       <Container py="xl" size="sm">
         <Box mb="xl" ta="center">
-          <Title mb="xs" order={2}>
+          {workspaceInfo.logo_url ? (
+            <Group justify="center" mb="sm">
+              <Avatar src={workspaceInfo.logo_url} size={64} radius="md" alt={workspaceInfo.name} />
+            </Group>
+          ) : null}
+          <Title mb="xs" order={2} style={{ color: "var(--nv-primary)" }}>
             {workspaceInfo.name}
           </Title>
           <Text c="dimmed">
@@ -1030,7 +1053,12 @@ export function ClientOnboardingPage() {
   return (
     <Container py="xl" size="md">
       <Box mb="xl" ta="center">
-        <Title mb="xs" order={2}>
+        {workspaceInfo.logo_url ? (
+          <Group justify="center" mb="sm">
+            <Avatar src={workspaceInfo.logo_url} size={64} radius="md" alt={workspaceInfo.name} />
+          </Group>
+        ) : null}
+        <Title mb="xs" order={2} style={{ color: "var(--nv-primary)" }}>
           {workspaceInfo.name}
         </Title>
         <Text c="dimmed">

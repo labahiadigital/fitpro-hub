@@ -340,7 +340,7 @@ async def get_me(
             "id": str(ws.id),
             "name": ws.name,
             "slug": ws.slug,
-            "logo_url": ws.logo_url,
+            "logo_url": await resolve_url(ws.logo_url),
             "role": ur.role.value,
         })
 

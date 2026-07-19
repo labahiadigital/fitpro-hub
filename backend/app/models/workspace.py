@@ -1,5 +1,6 @@
 import re
 import unicodedata
+from uuid import UUID
 
 from sqlalchemy import Column, String, Text, select
 from sqlalchemy.dialects.postgresql import JSONB
@@ -20,13 +21,26 @@ def generate_slug(name: str) -> str:
     return slug or "workspace"
 
 
-async def check_slug_available(db: AsyncSession, slug: str) -> bool:
-    """Return True if the slug is not yet used by any workspace."""
+_SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def is_valid_slug(slug: str) -> bool:
+    """Return True if slug matches the allowed URL-safe pattern."""
+    return bool(slug) and len(slug) <= 80 and bool(_SLUG_PATTERN.match(slug))
+
+
+async def check_slug_available(
+    db: AsyncSession,
+    slug: str,
+    exclude_id: UUID | None = None,
+) -> bool:
+    """Return True if the slug is not yet used by any other workspace."""
     from app.models.workspace import Workspace
 
-    result = await db.execute(
-        select(Workspace.id).where(Workspace.slug == slug)
-    )
+    query = select(Workspace.id).where(Workspace.slug == slug)
+    if exclude_id is not None:
+        query = query.where(Workspace.id != exclude_id)
+    result = await db.execute(query)
     return result.scalar_one_or_none() is None
 
 

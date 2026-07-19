@@ -9,7 +9,6 @@ import {
   Container,
   Divider,
   FileButton,
-  FileInput,
   Group,
   List,
   Loader,
@@ -60,6 +59,7 @@ import {
   IconUsers,
   IconRobot,
   IconBulb,
+  IconWorld,
 } from "@tabler/icons-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { openDangerConfirm } from "../../utils/confirmModal";
@@ -95,6 +95,7 @@ import {
   useUpdateGoogleCalendarSettings,
 } from "../../hooks/useGoogleCalendar";
 import { useAuthStore } from "../../stores/auth";
+import { applyWorkspaceCssVars } from "../../theme/workspaceBranding";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -395,6 +396,7 @@ export function SettingsPage() {
     initialValues: {
       name: currentWorkspace?.name || "",
       slug: currentWorkspace?.slug || "",
+      domain: currentWorkspace?.domain || "",
       email: wsContact.email || "",
       phone: wsContact.phone || "",
       address: wsContact.address || "",
@@ -405,14 +407,55 @@ export function SettingsPage() {
       support_email: wsSupport.email || "",
       email_footer: wsSupport.email_footer || "",
     },
+    validate: {
+      slug: (v) => {
+        if (!v?.trim()) return "El slug es obligatorio";
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v.trim())) {
+          return "Solo minúsculas, números y guiones";
+        }
+        if (v.length > 80) return "Máximo 80 caracteres";
+        return null;
+      },
+      domain: (v) => {
+        if (!v?.trim()) return null;
+        const host = v.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+        if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)) {
+          return "Dominio inválido (ej. app.micentro.com)";
+        }
+        return null;
+      },
+    },
   });
+
+  useEffect(() => {
+    if (!currentWorkspace) return;
+    workspaceForm.setValues({
+      name: currentWorkspace.name || "",
+      slug: currentWorkspace.slug || "",
+      domain: currentWorkspace.domain || "",
+      email: wsContact.email || "",
+      phone: wsContact.phone || "",
+      address: wsContact.address || "",
+      website: wsContact.website || "",
+      description: currentWorkspace.description || "",
+      support_phone: wsSupport.phone || "",
+      support_email: wsSupport.email || "",
+      email_footer: wsSupport.email_footer || "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWorkspace?.id, currentWorkspace?.slug, currentWorkspace?.domain, currentWorkspace?.name]);
 
   const workspaceUpdateMutation = useMutation({
     mutationFn: (values: typeof workspaceForm.values) => {
       const id = currentWorkspace?.id;
       if (!id) throw new Error("No workspace");
+      const domainRaw = values.domain?.trim() || "";
       return workspacesApi.update(id, {
         name: values.name,
+        slug: values.slug.trim().toLowerCase(),
+        domain: domainRaw
+          ? domainRaw.toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "")
+          : null,
         description: values.description || null,
         settings: {
           ...wsSettings,
@@ -435,8 +478,11 @@ export function SettingsPage() {
       setWorkspace(ws);
       notifications.show({ title: "Workspace actualizado", message: "Cambios guardados", color: "green", icon: <IconCheck size={16} /> });
     },
-    onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
+    onError: (error: unknown) => {
+      const detail =
+        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+        "No se pudo guardar";
+      notifications.show({ title: "Error", message: detail, color: "red" });
     },
   });
 
@@ -575,7 +621,8 @@ export function SettingsPage() {
     },
     onSuccess: (res) => {
       setWorkspace(res.data);
-      notifications.show({ title: "Marca actualizada", message: "Colores guardados", color: "green", icon: <IconCheck size={16} /> });
+      applyWorkspaceCssVars(res.data.branding);
+      notifications.show({ title: "Marca actualizada", message: "Colores aplicados en toda la plataforma", color: "green", icon: <IconCheck size={16} /> });
     },
     onError: () => {
       notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
@@ -785,8 +832,27 @@ export function SettingsPage() {
                 <Stack gap="md">
                   <Group grow>
                     <TextInput label="Nombre del negocio" placeholder="Mi Centro Fitness" {...workspaceForm.getInputProps("name")} />
-                    <TextInput label="Slug (URL)" placeholder="mi-centro-fitness" disabled {...workspaceForm.getInputProps("slug")} />
+                    <TextInput
+                      label="Slug (URL pública)"
+                      description={`Tus clientes entran por ${typeof window !== "undefined" ? window.location.origin : ""}/onboarding/${workspaceForm.values.slug || "tu-slug"}`}
+                      placeholder="mi-centro-fitness"
+                      {...workspaceForm.getInputProps("slug")}
+                      onChange={(e) => {
+                        const raw = e.currentTarget.value
+                          .toLowerCase()
+                          .replace(/[^a-z0-9-]/g, "-")
+                          .replace(/-{2,}/g, "-");
+                        workspaceForm.setFieldValue("slug", raw);
+                      }}
+                    />
                   </Group>
+                  <TextInput
+                    label="Dominio personalizado (opcional)"
+                    description="Hostname propio para white-label (ej. app.micentro.com). Requiere DNS configurado."
+                    placeholder="app.micentro.com"
+                    leftSection={<IconWorld size={16} />}
+                    {...workspaceForm.getInputProps("domain")}
+                  />
                   <Group grow>
                     <TextInput label="Email de contacto" placeholder="contacto@ejemplo.com" {...workspaceForm.getInputProps("email")} />
                     <TextInput label="Teléfono" placeholder="+34 600 000 000" {...workspaceForm.getInputProps("phone")} />
@@ -990,20 +1056,80 @@ export function SettingsPage() {
                       {currentWorkspace?.name?.charAt(0) || "F"}
                     </Avatar>
                     <Box>
-                      <FileInput accept="image/*" leftSection={<IconUpload size={14} />} placeholder="Subir logo" w={200} />
-                      <Text c="dimmed" mt={4} size="xs">PNG, JPG o SVG. Máximo 2MB.</Text>
+                      <FileButton
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={async (file) => {
+                          if (!file || !currentWorkspace?.id) return;
+                          try {
+                            const res = await workspacesApi.uploadLogo(currentWorkspace.id, file);
+                            setWorkspace({ ...currentWorkspace, logo_url: res.data.logo_url });
+                            notifications.show({
+                              title: "Logo actualizado",
+                              message: "Se mostrará en el menú, PDFs y onboarding",
+                              color: "green",
+                            });
+                          } catch {
+                            notifications.show({ title: "Error", message: "No se pudo subir el logo", color: "red" });
+                          }
+                        }}
+                      >
+                        {(props) => (
+                          <Button {...props} leftSection={<IconUpload size={14} />} size="sm" variant="light">
+                            Subir logo
+                          </Button>
+                        )}
+                      </FileButton>
+                      <Text c="dimmed" mt={4} size="xs">PNG, JPG o WebP. Máximo 5MB.</Text>
                     </Box>
                   </Group>
                 </Box>
 
                 <Divider />
 
-                <form onSubmit={brandingForm.onSubmit((v) => brandingUpdateMutation.mutate(v))}>
+                <form
+                  onSubmit={brandingForm.onSubmit((v) => {
+                    applyWorkspaceCssVars(v);
+                    brandingUpdateMutation.mutate(v);
+                  })}
+                >
                   <Text fw={500} mb="md" size="sm">Colores</Text>
+                  <Text c="dimmed" mb="md" size="xs">
+                    Los colores se aplican en toda la plataforma (botones, menú, acentos) para tu workspace.
+                  </Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} mb="lg" spacing="md">
-                    <ColorInput label="Color primario" {...brandingForm.getInputProps("primary_color")} />
-                    <ColorInput label="Color secundario" {...brandingForm.getInputProps("secondary_color")} />
-                    <ColorInput label="Color de acento" {...brandingForm.getInputProps("accent_color")} />
+                    <ColorInput
+                      label="Color primario"
+                      {...brandingForm.getInputProps("primary_color")}
+                      onChange={(value) => {
+                        brandingForm.setFieldValue("primary_color", value);
+                        applyWorkspaceCssVars({
+                          ...brandingForm.values,
+                          primary_color: value,
+                        });
+                      }}
+                    />
+                    <ColorInput
+                      label="Color secundario"
+                      {...brandingForm.getInputProps("secondary_color")}
+                      onChange={(value) => {
+                        brandingForm.setFieldValue("secondary_color", value);
+                        applyWorkspaceCssVars({
+                          ...brandingForm.values,
+                          secondary_color: value,
+                        });
+                      }}
+                    />
+                    <ColorInput
+                      label="Color de acento"
+                      {...brandingForm.getInputProps("accent_color")}
+                      onChange={(value) => {
+                        brandingForm.setFieldValue("accent_color", value);
+                        applyWorkspaceCssVars({
+                          ...brandingForm.values,
+                          accent_color: value,
+                        });
+                      }}
+                    />
                   </SimpleGrid>
 
                   <Box mb="lg">
@@ -1020,6 +1146,15 @@ export function SettingsPage() {
                       <Button mt="sm" size="xs" style={{ backgroundColor: brandingForm.values.accent_color }}>Reservar</Button>
                     </Paper>
                   </Box>
+
+                  <Alert color="blue" mb="md" radius="md" variant="light">
+                    <Text size="sm">
+                      URL pública de alta:{" "}
+                      <Text span fw={600}>
+                        {typeof window !== "undefined" ? window.location.origin : ""}/onboarding/{currentWorkspace?.slug || "tu-slug"}
+                      </Text>
+                    </Text>
+                  </Alert>
 
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" loading={brandingUpdateMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
