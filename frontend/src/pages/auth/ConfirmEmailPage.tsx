@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -37,7 +37,7 @@ export function ConfirmEmailPage() {
     const confirmEmail = async () => {
       if (!token) {
         setStatus("error");
-        setErrorMessage("Token de confirmación no válido o faltante.");
+        setErrorMessage("Token de confirmaciÃ³n no vÃ¡lido o faltante.");
         return;
       }
 
@@ -48,7 +48,7 @@ export function ConfirmEmailPage() {
         if (response.data.success) {
           setStatus("success");
           notifications.show({
-            title: "¡Email confirmado!",
+            title: "Â¡Email confirmado!",
             message: "Tu cuenta ha sido verificada correctamente.",
             color: "green",
             icon: <IconCheck size={18} />,
@@ -66,7 +66,7 @@ export function ConfirmEmailPage() {
         
         // Check if it's an expired token
         if (message.includes("expirado")) {
-          setErrorMessage("El enlace de verificación ha expirado. Solicita uno nuevo.");
+          setErrorMessage("El enlace de verificaciÃ³n ha expirado. Solicita uno nuevo.");
         } else {
           setErrorMessage(message);
         }
@@ -80,7 +80,7 @@ export function ConfirmEmailPage() {
     if (!resendEmail || !/^\S+@\S+$/.test(resendEmail)) {
       notifications.show({
         title: "Error",
-        message: "Por favor, introduce un email válido",
+        message: "Por favor, introduce un email vÃ¡lido",
         color: "red",
       });
       return;
@@ -92,7 +92,7 @@ export function ConfirmEmailPage() {
       
       notifications.show({
         title: "Email enviado",
-        message: response.data.message || "Si el email está registrado, recibirás un enlace de verificación.",
+        message: response.data.message || "Si el email estÃ¡ registrado, recibirÃ¡s un enlace de verificaciÃ³n.",
         color: "green",
       });
       
@@ -101,7 +101,7 @@ export function ConfirmEmailPage() {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
         title: "Error",
-        message: err.response?.data?.detail || "Error al enviar el email de verificación",
+        message: err.response?.data?.detail || "Error al enviar el email de verificaciÃ³n",
         color: "red",
       });
     } finally {
@@ -112,15 +112,15 @@ export function ConfirmEmailPage() {
   const getTitle = () => {
     switch (type) {
       case "signup":
-        return "Confirmación de cuenta";
+        return "ConfirmaciÃ³n de cuenta";
       case "recovery":
-        return "Restablecer contraseña";
+        return "Restablecer contraseÃ±a";
       case "magiclink":
         return "Acceso a tu cuenta";
       case "email_change":
         return "Cambio de email";
       default:
-        return "Verificación";
+        return "VerificaciÃ³n";
     }
   };
 
@@ -151,7 +151,7 @@ export function ConfirmEmailPage() {
           <Title
             order={1}
             style={{
-              background: "linear-gradient(135deg, #2D6A4F 0%, #52B788 100%)",
+              background: "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               fontSize: 32,
@@ -180,21 +180,21 @@ export function ConfirmEmailPage() {
                 size={80}
                 radius="xl"
                 variant="gradient"
-                gradient={{ from: "#2D6A4F", to: "#52B788" }}
+                gradient={{ from: "primary", to: "accent" }}
               >
                 <IconCheck size={40} stroke={2} />
               </ThemeIcon>
 
               <Text c="white" size="lg" fw={500} ta="center">
-                ¡Tu email ha sido verificado!
+                Â¡Tu email ha sido verificado!
               </Text>
 
               <Text c="gray.5" size="sm" ta="center">
                 {type === "signup" 
-                  ? "Tu cuenta está lista. Ya puedes iniciar sesión y comenzar a usar Trackfiz."
+                  ? "Tu cuenta estÃ¡ lista. Ya puedes iniciar sesiÃ³n y comenzar a usar Trackfiz."
                   : type === "recovery"
-                  ? "Ahora puedes crear una nueva contraseña."
-                  : "La verificación se ha completado correctamente."
+                  ? "Ahora puedes crear una nueva contraseÃ±a."
+                  : "La verificaciÃ³n se ha completado correctamente."
                 }
               </Text>
 
@@ -204,11 +204,11 @@ export function ConfirmEmailPage() {
                 leftSection={<IconLogin size={18} />}
                 onClick={() => navigate("/login")}
                 style={{
-                  background: "linear-gradient(135deg, #2D6A4F 0%, #40916C 100%)",
+                  background: "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
                   marginTop: 10,
                 }}
               >
-                Ir a Iniciar Sesión
+                Ir a Iniciar SesiÃ³n
               </Button>
             </Stack>
           )}
@@ -234,7 +234,7 @@ export function ConfirmEmailPage() {
 
               <Stack w="100%" gap="sm" mt="md">
                 <Text c="gray.5" size="sm" ta="center">
-                  ¿Necesitas un nuevo enlace de verificación?
+                  Â¿Necesitas un nuevo enlace de verificaciÃ³n?
                 </Text>
                 
                 <TextInput
@@ -260,7 +260,7 @@ export function ConfirmEmailPage() {
                   onClick={handleResendVerification}
                   loading={resendLoading}
                   variant="gradient"
-                  gradient={{ from: "#2D6A4F", to: "#40916C" }}
+                  gradient={{ from: "primary", to: "accent" }}
                 >
                   Enviar nuevo enlace
                 </Button>
@@ -275,7 +275,7 @@ export function ConfirmEmailPage() {
                     color: "white",
                   }}
                 >
-                  Volver al inicio de sesión
+                  Volver al inicio de sesiÃ³n
                 </Button>
               </Stack>
             </Stack>
@@ -287,17 +287,17 @@ export function ConfirmEmailPage() {
                 size={80}
                 radius="xl"
                 variant="gradient"
-                gradient={{ from: "#2D6A4F", to: "#52B788" }}
+                gradient={{ from: "primary", to: "accent" }}
               >
                 <IconMail size={40} stroke={2} />
               </ThemeIcon>
 
               <Text c="white" size="lg" fw={500} ta="center">
-                ¡Email enviado!
+                Â¡Email enviado!
               </Text>
 
               <Text c="gray.5" size="sm" ta="center">
-                Hemos enviado un nuevo enlace de verificación a tu email. 
+                Hemos enviado un nuevo enlace de verificaciÃ³n a tu email. 
                 Revisa tu bandeja de entrada (y la carpeta de spam).
               </Text>
 
@@ -312,7 +312,7 @@ export function ConfirmEmailPage() {
                   marginTop: 10,
                 }}
               >
-                Volver al inicio de sesión
+                Volver al inicio de sesiÃ³n
               </Button>
             </Stack>
           )}

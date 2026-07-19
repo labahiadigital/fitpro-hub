@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.security import create_tokens
 from app.core.storage import upload_workspace_file, generate_filename, resolve_url
 from app.models.user import User, UserRole, RoleType
-from app.models.workspace import Workspace, generate_slug, check_slug_available
+from app.models.workspace import Workspace, generate_slug, check_slug_available, is_valid_slug
 from app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate, WorkspaceResponse, WorkspaceListResponse
 from app.middleware.auth import get_current_user, require_workspace, require_owner, CurrentUser
 
@@ -38,7 +38,8 @@ async def list_workspaces(
             id=workspace.id,
             name=workspace.name,
             slug=workspace.slug,
-            logo_url=workspace.logo_url,
+            domain=workspace.domain,
+            logo_url=await resolve_url(workspace.logo_url),
             branding=workspace.branding or {},
             settings=workspace.settings or {},
             role=user_role.role.value
@@ -114,7 +115,44 @@ async def get_workspace_by_slug(
         "id": str(workspace.id),
         "name": workspace.name,
         "slug": workspace.slug,
-        "logo_url": workspace.logo_url
+        "domain": workspace.domain,
+        "logo_url": await resolve_url(workspace.logo_url),
+        "branding": workspace.branding or {},
+    }
+
+
+@router.get("/by-domain/{domain}")
+async def get_workspace_by_domain(
+    domain: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Resolver workspace por dominio personalizado (white-label).
+    Público: el frontend lo usa al cargar en un host distinto al de Trackfiz.
+    """
+    from app.core.workspace_url import normalize_hostname
+
+    host = normalize_hostname(domain)
+    if not host:
+        raise HTTPException(status_code=400, detail="Dominio inválido")
+
+    result = await db.execute(
+        select(Workspace).where(Workspace.domain == host)
+    )
+    workspace = result.scalar_one_or_none()
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No hay workspace asociado a este dominio",
+        )
+
+    return {
+        "id": str(workspace.id),
+        "name": workspace.name,
+        "slug": workspace.slug,
+        "domain": workspace.domain,
+        "logo_url": await resolve_url(workspace.logo_url),
+        "branding": workspace.branding or {},
     }
 
 
@@ -192,8 +230,10 @@ async def get_workspace(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace no encontrado"
         )
-    
-    return workspace
+
+    response = WorkspaceResponse.model_validate(workspace)
+    response.logo_url = await resolve_url(workspace.logo_url)
+    return response
 
 
 @router.put("/{workspace_id}", response_model=WorkspaceResponse)
@@ -224,8 +264,53 @@ async def update_workspace(
         )
     
     update_data = data.model_dump(exclude_unset=True)
+
+    if "slug" in update_data and update_data["slug"] is not None:
+        new_slug = generate_slug(update_data["slug"])
+        if not is_valid_slug(new_slug):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Slug inválido. Usa solo minúsculas, números y guiones.",
+            )
+        if new_slug != workspace.slug and not await check_slug_available(
+            db, new_slug, exclude_id=workspace.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ese slug ya está en uso. Elige otro.",
+            )
+        update_data["slug"] = new_slug
+
+    if "domain" in update_data:
+        domain = update_data["domain"]
+        if domain is not None:
+            domain = domain.strip().lower().removeprefix("https://").removeprefix("http://").rstrip("/")
+            if not domain:
+                domain = None
+            elif " " in domain or "/" in domain:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Dominio inválido. Usa solo el hostname (ej. app.micentro.com).",
+                )
+            else:
+                existing = await db.execute(
+                    select(Workspace.id).where(
+                        Workspace.domain == domain,
+                        Workspace.id != workspace.id,
+                    )
+                )
+                if existing.scalar_one_or_none():
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Ese dominio ya está asignado a otro workspace.",
+                    )
+        update_data["domain"] = domain
+        # Refresh CORS allow-list so the new domain works immediately.
+        from app.core.cors_origins import refresh_workspace_domain_cache
+        await refresh_workspace_domain_cache()
+
     for field, value in update_data.items():
-        if value is not None:
+        if value is not None or field in ("domain", "description", "logo_url"):
             if field in ["branding", "settings"] and isinstance(value, dict):
                 current_value = dict(getattr(workspace, field) or {})
                 current_value.update(value)
@@ -236,8 +321,11 @@ async def update_workspace(
 
     await db.commit()
     await db.refresh(workspace)
-    
-    return workspace
+
+    # Return resolved logo so the client can display it immediately
+    response = WorkspaceResponse.model_validate(workspace)
+    response.logo_url = await resolve_url(workspace.logo_url)
+    return response
 
 
 @router.post("/{workspace_id}/logo")

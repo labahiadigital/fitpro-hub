@@ -253,7 +253,7 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
         style={{
           borderRadius: "12px",
           backgroundColor: isActive ? "rgba(255, 255, 255, 0.08)" : "transparent",
-          color: isActive ? "#E7E247" : "rgba(255, 255, 255, 0.5)",
+          color: isActive ? "var(--nv-accent)" : "rgba(255, 255, 255, 0.5)",
           transition: "all 0.2s ease",
           position: "relative",
           overflow: "hidden",
@@ -280,7 +280,7 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
           {badge && badge > 0 && (
             <Box
               style={{
-                backgroundColor: "#E7E247",
+                backgroundColor: "var(--nv-accent)",
                 color: "#2A2822",
                 fontSize: "10px",
                 fontWeight: 800,
@@ -306,7 +306,7 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
               transform: "translateY(-50%)",
               width: "3px",
               height: "20px",
-              background: "#E7E247",
+              background: "var(--nv-accent)",
               borderRadius: "0 4px 4px 0",
               boxShadow: "0 0 12px rgba(231, 226, 71, 0.6)",
             }}
@@ -332,7 +332,7 @@ function NavGroupItem({ icon, label, children, onNavigate, isOpen, onToggle }: N
         style={{
           borderRadius: "12px",
           backgroundColor: isChildActive ? "rgba(255, 255, 255, 0.04)" : "transparent",
-          color: isChildActive ? "#E7E247" : "rgba(255, 255, 255, 0.5)",
+          color: isChildActive ? "var(--nv-accent)" : "rgba(255, 255, 255, 0.5)",
           transition: "all 0.2s ease",
         }}
         className="nav-item"
@@ -647,32 +647,54 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
         height: "100%",
       }}
     >
-      {/* Logo */}
+      {/* Logo / white-label brand */}
       <Group mb="xl" align="center">
-        <Box
-          style={{
-            width: 36,
-            height: 36,
-            background: "var(--nv-accent)",
-            borderRadius: "10px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 800,
-            fontSize: "20px",
-            color: "#2A2822",
-            boxShadow: "0 0 20px rgba(231, 226, 71, 0.15)",
-          }}
-        >
-          T
-        </Box>
-        <Box>
-          <Text c="white" fw={700} size="lg" style={{ fontFamily: "Space Grotesk", lineHeight: 1 }}>
-            Trackfiz
+        {currentWorkspace?.logo_url ? (
+          <Avatar
+            src={currentWorkspace.logo_url}
+            size={36}
+            radius={10}
+            alt={currentWorkspace.name || "Logo"}
+          />
+        ) : (
+          <Box
+            style={{
+              width: 36,
+              height: 36,
+              background: "var(--nv-accent)",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "18px",
+              color: "#2A2822",
+              boxShadow: "0 0 20px var(--nv-accent-glow)",
+            }}
+          >
+            {(currentWorkspace?.name || "T").charAt(0).toUpperCase()}
+          </Box>
+        )}
+        <Box style={{ minWidth: 0, flex: 1 }}>
+          <Text
+            c="white"
+            fw={700}
+            size="lg"
+            style={{
+              fontFamily: "Space Grotesk",
+              lineHeight: 1.15,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {currentWorkspace?.name || "Trackfiz"}
           </Text>
-          <Text c="dimmed" size="xs" fw={500} style={{ fontSize: "11px" }}>
-            {currentWorkspace?.name || "Espacio de Trabajo"}
-          </Text>
+          {currentWorkspace?.slug ? (
+            <Text c="dimmed" size="xs" fw={500} style={{ fontSize: "11px" }}>
+              /{currentWorkspace.slug}
+            </Text>
+          ) : null}
         </Box>
       </Group>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -43,13 +43,13 @@ export function AcceptStaffInvitePage() {
       full_name: (v) => (v.trim().length < 2 ? "Nombre demasiado corto" : null),
       password: passwordValidator,
       password_confirm: (v, values) =>
-        v !== values.password ? "Las contraseñas no coinciden" : null,
+        v !== values.password ? "Las contraseÃ±as no coinciden" : null,
     },
   });
 
   useEffect(() => {
     if (!token) {
-      setErrorMessage("Enlace de invitación inválido.");
+      setErrorMessage("Enlace de invitaciÃ³n invÃ¡lido.");
       setPageState("error");
       return;
     }
@@ -62,7 +62,7 @@ export function AcceptStaffInvitePage() {
       })
       .catch((err) => {
         setErrorMessage(
-          err.response?.data?.detail || "Invitación no encontrada o expirada."
+          err.response?.data?.detail || "InvitaciÃ³n no encontrada o expirada."
         );
         setPageState("error");
       });
@@ -116,7 +116,7 @@ export function AcceptStaffInvitePage() {
         {pageState === "loading" && (
           <Stack align="center" gap="md" py="xl">
             <Loader color="teal" />
-            <Text c="dimmed">Verificando invitación...</Text>
+            <Text c="dimmed">Verificando invitaciÃ³n...</Text>
           </Stack>
         )}
 
@@ -126,7 +126,7 @@ export function AcceptStaffInvitePage() {
               <IconX size={30} />
             </ThemeIcon>
             <Title order={3} ta="center">
-              Invitación inválida
+              InvitaciÃ³n invÃ¡lida
             </Title>
             <Text c="dimmed" ta="center" size="sm">
               {errorMessage}
@@ -137,7 +137,7 @@ export function AcceptStaffInvitePage() {
               radius="xl"
               onClick={() => navigate("/login")}
             >
-              Ir a Iniciar Sesión
+              Ir a Iniciar SesiÃ³n
             </Button>
           </Stack>
         )}
@@ -155,7 +155,7 @@ export function AcceptStaffInvitePage() {
                 >
                   <IconUserPlus size={30} />
                 </ThemeIcon>
-                <Title order={3}>Únete al equipo</Title>
+                <Title order={3}>Ãšnete al equipo</Title>
                 <Text c="dimmed" size="sm" mt={4}>
                   Has sido invitado a{" "}
                   <Text span fw={600} c="teal">
@@ -184,8 +184,8 @@ export function AcceptStaffInvitePage() {
 
               <Box>
                 <PasswordInput
-                  label="Contraseña"
-                  placeholder="Mínimo 8 caracteres"
+                  label="ContraseÃ±a"
+                  placeholder="MÃ­nimo 8 caracteres"
                   radius="md"
                   {...form.getInputProps("password")}
                 />
@@ -193,8 +193,8 @@ export function AcceptStaffInvitePage() {
               </Box>
 
               <PasswordInput
-                label="Confirmar contraseña"
-                placeholder="Repite tu contraseña"
+                label="Confirmar contraseÃ±a"
+                placeholder="Repite tu contraseÃ±a"
                 radius="md"
                 {...form.getInputProps("password_confirm")}
               />
@@ -218,10 +218,10 @@ export function AcceptStaffInvitePage() {
               <IconCheck size={30} />
             </ThemeIcon>
             <Title order={3} ta="center">
-              ¡Cuenta activada!
+              Â¡Cuenta activada!
             </Title>
             <Text c="dimmed" ta="center" size="sm">
-              Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión.
+              Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesiÃ³n.
             </Text>
             <Button
               fullWidth
@@ -229,7 +229,7 @@ export function AcceptStaffInvitePage() {
               onClick={() => navigate("/login")}
               style={{ backgroundColor: "var(--mantine-color-teal-7)" }}
             >
-              Iniciar sesión
+              Iniciar sesiÃ³n
             </Button>
           </Stack>
         )}

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Anchor,
   Box,
   Button,
@@ -40,7 +40,7 @@ export function ResetPasswordPage() {
     validate: {
       password: passwordValidator,
       confirmPassword: (value, values) =>
-        value === values.password ? null : "Las contraseñas no coinciden",
+        value === values.password ? null : "Las contraseÃ±as no coinciden",
     },
   });
 
@@ -48,7 +48,7 @@ export function ResetPasswordPage() {
     if (!token) {
       notifications.show({
         title: "Error",
-        message: "Token de recuperación no válido",
+        message: "Token de recuperaciÃ³n no vÃ¡lido",
         color: "red",
       });
       return;
@@ -59,13 +59,13 @@ export function ResetPasswordPage() {
       await authApi.resetPassword(token, values.password);
       setSuccess(true);
       notifications.show({
-        title: "¡Contraseña actualizada!",
-        message: "Ya puedes iniciar sesión con tu nueva contraseña.",
+        title: "Â¡ContraseÃ±a actualizada!",
+        message: "Ya puedes iniciar sesiÃ³n con tu nueva contraseÃ±a.",
         color: "green",
       });
     } catch (error) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
-      const message = err.response?.data?.detail || "Error al restablecer la contraseña";
+      const message = err.response?.data?.detail || "Error al restablecer la contraseÃ±a";
       notifications.show({
         title: "Error",
         message,
@@ -132,7 +132,7 @@ export function ResetPasswordPage() {
             <Title
               order={1}
               style={{
-                background: "linear-gradient(135deg, #2D6A4F 0%, #52B788 100%)",
+                background: "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 fontSize: 32,
@@ -143,11 +143,11 @@ export function ResetPasswordPage() {
             </Title>
 
             <Text c="white" size="lg" fw={500} ta="center">
-              Enlace no válido
+              Enlace no vÃ¡lido
             </Text>
 
             <Text c="gray.5" size="sm" ta="center">
-              El enlace de recuperación no es válido o ha expirado.
+              El enlace de recuperaciÃ³n no es vÃ¡lido o ha expirado.
               Solicita uno nuevo.
             </Text>
 
@@ -192,7 +192,7 @@ export function ResetPasswordPage() {
             <Title
               order={1}
               style={{
-                background: "linear-gradient(135deg, #2D6A4F 0%, #52B788 100%)",
+                background: "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 fontSize: 32,
@@ -206,18 +206,18 @@ export function ResetPasswordPage() {
               size={80}
               radius="xl"
               variant="gradient"
-              gradient={{ from: "#2D6A4F", to: "#52B788" }}
+              gradient={{ from: "primary", to: "accent" }}
             >
               <IconCheck size={40} stroke={2} />
             </ThemeIcon>
 
             <Text c="white" size="lg" fw={500} ta="center">
-              ¡Contraseña actualizada!
+              Â¡ContraseÃ±a actualizada!
             </Text>
 
             <Text c="gray.5" size="sm" ta="center">
-              Tu contraseña ha sido actualizada correctamente.
-              Ya puedes iniciar sesión con tu nueva contraseña.
+              Tu contraseÃ±a ha sido actualizada correctamente.
+              Ya puedes iniciar sesiÃ³n con tu nueva contraseÃ±a.
             </Text>
 
             <Button
@@ -232,7 +232,7 @@ export function ResetPasswordPage() {
                 borderRadius: 12,
               }}
             >
-              Ir a Iniciar Sesión
+              Ir a Iniciar SesiÃ³n
             </Button>
           </Stack>
         </Paper>
@@ -268,7 +268,7 @@ export function ResetPasswordPage() {
               <Title
                 order={1}
                 style={{
-                  background: "linear-gradient(135deg, #2D6A4F 0%, #52B788 100%)",
+                  background: "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   fontSize: 32,
@@ -279,17 +279,17 @@ export function ResetPasswordPage() {
                 Trackfiz
               </Title>
               <Title order={2} c="white" fw={700}>
-                Nueva contraseña
+                Nueva contraseÃ±a
               </Title>
               <Text c="gray.5" size="sm" mt={8}>
-                Introduce tu nueva contraseña
+                Introduce tu nueva contraseÃ±a
               </Text>
             </Box>
 
             <Box>
               <PasswordInput
-                label="Nueva contraseña"
-                placeholder="Mínimo 8 caracteres"
+                label="Nueva contraseÃ±a"
+                placeholder="MÃ­nimo 8 caracteres"
                 required
                 leftSection={<IconLock size={18} />}
                 styles={inputStyles}
@@ -299,8 +299,8 @@ export function ResetPasswordPage() {
             </Box>
 
             <PasswordInput
-              label="Confirmar contraseña"
-              placeholder="Repite tu contraseña"
+              label="Confirmar contraseÃ±a"
+              placeholder="Repite tu contraseÃ±a"
               required
               leftSection={<IconLock size={18} />}
               styles={inputStyles}
@@ -322,7 +322,7 @@ export function ResetPasswordPage() {
                 boxShadow: "0 4px 16px rgba(212, 175, 55, 0.25)",
               }}
             >
-              Actualizar contraseña
+              Actualizar contraseÃ±a
             </Button>
 
             <Anchor
@@ -334,7 +334,7 @@ export function ResetPasswordPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
             >
               <IconArrowLeft size={16} />
-              Volver al inicio de sesión
+              Volver al inicio de sesiÃ³n
             </Anchor>
           </Stack>
         </form>

@@ -1,8 +1,17 @@
-import { Box, Container, Group, Paper, Text } from "@mantine/core";
+import { Avatar, Box, Container, Group, Paper, Text } from "@mantine/core";
 import { IconBrandApple, IconBrandAndroid } from "@tabler/icons-react";
 import { Outlet } from "react-router-dom";
+import {
+  useBrandDisplayName,
+  useBrandLogoUrl,
+  useIsWhiteLabelHost,
+} from "../../hooks/useWhiteLabelBootstrap";
 
 export function AuthLayout() {
+  const brandName = useBrandDisplayName();
+  const logoUrl = useBrandLogoUrl();
+  const isWhiteLabel = useIsWhiteLabelHost();
+
   return (
     <Box
       style={{
@@ -16,7 +25,6 @@ export function AuthLayout() {
         overflow: "hidden",
       }}
     >
-      {/* Animated background elements */}
       <Box
         style={{
           position: "absolute",
@@ -24,7 +32,7 @@ export function AuthLayout() {
           left: "15%",
           width: 300,
           height: 300,
-          background: "radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 70%)",
+          background: "radial-gradient(circle, color-mix(in srgb, var(--nv-accent) 20%, transparent) 0%, transparent 70%)",
           borderRadius: "50%",
           filter: "blur(60px)",
           animation: "float 8s ease-in-out infinite",
@@ -37,52 +45,44 @@ export function AuthLayout() {
           right: "15%",
           width: 250,
           height: 250,
-          background: "radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%)",
+          background: "radial-gradient(circle, color-mix(in srgb, var(--nv-primary) 25%, transparent) 0%, transparent 70%)",
           borderRadius: "50%",
           filter: "blur(60px)",
           animation: "float 6s ease-in-out infinite reverse",
         }}
       />
-      <Box
-        style={{
-          position: "absolute",
-          top: "60%",
-          left: "60%",
-          width: 200,
-          height: 200,
-          background: "radial-gradient(circle, rgba(240, 147, 251, 0.06) 0%, transparent 70%)",
-          borderRadius: "50%",
-          filter: "blur(50px)",
-          animation: "float 10s ease-in-out infinite",
-        }}
-      />
 
       <Container size="xs" w="100%" style={{ position: "relative", zIndex: 1 }}>
-        {/* Logo */}
         <Group justify="center" mb="lg">
-          <Box
-            h={56}
-            w={56}
-            style={{
-              background: "linear-gradient(135deg, var(--nv-accent) 0%, #E8C547 100%)",
-              borderRadius: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 8px 32px rgba(212, 175, 55, 0.25)",
-            }}
-          >
-            <Text c="#1a1a2e" fw={800} size="xl">
-              T
-            </Text>
-          </Box>
+          {logoUrl ? (
+            <Avatar src={logoUrl} size={56} radius={16} alt={brandName} />
+          ) : (
+            <Box
+              h={56}
+              w={56}
+              style={{
+                background: "linear-gradient(135deg, var(--nv-accent) 0%, var(--nv-primary) 100%)",
+                borderRadius: 16,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 8px 32px var(--nv-accent-glow)",
+              }}
+            >
+              <Text c="#1a1a2e" fw={800} size="xl">
+                {brandName.charAt(0).toUpperCase()}
+              </Text>
+            </Box>
+          )}
         </Group>
 
         <Text c="white" fw={700} mb={4} size="xl" ta="center" style={{ letterSpacing: "-0.02em" }}>
-          Trackfiz
+          {brandName}
         </Text>
         <Text c="gray.5" mb="xl" size="sm" ta="center" style={{ lineHeight: 1.5 }}>
-          CRM/ERP/LMS todo-en-uno para profesionales del fitness y bienestar
+          {isWhiteLabel
+            ? "Accede a tu espacio de entrenamiento"
+            : "CRM/ERP/LMS todo-en-uno para profesionales del fitness y bienestar"}
         </Text>
 
         <Paper
@@ -98,23 +98,25 @@ export function AuthLayout() {
           <Outlet />
         </Paper>
 
-        {/* App badges */}
-        <Group justify="center" gap="xl" mt="xl" style={{ opacity: 0.5 }}>
-          <Group gap="xs">
-            <IconBrandApple size={16} color="white" />
-            <Text size="xs" c="gray.5">iOS App</Text>
+        {!isWhiteLabel && (
+          <Group justify="center" gap="xl" mt="xl" style={{ opacity: 0.5 }}>
+            <Group gap="xs">
+              <IconBrandApple size={16} color="white" />
+              <Text size="xs" c="gray.5">iOS App</Text>
+            </Group>
+            <Group gap="xs">
+              <IconBrandAndroid size={16} color="white" />
+              <Text size="xs" c="gray.5">Android App</Text>
+            </Group>
           </Group>
-          <Group gap="xs">
-            <IconBrandAndroid size={16} color="white" />
-            <Text size="xs" c="gray.5">Android App</Text>
-          </Group>
-        </Group>
+        )}
 
         <Text c="gray.6" mt="xl" size="xs" ta="center">
-          © 2026 Trackfiz. Todos los derechos reservados.
+          {isWhiteLabel
+            ? `© ${new Date().getFullYear()} ${brandName}`
+            : "© 2026 Trackfiz. Todos los derechos reservados."}
         </Text>
       </Container>
-
     </Box>
   );
 }

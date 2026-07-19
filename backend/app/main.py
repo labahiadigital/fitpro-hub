@@ -6,7 +6,6 @@ import time
 import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
@@ -127,6 +126,13 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("RUN_MIGRATIONS_ON_STARTUP=false -> skipping migrations on boot")
 
+    try:
+        from app.core.cors_origins import refresh_workspace_domain_cache
+        hosts = await refresh_workspace_domain_cache()
+        logger.info("Loaded %d workspace custom domains for CORS", len(hosts))
+    except Exception:
+        logger.exception("Could not preload workspace domains for CORS")
+
     yield
     logger.info("Shutting down %s...", settings.APP_NAME)
 
@@ -154,19 +160,63 @@ def _cors_headers_for(request: Request) -> dict[str, str]:
 
     Este helper replica la lógica mínima para que el browser acepte la
     respuesta de error y la app pueda mostrar un mensaje al usuario en
-    lugar de un corte mudo.
+    lugar de un corte mudo. Incluye dominios white-label registrados.
     """
+    from app.core.cors_origins import is_cors_origin_allowed_sync
+
     origin = request.headers.get("origin")
     if not origin:
         return {}
-    allowed = settings.cors_origins_list
-    if "*" in allowed or origin in allowed:
+    if is_cors_origin_allowed_sync(origin):
         return {
             "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Credentials": "true",
             "Vary": "Origin",
         }
     return {}
+
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    """CORS that allows static CORS_ORIGINS plus workspace custom domains."""
+
+    _ALLOW_METHODS = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    _ALLOW_HEADERS = "Authorization, Content-Type, X-Workspace-ID, X-Request-ID"
+    _EXPOSE_HEADERS = (
+        "Content-Disposition, X-Total-Count, X-Request-ID, "
+        "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After"
+    )
+
+    async def dispatch(self, request: Request, call_next):
+        from app.core.cors_origins import is_cors_origin_allowed
+
+        origin = request.headers.get("origin")
+        allowed = bool(origin) and await is_cors_origin_allowed(origin)
+
+        if request.method == "OPTIONS" and origin:
+            if not allowed:
+                return JSONResponse(status_code=400, content={"detail": "Origin not allowed"})
+            return JSONResponse(
+                status_code=200,
+                content={},
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Methods": self._ALLOW_METHODS,
+                    "Access-Control-Allow-Headers": request.headers.get(
+                        "access-control-request-headers", self._ALLOW_HEADERS
+                    ),
+                    "Access-Control-Max-Age": "600",
+                    "Vary": "Origin",
+                },
+            )
+
+        response = await call_next(request)
+        if origin and allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = self._EXPOSE_HEADERS
+            response.headers["Vary"] = "Origin"
+        return response
 
 
 @app.exception_handler(RequestValidationError)
@@ -278,23 +328,8 @@ class ProxySchemeMiddleware(BaseHTTPMiddleware):
 # wasting CPU on already-tiny payloads.
 app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Workspace-ID", "X-Request-ID"],
-    expose_headers=[
-        "Content-Disposition",  # Filename in CSV/XLSX/PDF downloads.
-        "X-Total-Count",
-        "X-Request-ID",
-        "X-RateLimit-Limit",
-        "X-RateLimit-Remaining",
-        "X-RateLimit-Reset",
-        "Retry-After",
-    ],
-    max_age=600,
-)
+# Dynamic CORS: static CORS_ORIGINS + workspace custom domains (white-label).
+app.add_middleware(DynamicCORSMiddleware)
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)

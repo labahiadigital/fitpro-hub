@@ -52,6 +52,7 @@ interface Workspace {
   id: string;
   name: string;
   slug: string;
+  domain?: string | null;
   logo_url?: string;
   description?: string;
   settings?: Record<string, unknown>;

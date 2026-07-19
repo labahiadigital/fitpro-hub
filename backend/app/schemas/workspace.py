@@ -6,9 +6,9 @@ from app.schemas.base import BaseSchema
 
 
 class BrandingSchema(BaseSchema):
-    primary_color: str = "#2D6A4F"
-    secondary_color: str = "#40916C"
-    accent_color: str = "#F08A5D"
+    primary_color: str = "#5C80BC"
+    secondary_color: str = "#4D5061"
+    accent_color: str = "#E7E247"
 
 
 class BookingPoliciesSchema(BaseSchema):
@@ -78,6 +78,7 @@ class WorkspaceCreate(BaseSchema):
 
 class WorkspaceUpdate(BaseSchema):
     name: Optional[str] = None
+    slug: Optional[str] = None
     description: Optional[str] = None
     domain: Optional[str] = None
     logo_url: Optional[str] = None
@@ -102,6 +103,7 @@ class WorkspaceListResponse(BaseSchema):
     id: UUID
     name: str
     slug: str
+    domain: Optional[str] = None
     logo_url: Optional[str] = None
     branding: Dict[str, Any] = {}
     settings: Dict[str, Any] = {}

@@ -441,7 +441,8 @@ async def create_client(
         await db.commit()
         workspace_result = await db.execute(select(Workspace).where(Workspace.id == current_user.workspace_id))
         workspace = workspace_result.scalar_one_or_none()
-        invitation_url = f"{settings.FRONTEND_URL}/onboarding/invite/{token}"
+        from app.core.workspace_url import workspace_public_base_url
+        invitation_url = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
         client_name = f"{client.first_name or ''} {client.last_name or ''}".strip()
         send_email_task.delay(
             to_email=client.email,
@@ -1467,7 +1468,8 @@ async def create_invitation(
     await db.refresh(invitation)
     
     # Build invitation link
-    invite_link = f"{settings.FRONTEND_URL}/onboarding/invite/{token}"
+    from app.core.workspace_url import workspace_public_base_url
+    invite_link = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
     
     # Send email
     email_sent = await send_invitation_email(
@@ -1549,7 +1551,8 @@ async def resend_invitation(
     await db.commit()
     
     # Build invitation link
-    invite_link = f"{settings.FRONTEND_URL}/onboarding/invite/{invitation.token}"
+    from app.core.workspace_url import workspace_public_base_url
+    invite_link = f"{workspace_public_base_url(workspace)}/onboarding/invite/{invitation.token}"
     
     # Send email
     email_sent = await send_invitation_email(

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, type ComponentType } from "react";
-import { Center, Loader, MantineProvider } from "@mantine/core";
+import { Center, Loader } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications, notifications } from "@mantine/notifications";
@@ -8,10 +8,10 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { WorkspaceThemeProvider } from "./components/theme/WorkspaceThemeProvider";
 import { useAuthStore, waitForHydration } from "./stores/auth";
 import { authApi, scheduleProactiveRefresh, trySilentRefresh } from "./services/api";
 import { getApiErrorMessage } from "./utils/getApiErrorMessage";
-import { theme } from "./theme";
 
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
@@ -296,7 +296,7 @@ function TrainerRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider defaultColorScheme="light" theme={theme}>
+      <WorkspaceThemeProvider>
         <DatesProvider settings={{ locale: "es" }}>
           <ModalsProvider>
           <Notifications position="top-right" />
@@ -423,7 +423,7 @@ export default function App() {
           </ErrorBoundary>
           </ModalsProvider>
         </DatesProvider>
-      </MantineProvider>
+      </WorkspaceThemeProvider>
     </QueryClientProvider>
   );
 }
