@@ -288,7 +288,7 @@ export function ClientDashboardPage() {
           radius="lg"
           mb="xl"
           style={{
-            background: "linear-gradient(135deg, #E7E247 0%, #D4CF2E 100%)",
+            background: "linear-gradient(135deg, var(--nv-accent) 0%, var(--nv-primary) 100%)",
             color: "#2A2822",
           }}
         >

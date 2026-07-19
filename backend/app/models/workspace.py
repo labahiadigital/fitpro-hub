@@ -105,9 +105,9 @@ class Workspace(BaseModel):
     # Branding
     logo_url = Column(String(500), nullable=True)
     branding = Column(JSONB, default=lambda: {
-        "primary_color": "#2D6A4F",
-        "secondary_color": "#40916C",
-        "accent_color": "#F08A5D",
+        "primary_color": "#5C80BC",
+        "secondary_color": "#4D5061",
+        "accent_color": "#E7E247",
     })
     
     # Settings

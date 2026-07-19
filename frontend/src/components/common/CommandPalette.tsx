@@ -255,7 +255,7 @@ export function CommandPalette({ opened, close, isClient }: CommandPaletteProps)
                         <Group>
                           <Box
                             style={{
-                              color: isActive ? "#E7E247" : "rgba(255, 255, 255, 0.5)",
+                              color: isActive ? "var(--nv-accent)" : "rgba(255, 255, 255, 0.5)",
                               display: "flex",
                             }}
                           >
@@ -279,7 +279,7 @@ export function CommandPalette({ opened, close, isClient }: CommandPaletteProps)
                         {isActive && (
                           <IconArrowRight
                             size={16}
-                            color="#E7E247"
+                            color="var(--nv-accent)"
                             style={{ opacity: 0.8 }}
                           />
                         )}

@@ -115,6 +115,42 @@ async def get_workspace_by_slug(
         "id": str(workspace.id),
         "name": workspace.name,
         "slug": workspace.slug,
+        "domain": workspace.domain,
+        "logo_url": await resolve_url(workspace.logo_url),
+        "branding": workspace.branding or {},
+    }
+
+
+@router.get("/by-domain/{domain}")
+async def get_workspace_by_domain(
+    domain: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Resolver workspace por dominio personalizado (white-label).
+    Público: el frontend lo usa al cargar en un host distinto al de Trackfiz.
+    """
+    from app.core.workspace_url import normalize_hostname
+
+    host = normalize_hostname(domain)
+    if not host:
+        raise HTTPException(status_code=400, detail="Dominio inválido")
+
+    result = await db.execute(
+        select(Workspace).where(Workspace.domain == host)
+    )
+    workspace = result.scalar_one_or_none()
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No hay workspace asociado a este dominio",
+        )
+
+    return {
+        "id": str(workspace.id),
+        "name": workspace.name,
+        "slug": workspace.slug,
+        "domain": workspace.domain,
         "logo_url": await resolve_url(workspace.logo_url),
         "branding": workspace.branding or {},
     }
@@ -269,6 +305,9 @@ async def update_workspace(
                         detail="Ese dominio ya está asignado a otro workspace.",
                     )
         update_data["domain"] = domain
+        # Refresh CORS allow-list so the new domain works immediately.
+        from app.core.cors_origins import refresh_workspace_domain_cache
+        await refresh_workspace_domain_cache()
 
     for field, value in update_data.items():
         if value is not None or field in ("domain", "description", "logo_url"):

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Avatar,
   Box,
   Group,
@@ -38,7 +38,7 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
       style={{
         borderRadius: "12px",
         backgroundColor: isActive ? "rgba(231, 226, 71, 0.15)" : "transparent",
-        color: isActive ? "#E7E247" : "rgba(255, 255, 255, 0.65)",
+        color: isActive ? "var(--nv-accent)" : "rgba(255, 255, 255, 0.65)",
         fontWeight: isActive ? 600 : 500,
         transition: "all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)",
         position: "relative",
@@ -54,7 +54,7 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
     >
       <Box
         style={{
-          color: isActive ? "#E7E247" : "currentColor",
+          color: isActive ? "var(--nv-accent)" : "currentColor",
           display: "flex",
           alignItems: "center",
           opacity: isActive ? 1 : 0.8,
@@ -106,7 +106,7 @@ function NavItem({ icon, label, to, badge, collapsed }: NavItemProps) {
             transform: "translateY(-50%)",
             width: "3px",
             height: "20px",
-            backgroundColor: "#E7E247",
+            backgroundColor: "var(--nv-accent)",
             borderRadius: "0 4px 4px 0",
             boxShadow: "0 0 8px rgba(231, 226, 71, 0.5)",
           }}
@@ -168,7 +168,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
             style={{
               width: collapsed ? 32 : 42,
               height: collapsed ? 32 : 42,
-              background: "linear-gradient(135deg, #E7E247 0%, #D4CF2E 100%)",
+              background: "linear-gradient(135deg, var(--nv-accent) 0%, var(--nv-primary) 100%)",
               borderRadius: "12px",
               display: "flex",
               alignItems: "center",
@@ -263,7 +263,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                   size={36}
                   radius="xl"
                   style={{
-                    border: "2px solid #E7E247",
+                    border: "2px solid var(--nv-accent)",
                     boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
                   }}
                   src={null}
@@ -301,7 +301,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
               style={{ color: "white" }}
               className="menu-item-hover"
             >
-              Configuración
+              ConfiguraciÃ³n
             </Menu.Item>
             <Menu.Divider style={{ borderColor: "rgba(255,255,255,0.1)" }} />
             <Menu.Item
@@ -310,7 +310,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
               onClick={logout}
               className="menu-item-hover"
             >
-              Cerrar sesión
+              Cerrar sesiÃ³n
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>

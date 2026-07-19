@@ -1,4 +1,4 @@
-import {
+﻿import {
   Box,
   Group,
   Stack,
@@ -31,8 +31,8 @@ interface AlertsWidgetProps {
 const alertConfig = {
   payment_due: { icon: IconCreditCard, color: "#EF4444", bgColor: "rgba(239, 68, 68, 0.1)" },
   inactive_client: { icon: IconUserOff, color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.1)" },
-  renewal_soon: { icon: IconCalendarDue, color: "#E7E247", bgColor: "rgba(231, 226, 71, 0.1)" },
-  form_pending: { icon: IconForms, color: "#5C80BC", bgColor: "rgba(92, 128, 188, 0.1)" },
+  renewal_soon: { icon: IconCalendarDue, color: "var(--nv-accent)", bgColor: "var(--nv-accent-glow)" },
+  form_pending: { icon: IconForms, color: "var(--nv-primary)", bgColor: "var(--nv-primary-glow)" },
   goal_achieved: { icon: IconTrophy, color: "#10B981", bgColor: "rgba(16, 185, 129, 0.1)" },
 };
 

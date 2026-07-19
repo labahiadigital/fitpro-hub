@@ -1,4 +1,4 @@
-import {
+﻿import {
   Alert,
   Anchor,
   Box,
@@ -36,8 +36,8 @@ export function LoginPage() {
       remember: true,
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
-      password: (value) => (value.length >= 6 ? null : "Mínimo 6 caracteres"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email invÃ¡lido"),
+      password: (value) => (value.length >= 6 ? null : "MÃ­nimo 6 caracteres"),
     },
   });
 
@@ -47,7 +47,7 @@ export function LoginPage() {
       await login(values.email, values.password);
     } catch (err: unknown) {
       const errObj = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError(errObj.response?.data?.detail || errObj.message || "Error al iniciar sesión");
+      setError(errObj.response?.data?.detail || errObj.message || "Error al iniciar sesiÃ³n");
     }
   };
 
@@ -90,7 +90,7 @@ export function LoginPage() {
           fw={700}
           style={{ letterSpacing: "-0.02em" }}
         >
-          Inicia sesión
+          Inicia sesiÃ³n
         </Title>
         <Text c="gray.5" size="sm" mt={4}>
           Accede a tu cuenta de Trackfiz
@@ -109,7 +109,7 @@ export function LoginPage() {
         >
           <Text size="sm" c="teal.4">
             Has sido invitado a <Text span fw={700}>{invitedWorkspace || "un equipo"}</Text>.
-            Inicia sesión para acceder.
+            Inicia sesiÃ³n para acceder.
           </Text>
         </Alert>
       )}
@@ -141,8 +141,8 @@ export function LoginPage() {
           />
 
           <PasswordInput
-            label="Contraseña"
-            placeholder="Tu contraseña"
+            label="ContraseÃ±a"
+            placeholder="Tu contraseÃ±a"
             required
             leftSection={<IconLock size={18} />}
             styles={inputStyles}
@@ -172,7 +172,7 @@ export function LoginPage() {
               c="var(--nv-accent)"
               style={{ fontSize: 13 }}
             >
-              ¿Olvidaste tu contraseña?
+              Â¿Olvidaste tu contraseÃ±a?
             </Anchor>
           </Group>
 
@@ -192,18 +192,18 @@ export function LoginPage() {
               boxShadow: "0 4px 16px rgba(212, 175, 55, 0.25)",
             }}
           >
-            Iniciar Sesión
+            Iniciar SesiÃ³n
           </Button>
 
           <Text c="gray.5" size="sm" ta="center" mt="md">
-            ¿No tienes cuenta?{" "}
+            Â¿No tienes cuenta?{" "}
             <Anchor
               component={Link}
               fw={600}
               to="/register"
               c="var(--nv-accent)"
             >
-              Regístrate
+              RegÃ­strate
             </Anchor>
           </Text>
         </Stack>

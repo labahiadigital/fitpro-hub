@@ -253,7 +253,7 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
         style={{
           borderRadius: "12px",
           backgroundColor: isActive ? "rgba(255, 255, 255, 0.08)" : "transparent",
-          color: isActive ? "#E7E247" : "rgba(255, 255, 255, 0.5)",
+          color: isActive ? "var(--nv-accent)" : "rgba(255, 255, 255, 0.5)",
           transition: "all 0.2s ease",
           position: "relative",
           overflow: "hidden",
@@ -280,7 +280,7 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
           {badge && badge > 0 && (
             <Box
               style={{
-                backgroundColor: "#E7E247",
+                backgroundColor: "var(--nv-accent)",
                 color: "#2A2822",
                 fontSize: "10px",
                 fontWeight: 800,
@@ -306,7 +306,7 @@ function NavItem({ icon, label, to, badge, onNavigate }: NavItemProps) {
               transform: "translateY(-50%)",
               width: "3px",
               height: "20px",
-              background: "#E7E247",
+              background: "var(--nv-accent)",
               borderRadius: "0 4px 4px 0",
               boxShadow: "0 0 12px rgba(231, 226, 71, 0.6)",
             }}
@@ -332,7 +332,7 @@ function NavGroupItem({ icon, label, children, onNavigate, isOpen, onToggle }: N
         style={{
           borderRadius: "12px",
           backgroundColor: isChildActive ? "rgba(255, 255, 255, 0.04)" : "transparent",
-          color: isChildActive ? "#E7E247" : "rgba(255, 255, 255, 0.5)",
+          color: isChildActive ? "var(--nv-accent)" : "rgba(255, 255, 255, 0.5)",
           transition: "all 0.2s ease",
         }}
         className="nav-item"

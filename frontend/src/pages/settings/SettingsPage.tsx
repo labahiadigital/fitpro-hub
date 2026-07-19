@@ -95,7 +95,8 @@ import {
   useUpdateGoogleCalendarSettings,
 } from "../../hooks/useGoogleCalendar";
 import { useAuthStore } from "../../stores/auth";
-import { applyWorkspaceCssVars } from "../../theme/workspaceBranding";
+import { applyWorkspaceCssVars, DEFAULT_WORKSPACE_BRANDING } from "../../theme/workspaceBranding";
+import { getPublicAppBaseUrl } from "../../hooks/useWhiteLabelBootstrap";
 import { useTeamMembers } from "../../hooks/useTeam";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -596,18 +597,18 @@ export function SettingsPage() {
   // ==================== BRANDING ====================
   const brandingForm = useForm({
     initialValues: {
-      primary_color: currentWorkspace?.branding?.primary_color || "#2D6A4F",
-      secondary_color: currentWorkspace?.branding?.secondary_color || "#40916C",
-      accent_color: currentWorkspace?.branding?.accent_color || "#95D5B2",
+      primary_color: currentWorkspace?.branding?.primary_color || DEFAULT_WORKSPACE_BRANDING.primary_color,
+      secondary_color: currentWorkspace?.branding?.secondary_color || DEFAULT_WORKSPACE_BRANDING.secondary_color,
+      accent_color: currentWorkspace?.branding?.accent_color || DEFAULT_WORKSPACE_BRANDING.accent_color,
     },
   });
 
   useEffect(() => {
     if (currentWorkspace?.branding) {
       brandingForm.setValues({
-        primary_color: currentWorkspace.branding.primary_color || "#2D6A4F",
-        secondary_color: currentWorkspace.branding.secondary_color || "#40916C",
-        accent_color: currentWorkspace.branding.accent_color || "#95D5B2",
+        primary_color: currentWorkspace.branding.primary_color || DEFAULT_WORKSPACE_BRANDING.primary_color,
+        secondary_color: currentWorkspace.branding.secondary_color || DEFAULT_WORKSPACE_BRANDING.secondary_color,
+        accent_color: currentWorkspace.branding.accent_color || DEFAULT_WORKSPACE_BRANDING.accent_color,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -834,7 +835,7 @@ export function SettingsPage() {
                     <TextInput label="Nombre del negocio" placeholder="Mi Centro Fitness" {...workspaceForm.getInputProps("name")} />
                     <TextInput
                       label="Slug (URL pública)"
-                      description={`Tus clientes entran por ${typeof window !== "undefined" ? window.location.origin : ""}/onboarding/${workspaceForm.values.slug || "tu-slug"}`}
+                      description={`Alta de clientes: ${getPublicAppBaseUrl({ domain: currentWorkspace?.domain, slug: workspaceForm.values.slug })}/onboarding/${workspaceForm.values.slug || "tu-slug"}`}
                       placeholder="mi-centro-fitness"
                       {...workspaceForm.getInputProps("slug")}
                       onChange={(e) => {
@@ -847,12 +848,33 @@ export function SettingsPage() {
                     />
                   </Group>
                   <TextInput
-                    label="Dominio personalizado (opcional)"
-                    description="Hostname propio para white-label (ej. app.micentro.com). Requiere DNS configurado."
+                    label="Dominio personalizado (white-label)"
+                    description="Hostname propio (ej. app.micentro.com). Tras guardarlo, apunta un CNAME a app.trackfiz.com."
                     placeholder="app.micentro.com"
                     leftSection={<IconWorld size={16} />}
                     {...workspaceForm.getInputProps("domain")}
                   />
+                  {workspaceForm.values.domain?.trim() ? (
+                    <Alert color="blue" radius="md" variant="light" icon={<IconWorld size={16} />}>
+                      <Text size="sm" fw={600} mb={6}>Configuración DNS</Text>
+                      <Text size="sm" mb={4}>
+                        1. Crea un registro <b>CNAME</b> en tu DNS:
+                      </Text>
+                      <Text size="xs" mb={6} style={{ fontFamily: "monospace" }}>
+                        {workspaceForm.values.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "")} → app.trackfiz.com
+                      </Text>
+                      <Text size="sm" mb={4}>
+                        2. Espera la propagación DNS (minutos a pocas horas).
+                      </Text>
+                      <Text size="sm">
+                        3. Abre{" "}
+                        <Text span fw={600}>
+                          https://{workspaceForm.values.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "")}
+                        </Text>{" "}
+                        — verás tu logo, colores y nombre. Los enlaces de invitación usarán este dominio.
+                      </Text>
+                    </Alert>
+                  ) : null}
                   <Group grow>
                     <TextInput label="Email de contacto" placeholder="contacto@ejemplo.com" {...workspaceForm.getInputProps("email")} />
                     <TextInput label="Teléfono" placeholder="+34 600 000 000" {...workspaceForm.getInputProps("phone")} />
@@ -1151,7 +1173,11 @@ export function SettingsPage() {
                     <Text size="sm">
                       URL pública de alta:{" "}
                       <Text span fw={600}>
-                        {typeof window !== "undefined" ? window.location.origin : ""}/onboarding/{currentWorkspace?.slug || "tu-slug"}
+                        {getPublicAppBaseUrl({
+                          domain: currentWorkspace?.domain,
+                          slug: currentWorkspace?.slug,
+                        })}
+                        /onboarding/{currentWorkspace?.slug || "tu-slug"}
                       </Text>
                     </Text>
                   </Alert>

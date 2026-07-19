@@ -1,4 +1,4 @@
-import {
+﻿import {
   Anchor,
   Box,
   Button,
@@ -29,7 +29,7 @@ export function ForgotPasswordPage() {
       email: "",
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email invÃ¡lido"),
     },
   });
 
@@ -40,7 +40,7 @@ export function ForgotPasswordPage() {
       setSubmitted(true);
       notifications.show({
         title: "Email enviado",
-        message: "Si el email está registrado, recibirás instrucciones para restablecer tu contraseña.",
+        message: "Si el email estÃ¡ registrado, recibirÃ¡s instrucciones para restablecer tu contraseÃ±a.",
         color: "green",
       });
     } catch (error) {
@@ -111,7 +111,7 @@ export function ForgotPasswordPage() {
             <Title
               order={1}
               style={{
-                background: "linear-gradient(135deg, #2D6A4F 0%, #52B788 100%)",
+                background: "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 fontSize: 32,
@@ -125,17 +125,17 @@ export function ForgotPasswordPage() {
               size={80}
               radius="xl"
               variant="gradient"
-              gradient={{ from: "#2D6A4F", to: "#52B788" }}
+              gradient={{ from: "primary", to: "accent" }}
             >
               <IconCheck size={40} stroke={2} />
             </ThemeIcon>
 
             <Text c="white" size="lg" fw={500} ta="center">
-              ¡Email enviado!
+              Â¡Email enviado!
             </Text>
 
             <Text c="gray.5" size="sm" ta="center">
-              Si el email está registrado, recibirás instrucciones para restablecer tu contraseña.
+              Si el email estÃ¡ registrado, recibirÃ¡s instrucciones para restablecer tu contraseÃ±a.
               Revisa tu bandeja de entrada y la carpeta de spam.
             </Text>
 
@@ -147,7 +147,7 @@ export function ForgotPasswordPage() {
               style={{ display: "flex", alignItems: "center", gap: 4 }}
             >
               <IconArrowLeft size={16} />
-              Volver al inicio de sesión
+              Volver al inicio de sesiÃ³n
             </Anchor>
           </Stack>
         </Paper>
@@ -183,7 +183,7 @@ export function ForgotPasswordPage() {
               <Title
                 order={1}
                 style={{
-                  background: "linear-gradient(135deg, #2D6A4F 0%, #52B788 100%)",
+                  background: "linear-gradient(135deg, var(--nv-primary) 0%, var(--nv-accent) 100%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   fontSize: 32,
@@ -194,7 +194,7 @@ export function ForgotPasswordPage() {
                 Trackfiz
               </Title>
               <Title order={2} c="white" fw={700}>
-                ¿Olvidaste tu contraseña?
+                Â¿Olvidaste tu contraseÃ±a?
               </Title>
               <Text c="gray.5" size="sm" mt={8}>
                 Introduce tu email y te enviaremos instrucciones para restablecerla.
@@ -237,7 +237,7 @@ export function ForgotPasswordPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
             >
               <IconArrowLeft size={16} />
-              Volver al inicio de sesión
+              Volver al inicio de sesiÃ³n
             </Anchor>
           </Stack>
         </form>

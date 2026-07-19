@@ -1,4 +1,4 @@
-import {
+﻿import {
   Anchor,
   Box,
   Button,
@@ -37,8 +37,8 @@ export function RegisterPage() {
           Registro temporalmente deshabilitado
         </Title>
         <Text c="gray.5" size="sm">
-          El registro de nuevas cuentas de entrenador está temporalmente deshabilitado.
-          Si ya tienes cuenta, inicia sesión.
+          El registro de nuevas cuentas de entrenador estÃ¡ temporalmente deshabilitado.
+          Si ya tienes cuenta, inicia sesiÃ³n.
         </Text>
         <Button
           component={Link}
@@ -52,7 +52,7 @@ export function RegisterPage() {
             borderRadius: 12,
           }}
         >
-          Ir a Iniciar Sesión
+          Ir a Iniciar SesiÃ³n
         </Button>
       </Stack>
     );
@@ -69,13 +69,13 @@ export function RegisterPage() {
     },
     validate: {
       full_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email invÃ¡lido"),
       confirm_email: (value, values) =>
         value !== values.email ? "Los emails no coinciden" : null,
       password: passwordValidator,
       workspace_name: (value) =>
         value.length < 2 ? "Nombre de tu gimnasio virtual requerido" : null,
-      terms: (value) => (value ? null : "Debes aceptar los términos"),
+      terms: (value) => (value ? null : "Debes aceptar los tÃ©rminos"),
     },
   });
 
@@ -143,7 +143,7 @@ export function RegisterPage() {
           <TextInput
             label="Nombre completo"
             leftSection={<IconUser size={18} />}
-            placeholder="Juan García"
+            placeholder="Juan GarcÃ­a"
             required
             styles={inputStyles}
             {...form.getInputProps("full_name")}
@@ -169,9 +169,9 @@ export function RegisterPage() {
 
           <Box>
             <PasswordInput
-              label="Contraseña"
+              label="ContraseÃ±a"
               leftSection={<IconLock size={18} />}
-              placeholder="Mínimo 8 caracteres"
+              placeholder="MÃ­nimo 8 caracteres"
               required
               styles={inputStyles}
               {...form.getInputProps("password")}
@@ -193,11 +193,11 @@ export function RegisterPage() {
               <Text size="xs" c="gray.5">
                 Acepto los{" "}
                 <Anchor size="xs" href="https://trackfiz.com/terms" target="_blank" c="var(--nv-accent)">
-                  términos y condiciones
+                  tÃ©rminos y condiciones
                 </Anchor>{" "}
                 y la{" "}
                 <Anchor size="xs" href="https://trackfiz.com/privacy" target="_blank" c="var(--nv-accent)">
-                  política de privacidad
+                  polÃ­tica de privacidad
                 </Anchor>
               </Text>
             }
@@ -238,9 +238,9 @@ export function RegisterPage() {
         <Divider label="o" labelPosition="center" color="rgba(255, 255, 255, 0.1)" />
 
         <Text size="sm" ta="center" c="gray.5">
-          ¿Ya tienes cuenta?{" "}
+          Â¿Ya tienes cuenta?{" "}
           <Anchor component={Link} fw={600} to="/login" c="var(--nv-accent)">
-            Inicia sesión
+            Inicia sesiÃ³n
           </Anchor>
         </Text>
       </Stack>
