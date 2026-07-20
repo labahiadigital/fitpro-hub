@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
@@ -14,6 +14,7 @@ from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.storage import resolve_url
 from app.models.invitation import ClientInvitation, InvitationStatus
 
 # String constants for status values (matching database)
@@ -103,6 +104,8 @@ class ValidateTokenResponse(BaseModel):
     last_name: Optional[str] = None
     workspace_name: Optional[str] = None
     workspace_slug: Optional[str] = None
+    logo_url: Optional[str] = None
+    branding: Dict[str, Any] = {}
     message: Optional[str] = None
     product: Optional[ProductInfo] = None
     payment_completed: bool = False
@@ -120,85 +123,31 @@ class ValidateTokenResponse(BaseModel):
 
 # ============ Email Templates ============
 
+from app.services.invitation_email import (
+    build_client_invitation_email_html,
+    invitation_email_subject,
+)
+
+
 def get_invitation_email_html(
     client_name: str,
     trainer_name: str,
     workspace_name: str,
     invitation_url: str,
     custom_message: Optional[str] = None,
+    branding: Optional[Dict[str, Any]] = None,
+    logo_url: Optional[str] = None,
 ) -> str:
-    """Generate HTML email for client invitation."""
-    message_section = f"""
-        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2D6A4F;">
-            <p style="margin: 0; color: #333; font-style: italic;">"{custom_message}"</p>
-            <p style="margin: 5px 0 0; color: #666; font-size: 12px;">- {trainer_name}</p>
-        </div>
-    """ if custom_message else ""
-    
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <tr>
-                <td style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 30px; text-align: center;">
-                    <h1 style="color: #D4AF37; margin: 0; font-size: 28px;">¡Bienvenido a {workspace_name}!</h1>
-                </td>
-            </tr>
-            <tr>
-                <td style="padding: 40px 30px;">
-                    <p style="color: #333; font-size: 16px; line-height: 1.6;">
-                        Hola{f' <strong>{client_name}</strong>' if client_name else ''},
-                    </p>
-                    <p style="color: #666; font-size: 16px; line-height: 1.6;">
-                        <strong>{trainer_name}</strong> te ha invitado a unirte a <strong>{workspace_name}</strong> 
-                        para comenzar tu programa de entrenamiento personalizado.
-                    </p>
-                    
-                    {message_section}
-                    
-                    <p style="color: #666; font-size: 16px; line-height: 1.6;">
-                        Para completar tu registro, haz clic en el siguiente botón:
-                    </p>
-                    
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="{invitation_url}" 
-                           style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #C9A227 100%); 
-                                  color: #1a1a2e; padding: 15px 40px; text-decoration: none; 
-                                  border-radius: 8px; font-weight: bold; font-size: 16px;
-                                  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
-                            Completar mi Registro
-                        </a>
-                    </div>
-                    
-                    <p style="color: #999; font-size: 14px; line-height: 1.6;">
-                        Este enlace expirará en 7 días. Si no solicitaste esta invitación, 
-                        puedes ignorar este correo.
-                    </p>
-                    
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                    
-                    <p style="color: #999; font-size: 12px; text-align: center;">
-                        Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
-                        <a href="{invitation_url}" style="color: #D4AF37; word-break: break-all;">{invitation_url}</a>
-                    </p>
-                </td>
-            </tr>
-            <tr>
-                <td style="background: #1a1a2e; padding: 20px 30px; text-align: center;">
-                    <p style="color: #888; font-size: 12px; margin: 0;">
-                        © 2026 {workspace_name} · Powered by Trackfiz
-                    </p>
-                </td>
-            </tr>
-        </table>
-    </body>
-    </html>
-    """
+    """Generate HTML email for client invitation (white-label)."""
+    return build_client_invitation_email_html(
+        workspace_name=workspace_name,
+        trainer_name=trainer_name,
+        invitation_url=invitation_url,
+        client_name=client_name,
+        custom_message=custom_message,
+        branding=branding,
+        logo_url=logo_url,
+    )
 
 
 # ============ Endpoints ============
@@ -316,6 +265,8 @@ async def create_invitation(
         workspace_name=workspace.name,
         invitation_url=invitation_url,
         custom_message=data.message,
+        branding=workspace.branding or {},
+        logo_url=await resolve_url(workspace.logo_url),
     )
     
     # Send email in background. ``tracking`` permite que el webhook de
@@ -324,8 +275,10 @@ async def create_invitation(
     background_tasks.add_task(
         send_email_task.delay,
         to_email=data.email,
-        subject=f"Invitación a {workspace.name}",
+        subject=invitation_email_subject(workspace.name, trainer_name),
         html_content=email_html,
+        from_name=workspace.name,
+        reply_to=(workspace.settings or {}).get("support", {}).get("email") if isinstance(workspace.settings, dict) else None,
         tracking={
             "workspace_id": str(workspace.id),
             "invitation_id": str(invitation.id),
@@ -463,6 +416,13 @@ async def resend_invitation(
         workspace_name=workspace.name,
         invitation_url=invitation_url,
         custom_message=invitation.message,
+        branding=workspace.branding or {},
+        logo_url=await resolve_url(workspace.logo_url),
+    )
+    reply_to = (
+        (workspace.settings or {}).get("support", {}).get("email")
+        if isinstance(workspace.settings, dict)
+        else None
     )
     
     # Encolamos el envío en Celery. Antes el código envolvía
@@ -477,8 +437,10 @@ async def resend_invitation(
     try:
         send_email_task.delay(
             to_email=invitation.email,
-            subject=f"Recordatorio: Invitación a {workspace.name}",
+            subject=f"Recordatorio: {invitation_email_subject(workspace.name, trainer_name)}",
             html_content=email_html,
+            from_name=workspace.name,
+            reply_to=reply_to,
             tracking={
                 "workspace_id": str(workspace.id),
                 "invitation_id": str(invitation.id),
@@ -499,8 +461,9 @@ async def resend_invitation(
             await email_service.send_email(
                 to_email=invitation.email,
                 to_name=client_name,
-                subject=f"Recordatorio: Invitación a {workspace.name}",
+                subject=f"Recordatorio: {invitation_email_subject(workspace.name, trainer_name)}",
                 html_content=email_html,
+                reply_to=reply_to,
             )
             logger.info(f"Resend invitation email sent synchronously to {invitation.email}")
         except Exception as exc:
@@ -641,6 +604,8 @@ async def validate_invitation_token(
         last_name=invitation.last_name,
         workspace_name=workspace.name,
         workspace_slug=workspace.slug,
+        logo_url=await resolve_url(workspace.logo_url),
+        branding=workspace.branding or {},
         message=invitation.message,
         product=product_info,
         payment_completed=payment_completed,

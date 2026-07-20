@@ -441,16 +441,32 @@ async def create_client(
         await db.commit()
         workspace_result = await db.execute(select(Workspace).where(Workspace.id == current_user.workspace_id))
         workspace = workspace_result.scalar_one_or_none()
+        trainer_result = await db.execute(select(User).where(User.id == current_user.id))
+        trainer = trainer_result.scalar_one_or_none()
+        trainer_name = trainer.full_name if trainer else "Tu entrenador"
+        workspace_name = workspace.name if workspace else "Tu entrenador"
+        branding, logo_url = await _workspace_email_branding(workspace)
+        reply_to = _workspace_support_reply_to(workspace)
         from app.core.workspace_url import workspace_public_base_url
+        from app.services.invitation_email import (
+            build_client_invitation_email_html,
+            invitation_email_subject,
+        )
         invitation_url = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
         client_name = f"{client.first_name or ''} {client.last_name or ''}".strip()
         send_email_task.delay(
             to_email=client.email,
-            subject=f"Invitación a {workspace.name if workspace else 'Trackfiz'}",
-            html_content=f"""<p>Hola {client_name},</p>
-<p>Has sido dado de alta como cliente. Para activar tu cuenta y acceder a tu portal, haz clic en el siguiente enlace:</p>
-<p><a href="{invitation_url}" style="display:inline-block;padding:12px 24px;background:#228be6;color:white;text-decoration:none;border-radius:8px;">Activar mi cuenta</a></p>
-<p>Este enlace expira en 7 días.</p>""",
+            subject=invitation_email_subject(workspace_name, trainer_name),
+            html_content=build_client_invitation_email_html(
+                workspace_name=workspace_name,
+                trainer_name=trainer_name,
+                invitation_url=invitation_url,
+                client_name=client_name or None,
+                branding=branding,
+                logo_url=logo_url,
+            ),
+            from_name=workspace_name,
+            reply_to=reply_to,
             tracking={
                 "workspace_id": str(invitation.workspace_id),
                 "invitation_id": str(invitation.id),
@@ -1182,6 +1198,24 @@ async def remove_client_supplement(
 
 # ============ CLIENT INVITATIONS ============
 
+def _workspace_support_reply_to(workspace: Optional[Workspace]) -> Optional[str]:
+    if workspace is None or not isinstance(workspace.settings, dict):
+        return None
+    support = workspace.settings.get("support")
+    if not isinstance(support, dict):
+        return None
+    email = support.get("email")
+    return email if isinstance(email, str) and "@" in email else None
+
+
+async def _workspace_email_branding(
+    workspace: Optional[Workspace],
+) -> tuple[Dict[str, Any], Optional[str]]:
+    if workspace is None:
+        return {}, None
+    return workspace.branding or {}, await resolve_url(workspace.logo_url)
+
+
 async def send_invitation_email(
     email: str,
     invite_link: str,
@@ -1190,68 +1224,34 @@ async def send_invitation_email(
     first_name: Optional[str] = None,
     message: Optional[str] = None,
     tracking: Optional[Dict[str, Any]] = None,
+    branding: Optional[Dict[str, Any]] = None,
+    logo_url: Optional[str] = None,
+    reply_to: Optional[str] = None,
 ) -> bool:
-    """Send invitation email using Brevo API.
+    """Send invitation email using Brevo API (white-label workspace branding).
 
     ``tracking`` opcional permite registrar el envío en
     ``email_events`` para que el webhook de Brevo cruce los eventos
     posteriores (delivered/opened/clicked) con la invitación correcta.
-    Esperamos un dict con ``workspace_id`` / ``invitation_id`` /
-    ``client_id`` / ``user_id`` (todo string UUID, opcionales).
     """
     if not settings.BREVO_API_KEY:
         logger.warning("BREVO_API_KEY not configured, skipping email send")
         return False
-    
-    greeting = f"Hola {first_name}" if first_name else "Hola"
-    custom_message = f'<p style="color: #666; font-size: 16px; background: #f0f0f0; padding: 15px; border-radius: 8px; font-style: italic;">"{message}"</p>' if message else ""
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="font-family: 'DM Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #2A2822 0%, #3D3A32 100%); padding: 30px; text-align: center; border-radius: 16px 16px 0 0;">
-                <div style="display: inline-block; width: 50px; height: 50px; background: #E7E247; border-radius: 12px; line-height: 50px; font-size: 24px; font-weight: bold; color: #2A2822; margin-bottom: 15px;">T</div>
-                <h1 style="color: white; margin: 10px 0 5px 0; font-size: 24px;">¡Te han invitado a Trackfiz!</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 0; font-size: 14px;">{workspace_name}</p>
-            </div>
-            <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                <p style="color: #333; font-size: 18px; margin-bottom: 5px;">{greeting},</p>
-                <p style="color: #666; font-size: 16px;">
-                    <strong>{trainer_name}</strong> te ha invitado a unirte a <strong>{workspace_name}</strong> en Trackfiz.
-                </p>
-                {custom_message}
-                <p style="color: #666; font-size: 16px;">
-                    Con Trackfiz podrás:
-                </p>
-                <ul style="color: #666; font-size: 15px; padding-left: 20px;">
-                    <li>📊 Ver tu plan de entrenamiento personalizado</li>
-                    <li>🥗 Seguir tu plan de nutrición</li>
-                    <li>📈 Registrar tu progreso y medidas</li>
-                    <li>📅 Gestionar tus citas y sesiones</li>
-                    <li>💬 Comunicarte directamente con tu entrenador</li>
-                </ul>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{invite_link}" style="display: inline-block; background: linear-gradient(135deg, #E7E247 0%, #D4CF3D 100%); color: #2A2822; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(231,226,71,0.3);">
-                        Crear mi cuenta
-                    </a>
-                </div>
-                <p style="color: #999; font-size: 13px; text-align: center;">
-                    Este enlace expira en 7 días. Si no has solicitado esta invitación, puedes ignorar este email.
-                </p>
-            </div>
-            <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-                <p>© 2026 Trackfiz. Todos los derechos reservados.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+
+    from app.services.invitation_email import (
+        build_client_invitation_email_html,
+        invitation_email_subject,
+    )
+
+    html_content = build_client_invitation_email_html(
+        workspace_name=workspace_name,
+        trainer_name=trainer_name,
+        invitation_url=invite_link,
+        client_name=first_name,
+        custom_message=message,
+        branding=branding,
+        logo_url=logo_url,
+    )
     
     try:
         headers = {
@@ -1261,13 +1261,15 @@ async def send_invitation_email(
         
         payload = {
             "sender": {
-                "name": settings.FROM_NAME,
+                "name": workspace_name,
                 "email": settings.FROM_EMAIL,
             },
             "to": [{"email": email, "name": first_name or ""}],
-            "subject": f"🎯 {trainer_name} te invita a unirte a {workspace_name}",
+            "subject": invitation_email_subject(workspace_name, trainer_name),
             "htmlContent": html_content,
         }
+        if reply_to:
+            payload["replyTo"] = {"email": reply_to}
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -1470,6 +1472,8 @@ async def create_invitation(
     # Build invitation link
     from app.core.workspace_url import workspace_public_base_url
     invite_link = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
+    branding, logo_url = await _workspace_email_branding(workspace)
+    reply_to = _workspace_support_reply_to(workspace)
     
     # Send email
     email_sent = await send_invitation_email(
@@ -1479,6 +1483,9 @@ async def create_invitation(
         trainer_name=trainer_name,
         first_name=data.first_name,
         message=data.message,
+        branding=branding,
+        logo_url=logo_url,
+        reply_to=reply_to,
         tracking={
             "workspace_id": str(invitation.workspace_id),
             "invitation_id": str(invitation.id),
@@ -1553,6 +1560,8 @@ async def resend_invitation(
     # Build invitation link
     from app.core.workspace_url import workspace_public_base_url
     invite_link = f"{workspace_public_base_url(workspace)}/onboarding/invite/{invitation.token}"
+    branding, logo_url = await _workspace_email_branding(workspace)
+    reply_to = _workspace_support_reply_to(workspace)
     
     # Send email
     email_sent = await send_invitation_email(
@@ -1562,6 +1571,9 @@ async def resend_invitation(
         trainer_name=trainer_name,
         first_name=invitation.first_name,
         message=invitation.message,
+        branding=branding,
+        logo_url=logo_url,
+        reply_to=reply_to,
         tracking={
             "workspace_id": str(invitation.workspace_id),
             "invitation_id": str(invitation.id),

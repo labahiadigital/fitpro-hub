@@ -1,6 +1,7 @@
 import {
   Alert,
   Anchor,
+  Avatar,
   Badge,
   Box,
   Button,
@@ -34,6 +35,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api, redsysApi, sequraApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+import { applyWorkspaceCssVars } from "../../theme/workspaceBranding";
 import { formatDecimal } from "../../utils/format";
 import { sanitizeHtml } from "../../utils/safeHtml";
 
@@ -54,6 +56,8 @@ interface InvitationData {
   last_name?: string;
   workspace_name?: string;
   workspace_slug?: string;
+  logo_url?: string | null;
+  branding?: Record<string, string>;
   message?: string;
   product?: ProductInfo;
   payment_completed?: boolean;
@@ -80,6 +84,33 @@ interface OnboardingFormData {
 }
 
 const PHONE_REGEX = /^[+]?[\d\s().-]{6,}$/;
+
+function InvitationWorkspaceHeader({
+  invitation,
+  subtitle,
+}: {
+  invitation: InvitationData;
+  subtitle?: string;
+}) {
+  return (
+    <Box mb="xl" ta="center">
+      <Group justify="center" mb="sm">
+        {invitation.logo_url ? (
+          <Avatar
+            src={invitation.logo_url}
+            size={64}
+            radius="md"
+            alt={invitation.workspace_name || ""}
+          />
+        ) : null}
+      </Group>
+      <Title mb="xs" order={2} style={{ color: "var(--nv-primary)" }}>
+        {invitation.workspace_name}
+      </Title>
+      {subtitle ? <Text c="dimmed">{subtitle}</Text> : null}
+    </Box>
+  );
+}
 
 export function InvitationOnboardingPage() {
   const { token } = useParams<{ token: string }>();
@@ -204,6 +235,17 @@ export function InvitationOnboardingPage() {
         setInvitationData(response.data);
 
         if (response.data.valid) {
+          if (response.data.branding) {
+            applyWorkspaceCssVars(response.data.branding);
+          }
+          if (response.data.workspace_name) {
+            document.title = response.data.workspace_name;
+          }
+          if (response.data.logo_url) {
+            const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+            if (link) link.href = response.data.logo_url;
+          }
+
           form.setValues({
             ...form.values,
             email: response.data.email || "",
@@ -755,14 +797,10 @@ export function InvitationOnboardingPage() {
 
     return (
       <Container py="xl" size="sm">
-        <Box mb="xl" ta="center">
-          <Title mb="xs" order={2}>
-            {invitationData.workspace_name}
-          </Title>
-          <Text c="dimmed">
-            Para completar tu registro, primero debes activar tu plan
-          </Text>
-        </Box>
+        <InvitationWorkspaceHeader
+          invitation={invitationData}
+          subtitle="Para completar tu registro, primero debes activar tu plan"
+        />
 
         <Paper p="xl" radius="lg" withBorder>
           {checkingPayment ? (
@@ -970,21 +1008,17 @@ export function InvitationOnboardingPage() {
   // ── Formulario de registro reducido (un único paso) ───────────────
   return (
     <Container py="xl" size="sm">
-      <Box mb="xl" ta="center">
-        <Title mb="xs" order={2}>
-          {invitationData.workspace_name}
-        </Title>
-        <Text c="dimmed">
-          Crea tu cuenta para empezar tu transformación
-        </Text>
-        {invitationData.message && (
-          <Paper p="md" mt="md" radius="md" withBorder style={{ background: "rgba(45, 106, 79, 0.05)" }}>
-            <Text size="sm" c="dimmed" fs="italic">
-              "{invitationData.message}"
-            </Text>
-          </Paper>
-        )}
-      </Box>
+      <InvitationWorkspaceHeader
+        invitation={invitationData}
+        subtitle="Crea tu cuenta para empezar tu transformación"
+      />
+      {invitationData.message && (
+        <Paper p="md" mb="md" radius="md" withBorder style={{ background: "rgba(45, 106, 79, 0.05)" }}>
+          <Text size="sm" c="dimmed" fs="italic">
+            "{invitationData.message}"
+          </Text>
+        </Paper>
+      )}
 
       <Paper p="xl" radius="lg" withBorder>
         <Group mb="lg" gap="sm">
