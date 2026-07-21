@@ -251,9 +251,9 @@ async def create_invitation(
     await db.commit()
     await db.refresh(invitation)
     
-    # Build invitation URL
-    from app.core.workspace_url import workspace_public_base_url
-    invitation_url = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
+    # Build invitation URL (always platform FRONTEND_URL — never unverified custom domain)
+    from app.core.workspace_url import workspace_invitation_url
+    invitation_url = workspace_invitation_url(workspace, token)
     
     # Send invitation email
     client_name = f"{data.first_name or ''} {data.last_name or ''}".strip() or None
@@ -335,16 +335,15 @@ async def list_invitations(
     result = await db.execute(query)
     invitations = result.scalars().all()
 
-    from app.core.workspace_url import workspace_public_base_url
+    from app.core.workspace_url import workspace_invitation_url
     ws_result = await db.execute(
         select(Workspace).where(Workspace.id == current_user.workspace_id)
     )
     workspace = ws_result.scalar_one_or_none()
-    base = workspace_public_base_url(workspace)
 
     items = []
     for inv in invitations:
-        invitation_url = f"{base}/onboarding/invite/{inv.token}"
+        invitation_url = workspace_invitation_url(workspace, inv.token)
         items.append(InvitationResponse(
             id=inv.id,
             email=inv.email,
@@ -402,9 +401,9 @@ async def resend_invitation(
     await db.commit()
     await db.refresh(invitation)
     
-    # Build invitation URL
-    from app.core.workspace_url import workspace_public_base_url
-    invitation_url = f"{workspace_public_base_url(workspace)}/onboarding/invite/{invitation.token}"
+    # Build invitation URL (always platform FRONTEND_URL — never unverified custom domain)
+    from app.core.workspace_url import workspace_invitation_url
+    invitation_url = workspace_invitation_url(workspace, invitation.token)
     
     # Send email
     client_name = f"{invitation.first_name or ''} {invitation.last_name or ''}".strip() or None
@@ -1517,8 +1516,8 @@ async def public_product_signup(
     await db.commit()
     await db.refresh(invitation)
 
-    from app.core.workspace_url import workspace_public_base_url
-    invitation_url = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
+    from app.core.workspace_url import workspace_invitation_url
+    invitation_url = workspace_invitation_url(workspace, token)
 
     return PublicProductSignupResponse(
         invitation_token=token,

@@ -871,7 +871,7 @@ export function SettingsPage() {
                         <Text span fw={600}>
                           https://{workspaceForm.values.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "")}
                         </Text>{" "}
-                        — verás tu logo, colores y nombre. Los enlaces de invitación usarán este dominio.
+                        — verás tu logo, colores y nombre. Los emails de invitación siguen usando app.trackfiz.com hasta que el DNS esté activo (así no se rompe el enlace).
                       </Text>
                     </Alert>
                   ) : null}

@@ -230,20 +230,30 @@ export function InvitationOnboardingPage() {
         return;
       }
 
+      // React Router already decodes params; if a client double-encodes the
+      // link we still accept the raw path segment.
+      const inviteToken = token;
+
       try {
-        const response = await api.get(`/invitations/validate/${token}`);
+        const response = await api.get(
+          `/invitations/validate/${encodeURIComponent(inviteToken)}`,
+        );
         setInvitationData(response.data);
 
         if (response.data.valid) {
-          if (response.data.branding) {
-            applyWorkspaceCssVars(response.data.branding);
-          }
-          if (response.data.workspace_name) {
-            document.title = response.data.workspace_name;
-          }
-          if (response.data.logo_url) {
-            const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-            if (link) link.href = response.data.logo_url;
+          try {
+            if (response.data.branding) {
+              applyWorkspaceCssVars(response.data.branding);
+            }
+            if (response.data.workspace_name) {
+              document.title = response.data.workspace_name;
+            }
+            if (response.data.logo_url) {
+              const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+              if (link) link.href = response.data.logo_url;
+            }
+          } catch {
+            // Branding is cosmetic — never block onboarding if it fails.
           }
 
           form.setValues({
@@ -271,6 +281,7 @@ export function InvitationOnboardingPage() {
     };
 
     validateInvitation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- form is stable enough; re-run only on token
   }, [token]);
 
   useEffect(() => {

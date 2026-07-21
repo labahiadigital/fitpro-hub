@@ -28,10 +28,17 @@ def build_client_invitation_email_html(
     branding: Optional[Mapping[str, Any]] = None,
     logo_url: Optional[str] = None,
 ) -> str:
-    """Branded invitation email — workspace name/colors, no Trackfiz in body."""
+    """Branded invitation email — workspace name/colors, no Trackfiz in body.
+
+    Markup is kept Outlook-safe: CTA ``href`` + ``style`` on a single line,
+    logo optional (long presigned URLs can confuse some clients).
+    """
     safe_workspace = html.escape(workspace_name)
     safe_trainer = html.escape(trainer_name)
-    safe_url = html.escape(invitation_url, quote=True)
+    # Escape for HTML attributes; keep a display copy without breaking the URL
+    # when users copy-paste from the fallback line.
+    safe_url_attr = html.escape(invitation_url, quote=True)
+    safe_url_text = html.escape(invitation_url)
     primary = _brand_color(branding, "primary_color", _DEFAULT_PRIMARY)
     accent = _brand_color(branding, "accent_color", _DEFAULT_ACCENT)
 
@@ -43,31 +50,34 @@ def build_client_invitation_email_html(
 
     message_block = ""
     if custom_message:
-        message_block = f"""
-        <div style="background:#f8f9fa;padding:16px;border-radius:8px;margin:20px 0;border-left:4px solid {primary};">
-          <p style="margin:0;color:#444;font-style:italic;">"{html.escape(custom_message)}"</p>
-          <p style="margin:8px 0 0;color:#888;font-size:12px;">— {safe_trainer}</p>
-        </div>
-        """
+        message_block = (
+            f'<div style="background:#f8f9fa;padding:16px;border-radius:8px;'
+            f'margin:20px 0;border-left:4px solid {primary};">'
+            f'<p style="margin:0;color:#444;font-style:italic;">'
+            f'"{html.escape(custom_message)}"</p>'
+            f'<p style="margin:8px 0 0;color:#888;font-size:12px;">— {safe_trainer}</p>'
+            f"</div>"
+        )
 
-    logo_block = ""
-    if logo_url:
-        safe_logo = html.escape(logo_url, quote=True)
-        logo_block = f"""
-        <img src="{safe_logo}" alt="{safe_workspace}" width="72" height="72"
-             style="display:block;margin:0 auto 16px;border-radius:12px;object-fit:contain;" />
-        """
+    # Skip fragile remote logos in email (presigned URLs are long and break
+    # some clients). Branding still shows via name + colors.
+    _ = logo_url  # reserved for a future public CDN logo URL
+
+    btn_style = (
+        f"display:inline-block;background:{accent};color:#1a1a2e;"
+        f"padding:14px 36px;text-decoration:none;border-radius:10px;"
+        f"font-weight:700;font-size:16px;"
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:0;background:#f4f4f4;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#fff;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#fff;">
     <tr>
-      <td style="background:linear-gradient(135deg,{_DEFAULT_DARK} 0%,#16213e 100%);padding:36px 28px;text-align:center;">
-        {logo_block}
+      <td style="background:{_DEFAULT_DARK};padding:36px 28px;text-align:center;">
         <h1 style="color:{accent};margin:0;font-size:26px;line-height:1.3;">¡Bienvenido/a a {safe_workspace}!</h1>
-        <p style="color:rgba(255,255,255,0.75);margin:10px 0 0;font-size:14px;">{safe_trainer} te ha invitado</p>
+        <p style="color:#cccccc;margin:10px 0 0;font-size:14px;">{safe_trainer} te ha invitado</p>
       </td>
     </tr>
     <tr>
@@ -81,21 +91,20 @@ def build_client_invitation_email_html(
         <p style="color:#666;font-size:16px;line-height:1.6;">
           Pulsa el botón para crear tu cuenta y empezar:
         </p>
-        <div style="text-align:center;margin:28px 0;">
-          <a href="{safe_url}"
-             style="display:inline-block;background:linear-gradient(135deg,{accent} 0%,{primary} 100%);
-                    color:#1a1a2e;padding:14px 36px;text-decoration:none;border-radius:10px;
-                    font-weight:700;font-size:16px;">
-            Crear mi cuenta
-          </a>
-        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center" style="padding:28px 0;">
+              <a href="{safe_url_attr}" style="{btn_style}">Crear mi cuenta</a>
+            </td>
+          </tr>
+        </table>
         <p style="color:#999;font-size:13px;line-height:1.6;text-align:center;">
           Este enlace caduca en 7 días. Si no esperabas este correo, puedes ignorarlo.
         </p>
         <hr style="border:none;border-top:1px solid #eee;margin:28px 0;">
         <p style="color:#999;font-size:12px;text-align:center;word-break:break-all;">
           Si el botón no funciona, copia este enlace:<br>
-          <a href="{safe_url}" style="color:{primary};">{safe_url}</a>
+          <a href="{safe_url_attr}" style="color:{primary};">{safe_url_text}</a>
         </p>
       </td>
     </tr>

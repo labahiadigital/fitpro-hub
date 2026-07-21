@@ -447,12 +447,12 @@ async def create_client(
         workspace_name = workspace.name if workspace else "Tu entrenador"
         branding, logo_url = await _workspace_email_branding(workspace)
         reply_to = _workspace_support_reply_to(workspace)
-        from app.core.workspace_url import workspace_public_base_url
+        from app.core.workspace_url import workspace_invitation_url
         from app.services.invitation_email import (
             build_client_invitation_email_html,
             invitation_email_subject,
         )
-        invitation_url = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
+        invitation_url = workspace_invitation_url(workspace, token)
         client_name = f"{client.first_name or ''} {client.last_name or ''}".strip()
         send_email_task.delay(
             to_email=client.email,
@@ -1469,9 +1469,9 @@ async def create_invitation(
     await db.commit()
     await db.refresh(invitation)
     
-    # Build invitation link
-    from app.core.workspace_url import workspace_public_base_url
-    invite_link = f"{workspace_public_base_url(workspace)}/onboarding/invite/{token}"
+    # Build invitation link (platform URL only — custom domain breaks invites until DNS is ready)
+    from app.core.workspace_url import workspace_invitation_url
+    invite_link = workspace_invitation_url(workspace, token)
     branding, logo_url = await _workspace_email_branding(workspace)
     reply_to = _workspace_support_reply_to(workspace)
     
@@ -1557,9 +1557,9 @@ async def resend_invitation(
     invitation.expires_at = datetime.utcnow() + timedelta(days=7)
     await db.commit()
     
-    # Build invitation link
-    from app.core.workspace_url import workspace_public_base_url
-    invite_link = f"{workspace_public_base_url(workspace)}/onboarding/invite/{invitation.token}"
+    # Build invitation link (platform URL only — custom domain breaks invites until DNS is ready)
+    from app.core.workspace_url import workspace_invitation_url
+    invite_link = workspace_invitation_url(workspace, invitation.token)
     branding, logo_url = await _workspace_email_branding(workspace)
     reply_to = _workspace_support_reply_to(workspace)
     
