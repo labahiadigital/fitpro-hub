@@ -204,13 +204,16 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, _hasHydrated, _authReady } = useAuthStore();
+  const location = useLocation();
 
   if (!_hasHydrated || !_authReady) {
     return <PageLoader />;
   }
 
   if (!isAuthenticated) {
-    return <Navigate replace to="/login" />;
+    const next = `${location.pathname}${location.search}`;
+    const qs = next && next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
+    return <Navigate replace to={`/login${qs}`} />;
   }
 
   return <>{children}</>;

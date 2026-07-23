@@ -208,10 +208,12 @@ export function usePermanentDeleteClient() {
     mutationFn: (id: string) => clientsApi.deletePermanent(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+    },
+    onError: (error: unknown) => {
       notifications.show({
-        title: "Cliente eliminado",
-        message: "El cliente ha sido movido a Eliminados",
-        color: "green",
+        title: "Error al eliminar",
+        message: getApiErrorMessage(error),
+        color: "red",
       });
     },
   });

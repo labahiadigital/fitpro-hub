@@ -493,19 +493,29 @@ async def copy_form(
         )
 
     # Los "Formularios del Sistema" (form_type == "system" + is_global)
-    # son built-in de Trackfiz y se asignan automáticamente a TODO cliente
-    # que completa el onboarding (Cuestionario Inicial Trackfiz). No se
-    # pueden duplicar al workspace porque son inmutables: si el coach
-    # quiere su propio cuestionario inicial debe crearlo desde cero.
+    # son built-in y se asignan automáticamente al onboarding. El coach
+    # PUEDE copiarlos a su workspace para personalizar campos; la copia
+    # ya no es global y se edita con normalidad.
     if source.is_global and (source.form_type or "").lower() == "system":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "El Cuestionario Inicial Trackfiz es un formulario del sistema "
-                "y no se puede copiar. Ya se asigna automáticamente a todos "
-                "los clientes que completan el onboarding."
-            ),
+        clone = Form(
+            workspace_id=current_user.workspace_id,
+            created_by=current_user.id,
+            name=f"{source.name} (personalizado)",
+            description=source.description,
+            form_type="custom",
+            schema=dict(source.schema or {"fields": []}),
+            settings={
+                **dict(source.settings or {}),
+                "send_on_signup": True,
+                "is_required": True,
+            },
+            is_active=True,
+            is_global=False,
         )
+        db.add(clone)
+        await db.commit()
+        await db.refresh(clone)
+        return _serialize_form(clone)
 
     clone = Form(
         workspace_id=current_user.workspace_id,

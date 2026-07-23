@@ -31,10 +31,12 @@ import {
   IconTarget,
   IconTrendingUp,
   IconClock,
+  IconForms,
   IconPlayerPlay,
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useClientDashboard, useClientProfile, usePendingReviews } from "../../hooks/useClientPortal";
+import { useMyForms } from "../../hooks/useForms";
 import { useNavigate } from "react-router-dom";
 import { generateClientPlanPDF } from "../../services/pdfGenerator";
 import { api } from "../../services/api";
@@ -109,8 +111,10 @@ export function ClientDashboardPage() {
   const { data: dashboardData, isLoading } = useClientDashboard();
   const { data: profileData } = useClientProfile();
   const { data: pendingReviews = [] } = usePendingReviews();
+  const { data: pendingForms = [] } = useMyForms("pending");
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const nextPendingForm = pendingForms.find((f) => f.status === "pending") || pendingForms[0];
 
   // Suplementos asignados por el entrenador. Antes solo eran accesibles
   // bajo "Mi Nutrición → Cesta de suplementos" (pestaña terciaria) y los
@@ -212,6 +216,36 @@ export function ClientDashboardPage() {
           vea esto en cuanto entra: sin estos datos su entrenador no puede
           calcularle la dieta y las calorías que aparecen en otras
           pantallas no son fiables. */}
+      {nextPendingForm && (
+        <Alert
+          icon={<IconForms size={18} />}
+          color="violet"
+          variant="light"
+          radius="md"
+          mb="xl"
+          title="Tienes un formulario pendiente"
+        >
+          <Stack gap="xs">
+            <Text size="sm">
+              <b>{nextPendingForm.form_name}</b>
+              {nextPendingForm.is_required
+                ? " — es obligatorio para que tu entrenador pueda prepararte el plan."
+                : " — complétalo cuando puedas."}
+            </Text>
+            <Group>
+              <Button
+                size="xs"
+                color="violet"
+                radius="md"
+                onClick={() => navigate("/my-forms")}
+              >
+                Rellenar ahora
+              </Button>
+            </Group>
+          </Stack>
+        </Alert>
+      )}
+
       {missingPhysical.length > 0 && (
         <Alert
           icon={<IconAlertCircle size={18} />}

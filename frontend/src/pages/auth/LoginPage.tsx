@@ -28,6 +28,7 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const isInvited = searchParams.get("invited") === "1";
   const invitedWorkspace = searchParams.get("workspace");
+  const nextPath = searchParams.get("next") || undefined;
 
   const form = useForm({
     initialValues: {
@@ -36,18 +37,18 @@ export function LoginPage() {
       remember: true,
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email invÃ¡lido"),
-      password: (value) => (value.length >= 6 ? null : "MÃ­nimo 6 caracteres"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      password: (value) => (value.length >= 6 ? null : "Mínimo 6 caracteres"),
     },
   });
 
   const handleSubmit = async (values: typeof form.values) => {
     setError(null);
     try {
-      await login(values.email, values.password);
+      await login(values.email, values.password, nextPath);
     } catch (err: unknown) {
       const errObj = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError(errObj.response?.data?.detail || errObj.message || "Error al iniciar sesiÃ³n");
+      setError(errObj.response?.data?.detail || errObj.message || "Error al iniciar sesión");
     }
   };
 

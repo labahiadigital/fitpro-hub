@@ -1259,12 +1259,14 @@ async def complete_invitation(
         # URL al cuestionario del sistema. Si por algún motivo no se
         # pudo crear el FormSubmission (no existe el form global)
         # caemos al dashboard del cliente para no enviar un enlace roto.
+        from app.core.workspace_url import platform_frontend_base_url
+        frontend_base = platform_frontend_base_url()
         if system_form_submission_id:
             system_form_url = (
-                f"{settings.FRONTEND_URL}/onboarding/system-form/{system_form_submission_id}"
+                f"{frontend_base}/onboarding/system-form/{system_form_submission_id}"
             )
         else:
-            system_form_url = f"{settings.FRONTEND_URL}/my-dashboard"
+            system_form_url = f"{frontend_base}/my-forms"
 
         # Los emails se encolan en Celery EN VEZ de enviarse de forma
         # síncrona. Cada send_email puede tardar varios segundos contra
@@ -1325,6 +1327,8 @@ async def complete_invitation(
                 "expires_in": settings.access_token_expire_minutes * 60,
                 "refresh_token": refresh_token,
                 "requires_email_verification": False,
+                "system_form_url": system_form_url if system_form_submission_id else None,
+                "system_form_submission_id": str(system_form_submission_id) if system_form_submission_id else None,
                 "user": {
                     "id": str(user.id),
                     "email": user.email,

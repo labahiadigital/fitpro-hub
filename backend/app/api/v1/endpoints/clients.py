@@ -18,7 +18,7 @@ from app.core.parallel_db import parallel_queries
 from app.core.storage import resolve_url, resolve_urls
 from app.models.client import Client, ClientTag
 from app.models.exercise import ClientMeasurement
-from app.models.user import UserRole, User
+from app.models.user import UserRole, User, RoleType
 from app.models.invitation import ClientInvitation
 from app.models.product import Product
 from app.models.supplement import ClientSupplement, Supplement
@@ -653,9 +653,12 @@ async def delete_client_permanent(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Mover un cliente a Eliminados (soft delete con deleted_at).
-    Los datos se conservan por legalidad.
+    Eliminación de cliente en dos fases:
+    - Si aún no está en Eliminados → soft delete (``deleted_at``).
+    - Si ya está en Eliminados → borrado definitivo (hard delete) de la BD.
     """
+    from sqlalchemy import text
+
     result = await db.execute(
         select(Client).where(
             Client.id == client_id,
@@ -669,9 +672,66 @@ async def delete_client_permanent(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Cliente no encontrado"
         )
-    
-    client.is_active = False
-    client.deleted_at = datetime.now(timezone.utc)
+
+    # Primera fase: mover a Eliminados (conserva datos).
+    if client.deleted_at is None:
+        client.is_active = False
+        client.deleted_at = datetime.now(timezone.utc)
+        await db.commit()
+        return
+
+    # Segunda fase: borrado definitivo. Limpiamos FKs sin CASCADE y luego
+    # borramos el cliente (el resto cae por CASCADE).
+    cid = str(client.id)
+    linked_user_id = client.user_id
+
+    cleanup_sql = [
+        "DELETE FROM referral_conversions WHERE converted_client_id = :id",
+        "UPDATE referrals SET client_id = NULL WHERE client_id = :id",
+        "DELETE FROM live_class_registrations WHERE client_id = :id",
+        "UPDATE course_reviews SET client_id = NULL WHERE client_id = :id",
+        "UPDATE course_enrollments SET client_id = NULL WHERE client_id = :id",
+        "UPDATE challenge_participants SET client_id = NULL WHERE client_id = :id",
+        "UPDATE certificates SET client_id = NULL WHERE client_id = :id",
+        "UPDATE documents SET client_id = NULL WHERE client_id = :id",
+        "UPDATE client_invitations SET client_id = NULL WHERE client_id = :id",
+        "UPDATE email_events SET client_id = NULL WHERE client_id = :id",
+        "UPDATE tasks SET client_id = NULL WHERE client_id = :id",
+        "UPDATE appointments SET client_id = NULL WHERE client_id = :id",
+    ]
+    for sql in cleanup_sql:
+        try:
+            await db.execute(text(sql), {"id": cid})
+        except Exception as exc:
+            logger.warning("hard_delete cleanup skipped (%s): %s", sql.split()[0:3], exc)
+
+    await db.delete(client)
+    await db.flush()
+
+    # Quitar rol de cliente en este workspace; si el usuario no tiene más
+    # roles, lo desactivamos para que no quede una cuenta huérfana.
+    if linked_user_id:
+        role_result = await db.execute(
+            select(UserRole).where(
+                UserRole.user_id == linked_user_id,
+                UserRole.workspace_id == current_user.workspace_id,
+                UserRole.role == RoleType.client,
+            )
+        )
+        for role_row in role_result.scalars().all():
+            await db.delete(role_row)
+
+        remaining = await db.execute(
+            select(func.count()).select_from(UserRole).where(
+                UserRole.user_id == linked_user_id
+            )
+        )
+        if (remaining.scalar() or 0) == 0:
+            user_result = await db.execute(select(User).where(User.id == linked_user_id))
+            orphan = user_result.scalar_one_or_none()
+            if orphan:
+                orphan.is_active = False
+
     await db.commit()
 
 

@@ -522,6 +522,32 @@ export function SettingsPage() {
     },
   });
 
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const handleTrainerAvatarUpload = async (file: File | null) => {
+    if (!file || !user) return;
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await usersApi.uploadAvatar(formData);
+      const avatarUrl = (res.data as { avatar_url: string }).avatar_url;
+      setUser({ ...user, avatar_url: avatarUrl });
+      notifications.show({
+        title: "Foto actualizada",
+        message: "Tu foto de perfil se ha cambiado correctamente",
+        color: "green",
+        icon: <IconCheck size={16} />,
+      });
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo subir la foto. Prueba con JPEG, PNG o WebP (máx. 5 MB).",
+        color: "red",
+      });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
   // Change email
   const changeEmailForm = useForm({
     initialValues: { new_email: "", password: "" },
@@ -939,9 +965,20 @@ export function SettingsPage() {
                 <Box>
                   <Text fw={500}>{user?.full_name || "Usuario"}</Text>
                   <Text c="dimmed" size="sm">{user?.email}</Text>
-                  <Button leftSection={<IconUpload size={14} />} mt="xs" size="xs" variant="light">
-                    Cambiar foto
-                  </Button>
+                  <FileButton onChange={handleTrainerAvatarUpload} accept="image/png,image/jpeg,image/webp">
+                    {(props) => (
+                      <Button
+                        {...props}
+                        leftSection={<IconUpload size={14} />}
+                        mt="xs"
+                        size="xs"
+                        variant="light"
+                        loading={avatarUploading}
+                      >
+                        Cambiar foto
+                      </Button>
+                    )}
+                  </FileButton>
                 </Box>
               </Group>
 

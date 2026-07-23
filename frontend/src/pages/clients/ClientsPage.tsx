@@ -1250,12 +1250,15 @@ export function ClientsPage() {
 
   const handlePermanentDelete = async (client: any) => {
     if (!client || client.id.startsWith("demo-client-")) return;
+    const wasAlreadyDeleted = Boolean(client.deleted_at);
     try {
       await permanentDeleteClient.mutateAsync(client.id);
       notifications.show({
-        title: "Cliente eliminado",
-        message: `${client.first_name} ${client.last_name} ha sido eliminado permanentemente`,
-        color: "red",
+        title: wasAlreadyDeleted ? "Cliente eliminado definitivamente" : "Cliente movido a Eliminados",
+        message: wasAlreadyDeleted
+          ? `${client.first_name} ${client.last_name} y todos sus datos se han borrado`
+          : `${client.first_name} ${client.last_name} se ha movido a Eliminados (puedes restaurarlo)`,
+        color: wasAlreadyDeleted ? "red" : "yellow",
       });
       closeDeleteConfirm();
       setClientToDelete(null);
@@ -1274,7 +1277,9 @@ export function ClientsPage() {
   };
 
   const handleDelete = (client: any) => {
-    if (client.is_active) {
+    // Activo → desasignar (soft). Inactivo o ya en Eliminados → modal de confirmación
+    // (primera vez soft a Eliminados; si ya tiene deleted_at → hard delete).
+    if (client.is_active && !client.deleted_at) {
       handleSoftDelete(client);
     } else {
       setClientToDelete(client);
@@ -2268,18 +2273,36 @@ export function ClientsPage() {
       <BottomSheet
         opened={deleteConfirmOpened}
         onClose={() => { closeDeleteConfirm(); setClientToDelete(null); }}
-        title="Confirmar eliminación permanente"
+        title={
+          clientToDelete?.deleted_at
+            ? "Confirmar eliminación definitiva"
+            : "Mover a Eliminados"
+        }
         radius="lg"
         size="sm"
       >
         <Stack gap="md">
-          <Text size="sm">
-            ¿Estás seguro de que deseas eliminar permanentemente a{" "}
-            <Text span fw={700}>{clientToDelete?.first_name} {clientToDelete?.last_name}</Text>?
-          </Text>
-          <Text size="xs" c="red">
-            Esta acción no se puede deshacer. Se eliminarán todos los datos del cliente.
-          </Text>
+          {clientToDelete?.deleted_at ? (
+            <>
+              <Text size="sm">
+                ¿Eliminar definitivamente a{" "}
+                <Text span fw={700}>{clientToDelete?.first_name} {clientToDelete?.last_name}</Text>?
+              </Text>
+              <Text size="xs" c="red">
+                Esta acción no se puede deshacer. Se borrarán todos los datos del cliente.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text size="sm">
+                ¿Mover a Eliminados a{" "}
+                <Text span fw={700}>{clientToDelete?.first_name} {clientToDelete?.last_name}</Text>?
+              </Text>
+              <Text size="xs" c="dimmed">
+                Podrás restaurarlo desde la pestaña Eliminados. Para borrarlo del todo, elimínalo otra vez desde ahí.
+              </Text>
+            </>
+          )}
           <Group justify="flex-end">
             <Button variant="default" onClick={() => { closeDeleteConfirm(); setClientToDelete(null); }} radius="xl">
               Cancelar
@@ -2290,7 +2313,7 @@ export function ClientsPage() {
               onClick={() => handlePermanentDelete(clientToDelete)}
               radius="xl"
             >
-              Eliminar permanentemente
+              {clientToDelete?.deleted_at ? "Eliminar definitivamente" : "Mover a Eliminados"}
             </Button>
           </Group>
         </Stack>

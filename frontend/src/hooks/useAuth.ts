@@ -16,7 +16,7 @@ export function useAuth() {
   } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectTo?: string) => {
     setLoading(true);
     try {
       const loginResponse = await authApi.login(email, password);
@@ -51,7 +51,13 @@ export function useAuth() {
         color: "green",
       });
 
-      navigate("/dashboard");
+      const safeNext =
+        redirectTo &&
+        redirectTo.startsWith("/") &&
+        !redirectTo.startsWith("//")
+          ? redirectTo
+          : "/dashboard";
+      navigate(safeNext);
     } catch (error: unknown) {
       const err = error as {
         response?: { data?: { detail?: string }; status?: number };

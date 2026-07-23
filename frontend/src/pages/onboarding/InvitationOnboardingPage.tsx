@@ -121,6 +121,7 @@ export function InvitationOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
   const [loadingInvitation, setLoadingInvitation] = useState(true);
+  const [systemFormSubmissionId, setSystemFormSubmissionId] = useState<string | null>(null);
 
   // Payment state
   const [paymentRequired, setPaymentRequired] = useState(false);
@@ -591,6 +592,19 @@ export function InvitationOnboardingPage() {
         setTokens(response.data.access_token, response.data.refresh_token);
       }
 
+      const formId =
+        response.data?.system_form_submission_id ||
+        (typeof response.data?.system_form_url === "string"
+          ? response.data.system_form_url.split("/").pop()
+          : null);
+      if (formId && formId !== "my-forms" && formId !== "my-dashboard") {
+        setSystemFormSubmissionId(formId);
+        setCompleted(true);
+        // Llevar al cuestionario inicial en cuanto la cuenta existe.
+        navigate(`/onboarding/system-form/${formId}`, { replace: true });
+        return;
+      }
+
       setCompleted(true);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
@@ -657,6 +671,17 @@ export function InvitationOnboardingPage() {
           });
           setTokens(response.data.access_token, response.data.refresh_token);
         }
+        const formId =
+          response.data?.system_form_submission_id ||
+          (typeof response.data?.system_form_url === "string"
+            ? response.data.system_form_url.split("/").pop()
+            : null);
+        if (formId && formId !== "my-forms" && formId !== "my-dashboard") {
+          setSystemFormSubmissionId(formId);
+          setCompleted(true);
+          navigate(`/onboarding/system-form/${formId}`, { replace: true });
+          return;
+        }
         setCompleted(true);
       } catch (error: unknown) {
         // NO reseteamos autoCompletedRef: el primer intento ya pudo
@@ -720,14 +745,17 @@ export function InvitationOnboardingPage() {
             <IconMail size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            ¡Pago completado!
+            ¡Cuenta lista!
           </Title>
           <Text mb="md">
-            Te ha llegado un <strong>email de bienvenida</strong> a tu correo.
+            {systemFormSubmissionId
+              ? "Siguiente paso: completa tu cuestionario inicial."
+              : "Te ha llegado un email de bienvenida a tu correo."}
           </Text>
           <Text c="dimmed" mb="xl">
-            Ábrelo y sigue desde ahí para continuar con tu primer cuestionario.
-            Es el siguiente paso para que tu entrenador pueda diseñarte un plan a medida.
+            {systemFormSubmissionId
+              ? "Tu entrenador lo necesita para diseñar tu plan a medida."
+              : "Ábrelo y sigue desde ahí para continuar con tu primer cuestionario."}
           </Text>
 
           {(supportPhone || supportEmail) && (
@@ -759,7 +787,18 @@ export function InvitationOnboardingPage() {
             </Paper>
           )}
 
-          <Button size="lg" onClick={() => navigate("/login")}>Ir a iniciar sesión</Button>
+          <Button
+            size="lg"
+            onClick={() =>
+              navigate(
+                systemFormSubmissionId
+                  ? `/onboarding/system-form/${systemFormSubmissionId}`
+                  : "/my-forms",
+              )
+            }
+          >
+            {systemFormSubmissionId ? "Rellenar cuestionario" : "Ir a mis formularios"}
+          </Button>
         </Paper>
       </Container>
     );

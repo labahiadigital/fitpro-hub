@@ -786,6 +786,16 @@ export function FormsPage() {
             >
               Ver formulario
             </Button>
+            <Button
+              flex={1}
+              leftSection={<IconCopy size={14} />}
+              onClick={() => handleCopyForm(formTemplate)}
+              size="xs"
+              variant="filled"
+              loading={copyFormMutation.isPending}
+            >
+              Copiar y editar
+            </Button>
           </Group>
         ) : isSystem ? (
           <Group gap="xs">

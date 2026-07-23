@@ -275,6 +275,10 @@ export const usersApi = {
     api.get(`/users/validate-invite/${token}`),
   acceptInvite: (data: { token: string; full_name: string; password: string }) =>
     api.post("/users/accept-invite", data),
+  uploadAvatar: (formData: FormData) =>
+    api.post("/users/me/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };
 
 // Account API

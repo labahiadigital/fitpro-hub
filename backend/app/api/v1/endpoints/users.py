@@ -1,6 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -9,7 +9,7 @@ import logging
 
 from app.core import ttl_cache
 from app.core.database import get_db
-from app.core.storage import resolve_url
+from app.core.storage import resolve_url, upload_workspace_file, generate_filename
 from app.core.config import settings
 from app.core.security import get_password_hash, generate_verification_token, validate_password_strength
 from app.models.user import User, UserRole, RoleType
@@ -25,6 +25,61 @@ from pydantic import BaseModel, EmailStr
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.post("/me/avatar")
+async def upload_my_avatar(
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload profile photo for the authenticated trainer/staff user."""
+    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tipo de archivo no permitido. Usa JPEG, PNG o WebP.",
+        )
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Máximo 5 MB",
+        )
+
+    workspace_id = current_user.workspace_id
+    if not workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay workspace activo",
+        )
+
+    filename = generate_filename(file.filename or "avatar.jpg")
+    try:
+        public_url = await upload_workspace_file(
+            content,
+            workspace_id,
+            "users",
+            str(current_user.id),
+            "avatar",
+            filename,
+            content_type=file.content_type or "image/jpeg",
+        )
+    except Exception:
+        logger.exception("Failed to upload trainer avatar")
+        raise HTTPException(status_code=500, detail="Error al subir la imagen")
+
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    user.avatar_url = public_url
+    await db.commit()
+    await db.refresh(user)
+    ttl_cache.invalidate_prefix(f"auth:me:{user.id}:")
+    return {"avatar_url": await resolve_url(public_url)}
 
 
 @router.get("", response_model=List[UserWithRoleResponse])
