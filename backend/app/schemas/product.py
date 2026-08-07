@@ -150,9 +150,7 @@ class CouponBase(BaseModel):
     discount_type: str = Field(default='percentage')
     discount_value: float = Field(..., ge=0)
     max_uses: Optional[int] = Field(None, ge=1)
-    valid_from: Optional[datetime] = None
-    valid_until: Optional[datetime] = None
-    applicable_products: List[UUID] = Field(default_factory=list)
+    applicable_product_ids: List[str] = Field(default_factory=list)
     is_active: bool = True
 
 
@@ -166,9 +164,7 @@ class CouponUpdate(BaseModel):
     discount_type: Optional[str] = None
     discount_value: Optional[float] = Field(None, ge=0)
     max_uses: Optional[int] = Field(None, ge=1)
-    valid_from: Optional[datetime] = None
-    valid_until: Optional[datetime] = None
-    applicable_products: Optional[List[UUID]] = None
+    applicable_product_ids: Optional[List[str]] = None
     is_active: Optional[bool] = None
 
 
@@ -176,6 +172,8 @@ class CouponResponse(CouponBase, BaseSchema):
     id: UUID
     workspace_id: UUID
     current_uses: int = 0
+
+    model_config = {"from_attributes": True}
 
 
 class CouponList(BaseModel):
@@ -187,7 +185,7 @@ class CouponList(BaseModel):
 
 class CouponValidate(BaseModel):
     code: str
-    product_id: Optional[UUID] = None
+    product_id: Optional[str] = None
 
 
 class CouponValidateResponse(BaseModel):

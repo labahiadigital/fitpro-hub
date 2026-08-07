@@ -833,11 +833,17 @@ async def create_coupon(
     current_user: User = Depends(require_roles(["owner", "collaborator"])),
 ):
     """Create a new coupon."""
-    coupon = Coupon(**data.model_dump())
-    db.add(coupon)
-    await db.commit()
-    await db.refresh(coupon)
-    return CouponResponse.model_validate(coupon)
+    try:
+        dump = data.model_dump()
+        dump["applicable_product_ids"] = dump.get("applicable_product_ids") or []
+        coupon = Coupon(**dump)
+        db.add(coupon)
+        await db.commit()
+        await db.refresh(coupon)
+        return CouponResponse.model_validate(coupon)
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al crear cupón: {exc}") from exc
 
 
 @router.patch("/coupons/{coupon_id}", response_model=CouponResponse)
@@ -888,6 +894,40 @@ async def delete_coupon(
     await db.commit()
 
 
+async def _validate_coupon_logic(
+    db: AsyncSession, workspace_id: UUID, code: str, product_id: str | None = None
+) -> CouponValidateResponse:
+    """Shared validation logic for both authenticated and public endpoints."""
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.workspace_id == workspace_id,
+            Coupon.code == code,
+        )
+    )
+    coupon = result.scalar_one_or_none()
+
+    if not coupon:
+        return CouponValidateResponse(is_valid=False, message="Código no encontrado")
+
+    if not coupon.is_active:
+        return CouponValidateResponse(is_valid=False, message="Cupón desactivado")
+
+    if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
+        return CouponValidateResponse(is_valid=False, message="Cupón agotado")
+
+    applicable = coupon.applicable_product_ids or []
+    if product_id and applicable:
+        if str(product_id) not in [str(pid) for pid in applicable]:
+            return CouponValidateResponse(is_valid=False, message="Cupón no aplicable a este producto")
+
+    return CouponValidateResponse(
+        is_valid=True,
+        discount_type=coupon.discount_type,
+        discount_value=float(coupon.discount_value),
+        message="Cupón válido",
+    )
+
+
 @router.post("/coupons/validate", response_model=CouponValidateResponse)
 async def validate_coupon(
     data: CouponValidate,
@@ -896,34 +936,7 @@ async def validate_coupon(
     current_user: User = Depends(get_current_user),
 ):
     """Validate a coupon code."""
-    result = await db.execute(
-        select(Coupon).where(
-            Coupon.workspace_id == workspace_id,
-            Coupon.code == data.code,
-        )
-    )
-    coupon = result.scalar_one_or_none()
-    
-    if not coupon:
-        return CouponValidateResponse(is_valid=False, message="Código no encontrado")
-    
-    if not coupon.is_active:
-        return CouponValidateResponse(is_valid=False, message="Cupón desactivado")
-    
-    if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
-        return CouponValidateResponse(is_valid=False, message="Cupón agotado")
-    
-    # Check product applicability
-    if data.product_id and coupon.applicable_products:
-        if data.product_id not in coupon.applicable_products:
-            return CouponValidateResponse(is_valid=False, message="Cupón no aplicable a este producto")
-    
-    return CouponValidateResponse(
-        is_valid=True,
-        discount_type=coupon.discount_type,
-        discount_value=float(coupon.discount_value),
-        message="Cupón válido",
-    )
+    return await _validate_coupon_logic(db, workspace_id, data.code, data.product_id)
 
 
 @router.post("/coupons/public-validate", response_model=CouponValidateResponse)
@@ -933,31 +946,5 @@ async def validate_coupon_public(
     db: AsyncSession = Depends(get_db),
 ):
     """Validate a coupon code publicly (no auth, used in onboarding flow)."""
-    result = await db.execute(
-        select(Coupon).where(
-            Coupon.workspace_id == workspace_id,
-            Coupon.code == data.code,
-        )
-    )
-    coupon = result.scalar_one_or_none()
-
-    if not coupon:
-        return CouponValidateResponse(is_valid=False, message="Código no encontrado")
-
-    if not coupon.is_active:
-        return CouponValidateResponse(is_valid=False, message="Cupón desactivado")
-
-    if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
-        return CouponValidateResponse(is_valid=False, message="Cupón agotado")
-
-    if data.product_id and coupon.applicable_products:
-        if data.product_id not in coupon.applicable_products:
-            return CouponValidateResponse(is_valid=False, message="Cupón no aplicable a este producto")
-
-    return CouponValidateResponse(
-        is_valid=True,
-        discount_type=coupon.discount_type,
-        discount_value=float(coupon.discount_value),
-        message="Cupón válido",
-    )
+    return await _validate_coupon_logic(db, workspace_id, data.code, data.product_id)
 

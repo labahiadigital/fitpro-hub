@@ -145,8 +145,7 @@ export function CatalogPage() {
   const { data: subscriptions = [] } = useSubscriptions();
   const { data: packagesData = [] } = useSessionPackages();
   const { data: clientPackagesData = [] } = useClientPackages();
-  const { data: couponsRaw } = useCoupons();
-  const coupons: CouponType[] = Array.isArray(couponsRaw) ? couponsRaw : (couponsRaw as { items?: CouponType[] })?.items ?? [];
+  const { data: coupons = [] } = useCoupons();
 
   // Product mutations
   const createProduct = useCreateProduct();
@@ -473,6 +472,7 @@ export function CatalogPage() {
       discount_type: "percentage" as "percentage" | "fixed",
       discount_value: 0,
       max_uses: null as number | null,
+      applicable_product_ids: [] as string[],
       is_active: true,
     },
     validate: {
@@ -491,6 +491,7 @@ export function CatalogPage() {
         discount_type: coupon.discount_type,
         discount_value: coupon.discount_value,
         max_uses: coupon.max_uses ?? null,
+        applicable_product_ids: coupon.applicable_product_ids ?? [],
         is_active: coupon.is_active,
       });
     } else {
@@ -508,13 +509,14 @@ export function CatalogPage() {
         discount_type: values.discount_type,
         discount_value: values.discount_value,
         max_uses: values.max_uses && values.max_uses > 0 ? values.max_uses : undefined,
+        applicable_product_ids: values.applicable_product_ids,
         is_active: values.is_active,
       };
       if (editingCoupon) {
         await updateCoupon.mutateAsync({ id: editingCoupon.id, data: couponData });
         notifications.show({ title: "Cupón actualizado", message: "El cupón se ha actualizado correctamente", color: "green" });
       } else {
-        await createCoupon.mutateAsync(couponData as Parameters<typeof createCoupon.mutateAsync>[0]);
+        await createCoupon.mutateAsync(couponData);
         notifications.show({ title: "Cupón creado", message: "El cupón se ha creado correctamente", color: "green" });
       }
       closeCouponModal();
@@ -1154,6 +1156,14 @@ export function CatalogPage() {
                         {coupon.current_uses}{coupon.max_uses ? ` / ${coupon.max_uses}` : " (ilimitado)"}
                       </Text>
                     </Group>
+                    <Group justify="space-between">
+                      <Text c="dimmed" size="sm">Aplica a</Text>
+                      <Text fw={600} size="sm">
+                        {coupon.applicable_product_ids?.length
+                          ? `${coupon.applicable_product_ids.length} producto${coupon.applicable_product_ids.length > 1 ? "s" : ""}`
+                          : "General"}
+                      </Text>
+                    </Group>
                   </Stack>
                 </Card>
               ))}
@@ -1530,6 +1540,16 @@ export function CatalogPage() {
               min={1}
               value={couponForm.values.max_uses ?? ""}
               onChange={(val) => couponForm.setFieldValue("max_uses", val === "" || val === null ? null : Number(val))}
+            />
+            <MultiSelect
+              label="Productos aplicables"
+              description="Deja vacío para que el cupón sea general (se aplica a todos los productos)"
+              placeholder="General — todos los productos"
+              data={products.map((p) => ({ value: p.id, label: `${p.name} (${formatDecimal(p.price)} €)` }))}
+              value={couponForm.values.applicable_product_ids}
+              onChange={(val) => couponForm.setFieldValue("applicable_product_ids", val)}
+              searchable
+              clearable
             />
             <Switch
               description="Solo los cupones activos pueden ser usados"

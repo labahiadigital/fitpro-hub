@@ -60,8 +60,7 @@ export interface Coupon {
   discount_value: number;
   max_uses?: number;
   current_uses: number;
-  valid_from?: string;
-  valid_until?: string;
+  applicable_product_ids: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -164,13 +163,15 @@ export function useClientPackages(clientId?: string) {
 export function useCoupons(params?: { is_active?: boolean }) {
   const { currentWorkspace } = useAuthStore();
 
-  return useQuery({
+  return useQuery<Coupon[]>({
     queryKey: ["coupons", currentWorkspace?.id, params],
     queryFn: async () => {
       const response = await api.get("/products/coupons/", {
         params: { workspace_id: currentWorkspace?.id, ...params },
       });
-      return response.data;
+      const data = response.data;
+      if (Array.isArray(data)) return data as Coupon[];
+      return (data?.items ?? []) as Coupon[];
     },
     enabled: !!currentWorkspace?.id,
   });

@@ -124,17 +124,15 @@ class ClientPackage(BaseModel):
 
 class Coupon(BaseModel):
     """Discount coupon model."""
-    
+
     __tablename__ = "coupons"
-    
+
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     code = Column(String(50), nullable=False)
     description = Column(Text)
-    discount_type = Column(String(20), nullable=False, default='percentage')  # percentage, fixed
+    discount_type = Column(String(20), nullable=False, default='percentage')
     discount_value = Column(Numeric(10, 2), nullable=False)
     max_uses = Column(Integer)
-    current_uses = Column(Integer, default=0)
-    valid_from = Column(String)
-    valid_until = Column(String)
-    applicable_products = Column(ARRAY(UUID(as_uuid=True)), default=[])
-    is_active = Column(Boolean, default=True)
+    current_uses = Column(Integer, default=0, nullable=False)
+    applicable_product_ids = Column(JSONB, default=list)
+    is_active = Column(Boolean, default=True, nullable=False)
