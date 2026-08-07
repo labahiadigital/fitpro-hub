@@ -840,6 +840,54 @@ async def create_coupon(
     return CouponResponse.model_validate(coupon)
 
 
+@router.patch("/coupons/{coupon_id}", response_model=CouponResponse)
+async def update_coupon(
+    coupon_id: UUID,
+    data: CouponUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(["owner", "collaborator"])),
+):
+    """Update a coupon."""
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.id == coupon_id,
+            Coupon.workspace_id == current_user.workspace_id,
+        )
+    )
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Cupón no encontrado")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(coupon, field, value)
+
+    await db.commit()
+    await db.refresh(coupon)
+    return CouponResponse.model_validate(coupon)
+
+
+@router.delete("/coupons/{coupon_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_coupon(
+    coupon_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(["owner"])),
+):
+    """Delete a coupon."""
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.id == coupon_id,
+            Coupon.workspace_id == current_user.workspace_id,
+        )
+    )
+    coupon = result.scalar_one_or_none()
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Cupón no encontrado")
+
+    await db.delete(coupon)
+    await db.commit()
+
+
 @router.post("/coupons/validate", response_model=CouponValidateResponse)
 async def validate_coupon(
     data: CouponValidate,
@@ -857,23 +905,59 @@ async def validate_coupon(
     coupon = result.scalar_one_or_none()
     
     if not coupon:
-        return CouponValidateResponse(is_valid=False, message="C?digo no encontrado")
+        return CouponValidateResponse(is_valid=False, message="Código no encontrado")
     
     if not coupon.is_active:
-        return CouponValidateResponse(is_valid=False, message="Cup?n desactivado")
+        return CouponValidateResponse(is_valid=False, message="Cupón desactivado")
     
     if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
-        return CouponValidateResponse(is_valid=False, message="Cup?n agotado")
+        return CouponValidateResponse(is_valid=False, message="Cupón agotado")
     
     # Check product applicability
     if data.product_id and coupon.applicable_products:
         if data.product_id not in coupon.applicable_products:
-            return CouponValidateResponse(is_valid=False, message="Cup?n no aplicable a este producto")
+            return CouponValidateResponse(is_valid=False, message="Cupón no aplicable a este producto")
     
     return CouponValidateResponse(
         is_valid=True,
         discount_type=coupon.discount_type,
         discount_value=float(coupon.discount_value),
-        message="Cup?n v?lido",
+        message="Cupón válido",
+    )
+
+
+@router.post("/coupons/public-validate", response_model=CouponValidateResponse)
+async def validate_coupon_public(
+    data: CouponValidate,
+    workspace_id: UUID = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Validate a coupon code publicly (no auth, used in onboarding flow)."""
+    result = await db.execute(
+        select(Coupon).where(
+            Coupon.workspace_id == workspace_id,
+            Coupon.code == data.code,
+        )
+    )
+    coupon = result.scalar_one_or_none()
+
+    if not coupon:
+        return CouponValidateResponse(is_valid=False, message="Código no encontrado")
+
+    if not coupon.is_active:
+        return CouponValidateResponse(is_valid=False, message="Cupón desactivado")
+
+    if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
+        return CouponValidateResponse(is_valid=False, message="Cupón agotado")
+
+    if data.product_id and coupon.applicable_products:
+        if data.product_id not in coupon.applicable_products:
+            return CouponValidateResponse(is_valid=False, message="Cupón no aplicable a este producto")
+
+    return CouponValidateResponse(
+        is_valid=True,
+        discount_type=coupon.discount_type,
+        discount_value=float(coupon.discount_value),
+        message="Cupón válido",
     )
 

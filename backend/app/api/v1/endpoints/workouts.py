@@ -10,6 +10,7 @@ from sqlalchemy import select, or_, func, String, update
 from pydantic import BaseModel
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.storage import (
     normalize_image_urls_in_obj,
     resolve_url,
@@ -17,6 +18,7 @@ from app.core.storage import (
 from app.models.workout import WorkoutProgram, WorkoutLog
 from app.models.exercise import Exercise, ExerciseAlternative
 from app.models.client import Client
+from app.models.workspace import Workspace
 from app.middleware.auth import require_workspace, require_staff, CurrentUser
 from app.api.v1.endpoints.tasks import create_auto_task
 from app.services.template_hydration import hydrate_workout_templates
@@ -958,21 +960,40 @@ async def assign_program_to_client(
         )
 
     try:
-        client_user_result = await db.execute(
-            select(Client.user_id).where(Client.id == data.client_id)
+        client_row = await db.execute(
+            select(Client).where(Client.id == data.client_id)
         )
-        client_user_id = client_user_result.scalar_one_or_none()
-        if client_user_id:
+        client_obj = client_row.scalar_one_or_none()
+        if client_obj and client_obj.user_id:
+            ws_row = await db.execute(
+                select(Workspace).where(Workspace.id == current_user.workspace_id)
+            )
+            ws_obj = ws_row.scalar_one_or_none()
+            ws_name = ws_obj.name if ws_obj else "Trackfiz"
+            portal_url = f"{settings.FRONTEND_URL}/my-workouts"
+
+            from app.services.email import EmailTemplates
+            email_html = EmailTemplates.plan_assigned_notification(
+                client_name=client_obj.full_name or "atleta",
+                plan_type="workout",
+                plan_name=template.name,
+                portal_url=portal_url,
+                workspace_name=ws_name,
+            )
+
             from app.services.notification_service import notify
             await notify(
                 db=db,
                 event="program_assigned",
-                user_id=client_user_id,
+                user_id=client_obj.user_id,
                 workspace_id=current_user.workspace_id,
                 title="Nuevo programa de entrenamiento asignado",
                 body=f"Se te ha asignado el programa '{template.name}'.",
                 notification_type="info",
                 link="/my-workouts",
+                email_subject=f"Nuevo plan de entrenamiento: {template.name}",
+                email_html=email_html,
+                email_to=client_obj.email,
             )
     except Exception:
         import logging

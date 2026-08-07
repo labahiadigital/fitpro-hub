@@ -18,6 +18,7 @@ from app.models.message import (
     MessageSource, MessageDirection, MessageStatus
 )
 from app.models.client import Client
+from app.models.user import User
 from app.models.workspace import Workspace
 from app.middleware.auth import require_workspace, CurrentUser
 from app.services.kapso import kapso_service, KapsoError
@@ -513,7 +514,39 @@ async def send_message(
             message.external_error = str(e)
             await db.commit()
             await db.refresh(message)
-    
+
+    # Email notification to the client (best-effort, non-blocking)
+    if is_sent and conversation.client_id and data.content:
+        try:
+            client_result2 = await db.execute(
+                select(Client).where(Client.id == conversation.client_id)
+            )
+            notif_client = client_result2.scalar_one_or_none()
+            if notif_client and notif_client.email:
+                sender_result = await db.execute(
+                    select(User.full_name).where(User.id == current_user.id)
+                )
+                sender_name = sender_result.scalar_one_or_none() or "Tu entrenador"
+                ws_name = workspace.name if workspace else "Trackfiz"
+                portal_url = f"{settings.FRONTEND_URL}/my-messages"
+
+                from app.services.email import EmailTemplates
+                email_html = EmailTemplates.new_message_notification(
+                    client_name=notif_client.full_name or "atleta",
+                    sender_name=sender_name,
+                    message_preview=data.content[:200],
+                    portal_url=portal_url,
+                    workspace_name=ws_name,
+                )
+                from app.tasks.notifications import send_email_task
+                send_email_task.delay(
+                    to_email=notif_client.email,
+                    subject=f"Nuevo mensaje de {sender_name}",
+                    html_content=email_html,
+                )
+        except Exception:
+            logger.warning("Could not send message email notification", exc_info=True)
+
     return message
 
 

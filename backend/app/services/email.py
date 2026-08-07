@@ -1405,6 +1405,147 @@ class EmailTemplates:
         </html>
         """
 
+    @staticmethod
+    def new_message_notification(
+        client_name: str,
+        sender_name: str,
+        message_preview: str,
+        portal_url: str,
+        workspace_name: Optional[str] = None,
+    ) -> str:
+        """Email enviado al cliente cuando el entrenador le manda un mensaje."""
+        brand = workspace_name or "Trackfiz"
+        safe_name = html_mod.escape(client_name.strip() if client_name else "atleta")
+        safe_sender = html_mod.escape(sender_name.strip() if sender_name else "Tu entrenador")
+        safe_preview = html_mod.escape(message_preview[:200] if message_preview else "")
+        return f"""
+        <!DOCTYPE html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Nuevo mensaje - {html_mod.escape(brand)}</title>
+        </head>
+        <body style="margin:0;padding:0;background:#f4f7f6;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;color:#1f2937;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td align="center" style="padding:40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                            <tr>
+                                <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:36px 30px;text-align:center;">
+                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;">{html_mod.escape(brand)}</h1>
+                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.9);font-size:13px;">Tienes un nuevo mensaje</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:32px 30px;">
+                                    <p style="margin:0 0 14px;color:#4a5568;font-size:16px;line-height:1.6;">
+                                        Hola <strong style="color:#2D6A4F;">{safe_name}</strong>,
+                                    </p>
+                                    <p style="margin:0 0 18px;color:#4a5568;font-size:15px;line-height:1.6;">
+                                        <strong>{safe_sender}</strong> te ha enviado un mensaje:
+                                    </p>
+                                    <div style="background:#f8fafc;border-left:3px solid #2D6A4F;padding:14px 16px;border-radius:6px;margin:0 0 24px;">
+                                        <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;font-style:italic;">
+                                            "{safe_preview}"
+                                        </p>
+                                    </div>
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 8px;">
+                                        <tr>
+                                            <td align="center">
+                                                {_cta_button("Ver mensaje", portal_url)}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f8fafc;padding:22px 30px;border-top:1px solid #e2e8f0;">
+                                    <p style="margin:0;color:#a0aec0;font-size:12px;text-align:center;">
+                                        &copy; 2026 Trackfiz. Todos los derechos reservados.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+
+    @staticmethod
+    def plan_assigned_notification(
+        client_name: str,
+        plan_type: str,
+        plan_name: str,
+        portal_url: str,
+        workspace_name: Optional[str] = None,
+    ) -> str:
+        """Email enviado al cliente cuando se le asigna un plan de entrenamiento o nutrición."""
+        brand = workspace_name or "Trackfiz"
+        safe_name = html_mod.escape(client_name.strip() if client_name else "atleta")
+        safe_plan = html_mod.escape(plan_name)
+        type_label = "entrenamiento" if plan_type == "workout" else "nutricional"
+        emoji = "\U0001f4aa" if plan_type == "workout" else "\U0001f957"
+        return f"""
+        <!DOCTYPE html>
+        <html xmlns="http://www.w3.org/1999/xhtml">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Nuevo plan asignado - {html_mod.escape(brand)}</title>
+        </head>
+        <body style="margin:0;padding:0;background:#f4f7f6;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;color:#1f2937;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td align="center" style="padding:40px 20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                            <tr>
+                                <td style="background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);padding:36px 30px;text-align:center;">
+                                    <h1 style="margin:0;color:white;font-size:26px;font-weight:700;">{html_mod.escape(brand)}</h1>
+                                    <p style="margin:8px 0 0;color:rgba(255,255,255,.9);font-size:13px;">Nuevo plan de {type_label}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:32px 30px;">
+                                    <p style="margin:0 0 14px;color:#4a5568;font-size:16px;line-height:1.6;">
+                                        Hola <strong style="color:#2D6A4F;">{safe_name}</strong>,
+                                    </p>
+                                    <p style="margin:0 0 18px;color:#4a5568;font-size:15px;line-height:1.6;">
+                                        Tu entrenador te ha asignado un nuevo plan de {type_label}:
+                                    </p>
+                                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;text-align:center;margin:0 0 24px;">
+                                        <p style="margin:0 0 4px;font-size:28px;">{emoji}</p>
+                                        <p style="margin:0;color:#166534;font-size:18px;font-weight:700;">{safe_plan}</p>
+                                    </div>
+                                    <p style="margin:0 0 22px;color:#4a5568;font-size:15px;line-height:1.6;">
+                                        Accede a la plataforma para ver los detalles completos de tu plan.
+                                    </p>
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 8px;">
+                                        <tr>
+                                            <td align="center">
+                                                {_cta_button("Ver mi plan", portal_url)}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background:#f8fafc;padding:22px 30px;border-top:1px solid #e2e8f0;">
+                                    <p style="margin:0;color:#a0aec0;font-size:12px;text-align:center;">
+                                        &copy; 2026 Trackfiz. Todos los derechos reservados.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+
 
 # Singleton instance
 email_service = EmailService()

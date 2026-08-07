@@ -16,6 +16,8 @@ import {
   Badge,
   Loader,
   Tooltip,
+  Modal,
+  Button,
 } from "@mantine/core";
 import { useDisclosure, useHotkeys } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -55,6 +57,8 @@ import {
   IconTool,
   IconShield,
   IconClock,
+  IconShare,
+  IconSquarePlus,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -803,7 +807,7 @@ export function DashboardLayout() {
   const deleteNotif = useDeleteNotification();
 
   const unreadNotifCount = unreadData?.unread_count || 0;
-  const { canInstall, install: installPWA } = usePWAInstall();
+  const { canInstall, install: installPWA, showIOSGuide, dismissIOSGuide } = usePWAInstall();
 
   const mappedNotifications = (notifData?.items || []).map((n) => ({
     id: n.id,
@@ -985,6 +989,60 @@ export function DashboardLayout() {
         onDelete={(id) => deleteNotif.mutate(id)}
         onClearAll={() => markAllRead.mutate()}
       />
+
+      <Modal
+        opened={showIOSGuide}
+        onClose={dismissIOSGuide}
+        title="Instalar Trackfiz"
+        centered
+        radius="lg"
+        size="sm"
+      >
+        <Stack gap="md">
+          <Text size="sm">Para instalar la app en tu iPhone/iPad:</Text>
+          <Group gap="sm" align="flex-start">
+            <Box
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "8px",
+                background: "var(--mantine-color-blue-0)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <IconShare size={16} color="var(--mantine-color-blue-6)" />
+            </Box>
+            <Text size="sm" style={{ flex: 1 }}>
+              Pulsa el botón <b>Compartir</b> en la barra inferior de Safari
+            </Text>
+          </Group>
+          <Group gap="sm" align="flex-start">
+            <Box
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "8px",
+                background: "var(--mantine-color-blue-0)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <IconSquarePlus size={16} color="var(--mantine-color-blue-6)" />
+            </Box>
+            <Text size="sm" style={{ flex: 1 }}>
+              Selecciona <b>"Añadir a pantalla de inicio"</b>
+            </Text>
+          </Group>
+          <Button onClick={dismissIOSGuide} variant="light" fullWidth radius="md">
+            Entendido
+          </Button>
+        </Stack>
+      </Modal>
     </div>
   );
 }

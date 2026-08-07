@@ -147,7 +147,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
               role?: "owner" | "collaborator" | "client";
               workspace_id?: string;
               permissions?: Record<string, string[]>;
-              workspaces?: Array<{ id: string; name: string; slug: string; logo_url?: string; role: "owner" | "collaborator" | "client" }>;
+              workspaces?: Array<{ id: string; name: string; slug: string; logo_url?: string; domain?: string; branding?: { primary_color: string; secondary_color: string; accent_color: string }; role: "owner" | "collaborator" | "client" }>;
             };
             useAuthStore.getState().setUser({
               id: data.id,
@@ -161,13 +161,15 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
               workspaces: data.workspaces,
             });
             if (data.workspace_id && data.workspaces?.length) {
-              const ws = data.workspaces.find((w) => w.id === data.workspace_id) || data.workspaces[0];
+              const ws = data.workspaces.find((w: Record<string, unknown>) => w.id === data.workspace_id) || data.workspaces[0];
               if (ws) {
                 useAuthStore.getState().setWorkspace({
                   id: ws.id,
                   name: ws.name,
                   slug: ws.slug,
                   logo_url: ws.logo_url,
+                  domain: ws.domain,
+                  branding: ws.branding,
                 });
               }
             }

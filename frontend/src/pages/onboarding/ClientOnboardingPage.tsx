@@ -43,7 +43,7 @@ import {
   IconTarget,
   IconUser,
 } from "@tabler/icons-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
@@ -166,6 +166,40 @@ export function ClientOnboardingPage() {
   const [waitlistData, setWaitlistData] = useState({ email: "", name: "", phone: "", message: "" });
   const [progressPhoto, setProgressPhoto] = useState<File | null>(null);
   const [progressPhotoPreview, setProgressPhotoPreview] = useState<string | null>(null);
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponValidating, setCouponValidating] = useState(false);
+  const [couponResult, setCouponResult] = useState<{
+    is_valid: boolean;
+    discount_type?: string;
+    discount_value?: number;
+    message?: string;
+  } | null>(null);
+
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim() || !workspaceInfo?.id) return;
+    setCouponValidating(true);
+    try {
+      const res = await api.post("/products/coupons/public-validate", {
+        code: couponCode.trim().toUpperCase(),
+        product_id: productId || undefined,
+      }, { params: { workspace_id: workspaceInfo.id } });
+      setCouponResult(res.data);
+    } catch {
+      setCouponResult({ is_valid: false, message: "Error al validar el cupón" });
+    } finally {
+      setCouponValidating(false);
+    }
+  };
+
+  const discountedPrice = useMemo(() => {
+    if (!productInfo?.price || !couponResult?.is_valid) return productInfo?.price ?? 0;
+    if (couponResult.discount_type === "percentage") {
+      return Math.max(0, productInfo.price * (1 - (couponResult.discount_value || 0) / 100));
+    }
+    return Math.max(0, productInfo.price - (couponResult.discount_value || 0));
+  }, [productInfo?.price, couponResult]);
 
   // Verificar que el workspace existe
   useEffect(() => {
@@ -299,8 +333,6 @@ export function ClientOnboardingPage() {
           marketing: v.acceptMarketing,
           consent_date: new Date().toISOString(),
         },
-        // Facturación: todos los campos van obligatorios; ``legal_name``
-        // sólo aplica a Persona Jurídica.
         fiscal_type: v.fiscalType,
         legal_name: v.fiscalType === "company" ? v.legalName.trim() : null,
         tax_id: v.taxId.trim(),
@@ -308,6 +340,7 @@ export function ClientOnboardingPage() {
         billing_city: v.billingCity.trim(),
         billing_country: v.billingCountry.trim(),
         billing_postal_code: v.billingPostalCode.trim(),
+        coupon_code: couponResult?.is_valid ? couponCode.trim().toUpperCase() : undefined,
       });
       if (res.data?.invitation_token) {
         navigate(`/onboarding/invite/${res.data.invitation_token}`);
@@ -995,6 +1028,61 @@ export function ClientOnboardingPage() {
                   required
                   {...form.getInputProps("billingPostalCode")}
                 />
+              </>
+            )}
+
+            {/* Coupon Code */}
+            {productInfo && productInfo.price > 0 && (
+              <>
+                <Divider my="xs" label="¿Tienes un cupón de descuento?" labelPosition="center" />
+                <Group align="flex-end" gap="xs">
+                  <TextInput
+                    label="Código de cupón"
+                    placeholder="Ej: DESCUENTO20"
+                    value={couponCode}
+                    onChange={(e) => {
+                      setCouponCode(e.currentTarget.value.toUpperCase());
+                      setCouponResult(null);
+                    }}
+                    styles={{ input: { fontFamily: "monospace", fontWeight: 700, letterSpacing: 1 } }}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    variant="light"
+                    onClick={handleValidateCoupon}
+                    loading={couponValidating}
+                    disabled={!couponCode.trim()}
+                  >
+                    Aplicar
+                  </Button>
+                </Group>
+                {couponResult && (
+                  <Alert
+                    color={couponResult.is_valid ? "green" : "red"}
+                    variant="light"
+                    radius="md"
+                  >
+                    {couponResult.is_valid ? (
+                      <Group gap="xs">
+                        <IconCheck size={16} />
+                        <Text size="sm" fw={500}>
+                          {couponResult.message} — Descuento:{" "}
+                          {couponResult.discount_type === "percentage"
+                            ? `${couponResult.discount_value}%`
+                            : `${couponResult.discount_value} €`}
+                        </Text>
+                      </Group>
+                    ) : (
+                      <Text size="sm">{couponResult.message}</Text>
+                    )}
+                  </Alert>
+                )}
+                {couponResult?.is_valid && (
+                  <Group justify="space-between">
+                    <Text size="sm" c="dimmed" td="line-through">€{formatDecimal(productInfo.price, 2)}</Text>
+                    <Text size="lg" fw={700} c="green">€{formatDecimal(discountedPrice, 2)}</Text>
+                  </Group>
+                )}
               </>
             )}
 

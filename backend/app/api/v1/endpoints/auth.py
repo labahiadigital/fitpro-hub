@@ -341,6 +341,8 @@ async def get_me(
             "name": ws.name,
             "slug": ws.slug,
             "logo_url": await resolve_url(ws.logo_url),
+            "domain": ws.domain,
+            "branding": ws.branding or {},
             "role": ur.role.value,
         })
 

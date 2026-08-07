@@ -23,8 +23,10 @@ from app.core.storage import (
     normalize_image_urls_in_obj,
     resolve_url,
 )
+from app.core.config import settings
 from app.middleware.auth import CurrentUser, get_current_user, require_staff, require_workspace
 from app.models.client import Client
+from app.models.workspace import Workspace
 from app.models.nutrition import Food, FoodFavorite, FoodGroup, MealPlan, Recipe
 from app.api.v1.endpoints.tasks import create_auto_task
 from app.services.template_hydration import hydrate_meal_plans
@@ -967,21 +969,40 @@ async def assign_meal_plan_to_client(
         )
 
     try:
-        client_user_result = await db.execute(
-            select(Client.user_id).where(Client.id == data.client_id)
+        client_row = await db.execute(
+            select(Client).where(Client.id == data.client_id)
         )
-        client_user_id = client_user_result.scalar_one_or_none()
-        if client_user_id:
+        client_obj = client_row.scalar_one_or_none()
+        if client_obj and client_obj.user_id:
+            ws_row = await db.execute(
+                select(Workspace).where(Workspace.id == current_user.workspace_id)
+            )
+            ws_obj = ws_row.scalar_one_or_none()
+            ws_name = ws_obj.name if ws_obj else "Trackfiz"
+            portal_url = f"{settings.FRONTEND_URL}/my-nutrition"
+
+            from app.services.email import EmailTemplates
+            email_html = EmailTemplates.plan_assigned_notification(
+                client_name=client_obj.full_name or "atleta",
+                plan_type="nutrition",
+                plan_name=template.name,
+                portal_url=portal_url,
+                workspace_name=ws_name,
+            )
+
             from app.services.notification_service import notify
             await notify(
                 db=db,
                 event="plan_assigned",
-                user_id=client_user_id,
+                user_id=client_obj.user_id,
                 workspace_id=current_user.workspace_id,
                 title="Nuevo plan nutricional asignado",
                 body=f"Se te ha asignado el plan '{template.name}'.",
                 notification_type="info",
                 link="/my-nutrition",
+                email_subject=f"Nuevo plan nutricional: {template.name}",
+                email_html=email_html,
+                email_to=client_obj.email,
             )
     except Exception:
         import logging

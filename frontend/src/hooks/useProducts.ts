@@ -176,6 +176,52 @@ export function useCoupons(params?: { is_active?: boolean }) {
   });
 }
 
+export function useCreateCoupon() {
+  const queryClient = useQueryClient();
+  const { currentWorkspace } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async (data: Omit<Coupon, "id" | "workspace_id" | "current_uses" | "created_at" | "updated_at">) => {
+      const response = await api.post("/products/coupons/", {
+        ...data,
+        workspace_id: currentWorkspace?.id,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coupons"] });
+    },
+  });
+}
+
+export function useUpdateCoupon() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Coupon> }) => {
+      const response = await api.patch(`/products/coupons/${id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coupons"] });
+    },
+  });
+}
+
+export function useDeleteCoupon() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.delete(`/products/coupons/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coupons"] });
+    },
+  });
+}
+
 export function useValidateCoupon() {
   const { currentWorkspace } = useAuthStore();
 

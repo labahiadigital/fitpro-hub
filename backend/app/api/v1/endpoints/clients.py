@@ -698,39 +698,69 @@ async def delete_client_permanent(
         "UPDATE email_events SET client_id = NULL WHERE client_id = :id",
         "UPDATE tasks SET client_id = NULL WHERE client_id = :id",
         "UPDATE appointments SET client_id = NULL WHERE client_id = :id",
+        "DELETE FROM client_supplements WHERE client_id = :id",
+        "DELETE FROM conversations WHERE client_id = :id",
+        "DELETE FROM workout_logs WHERE client_id = :id",
+        "DELETE FROM nutrition_logs WHERE client_id = :id",
+        "DELETE FROM wearable_connections WHERE client_id = :id",
+        "DELETE FROM feedback WHERE client_id = :id",
+        "DELETE FROM notifications WHERE user_id IN (SELECT user_id FROM clients WHERE id = :id) AND workspace_id = :ws_id",
     ]
     for sql in cleanup_sql:
         try:
-            await db.execute(text(sql), {"id": cid})
+            params: dict = {"id": cid}
+            if ":ws_id" in sql:
+                params["ws_id"] = str(current_user.workspace_id)
+            await db.execute(text(sql), params)
         except Exception as exc:
             logger.warning("hard_delete cleanup skipped (%s): %s", sql.split()[0:3], exc)
+            # If an individual statement fails (e.g. table doesn't exist),
+            # we need a SAVEPOINT rollback so the rest of the transaction
+            # isn't poisoned. We issue a rollback-to-savepoint via
+            # begin_nested(). For safety, catch that too.
+            try:
+                await db.rollback()
+                await db.begin()
+            except Exception:
+                pass
 
-    await db.delete(client)
-    await db.flush()
+    try:
+        await db.delete(client)
+        await db.flush()
+    except Exception as exc:
+        logger.error("hard_delete: failed to delete client %s: %s", cid, exc)
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al eliminar el cliente. Algunos datos vinculados no pudieron limpiarse.",
+        )
 
     # Quitar rol de cliente en este workspace; si el usuario no tiene más
     # roles, lo desactivamos para que no quede una cuenta huérfana.
     if linked_user_id:
-        role_result = await db.execute(
-            select(UserRole).where(
-                UserRole.user_id == linked_user_id,
-                UserRole.workspace_id == current_user.workspace_id,
-                UserRole.role == RoleType.client,
+        try:
+            role_result = await db.execute(
+                select(UserRole).where(
+                    UserRole.user_id == linked_user_id,
+                    UserRole.workspace_id == current_user.workspace_id,
+                    UserRole.role == RoleType.client,
+                )
             )
-        )
-        for role_row in role_result.scalars().all():
-            await db.delete(role_row)
+            for role_row in role_result.scalars().all():
+                await db.delete(role_row)
 
-        remaining = await db.execute(
-            select(func.count()).select_from(UserRole).where(
-                UserRole.user_id == linked_user_id
+            remaining = await db.execute(
+                select(func.count()).select_from(UserRole).where(
+                    UserRole.user_id == linked_user_id
+                )
             )
-        )
-        if (remaining.scalar() or 0) == 0:
-            user_result = await db.execute(select(User).where(User.id == linked_user_id))
-            orphan = user_result.scalar_one_or_none()
-            if orphan:
-                orphan.is_active = False
+            if (remaining.scalar() or 0) == 0:
+                user_result = await db.execute(select(User).where(User.id == linked_user_id))
+                orphan = user_result.scalar_one_or_none()
+                if orphan:
+                    orphan.is_active = False
+        except Exception as exc:
+            logger.warning("hard_delete: cleanup of user roles failed: %s", exc)
 
     await db.commit()
 

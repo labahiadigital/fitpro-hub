@@ -107,6 +107,16 @@ async def notify(
                     html_content=email_html,
                 )
             except Exception:
-                logger.exception("notify: failed to enqueue email for user %s", user_id)
+                logger.warning("notify: Celery unavailable, sending email directly for user %s", user_id)
+                try:
+                    from app.services.email import email_service
+                    await email_service.send_email(
+                        to_email=email_addr,
+                        to_name="",
+                        subject=email_subject or title,
+                        html_content=email_html,
+                    )
+                except Exception:
+                    logger.exception("notify: direct email also failed for user %s", user_id)
     except Exception:
         logger.exception("notify: failed to dispatch notification event=%s user=%s", event, user_id)

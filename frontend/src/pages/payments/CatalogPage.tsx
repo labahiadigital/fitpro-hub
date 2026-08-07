@@ -25,6 +25,7 @@ import {
   TextInput,
   ThemeIcon,
   Tooltip,
+  Radio,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
@@ -43,6 +44,9 @@ import {
   IconTrash,
   IconUsers,
   IconX,
+  IconDiscount2,
+  IconCopy,
+  IconPercentage,
 } from "@tabler/icons-react";
 import { useCallback, useState, useEffect, useMemo } from "react";
 import { openDangerConfirm } from "../../utils/confirmModal";
@@ -68,6 +72,13 @@ import {
   type SessionPackage as SessionPackageType,
   type ClientPackage as ClientPackageType,
 } from "../../hooks/usePackages";
+import {
+  useCoupons,
+  useCreateCoupon,
+  useUpdateCoupon,
+  useDeleteCoupon,
+  type Coupon as CouponType,
+} from "../../hooks/useProducts";
 import { useStockItems } from "../../hooks/useStock";
 import { useBoxes } from "../../hooks/useBoxes";
 import { useMachines } from "../../hooks/useMachines";
@@ -125,11 +136,17 @@ export function CatalogPage() {
   const [packageModalOpened, { open: openPackageModal, close: closePackageModal }] = useDisclosure(false);
   const [editingPackage, setEditingPackage] = useState<SessionPackage | null>(null);
 
+  // Coupon state
+  const [couponModalOpened, { open: openCouponModal, close: closeCouponModal }] = useDisclosure(false);
+  const [editingCoupon, setEditingCoupon] = useState<CouponType | null>(null);
+
   // Data hooks
   const { data: products = [] } = useProducts();
   const { data: subscriptions = [] } = useSubscriptions();
   const { data: packagesData = [] } = useSessionPackages();
   const { data: clientPackagesData = [] } = useClientPackages();
+  const { data: couponsRaw } = useCoupons();
+  const coupons: CouponType[] = Array.isArray(couponsRaw) ? couponsRaw : (couponsRaw as { items?: CouponType[] })?.items ?? [];
 
   // Product mutations
   const createProduct = useCreateProduct();
@@ -141,6 +158,11 @@ export function CatalogPage() {
   // Package mutations
   const createPackage = useCreateSessionPackage();
   const updatePackage = useUpdateSessionPackage();
+
+  // Coupon mutations
+  const createCoupon = useCreateCoupon();
+  const updateCoupon = useUpdateCoupon();
+  const deleteCoupon = useDeleteCoupon();
 
   // Resource binding data
   const { data: stockItems = [] } = useStockItems();
@@ -443,6 +465,86 @@ export function CatalogPage() {
     }
   };
 
+  // --- Coupon Form ---
+  const couponForm = useForm({
+    initialValues: {
+      code: "",
+      description: "",
+      discount_type: "percentage" as "percentage" | "fixed",
+      discount_value: 0,
+      max_uses: null as number | null,
+      is_active: true,
+    },
+    validate: {
+      code: (value) => (value.length < 1 ? "Código requerido" : null),
+      discount_value: (value) => (value <= 0 ? "El descuento debe ser mayor a 0" : null),
+    },
+  });
+
+  // --- Coupon Handlers ---
+  const handleOpenCouponModal = (coupon?: CouponType) => {
+    if (coupon) {
+      setEditingCoupon(coupon);
+      couponForm.setValues({
+        code: coupon.code,
+        description: coupon.description || "",
+        discount_type: coupon.discount_type,
+        discount_value: coupon.discount_value,
+        max_uses: coupon.max_uses ?? null,
+        is_active: coupon.is_active,
+      });
+    } else {
+      setEditingCoupon(null);
+      couponForm.reset();
+    }
+    openCouponModal();
+  };
+
+  const handleSaveCoupon = async (values: typeof couponForm.values) => {
+    try {
+      const couponData = {
+        code: values.code.toUpperCase().trim(),
+        description: values.description || undefined,
+        discount_type: values.discount_type,
+        discount_value: values.discount_value,
+        max_uses: values.max_uses && values.max_uses > 0 ? values.max_uses : undefined,
+        is_active: values.is_active,
+      };
+      if (editingCoupon) {
+        await updateCoupon.mutateAsync({ id: editingCoupon.id, data: couponData });
+        notifications.show({ title: "Cupón actualizado", message: "El cupón se ha actualizado correctamente", color: "green" });
+      } else {
+        await createCoupon.mutateAsync(couponData as Parameters<typeof createCoupon.mutateAsync>[0]);
+        notifications.show({ title: "Cupón creado", message: "El cupón se ha creado correctamente", color: "green" });
+      }
+      closeCouponModal();
+      couponForm.reset();
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudo guardar el cupón", color: "red" });
+    }
+  };
+
+  const handleDeleteCoupon = (coupon: CouponType) => {
+    openDangerConfirm({
+      title: "Eliminar cupón",
+      message: `¿Estás seguro de que quieres eliminar el cupón "${coupon.code}"?`,
+      onConfirm: async () => {
+        try {
+          await deleteCoupon.mutateAsync(coupon.id);
+          notifications.show({ title: "Cupón eliminado", message: "El cupón ha sido eliminado", color: "green" });
+        } catch { /* handled */ }
+      },
+    });
+  };
+
+  const handleToggleCouponActive = async (coupon: CouponType) => {
+    try {
+      await updateCoupon.mutateAsync({ id: coupon.id, data: { is_active: !coupon.is_active } });
+    } catch {
+      notifications.show({ title: "Error", message: "No se pudo actualizar el estado", color: "red" });
+    }
+  };
+
   const getPkgStatusColor = (status: ClientPackage["status"]) => {
     switch (status) {
       case "active": return "green";
@@ -589,7 +691,11 @@ export function CatalogPage() {
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        action={{
+        action={activeTab === "coupons" ? {
+          label: "Nuevo Cupón",
+          icon: <IconPlus size={16} />,
+          onClick: () => handleOpenCouponModal(),
+        } : {
           label: activeTab === "physical" ? "Nuevo Producto" : "Nuevo Servicio",
           icon: <IconPlus size={16} />,
           onClick: () => handleOpenNewProduct(activeTab === "physical" ? "product" : "service"),
@@ -607,6 +713,7 @@ export function CatalogPage() {
             { value: "physical", label: "Productos" },
             { value: "subscriptions", label: "Suscripciones" },
             { value: "bonos", label: "Bonos" },
+            { value: "coupons", label: "Cupones" },
           ]}
           size="sm"
           radius="md"
@@ -627,6 +734,9 @@ export function CatalogPage() {
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconCurrencyEuro size={14} />} value="bonos" style={{ fontWeight: 500 }}>
               Bonos
+            </Tabs.Tab>
+            <Tabs.Tab leftSection={<IconDiscount2 size={14} />} value="coupons" style={{ fontWeight: 500 }}>
+              Cupones
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -952,6 +1062,104 @@ export function CatalogPage() {
             </Tabs.Panel>
           </Tabs>
         </Tabs.Panel>
+        {/* ═══════════════ COUPONS TAB ═══════════════ */}
+        <Tabs.Panel value="coupons">
+          <Group justify="flex-end" mb="md">
+            <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpenCouponModal()}>
+              Nuevo Cupón
+            </Button>
+          </Group>
+
+          {coupons.length === 0 ? (
+            <Box className="nv-card" p="xl">
+              <Text c="dimmed" ta="center">No hay cupones creados. Crea uno para ofrecer descuentos a tus clientes.</Text>
+            </Box>
+          ) : (
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
+              {coupons.map((coupon) => (
+                <Card key={coupon.id} p="lg" radius="md" withBorder>
+                  <Group justify="space-between" mb="md">
+                    <Group gap="xs">
+                      <ThemeIcon
+                        color={coupon.is_active ? "violet" : "gray"}
+                        radius="md"
+                        size="lg"
+                        variant="light"
+                      >
+                        <IconDiscount2 size={20} />
+                      </ThemeIcon>
+                      <div>
+                        <Group gap={6}>
+                          <Text fw={700} size="lg" ff="monospace">{coupon.code}</Text>
+                          <CopyButton value={coupon.code}>
+                            {({ copied, copy }) => (
+                              <Tooltip label={copied ? "¡Copiado!" : "Copiar código"}>
+                                <ActionIcon
+                                  color={copied ? "green" : "gray"}
+                                  variant="subtle"
+                                  size="xs"
+                                  onClick={copy}
+                                >
+                                  {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                          </CopyButton>
+                        </Group>
+                        <Badge color={coupon.is_active ? "green" : "gray"} size="xs" variant="light">
+                          {coupon.is_active ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </div>
+                    </Group>
+                    <Menu shadow="md" width={160}>
+                      <Menu.Target>
+                        <ActionIcon variant="subtle">
+                          <IconDotsVertical size={16} />
+                        </ActionIcon>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleOpenCouponModal(coupon)}>
+                          Editar
+                        </Menu.Item>
+                        <Menu.Item
+                          leftSection={coupon.is_active ? <IconX size={14} /> : <IconCheck size={14} />}
+                          onClick={() => handleToggleCouponActive(coupon)}
+                        >
+                          {coupon.is_active ? "Desactivar" : "Activar"}
+                        </Menu.Item>
+                        <Menu.Divider />
+                        <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={() => handleDeleteCoupon(coupon)}>
+                          Eliminar
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  </Group>
+
+                  {coupon.description && (
+                    <Text c="dimmed" lineClamp={2} mb="md" size="sm">{coupon.description}</Text>
+                  )}
+
+                  <Stack gap="xs" mb="md">
+                    <Group justify="space-between">
+                      <Text c="dimmed" size="sm">Descuento</Text>
+                      <Badge color="violet" variant="light" size="lg">
+                        {coupon.discount_type === "percentage"
+                          ? `${coupon.discount_value}%`
+                          : `${coupon.discount_value} €`}
+                      </Badge>
+                    </Group>
+                    <Group justify="space-between">
+                      <Text c="dimmed" size="sm">Usos</Text>
+                      <Text fw={600} size="sm">
+                        {coupon.current_uses}{coupon.max_uses ? ` / ${coupon.max_uses}` : " (ilimitado)"}
+                      </Text>
+                    </Group>
+                  </Stack>
+                </Card>
+              ))}
+            </SimpleGrid>
+          )}
+        </Tabs.Panel>
       </Tabs>
 
       {/* Product Modal */}
@@ -1268,6 +1476,71 @@ export function CatalogPage() {
             <Group justify="flex-end" mt="md">
               <Button onClick={closePackageModal} variant="subtle">Cancelar</Button>
               <Button type="submit">{editingPackage ? "Guardar Cambios" : "Crear Paquete"}</Button>
+            </Group>
+          </Stack>
+        </form>
+      </BottomSheet>
+      {/* Coupon Modal */}
+      <BottomSheet
+        onClose={() => { closeCouponModal(); setEditingCoupon(null); couponForm.reset(); }}
+        opened={couponModalOpened}
+        size="md"
+        title={editingCoupon ? "Editar Cupón" : "Nuevo Cupón"}
+      >
+        <form onSubmit={couponForm.onSubmit(handleSaveCoupon)}>
+          <Stack gap="md">
+            <TextInput
+              label="Código del cupón"
+              placeholder="Ej: DESCUENTO20"
+              description="El código que los clientes introducirán al pagar. Se guardará en mayúsculas."
+              required
+              {...couponForm.getInputProps("code")}
+              onChange={(e) => couponForm.setFieldValue("code", e.currentTarget.value.toUpperCase())}
+              styles={{ input: { fontFamily: "monospace", fontWeight: 700, letterSpacing: 1 } }}
+            />
+            <TextInput
+              label="Descripción (opcional)"
+              placeholder="Ej: Descuento de verano para nuevos clientes"
+              {...couponForm.getInputProps("description")}
+            />
+            <Radio.Group
+              label="Tipo de descuento"
+              value={couponForm.values.discount_type}
+              onChange={(val) => couponForm.setFieldValue("discount_type", val as "percentage" | "fixed")}
+            >
+              <Group mt="xs">
+                <Radio value="percentage" label="Porcentaje (%)" />
+                <Radio value="fixed" label="Cantidad fija (€)" />
+              </Group>
+            </Radio.Group>
+            <NumberInput
+              label={couponForm.values.discount_type === "percentage" ? "Porcentaje de descuento" : "Descuento en euros"}
+              placeholder="0"
+              min={0}
+              max={couponForm.values.discount_type === "percentage" ? 100 : undefined}
+              decimalScale={2}
+              required
+              leftSection={couponForm.values.discount_type === "percentage" ? <IconPercentage size={14} /> : <IconCurrencyEuro size={14} />}
+              {...couponForm.getInputProps("discount_value")}
+            />
+            <NumberInput
+              label="Máximo de usos (opcional)"
+              description="Déjalo vacío para usos ilimitados"
+              placeholder="Ilimitado"
+              min={1}
+              value={couponForm.values.max_uses ?? ""}
+              onChange={(val) => couponForm.setFieldValue("max_uses", val === "" || val === null ? null : Number(val))}
+            />
+            <Switch
+              description="Solo los cupones activos pueden ser usados"
+              label="Cupón activo"
+              {...couponForm.getInputProps("is_active", { type: "checkbox" })}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button onClick={() => { closeCouponModal(); setEditingCoupon(null); couponForm.reset(); }} variant="subtle">Cancelar</Button>
+              <Button type="submit" loading={createCoupon.isPending || updateCoupon.isPending}>
+                {editingCoupon ? "Guardar Cambios" : "Crear Cupón"}
+              </Button>
             </Group>
           </Stack>
         </form>
