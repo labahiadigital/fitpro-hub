@@ -45,6 +45,7 @@ const ClientOnboardingPage = lazyRetry(() => import("./pages/onboarding/ClientOn
 const SystemFormPage = lazyRetry(() => import("./pages/onboarding/SystemFormPage").then(m => ({ default: m.SystemFormPage })));
 const OnboardingPage = lazyRetry(() => import("./pages/onboarding/OnboardingPage").then(m => ({ default: m.OnboardingPage })));
 const AcceptStaffInvitePage = lazyRetry(() => import("./pages/auth/AcceptStaffInvitePage").then(m => ({ default: m.AcceptStaffInvitePage })));
+const SubscriptionExpiredPage = lazyRetry(() => import("./pages/auth/SubscriptionExpiredPage"));
 
 const DashboardPage = lazyRetry(() => import("./pages/dashboard/DashboardPage").then(m => ({ default: m.DashboardPage })));
 const ClientsPage = lazyRetry(() => import("./pages/clients/ClientsPage").then(m => ({ default: m.ClientsPage })));
@@ -340,6 +341,7 @@ export default function App() {
                   path="/complete-profile"
                 />
 
+                <Route element={<SubscriptionExpiredPage />} path="/subscription-expired" />
                 <Route element={<ConfirmEmailPage />} path="/auth/confirm" />
                 <Route element={<AcceptStaffInvitePage />} path="/auth/accept-invite" />
                 <Route element={<ForgotPasswordPage />} path="/forgot-password" />

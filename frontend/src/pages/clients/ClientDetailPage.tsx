@@ -106,6 +106,7 @@ import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailVie
 import { NutritionCalculatorCard } from "../../components/nutrition/NutritionCalculatorCard";
 import { NutritionHistoryPanel } from "../../components/nutrition/NutritionHistoryPanel";
 import { ClientFormsTab } from "../../components/clients/ClientFormsTab";
+import { ClientReportsTab } from "../../components/clients/ClientReportsTab";
 import type { NutritionCalculationEntry } from "../../hooks/useClients";
 import { type FormulaType, calculateBMR, calculateTDEE } from "../../utils/calories";
 import { generateClientPlanPDF, generateMealPlanPDF, generateWorkoutProgramPDF } from "../../services/pdfGenerator";
@@ -1961,9 +1962,9 @@ export function ClientDetailPage() {
   const measurements = clientMeasurements.map(m => ({
     id: m.id,
     date: m.measured_at || m.created_at,
-    weight: m.weight_kg || 0,
-    body_fat: m.body_fat_percentage || 0,
-    muscle_mass: m.muscle_mass_kg || 0,
+    weight: typeof m.weight_kg === "number" ? m.weight_kg : null,
+    body_fat: typeof m.body_fat_percentage === "number" ? m.body_fat_percentage : null,
+    muscle_mass: typeof m.muscle_mass_kg === "number" ? m.muscle_mass_kg : null,
     measurements: m.measurements || {},
     photos: m.photos || [],
     notes: m.notes,
@@ -2607,6 +2608,7 @@ export function ClientDetailPage() {
             <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
             <Tabs.Tab leftSection={<IconForms size={16} />} value="forms">Formularios</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFileText size={16} />} value="reports">Reportes</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos y suscripciones</Tabs.Tab>
           </Tabs.List>
         )}
@@ -4372,9 +4374,12 @@ export function ClientDetailPage() {
                     <Table.Tbody>
                       {measurements.map((m, index) => {
                         const prevMeasurement = measurements[index + 1];
-                        const weightChange = prevMeasurement ? m.weight - prevMeasurement.weight : 0;
-                        const bodyFatChange = prevMeasurement ? m.body_fat - prevMeasurement.body_fat : 0;
-                        const muscleChange = prevMeasurement ? m.muscle_mass - prevMeasurement.muscle_mass : 0;
+                        const weightChange = (prevMeasurement && m.weight != null && prevMeasurement.weight != null)
+                          ? m.weight - prevMeasurement.weight : null;
+                        const bodyFatChange = (prevMeasurement && m.body_fat != null && prevMeasurement.body_fat != null)
+                          ? m.body_fat - prevMeasurement.body_fat : null;
+                        const muscleChange = (prevMeasurement && m.muscle_mass != null && prevMeasurement.muscle_mass != null)
+                          ? m.muscle_mass - prevMeasurement.muscle_mass : null;
                         
                         return (
                           <Table.Tr key={m.id || index}>
@@ -4386,13 +4391,13 @@ export function ClientDetailPage() {
                               </Text>
                             </Table.Td>
                             <Table.Td>
-                              <Text size="sm">{m.weight > 0 ? `${m.weight} kg` : "-"}</Text>
+                              <Text size="sm">{m.weight != null && m.weight > 0 ? `${m.weight} kg` : "-"}</Text>
                             </Table.Td>
                             <Table.Td>
-                              <Text size="sm">{m.body_fat > 0 ? `${m.body_fat}%` : "-"}</Text>
+                              <Text size="sm">{m.body_fat != null && m.body_fat > 0 ? `${m.body_fat}%` : "-"}</Text>
                             </Table.Td>
                             <Table.Td>
-                              <Text size="sm">{m.muscle_mass > 0 ? `${m.muscle_mass} kg` : "-"}</Text>
+                              <Text size="sm">{m.muscle_mass != null && m.muscle_mass > 0 ? `${m.muscle_mass} kg` : "-"}</Text>
                             </Table.Td>
                             <Table.Td>
                               {m.measurements && Object.keys(m.measurements).length > 0 ? (
@@ -4408,7 +4413,7 @@ export function ClientDetailPage() {
                             <Table.Td>
                               {prevMeasurement && (
                                 <Stack gap={2}>
-                                  {weightChange !== 0 && (
+                                  {weightChange != null && weightChange !== 0 && (
                                     <Badge
                                       color={weightChange <= 0 ? "green" : "red"}
                                       size="xs"
@@ -4417,7 +4422,7 @@ export function ClientDetailPage() {
                                       {weightChange > 0 ? "+" : ""}{formatDecimal(weightChange, 1)} kg
                                     </Badge>
                                   )}
-                                  {bodyFatChange !== 0 && m.body_fat > 0 && (
+                                  {bodyFatChange != null && bodyFatChange !== 0 && (
                                     <Badge
                                       color={bodyFatChange <= 0 ? "green" : "orange"}
                                       size="xs"
@@ -4426,7 +4431,7 @@ export function ClientDetailPage() {
                                       {bodyFatChange > 0 ? "+" : ""}{formatDecimal(bodyFatChange, 1)}% grasa
                                     </Badge>
                                   )}
-                                  {muscleChange !== 0 && m.muscle_mass > 0 && (
+                                  {muscleChange != null && muscleChange !== 0 && (
                                     <Badge
                                       color={muscleChange >= 0 ? "blue" : "red"}
                                       size="xs"
@@ -4792,6 +4797,11 @@ export function ClientDetailPage() {
             clientId={id || ""}
             clientName={client?.full_name || client?.first_name}
           />
+        </Tabs.Panel>
+
+        {/* Reportes de revisión */}
+        <Tabs.Panel value="reports">
+          <ClientReportsTab clientId={id || ""} />
         </Tabs.Panel>
 
         {/* Pagos y suscripciones (incluye datos de facturación inline) */}

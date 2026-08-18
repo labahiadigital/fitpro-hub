@@ -312,28 +312,120 @@ def process_all_renewals():
 
 @shared_task
 def check_expiring_subscriptions():
-    """Check for subscriptions expiring in the next 7 days and log them."""
+    """Check for subscriptions expiring in the next 14 days.
+
+    - Subscriptions expiring in ≤14 days: send a renewal reminder notification
+      to the workspace owner so they can contact the client.
+    - Subscriptions past their period end: mark them as cancelled automatically
+      so the client loses platform access.
+    """
     from app.models.payment import Subscription, SubscriptionStatus
+    from app.models.client import Client
+    from app.models.user import UserRole, RoleType
+    from app.models.notification import Notification
 
     with _sync_session() as session:
         try:
             now = datetime.now(timezone.utc)
-            week_from_now = now + timedelta(days=7)
+            two_weeks_from_now = now + timedelta(days=14)
 
-            subs = (
+            # --- 1. Expire overdue subscriptions ---
+            overdue_subs = (
                 session.query(Subscription)
                 .filter(
                     Subscription.status == SubscriptionStatus.active,
-                    Subscription.current_period_end > now,
-                    Subscription.current_period_end <= week_from_now,
+                    Subscription.current_period_end.isnot(None),
+                    Subscription.current_period_end <= now,
                 )
                 .all()
             )
 
-            logger.info(f"Found {len(subs)} subscriptions expiring within 7 days")
-            return {"status": "completed", "expiring_count": len(subs)}
+            expired_count = 0
+            for sub in overdue_subs:
+                extra = sub.extra_data or {}
+                if extra.get("redsys_identifier"):
+                    continue
+
+                sub.status = SubscriptionStatus.cancelled
+                sub.cancelled_at = now
+                expired_count += 1
+                logger.info(f"Auto-expired subscription {sub.id} (client={sub.client_id})")
+
+            if expired_count:
+                session.commit()
+
+            # --- 2. Notify about subscriptions expiring within 14 days ---
+            expiring_subs = (
+                session.query(Subscription)
+                .filter(
+                    Subscription.status == SubscriptionStatus.active,
+                    Subscription.current_period_end > now,
+                    Subscription.current_period_end <= two_weeks_from_now,
+                )
+                .all()
+            )
+
+            notified_count = 0
+            for sub in expiring_subs:
+                extra = sub.extra_data or {}
+                last_notified = extra.get("expiry_notified_at")
+                if last_notified:
+                    try:
+                        notified_dt = datetime.fromisoformat(last_notified)
+                        if (now - notified_dt) < timedelta(days=7):
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+
+                client = session.query(Client).filter(Client.id == sub.client_id).first()
+                client_name = client.full_name if client else "Cliente desconocido"
+
+                days_left = (sub.current_period_end - now).days
+
+                owner_role = (
+                    session.query(UserRole)
+                    .filter(
+                        UserRole.workspace_id == sub.workspace_id,
+                        UserRole.role == RoleType.owner,
+                    )
+                    .first()
+                )
+
+                if owner_role:
+                    notification = Notification(
+                        workspace_id=sub.workspace_id,
+                        user_id=owner_role.user_id,
+                        title=f"Suscripción de {client_name} expira en {days_left} días",
+                        body=f"La suscripción '{sub.name}' de {client_name} expirará el "
+                             f"{sub.current_period_end.strftime('%d/%m/%Y')}. "
+                             f"Contacta con el cliente para renovarla.",
+                        type="warning",
+                        link=f"/clients/{sub.client_id}",
+                    )
+                    session.add(notification)
+                    notified_count += 1
+
+                sub.extra_data = {**(sub.extra_data or {}), "expiry_notified_at": now.isoformat()}
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(sub, "extra_data")
+
+            if notified_count or expired_count:
+                session.commit()
+
+            logger.info(
+                f"Subscription check complete: {expired_count} expired, "
+                f"{notified_count} expiry notifications sent, "
+                f"{len(expiring_subs)} expiring within 14 days"
+            )
+            return {
+                "status": "completed",
+                "expired_count": expired_count,
+                "expiring_count": len(expiring_subs),
+                "notified_count": notified_count,
+            }
 
         except Exception as e:
+            session.rollback()
             logger.error(f"Error checking expiring subscriptions: {e}", exc_info=True)
             return {"status": "error", "detail": str(e)}
 

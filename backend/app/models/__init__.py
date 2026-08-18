@@ -40,6 +40,7 @@ from app.models.schedule import StaffSchedule, MachineSchedule, BoxSchedule
 from app.models.email_tracking import EmailEvent, EmailCampaignTemplate
 from app.models.community import CommunityBenefit
 from app.models.supplement import ClientSupplement
+from app.models.client_report import ClientReport
 
 __all__ = [
     "Base",
@@ -133,4 +134,5 @@ __all__ = [
     "EmailCampaignTemplate",
     "CommunityBenefit",
     "ClientSupplement",
+    "ClientReport",
 ]

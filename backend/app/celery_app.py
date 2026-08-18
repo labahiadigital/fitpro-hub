@@ -106,7 +106,7 @@ celery_app.conf.beat_schedule = {
     },
     "check-expiring-subscriptions": {
         "task": "app.tasks.payments.check_expiring_subscriptions",
-        "schedule": crontab(hour=6, minute=0),
+        "schedule": crontab(hour="6,12,18,0", minute=0),
         "options": {"queue": "payments"},
     },
     "process-subscription-renewals": {

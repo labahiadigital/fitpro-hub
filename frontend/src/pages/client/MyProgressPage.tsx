@@ -1082,7 +1082,8 @@ export function MyProgressPage() {
                 <Table.Tbody>
                   {measurements.map((m, index) => {
                     const prev = measurements[index + 1];
-                    const weightChange = prev ? (m.weight_kg || 0) - (prev.weight_kg || 0) : 0;
+                    const weightChange = (prev && m.weight_kg != null && prev.weight_kg != null)
+                      ? m.weight_kg - prev.weight_kg : null;
                     
                     return (
                       <Table.Tr key={m.id || index}>
@@ -1101,7 +1102,7 @@ export function MyProgressPage() {
                         <Table.Td>{m.body_fat_percentage ? `${m.body_fat_percentage}%` : "-"}</Table.Td>
                         <Table.Td>{m.muscle_mass_kg ? `${m.muscle_mass_kg} kg` : "-"}</Table.Td>
                         <Table.Td>
-                          {prev && weightChange !== 0 && (
+                          {weightChange != null && weightChange !== 0 && (
                             <Badge
                               color={weightChange <= 0 ? "green" : "red"}
                               size="sm"

@@ -55,7 +55,12 @@ router = APIRouter()
 # ============ HELPER FUNCTIONS ============
 
 async def get_client_for_user(user_id: UUID, db: AsyncSession, workspace_id: UUID | None = None) -> Client:
-    """Get the client record linked to a user account, scoped to workspace."""
+    """Get the client record linked to a user account, scoped to workspace.
+
+    Also verifies the client has an active subscription if they have any
+    subscriptions at all. Clients with no subscription records are considered
+    free-tier / manually managed and pass through.
+    """
     q = select(Client).where(Client.user_id == user_id)
     if workspace_id:
         q = q.where(Client.workspace_id == workspace_id)
@@ -73,6 +78,27 @@ async def get_client_for_user(user_id: UUID, db: AsyncSession, workspace_id: UUI
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tu cuenta de cliente ha sido desactivada. Contacta con tu entrenador."
         )
+
+    # Subscription gate: if client has subscriptions, at least one must be
+    # active or trialing. This ensures expired/cancelled clients lose access.
+    sub_result = await db.execute(
+        select(Subscription).where(
+            Subscription.client_id == client.id,
+            Subscription.workspace_id == client.workspace_id,
+        )
+    )
+    subscriptions = sub_result.scalars().all()
+
+    if subscriptions:
+        has_valid = any(
+            s.status in (SubscriptionStatus.active, SubscriptionStatus.trialing)
+            for s in subscriptions
+        )
+        if not has_valid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tu suscripción ha expirado. Contacta con tu entrenador para renovarla."
+            )
 
     return client
 
@@ -4033,3 +4059,50 @@ async def client_list_supplements(
             )
         )
     return out
+
+
+# ============ CLIENT REPORTS (visible to client) ============
+
+class ClientReportClientResponse(BaseModel):
+    """Report as seen by the client."""
+    id: UUID
+    title: Optional[str] = None
+    body: str
+    client_feedback: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/reports")
+async def get_my_reports(
+    limit: int = Query(50, ge=1, le=200),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all reports written by the coach for the authenticated client."""
+    from app.models.client_report import ClientReport
+
+    client = await get_client_for_user(current_user.id, db, current_user.workspace_id)
+
+    result = await db.execute(
+        select(ClientReport)
+        .where(
+            ClientReport.client_id == client.id,
+            ClientReport.workspace_id == client.workspace_id,
+        )
+        .order_by(desc(ClientReport.created_at))
+        .limit(limit)
+    )
+    reports = result.scalars().all()
+    return [
+        ClientReportClientResponse(
+            id=r.id,
+            title=r.title,
+            body=r.body,
+            client_feedback=r.client_feedback,
+            created_at=r.created_at,
+        )
+        for r in reports
+    ]

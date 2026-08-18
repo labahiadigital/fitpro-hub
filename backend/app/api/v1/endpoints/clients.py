@@ -1789,3 +1789,155 @@ async def send_password_reset_to_client(
 
     return {"success": True, "message": "Email de restablecimiento enviado"}
 
+
+# ============ CLIENT REPORTS (Coach revision notes) ============
+
+class ClientReportCreate(BaseModel):
+    title: Optional[str] = None
+    body: str
+    client_feedback: Optional[str] = None
+
+
+class ClientReportUpdate(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None
+    client_feedback: Optional[str] = None
+
+
+class ClientReportResponse(BaseModel):
+    id: UUID
+    client_id: UUID
+    created_by: Optional[UUID] = None
+    title: Optional[str] = None
+    body: str
+    client_feedback: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/{client_id}/reports", response_model=List[ClientReportResponse])
+async def list_client_reports(
+    client_id: UUID,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all reports for a client, newest first."""
+    from app.models.client_report import ClientReport
+
+    client = await _get_client_or_404(client_id, current_user.workspace_id, db)
+
+    result = await db.execute(
+        select(ClientReport)
+        .where(
+            ClientReport.client_id == client.id,
+            ClientReport.workspace_id == current_user.workspace_id,
+        )
+        .order_by(desc(ClientReport.created_at))
+        .limit(limit)
+        .offset(offset)
+    )
+    return result.scalars().all()
+
+
+@router.post("/{client_id}/reports", response_model=ClientReportResponse, status_code=status.HTTP_201_CREATED)
+async def create_client_report(
+    client_id: UUID,
+    data: ClientReportCreate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new report / revision note for a client."""
+    from app.models.client_report import ClientReport
+
+    client = await _get_client_or_404(client_id, current_user.workspace_id, db)
+
+    report = ClientReport(
+        workspace_id=current_user.workspace_id,
+        client_id=client.id,
+        created_by=current_user.id,
+        title=data.title,
+        body=data.body,
+        client_feedback=data.client_feedback,
+    )
+    db.add(report)
+    await db.commit()
+    await db.refresh(report)
+    return report
+
+
+@router.put("/{client_id}/reports/{report_id}", response_model=ClientReportResponse)
+async def update_client_report(
+    client_id: UUID,
+    report_id: UUID,
+    data: ClientReportUpdate,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an existing report."""
+    from app.models.client_report import ClientReport
+
+    result = await db.execute(
+        select(ClientReport).where(
+            ClientReport.id == report_id,
+            ClientReport.client_id == client_id,
+            ClientReport.workspace_id == current_user.workspace_id,
+        )
+    )
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Reporte no encontrado")
+
+    if data.title is not None:
+        report.title = data.title
+    if data.body is not None:
+        report.body = data.body
+    if data.client_feedback is not None:
+        report.client_feedback = data.client_feedback
+
+    await db.commit()
+    await db.refresh(report)
+    return report
+
+
+@router.delete("/{client_id}/reports/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_client_report(
+    client_id: UUID,
+    report_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a report."""
+    from app.models.client_report import ClientReport
+
+    result = await db.execute(
+        select(ClientReport).where(
+            ClientReport.id == report_id,
+            ClientReport.client_id == client_id,
+            ClientReport.workspace_id == current_user.workspace_id,
+        )
+    )
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Reporte no encontrado")
+
+    await db.delete(report)
+    await db.commit()
+
+
+async def _get_client_or_404(client_id: UUID, workspace_id: UUID, db: AsyncSession) -> Client:
+    """Helper to fetch a client or raise 404."""
+    result = await db.execute(
+        select(Client).where(
+            Client.id == client_id,
+            Client.workspace_id == workspace_id,
+        )
+    )
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return client

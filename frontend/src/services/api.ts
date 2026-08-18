@@ -136,6 +136,18 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     
+    // Subscription expired: redirect client to a blocked page
+    if (error.response?.status === 403) {
+      const detail = (error.response?.data as { detail?: string })?.detail || "";
+      if (detail.includes("suscripción ha expirado")) {
+        const isAlreadyOnExpired = window.location.pathname.includes("/subscription-expired");
+        if (!isAlreadyOnExpired) {
+          window.location.href = "/subscription-expired";
+        }
+        return Promise.reject(error);
+      }
+    }
+
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       // Don't logout for login/register endpoints
       const isAuthEndpoint = originalRequest.url?.includes("/auth/login") || 
@@ -325,6 +337,15 @@ export const clientsApi = {
     api.post(`/clients/invitations/${invitationId}/resend`),
   cancelInvitation: (invitationId: string) =>
     api.delete(`/clients/invitations/${invitationId}`),
+  // Reports (coach revision notes)
+  listReports: (clientId: string, limit?: number) =>
+    api.get(`/clients/${clientId}/reports`, { params: { limit } }),
+  createReport: (clientId: string, data: { title?: string; body: string; client_feedback?: string }) =>
+    api.post(`/clients/${clientId}/reports`, data),
+  updateReport: (clientId: string, reportId: string, data: { title?: string; body?: string; client_feedback?: string }) =>
+    api.put(`/clients/${clientId}/reports/${reportId}`, data),
+  deleteReport: (clientId: string, reportId: string) =>
+    api.delete(`/clients/${clientId}/reports/${reportId}`),
 };
 
 // Bookings API
@@ -923,6 +944,10 @@ export const clientPortalApi = {
       params: { category: category || "general", ...(name ? { name } : {}) },
     }),
   deleteDocument: (id: string) => api.delete(`/my/documents/${id}`),
+
+  // Reports (coach revision notes)
+  myReports: (limit?: number) =>
+    api.get("/my/reports", { params: limit ? { limit } : {} }),
 };
 
 // Messages API (Staff/Trainer)
