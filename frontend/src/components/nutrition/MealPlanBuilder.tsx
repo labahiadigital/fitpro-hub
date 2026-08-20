@@ -962,7 +962,34 @@ export function MealPlanBuilder({
                 w={140}
               />
             </Group>
-            
+            {onCopyWeek && (
+              <Popover position="bottom-end">
+                <Popover.Target>
+                  <Button leftSection={<IconCopy size={14} />} size="xs" variant="light" radius="md" color="violet">
+                    Copiar a semanas
+                  </Button>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="sm">
+                    <Text size="sm" fw={500}>Copiar semana {currentWeek} a:</Text>
+                    {Array.from({ length: totalWeeks }, (_, i) => i + 1)
+                      .filter((w) => w !== currentWeek)
+                      .map((w) => (
+                        <Button
+                          key={w}
+                          size="xs"
+                          variant="light"
+                          onClick={() => {
+                            onCopyWeek(currentWeek, w);
+                          }}
+                        >
+                          Semana {w}
+                        </Button>
+                      ))}
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            )}
           </Group>
         </Paper>
       )}
@@ -1002,34 +1029,6 @@ export function MealPlanBuilder({
                 </Stack>
               </Popover.Dropdown>
             </Popover>
-            {onCopyWeek && totalWeeks > 1 && (
-              <Popover position="bottom-end">
-                <Popover.Target>
-                  <Button leftSection={<IconCopy size={14} />} size="xs" variant="light" radius="md" color="violet">
-                    Copiar a semana
-                  </Button>
-                </Popover.Target>
-                <Popover.Dropdown>
-                  <Stack gap="sm">
-                    <Text size="sm" fw={500}>Copiar semana {currentWeek} a:</Text>
-                    {Array.from({ length: totalWeeks }, (_, i) => i + 1)
-                      .filter((w) => w !== currentWeek)
-                      .map((w) => (
-                        <Button
-                          key={w}
-                          size="xs"
-                          variant="light"
-                          onClick={() => {
-                            onCopyWeek(currentWeek, w);
-                          }}
-                        >
-                          Semana {w}
-                        </Button>
-                      ))}
-                  </Stack>
-                </Popover.Dropdown>
-              </Popover>
-            )}
             {currentDay && currentDay.meals.length > 0 && (
               <Button
                 leftSection={<IconArrowsExchange size={14} />}
