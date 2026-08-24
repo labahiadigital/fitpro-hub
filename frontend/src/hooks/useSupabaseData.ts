@@ -211,6 +211,20 @@ export function useUpdateFood() {
   });
 }
 
+export function useDuplicateFood() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (foodId: string) => {
+      const response = await api.post(`/nutrition/foods/${foodId}/duplicate`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["foods"] });
+      queryClient.invalidateQueries({ queryKey: ["foods-paginated"] });
+    },
+  });
+}
+
 // ============ WORKOUT PROGRAMS ============
 
 // Hook para obtener programas de entrenamiento

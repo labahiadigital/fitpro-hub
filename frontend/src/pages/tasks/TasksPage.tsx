@@ -308,6 +308,9 @@ export function TasksPage() {
   );
 
   const handleCreate = createForm.onSubmit((values) => {
+    const dueDateStr = values.due_date
+      ? `${values.due_date.getFullYear()}-${String(values.due_date.getMonth() + 1).padStart(2, "0")}-${String(values.due_date.getDate()).padStart(2, "0")}T00:00:00`
+      : undefined;
     createMutation.mutate(
       {
         title: values.title,
@@ -316,7 +319,7 @@ export function TasksPage() {
         assigned_to: values.assigned_to || undefined,
         team_group_id: values.team_group_id || undefined,
         client_id: values.client_id || undefined,
-        due_date: values.due_date?.toISOString(),
+        due_date: dueDateStr,
         due_time: values.due_time || undefined,
       },
       {
@@ -330,6 +333,9 @@ export function TasksPage() {
 
   const handleEdit = editForm.onSubmit((values) => {
     if (!editingTask) return;
+    const dueDateStr = values.due_date
+      ? `${values.due_date.getFullYear()}-${String(values.due_date.getMonth() + 1).padStart(2, "0")}-${String(values.due_date.getDate()).padStart(2, "0")}T00:00:00`
+      : undefined;
     updateMutation.mutate(
       {
         id: editingTask.id,
@@ -339,7 +345,7 @@ export function TasksPage() {
         assigned_to: values.assigned_to || undefined,
         team_group_id: values.team_group_id || undefined,
         client_id: values.client_id || undefined,
-        due_date: values.due_date?.toISOString(),
+        due_date: dueDateStr,
         due_time: values.due_time || undefined,
       },
       {

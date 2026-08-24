@@ -20,6 +20,51 @@ function setFavicon(href: string | null | undefined) {
   link.href = href || "/favicon.svg";
 }
 
+let currentManifestBlobUrl: string | null = null;
+
+function setDynamicManifest(name: string, logoUrl?: string | null) {
+  if (typeof document === "undefined") return;
+
+  const icons: Array<{ src: string; sizes: string; type: string; purpose?: string }> = [];
+  if (logoUrl) {
+    icons.push({ src: logoUrl, sizes: "192x192", type: "image/png" });
+    icons.push({ src: logoUrl, sizes: "512x512", type: "image/png" });
+    icons.push({ src: logoUrl, sizes: "512x512", type: "image/png", purpose: "maskable" });
+  } else {
+    icons.push({ src: "/icons/icon-192.svg", sizes: "192x192", type: "image/svg+xml" });
+    icons.push({ src: "/icons/icon-512.svg", sizes: "512x512", type: "image/svg+xml" });
+    icons.push({ src: "/icons/icon-512.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" });
+  }
+
+  const manifest = {
+    name,
+    short_name: name,
+    description: `${name} — plataforma de entrenamiento y bienestar`,
+    start_url: "/",
+    display: "standalone",
+    background_color: "#F2F4EF",
+    theme_color: "#F2F4EF",
+    orientation: "any",
+    icons,
+    categories: ["fitness", "health", "productivity"],
+    lang: "es",
+    scope: "/",
+  };
+
+  if (currentManifestBlobUrl) URL.revokeObjectURL(currentManifestBlobUrl);
+
+  const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+  currentManifestBlobUrl = URL.createObjectURL(blob);
+
+  let link = document.querySelector<HTMLLinkElement>("link[rel='manifest']");
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "manifest";
+    document.head.appendChild(link);
+  }
+  link.href = currentManifestBlobUrl;
+}
+
 function setDocumentBrand(name: string | null | undefined, logoUrl?: string | null) {
   if (typeof document === "undefined") return;
   document.title = name ? `${name}` : "Trackfiz";
@@ -30,6 +75,7 @@ function setDocumentBrand(name: string | null | undefined, logoUrl?: string | nu
     desc.content = `${name} — plataforma de entrenamiento y bienestar`;
   }
   setFavicon(logoUrl);
+  setDynamicManifest(name || "Trackfiz", logoUrl);
 }
 
 /**

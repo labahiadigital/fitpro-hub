@@ -1534,7 +1534,7 @@ export function WorkoutBuilderWithDays({
             <Group gap="xs">
               <Popover position="bottom-end" opened={copyWeekPopoverOpened} onChange={setCopyWeekPopoverOpened}>
                 <Popover.Target>
-                  <Button variant="light" size="xs" color="violet" leftSection={<IconCopy size={14} />} onClick={() => setCopyWeekPopoverOpened((o) => !o)}>Copiar a semana</Button>
+                  <Button variant="light" size="xs" color="violet" leftSection={<IconCopy size={14} />} onClick={() => setCopyWeekPopoverOpened((o) => !o)}>Copiar a semanas</Button>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">

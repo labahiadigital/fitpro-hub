@@ -138,6 +138,7 @@ async def create_task(
             status=data.status.value,
             priority=data.priority.value,
             assigned_to=data.assigned_to,
+            team_group_id=data.team_group_id,
             client_id=data.client_id,
             created_by=current_user.id,
             due_date=data.due_date,
@@ -152,7 +153,7 @@ async def create_task(
     except Exception as e:
         await db.rollback()
         logger.exception("Error creating task: %s", e)
-        raise HTTPException(status_code=500, detail="Error al crear tarea")
+        raise HTTPException(status_code=500, detail=f"Error al crear tarea: {e}")
 
 
 @router.patch("/{task_id}", response_model=TaskResponse)

@@ -468,6 +468,34 @@ async def delete_food(
     await db.commit()
 
 
+@router.post("/foods/{food_id}/duplicate", response_model=FoodResponse, status_code=status.HTTP_201_CREATED)
+async def duplicate_food(
+    food_id: UUID,
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Duplica un alimento al workspace del usuario para poder editarlo."""
+    original = await db.get(Food, food_id)
+    if not original:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alimento no encontrado")
+
+    skip = {"id", "created_at", "updated_at", "workspace_id", "is_global", "barcode"}
+    data = {}
+    for col in Food.__table__.columns:
+        if col.name in skip:
+            continue
+        data[col.name] = getattr(original, col.name)
+
+    data["name"] = f"{original.name} (copia)"
+    clone = Food(workspace_id=current_user.workspace_id, is_global=False, **data)
+    db.add(clone)
+    await db.commit()
+    await db.refresh(clone)
+    resp = FoodResponse.model_validate(clone)
+    resp.image_url = await resolve_url(resp.image_url)
+    return resp
+
+
 # Endpoint auxiliar para que el frontend sepa si debe mostrar los
 # controles de edición de alimentos del sistema. Mantiene la lógica de
 # autorización en el servidor y evita que un frontend mal compilado

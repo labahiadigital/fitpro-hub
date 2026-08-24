@@ -94,8 +94,9 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       notifications.show({ title: "Tarea creada", message: "La tarea se ha creado correctamente", color: "green" });
     },
-    onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo crear la tarea", color: "red" });
+    onError: (error: any) => {
+      const detail = error?.response?.data?.detail || "No se pudo crear la tarea";
+      notifications.show({ title: "Error", message: typeof detail === "string" ? detail : "No se pudo crear la tarea", color: "red" });
     },
   });
 }

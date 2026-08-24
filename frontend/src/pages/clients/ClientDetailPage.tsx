@@ -4349,6 +4349,80 @@ export function ClientDetailPage() {
               </SimpleGrid>
             )}
 
+            {/* Progresión de Pesos en Ejercicios */}
+            {(() => {
+              type WeightEntry = { date: string; maxWeight: number; bestSet: string };
+              const exerciseMap: Record<string, { name: string; entries: WeightEntry[] }> = {};
+              for (const log of clientWorkoutLogs) {
+                const raw = (log as any)?.log || {};
+                const logDate = raw.completed_at || raw.date || (log as any).created_at;
+                if (!logDate) continue;
+                const dateStr = new Date(logDate).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+                const exercises: any[] = Array.isArray(raw.exercises) ? raw.exercises : [];
+                for (const ex of exercises) {
+                  const exId = ex.exercise_id || ex.exercise_name || ex.name;
+                  const exName = ex.exercise_name || ex.name || exId;
+                  if (!exId || !exName) continue;
+                  const sets: any[] = Array.isArray(ex.sets) ? ex.sets : [];
+                  let maxW = 0;
+                  let bestSetStr = "";
+                  for (const s of sets) {
+                    const w = Number(s.weight_kg || 0);
+                    if (w > maxW) {
+                      maxW = w;
+                      bestSetStr = `${w}kg × ${s.reps_completed || "?"}`;
+                    }
+                  }
+                  if (maxW <= 0) continue;
+                  if (!exerciseMap[exId]) exerciseMap[exId] = { name: exName, entries: [] };
+                  exerciseMap[exId].entries.push({ date: dateStr, maxWeight: maxW, bestSet: bestSetStr });
+                }
+              }
+              const exerciseList = Object.values(exerciseMap).filter(e => e.entries.length > 0);
+              exerciseList.sort((a, b) => b.entries.length - a.entries.length);
+
+              return exerciseList.length > 0 ? (
+                <Box className="nv-card" p="xl">
+                  <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Progresión de Pesos ({exerciseList.length} ejercicios)
+                  </Text>
+                  <Stack gap="md">
+                    {exerciseList.slice(0, 20).map((ex) => {
+                      const firstW = ex.entries[ex.entries.length - 1]?.maxWeight || 0;
+                      const lastW = ex.entries[0]?.maxWeight || 0;
+                      const diff = lastW - firstW;
+                      return (
+                        <Box key={ex.name}>
+                          <Group justify="space-between" mb="xs">
+                            <Text fw={600} size="sm">{ex.name}</Text>
+                            <Group gap={6}>
+                              <Text size="sm" c="dimmed">{ex.entries.length} registros</Text>
+                              {diff !== 0 && ex.entries.length > 1 && (
+                                <Badge size="xs" color={diff > 0 ? "green" : "red"} variant="light">
+                                  {diff > 0 ? "+" : ""}{diff.toFixed(1)} kg
+                                </Badge>
+                              )}
+                            </Group>
+                          </Group>
+                          <ScrollArea type="auto">
+                            <Group gap="xs" wrap="nowrap" style={{ minWidth: ex.entries.length * 80 }}>
+                              {[...ex.entries].reverse().map((entry, i) => (
+                                <Box key={i} ta="center" p="xs" style={{ background: "var(--nv-surface-subtle)", borderRadius: 8, minWidth: 70 }}>
+                                  <Text size="xs" c="dimmed">{entry.date}</Text>
+                                  <Text fw={700} size="sm">{entry.maxWeight} kg</Text>
+                                  <Text size="xs" c="dimmed">{entry.bestSet}</Text>
+                                </Box>
+                              ))}
+                            </Group>
+                          </ScrollArea>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+              ) : null;
+            })()}
+
             {/* Tabla de medidas */}
             <Box className="nv-card" p="xl">
               <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>

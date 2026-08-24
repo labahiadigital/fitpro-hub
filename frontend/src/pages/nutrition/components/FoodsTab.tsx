@@ -16,6 +16,7 @@ import {
 } from "@mantine/core";
 import {
   IconApple,
+  IconCopy,
   IconEdit,
   IconEye,
   IconSearch,
@@ -66,6 +67,7 @@ interface FoodsTabProps {
   onEdit: (food: any) => void;
   onView: (food: any) => void;
   onDelete: (foodId: string, foodName: string) => void;
+  onDuplicate?: (foodId: string) => void;
   onNewFood: () => void;
   togglePending: boolean;
   foodsPerPage: number;
@@ -102,6 +104,7 @@ export function FoodsTab({
   onEdit,
   onView,
   onDelete,
+  onDuplicate,
   onNewFood,
   togglePending,
   foodsPerPage,
@@ -206,6 +209,7 @@ export function FoodsTab({
                     <Table.Td>
                       <Group gap={4} wrap="nowrap">
                         <ActionIcon color="gray" onClick={() => onView(food)} size="sm" variant="subtle"><IconEye size={14} /></ActionIcon>
+                        {onDuplicate && <ActionIcon color="blue" onClick={() => onDuplicate(food.id)} size="sm" variant="subtle"><IconCopy size={14} /></ActionIcon>}
                         {canManage(food) && <ActionIcon color="gray" onClick={() => onEdit(food)} size="sm" variant="subtle"><IconEdit size={14} /></ActionIcon>}
                         {canManage(food) && <ActionIcon color="red" onClick={() => onDelete(food.id, food.name)} size="sm" variant="subtle"><IconTrash size={14} /></ActionIcon>}
                       </Group>
@@ -286,6 +290,13 @@ export function FoodsTab({
                           <IconEye size={16} />
                         </ActionIcon>
                       </Tooltip>
+                      {onDuplicate && (
+                        <Tooltip label="Duplicar a mi workspace">
+                          <ActionIcon color="blue" onClick={() => onDuplicate(food.id)} size="sm" variant="subtle" radius="md">
+                            <IconCopy size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
                       {canManage(food) && (
                         <Tooltip label={food.is_global ? "Editar (Sistema)" : "Editar"}>
                           <ActionIcon color="gray" onClick={() => onEdit(food)} size="sm" variant="subtle" radius="md">

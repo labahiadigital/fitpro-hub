@@ -59,6 +59,7 @@ import {
   useDeleteFood,
   useDeleteMealPlan,
   useDeleteSupplement,
+  useDuplicateFood,
   useSupabaseFoods,
   useSupabaseFoodsPaginated,
   useSupabaseMealPlans,
@@ -474,6 +475,7 @@ export function NutritionPage() {
   const createFood = useCreateFood();
   const updateFood = useUpdateFood();
   const deleteFood = useDeleteFood();
+  const duplicateFood = useDuplicateFood();
 
   // ¿Puede este trainer editar foods globales del catálogo "Sistema"?
   // El backend devuelve un booleano y nosotros lo usamos solo para
@@ -960,6 +962,12 @@ export function NutritionPage() {
             onDelete={handleDeleteFood} onNewFood={openFoodModal} togglePending={toggleFoodFavorite.isPending} foodsPerPage={FOODS_PER_PAGE}
             viewMode={viewMode} onViewModeChange={setViewMode}
             canEditSystemFoods={canEditSystemFoods}
+            onDuplicate={(foodId) => {
+              duplicateFood.mutate(foodId, {
+                onSuccess: () => { notifications.show({ title: "Alimento duplicado", message: "Se ha creado una copia editable en tu workspace", color: "green" }); },
+                onError: () => { notifications.show({ title: "Error", message: "No se pudo duplicar el alimento", color: "red" }); },
+              });
+            }}
           />
         </Tabs.Panel>
 
