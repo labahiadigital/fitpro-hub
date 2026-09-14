@@ -295,15 +295,28 @@ def process_all_renewals():
             logger.info(f"Found {len(subs)} subscriptions due for renewal")
 
             dispatched = 0
+            skipped_no_id = 0
             for sub in subs:
                 extra = sub.extra_data or {}
                 if not extra.get("redsys_identifier"):
-                    logger.info(f"Skipping sub {sub.id}: no redsys_identifier")
+                    # No stored card token — cannot renew automatically.
+                    # check_expiring_subscriptions will cancel these; just
+                    # log for visibility.
+                    logger.info(
+                        f"Skipping sub {sub.id}: no redsys_identifier (will be "
+                        f"cancelled by expiry check)"
+                    )
+                    skipped_no_id += 1
                     continue
                 process_subscription_renewal.delay(str(sub.id), str(sub.workspace_id))
                 dispatched += 1
 
-            return {"status": "completed", "found": len(subs), "dispatched": dispatched}
+            return {
+                "status": "completed",
+                "found": len(subs),
+                "dispatched": dispatched,
+                "skipped_no_identifier": skipped_no_id,
+            }
 
         except Exception as e:
             logger.error(f"Error in process_all_renewals: {e}", exc_info=True)
@@ -343,8 +356,15 @@ def check_expiring_subscriptions():
             expired_count = 0
             for sub in overdue_subs:
                 extra = sub.extra_data or {}
+
+                # Subscriptions WITH a redsys_identifier are expected to renew
+                # automatically via MIT. However if they remain overdue for
+                # more than 7 days past their period end it means the automatic
+                # renewal failed repeatedly and we must cancel them too.
                 if extra.get("redsys_identifier"):
-                    continue
+                    grace_expired = sub.current_period_end + timedelta(days=7) <= now
+                    if not grace_expired:
+                        continue
 
                 sub.status = SubscriptionStatus.cancelled
                 sub.cancelled_at = now

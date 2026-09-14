@@ -48,6 +48,7 @@ import {
   IconPlayerPlay,
   IconFileDownload,
   IconHeartbeat,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
 import { useAuthStore } from "../../stores/auth";
@@ -87,6 +88,7 @@ interface SubscriptionData {
   card_brand: string | null;
   payment_method: string | null;
   payments: SubscriptionPayment[];
+  is_period_expired?: boolean;
 }
 
 function formatDate(dateStr: string | null): string {
@@ -275,7 +277,11 @@ function SubscriptionSection() {
   }
 
   const sub = subscription;
-  const stConfig = statusConfig[sub.status] || { label: sub.status, color: "gray" };
+  const isPeriodExpired = sub.is_period_expired === true ||
+    (sub.current_period_end && new Date(sub.current_period_end) < new Date());
+  const stConfig = isPeriodExpired && sub.status === "active"
+    ? { label: "Expirada", color: "red" }
+    : statusConfig[sub.status] || { label: sub.status, color: "gray" };
 
   return (
     <>
@@ -320,9 +326,9 @@ function SubscriptionSection() {
           <Paper p="sm" radius="md" withBorder>
             <Group gap="xs" mb={4}>
               <IconCalendar size={14} color="var(--mantine-color-dimmed)" />
-              <Text size="xs" c="dimmed">Próximo cobro</Text>
+              <Text size="xs" c="dimmed">{isPeriodExpired ? "Expiró el" : "Próximo cobro"}</Text>
             </Group>
-            <Text size="sm" fw={500}>{formatDate(sub.current_period_end)}</Text>
+            <Text size="sm" fw={500} c={isPeriodExpired ? "red" : undefined}>{formatDate(sub.current_period_end)}</Text>
           </Paper>
         </SimpleGrid>
 
@@ -340,6 +346,22 @@ function SubscriptionSection() {
               </Box>
             </Group>
           </Paper>
+        )}
+
+        {isPeriodExpired && sub.status === "active" && (
+          <Alert color="red" variant="light" mb="md" icon={<IconAlertCircle size={16} />}>
+            <Text size="sm" mb="xs">
+              Tu suscripción ha expirado el {formatDate(sub.current_period_end)}.
+              Renueva tu plan para continuar accediendo a la plataforma.
+            </Text>
+            <Button
+              size="xs"
+              leftSection={<IconRefresh size={14} />}
+              onClick={() => window.location.href = "/subscription-expired"}
+            >
+              Renovar suscripción
+            </Button>
+          </Alert>
         )}
 
         {sub.status === "cancelled" && sub.cancelled_at && (

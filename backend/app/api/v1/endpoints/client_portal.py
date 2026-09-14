@@ -3729,6 +3729,7 @@ class ClientSubscriptionResponse(BaseModel):
     card_brand: Optional[str] = None
     payment_method: Optional[str] = None
     payments: List[SubscriptionPaymentItem] = []
+    is_period_expired: bool = False
 
     class Config:
         from_attributes = True
@@ -3780,6 +3781,17 @@ async def get_my_subscription(
 
     extra = subscription.extra_data or {}
 
+    from datetime import timezone as _tz
+
+    period_expired = False
+    if subscription.current_period_end is not None:
+        now_utc = datetime.now(_tz.utc)
+        end_aware = subscription.current_period_end
+        if end_aware.tzinfo is None:
+            from datetime import timezone as _tz2
+            end_aware = end_aware.replace(tzinfo=_tz2.utc)
+        period_expired = end_aware < now_utc
+
     return ClientSubscriptionResponse(
         id=subscription.id,
         name=subscription.name,
@@ -3795,6 +3807,7 @@ async def get_my_subscription(
         card_last4=extra.get("redsys_card_last4"),
         card_brand=extra.get("redsys_card_brand_name", extra.get("redsys_card_brand")),
         payment_method=extra.get("gateway", "redsys"),
+        is_period_expired=period_expired,
         payments=[
             SubscriptionPaymentItem(
                 id=p.id,
