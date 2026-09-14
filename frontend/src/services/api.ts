@@ -136,10 +136,14 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     
-    // Subscription expired: redirect client to a blocked page
+    // Subscription expired: redirect client to a blocked page.
+    // Skip the redirect for renewal endpoints so the client can still
+    // fetch renewal options and initiate a new payment.
     if (error.response?.status === 403) {
       const detail = (error.response?.data as { detail?: string })?.detail || "";
-      if (detail.includes("suscripción ha expirado")) {
+      const requestUrl = originalRequest?.url || "";
+      const isRenewalEndpoint = requestUrl.includes("/my/renewal-options") || requestUrl.includes("/my/renew");
+      if (detail.includes("suscripción ha expirado") && !isRenewalEndpoint) {
         const isAlreadyOnExpired = window.location.pathname.includes("/subscription-expired");
         if (!isAlreadyOnExpired) {
           window.location.href = "/subscription-expired";
@@ -923,6 +927,9 @@ export const clientPortalApi = {
   subscription: () => api.get("/my/subscription"),
   payments: (limit?: number) => api.get("/my/payments", { params: { limit } }),
   cancelSubscription: () => api.post("/my/subscription/cancel"),
+  // Renewal (accessible with expired subscription)
+  renewalOptions: () => api.get("/my/renewal-options"),
+  startRenewal: (productId: string) => api.post("/my/renew", { product_id: productId }),
   // Pausa/reanuda la suscripción del cliente. Sólo aplica con Stripe; para
   // pasarelas que no soportan pausa nativa el backend devolverá el error.
   pauseSubscription: (subscriptionId: string, data: { duration_days?: number; duration_months?: number }) =>

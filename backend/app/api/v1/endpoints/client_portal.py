@@ -6,6 +6,7 @@ All data is filtered to only show what belongs to the authenticated client.
 import copy
 import logging
 import re as _re
+import secrets
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Union
@@ -42,7 +43,9 @@ from app.models.user import RoleType, User, UserRole
 from app.models.workout import WorkoutLog, WorkoutProgram
 from app.models.workspace import Workspace
 from app.models.feedback import ClientDietFeedback, ClientEmotion, ClientFeedback, ClientWorkoutFeedback
-from app.models.payment import Payment, Subscription, SubscriptionStatus
+from app.models.payment import Payment, PaymentStatus, Subscription, SubscriptionStatus
+from app.models.product import Product
+from app.models.invitation import ClientInvitation
 from app.models.document import Document
 from app.models.supplement import ClientSupplement, Supplement
 from app.models.task import Task
@@ -99,6 +102,35 @@ async def get_client_for_user(user_id: UUID, db: AsyncSession, workspace_id: UUI
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tu suscripción ha expirado. Contacta con tu entrenador para renovarla."
             )
+
+    return client
+
+
+async def get_client_for_user_no_sub_check(
+    user_id: UUID, db: AsyncSession, workspace_id: UUID | None = None
+) -> Client:
+    """Get client record without checking subscription status.
+
+    Used by renewal endpoints where the client's subscription is already
+    expired and they need access to pay for a new one.
+    """
+    q = select(Client).where(Client.user_id == user_id)
+    if workspace_id:
+        q = q.where(Client.workspace_id == workspace_id)
+    result = await db.execute(q)
+    client = result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No se encontró perfil de cliente para este usuario",
+        )
+
+    if not client.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu cuenta de cliente ha sido desactivada. Contacta con tu entrenador.",
+        )
 
     return client
 
@@ -4106,3 +4138,182 @@ async def get_my_reports(
         )
         for r in reports
     ]
+
+
+# ============ SUBSCRIPTION RENEWAL (accessible even with expired subscription) ============
+
+
+class RenewalProductOption(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    price: float
+    currency: str = "EUR"
+    interval: Optional[str] = None
+    product_type: str
+
+
+class RenewalOptionsResponse(BaseModel):
+    client_name: str
+    workspace_name: str
+    products: List[RenewalProductOption]
+
+
+class RenewalRequest(BaseModel):
+    product_id: UUID
+
+
+class RenewalResponse(BaseModel):
+    invitation_token: str
+    product_name: str
+    amount: float
+
+
+@router.get("/renewal-options", response_model=RenewalOptionsResponse)
+async def get_renewal_options(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get available products for subscription renewal.
+
+    This endpoint does NOT check subscription status so that clients with
+    expired subscriptions can still see what products they can renew with.
+    """
+    client = await get_client_for_user_no_sub_check(
+        current_user.id, db, current_user.workspace_id,
+    )
+
+    workspace_result = await db.execute(
+        select(Workspace).where(Workspace.id == client.workspace_id)
+    )
+    workspace = workspace_result.scalar_one_or_none()
+    workspace_name = workspace.name if workspace else "Tu centro"
+
+    result = await db.execute(
+        select(Product).where(
+            Product.workspace_id == client.workspace_id,
+            Product.is_active == True,
+            Product.product_type == "subscription",
+        )
+    )
+    products = result.scalars().all()
+
+    return RenewalOptionsResponse(
+        client_name=f"{client.first_name or ''} {client.last_name or ''}".strip() or "Cliente",
+        workspace_name=workspace_name,
+        products=[
+            RenewalProductOption(
+                id=p.id,
+                name=p.name,
+                description=p.description,
+                price=float(p.price),
+                currency=p.currency or "EUR",
+                interval=p.interval,
+                product_type=p.product_type or "subscription",
+            )
+            for p in products
+        ],
+    )
+
+
+@router.post("/renew", response_model=RenewalResponse)
+async def start_renewal(
+    data: RenewalRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Start a subscription renewal for an existing client.
+
+    Creates a new invitation linked to the client and the chosen product,
+    allowing the client to pay through the normal onboarding payment flow
+    (Redsys or SeQura) using the returned invitation token.
+
+    This endpoint does NOT check subscription status so that clients with
+    expired subscriptions can initiate a renewal.
+    """
+    client = await get_client_for_user_no_sub_check(
+        current_user.id, db, current_user.workspace_id,
+    )
+
+    product_result = await db.execute(
+        select(Product).where(
+            Product.id == data.product_id,
+            Product.workspace_id == client.workspace_id,
+            Product.is_active == True,
+        )
+    )
+    product = product_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado o no disponible",
+        )
+
+    # Cancel any previous pending renewal invitations for this client to
+    # prevent duplicates.
+    prev_result = await db.execute(
+        select(ClientInvitation).where(
+            ClientInvitation.client_id == client.id,
+            ClientInvitation.workspace_id == client.workspace_id,
+            ClientInvitation.status == "pending",
+            ClientInvitation.product_id.isnot(None),
+        )
+    )
+    for old_inv in prev_result.scalars().all():
+        old_inv.status = "cancelled"
+
+    # Find workspace owner to set as inviter
+    owner_result = await db.execute(
+        select(UserRole.user_id).where(
+            UserRole.workspace_id == client.workspace_id,
+            UserRole.role == RoleType.owner,
+        ).limit(1)
+    )
+    owner_id = owner_result.scalar_one_or_none()
+
+    # Copy user's password hash so the invitation is marked as data_complete
+    # and the onboarding page skips the registration form (the client already
+    # has an account).
+    user_result = await db.execute(
+        select(User).where(User.id == current_user.id)
+    )
+    user = user_result.scalar_one_or_none()
+    user_password_hash = user.password_hash if user else None
+
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(days=7)
+
+    invitation = ClientInvitation(
+        workspace_id=client.workspace_id,
+        invited_by=owner_id,
+        email=client.email,
+        first_name=client.first_name,
+        last_name=client.last_name,
+        token=token,
+        status="pending",
+        expires_at=expires_at,
+        client_id=client.id,
+        product_id=product.id,
+        phone=client.phone,
+        password_hash=user_password_hash,
+        fiscal_type=client.fiscal_type,
+        legal_name=client.legal_name,
+        tax_id=client.tax_id,
+        billing_address=client.billing_address,
+        billing_city=client.billing_city,
+        billing_postal_code=client.billing_postal_code,
+        billing_country=client.billing_country,
+    )
+    db.add(invitation)
+    await db.commit()
+
+    logger.info(
+        "Renewal invitation created: client=%s product=%s token_prefix=%s",
+        client.id, product.id, token[:8],
+    )
+
+    return RenewalResponse(
+        invitation_token=token,
+        product_name=product.name,
+        amount=float(product.price),
+    )
