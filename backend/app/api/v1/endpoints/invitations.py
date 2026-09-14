@@ -104,6 +104,7 @@ class ValidateTokenResponse(BaseModel):
     last_name: Optional[str] = None
     workspace_name: Optional[str] = None
     workspace_slug: Optional[str] = None
+    workspace_id: Optional[str] = None
     logo_url: Optional[str] = None
     branding: Dict[str, Any] = {}
     message: Optional[str] = None
@@ -603,6 +604,7 @@ async def validate_invitation_token(
         last_name=invitation.last_name,
         workspace_name=workspace.name,
         workspace_slug=workspace.slug,
+        workspace_id=str(workspace.id),
         logo_url=await resolve_url(workspace.logo_url),
         branding=workspace.branding or {},
         message=invitation.message,

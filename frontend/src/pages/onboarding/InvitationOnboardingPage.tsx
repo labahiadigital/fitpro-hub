@@ -24,6 +24,7 @@ import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
   IconCalendarDollar,
+  IconCheck,
   IconCreditCard,
   IconLock,
   IconMail,
@@ -56,6 +57,7 @@ interface InvitationData {
   last_name?: string;
   workspace_name?: string;
   workspace_slug?: string;
+  workspace_id?: string;
   logo_url?: string | null;
   branding?: Record<string, string>;
   message?: string;
@@ -144,11 +146,46 @@ export function InvitationOnboardingPage() {
   const sequraFormRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponValidating, setCouponValidating] = useState(false);
+  const [couponResult, setCouponResult] = useState<{
+    is_valid: boolean;
+    discount_type?: string;
+    discount_value?: number;
+    message?: string;
+  } | null>(null);
+
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, []);
+
+  const handleValidateCoupon = useCallback(async () => {
+    if (!couponCode.trim() || !invitationData?.product?.id || !invitationData?.workspace_id) return;
+    setCouponValidating(true);
+    try {
+      const valRes = await api.post("/products/coupons/public-validate", {
+        code: couponCode.trim().toUpperCase(),
+        product_id: invitationData.product.id,
+      }, { params: { workspace_id: invitationData.workspace_id } });
+      setCouponResult(valRes.data);
+    } catch {
+      setCouponResult({ is_valid: false, message: "Error al validar el cupón" });
+    } finally {
+      setCouponValidating(false);
+    }
+  }, [couponCode, invitationData]);
+
+  const discountedPrice = (() => {
+    const price = invitationData?.product?.price ?? 0;
+    if (!couponResult?.is_valid) return price;
+    if (couponResult.discount_type === "percentage") {
+      return Math.max(0, price * (1 - (couponResult.discount_value || 0) / 100));
+    }
+    return Math.max(0, price - (couponResult.discount_value || 0));
+  })();
 
   const paymentParam = searchParams.get("payment");
   const gatewayParam = searchParams.get("gateway");
@@ -320,7 +357,11 @@ export function InvitationOnboardingPage() {
     setPaymentLoading(true);
     setPaymentError(null);
     try {
-      const res = await redsysApi.createOnboardingPayment(token);
+      const payload: { token: string; coupon_code?: string } = { token };
+      if (couponResult?.is_valid && couponCode.trim()) {
+        payload.coupon_code = couponCode.trim().toUpperCase();
+      }
+      const res = await redsysApi.createOnboardingPayment(token, payload.coupon_code);
       const { Ds_SignatureVersion, Ds_MerchantParameters, Ds_Signature, redsys_url } = res.data;
 
       const form_el = document.createElement("form");
@@ -353,7 +394,8 @@ export function InvitationOnboardingPage() {
     setPaymentLoading(true);
     setPaymentError(null);
     try {
-      const res = await sequraApi.startOnboarding(token, "pp6");
+      const appliedCoupon = couponResult?.is_valid && couponCode.trim() ? couponCode.trim().toUpperCase() : undefined;
+      const res = await sequraApi.startOnboarding(token, "pp6", appliedCoupon);
       const { form_html } = res.data;
 
       if (form_html) {
@@ -874,9 +916,20 @@ export function InvitationOnboardingPage() {
 
                 <Paper p="lg" radius="md" withBorder w="100%" style={{ background: "rgba(45, 106, 79, 0.03)" }}>
                   <Group justify="center" gap="xs">
-                    <Title order={1} style={{ fontSize: "2.5rem" }}>
-                      {formatDecimal(product.price, 2)}€
-                    </Title>
+                    {couponResult?.is_valid ? (
+                      <>
+                        <Text td="line-through" c="dimmed" size="lg">
+                          {formatDecimal(product.price, 2)}€
+                        </Text>
+                        <Title order={1} style={{ fontSize: "2.5rem" }} c="teal">
+                          {formatDecimal(discountedPrice, 2)}€
+                        </Title>
+                      </>
+                    ) : (
+                      <Title order={1} style={{ fontSize: "2.5rem" }}>
+                        {formatDecimal(product.price, 2)}€
+                      </Title>
+                    )}
                     {intervalLabel && (
                       <Text c="dimmed" size="lg">{intervalLabel}</Text>
                     )}
@@ -886,6 +939,55 @@ export function InvitationOnboardingPage() {
                   </Text>
                 </Paper>
               </Stack>
+
+              {/* Coupon section */}
+              {product.price > 0 && (
+                <>
+                  <Divider label="¿Tienes un cupón de descuento?" labelPosition="center" />
+                  <Group align="flex-end" gap="xs">
+                    <TextInput
+                      label="Código de cupón"
+                      placeholder="Ej: DESCUENTO20"
+                      value={couponCode}
+                      onChange={(e) => {
+                        setCouponCode(e.currentTarget.value.toUpperCase());
+                        setCouponResult(null);
+                      }}
+                      styles={{ input: { fontFamily: "monospace", fontWeight: 700, letterSpacing: 1 } }}
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      variant="light"
+                      onClick={handleValidateCoupon}
+                      loading={couponValidating}
+                      disabled={!couponCode.trim()}
+                    >
+                      Aplicar
+                    </Button>
+                  </Group>
+                  {couponResult && (
+                    <Alert
+                      color={couponResult.is_valid ? "green" : "red"}
+                      variant="light"
+                      radius="md"
+                    >
+                      {couponResult.is_valid ? (
+                        <Group gap="xs">
+                          <IconCheck size={16} />
+                          <Text size="sm" fw={500}>
+                            {couponResult.message} — Descuento:{" "}
+                            {couponResult.discount_type === "percentage"
+                              ? `${couponResult.discount_value}%`
+                              : `${couponResult.discount_value} €`}
+                          </Text>
+                        </Group>
+                      ) : (
+                        <Text size="sm">{couponResult.message}</Text>
+                      )}
+                    </Alert>
+                  )}
+                </>
+              )}
 
               <Divider label="Elige tu método de pago" labelPosition="center" />
 
@@ -919,7 +1021,7 @@ export function InvitationOnboardingPage() {
                         <Badge variant="light" size="xs">Google Pay</Badge>
                       </Group>
                     </div>
-                    <Text fw={700} size="lg">{formatDecimal(product.price, 2)}€</Text>
+                    <Text fw={700} size="lg">{formatDecimal(couponResult?.is_valid ? discountedPrice : product.price, 2)}€</Text>
                   </Group>
                 </Paper>
 

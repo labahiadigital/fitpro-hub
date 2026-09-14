@@ -148,6 +148,7 @@ def _build_merchant_notification_url(request: Request) -> str:
 class OnboardingPaymentRequest(BaseModel):
     """Request to create a payment during client onboarding."""
     token: str = Field(..., min_length=10, max_length=100)
+    coupon_code: Optional[str] = Field(None, max_length=50, description="Optional coupon code for discount")
 
 
 class OnboardingPaymentResponse(BaseModel):
@@ -267,29 +268,71 @@ async def create_onboarding_payment(
 
     # Generate order ID and calculate amount
     order_id = redsys_service.generate_order_id()
-    amount_cents = int(round(float(product.price) * 100))
+    final_price = float(product.price)
+    coupon_applied = None
+
+    # Apply coupon discount if provided
+    if data.coupon_code:
+        from app.models.product import Coupon
+
+        coupon_result = await db.execute(
+            select(Coupon).where(
+                Coupon.workspace_id == invitation.workspace_id,
+                Coupon.code == data.coupon_code,
+                Coupon.is_active == True,
+            )
+        )
+        coupon = coupon_result.scalar_one_or_none()
+        if coupon:
+            if coupon.max_uses and coupon.current_uses >= coupon.max_uses:
+                logger.info(f"Coupon {data.coupon_code} exhausted, ignoring discount")
+            else:
+                applicable = coupon.applicable_product_ids or []
+                if applicable and str(product.id) not in [str(pid) for pid in applicable]:
+                    logger.info(f"Coupon {data.coupon_code} not applicable to product {product.id}")
+                else:
+                    if coupon.discount_type == "percentage":
+                        discount = final_price * float(coupon.discount_value) / 100
+                    else:
+                        discount = float(coupon.discount_value)
+                    final_price = max(final_price - discount, 0.01)
+                    coupon_applied = {
+                        "code": coupon.code,
+                        "discount_type": coupon.discount_type,
+                        "discount_value": float(coupon.discount_value),
+                    }
+                    coupon.current_uses = (coupon.current_uses or 0) + 1
+                    logger.info(
+                        f"Coupon {coupon.code} applied: {discount:.2f} EUR off -> {final_price:.2f} EUR"
+                    )
+
+    amount_cents = int(round(final_price * 100))
 
     if amount_cents <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El importe del producto no es válido")
 
     # Create payment record
     # client_id is NOT set yet (client doesn't exist), it will be linked in complete_invitation
+    extra = {
+        "gateway": "redsys",
+        "redsys_order_id": order_id,
+        "redsys_environment": redsys_service.config.environment,
+        "invitation_id": str(invitation.id),
+        "product_id": str(product.id),
+        "onboarding_payment": True,
+    }
+    if coupon_applied:
+        extra["coupon"] = coupon_applied
+
     payment = Payment(
         workspace_id=invitation.workspace_id,
         client_id=invitation.client_id,  # May be None; linked later
         description=f"Suscripción: {product.name}",
-        amount=product.price,
+        amount=final_price,
         currency=product.currency or "EUR",
         status=PaymentStatus.pending,
         payment_type="subscription",
-        extra_data={
-            "gateway": "redsys",
-            "redsys_order_id": order_id,
-            "redsys_environment": redsys_service.config.environment,
-            "invitation_id": str(invitation.id),
-            "product_id": str(product.id),
-            "onboarding_payment": True,
-        },
+        extra_data=extra,
     )
     db.add(payment)
     await db.flush()

@@ -534,8 +534,8 @@ export const productsApi = {
 // Redsys API
 export const redsysApi = {
   // Onboarding payments (public, no auth required)
-  createOnboardingPayment: (token: string) =>
-    api.post("/redsys/create-onboarding-payment", { token }),
+  createOnboardingPayment: (token: string, couponCode?: string) =>
+    api.post("/redsys/create-onboarding-payment", { token, ...(couponCode ? { coupon_code: couponCode } : {}) }),
   getOnboardingPaymentStatus: (token: string) =>
     api.get(`/redsys/onboarding-payment-status/${token}`),
   confirmReturn: (data: {
@@ -593,8 +593,8 @@ export const erpApi = {
 
 // SeQura API (pago fraccionado)
 export const sequraApi = {
-  startOnboarding: (token: string, productCode: string = "pp6") =>
-    api.post("/sequra/start-onboarding", { token, product_code: productCode }),
+  startOnboarding: (token: string, productCode: string = "pp6", couponCode?: string) =>
+    api.post("/sequra/start-onboarding", { token, product_code: productCode, ...(couponCode ? { coupon_code: couponCode } : {}) }),
   getIdentificationForm: (orderUri: string, product: string = "pp6") =>
     api.get("/sequra/identification-form", {
       params: { order_uri: orderUri, product },
