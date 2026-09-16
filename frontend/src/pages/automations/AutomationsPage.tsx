@@ -269,13 +269,13 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
     const values = form.values;
     if (!(values.name && values.trigger_type)) return;
 
-    const automationData = {
+    const automationData: Partial<ApiAutomation> = {
       name: values.name,
       description: values.description,
       trigger_type: values.trigger_type,
       trigger_config: values.trigger_config,
       actions: actions.map((a) => ({
-        type: a.type,
+        type: a.type as ApiAutomation["actions"][number]["type"],
         config: a.config,
       })),
       is_active: editingAutomation?.is_active ?? true,
