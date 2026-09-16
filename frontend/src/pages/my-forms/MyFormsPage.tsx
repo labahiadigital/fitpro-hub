@@ -271,7 +271,7 @@ function FormRespondCard({ item }: FormRespondCardProps) {
       {isDone ? (
         <Stack gap="md">
           <Alert color="green" icon={<IconCheck size={16} />}>
-            {"Ya has respondido este formulario. Puedes revisar tus respuestas abajo."}
+            {t("myForms.yaHasRespondido")}
           </Alert>
           {item.fields.map((f) => (
             <Box key={f.id}>
@@ -307,7 +307,7 @@ function FormRespondCard({ item }: FormRespondCardProps) {
               onClick={handleSubmit}
               leftSection={<IconCheck size={16} />}
             >
-              {"Enviar respuesta"}
+              {t("myForms.enviarRespuesta")}
             </Button>
           </Group>
         </Stack>

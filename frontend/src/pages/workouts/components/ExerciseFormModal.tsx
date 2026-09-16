@@ -33,6 +33,7 @@ import {
   useRemoveExerciseAlternative,
 } from "../../../hooks/useExercises";
 import { api } from "../../../services/api";
+import { useTranslation } from "react-i18next";
 
 function ExerciseAlternativesSection({
   exerciseId,
@@ -43,6 +44,7 @@ function ExerciseAlternativesSection({
   exerciseName: string;
   allExercises: Array<{ id: string; name: string; muscle_groups?: string[]; category?: string }>;
 }) {
+  const { t } = useTranslation();
   const { data: alternatives, isLoading } = useExerciseAlternatives(exerciseId);
   const addAlternative = useAddExerciseAlternative();
   const removeAlternative = useRemoveExerciseAlternative();
@@ -60,10 +62,10 @@ function ExerciseAlternativesSection({
     <Box mt="xl" pt="md" style={{ borderTop: "1px solid var(--border-subtle)" }}>
       <Group gap="xs" mb="sm">
         <IconExchange size={16} />
-        <Text fw={600} size="sm">Ejercicios alternativos para "{exerciseName}"</Text>
+        <Text fw={600} size="sm">{t("exercises.ejerciciosAlternativosPara", { name: exerciseName })}</Text>
       </Group>
       <Text size="xs" c="dimmed" mb="sm">
-        {"Define qué ejercicios puede usar el cliente como sustituto si la máquina no está disponible o tiene alguna lesión."}
+        {t("exerciseForm.defineQueEjercicios")}
       </Text>
 
       {isLoading ? (
@@ -92,13 +94,13 @@ function ExerciseAlternativesSection({
         </Stack>
       ) : (
         <Text size="xs" c="dimmed" mb="sm" ta="center" py="xs">
-          {"Sin alternativas definidas. Añade ejercicios equivalentes para que el cliente pueda sustituir."}
+          {t("exerciseForm.sinAlternativas")}
         </Text>
       )}
 
       <TextInput
         size="xs"
-        placeholder={"Buscar ejercicio para añadir como alternativa..."}
+        placeholder={t("exerciseForm.buscarEjercicioAlternativa")}
         leftSection={<IconSearch size={12} />}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -138,7 +140,7 @@ function ExerciseAlternativesSection({
               </Group>
             ))}
             {filtered.length === 0 && (
-              <Text size="xs" c="dimmed" ta="center" py="xs">{"No se encontraron ejercicios"}</Text>
+              <Text size="xs" c="dimmed" ta="center" py="xs">{t("exerciseForm.noSeEncontronEjercicios")}</Text>
             )}
           </Stack>
         </ScrollArea>
@@ -204,6 +206,7 @@ export function ExerciseFormModal({
   updatePending,
   deletePending,
 }: ExerciseFormModalProps) {
+  const { t } = useTranslation();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const isReadOnly = !!editingExercise?.is_global;
@@ -223,7 +226,7 @@ export function ExerciseFormModal({
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       exerciseForm.setFieldValue("image_url", res.data.image_url);
-      notifications.show({ color: "green", message: "Imagen subida correctamente" });
+      notifications.show({ color: "green", message: t("exercises.imagenSubida") });
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       notifications.show({ color: "red", message: detail || "No se pudo subir la imagen" });
@@ -257,7 +260,7 @@ export function ExerciseFormModal({
       )}
       {editingExercise?.is_global && (
         <Group gap="sm" mb="sm">
-          <Badge color="gray" variant="light" size="sm">{"Dato del sistema — solo lectura"}</Badge>
+          <Badge color="gray" variant="light" size="sm">{t("exerciseForm.datoDelSistema")}</Badge>
           {onCloneAsOwn && (
             <Button
               size="xs"
@@ -266,7 +269,7 @@ export function ExerciseFormModal({
               leftSection={<IconCopy size={14} />}
               onClick={() => onCloneAsOwn(editingExercise)}
             >
-              {"Crear copia propia"}
+              {t("exerciseForm.crearCopiaPropia")}
             </Button>
           )}
         </Group>
@@ -274,32 +277,32 @@ export function ExerciseFormModal({
       <form onSubmit={exerciseForm.onSubmit(onSubmit)}>
         <Stack>
           <TextInput
-            label={"Nombre"}
-            placeholder={"Press de Banca"}
+            label={t("common.nombre")}
+            placeholder={t("exerciseForm.pressDeBanca")}
             required
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("name")}
           />
 
           <TextInput
-            label={"Alias"}
-            placeholder={"Nombre alternativo (ej: Bench Press)"}
+            label={t("exercises.alias")}
+            placeholder={t("exerciseForm.nombreAlternativo")}
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("alias")}
           />
 
           <Textarea
-            label={"Descripción"}
+            label={t("common.descripcion")}
             minRows={2}
-            placeholder={"Breve descripción del ejercicio..."}
+            placeholder={t("exerciseForm.breveDescripcion")}
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("description")}
           />
 
           <Textarea
-            label={"Instrucciones"}
+            label={t("exercises.instrucciones")}
             minRows={3}
-            placeholder={"Pasos para realizar el ejercicio correctamente..."}
+            placeholder={t("exerciseForm.pasosParaRealizar")}
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("instructions")}
           />
@@ -307,15 +310,15 @@ export function ExerciseFormModal({
           <Group grow>
             <MultiSelect
               data={muscleGroups}
-              label={"Grupos musculares"}
-              placeholder={"Selecciona"}
+              label={t("exerciseForm.gruposMusculares")}
+              placeholder={t("common.selecciona")}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("muscle_groups")}
             />
             <MultiSelect
               data={equipmentOptions}
-              label={"Equipamiento"}
-              placeholder={"Selecciona"}
+              label={t("exercises.equipamiento")}
+              placeholder={t("common.selecciona")}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("equipment")}
             />
@@ -328,7 +331,7 @@ export function ExerciseFormModal({
                 { value: "intermediate", label: "Intermedio" },
                 { value: "advanced", label: "Avanzado" },
               ]}
-              label={"Dificultad"}
+              label={t("common.dificultad")}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("difficulty")}
             />
@@ -341,7 +344,7 @@ export function ExerciseFormModal({
                 { value: "calentamiento", label: "Calentamiento" },
                 { value: "estiramiento", label: "Estiramiento" },
               ]}
-              label={"Categoría"}
+              label={t("common.categoria")}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("category")}
             />
@@ -351,7 +354,7 @@ export function ExerciseFormModal({
             <Text size="sm" fw={500}>{"Imagen"}</Text>
             <Group gap="xs" align="flex-end" wrap="nowrap">
               <TextInput
-                placeholder={"URL de la imagen o súbela con el botón"}
+                placeholder={t("exercises.urlImagenOSubela")}
                 leftSection={<IconPhoto size={14} />}
                 style={{ flex: 1 }}
                 disabled={isReadOnly}
@@ -378,12 +381,12 @@ export function ExerciseFormModal({
               />
             </Group>
             <Text size="xs" c="dimmed">
-              {"La imagen se guarda en el almacenamiento privado de tu workspace (máx. 8 MB)."}
+              {t("exerciseForm.laImagenSeGuarda")}
             </Text>
           </Stack>
 
           <TextInput
-            label={"Vídeo (URL)"}
+            label={t("exercises.videoUrl")}
             placeholder="https://youtube.com/... o enlace directo a un .mp4"
             leftSection={<IconVideo size={14} />}
             disabled={isReadOnly}

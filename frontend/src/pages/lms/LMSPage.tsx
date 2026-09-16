@@ -94,6 +94,7 @@ interface Challenge {
 // Courses and challenges data are fetched from Supabase
 
 function CourseCard({ course }: { course: Course }) {
+  const { t } = useTranslation();
   const difficultyColors: Record<string, string> = {
     beginner: "green",
     intermediate: "yellow",
@@ -128,7 +129,7 @@ function CourseCard({ course }: { course: Course }) {
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item leftSection={<IconEye size={14} />}>{"Ver curso"}</Menu.Item>
+            <Menu.Item leftSection={<IconEye size={14} />}>{t("lms.verCurso")}</Menu.Item>
             <Menu.Item leftSection={<IconEdit size={14} />}>{"Editar"}</Menu.Item>
             <Menu.Item leftSection={<IconChartBar size={14} />}>{"Estadísticas"}</Menu.Item>
             <Menu.Divider />
@@ -203,6 +204,7 @@ function CourseCard({ course }: { course: Course }) {
 }
 
 function ChallengeCard({ challenge }: { challenge: Challenge }) {
+  const { t } = useTranslation();
   const typeColors: Record<string, string> = {
     fitness: "blue",
     nutrition: "green",
@@ -244,7 +246,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item leftSection={<IconEye size={14} />}>{"Ver reto"}</Menu.Item>
+            <Menu.Item leftSection={<IconEye size={14} />}>{t("lms.verReto")}</Menu.Item>
             <Menu.Item leftSection={<IconEdit size={14} />}>{"Editar"}</Menu.Item>
             <Menu.Item leftSection={<IconTrophy size={14} />}>{"Leaderboard"}</Menu.Item>
             <Menu.Divider />
@@ -264,7 +266,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
         </Badge>
         {isActive && (
           <Badge color="green" size="sm">
-            {"En curso"}
+            {t("lms.enCurso")}
           </Badge>
         )}
         {isUpcoming && (

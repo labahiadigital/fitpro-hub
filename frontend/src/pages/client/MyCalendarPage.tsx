@@ -72,6 +72,7 @@ function RequestBookingModal({
   opened: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
@@ -97,8 +98,8 @@ function RequestBookingModal({
     <NativeBottomSheet
       opened={opened}
       onClose={onClose}
-      title={"Solicitar cita"}
-      subtitle={"Selecciona fecha y horario"}
+      title={t("myCalendar.solicitarCita")}
+      subtitle={t("myCalendar.seleccionaFechaYHorario")}
       footer={
         <Button
           color="yellow"
@@ -111,7 +112,7 @@ function RequestBookingModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          {"Solicitar cita"}
+          {t("myCalendar.solicitarCitaBtn")}
         </Button>
       }
     >
@@ -149,13 +150,13 @@ function RequestBookingModal({
               ))}
             </Group>
           ) : (
-            <Text size="sm" c="dimmed" ta="center">{"No hay horarios disponibles"}</Text>
+            <Text size="sm" c="dimmed" ta="center">{t("myCalendar.noHayHorariosDisponibles")}</Text>
           )}
         </Box>
       )}
 
       <Textarea
-        placeholder={"Notas (opcional)"}
+        placeholder={t("myCalendar.notasOpcional")}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         minRows={2}
@@ -176,6 +177,7 @@ function EditBookingModal({
   onClose: () => void;
   bookingId: string | null;
 }) {
+  const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
@@ -201,8 +203,8 @@ function EditBookingModal({
     <NativeBottomSheet
       opened={opened}
       onClose={onClose}
-      title={"Modificar cita"}
-      subtitle={"Selecciona nueva fecha y horario"}
+      title={t("myCalendar.modificarCita")}
+      subtitle={t("myCalendar.seleccionaNuevaFechaYHorario")}
       footer={
         <Button
           color="blue"
@@ -215,7 +217,7 @@ function EditBookingModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          {"Confirmar cambio"}
+          {t("myCalendar.confirmarCambio")}
         </Button>
       }
     >
@@ -253,13 +255,13 @@ function EditBookingModal({
               ))}
             </Group>
           ) : (
-            <Text size="sm" c="dimmed" ta="center">{"No hay horarios disponibles"}</Text>
+            <Text size="sm" c="dimmed" ta="center">{t("myCalendar.noHayHorariosDisponibles")}</Text>
           )}
         </Box>
       )}
 
       <Textarea
-        placeholder={"Notas (opcional)"}
+        placeholder={t("myCalendar.notasOpcional")}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         minRows={2}

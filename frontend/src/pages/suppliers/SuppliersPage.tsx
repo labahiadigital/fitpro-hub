@@ -602,7 +602,7 @@ export default function SuppliersPage() {
                         </Grid.Col>
                         <Grid.Col span={12}>
                           <Group justify="space-between">
-                            <Tooltip label={acc.is_default ? "Cuenta por defecto" : "Marcar como predeterminada"}>
+                            <Tooltip label={acc.is_default ? t("suppliers.cuentaPorDefecto") : t("suppliers.marcarPredeterminada")}>
                               <Button
                                 size="xs"
                                 variant={acc.is_default ? "filled" : "light"}
@@ -616,7 +616,7 @@ export default function SuppliersPage() {
                                 }
                                 onClick={() => setDefaultBank(idx)}
                               >
-                                {acc.is_default ? "Predeterminada" : "Usar por defecto"}
+                                {acc.is_default ? t("suppliers.predeterminada") : t("suppliers.usarPorDefecto")}
                               </Button>
                             </Tooltip>
                             <ActionIcon

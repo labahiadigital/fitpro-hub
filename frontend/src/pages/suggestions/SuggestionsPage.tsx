@@ -27,6 +27,7 @@ import {
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useAuthStore } from "../../stores/auth";
+import { useTranslation } from "react-i18next";
 
 interface Suggestion {
   id: string;
@@ -112,6 +113,7 @@ const STATUS_CONFIG: Record<Suggestion["status"], { color: string; label: string
 };
 
 export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
+  const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<Suggestion[]>(INITIAL_SUGGESTIONS);
   const [showForm, setShowForm] = useState(false);
   const { user } = useAuthStore();
@@ -179,13 +181,13 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
               {"Nueva Sugerencia"}
             </Button>
           }
-          description={"Propón ideas y vota las sugerencias de la comunidad"}
-          title={"Buzón de Sugerencias"}
+          description={t("suggestions.proponIdeas")}
+          title={t("suggestions.buzonDeSugerencias")}
         />
       )}
       {embedded && (
         <Group justify="space-between" mb="lg">
-          <Text fw={700} size="lg">{"Buzón de Sugerencias"}</Text>
+          <Text fw={700} size="lg">{t("suggestions.buzonDeSugerenciasTitle")}</Text>
           <Button leftSection={<IconPlus size={14} />} size="xs" radius="xl" onClick={() => setShowForm(!showForm)}>
             {"Nueva Sugerencia"}
           </Button>
@@ -243,27 +245,27 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
               <IconBulb size={20} />
             </ThemeIcon>
             <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>
-              {"Enviar nueva sugerencia"}
+              {t("suggestions.enviarNuevaSugerencia")}
             </Text>
           </Group>
 
           <form onSubmit={form.onSubmit(handleSubmit)}>
             <Stack gap="md">
               <TextInput
-                label={"Título"}
+                label={t("common.titulo")}
                 placeholder={"¿Qué te gustaría proponer?"}
                 {...form.getInputProps("title")}
               />
               <Textarea
-                label={"Descripción"}
-                placeholder={"Describe tu idea con detalle para que podamos entenderla mejor..."}
+                label={t("common.descripcion")}
+                placeholder={t("suggestions.describeTuIdea")}
                 minRows={3}
                 {...form.getInputProps("description")}
               />
               <Group justify="space-between">
                 <Switch
-                  label={"Hacer pública"}
-                  description={"Las sugerencias públicas pueden ser votadas por otros usuarios"}
+                  label={t("suggestions.hacerPublica")}
+                  description={t("suggestions.sugerenciasPublicas")}
                   {...form.getInputProps("isPublic", { type: "checkbox" })}
                 />
                 <Group gap="sm">
@@ -360,10 +362,10 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
               <IconBulb size={32} />
             </ThemeIcon>
             <Text fw={600} size="lg" mb="xs" style={{ color: "var(--nv-text-primary)" }}>
-              {"Sin sugerencias todavía"}
+              {t("suggestions.sinSugerenciasTodavia")}
             </Text>
             <Text c="dimmed" size="sm" mb="lg">
-              {"Sé el primero en proponer una idea para mejorar la plataforma"}
+              {t("suggestions.seElPrimero")}
             </Text>
             <Button leftSection={<IconPlus size={16} />} onClick={() => setShowForm(true)}>
               {"Nueva Sugerencia"}

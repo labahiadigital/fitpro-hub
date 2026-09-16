@@ -164,7 +164,7 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number, t: (key: string) => string
   },
   {
     icon: <IconUsersGroup size={20} />,
-    label: "Miembros y equipo",
+    label: t("nav.miembrosYEquipo"),
     children: [
       { icon: <IconUsers size={18} />, label: "Miembros", to: "/team/members", requiredResource: "team" },
       { icon: <IconUsersGroup size={18} />, label: "Grupos", to: "/team/groups", requiredResource: "team" },
@@ -590,7 +590,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
             <Group gap="sm">
               <IconLogout size={16} color="rgba(255,255,255,0.4)" />
               <Text c="rgba(255,255,255,0.5)" size="sm" fw={500}>
-                {"Cerrar sesión"}
+                {t("layout.cerrarSesion")}
               </Text>
             </Group>
           </UnstyledButton>

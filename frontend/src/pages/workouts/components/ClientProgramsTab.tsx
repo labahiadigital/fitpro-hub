@@ -17,6 +17,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { useTranslation } from "react-i18next";
 
 interface ClientProgramsTabProps {
   clientPrograms: any[];
@@ -41,6 +42,7 @@ export function ClientProgramsTab({
   createPending,
   deletePending,
 }: ClientProgramsTabProps) {
+  const { t } = useTranslation();
   if (clientPrograms.length > 0) {
     return (
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
@@ -104,7 +106,7 @@ export function ClientProgramsTab({
                 <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => onView(program)}>
                   <IconEye size={14} />
                 </ActionIcon>
-                <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title={"Duplicar programa"}>
+                <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title={t("workouts.duplicarPrograma")}>
                   <IconCopy size={14} />
                 </ActionIcon>
                 <ActionIcon color="red" variant="light" radius="md" size="sm" onClick={() => onDelete(program.id)} loading={deletePending}>
@@ -131,10 +133,10 @@ export function ClientProgramsTab({
   return (
     <EmptyState
       actionLabel={"Crear Programa"}
-      description={"Asigna un programa a un cliente para verlo aquí."}
+      description={t("workouts.asignaProgramaCliente")}
       icon={<IconUsers size={36} />}
       onAction={() => onEdit(undefined)}
-      title={"No hay programas de clientes"}
+      title={t("workouts.noHayProgramasClientes")}
     />
   );
 }

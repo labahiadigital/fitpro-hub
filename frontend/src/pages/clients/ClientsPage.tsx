@@ -107,6 +107,7 @@ function ClientCard({
   onView: () => void;
   onResetPassword?: (client: any) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Box 
       className="nv-card" 
@@ -152,7 +153,7 @@ function ClientCard({
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Item leftSection={<IconEye size={14} />} onClick={onView}>
-              {"Ver perfil"}
+              {t("clients.verPerfil")}
             </Menu.Item>
             <Menu.Item leftSection={<IconEdit size={14} />}>
               {"Editar"}
@@ -165,7 +166,7 @@ function ClientCard({
                   onResetPassword(client);
                 }}
               >
-                {"Restablecer contraseña"}
+                {t("clients.restablecerContrasena")}
               </Menu.Item>
             )}
             <Menu.Divider />
@@ -261,10 +262,11 @@ function SegmentClientList({
   onSelectionChange,
   onRowClick,
 }: SegmentClientListProps) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <Box className="nv-card" p="lg">
-        <Group justify="center"><Text size="sm" c="dimmed">{"Cargando segmento…"}</Text></Group>
+        <Group justify="center"><Text size="sm" c="dimmed">{t("clients.cargandoSegmento")}</Text></Group>
       </Box>
     );
   }
@@ -408,14 +410,14 @@ function AbandonedCartList({
   const { t } = useTranslation();
   if (loading) {
     return (
-      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">{"Cargando carrito abandonado…"}</Text></Box>
+      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">{t("clients.cargandoCarrito")}</Text></Box>
     );
   }
   if (items.length === 0) {
     return (
       <EmptyState
         icon={<IconShoppingCartX size={48} />}
-        title={"No hay carritos abandonados"}
+        title={t("clients.noHayCarritos")}
         description={t("clients.aquiApareceranLasInvitacionesCon")}
       />
     );
@@ -543,7 +545,7 @@ function AbandonedCartList({
                   {i.last_email_sent_at ? (
                     <Stack gap={2}>
                       <Group gap={4} wrap="nowrap">
-                        <Tooltip label={"Email enviado"} withArrow>
+                        <Tooltip label={t("clients.emailEnviado")} withArrow>
                           <Badge
                             size="xs"
                             color="blue"
@@ -566,10 +568,10 @@ function AbandonedCartList({
                           </Tooltip>
                         ) : i.last_email_status === "delivered" ? (
                           <Tooltip label={t("clients.entregadoSinAbrirAun")} withArrow>
-                            <Badge size="xs" color="gray" variant="light">{"Sin leer"}</Badge>
+                            <Badge size="xs" color="gray" variant="light">{t("clients.sinLeer")}</Badge>
                           </Tooltip>
                         ) : i.last_email_status && i.last_email_status.includes("bounce") ? (
-                          <Tooltip label={"Rebote del servidor"} withArrow>
+                          <Tooltip label={t("clients.reboteDelServidor")} withArrow>
                             <Badge size="xs" color="red" variant="light" leftSection={<IconMailX size={10} />}>
                               {"Rebote"}
                             </Badge>
@@ -584,7 +586,7 @@ function AbandonedCartList({
                     </Stack>
                   ) : (
                     <Tooltip label={t("clients.aunNoSeHaEnviado")} withArrow>
-                      <Badge size="xs" color="gray" variant="light">{"Sin enviar"}</Badge>
+                      <Badge size="xs" color="gray" variant="light">{t("clients.sinEnviar")}</Badge>
                     </Tooltip>
                   )}
                 </Table.Td>
@@ -612,7 +614,7 @@ function AbandonedCartList({
                 </Table.Td>
                 <Table.Td onClick={(e) => e.stopPropagation()}>
                   {!i.won && (
-                    <Tooltip label={"Eliminar carrito"} withArrow>
+                    <Tooltip label={t("clients.eliminarCarrito")} withArrow>
                       <ActionIcon
                         size="sm"
                         color="red"
@@ -662,12 +664,13 @@ function InvitedList({
   onCancel: (id: string) => void;
   isPending: boolean;
 }) {
+  const { t } = useTranslation();
   if (invitations.length === 0) {
     return (
       <EmptyState
         icon={<IconMail size={48} />}
-        title={"Sin invitaciones pendientes"}
-        description={"Cuando un cliente acepte la invitación pasará a su tab correspondiente."}
+        title={t("clients.sinInvitacionesPendientes")}
+        description={t("clients.cuandoClienteAcepte")}
       />
     );
   }
@@ -698,7 +701,7 @@ function InvitedList({
                     <Button size="xs" variant="light" radius="xl" leftSection={<IconRefresh size={14} />} onClick={() => onResend(inv.id)} loading={isPending}>
                       {"Reenviar"}
                     </Button>
-                    <ActionIcon size="sm" variant="subtle" color="red" onClick={() => onCancel(inv.id)} title={"Cancelar invitación"}>
+                    <ActionIcon size="sm" variant="subtle" color="red" onClick={() => onCancel(inv.id)} title={t("clients.cancelarInvitacion")}>
                       <IconTrash size={14} />
                     </ActionIcon>
                   </Group>
@@ -741,17 +744,18 @@ function TrackingList({
   isResending: boolean;
   isCancelling: boolean;
 }) {
+  const { t } = useTranslation();
   if (loading) {
     return (
-      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">{"Cargando seguimiento…"}</Text></Box>
+      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">{t("clients.cargandoSeguimiento")}</Text></Box>
     );
   }
   if (items.length === 0) {
     return (
       <EmptyState
         icon={<IconMailOpened size={48} />}
-        title={"No hay invitaciones que seguir"}
-        description={"Aquí verás el estado (entregado, abierto, clicado) del último email enviado a cada invitación."}
+        title={t("clients.noHayInvitacionesSeguir")}
+        description={t("clients.aquiVerasEstado")}
       />
     );
   }
@@ -762,7 +766,7 @@ function TrackingList({
           <Table.Thead>
             <Table.Tr>
               <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Email"}</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Último email"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{t("clients.ultimoEmail")}</Text></Table.Th>
               <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Estado"}</Text></Table.Th>
               <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Asunto"}</Text></Table.Th>
               <Table.Th />
@@ -819,7 +823,7 @@ function TrackingList({
                         )}
                       </Stack>
                     ) : (
-                      <Text size="xs" c="dimmed">{"Sin envíos"}</Text>
+                      <Text size="xs" c="dimmed">{t("clients.sinEnvios")}</Text>
                     )}
                   </Table.Td>
                   <Table.Td>
@@ -828,7 +832,7 @@ function TrackingList({
                         <Tooltip
                           label={
                             status === "request" ? "Enviado al servidor de Brevo"
-                            : status === "delivered" ? "Entregado al destinatario"
+                            : status === "delivered" ? t("clients.entregadoDestinatario")
                             : status === "opened" || status === "unique_opened" ? "El destinatario abrió el email"
                             : status === "clicked" ? "El destinatario hizo click en un enlace"
                             : status === "soft_bounce" ? "Rebote temporal: bandeja llena u otro problema reversible"
@@ -1257,7 +1261,7 @@ export function ClientsPage() {
     try {
       await permanentDeleteClient.mutateAsync(client.id);
       notifications.show({
-        title: wasAlreadyDeleted ? "Cliente eliminado definitivamente" : "Cliente movido a Eliminados",
+        title: wasAlreadyDeleted ? t("clients.clienteEliminadoDef") : t("clients.clienteMovidoEliminados"),
         message: wasAlreadyDeleted
           ? `${client.first_name} ${client.last_name} y todos sus datos se han borrado`
           : `${client.first_name} ${client.last_name} se ha movido a Eliminados (puedes restaurarlo)`,
@@ -1848,7 +1852,7 @@ export function ClientsPage() {
           onAction={activeTab === "all" ? openClientModal : undefined}
           title={
             activeTab === "active" ? "No hay clientes activos"
-            : "No hay clientes"
+            : t("clients.noHayClientes")
           }
         />
       ) : null}
@@ -1882,7 +1886,7 @@ export function ClientsPage() {
           )}
           <Select
             label={t("clients.plantilla")}
-            placeholder={campaignTemplatesQuery.isLoading ? "Cargando…" : "Selecciona una plantilla"}
+            placeholder={campaignTemplatesQuery.isLoading ? t("common.cargando") : t("clients.seleccionaPlantilla")}
             data={(campaignTemplatesQuery.data || []).map((t) => ({
               value: t.id,
               label: t.discount_value

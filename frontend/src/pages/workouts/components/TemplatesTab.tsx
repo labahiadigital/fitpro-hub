@@ -17,6 +17,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { useTranslation } from "react-i18next";
 
 interface TemplatesTabProps {
   templates: any[];
@@ -39,6 +40,7 @@ export function TemplatesTab({
   createPending,
   deletePending,
 }: TemplatesTabProps) {
+  const { t } = useTranslation();
   if (templates.length > 0) {
     return (
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
@@ -73,7 +75,7 @@ export function TemplatesTab({
               <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => onView(program)}>
                 <IconEye size={14} />
               </ActionIcon>
-              <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title={"Duplicar programa"}>
+              <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title={t("workouts.duplicarPrograma")}>
                 <IconCopy size={14} />
               </ActionIcon>
               <ActionIcon color="red" variant="light" radius="md" size="sm" onClick={() => onDelete(program.id)} loading={deletePending}>
@@ -99,10 +101,10 @@ export function TemplatesTab({
   return (
     <EmptyState
       actionLabel={"Crear Programa"}
-      description={"Crea tu primer programa de entrenamiento para asignarlo a tus clientes."}
+      description={t("workouts.creaTuPrimerPrograma")}
       icon={<IconTemplate size={36} />}
       onAction={() => onEdit(undefined)}
-      title={"No hay plantillas"}
+      title={t("workouts.noHayPlantillas")}
     />
   );
 }

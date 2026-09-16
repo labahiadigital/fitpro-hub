@@ -1095,7 +1095,7 @@ export function InvitationOnboardingPage() {
               >
                 {selectedPaymentMethod === "sequra"
                   ? "Continuar con SeQura"
-                  : "Pagar con tarjeta"}
+                  : t("invitationOnboarding.pagarConTarjeta")}
               </Button>
 
               <Group gap="xs" justify="center">

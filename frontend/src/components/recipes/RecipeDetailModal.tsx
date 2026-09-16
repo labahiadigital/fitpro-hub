@@ -20,6 +20,7 @@ import {
 } from "@tabler/icons-react";
 import type { Recipe } from "../../types/recipe";
 import { BottomSheet } from "../common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 interface RecipeDetailModalProps {
   opened: boolean;
@@ -44,6 +45,7 @@ export function RecipeDetailModal({
   onDuplicate,
   readOnly = false,
 }: RecipeDetailModalProps) {
+  const { t } = useTranslation();
   if (!recipe) return null;
 
   const servings = recipe.servings || 1;
@@ -122,7 +124,7 @@ export function RecipeDetailModal({
             )}
             {recipe.is_public && (
               <Badge color="cyan" variant="light" size="sm">
-                {"Visible clientes"}
+                {t("recipeDetail.visibleClientes")}
               </Badge>
             )}
             {recipe.tags?.map((tag) => (
@@ -143,7 +145,7 @@ export function RecipeDetailModal({
           >
             <Group justify="space-between" mb="sm">
               <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-                {"Información nutricional"}
+                {t("recipeDetail.informacionNutricional")}
               </Text>
               <Text size="xs" c="dimmed">
                 por porción / total
@@ -290,7 +292,7 @@ export function RecipeDetailModal({
           {/* Notes (trainer only) */}
           {!readOnly && recipe.notes && (
             <>
-              <Divider label={<Text fw={600} size="sm">{"Notas internas"}</Text>} />
+              <Divider label={<Text fw={600} size="sm">{t("recipeDetail.notasInternas")}</Text>} />
               <Box
                 p="sm"
                 style={{

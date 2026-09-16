@@ -106,7 +106,24 @@
     "copiarEnlace": "Copy public link",
     "copiarCodigo": "Copy code",
     "cliente": "Client",
-    "nombreRequerido": "Name required"
+    "nombreRequerido": "Name required",
+    "verDetalles": "View details",
+    "filtrosAvanzados": "Advanced filters",
+    "subir": "Move up",
+    "bajar": "Move down",
+    "unidad": "Unit",
+    "acciones": "Actions",
+    "tipo": "Type",
+    "categoria": "Category",
+    "dificultad": "Difficulty",
+    "descripcion": "Description",
+    "etiquetas": "Tags",
+    "titulo": "Title",
+    "selecciona": "Select",
+    "quitarFavoritos": "Remove from favorites",
+    "anadirFavoritos": "Add to favorites",
+    "requerido": "Required",
+    "cargando": "Loading…"
   },
   "nav": {
     "mainMenu": "Main Menu",
@@ -158,7 +175,8 @@
     "myProfile": "My Profile",
     "automations": "Automations",
     "suggestions": "Suggestions",
-    "packages": "Packages"
+    "packages": "Packages",
+    "miembrosYEquipo": "Members and team"
   },
   "auth": {
     "login": "Log In",
@@ -402,7 +420,12 @@
     "clockOut": "Clock Out",
     "clockInLabel": "Clock in",
     "clockOutLabel": "Clock out",
-    "viewTimeClock": "View time clock"
+    "viewTimeClock": "View time clock",
+    "clientesInactivos": "Inactive clients",
+    "esteMes": "This month",
+    "segmentosDeClientes": "Client Segments",
+    "crecimientoDeIngresos": "Revenue Growth",
+    "sesionesEsteMes": "Sessions this month"
   },
   "settings": {
     "title": "Settings",
@@ -724,7 +747,7 @@
     "tuMejorVersionComienzaAqui": "Tu mejor Viewsión comienza aquí",
     "subeTuLogo": "Upload your logo",
     "subeTuFavicon": "Upload your favicon",
-    "appTudominioCom": "app.tudominio.com",
+    "appTudominioCom": "app.yourdomain.com",
     "soporteTudominioCom": "support@yourdomain.com",
     "tuNombreNoreplyTudominioCom": "Tu Name <Noreply@tudominio.com>",
     "escribeTuFirmaPersonalizada": "Write your custom signature...",
@@ -783,9 +806,9 @@
     "motivoOpcional": "Motivo (Optional)",
     "modoCoexistenciaActivo": "Modo coexistencia Active",
     "eliminarCuenta": "Delete Cuenta",
-    "miCentroFitness": "mi-centro-fitness",
-    "appMicentroCom": "app.micentro.com",
-    "contactoEjemploCom": "contacto@ejemplo.com",
+    "miCentroFitness": "my-fitness-center",
+    "appMicentroCom": "app.mycenter.com",
+    "contactoEjemploCom": "contact@example.com",
     "calleNumeroCiudad": "Calle, número, City",
     "describeTuNegocio": "Describe your business...",
     "nuevoEmailCom": "New@Email.com",
@@ -941,7 +964,11 @@
     "tu_disponibilidad_semanal_ha_sido_actualizada": "Your weekly availability has been updated",
     "no_se_pudo_guardar": "Could not save",
     "publicos": "public",
-    "notifica_por_email": "= Notify by email"
+    "notifica_por_email": "= Notify by email",
+    "horarioDeDisponibilidad": "Availability Schedule",
+    "configuraLosHorarios": "Set the hours when your clients can request appointments.",
+    "noDisponible": "Not available",
+    "debeSerDiferente": "Must be different"
   },
   "days": {
     "monday": "Monday",
@@ -1329,7 +1356,8 @@
     "eliminar": "Delete",
     "cerrar": "Close",
     "volver": "Back",
-    "guardarCambios": "Save cambios"
+    "guardarCambios": "Save cambios",
+    "enlaceVideollamada": "Video call link"
   },
   "chat": {
     "llamar": "Call",
@@ -1366,7 +1394,15 @@
     "imagen": "Image",
     "seleccionaUnaConversacion": "Selecciona una conViewsación",
     "eligeUnChatDeLa": "Elige un Chat de la lista para empezar a conViewsar",
-    "iniciarConversacion": "Iniciar conViewsación"
+    "iniciarConversacion": "Iniciar conViewsación",
+    "bandejaDeEntrada": "Inbox",
+    "noHayMensajesEnLaBandeja": "No messages in inbox",
+    "marcarComoNoLeido": "Mark as unread",
+    "actualizar": "Refresh",
+    "marcarComoLeido": "Mark as read",
+    "chatDePlataforma": "Platform chat",
+    "enviarPorPlataforma": "Send via platform",
+    "fotosDeProgreso": "Progress photos"
   },
   "clientDashboard": {
     "entrenamientos": "Workouts",
@@ -1408,7 +1444,8 @@
     "comienzaTuSemana": "Start your week with energy!",
     "completado": "completed",
     "casiLoTienes": "Almost there!",
-    "vasMuyBien": "You're doing great!"
+    "vasMuyBien": "You're doing great!",
+    "configuraObjetivo": "Set your goal"
   },
   "myCalendar": {
     "solicitarCita": "Request appointment",
@@ -1434,7 +1471,8 @@
     "entrenador": "Trainer",
     "ubicacion": "[EN] Ubicación",
     "tipo": "Type",
-    "modificar": "Modify"
+    "modificar": "Modify",
+    "solicitarCitaBtn": "Request appointment"
   },
   "myCommunity": {
     "copiarCodigo": "Copy código",
@@ -1560,7 +1598,16 @@
     "progreso": "Progress",
     "tuCestaDeSuplementosEsta": "Tu cesta de Supplements está vacía",
     "cuandoTuEntrenadorTeAsigne": "Cuando tu Trainer te asigne Supplements aparecerán aquí con su URL\r\n          de compra y código de descuento si los tiene configurados.",
-    "comprarAqui": "[EN] Comprar aquí"
+    "comprarAqui": "[EN] Comprar aquí",
+    "coincidenciasEnBD": "Matches in database",
+    "sinCoincidencias": "No matches. Will be saved manually.",
+    "esteBloqueComidaLibre": "This meal block is marked as free meal.",
+    "noHayComidasAsignadas": "No meals assigned in the plan for this day",
+    "seleccionaComidaIntercambiar": "Select the meal to swap",
+    "sinResultadosPara": "No results for \"{{query}}\"",
+    "comidasDelPlanPara": "Meal plan for {{day}}",
+    "noHayComidasEn": "No meals on {{day}}",
+    "comidasDe": "Meals of {{day}}"
   },
   "myProfile": {
     "descargarFactura": "Download Invoice",
@@ -1768,7 +1815,11 @@
     "noHasRegistradoMedidasAun": "No has registrado medidas aún. ¡Empieza aTime!",
     "subirNuevaFoto": "Upload New foto",
     "noHayMedidasRegistradasPara": "No hay medidas registradas para esta Date",
-    "subeFotosDeProgresoPara": "Sube fotos de Progress para View tu evolución visual"
+    "subeFotosDeProgresoPara": "Sube fotos de Progress para View tu evolución visual",
+    "editandoMedidas": "Editing existing measurements",
+    "anadeFotoEvolucion": "Add a photo to compare your progress",
+    "subirFotoProgreso": "Upload Progress Photo",
+    "fotosEvolucion": "Progress Photos ({{count}} photos)"
   },
   "myWorkouts": {
     "duracionMin": "Duration (min)",
@@ -1831,7 +1882,15 @@
     "buenTrabajo": "[EN] ¡Buen trabajo!",
     "hasCompletadoTuEntrenamientoSigue": "Has Completed tu Workout. ¡Sigue aYes!",
     "continuar": "Continue",
-    "nuevoRecordPersonal": "New personal record!"
+    "nuevoRecordPersonal": "New personal record!",
+    "alternativasRecomendadas": "Alternatives recommended by your trainer",
+    "eligeNuevoEjercicio": "Choose the new exercise:",
+    "noSeEncontronEjercicios": "No exercises found",
+    "motivoDelCambio": "Reason for change (optional)",
+    "esfuerzo": "Effort (1-10)",
+    "ejLesion": "E.g.: Injury, machine unavailable...",
+    "ejerciciosDe": "Exercises of {{day}}",
+    "noHayEjerciciosEn": "No exercises on {{day}}"
   },
   "clientDetail": {
     "tipoDeCliente": "Type de Client",
@@ -1906,7 +1965,7 @@
     "calleMayor123B": "Main St. 12, 3B",
     "seleccionaLasAlergiasDelCliente": "Selecciona las alergias del Client",
     "seleccionaLasIntoleranciasDelCliente": "Selecciona las intolerancias del Client",
-    "juan": "Juan",
+    "juan": "John",
     "garcia": "[EN] García",
     "juanEmailCom": "juan@Email.com",
     "describeLosObjetivosDelCliente": "Describe los Goals del Client...",
@@ -2182,7 +2241,14 @@
     "sin_riesgos_identificados_en_par_q": "✓ No risks identified in PAR-Q",
     "foto_de_progreso": "Progress photo",
     "grasa_corporal": "% Body Fat",
-    "grasa": "% Fat"
+    "grasa": "% Fat",
+    "sinSuscripcion": "This client has no subscriptions registered yet.",
+    "noHayPagos": "No payments recorded for this client.",
+    "sinDatosFacturacion": "This client has no billing data registered yet.",
+    "agendaLaPrimera": "Schedule the first",
+    "sinPagosRegistrados": "No payments recorded",
+    "noHayFotos": "No photos",
+    "deTipo": "of type"
   },
   "clients": {
     "emailEnviado": "Email sent",
@@ -2226,7 +2292,7 @@
     "nuevoCliente": "New Client",
     "nuevaEtiqueta": "New Tag",
     "invitarCliente": "Invite Client",
-    "juan": "Juan",
+    "juan": "John",
     "garcia": "[EN] García",
     "juanEmailCom": "juan@Email.com",
     "describeLosObjetivosDelCliente": "Describe los Goals del Client...",
@@ -2312,7 +2378,17 @@
     "podrasRestaurarloDesdeLaPestana": "[EN] Podrás restaurarlo desde la pestaña Eliminados. Para borrarlo del todo, elimínalo otra vez desde ahí.",
     "si": "Yes",
     "no": "No",
-    "buscar_por_nombre_email_o_telefono": "Search by name, email or phone..."
+    "buscar_por_nombre_email_o_telefono": "Search by name, email or phone...",
+    "cargandoCarrito": "Loading abandoned cart…",
+    "noHayCarritos": "No abandoned carts",
+    "cuandoClienteAcepte": "When a client accepts the invitation they will move to their tab.",
+    "noHayInvitacionesSeguir": "No invitations to track",
+    "aquiVerasEstado": "Here you'll see the status (delivered, opened, clicked) of the last email sent to each invitation.",
+    "entregadoDestinatario": "Delivered to recipient",
+    "clienteEliminadoDef": "Client permanently deleted",
+    "clienteMovidoEliminados": "Client moved to Trash",
+    "noHayClientes": "No clients",
+    "seleccionaPlantilla": "Select a template"
   },
   "community": {
     "titulo": "[EN] Título",
@@ -2538,7 +2614,8 @@
     "noSeEncontraronClasesCon": "No se encontraron Classs con los filtros seleccionados",
     "crearPrimeraClase": "Create Primera Class",
     "clase_creada": "Class created",
-    "la_clase_se_ha_programado_correctamente": "The class has been scheduled successfully"
+    "la_clase_se_ha_programado_correctamente": "The class has been scheduled successfully",
+    "describeContenidoClase": "Describe the class content..."
   },
   "lms": {
     "academiaLms": "Academy / LMS",
@@ -2592,7 +2669,8 @@
     "cancelacion": "[EN] Cancelación",
     "editar": "Edit",
     "eliminar": "Delete",
-    "cancelar": "Cancel"
+    "cancelar": "Cancel",
+    "fijaEn": "Fixed in: {{name}}"
   },
   "myForms": {
     "formularios": "Forms",
@@ -2614,7 +2692,8 @@
     "cuandoTuEntrenadorTeEnvie": "Cuando tu Trainer te envíe uNo lo Viewás aquí.",
     "todaviaNoHayFormulariosCompletados": "Todavía No hay Forms Completeds",
     "tu_respuesta_se_ha_registrado_correctamente": "Your response has been recorded successfully.",
-    "no_se_pudo_enviar_el_formulario_intentalo_de_nuevo": "Could not submit the form. Please try again."
+    "no_se_pudo_enviar_el_formulario_intentalo_de_nuevo": "Could not submit the form. Please try again.",
+    "yaHasRespondido": "You have already responded to this form. You can review your answers below."
   },
   "nutrition": {
     "verDetalle": "View detalle",
@@ -2685,7 +2764,7 @@
     "carbs": "Carbs",
     "acciones": "Actions",
     "proteina": "[EN] Proteína",
-    "carbos": "Carbos",
+    "carbos": "Carbs",
     "noHayPlantillas": "No hay Templates",
     "creaTuPrimeraPlantillaNutricional": "Crea tu primera Template nutricional reutilizable para asignarla a tus Clients.",
     "crearPlantilla": "Create Template",
@@ -2853,16 +2932,16 @@
     "omega3": "Omega-3",
     "alcohol": "Alcohol",
     "vitaminasPor100g": "Vitaminas By( 100g)",
-    "vitaminaA": "Vitamina A",
+    "vitaminaA": "Vitamin A",
     "vitaminaD": "Vitamin D",
-    "vitaminaE": "Vitamina E",
-    "vitaminaK": "Vitamina K",
-    "vitaminaC": "Vitamina C",
+    "vitaminaE": "Vitamin E",
+    "vitaminaK": "Vitamin K",
+    "vitaminaC": "Vitamin C",
     "vitaminaB1Tiamina": "Vitamin B1 (Thiamine)",
     "vitaminaB2Riboflavina": "Vitamin B2 (Riboflavin)",
-    "vitaminaB6": "Vitamina B6",
+    "vitaminaB6": "Vitamin B6",
     "vitaminaB9AcidoFolico": "[EN] Vitamina B9 (Ácido Fólico)",
-    "vitaminaB12": "Vitamina B12",
+    "vitaminaB12": "Vitamin B12",
     "vitaminaPpNiacina": "Vitamin PP (Niacin)",
     "acidoPantotenico": "[EN] Ácido Pantoténico",
     "noHayInformacionDeVitaminas": "No hay Information de vitaminas disponible",
@@ -2895,7 +2974,15 @@
     "configuracion": "Settings",
     "editandoPlantillaReutilizable": "Editando Template reutilizable",
     "asignaUnClienteOMarca": "Asigna un Client o marca &quot;Create como Template&quot; para poder Save",
-    "crearSuplemento": "Create Supplement"
+    "crearSuplemento": "Create Supplement",
+    "pesoKg": "Weight (kg)",
+    "alturaCm": "Height (cm)",
+    "edad": "Age",
+    "genero": "Gender",
+    "objetivo": "Goal",
+    "eliminadoFavoritos": "Removed from favorites",
+    "alimentoEliminadoFavoritos": "The food has been removed from your favorites",
+    "suplementoEliminadoFavoritos": "The supplement has been removed from your favorites"
   },
   "onboarding": {
     "email": "Email",
@@ -3146,7 +3233,22 @@
     "tuCuestionarioSeHaEnviado": "Tu cuestionario se ha enviado. Te hemos mandado un segundo Email con\r\n            los próximos pasos para acceder a tu plataforma.",
     "irAMiPanel": "Go to my panel",
     "enviarCuestionario": "Send cuestionario",
-    "listoListaDeEspera": "Done! We've added you to the waiting list. We'll let you know when a spot is available."
+    "listoListaDeEspera": "Done! We've added you to the waiting list. We'll let you know when a spot is available.",
+    "informacionBasica": "Basic information about you",
+    "tuEstadoFisico": "Your current physical state",
+    "nivelDeActividad": "Physical activity level",
+    "cuentanosMas": "Tell us more about your goals",
+    "porEjemploObjetivos": "For example: I want to lose 5kg in 3 months, improve my endurance...",
+    "paraPersonalizarPlan": "To customize your plan safely",
+    "porEjemploLesiones": "For example: Back pain, knee injury, tendinitis...",
+    "porEjemploEnfermedades": "For example: Diabetes, hypertension, asthma...",
+    "paraOfrecerte": "To offer you the best service",
+    "tratamientoDatosPersonales": "Personal data processing *",
+    "aceptoDatosPersonales": "I accept that my personal data is processed for the provision of personal training services.",
+    "tratamientoDatosSalud": "Health data processing *",
+    "aceptoDatosSalud": "I accept that my health data (allergies, injuries, medical conditions) is processed to customize my training and nutrition plan.",
+    "aceptoComunicaciones": "I accept receiving communications about news, promotions and training tips.",
+    "seleccionaObjetivo": "Select a goal"
   },
   "packages": {
     "nombreDelPaquete": "Name del paquete",
@@ -3411,7 +3513,7 @@
     "planPremium": "Premium Plan",
     "describeElProducto": "Describe el Product...",
     "ilimitado": "Unlimited",
-    "contactoTudominioCom": "contacto@tudominio.com",
+    "contactoTudominioCom": "contact@yourdomain.com",
     "seleccionarArticulo": "[EN] Seleccionar artículo",
     "seleccionarBox": "Seleccionar Box",
     "seleccionarMaquina": "Seleccionar Machine",
@@ -3516,7 +3618,9 @@
     "anadirMaquina": "Add Machine",
     "miembrosDelEquipo": "Members del Team",
     "anadirMiembro": "Add Member",
-    "cancelar": "Cancel"
+    "cancelar": "Cancel",
+    "porcentajeDescuento": "Discount percentage",
+    "descuentoEuros": "Discount in euros"
   },
   "payments": {
     "verDetalle": "View detalle",
@@ -3836,7 +3940,8 @@
     "cerrar": "Close",
     "cant": "Qty.",
     "registrar": "Register",
-    "no_hay_proveedores_activos": "No active suppliers"
+    "no_hay_proveedores_activos": "No active suppliers",
+    "detalleDeStock": "Stock detail"
   },
   "suggestions": {
     "titulo": "[EN] Título",
@@ -3874,7 +3979,11 @@
     "seElPrimeroEnProponer": "[EN] Sé el primero en proponer una idea para mejorar la plataforma",
     "anadir_temporizador_de_descanso_entre_series": "Add rest timer between sets",
     "integracion_con_apple_health_google_fit": "Integration with Apple Health / Google Fit",
-    "comparar_progreso_de_fotos_mes_a_mes": "Compare photo progress month to month"
+    "comparar_progreso_de_fotos_mes_a_mes": "Compare photo progress month to month",
+    "proponIdeas": "Propose ideas and vote on community suggestions",
+    "buzonDeSugerenciasTitle": "Suggestion Box",
+    "describeTuIdea": "Describe your idea in detail so we can understand it better...",
+    "seElPrimero": "Be the first to propose an idea to improve the platform"
   },
   "supplements": {
     "suplementacion": "[EN] Suplementación",
@@ -3883,7 +3992,18 @@
     "recomendacionesProximamente": "[EN] Recomendaciones (Próximamente)",
     "recomendaciones": "Recommendations",
     "proximamente": "[EN] Próximamente",
-    "proximamenteGestionDeRecomendacionesDe": "Próximamente: Gestión de recomendaciones de Supplements por Client"
+    "proximamenteGestionDeRecomendacionesDe": "Próximamente: Gestión de recomendaciones de Supplements por Client",
+    "buscarSuplementos": "Search supplements...",
+    "verDetalle": "View detail",
+    "comoTomar": "How to take:",
+    "abrirEnlaceCompra": "Open purchase link",
+    "verTodos": "View all",
+    "noTienesFavoritos": "You have no supplements marked as favorites.",
+    "sinFavoritos": "No favorites",
+    "limpiarBusqueda": "Clear search",
+    "sinResultados": "No results",
+    "suplementosCargados": "Supplements are loaded from the database. Add supplements to see them here.",
+    "noHaySuplementos": "No supplements"
   },
   "suppliers": {
     "nombreORazonSocial": "Name o razón social",
@@ -3946,7 +4066,11 @@
     "datosDeContacto": "Data of contacto",
     "otros": "Others",
     "cancelar": "Cancel",
-    "buscar_por_nombre_nif_email": "Search by name, tax ID, email..."
+    "buscar_por_nombre_nif_email": "Search by name, tax ID, email...",
+    "cuentaPorDefecto": "Default account",
+    "marcarPredeterminada": "Set as default",
+    "predeterminada": "Default",
+    "usarPorDefecto": "Use as default"
   },
   "tasks": {
     "titulo": "[EN] Título",
@@ -4278,7 +4402,12 @@
     "barraDeDominadas": "Barra of dominadas",
     "plantillas": "Templates",
     "programasDeClientes": "Programs de Clients",
-    "estiramientos": "Stretches"
+    "estiramientos": "Stretches",
+    "creaTuPrimerPrograma": "Create your first training program to assign to your clients.",
+    "anadeEjerciciosBiblioteca": "Add exercises to your library to use in your programs.",
+    "asignaProgramaCliente": "Assign a program to a client to see it here.",
+    "noHayProgramasClientes": "No client programs",
+    "grupoMuscularFilter": "Muscle group"
   },
   "chatComp": {
     "actualizar": "Update",
@@ -4378,7 +4507,8 @@
     "hoy": "Today",
     "noTienesNuevasNotificacionesHoy": "No tienes News Notifications Today.",
     "anteriores": "Previouses",
-    "configurarNotificaciones": "Configurar Notifications"
+    "configurarNotificaciones": "Configurar Notifications",
+    "noTienesNotificaciones": "No new notifications today."
   },
   "nutritionComp": {
     "editarNombre": "Edit Name",
@@ -4564,7 +4694,7 @@
     "katchMcardleRequiereGrasaCorporal": "Katch-McArdle requiere % fat corporal.",
     "resultadoDelCalculo": "[EN] Resultado del cálculo",
     "proteinas": "Proteins",
-    "carbos": "Carbos",
+    "carbos": "Carbs",
     "aunNoHayObjetivosNutricionales": "Aún No hay Goals nutricionales guardados en el histórico.",
     "fecha": "Date",
     "formula": "[EN] Fórmula",
@@ -4579,7 +4709,7 @@
     "dificil": "[EN] Difícil",
     "calorias": "Calories",
     "proteina": "[EN] Proteína",
-    "carbos": "Carbos",
+    "carbos": "Carbs",
     "grasa": "Fat",
     "sistema": "System",
     "visibleClientes": "Visible Clients",
@@ -4615,7 +4745,11 @@
     "totalRecetaCompleta": "Total (Recipe completa)",
     "cancelar": "Cancel",
     "receta_duplicada": "Recipe duplicated",
-    "receta_eliminada": "Recipe deleted"
+    "receta_eliminada": "Recipe deleted",
+    "buscarRecetas": "Search recipes...",
+    "ejTortitas": "E.g.: Oat and banana pancakes",
+    "sinResultados": "No results",
+    "noHayRecetas": "No recipes"
   },
   "supplementsComp": {
     "nombre": "Name",
@@ -4837,12 +4971,31 @@
     "myProfileDesc": "Personal data and preferences"
   },
   "clientForms": {
-    "no_se_pudo_enviar_el_formulario": "Could not submit the form"
+    "no_se_pudo_enviar_el_formulario": "Could not submit the form",
+    "formularioEnviado": "Form sent",
+    "formulariosDelCliente": "Client forms",
+    "enviaFormulariosDesc": "Send forms to the client and review their responses here.",
+    "enviarFormulario": "Send form",
+    "cargandoFormularios": "Loading forms...",
+    "aunNoFormularios": "No forms have been sent yet",
+    "cuandoEnviesFormulario": "When you send a form to the client it will appear here with its status.",
+    "enviarFormularioAlCliente": "Send form to client",
+    "seleccionaUnFormularioActivo": "Select an active form",
+    "noTienesFormularios": "You don't have your own forms yet",
+    "irAFormularios": "Go to Forms",
+    "clienteNoHaRespondido": "The client has not responded to this form yet.",
+    "respuestaDelFormulario": "Form response",
+    "formulario": "Form"
   },
   "clientReports": {
     "el_reporte_se_ha_guardado_correctamente": "The report has been saved successfully",
     "los_cambios_se_han_guardado": "Changes have been saved",
-    "el_reporte_ha_sido_eliminado": "The report has been deleted"
+    "el_reporte_ha_sido_eliminado": "The report has been deleted",
+    "reportesDeRevision": "Review Reports",
+    "nuevaRevision": "New review",
+    "noHayReportes": "No review reports for this client yet.",
+    "feedbackDelClienteLabel": "Client feedback:",
+    "feedbackCliente": "Client feedback (optional)"
   },
   "dashboardLayout": {
     "anadir_a_pantalla_de_inicio": "\"Add to Home Screen\""
@@ -4851,7 +5004,43 @@
     "alimento_creado": "Food created",
     "el_alimento_ha_sido_creado_correctamente": "The food has been created successfully",
     "receta_anadida": "Recipe added",
-    "nombreRequeridoMín2Caracteres": "Name required (min. 2 characters)"
+    "nombreRequeridoMín2Caracteres": "Name required (min. 2 characters)",
+    "copiarASemanas": "Copy to weeks",
+    "planNutricional": "Nutrition plan",
+    "copiarADias": "Copy to days",
+    "moverComidas": "Move meals",
+    "listaDeCompra": "Shopping List",
+    "distribucionDeMacros": "Macro distribution",
+    "arrastraLosSeparadores": "Drag separators · adjust with %",
+    "esteDiaNoTieneComidas": "This day has no pre-assigned meals. The client can eat freely.",
+    "editarNombre": "Edit name",
+    "duplicarBloque": "Duplicate block",
+    "comidaLibre": "Free meal",
+    "comidaLibreLabel": "Free meal",
+    "esteBloqueNoTieneAlimentos": "This block has no pre-assigned foods. The client can eat freely.",
+    "agruparComoReceta": "Group as Recipe",
+    "crearAlimento": "Create food",
+    "buscarAlimentos": "Search foods...",
+    "buscarGruposAlimentos": "Search food groups...",
+    "noSeEncontronGrupos": "No food groups found",
+    "buscarSuplementos": "Search supplements...",
+    "buscarBebidas": "Search drinks...",
+    "noSeEncontronBebidas": "No drinks found.",
+    "crearAlimentoTitle": "Create food",
+    "nombreDelAlimento": "Food name",
+    "crearYAnadir": "Create and add",
+    "listaDeCompraTitle": "Shopping List",
+    "seleccionaComidasMover": "Select meals to move:",
+    "diaDestino": "Destination day:",
+    "instruccionesNota": "Instructions / Note",
+    "instrucciones": "Instructions",
+    "carbohidratosG": "Carbohydrates (g)",
+    "grasasG": "Fats (g)",
+    "fibraG": "Fiber (g)",
+    "seleccionarAlimento": "Select Food or Supplement",
+    "notasEjPieza": "Notes (e.g.: 1 piece, grilled...)",
+    "ejALaPlancha": "E.g.: grilled, boiled...",
+    "copiarSemanaA": "Copy week {{week}} to:"
   },
   "mealPlanDetailView": {
     "el_pdf_se_esta_generando": "The PDF is being generated...",
@@ -4863,21 +5052,62 @@
     "años": " years"
   },
   "nutritionHistory": {
-    "grasa": "% Fat"
+    "grasa": "% Fat",
+    "aunNoHayObjetivos": "No nutritional goals saved in history yet.",
+    "vaciarHistorico": "Clear history",
+    "ocultarHistorico": "Hide history"
   },
   "workoutBuilder": {
-    "dia_de_descanso": "🛌 Day of rest"
+    "dia_de_descanso": "🛌 Day of rest",
+    "descansoEntreSeries": "Rest between sets (sec)",
+    "pesoObj": "Target weight",
+    "anadirBloque": "Add block",
+    "grupoMuscular": "Muscle group",
+    "crearEjercicioNuevo": "Create new exercise",
+    "copiarASemanas": "Copy to weeks",
+    "programaDeEntrenamiento": "Training program",
+    "copiarADias": "Copy to days",
+    "diaMarcadoDescanso": "This day is marked as rest. Click the button to add training.",
+    "rondas": "Rounds",
+    "bloques": "Blocks",
+    "min": "Min",
+    "km": "Km",
+    "kmh": "Km/h",
+    "descanso": "Rest",
+    "series": "Sets",
+    "urlVideo": "Video URL",
+    "notasInstrucciones": "Notes / Instructions",
+    "ejMantenerCore": "E.g.: Keep core engaged...",
+    "equipo": "Equipment",
+    "copiarSemanaA": "Copy week {{week}} to:"
   },
   "acceptStaffInvite": {
     "asnete_al_equipo": "Ãšnete to the team"
   },
   "timeClock": {
     "7_dias": "7 days",
-    "30_dias": "30 days"
+    "30_dias": "30 days",
+    "retornoPausa": "Break return",
+    "pausa": "Break",
+    "horaServidor": "Server time",
+    "horaDelServidor": "Server time",
+    "totalSolicitudes": "Total requests: {{total}}"
   },
   "exerciseForm": {
     "alternativa_anadida": "Alternative added",
-    "la_imagen_no_puede_superar_los_8_mb": "The image no can superar the 8 MB"
+    "la_imagen_no_puede_superar_los_8_mb": "The image no can superar the 8 MB",
+    "defineQueEjercicios": "Define which exercises the client can use as a substitute if the machine is not available or they have an injury.",
+    "sinAlternativas": "No alternatives defined. Add equivalent exercises so the client can substitute.",
+    "buscarEjercicioAlternativa": "Search exercise to add as alternative...",
+    "noSeEncontronEjercicios": "No exercises found",
+    "datoDelSistema": "System data — read only",
+    "crearCopiaPropia": "Create own copy",
+    "pressDeBanca": "Bench Press",
+    "nombreAlternativo": "Alternative name (e.g.: Bench Press)",
+    "breveDescripcion": "Brief exercise description...",
+    "pasosParaRealizar": "Steps to perform the exercise correctly...",
+    "gruposMusculares": "Muscle groups",
+    "laImagenSeGuarda": "The image is saved in your workspace's private storage (max. 8 MB)."
   },
   "clientReportsTab": {
     "eliminarEsteReporte": "Delete this report?",
@@ -5128,5 +5358,166 @@
   "workoutsPage": {
     "sinNombre": "No name",
     "nombreRequerido": "Name required"
+  },
+  "mealPlanDetail": {
+    "datosDelCliente": "Client Data",
+    "planDeComidas": "Meal Plan",
+    "distribucionDeMacros": "Macronutrient Distribution - Kcal",
+    "objetivosVsActual": "Goals vs Actual",
+    "calculadoDesdeCliente": "Calculated from client",
+    "calculoRequisitosEnergeticos": "Daily Energy Requirements Calculation",
+    "hipertrofiaAumento": "Hypertrophy or Weight Gain",
+    "definicionPerdida": "Definition or Weight Loss",
+    "calculoTemporizacion": "Fat Loss Goal Timeline Calculation",
+    "noHaySuplementacion": "No supplementation assigned",
+    "anadeSuplementos": "Add recommended supplements for this plan",
+    "recomendacionesDeEjemplo": "Example recommendations",
+    "noHayComidasConfiguradas": "No meals configured",
+    "editaElPlan": "Edit the plan to add meals",
+    "notasDelDia": "Day notes:",
+    "intraEntrenamiento": "Intra workout or 10g EAAs + 10g GLUTAMINE + 10g CREATINE",
+    "antesDeDormir": "Before sleep:",
+    "zma3Capsulas": "ZMA 3 capsules",
+    "semana": "Week",
+    "sexo": "Sex",
+    "edad": "Age",
+    "peso": "Weight",
+    "altura": "Height",
+    "actividad": "Activity",
+    "tendenciaCorporal": "Body Tendency"
+  },
+  "editableMealName": {
+    "editarNombre": "Edit name",
+    "nombresDeComidas": "Meal Names",
+    "personalizaNombres": "Customize meal names for your clients",
+    "restaurarNombre": "Restore default name"
+  },
+  "branding": {
+    "identidadDeMarca": "Brand Identity",
+    "personalizaApariencia": "Customize your platform appearance",
+    "nombreDelNegocio": "Business Name",
+    "subeTuLogo": "Upload your logo",
+    "subeTuFavicon": "Upload your favicon",
+    "eliminaBranding": "Remove Trackfiz branding",
+    "eliminaReferencias": "Remove all Trackfiz references",
+    "ocultarBrandingFooter": "Hide branding in footer",
+    "personalizacionEmails": "Email Customization",
+    "configuraComo": "Configure how emails are sent to your clients",
+    "emailDeSoporte": "Support Email",
+    "remitenteDeEmails": "Email Sender",
+    "firmaDeEmail": "Email Signature",
+    "escribeTuFirma": "Write your custom signature...",
+    "tuPropiaApp": "Your own app in the stores",
+    "tuAppIos": "Your custom app in the App Store with your brand and colors.",
+    "tuAppAndroid": "Your custom app in Google Play with your brand and colors.",
+    "eslogan": "Slogan",
+    "colorPrincipal": "Primary Color",
+    "colorSecundario": "Secondary Color",
+    "logo": "Logo",
+    "favicon": "Favicon",
+    "habilitarWhiteLabel": "Enable White Label",
+    "dominioPersonalizado": "Custom Domain",
+    "miEstudioFitness": "My Fitness Studio",
+    "tuNombreNoreply": "Your Name <noreply@yourdomain.com>",
+    "appTudominio": "app.yourdomain.com",
+    "soporteTudominio": "support@yourdomain.com"
+  },
+  "exerciseLibrary": {
+    "bibliotecaDeEjercicios": "Exercise Library",
+    "buscarEjercicios": "Search exercises...",
+    "noSeEncontronEjercicios": "No exercises found"
+  },
+  "recipeForm": {
+    "nombreDeLaReceta": "Recipe name",
+    "seleccionarCategoria": "Select category",
+    "seleccionarDificultad": "Select difficulty",
+    "instrucciones": "Preparation instructions",
+    "describeLosPasos": "Describe the steps to prepare this recipe...",
+    "buscarAlimentoAnadir": "Search food to add...",
+    "escribeParaBuscar": "Type to search foods...",
+    "suplementosDesdeAlimentos": "Supplements can be added from the foods tab by searching by name.",
+    "resumenNutricional": "Nutritional summary",
+    "notasInternas": "Internal notes (only visible to the trainer)",
+    "notasPrivadas": "Private notes about this recipe...",
+    "visibleParaClientes": "Visible to clients",
+    "clientesVeranReceta": "Clients will be able to see this recipe in their nutrition section"
+  },
+  "recipeDetail": {
+    "visibleClientes": "Visible to clients",
+    "informacionNutricional": "Nutritional information",
+    "notasInternas": "Internal notes"
+  },
+  "nutritionCalc": {
+    "volverACargar": "Reload from last progress",
+    "calculaNuevasCalorías": "Calculate new calories and macros from the client's latest progress data.",
+    "faltanDatos": "Missing client data",
+    "noHayRegistrosProgreso": "No recent progress records. Profile data will be used.",
+    "nivelDeActividad": "Activity level",
+    "resultadoDelCalculo": "Calculation result"
+  },
+  "macroBar": {
+    "arrastProtCarb": "Drag to adjust Protein / Carbs",
+    "separadorProtCarb": "Protein and carbs separator",
+    "arrastCarbGrasa": "Drag to adjust Carbs / Fats",
+    "separadorCarbGrasa": "Carbs and fats separator"
+  },
+  "rectification": {
+    "solicitarRectificacion": "Request rectification",
+    "describeLaRectificacion": "Describe the rectification",
+    "indicaQueInformacion": "Indicate what information is incorrect and what would be correct...",
+    "enviarSolicitud": "Send request",
+    "solicitaCorreccion": "Request the correction of"
+  },
+  "programBuilder": {
+    "editandoPlantilla": "Editing reusable template",
+    "asignarACliente": "Assign to client",
+    "buscarCliente": "Search client...",
+    "crearComoPlantilla": "Create as template",
+    "crearComoPlantillaLabel": "Create as template",
+    "nombreDelPrograma": "Program name",
+    "programaHipertrofia": "Hypertrophy Program",
+    "describeElPrograma": "Describe the program...",
+    "anadeEtiquetas": "Add tags",
+    "fechaDeInicio": "Start date",
+    "fechaDeFin": "End date (optional)",
+    "siNoSeIndica": "If not specified, weeks repeat indefinitely",
+    "intervaloRevision": "Review interval (days)",
+    "generaRecordatorios": "Generates automatic reminders to review the program",
+    "asignaUnCliente": "Assign a client or check \"Create as template\" to save"
+  },
+  "foods": {
+    "buscarAlimentos": "Search foods...",
+    "verDetalle": "View detail",
+    "duplicarAMiWorkspace": "Duplicate to my workspace",
+    "limpiarBusqueda": "Clear search",
+    "sinResultados": "No results",
+    "anadeAlimentosBiblioteca": "Add foods to your library to use in your plans.",
+    "noHayAlimentos": "No foods"
+  },
+  "nutritionTemplates": {
+    "creaTuPrimeraPlantilla": "Create your first reusable nutrition template to assign to your clients.",
+    "noHayPlantillas": "No templates"
+  },
+  "clientPlans": {
+    "creaPlanPersonalizado": "Create a personalized nutrition plan for a client.",
+    "noHayPlanesClientes": "No client plans"
+  },
+  "macros": {
+    "proteinaPct": "Protein %",
+    "carbohidratosPct": "Carbs %",
+    "grasasPct": "Fats %"
+  },
+  "exercises": {
+    "alias": "Alias",
+    "instrucciones": "Instructions",
+    "equipamiento": "Equipment",
+    "videoUrl": "Video (URL)",
+    "urlImagenOSubela": "Image URL or upload with the button",
+    "musculos": "Muscles",
+    "imagenSubida": "Image uploaded successfully",
+    "ejerciciosAlternativosPara": "Alternative exercises for \"{{name}}\""
+  },
+  "invitationOnboarding": {
+    "pagarConTarjeta": "Pay with card"
   }
 }

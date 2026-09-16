@@ -1,4 +1,5 @@
 import { Box, Group, RingProgress, Stack, Text } from "@mantine/core";
+import { useTranslation } from "react-i18next";
 
 interface ClientGrowthChartProps {
   data?: any[];
@@ -11,6 +12,7 @@ export function ClientGrowthChart({
   totalClients,
   newThisMonth,
 }: ClientGrowthChartProps) {
+  const { t } = useTranslation();
   // Distribution Data Simulation
   const enterprise = 45;
   const pro = 35;
@@ -18,7 +20,7 @@ export function ClientGrowthChart({
 
   return (
     <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%" }}>
-      <Text className="stat-label" mb="sm">{"Segmentos de Clientes"}</Text>
+      <Text className="stat-label" mb="sm">{t("dashboard.segmentosDeClientes")}</Text>
 
       {/* Layout horizontal: gráfico a la izquierda, leyenda a la derecha */}
       <Group justify="space-between" align="center" gap="md" wrap="nowrap">

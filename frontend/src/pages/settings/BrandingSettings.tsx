@@ -80,9 +80,9 @@ export function BrandingSettings({
             <IconPalette size={20} />
           </ThemeIcon>
           <div>
-            <Title order={4}>{"Identidad de Marca"}</Title>
+            <Title order={4}>{t("branding.identidadDeMarca")}</Title>
             <Text c="dimmed" size="sm">
-              {"Personaliza la apariencia de tu plataforma"}
+              {t("branding.personalizaApariencia")}
             </Text>
           </div>
         </Group>
@@ -90,13 +90,13 @@ export function BrandingSettings({
         <Stack gap="md">
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
-              label={"Nombre del Negocio"}
+              label={t("branding.nombreDelNegocio")}
               onChange={(e) => updateConfig("workspaceName", e.target.value)}
-              placeholder={"Mi Estudio Fitness"}
+              placeholder={t("branding.miEstudioFitness")}
               value={config.workspaceName}
             />
             <TextInput
-              label={"Eslogan"}
+              label={t("branding.eslogan")}
               onChange={(e) => updateConfig("tagline", e.target.value)}
               placeholder={t("settings.tuMejorVersionComienzaAqui")}
               value={config.tagline}
@@ -105,7 +105,7 @@ export function BrandingSettings({
 
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <ColorInput
-              label={"Color Principal"}
+              label={t("branding.colorPrincipal")}
               onChange={(value) => updateConfig("primaryColor", value)}
               placeholder="#10B981"
               swatches={[
@@ -119,7 +119,7 @@ export function BrandingSettings({
               value={config.primaryColor}
             />
             <ColorInput
-              label={"Color Secundario"}
+              label={t("branding.colorSecundario")}
               onChange={(value) => updateConfig("secondaryColor", value)}
               placeholder="#1F2937"
               swatches={["#1F2937", "#374151", "#4B5563", "#6B7280", "#9CA3AF"]}
@@ -133,10 +133,10 @@ export function BrandingSettings({
             <div>
               <FileInput
                 accept="image/*"
-                label={"Logo"}
+                label={t("branding.logo")}
                 leftSection={<IconPhoto size={14} />}
                 onChange={setLogoFile}
-                placeholder={"Sube tu logo"}
+                placeholder={t("branding.subeTuLogo")}
                 value={logoFile}
               />
               {config.logoUrl && (
@@ -148,10 +148,10 @@ export function BrandingSettings({
             <div>
               <FileInput
                 accept="image/*"
-                label={"Favicon"}
+                label={t("branding.favicon")}
                 leftSection={<IconPhoto size={14} />}
                 onChange={setFaviconFile}
-                placeholder={"Sube tu favicon"}
+                placeholder={t("branding.subeTuFavicon")}
                 value={faviconFile}
               />
               <Text c="dimmed" mt={4} size="xs">
@@ -172,7 +172,7 @@ export function BrandingSettings({
             <div>
               <Title order={4}>{"White Label"}</Title>
               <Text c="dimmed" size="sm">
-                {"Elimina el branding de Trackfiz"}
+                {t("branding.eliminaBranding")}
               </Text>
             </div>
           </Group>
@@ -187,8 +187,8 @@ export function BrandingSettings({
           <Stack gap="md">
             <Switch
               checked={config.enableWhiteLabel}
-              description={"Elimina todas las referencias a Trackfiz"}
-              label={"Habilitar White Label"}
+              description={t("branding.eliminaReferencias")}
+              label={t("branding.habilitarWhiteLabel")}
               onChange={(e) =>
                 updateConfig("enableWhiteLabel", e.currentTarget.checked)
               }
@@ -197,17 +197,17 @@ export function BrandingSettings({
               checked={config.hideFooterBranding}
               description={t("settings.eliminaPoweredByTrackfizDel")}
               disabled={!config.enableWhiteLabel}
-              label={"Ocultar branding en footer"}
+              label={t("branding.ocultarBrandingFooter")}
               onChange={(e) =>
                 updateConfig("hideFooterBranding", e.currentTarget.checked)
               }
             />
             <TextInput
               disabled={!config.enableWhiteLabel}
-              label={"Dominio Personalizado"}
+              label={t("branding.dominioPersonalizado")}
               leftSection={<IconWorld size={14} />}
               onChange={(e) => updateConfig("customDomain", e.target.value)}
-              placeholder={"app.tudominio.com"}
+              placeholder={t("branding.appTudominio")}
               value={config.customDomain}
             />
           </Stack>
@@ -225,33 +225,33 @@ export function BrandingSettings({
             <IconMail size={20} />
           </ThemeIcon>
           <div>
-            <Title order={4}>{"Personalización de Emails"}</Title>
+            <Title order={4}>{t("branding.personalizacionEmails")}</Title>
             <Text c="dimmed" size="sm">
-              {"Configura cómo se envían los emails a tus clientes"}
+              {t("branding.configuraComo")}
             </Text>
           </div>
         </Group>
 
         <Stack gap="md">
           <TextInput
-            label={"Email de Soporte"}
+            label={t("branding.emailDeSoporte")}
             leftSection={<IconMail size={14} />}
             onChange={(e) => updateConfig("supportEmail", e.target.value)}
-            placeholder={"soporte@tudominio.com"}
+            placeholder={t("branding.soporteTudominio")}
             value={config.supportEmail}
           />
           <TextInput
             disabled={!isPro}
-            label={"Remitente de Emails"}
+            label={t("branding.remitenteDeEmails")}
             onChange={(e) => updateConfig("customEmailFrom", e.target.value)}
-            placeholder={"Tu Nombre <noreply@tudominio.com>"}
+            placeholder={t("branding.tuNombreNoreply")}
             value={config.customEmailFrom}
           />
           <Textarea
-            label={"Firma de Email"}
+            label={t("branding.firmaDeEmail")}
             minRows={3}
             onChange={(e) => updateConfig("emailSignature", e.target.value)}
-            placeholder={"Escribe tu firma personalizada..."}
+            placeholder={t("branding.escribeTuFirma")}
             value={config.emailSignature}
           />
         </Stack>
@@ -267,7 +267,7 @@ export function BrandingSettings({
             <div>
               <Title order={4}>{"App Móvil Personalizada"}</Title>
               <Text c="dimmed" size="sm">
-                {"Tu propia app en las tiendas"}
+                {t("branding.tuPropiaApp")}
               </Text>
             </div>
           </Group>
@@ -283,7 +283,7 @@ export function BrandingSettings({
               <Text fw={600}>iOS App</Text>
             </Group>
             <Text c="dimmed" mb="md" size="sm">
-              {"Tu app personalizada en la App Store con tu marca y colores."}
+              {t("branding.tuAppIos")}
             </Text>
             <Button disabled fullWidth variant="light">
               {"Solicitar App iOS"}
@@ -295,7 +295,7 @@ export function BrandingSettings({
               <Text fw={600}>{"Android App"}</Text>
             </Group>
             <Text c="dimmed" mb="md" size="sm">
-              {"Tu app personalizada en Google Play con tu marca y colores."}
+              {t("branding.tuAppAndroid")}
             </Text>
             <Button disabled fullWidth variant="light">
               {"Solicitar App Android"}

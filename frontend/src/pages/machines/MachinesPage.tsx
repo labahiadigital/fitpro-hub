@@ -154,7 +154,7 @@ export default function MachinesPage() {
                   <div>
                     <Text fw={600} size="sm">{machine.name}</Text>
                     {machine.fixed_box_name && (
-                      <Text size="xs" c="dimmed">Fija en: {machine.fixed_box_name}</Text>
+                      <Text size="xs" c="dimmed">{t("machines.fijaEn", { name: machine.fixed_box_name })}</Text>
                     )}
                   </div>
                 </Group>

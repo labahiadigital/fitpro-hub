@@ -9,6 +9,7 @@ import {
 import { useClickOutside, useDisclosure } from "@mantine/hooks";
 import { IconCheck, IconEdit, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // Default meal names that can be customized
 export const DEFAULT_MEAL_NAMES: Record<string, string> = {
@@ -43,6 +44,7 @@ export function EditableMealName({
   editable = true,
   size = "sm",
 }: EditableMealNameProps) {
+  const { t } = useTranslation();
   const [editing, { open: startEdit, close: stopEdit }] = useDisclosure(false);
   const [value, setValue] = useState(customName || defaultName || DEFAULT_MEAL_NAMES[mealId] || "Comida");
   const ref = useClickOutside(() => handleCancel());
@@ -122,7 +124,7 @@ export function EditableMealName({
       <Text fw={600} size={size}>
         {displayName}
       </Text>
-      <Tooltip label={"Editar nombre"}>
+      <Tooltip label={t("editableMealName.editarNombre")}>
         <ActionIcon
           color="gray"
           variant="subtle"
@@ -145,6 +147,7 @@ interface MealNameManagerProps {
  * MealNameManager - Gestor de nombres de comidas para configuración del workspace
  */
 export function MealNameManager({ mealNames, onChange }: MealNameManagerProps) {
+  const { t } = useTranslation();
   const handleSave = (mealId: string, newName: string) => {
     onChange({
       ...mealNames,
@@ -161,10 +164,10 @@ export function MealNameManager({ mealNames, onChange }: MealNameManagerProps) {
   return (
     <Box>
       <Text fw={600} size="sm" mb="md">
-        {"Nombres de Comidas"}
+        {t("editableMealName.nombresDeComidas")}
       </Text>
       <Text c="dimmed" size="xs" mb="md">
-        {"Personaliza los nombres de las comidas para tus clientes"}
+        {t("editableMealName.personalizaNombres")}
       </Text>
 
       {Object.entries(DEFAULT_MEAL_NAMES).map(([mealId, defaultName]) => (
@@ -180,7 +183,7 @@ export function MealNameManager({ mealNames, onChange }: MealNameManagerProps) {
               w={150}
             />
             {mealNames[mealId] && mealNames[mealId] !== defaultName && (
-              <Tooltip label={"Restaurar nombre por defecto"}>
+              <Tooltip label={t("editableMealName.restaurarNombre")}>
                 <ActionIcon
                   color="gray"
                   variant="subtle"

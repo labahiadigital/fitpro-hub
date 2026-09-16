@@ -19,6 +19,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { useTranslation } from "react-i18next";
 
 interface ClientPlansTabProps {
   clientPlans: any[];
@@ -45,6 +46,7 @@ export function ClientPlansTab({
   createPending,
   deletePending,
 }: ClientPlansTabProps) {
+  const { t } = useTranslation();
   if (isLoading) {
     return <Center py="xl"><Loader size="md" /></Center>;
   }
@@ -107,10 +109,10 @@ export function ClientPlansTab({
   return (
     <EmptyState
       actionLabel={"Crear Plan"}
-      description={"Crea un plan nutricional personalizado para un cliente."}
+      description={t("clientPlans.creaPlanPersonalizado")}
       icon={<IconUsers size={36} />}
       onAction={onCreate}
-      title={"No hay planes de clientes"}
+      title={t("clientPlans.noHayPlanesClientes")}
     />
   );
 }

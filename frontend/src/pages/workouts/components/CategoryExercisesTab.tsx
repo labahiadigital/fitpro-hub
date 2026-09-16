@@ -22,6 +22,7 @@ import { Table } from "@mantine/core";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
 import { ViewModeToggle } from "../../../components/common/ViewModeToggle";
+import { useTranslation } from "react-i18next";
 
 interface CategoryConfig {
   category: string;
@@ -80,6 +81,7 @@ export function CategoryExercisesTab({
   viewMode = "grid",
   onViewModeChange,
 }: CategoryExercisesTabProps) {
+  const { t } = useTranslation();
   return (
     <>
       <Group gap="sm" mb="md">
@@ -110,7 +112,7 @@ export function CategoryExercisesTab({
             value={muscleGroupFilter || null}
             onChange={onMuscleGroupFilterChange}
             data={muscleGroups}
-            placeholder={"Grupo muscular"}
+            placeholder={t("workouts.grupoMuscularFilter")}
             size="xs"
             radius="md"
             w={160}
@@ -122,7 +124,7 @@ export function CategoryExercisesTab({
             value={equipmentFilter || null}
             onChange={onEquipmentFilterChange}
             data={equipmentOptions}
-            placeholder={"Equipamiento"}
+            placeholder={t("exercises.equipamiento")}
             size="xs"
             radius="md"
             w={160}

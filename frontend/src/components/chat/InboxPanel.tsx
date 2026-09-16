@@ -25,6 +25,7 @@ import {
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import "dayjs/locale/es";
 
 dayjs.extend(relativeTime);
@@ -94,6 +95,7 @@ interface InboxPanelProps {
  * InboxPanel - Panel de bandeja de entrada integrado bajo el chat
  */
 export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps) {
+  const { t } = useTranslation();
   const [opened, { toggle }] = useDisclosure(false);
   const [messages, setMessages] = useState<InboxMessage[]>(mockInboxMessages);
 
@@ -126,7 +128,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
               <IconInbox size={14} />
             </ThemeIcon>
             <Text fw={600} size="sm">
-              {"Bandeja de Entrada"}
+              {t("chat.bandejaDeEntrada")}
             </Text>
             {unreadCount > 0 && (
               <Badge color="red" size="sm" circle>
@@ -135,7 +137,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
             )}
           </Group>
           <Group gap="xs">
-            <Tooltip label={"Actualizar"}>
+            <Tooltip label={t("chat.actualizar")}>
               <ActionIcon
                 color="gray"
                 variant="subtle"
@@ -224,7 +226,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
                 )}
 
                 <Group gap="xs" mt="xs" ml={36}>
-                  <Tooltip label={message.isRead ? "Marcar como no leído" : "Marcar como leído"}>
+                  <Tooltip label={message.isRead ? t("chat.marcarComoNoLeido") : t("chat.marcarComoLeido")}>
                     <ActionIcon
                       color="gray"
                       variant="subtle"
@@ -245,7 +247,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
                       )}
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label={"Eliminar"}>
+                  <Tooltip label={t("chat.eliminar")}>
                     <ActionIcon
                       color="red"
                       variant="subtle"
@@ -267,7 +269,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
                 <IconInbox size={20} />
               </ThemeIcon>
               <Text c="dimmed" size="sm">
-                {"No hay mensajes en la bandeja"}
+                {t("chat.noHayMensajesEnLaBandeja")}
               </Text>
             </Box>
           )}

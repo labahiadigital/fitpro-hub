@@ -529,7 +529,7 @@ export function NutritionPage() {
     const isFav = isFoodFavorite(foodId);
     try {
       await toggleFoodFavorite.mutateAsync({ foodId, isFavorite: isFav });
-      notifications.show({ title: isFav ? "Eliminado de favoritos" : t("nutritionPage.añadidoAFavoritos"), message: isFav ? "El alimento se ha eliminado de tus favoritos" : t("nutritionPage.elAlimentoSeHaAñadidoATusFavorito"), color: isFav ? "gray" : "yellow" });
+      notifications.show({ title: isFav ? t("nutrition.eliminadoFavoritos") : t("nutritionPage.añadidoAFavoritos"), message: isFav ? t("nutrition.alimentoEliminadoFavoritos") : t("nutritionPage.elAlimentoSeHaAñadidoATusFavorito"), color: isFav ? "gray" : "yellow" });
     } catch {
       notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" });
     }
@@ -540,7 +540,7 @@ export function NutritionPage() {
     const isFav = isSupplementFavorite(supplementId);
     try {
       await toggleSupplementFavorite.mutateAsync({ supplementId, isFavorite: isFav });
-      notifications.show({ title: isFav ? "Eliminado de favoritos" : t("nutritionPage.añadidoAFavoritos"), message: isFav ? "El suplemento se ha eliminado de tus favoritos" : t("nutritionPage.elSuplementoSeHaAñadidoATusFavori"), color: isFav ? "gray" : "yellow" });
+      notifications.show({ title: isFav ? "Eliminado de favoritos" : t("nutritionPage.añadidoAFavoritos"), message: isFav ? t("nutrition.suplementoEliminadoFavoritos") : t("nutritionPage.elSuplementoSeHaAñadidoATusFavori"), color: isFav ? "gray" : "yellow" });
     } catch {
       notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" });
     }

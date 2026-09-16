@@ -372,6 +372,7 @@ export function OnboardingPage() {
 
 // Step 1: Datos personales
 function StepPersonalInfo({ form }: { form: any }) {
+  const { t } = useTranslation();
   const inputStyles = {
     input: {
       background: "rgba(255, 255, 255, 0.05)",
@@ -403,21 +404,21 @@ function StepPersonalInfo({ form }: { form: any }) {
         </ThemeIcon>
         <Box>
           <Text c="white" fw={600}>{"Datos Personales"}</Text>
-          <Text c="gray.5" size="sm">{"Información básica sobre ti"}</Text>
+          <Text c="gray.5" size="sm">{t("onboarding.informacionBasica")}</Text>
         </Box>
       </Group>
 
       <Group grow>
         <TextInput
-          label={"Nombre"}
-          placeholder={"Tu nombre"}
+          label={t("onboarding.nombre")}
+          placeholder={t("onboarding.tuNombre")}
           required
           styles={inputStyles}
           {...form.getInputProps("first_name")}
         />
         <TextInput
-          label={"Apellidos"}
-          placeholder={"Tus apellidos"}
+          label={t("onboarding.apellidos")}
+          placeholder={t("onboarding.tusApellidos")}
           required
           styles={inputStyles}
           {...form.getInputProps("last_name")}
@@ -425,7 +426,7 @@ function StepPersonalInfo({ form }: { form: any }) {
       </Group>
 
       <TextInput
-        label={"Teléfono"}
+        label={t("onboarding.telefono")}
         placeholder="+34 600 000 000"
         leftSection={<IconPhone size={16} color="rgba(255,255,255,0.4)" />}
         styles={inputStyles}
@@ -433,8 +434,8 @@ function StepPersonalInfo({ form }: { form: any }) {
       />
 
       <DateInput
-        label={"Fecha de Nacimiento"}
-        placeholder={"Selecciona tu fecha"}
+        label={t("onboarding.fechaDeNacimiento")}
+        placeholder={t("onboarding.seleccionaTuFecha")}
         leftSection={<IconCalendar size={16} color="rgba(255,255,255,0.4)" />}
         locale="es"
         styles={inputStyles}
@@ -475,6 +476,7 @@ function StepPersonalInfo({ form }: { form: any }) {
 
 // Step 2: Datos físicos
 function StepPhysicalData({ form }: { form: any }) {
+  const { t } = useTranslation();
   const inputStyles = {
     input: {
       background: "rgba(255, 255, 255, 0.05)",
@@ -503,13 +505,13 @@ function StepPhysicalData({ form }: { form: any }) {
         </ThemeIcon>
         <Box>
           <Text c="white" fw={600}>{"Datos Físicos"}</Text>
-          <Text c="gray.5" size="sm">{"Tu estado físico actual"}</Text>
+          <Text c="gray.5" size="sm">{t("onboarding.tuEstadoFisico")}</Text>
         </Box>
       </Group>
 
       <Group grow>
         <NumberInput
-          label={"Altura (cm)"}
+          label={t("onboarding.alturaCm")}
           placeholder="170"
           min={100}
           max={250}
@@ -518,7 +520,7 @@ function StepPhysicalData({ form }: { form: any }) {
           {...form.getInputProps("height_cm")}
         />
         <NumberInput
-          label={"Peso (kg)"}
+          label={t("onboarding.pesoKg")}
           placeholder="70"
           min={30}
           max={300}
@@ -530,7 +532,7 @@ function StepPhysicalData({ form }: { form: any }) {
       </Group>
 
       <Box>
-        <Text size="sm" c="rgba(255, 255, 255, 0.8)" mb="md">{"Nivel de actividad física"}</Text>
+        <Text size="sm" c="rgba(255, 255, 255, 0.8)" mb="md">{t("onboarding.nivelDeActividad")}</Text>
         <Stack gap="xs">
           {ACTIVITY_LEVELS.map((level) => (
             <Paper
@@ -574,6 +576,7 @@ function StepPhysicalData({ form }: { form: any }) {
 
 // Step 3: Objetivos
 function StepGoals({ form }: { form: any }) {
+  const { t } = useTranslation();
   const inputStyles = {
     input: {
       background: "rgba(255, 255, 255, 0.05)",
@@ -658,8 +661,8 @@ function StepGoals({ form }: { form: any }) {
       />
 
       <Textarea
-        label={"Cuéntanos más sobre tus objetivos"}
-        placeholder={"Por ejemplo: Quiero perder 5kg en 3 meses, mejorar mi resistencia..."}
+        label={t("onboarding.cuentanosMas")}
+        placeholder={t("onboarding.porEjemploObjetivos")}
         minRows={3}
         styles={inputStyles}
         {...form.getInputProps("goals_description")}
@@ -670,6 +673,7 @@ function StepGoals({ form }: { form: any }) {
 
 // Step 4: Salud
 function StepHealth({ form }: { form: any }) {
+  const { t } = useTranslation();
   const inputStyles = {
     input: {
       background: "rgba(255, 255, 255, 0.05)",
@@ -700,14 +704,14 @@ function StepHealth({ form }: { form: any }) {
           <IconHeart size={20} color="var(--nv-accent)" />
         </ThemeIcon>
         <Box>
-          <Text c="white" fw={600}>{"Información de Salud"}</Text>
-          <Text c="gray.5" size="sm">{"Para personalizar tu plan de forma segura"}</Text>
+          <Text c="white" fw={600}>{t("onboarding.informacionDeSalud")}</Text>
+          <Text c="gray.5" size="sm">{t("onboarding.paraPersonalizarPlan")}</Text>
         </Box>
       </Group>
 
       <MultiSelect
         label={"¿Tienes alguna alergia alimentaria?"}
-        placeholder={"Selecciona si aplica"}
+        placeholder={t("onboarding.seleccionaSiAplica")}
         data={ALLERGENS}
         searchable
         clearable
@@ -723,7 +727,7 @@ function StepHealth({ form }: { form: any }) {
 
       <MultiSelect
         label={"¿Tienes alguna intolerancia alimentaria?"}
-        placeholder={"Selecciona si aplica"}
+        placeholder={t("onboarding.seleccionaSiAplica")}
         data={INTOLERANCES}
         searchable
         clearable
@@ -739,7 +743,7 @@ function StepHealth({ form }: { form: any }) {
 
       <Textarea
         label={"¿Tienes alguna lesión o problema físico?"}
-        placeholder={"Por ejemplo: Dolor de espalda, lesión de rodilla, tendinitis..."}
+        placeholder={t("onboarding.porEjemploLesiones")}
         minRows={2}
         styles={inputStyles}
         {...form.getInputProps("injuries")}
@@ -747,7 +751,7 @@ function StepHealth({ form }: { form: any }) {
 
       <Textarea
         label={"¿Tienes alguna condición médica que debamos conocer?"}
-        placeholder={"Por ejemplo: Diabetes, hipertensión, asma..."}
+        placeholder={t("onboarding.porEjemploEnfermedades")}
         minRows={2}
         styles={inputStyles}
         {...form.getInputProps("medical_conditions")}
@@ -758,6 +762,7 @@ function StepHealth({ form }: { form: any }) {
 
 // Step 5: Consentimientos
 function StepConsents({ form }: { form: any }) {
+  const { t } = useTranslation();
   return (
     <Stack gap="md">
       <Group align="center" gap="sm" mb="md">
@@ -770,7 +775,7 @@ function StepConsents({ form }: { form: any }) {
         </ThemeIcon>
         <Box>
           <Text c="white" fw={600}>{"Consentimientos"}</Text>
-          <Text c="gray.5" size="sm">{"Para poder ofrecerte el mejor servicio"}</Text>
+          <Text c="gray.5" size="sm">{t("onboarding.paraOfrecerte")}</Text>
         </Box>
       </Group>
 
@@ -786,9 +791,9 @@ function StepConsents({ form }: { form: any }) {
           <Checkbox
             label={
               <Box>
-                <Text c="white" size="sm" fw={500}>{"Tratamiento de datos personales *"}</Text>
+                <Text c="white" size="sm" fw={500}>{t("onboarding.tratamientoDatosPersonales")}</Text>
                 <Text c="gray.5" size="xs">
-                  {"Acepto que mis datos personales sean tratados para la prestación del servicio de entrenamiento personal."}
+                  {t("onboarding.aceptoDatosPersonales")}
                 </Text>
               </Box>
             }
@@ -810,9 +815,9 @@ function StepConsents({ form }: { form: any }) {
           <Checkbox
             label={
               <Box>
-                <Text c="white" size="sm" fw={500}>{"Tratamiento de datos de salud *"}</Text>
+                <Text c="white" size="sm" fw={500}>{t("onboarding.tratamientoDatosSalud")}</Text>
                 <Text c="gray.5" size="xs">
-                  {"Acepto que mis datos de salud (alergias, lesiones, condiciones médicas) sean tratados para personalizar mi plan de entrenamiento y nutrición."}
+                  {t("onboarding.aceptoDatosSalud")}
                 </Text>
               </Box>
             }
@@ -834,9 +839,9 @@ function StepConsents({ form }: { form: any }) {
           <Checkbox
             label={
               <Box>
-                <Text c="white" size="sm" fw={500}>{"Comunicaciones comerciales"}</Text>
+                <Text c="white" size="sm" fw={500}>{t("onboarding.comunicacionesComerciales")}</Text>
                 <Text c="gray.5" size="xs">
-                  {"Acepto recibir comunicaciones sobre novedades, promociones y consejos de entrenamiento."}
+                  {t("onboarding.aceptoComunicaciones")}
                 </Text>
               </Box>
             }

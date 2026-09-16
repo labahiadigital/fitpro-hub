@@ -1598,7 +1598,7 @@ export function CalendarPage() {
               label={
                 form.values.modality === "in_person"
                   ? t("stock.ubicacion")
-                  : "Enlace de videollamada"
+                  : t("calendar.enlaceVideollamada")
               }
               leftSection={
                 form.values.modality === "in_person" ? (

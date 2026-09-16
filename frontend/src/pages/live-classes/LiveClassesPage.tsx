@@ -74,6 +74,7 @@ interface LiveClass {
 
 // Componente de tarjeta de clase
 function ClassCard({ liveClass }: { liveClass: LiveClass }) {
+  const { t } = useTranslation();
 
   const statusColors: Record<string, string> = {
     draft: "gray",
@@ -172,7 +173,7 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
                       });
                     }}
                   >
-                    {"Copiar enlace"}
+                    {t("liveClasses.copiarEnlace")}
                   </Menu.Item>
                 )}
                 <Menu.Divider />
@@ -247,7 +248,7 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
               </Button>
             ) : liveClass.status === "scheduled" ? (
               <Button size="xs" variant="light" className="nv-button">
-                {"Ver detalles"}
+                {t("liveClasses.verDetalles")}
               </Button>
             ) : null}
           </Group>
@@ -259,6 +260,7 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
 
 // Componente de fila de clase para vista de lista
 function ClassRow({ liveClass }: { liveClass: LiveClass }) {
+  const { t } = useTranslation();
   const statusColors: Record<string, string> = {
     draft: "gray",
     scheduled: "blue",
@@ -330,7 +332,7 @@ function ClassRow({ liveClass }: { liveClass: LiveClass }) {
               <Menu.Item leftSection={<IconEdit size={14} />}>{"Editar"}</Menu.Item>
               {liveClass.meeting_url && (
                 <Menu.Item leftSection={<IconExternalLink size={14} />}>
-                  {"Abrir enlace"}
+                  {t("liveClasses.abrirEnlace")}
                 </Menu.Item>
               )}
               <Menu.Divider />
@@ -384,7 +386,7 @@ function CreateClassModal({
     <BottomSheet
       opened={opened}
       onClose={onClose}
-      title={"Nueva Clase en Vivo"}
+      title={t("liveClasses.nuevaClaseEnVivo")}
       size="lg"
       styles={{
         header: { borderBottom: "1px solid var(--nv-border)" },
@@ -395,21 +397,21 @@ function CreateClassModal({
         <Stack gap="md">
           <TextInput
             label={t("liveClasses.tituloDeLaClase")}
-            placeholder={"Ej: HIIT Intensivo"}
+            placeholder={t("liveClasses.ejHiitIntensivo")}
             required
             {...form.getInputProps("title")}
           />
 
           <Textarea
             label={t("teamComp.descripcion")}
-            placeholder={"Describe el contenido de la clase..."}
+            placeholder={t("liveClasses.describeContenidoClase")}
             rows={3}
             {...form.getInputProps("description")}
           />
 
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <Select
-              label={"Tipo de clase"}
+              label={t("liveClasses.tipoDeClase")}
               data={[
                 { value: "individual", label: "Individual" },
                 { value: "group", label: "Grupal" },
@@ -435,8 +437,8 @@ function CreateClassModal({
 
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <DateTimePicker
-              label={"Fecha y hora"}
-              placeholder={"Selecciona fecha y hora"}
+              label={t("liveClasses.fechaYHora")}
+              placeholder={t("liveClasses.seleccionaFechaYHora")}
               valueFormat="DD/MM/YYYY HH:mm"
               {...form.getInputProps("scheduled_start")}
             />
@@ -459,7 +461,7 @@ function CreateClassModal({
             />
 
             <Select
-              label={"Nivel de dificultad"}
+              label={t("liveClasses.nivelDeDificultad")}
               data={[
                 { value: "all", label: "Todos los niveles" },
                 { value: "beginner", label: "Principiante" },
@@ -470,18 +472,18 @@ function CreateClassModal({
             />
           </SimpleGrid>
 
-          <Divider label={"Precio"} labelPosition="center" />
+          <Divider label={t("liveClasses.precio")} labelPosition="center" />
 
           <Group>
             <Switch
-              label={"Clase gratuita"}
+              label={t("liveClasses.claseGratuita")}
               {...form.getInputProps("is_free", { type: "checkbox" })}
             />
           </Group>
 
           {!form.values.is_free && (
             <NumberInput
-              label={"Precio"}
+              label={t("liveClasses.precio")}
               min={0}
               step={0.5}
               decimalScale={2}
@@ -489,7 +491,7 @@ function CreateClassModal({
             />
           )}
 
-          <Divider label={"Opciones"} labelPosition="center" />
+          <Divider label={t("liveClasses.opciones")} labelPosition="center" />
 
           <Switch
             label={t("liveClasses.grabarClaseAutomaticamente")}

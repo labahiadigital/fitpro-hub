@@ -225,6 +225,7 @@ function ClientPaymentsTab({
   client?: any;
   onClientSaved?: () => void;
 }) {
+  const { t } = useTranslation();
   const { data: paymentsData = [], isLoading: loadingPayments } = useQuery({
     queryKey: ["client-payments", clientId],
     queryFn: async () => {
@@ -307,9 +308,9 @@ function ClientPaymentsTab({
                 <IconCreditCard size={18} />
               </ThemeIcon>
               <Box>
-                <Text size="sm" fw={600}>{"Sin plan asignado"}</Text>
+                <Text size="sm" fw={600}>{t("clientDetail.sinPlanAsignado")}</Text>
                 <Text size="xs" c="dimmed">
-                  {"Este cliente no tiene ninguna suscripción registrada todavía."}
+                  {t("clientDetail.sinSuscripcion")}
                 </Text>
               </Box>
             </Group>
@@ -343,7 +344,7 @@ function ClientPaymentsTab({
                         </Badge>
                         {s.cancel_at_period_end && (
                           <Badge color="orange" size="sm" variant="light" radius="xl">
-                            {"Se cancelará al finalizar"}
+                            {t("clientDetail.seCancelaraAlFinalizar")}
                           </Badge>
                         )}
                       </Group>
@@ -358,7 +359,7 @@ function ClientPaymentsTab({
                           </Text>
                         </Box>
                         <Box>
-                          <Text size="xs" c="dimmed">{"Periodo actual"}</Text>
+                          <Text size="xs" c="dimmed">{t("clientDetail.periodoActual")}</Text>
                           <Text size="sm" fw={600}>
                             {formatDate(s.current_period_start)} — {formatDate(s.current_period_end)}
                           </Text>
@@ -405,14 +406,14 @@ function ClientPaymentsTab({
       <Box className="nv-card" p="xl">
         <Group justify="space-between" mb="lg">
           <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {"Historial de Pagos"}
+            {t("clientDetail.historialDePagos")}
           </Text>
         </Group>
 
         {loadingPayments ? (
           <Center py="xl"><Loader size="sm" /></Center>
         ) : paymentsData.length === 0 ? (
-          <Text c="dimmed" ta="center" py="xl">{"No hay pagos registrados para este cliente."}</Text>
+          <Text c="dimmed" ta="center" py="xl">{t("clientDetail.noHayPagos")}</Text>
         ) : (
           <ScrollArea type="auto">
             <Table verticalSpacing="md" style={{ minWidth: 600 }}>
@@ -551,7 +552,7 @@ function ClientBillingCompact({
             <IconReceipt size={18} />
           </ThemeIcon>
           <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {"Datos de facturación"}
+            {t("clientDetail.datosDeFacturacion")}
           </Text>
         </Group>
         {!editing && (
@@ -569,7 +570,7 @@ function ClientBillingCompact({
       {editing ? (
         <Stack gap="sm">
           <Radio.Group
-            label={"Tipo de cliente"}
+            label={t("clientDetail.tipoDeCliente")}
             value={form.fiscal_type}
             onChange={(v) =>
               setForm((s) => ({
@@ -588,7 +589,7 @@ function ClientBillingCompact({
             {isCompany && (
               <TextInput
                 label={t("onboarding.razonSocial")}
-                placeholder={"Empresa S.L."}
+                placeholder={t("clientDetail.empresaSL")}
                 value={form.legal_name}
                 onChange={(e) =>
                   setForm((s) => ({ ...s, legal_name: e.currentTarget.value }))
@@ -650,12 +651,12 @@ function ClientBillingCompact({
         </Stack>
       ) : !hasAnyData ? (
         <Text size="sm" c="dimmed">
-          {"Este cliente todavía no tiene datos de facturación registrados."}
+          {t("clientDetail.sinDatosFacturacion")}
         </Text>
       ) : (
         <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md" verticalSpacing="sm">
           <Field
-            label={"Tipo"}
+            label={t("clientDetail.tipo")}
             value={isCompany ? t("onboarding.personaJuridica") : t("onboarding.personaFisica")}
           />
           <Field
@@ -783,6 +784,7 @@ function WorkoutLogCard({ log, dateStr }: { log: any; dateStr: string }) {
 }
 
 function NutritionDayCard({ day, percentage }: { day: any; percentage: number }) {
+  const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
   const dateStr = day?.date && !isNaN(new Date(day.date).getTime())
     ? new Date(day.date).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })
@@ -885,10 +887,10 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                 {ref && (
                   <Box p="xs" mt={4} style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
                     {addedFoods.length === 0 && removedFoods.length === 0 && Math.abs(mealDiffCal) < 5 && Math.abs(mealDiffProt) < 1 && Math.abs(mealDiffCarbs) < 1 && Math.abs(mealDiffFat) < 1 ? (
-                      <Badge size="sm" variant="light" color="green">{"Sin variaciones"}</Badge>
+                      <Badge size="sm" variant="light" color="green">{t("clientDetail.sinVariaciones")}</Badge>
                     ) : (
                       <>
-                        <Text size="xs" fw={600} mb={4}>{"Variación vs plan:"}</Text>
+                        <Text size="xs" fw={600} mb={4}>{t("clientDetail.variacionVsPlan")}</Text>
                         <Group gap={4} wrap="wrap" mb={4}>
                           <Badge size="xs" variant="light" color={diffColor(mealDiffCal)}>{fmtDiff(mealDiffCal)} kcal</Badge>
                           <Badge size="xs" variant="light" color={diffColor(mealDiffProt)}>{fmtDiff(mealDiffProt)}g prot</Badge>
@@ -1501,7 +1503,7 @@ export function ClientDetailPage() {
           <Stack align="center" gap="md">
             <Text c="dimmed" ta="center">
               {axios.isAxiosError(error) && error.response?.status === 404
-                ? "Cliente no encontrado"
+                ? t("clientDetail.clienteNoEncontrado")
                 : "Error al cargar el cliente"}
             </Text>
             <Button variant="light" onClick={() => refetch()}>
@@ -2543,7 +2545,7 @@ export function ClientDetailPage() {
           label={t("clientDetail.sesionesTotales")}
           value={stats.total_sessions || "-"}
           color="var(--nv-primary)"
-          hint="Agenda la primera"
+          hint={t("clientDetail.agendaLaPrimera")}
           onClick={() => setActiveTab("sessions")}
         />
         <StatCard
@@ -2574,7 +2576,7 @@ export function ClientDetailPage() {
           label="LTV"
           value={stats.lifetime_value > 0 ? `€${stats.lifetime_value}` : "-"}
           color="#8B5CF6"
-          hint="Sin pagos registrados"
+          hint={t("clientDetail.sinPagosRegistrados")}
           onClick={() => setActiveTab("payments")}
         />
         <StatCard
@@ -4244,7 +4246,7 @@ export function ClientDetailPage() {
                   ))}
                 </Stack>
               ) : (
-                <Text c="dimmed" ta="center" py="xl">No hay fotos{trainerPhotoFilter !== "all" ? ` de tipo ${trainerPhotoFilter === "front" ? "frontal" : trainerPhotoFilter === "back" ? "espalda" : "lateral"}` : ""}</Text>
+                <Text c="dimmed" ta="center" py="xl">{t("clientDetail.noHayFotos")}{trainerPhotoFilter !== "all" ? ` ${t("clientDetail.deTipo")} ${trainerPhotoFilter === "front" ? t("clientDetail.frontal") : trainerPhotoFilter === "back" ? t("clientDetail.espalda") : t("clientDetail.lateral")}` : ""}</Text>
               );
             })()}
           </Box>

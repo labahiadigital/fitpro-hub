@@ -376,7 +376,7 @@ export function ClientDashboardPage() {
               icon={IconTarget}
               label={t("clientDashboard.objetivo")}
               value={data.goals.target_weight > 0 ? `${data.goals.progress}%` : "—"}
-              subvalue={data.goals.target_weight > 0 ? data.goals.primary : "Configura tu objetivo"}
+              subvalue={data.goals.target_weight > 0 ? data.goals.primary : t("clientDashboard.configuraObjetivo")}
               color="green"
             />
           </SimpleGrid>

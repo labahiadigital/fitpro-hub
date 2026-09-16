@@ -105,7 +105,24 @@
     "copiado": "¡Copiado!",
     "copiarEnlace": "Copiar enlace público",
     "copiarCodigo": "Copiar código",
-    "nombreRequerido": "Nombre requerido"
+    "nombreRequerido": "Nombre requerido",
+    "verDetalles": "Ver detalles",
+    "filtrosAvanzados": "Filtros avanzados",
+    "subir": "Subir",
+    "bajar": "Bajar",
+    "unidad": "Unidad",
+    "acciones": "Acciones",
+    "tipo": "Tipo",
+    "categoria": "Categoría",
+    "dificultad": "Dificultad",
+    "descripcion": "Descripción",
+    "etiquetas": "Etiquetas",
+    "titulo": "Título",
+    "selecciona": "Selecciona",
+    "quitarFavoritos": "Quitar de favoritos",
+    "anadirFavoritos": "Añadir a favoritos",
+    "requerido": "Requerido",
+    "cargando": "Cargando…"
   },
   "nav": {
     "mainMenu": "Menú Principal",
@@ -157,7 +174,8 @@
     "myProfile": "Mi Perfil",
     "automations": "Automatizaciones",
     "suggestions": "Sugerencias",
-    "packages": "Paquetes"
+    "packages": "Paquetes",
+    "miembrosYEquipo": "Miembros y equipo"
   },
   "auth": {
     "login": "Iniciar Sesión",
@@ -401,7 +419,12 @@
     "clockOut": "Salida",
     "clockInLabel": "Fichar entrada",
     "clockOutLabel": "Fichar salida",
-    "viewTimeClock": "Ver control horario"
+    "viewTimeClock": "Ver control horario",
+    "clientesInactivos": "Clientes inactivos",
+    "esteMes": "Este mes",
+    "segmentosDeClientes": "Segmentos de Clientes",
+    "crecimientoDeIngresos": "Crecimiento de Ingresos",
+    "sesionesEsteMes": "Sesiones este mes"
   },
   "settings": {
     "title": "Configuración",
@@ -940,7 +963,11 @@
     "tu_disponibilidad_semanal_ha_sido_actualizada": "Tu disponibilidad semanal ha sido actualizada",
     "no_se_pudo_guardar": "No se pudo guardar",
     "publicos": "públicos",
-    "notifica_por_email": "= Notifica por email"
+    "notifica_por_email": "= Notifica por email",
+    "horarioDeDisponibilidad": "Horario de Disponibilidad",
+    "configuraLosHorarios": "Configura los horarios en los que tus clientes pueden solicitar citas.",
+    "noDisponible": "No disponible",
+    "debeSerDiferente": "Debe ser diferente"
   },
   "days": {
     "monday": "Lunes",
@@ -1328,7 +1355,8 @@
     "eliminar": "Eliminar",
     "cerrar": "Cerrar",
     "volver": "Volver",
-    "guardarCambios": "Guardar cambios"
+    "guardarCambios": "Guardar cambios",
+    "enlaceVideollamada": "Enlace de videollamada"
   },
   "chat": {
     "llamar": "Llamar",
@@ -1365,7 +1393,15 @@
     "imagen": "Imagen",
     "seleccionaUnaConversacion": "Selecciona una conversación",
     "eligeUnChatDeLa": "Elige un chat de la lista para empezar a conversar",
-    "iniciarConversacion": "Iniciar conversación"
+    "iniciarConversacion": "Iniciar conversación",
+    "bandejaDeEntrada": "Bandeja de Entrada",
+    "noHayMensajesEnLaBandeja": "No hay mensajes en la bandeja",
+    "marcarComoNoLeido": "Marcar como no leído",
+    "actualizar": "Actualizar",
+    "marcarComoLeido": "Marcar como leído",
+    "chatDePlataforma": "Chat de plataforma",
+    "enviarPorPlataforma": "Enviar por plataforma",
+    "fotosDeProgreso": "Fotos de progreso"
   },
   "clientDashboard": {
     "entrenamientos": "Entrenamientos",
@@ -1407,7 +1443,8 @@
     "comienzaTuSemana": "¡Comienza tu semana con energía!",
     "completado": "completado",
     "casiLoTienes": "¡Casi lo tienes!",
-    "vasMuyBien": "¡Vas muy bien!"
+    "vasMuyBien": "¡Vas muy bien!",
+    "configuraObjetivo": "Configura tu objetivo"
   },
   "myCalendar": {
     "solicitarCita": "Solicitar cita",
@@ -1433,7 +1470,8 @@
     "entrenador": "Entrenador",
     "ubicacion": "Ubicación",
     "tipo": "Tipo",
-    "modificar": "Modificar"
+    "modificar": "Modificar",
+    "solicitarCitaBtn": "Solicitar cita"
   },
   "myCommunity": {
     "copiarCodigo": "Copiar código",
@@ -1559,7 +1597,16 @@
     "progreso": "Progreso",
     "tuCestaDeSuplementosEsta": "Tu cesta de suplementos está vacía",
     "cuandoTuEntrenadorTeAsigne": "Cuando tu entrenador te asigne suplementos aparecerán aquí con su URL\r\n          de compra y código de descuento si los tiene configurados.",
-    "comprarAqui": "Comprar aquí"
+    "comprarAqui": "Comprar aquí",
+    "coincidenciasEnBD": "Coincidencias en la base de datos",
+    "sinCoincidencias": "Sin coincidencias. Se guardará como manual.",
+    "esteBloqueComidaLibre": "Este bloque del plan está marcado como comida libre.",
+    "noHayComidasAsignadas": "No hay comidas asignadas en el plan para este día",
+    "seleccionaComidaIntercambiar": "Selecciona la comida a intercambiar",
+    "sinResultadosPara": "Sin resultados para \"{{query}}\"",
+    "comidasDelPlanPara": "Comidas del plan para {{day}}",
+    "noHayComidasEn": "No hay comidas en {{day}}",
+    "comidasDe": "Comidas de {{day}}"
   },
   "myProfile": {
     "descargarFactura": "Descargar factura",
@@ -1767,7 +1814,11 @@
     "noHasRegistradoMedidasAun": "No has registrado medidas aún. ¡Empieza ahora!",
     "subirNuevaFoto": "Subir nueva foto",
     "noHayMedidasRegistradasPara": "No hay medidas registradas para esta fecha",
-    "subeFotosDeProgresoPara": "Sube fotos de progreso para ver tu evolución visual"
+    "subeFotosDeProgresoPara": "Sube fotos de progreso para ver tu evolución visual",
+    "editandoMedidas": "Editando medidas existentes",
+    "anadeFotoEvolucion": "Añade una foto para comparar tu evolución",
+    "subirFotoProgreso": "Subir Foto de Progreso",
+    "fotosEvolucion": "Fotos de Evolución ({{count}} fotos)"
   },
   "myWorkouts": {
     "duracionMin": "Duración (min)",
@@ -1830,7 +1881,15 @@
     "buenTrabajo": "¡Buen trabajo!",
     "hasCompletadoTuEntrenamientoSigue": "Has completado tu entrenamiento. ¡Sigue así!",
     "continuar": "Continuar",
-    "nuevoRecordPersonal": "¡Nuevo récord personal!"
+    "nuevoRecordPersonal": "¡Nuevo récord personal!",
+    "alternativasRecomendadas": "Alternativas recomendadas por tu entrenador",
+    "eligeNuevoEjercicio": "Elige el nuevo ejercicio:",
+    "noSeEncontronEjercicios": "No se encontraron ejercicios",
+    "motivoDelCambio": "Motivo del cambio (opcional)",
+    "esfuerzo": "Esfuerzo (1-10)",
+    "ejLesion": "Ej: Lesión, máquina no disponible...",
+    "ejerciciosDe": "Ejercicios de {{day}}",
+    "noHayEjerciciosEn": "No hay ejercicios en {{day}}"
   },
   "clientDetail": {
     "tipoDeCliente": "Tipo de cliente",
@@ -2181,7 +2240,14 @@
     "sin_riesgos_identificados_en_par_q": "✓ Sin riesgos identificados en PAR-Q",
     "foto_de_progreso": "Foto de progreso",
     "grasa_corporal": "% Grasa Corporal",
-    "grasa": "% Grasa"
+    "grasa": "% Grasa",
+    "sinSuscripcion": "Este cliente no tiene ninguna suscripción registrada todavía.",
+    "noHayPagos": "No hay pagos registrados para este cliente.",
+    "sinDatosFacturacion": "Este cliente todavía no tiene datos de facturación registrados.",
+    "agendaLaPrimera": "Agenda la primera",
+    "sinPagosRegistrados": "Sin pagos registrados",
+    "noHayFotos": "No hay fotos",
+    "deTipo": "de tipo"
   },
   "clients": {
     "emailEnviado": "Email enviado",
@@ -2311,7 +2377,17 @@
     "podrasRestaurarloDesdeLaPestana": "Podrás restaurarlo desde la pestaña Eliminados. Para borrarlo del todo, elimínalo otra vez desde ahí.",
     "si": "Sí",
     "no": "No",
-    "buscar_por_nombre_email_o_telefono": "Buscar por nombre, email o teléfono..."
+    "buscar_por_nombre_email_o_telefono": "Buscar por nombre, email o teléfono...",
+    "cargandoCarrito": "Cargando carrito abandonado…",
+    "noHayCarritos": "No hay carritos abandonados",
+    "cuandoClienteAcepte": "Cuando un cliente acepte la invitación pasará a su tab correspondiente.",
+    "noHayInvitacionesSeguir": "No hay invitaciones que seguir",
+    "aquiVerasEstado": "Aquí verás el estado (entregado, abierto, clicado) del último email enviado a cada invitación.",
+    "entregadoDestinatario": "Entregado al destinatario",
+    "clienteEliminadoDef": "Cliente eliminado definitivamente",
+    "clienteMovidoEliminados": "Cliente movido a Eliminados",
+    "noHayClientes": "No hay clientes",
+    "seleccionaPlantilla": "Selecciona una plantilla"
   },
   "community": {
     "titulo": "Título",
@@ -2537,7 +2613,8 @@
     "noSeEncontraronClasesCon": "No se encontraron clases con los filtros seleccionados",
     "crearPrimeraClase": "Crear Primera Clase",
     "clase_creada": "Clase creada",
-    "la_clase_se_ha_programado_correctamente": "La clase se ha programado correctamente"
+    "la_clase_se_ha_programado_correctamente": "La clase se ha programado correctamente",
+    "describeContenidoClase": "Describe el contenido de la clase..."
   },
   "lms": {
     "academiaLms": "Academia / LMS",
@@ -2591,7 +2668,8 @@
     "cancelacion": "Cancelación",
     "editar": "Editar",
     "eliminar": "Eliminar",
-    "cancelar": "Cancelar"
+    "cancelar": "Cancelar",
+    "fijaEn": "Fija en: {{name}}"
   },
   "myForms": {
     "formularios": "Formularios",
@@ -2613,7 +2691,8 @@
     "cuandoTuEntrenadorTeEnvie": "Cuando tu entrenador te envíe uno lo verás aquí.",
     "todaviaNoHayFormulariosCompletados": "Todavía no hay formularios completados",
     "tu_respuesta_se_ha_registrado_correctamente": "Tu respuesta se ha registrado correctamente.",
-    "no_se_pudo_enviar_el_formulario_intentalo_de_nuevo": "No se pudo enviar el formulario. Inténtalo de nuevo."
+    "no_se_pudo_enviar_el_formulario_intentalo_de_nuevo": "No se pudo enviar el formulario. Inténtalo de nuevo.",
+    "yaHasRespondido": "Ya has respondido este formulario. Puedes revisar tus respuestas abajo."
   },
   "nutrition": {
     "verDetalle": "Ver detalle",
@@ -2894,7 +2973,15 @@
     "configuracion": "Configuración",
     "editandoPlantillaReutilizable": "Editando plantilla reutilizable",
     "asignaUnClienteOMarca": "Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar",
-    "crearSuplemento": "Crear Suplemento"
+    "crearSuplemento": "Crear Suplemento",
+    "pesoKg": "Peso (kg)",
+    "alturaCm": "Altura (cm)",
+    "edad": "Edad",
+    "genero": "Género",
+    "objetivo": "Objetivo",
+    "eliminadoFavoritos": "Eliminado de favoritos",
+    "alimentoEliminadoFavoritos": "El alimento se ha eliminado de tus favoritos",
+    "suplementoEliminadoFavoritos": "El suplemento se ha eliminado de tus favoritos"
   },
   "onboarding": {
     "email": "Email",
@@ -3145,7 +3232,22 @@
     "tuCuestionarioSeHaEnviado": "Tu cuestionario se ha enviado. Te hemos mandado un segundo email con\r\n            los próximos pasos para acceder a tu plataforma.",
     "irAMiPanel": "Ir a mi panel",
     "enviarCuestionario": "Enviar cuestionario",
-    "listoListaDeEspera": "¡Listo! Te hemos añadido a la lista de espera. Te avisaremos cuando haya una plaza disponible."
+    "listoListaDeEspera": "¡Listo! Te hemos añadido a la lista de espera. Te avisaremos cuando haya una plaza disponible.",
+    "informacionBasica": "Información básica sobre ti",
+    "tuEstadoFisico": "Tu estado físico actual",
+    "nivelDeActividad": "Nivel de actividad física",
+    "cuentanosMas": "Cuéntanos más sobre tus objetivos",
+    "porEjemploObjetivos": "Por ejemplo: Quiero perder 5kg en 3 meses, mejorar mi resistencia...",
+    "paraPersonalizarPlan": "Para personalizar tu plan de forma segura",
+    "porEjemploLesiones": "Por ejemplo: Dolor de espalda, lesión de rodilla, tendinitis...",
+    "porEjemploEnfermedades": "Por ejemplo: Diabetes, hipertensión, asma...",
+    "paraOfrecerte": "Para poder ofrecerte el mejor servicio",
+    "tratamientoDatosPersonales": "Tratamiento de datos personales *",
+    "aceptoDatosPersonales": "Acepto que mis datos personales sean tratados para la prestación del servicio de entrenamiento personal.",
+    "tratamientoDatosSalud": "Tratamiento de datos de salud *",
+    "aceptoDatosSalud": "Acepto que mis datos de salud (alergias, lesiones, condiciones médicas) sean tratados para personalizar mi plan de entrenamiento y nutrición.",
+    "aceptoComunicaciones": "Acepto recibir comunicaciones sobre novedades, promociones y consejos de entrenamiento.",
+    "seleccionaObjetivo": "Selecciona un objetivo"
   },
   "packages": {
     "nombreDelPaquete": "Nombre del paquete",
@@ -3515,7 +3617,9 @@
     "anadirMaquina": "Añadir máquina",
     "miembrosDelEquipo": "Miembros del equipo",
     "anadirMiembro": "Añadir miembro",
-    "cancelar": "Cancelar"
+    "cancelar": "Cancelar",
+    "porcentajeDescuento": "Porcentaje de descuento",
+    "descuentoEuros": "Descuento en euros"
   },
   "payments": {
     "verDetalle": "Ver detalle",
@@ -3835,7 +3939,8 @@
     "cerrar": "Cerrar",
     "cant": "Cant.",
     "registrar": "Registrar",
-    "no_hay_proveedores_activos": "No hay proveedores activos"
+    "no_hay_proveedores_activos": "No hay proveedores activos",
+    "detalleDeStock": "Detalle de stock"
   },
   "suggestions": {
     "titulo": "Título",
@@ -3873,7 +3978,11 @@
     "seElPrimeroEnProponer": "Sé el primero en proponer una idea para mejorar la plataforma",
     "anadir_temporizador_de_descanso_entre_series": "Añadir temporizador de descanso entre series",
     "integracion_con_apple_health_google_fit": "Integración con Apple Health / Google Fit",
-    "comparar_progreso_de_fotos_mes_a_mes": "Comparar progreso de fotos mes a mes"
+    "comparar_progreso_de_fotos_mes_a_mes": "Comparar progreso de fotos mes a mes",
+    "proponIdeas": "Propón ideas y vota las sugerencias de la comunidad",
+    "buzonDeSugerenciasTitle": "Buzón de Sugerencias",
+    "describeTuIdea": "Describe tu idea con detalle para que podamos entenderla mejor...",
+    "seElPrimero": "Sé el primero en proponer una idea para mejorar la plataforma"
   },
   "supplements": {
     "suplementacion": "Suplementación",
@@ -3882,7 +3991,18 @@
     "recomendacionesProximamente": "Recomendaciones (Próximamente)",
     "recomendaciones": "Recomendaciones",
     "proximamente": "Próximamente",
-    "proximamenteGestionDeRecomendacionesDe": "Próximamente: Gestión de recomendaciones de suplementos por cliente"
+    "proximamenteGestionDeRecomendacionesDe": "Próximamente: Gestión de recomendaciones de suplementos por cliente",
+    "buscarSuplementos": "Buscar suplementos...",
+    "verDetalle": "Ver detalle",
+    "comoTomar": "Cómo tomar:",
+    "abrirEnlaceCompra": "Abrir enlace de compra",
+    "verTodos": "Ver todos",
+    "noTienesFavoritos": "No tienes suplementos marcados como favoritos.",
+    "sinFavoritos": "Sin favoritos",
+    "limpiarBusqueda": "Limpiar búsqueda",
+    "sinResultados": "Sin resultados",
+    "suplementosCargados": "Los suplementos se cargan desde la base de datos. Añade suplementos para verlos aquí.",
+    "noHaySuplementos": "No hay suplementos"
   },
   "suppliers": {
     "nombreORazonSocial": "Nombre o razón social",
@@ -3945,7 +4065,11 @@
     "datosDeContacto": "Datos de contacto",
     "otros": "Otros",
     "cancelar": "Cancelar",
-    "buscar_por_nombre_nif_email": "Buscar por nombre, NIF, email..."
+    "buscar_por_nombre_nif_email": "Buscar por nombre, NIF, email...",
+    "cuentaPorDefecto": "Cuenta por defecto",
+    "marcarPredeterminada": "Marcar como predeterminada",
+    "predeterminada": "Predeterminada",
+    "usarPorDefecto": "Usar por defecto"
   },
   "tasks": {
     "titulo": "Título",
@@ -4277,7 +4401,12 @@
     "barraDeDominadas": "Barra de dominadas",
     "plantillas": "Plantillas",
     "programasDeClientes": "Programas de Clientes",
-    "estiramientos": "Estiramientos"
+    "estiramientos": "Estiramientos",
+    "creaTuPrimerPrograma": "Crea tu primer programa de entrenamiento para asignarlo a tus clientes.",
+    "anadeEjerciciosBiblioteca": "Añade ejercicios a tu biblioteca para usarlos en tus programas.",
+    "asignaProgramaCliente": "Asigna un programa a un cliente para verlo aquí.",
+    "noHayProgramasClientes": "No hay programas de clientes",
+    "grupoMuscularFilter": "Grupo muscular"
   },
   "chatComp": {
     "actualizar": "Actualizar",
@@ -4377,7 +4506,8 @@
     "hoy": "Hoy",
     "noTienesNuevasNotificacionesHoy": "No tienes nuevas notificaciones hoy.",
     "anteriores": "Anteriores",
-    "configurarNotificaciones": "Configurar notificaciones"
+    "configurarNotificaciones": "Configurar notificaciones",
+    "noTienesNotificaciones": "No tienes nuevas notificaciones hoy."
   },
   "nutritionComp": {
     "editarNombre": "Editar nombre",
@@ -4614,7 +4744,11 @@
     "totalRecetaCompleta": "Total (receta completa)",
     "cancelar": "Cancelar",
     "receta_duplicada": "Receta duplicada",
-    "receta_eliminada": "Receta eliminada"
+    "receta_eliminada": "Receta eliminada",
+    "buscarRecetas": "Buscar recetas...",
+    "ejTortitas": "Ej: Tortitas de avena y plátano",
+    "sinResultados": "Sin resultados",
+    "noHayRecetas": "No hay recetas"
   },
   "supplementsComp": {
     "nombre": "Nombre",
@@ -4836,12 +4970,31 @@
     "myProfileDesc": "Datos personales y preferencias"
   },
   "clientForms": {
-    "no_se_pudo_enviar_el_formulario": "No se pudo enviar el formulario"
+    "no_se_pudo_enviar_el_formulario": "No se pudo enviar el formulario",
+    "formularioEnviado": "Formulario enviado",
+    "formulariosDelCliente": "Formularios del cliente",
+    "enviaFormulariosDesc": "Envía formularios al cliente y revisa sus respuestas aquí.",
+    "enviarFormulario": "Enviar formulario",
+    "cargandoFormularios": "Cargando formularios...",
+    "aunNoFormularios": "Aún no se han enviado formularios",
+    "cuandoEnviesFormulario": "Cuando envíes un formulario al cliente aparecerá aquí con su estado.",
+    "enviarFormularioAlCliente": "Enviar formulario al cliente",
+    "seleccionaUnFormularioActivo": "Selecciona un formulario activo",
+    "noTienesFormularios": "No tienes formularios propios todavía",
+    "irAFormularios": "Ir a Formularios",
+    "clienteNoHaRespondido": "El cliente aún no ha respondido este formulario.",
+    "respuestaDelFormulario": "Respuesta del formulario",
+    "formulario": "Formulario"
   },
   "clientReports": {
     "el_reporte_se_ha_guardado_correctamente": "El reporte se ha guardado correctamente",
     "los_cambios_se_han_guardado": "Los cambios se han guardado",
-    "el_reporte_ha_sido_eliminado": "El reporte ha sido eliminado"
+    "el_reporte_ha_sido_eliminado": "El reporte ha sido eliminado",
+    "reportesDeRevision": "Reportes de Revisión",
+    "nuevaRevision": "Nueva revisión",
+    "noHayReportes": "No hay reportes de revisión para este cliente todavía.",
+    "feedbackDelClienteLabel": "Feedback del cliente:",
+    "feedbackCliente": "Feedback del cliente (opcional)"
   },
   "dashboardLayout": {
     "anadir_a_pantalla_de_inicio": "\"Añadir a pantalla de inicio\""
@@ -4850,7 +5003,43 @@
     "alimento_creado": "Alimento creado",
     "el_alimento_ha_sido_creado_correctamente": "El alimento ha sido creado correctamente",
     "receta_anadida": "Receta añadida",
-    "nombreRequeridoMín2Caracteres": "Nombre requerido (mín. 2 caracteres)"
+    "nombreRequeridoMín2Caracteres": "Nombre requerido (mín. 2 caracteres)",
+    "copiarASemanas": "Copiar a semanas",
+    "planNutricional": "Plan nutricional",
+    "copiarADias": "Copiar a días",
+    "moverComidas": "Mover comidas",
+    "listaDeCompra": "Lista de Compra",
+    "distribucionDeMacros": "Distribución de macros",
+    "arrastraLosSeparadores": "Arrastra los separadores · ajusta con los %",
+    "esteDiaNoTieneComidas": "Este día no tiene comidas preasignadas. El cliente puede comer libremente.",
+    "editarNombre": "Editar nombre",
+    "duplicarBloque": "Duplicar bloque",
+    "comidaLibre": "Comida libre",
+    "comidaLibreLabel": "Comida libre",
+    "esteBloqueNoTieneAlimentos": "Este bloque no tiene alimentos preasignados. El cliente puede comer libremente en esta comida.",
+    "agruparComoReceta": "Agrupar como Receta",
+    "crearAlimento": "Crear alimento",
+    "buscarAlimentos": "Buscar alimentos...",
+    "buscarGruposAlimentos": "Buscar grupos de alimentos...",
+    "noSeEncontronGrupos": "No se encontraron grupos de alimentos",
+    "buscarSuplementos": "Buscar suplementos...",
+    "buscarBebidas": "Buscar bebidas...",
+    "noSeEncontronBebidas": "No se encontraron bebidas.",
+    "crearAlimentoTitle": "Crear alimento",
+    "nombreDelAlimento": "Nombre del alimento",
+    "crearYAnadir": "Crear y añadir",
+    "listaDeCompraTitle": "Lista de la Compra",
+    "seleccionaComidasMover": "Selecciona las comidas a mover:",
+    "diaDestino": "Día destino:",
+    "instruccionesNota": "Instrucciones / Nota",
+    "instrucciones": "Instrucciones",
+    "carbohidratosG": "Carbohidratos (g)",
+    "grasasG": "Grasas (g)",
+    "fibraG": "Fibra (g)",
+    "seleccionarAlimento": "Seleccionar Alimento o Suplemento",
+    "notasEjPieza": "Notas (ej: 1 pieza, a la plancha...)",
+    "ejALaPlancha": "Ej: a la plancha, hervido...",
+    "copiarSemanaA": "Copiar semana {{week}} a:"
   },
   "mealPlanDetailView": {
     "el_pdf_se_esta_generando": "El PDF se está generando...",
@@ -4862,21 +5051,62 @@
     "años": " años"
   },
   "nutritionHistory": {
-    "grasa": "% Grasa"
+    "grasa": "% Grasa",
+    "aunNoHayObjetivos": "Aún no hay objetivos nutricionales guardados en el histórico.",
+    "vaciarHistorico": "Vaciar histórico",
+    "ocultarHistorico": "Ocultar histórico"
   },
   "workoutBuilder": {
-    "dia_de_descanso": "🛌 Día de descanso"
+    "dia_de_descanso": "🛌 Día de descanso",
+    "descansoEntreSeries": "Descanso entre series (seg)",
+    "pesoObj": "Peso obj.",
+    "anadirBloque": "Añadir bloque",
+    "grupoMuscular": "Grupo muscular",
+    "crearEjercicioNuevo": "Crear ejercicio nuevo",
+    "copiarASemanas": "Copiar a semanas",
+    "programaDeEntrenamiento": "Programa de entrenamiento",
+    "copiarADias": "Copiar a días",
+    "diaMarcadoDescanso": "Este día está marcado como descanso. Haz clic en el botón para añadir entrenamiento.",
+    "rondas": "Rondas",
+    "bloques": "Bloques",
+    "min": "Min",
+    "km": "Km",
+    "kmh": "Km/h",
+    "descanso": "Descanso",
+    "series": "Series",
+    "urlVideo": "URL Vídeo",
+    "notasInstrucciones": "Notas / Instrucciones",
+    "ejMantenerCore": "Ej: Mantener core activado...",
+    "equipo": "Equipo",
+    "copiarSemanaA": "Copiar semana {{week}} a:"
   },
   "acceptStaffInvite": {
     "asnete_al_equipo": "Ãšnete al equipo"
   },
   "timeClock": {
     "7_dias": "7 días",
-    "30_dias": "30 días"
+    "30_dias": "30 días",
+    "retornoPausa": "Retorno de pausa",
+    "pausa": "Pausa",
+    "horaServidor": "Hora servidor",
+    "horaDelServidor": "Hora del servidor",
+    "totalSolicitudes": "Total solicitudes: {{total}}"
   },
   "exerciseForm": {
     "alternativa_anadida": "Alternativa añadida",
-    "la_imagen_no_puede_superar_los_8_mb": "La imagen no puede superar los 8 MB"
+    "la_imagen_no_puede_superar_los_8_mb": "La imagen no puede superar los 8 MB",
+    "defineQueEjercicios": "Define qué ejercicios puede usar el cliente como sustituto si la máquina no está disponible o tiene alguna lesión.",
+    "sinAlternativas": "Sin alternativas definidas. Añade ejercicios equivalentes para que el cliente pueda sustituir.",
+    "buscarEjercicioAlternativa": "Buscar ejercicio para añadir como alternativa...",
+    "noSeEncontronEjercicios": "No se encontraron ejercicios",
+    "datoDelSistema": "Dato del sistema — solo lectura",
+    "crearCopiaPropia": "Crear copia propia",
+    "pressDeBanca": "Press de Banca",
+    "nombreAlternativo": "Nombre alternativo (ej: Bench Press)",
+    "breveDescripcion": "Breve descripción del ejercicio...",
+    "pasosParaRealizar": "Pasos para realizar el ejercicio correctamente...",
+    "gruposMusculares": "Grupos musculares",
+    "laImagenSeGuarda": "La imagen se guarda en el almacenamiento privado de tu workspace (máx. 8 MB)."
   },
   "clientReportsTab": {
     "eliminarEsteReporte": "¿Eliminar este reporte?",
@@ -5127,5 +5357,166 @@
   "workoutsPage": {
     "sinNombre": "Sin nombre",
     "nombreRequerido": "Nombre requerido"
+  },
+  "mealPlanDetail": {
+    "datosDelCliente": "Datos del Cliente",
+    "planDeComidas": "Plan de Comidas",
+    "distribucionDeMacros": "Distribución de Macronutrientes - Kcal",
+    "objetivosVsActual": "Objetivos vs Actual",
+    "calculadoDesdeCliente": "Calculado desde cliente",
+    "calculoRequisitosEnergeticos": "Cálculo de Requisitos Energéticos Diarios",
+    "hipertrofiaAumento": "Hipertrofia o Aumento de Peso",
+    "definicionPerdida": "Definición o Pérdida de Peso",
+    "calculoTemporizacion": "Cálculo de Temporalización de Objetivos para Pérdida de Grasa",
+    "noHaySuplementacion": "No hay suplementación asignada",
+    "anadeSuplementos": "Añade suplementos recomendados para este plan",
+    "recomendacionesDeEjemplo": "Recomendaciones de ejemplo",
+    "noHayComidasConfiguradas": "No hay comidas configuradas",
+    "editaElPlan": "Edita el plan para añadir comidas",
+    "notasDelDia": "Notas del día:",
+    "intraEntrenamiento": "Intra entrenamiento o 10g EAAs + 10g GLUTAMINA + 10g CREATINA",
+    "antesDeDormir": "Antes de dormir:",
+    "zma3Capsulas": "ZMA 3 cápsulas",
+    "semana": "Semana",
+    "sexo": "Sexo",
+    "edad": "Edad",
+    "peso": "Peso",
+    "altura": "Altura",
+    "actividad": "Actividad",
+    "tendenciaCorporal": "Tendencia Corporal"
+  },
+  "editableMealName": {
+    "editarNombre": "Editar nombre",
+    "nombresDeComidas": "Nombres de Comidas",
+    "personalizaNombres": "Personaliza los nombres de las comidas para tus clientes",
+    "restaurarNombre": "Restaurar nombre por defecto"
+  },
+  "branding": {
+    "identidadDeMarca": "Identidad de Marca",
+    "personalizaApariencia": "Personaliza la apariencia de tu plataforma",
+    "nombreDelNegocio": "Nombre del Negocio",
+    "subeTuLogo": "Sube tu logo",
+    "subeTuFavicon": "Sube tu favicon",
+    "eliminaBranding": "Elimina el branding de Trackfiz",
+    "eliminaReferencias": "Elimina todas las referencias a Trackfiz",
+    "ocultarBrandingFooter": "Ocultar branding en footer",
+    "personalizacionEmails": "Personalización de Emails",
+    "configuraComo": "Configura cómo se envían los emails a tus clientes",
+    "emailDeSoporte": "Email de Soporte",
+    "remitenteDeEmails": "Remitente de Emails",
+    "firmaDeEmail": "Firma de Email",
+    "escribeTuFirma": "Escribe tu firma personalizada...",
+    "tuPropiaApp": "Tu propia app en las tiendas",
+    "tuAppIos": "Tu app personalizada en la App Store con tu marca y colores.",
+    "tuAppAndroid": "Tu app personalizada en Google Play con tu marca y colores.",
+    "eslogan": "Eslogan",
+    "colorPrincipal": "Color Principal",
+    "colorSecundario": "Color Secundario",
+    "logo": "Logo",
+    "favicon": "Favicon",
+    "habilitarWhiteLabel": "Habilitar White Label",
+    "dominioPersonalizado": "Dominio Personalizado",
+    "miEstudioFitness": "Mi Estudio Fitness",
+    "tuNombreNoreply": "Tu Nombre <noreply@tudominio.com>",
+    "appTudominio": "app.tudominio.com",
+    "soporteTudominio": "soporte@tudominio.com"
+  },
+  "exerciseLibrary": {
+    "bibliotecaDeEjercicios": "Biblioteca de Ejercicios",
+    "buscarEjercicios": "Buscar ejercicios...",
+    "noSeEncontronEjercicios": "No se encontraron ejercicios"
+  },
+  "recipeForm": {
+    "nombreDeLaReceta": "Nombre de la receta",
+    "seleccionarCategoria": "Seleccionar categoría",
+    "seleccionarDificultad": "Seleccionar dificultad",
+    "instrucciones": "Instrucciones de preparación",
+    "describeLosPasos": "Describe los pasos para preparar esta receta...",
+    "buscarAlimentoAnadir": "Buscar alimento para añadir...",
+    "escribeParaBuscar": "Escribe para buscar alimentos...",
+    "suplementosDesdeAlimentos": "Los suplementos se pueden añadir desde la pestaña de alimentos buscando por nombre.",
+    "resumenNutricional": "Resumen nutricional",
+    "notasInternas": "Notas internas (solo visible para el entrenador)",
+    "notasPrivadas": "Notas privadas sobre esta receta...",
+    "visibleParaClientes": "Visible para clientes",
+    "clientesVeranReceta": "Los clientes podrán ver esta receta en su sección de nutrición"
+  },
+  "recipeDetail": {
+    "visibleClientes": "Visible clientes",
+    "informacionNutricional": "Información nutricional",
+    "notasInternas": "Notas internas"
+  },
+  "nutritionCalc": {
+    "volverACargar": "Volver a cargar desde el último progreso",
+    "calculaNuevasCalorías": "Calcula nuevas calorías y macros a partir de los últimos datos de progreso del cliente.",
+    "faltanDatos": "Faltan datos del cliente",
+    "noHayRegistrosProgreso": "No hay registros de progreso recientes. Se usarán los datos de la ficha.",
+    "nivelDeActividad": "Nivel de actividad",
+    "resultadoDelCalculo": "Resultado del cálculo"
+  },
+  "macroBar": {
+    "arrastProtCarb": "Arrastra para ajustar Proteína / Carbohidratos",
+    "separadorProtCarb": "Separador proteína y carbohidratos",
+    "arrastCarbGrasa": "Arrastra para ajustar Carbohidratos / Grasas",
+    "separadorCarbGrasa": "Separador carbohidratos y grasas"
+  },
+  "rectification": {
+    "solicitarRectificacion": "Solicitar rectificación",
+    "describeLaRectificacion": "Describe la rectificación",
+    "indicaQueInformacion": "Indica qué información es incorrecta y cuál sería la correcta...",
+    "enviarSolicitud": "Enviar solicitud",
+    "solicitaCorreccion": "Solicita la corrección de"
+  },
+  "programBuilder": {
+    "editandoPlantilla": "Editando plantilla reutilizable",
+    "asignarACliente": "Asignar a cliente",
+    "buscarCliente": "Buscar cliente...",
+    "crearComoPlantilla": "Crear como plantilla",
+    "crearComoPlantillaLabel": "Crear como plantilla",
+    "nombreDelPrograma": "Nombre del programa",
+    "programaHipertrofia": "Programa de Hipertrofia",
+    "describeElPrograma": "Describe el programa...",
+    "anadeEtiquetas": "Añade etiquetas",
+    "fechaDeInicio": "Fecha de inicio",
+    "fechaDeFin": "Fecha de fin (opcional)",
+    "siNoSeIndica": "Si no se indica, las semanas se repiten indefinidamente",
+    "intervaloRevision": "Intervalo de revisión (días)",
+    "generaRecordatorios": "Genera recordatorios automáticos para revisar el programa",
+    "asignaUnCliente": "Asigna un cliente o marca \"Crear como plantilla\" para poder guardar"
+  },
+  "foods": {
+    "buscarAlimentos": "Buscar alimentos...",
+    "verDetalle": "Ver detalle",
+    "duplicarAMiWorkspace": "Duplicar a mi workspace",
+    "limpiarBusqueda": "Limpiar búsqueda",
+    "sinResultados": "Sin resultados",
+    "anadeAlimentosBiblioteca": "Añade alimentos a tu biblioteca para usarlos en tus planes.",
+    "noHayAlimentos": "No hay alimentos"
+  },
+  "nutritionTemplates": {
+    "creaTuPrimeraPlantilla": "Crea tu primera plantilla nutricional reutilizable para asignarla a tus clientes.",
+    "noHayPlantillas": "No hay plantillas"
+  },
+  "clientPlans": {
+    "creaPlanPersonalizado": "Crea un plan nutricional personalizado para un cliente.",
+    "noHayPlanesClientes": "No hay planes de clientes"
+  },
+  "macros": {
+    "proteinaPct": "Proteína %",
+    "carbohidratosPct": "Carbohidratos %",
+    "grasasPct": "Grasas %"
+  },
+  "exercises": {
+    "alias": "Alias",
+    "instrucciones": "Instrucciones",
+    "equipamiento": "Equipamiento",
+    "videoUrl": "Vídeo (URL)",
+    "urlImagenOSubela": "URL de la imagen o súbela con el botón",
+    "musculos": "Músculos",
+    "imagenSubida": "Imagen subida correctamente",
+    "ejerciciosAlternativosPara": "Ejercicios alternativos para \"{{name}}\""
+  },
+  "invitationOnboarding": {
+    "pagarConTarjeta": "Pagar con tarjeta"
   }
 }

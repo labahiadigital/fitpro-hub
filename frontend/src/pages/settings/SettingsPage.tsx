@@ -191,10 +191,10 @@ function WeeklyScheduleSection({
   return (
     <Box className="nv-card" p="lg" mt="lg">
       <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-        {"Horario de Disponibilidad"}
+        {t("settings.horarioDeDisponibilidad")}
       </Text>
       <Text c="dimmed" size="sm" mb="md">
-        {"Configura los horarios en los que tus clientes pueden solicitar citas."}
+        {t("settings.configuraLosHorarios")}
       </Text>
       <Stack gap="sm">
         {DAY_KEYS.map((day) => (
@@ -203,7 +203,7 @@ function WeeklyScheduleSection({
               <Text fw={500} size="sm" w={100}>{t(DAY_KEYS_I18N[day])}</Text>
               {(schedule[day] || []).length === 0 ? (
                 <Group gap="xs">
-                  <Badge variant="light" color="gray" size="sm">{"No disponible"}</Badge>
+                  <Badge variant="light" color="gray" size="sm">{t("settings.noDisponible")}</Badge>
                   <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>{"Añadir"}</Button>
                 </Group>
               ) : (
@@ -556,7 +556,7 @@ export function SettingsPage() {
   const changeEmailForm = useForm({
     initialValues: { new_email: "", password: "" },
     validate: {
-      new_email: (v) => !v ? "Requerido" : !/^\S+@\S+\.\S+$/.test(v) ? t("auth.invalidEmail") : v === user?.email ? "Debe ser diferente" : null,
+      new_email: (v) => !v ? t("common.requerido") : !/^\S+@\S+\.\S+$/.test(v) ? t("auth.invalidEmail") : v === user?.email ? t("settings.debeSerDiferente") : null,
       password: (v) => (!v ? "Requerida" : null),
     },
   });

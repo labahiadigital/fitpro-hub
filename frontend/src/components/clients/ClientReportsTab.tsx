@@ -135,16 +135,16 @@ export function ClientReportsTab({ clientId }: Props) {
     <Stack gap="md">
       <Group justify="space-between">
         <Text fw={700} size="lg">
-          {"Reportes de Revisión"}
+          {t("clientReports.reportesDeRevision")}
         </Text>
         <Button leftSection={<IconPlus size={16} />} size="sm" onClick={handleNew}>
-          {"Nueva revisión"}
+          {t("clientReports.nuevaRevision")}
         </Button>
       </Group>
 
       {(!reports || reports.length === 0) ? (
         <Text c="dimmed" ta="center" py="xl">
-          {"No hay reportes de revisión para este cliente todavía."}
+          {t("clientReports.noHayReportes")}
         </Text>
       ) : (
         reports.map((report) => (
@@ -186,7 +186,7 @@ export function ClientReportsTab({ clientId }: Props) {
             {report.client_feedback && (
               <Box mt="sm" p="sm" style={{ background: "var(--mantine-color-blue-light)", borderRadius: 8 }}>
                 <Text size="xs" fw={600} c="blue" mb={4}>
-                  {"Feedback del cliente:"}
+                  {t("clientReports.feedbackDelClienteLabel")}
                 </Text>
                 <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
                   {report.client_feedback}
@@ -219,7 +219,7 @@ export function ClientReportsTab({ clientId }: Props) {
               {...form.getInputProps("body")}
             />
             <Textarea
-              label={"Feedback del cliente (opcional)"}
+              label={t("clientReports.feedbackCliente")}
               placeholder={t("clientsComp.loQueElClienteHa")}
               minRows={3}
               autosize

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ActionIcon, Box, Group, Text } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { type ReactNode, useEffect } from "react";
@@ -12,6 +13,7 @@ interface FullPageDetailProps {
 }
 
 export function FullPageDetail({ opened, onClose, title, subtitle, children, footer }: FullPageDetailProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (opened) {
       document.body.style.overflow = "hidden";
@@ -60,7 +62,7 @@ export function FullPageDetail({ opened, onClose, title, subtitle, children, foo
         }}
       >
         <Group gap="sm" wrap="nowrap" style={{ width: "100%" }}>
-          <ActionIcon variant="subtle" size="lg" onClick={onClose} aria-label={"Volver"} radius="xl">
+          <ActionIcon variant="subtle" size="lg" onClick={onClose} aria-label={t("common.volver")} radius="xl">
             <IconArrowLeft size={22} />
           </ActionIcon>
           <Box style={{ flex: 1, minWidth: 0 }}>

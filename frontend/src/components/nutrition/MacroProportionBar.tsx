@@ -1,5 +1,6 @@
 import { Badge, Box, Group, NumberInput, Stack, Text, Tooltip } from "@mantine/core";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface MacroPct {
   protein: number;
@@ -65,6 +66,7 @@ function normalize(p: number, c: number, f: number): MacroPct {
 }
 
 export function MacroProportionBar({ value, onChange, targetCalories, compact = false }: MacroProportionBarProps) {
+  const { t } = useTranslation();
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<null | "handle1" | "handle2">(null);
   const [localValue, setLocalValue] = useState<MacroPct>(value);
@@ -276,10 +278,10 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
           </Box>
 
           {/* Handle 1 (separa P | C) */}
-          <Tooltip label={"Arrastra para ajustar Proteína / Carbohidratos"} withArrow position="top">
+          <Tooltip label={t("macroBar.arrastProtCarb")} withArrow position="top">
             <Box
               role="slider"
-              aria-label={"Separador proteína y carbohidratos"}
+              aria-label={t("macroBar.separadorProtCarb")}
               aria-valuenow={handle1Pos}
               aria-valuemin={MIN}
               aria-valuemax={MAX}
@@ -312,10 +314,10 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
           </Tooltip>
 
           {/* Handle 2 (separa C | G) */}
-          <Tooltip label={"Arrastra para ajustar Carbohidratos / Grasas"} withArrow position="top">
+          <Tooltip label={t("macroBar.arrastCarbGrasa")} withArrow position="top">
             <Box
               role="slider"
-              aria-label={"Separador carbohidratos y grasas"}
+              aria-label={t("macroBar.separadorCarbGrasa")}
               aria-valuenow={handle2Pos}
               aria-valuemin={MIN}
               aria-valuemax={MAX}
@@ -376,7 +378,7 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
           {/* Inputs numéricos precisos */}
           <Group grow gap="xs">
             <NumberInput
-              label={"Proteína %"}
+              label={t("macros.proteinaPct")}
               value={value.protein}
               onChange={handleNumberChange("protein")}
               min={MIN}
@@ -387,7 +389,7 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
               styles={{ label: { color: COLORS.protein.text, fontWeight: 600 } }}
             />
             <NumberInput
-              label={"Carbohidratos %"}
+              label={t("macros.carbohidratosPct")}
               value={value.carbs}
               onChange={handleNumberChange("carbs")}
               min={MIN}
@@ -398,7 +400,7 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
               styles={{ label: { color: COLORS.carbs.text, fontWeight: 600 } }}
             />
             <NumberInput
-              label={"Grasas %"}
+              label={t("macros.grasasPct")}
               value={value.fat}
               onChange={handleNumberChange("fat")}
               min={MIN}

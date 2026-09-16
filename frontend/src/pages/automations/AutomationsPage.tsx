@@ -300,7 +300,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
             onClick: () => openAutomationBuilder(),
           }}
           description={t("automations.configuraWorkflowsAutomaticosParaTu")}
-          title={"Automatizaciones"}
+          title={t("automations.automatizaciones")}
         />
       )}
       {embedded && (
@@ -459,7 +459,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
               </Stack>
             </Stepper.Step>
 
-            <Stepper.Step description={t("automations.cuandoSeActiva")} label={"Disparador"}>
+            <Stepper.Step description={t("automations.cuandoSeActiva")} label={t("automations.disparador")}>
               <Stack mt="md">
                 <Text fw={500} mb="xs" size="sm">
                   {"¿Cuándo debe activarse esta automatización?"}
@@ -534,10 +534,10 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
               </Stack>
             </Stepper.Step>
 
-            <Stepper.Step description={t("automations.queHacer")} label={"Acciones"}>
+            <Stepper.Step description={t("automations.queHacer")} label={t("automations.acciones")}>
               <Stack mt="md">
                 <Text fw={500} size="sm">
-                  {"Acciones a ejecutar"}
+                  {t("automations.accionesAEjecutar")}
                 </Text>
 
                 {actions.length > 0 && (

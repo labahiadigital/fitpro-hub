@@ -25,6 +25,7 @@ import {
   calculateTDEE,
 } from "../../utils/calories";
 import type { NutritionCalculationEntry } from "../../hooks/useClients";
+import { useTranslation } from "react-i18next";
 
 interface Client {
   id?: string;
@@ -125,7 +126,8 @@ export function NutritionCalculatorCard({
   latestMeasurement,
   onSave,
   isSaving,
-}: NutritionCalculatorCardProps) {
+}: NutritionCalculatorCardProps) {
+  const { t } = useTranslation();
   const clientAge = client.birth_date
     ? Math.floor(
         (Date.now() - new Date(client.birth_date).getTime()) /
@@ -274,14 +276,14 @@ export function NutritionCalculatorCard({
           variant="subtle"
           leftSection={<IconRefresh size={14} />}
           onClick={resetFromProgress}
-          title={"Volver a cargar desde el último progreso"}
+          title={t("nutritionCalc.volverACargar")}
         >
           {"Reset"}
         </Button>
       </Group>
 
       <Text size="sm" c="dimmed" mb="sm">
-        {"Calcula nuevas calorías y macros a partir de los últimos datos de progreso del cliente."}
+        {t("nutritionCalc.calculaNuevasCalorías")}
       </Text>
 
       {missingFields.length > 0 && (
@@ -291,7 +293,7 @@ export function NutritionCalculatorCard({
           variant="light"
           radius="md"
           mb="md"
-          title={"Faltan datos del cliente"}
+          title={t("nutritionCalc.faltanDatos")}
         >
           <Text size="xs">
             No se puede calcular la dieta sin {missingFields.join(", ")}. Puedes
@@ -331,7 +333,7 @@ export function NutritionCalculatorCard({
           mb="md"
         >
           <Text size="xs">
-            {"No hay registros de progreso recientes. Se usarán los datos de la ficha."}
+            {t("nutritionCalc.noHayRegistrosProgreso")}
           </Text>
         </Alert>
       )}
@@ -339,7 +341,7 @@ export function NutritionCalculatorCard({
       <Stack gap="md">
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xs">
           <NumberInput
-            label={"Peso (kg)"}
+            label={t("nutrition.pesoKg")}
             value={weight}
             onChange={(v) => setWeight(Number(v) || 0)}
             decimalScale={1}
@@ -349,7 +351,7 @@ export function NutritionCalculatorCard({
             size="xs"
           />
           <NumberInput
-            label={"Altura (cm)"}
+            label={t("nutrition.alturaCm")}
             value={height}
             onChange={(v) => setHeight(Number(v) || 0)}
             min={100}
@@ -358,7 +360,7 @@ export function NutritionCalculatorCard({
             size="xs"
           />
           <NumberInput
-            label={"Edad"}
+            label={t("nutrition.edad")}
             value={age}
             onChange={(v) => setAge(Number(v) || 0)}
             min={10}
@@ -369,7 +371,7 @@ export function NutritionCalculatorCard({
 
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
           <Select
-            label={"Género"}
+            label={t("nutrition.genero")}
             value={gender}
             onChange={(v) =>
               setGender((v === "female" ? "female" : "male") as typeof gender)
@@ -397,7 +399,7 @@ export function NutritionCalculatorCard({
         </SimpleGrid>
 
         <Select
-          label={"Nivel de actividad"}
+          label={t("nutritionCalc.nivelDeActividad")}
           value={activity}
           onChange={(v) => v && setActivity(v)}
           data={ACTIVITY_OPTIONS}
@@ -405,7 +407,7 @@ export function NutritionCalculatorCard({
         />
 
         <Select
-          label={"Objetivo"}
+          label={t("nutrition.objetivo")}
           value={goal}
           onChange={(v) => v && setGoal(v)}
           data={GOAL_OPTIONS}
@@ -454,7 +456,7 @@ export function NutritionCalculatorCard({
             mb="xs"
             style={{ letterSpacing: "0.08em" }}
           >
-            {"Resultado del cálculo"}
+            {t("nutritionCalc.resultadoDelCalculo")}
           </Text>
           <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
             <Box

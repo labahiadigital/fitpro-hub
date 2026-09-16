@@ -30,6 +30,7 @@ import { formatDecimal } from "../../../utils/format";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
 import { ViewModeToggle } from "../../../components/common/ViewModeToggle";
+import { useTranslation } from "react-i18next";
 
 const FOOD_CATEGORIES = [
   { value: "", label: "Todas las categorías" },
@@ -111,7 +112,8 @@ export function FoodsTab({
   viewMode = "grid",
   onViewModeChange,
   canEditSystemFoods = false,
-}: FoodsTabProps) {
+}: FoodsTabProps) {
+  const { t } = useTranslation();
   // Helper para decidir si renderizar los botones de editar/eliminar de
   // un food. Foods propios del workspace: siempre. Foods globales del
   // sistema: solo si el usuario tiene permiso (lo concede el backend a
@@ -123,7 +125,7 @@ export function FoodsTab({
         <TextInput
           leftSection={<IconSearch size={14} />}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={"Buscar alimentos..."}
+          placeholder={t("foods.buscarAlimentos")}
           value={searchFood}
           radius="md"
           size="sm"
@@ -161,7 +163,7 @@ export function FoodsTab({
             size="xs"
             radius="md"
             w={180}
-            placeholder={"Categoría"}
+            placeholder={t("common.categoria")}
             clearable
             styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
           />
@@ -265,7 +267,7 @@ export function FoodsTab({
                       </Group>
                     </Box>
                     <Box className="food-card-actions">
-                      <Tooltip label={isFoodFavorite(food.id) ? "Quitar de favoritos" : "Añadir a favoritos"}>
+                      <Tooltip label={isFoodFavorite(food.id) ? t("common.quitarFavoritos") : t("common.anadirFavoritos")}>
                         <ActionIcon
                           color={isFoodFavorite(food.id) ? "yellow" : "gray"}
                           onClick={(e) => onToggleFavorite(food.id, e)}
@@ -285,13 +287,13 @@ export function FoodsTab({
                       🔥 {formatDecimal(Number(food.calories || 0), 0)} kcal
                     </Box>
                     <Group gap={4}>
-                      <Tooltip label={"Ver detalle"}>
+                      <Tooltip label={t("foods.verDetalle")}>
                         <ActionIcon color="gray" onClick={() => onView(food)} size="sm" variant="subtle" radius="md">
                           <IconEye size={16} />
                         </ActionIcon>
                       </Tooltip>
                       {onDuplicate && (
-                        <Tooltip label={"Duplicar a mi workspace"}>
+                        <Tooltip label={t("foods.duplicarAMiWorkspace")}>
                           <ActionIcon color="blue" onClick={() => onDuplicate(food.id)} size="sm" variant="subtle" radius="md">
                             <IconCopy size={16} />
                           </ActionIcon>
@@ -358,19 +360,19 @@ export function FoodsTab({
         </>
       ) : debouncedSearch ? (
         <EmptyState
-          actionLabel={"Limpiar búsqueda"}
+          actionLabel={t("foods.limpiarBusqueda")}
           description={`No se encontraron alimentos que coincidan con "${debouncedSearch}"`}
           icon={<IconSearch size={40} />}
           onAction={() => onSearchChange("")}
-          title={"Sin resultados"}
+          title={t("foods.sinResultados")}
         />
       ) : (
         <EmptyState
           actionLabel={"Añadir Alimento"}
-          description={"Añade alimentos a tu biblioteca para usarlos en tus planes."}
+          description={t("foods.anadeAlimentosBiblioteca")}
           icon={<IconApple size={40} />}
           onAction={onNewFood}
-          title={"No hay alimentos"}
+          title={t("foods.noHayAlimentos")}
         />
       )}
     </>

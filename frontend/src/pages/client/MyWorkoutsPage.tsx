@@ -58,6 +58,7 @@ import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
 import { useTranslation } from "react-i18next";
 
 function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
+  const { t } = useTranslation();
   const { data: allExercises } = useClientExercises({ limit: 500 });
   const [equipFilter, setEquipFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,7 +152,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
     <Stack gap="md">
       <Group gap="sm">
         <TextInput
-          placeholder={"Buscar ejercicio..."}
+          placeholder={t("myWorkouts.buscarEjercicio")}
           leftSection={<IconSearch size={14} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -161,7 +162,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
         />
         {equipmentOptions.length > 0 && (
           <Select
-            placeholder={"Filtrar por equipo"}
+            placeholder={t("myWorkouts.filtrarPorEquipo")}
             data={equipmentOptions}
             value={equipFilter}
             onChange={setEquipFilter}
@@ -233,7 +234,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
                               leftSection={<IconPlayerPlay size={10} />}
                               style={{ cursor: "pointer" }}
                             >
-                              {"Ver vídeo"}
+                              {t("myWorkouts.verVideo")}
                             </Badge>
                           )}
                         </Group>
@@ -247,7 +248,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
         ))
       ) : (
         <Paper p="lg" radius="md" ta="center">
-          <Text c="dimmed">{"No hay ejercicios asignados"}</Text>
+          <Text c="dimmed">{t("myWorkouts.noHayEjerciciosAsignados")}</Text>
         </Paper>
       )}
     </Stack>
@@ -692,6 +693,7 @@ function LogWorkoutModal({
   logDate?: Date;
   existingLogData?: Record<string, unknown> | null;
 }) {
+  const { t } = useTranslation();
   const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
   const [exerciseSets, setExerciseSets] = useState<Record<string, SetLog[]>>(() => {
     const initial: Record<string, SetLog[]> = {};
@@ -867,7 +869,7 @@ function LogWorkoutModal({
     <Box px="md">
       <SimpleGrid cols={2} spacing="sm">
         <NumberInput
-          label={"Duración (min)"}
+          label={t("myWorkouts.duracionMin")}
           {...form.getInputProps("duration_minutes")}
           min={1}
           max={300}
@@ -876,7 +878,7 @@ function LogWorkoutModal({
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         <NumberInput
-          label={"Esfuerzo (1-10)"}
+          label={t("myWorkouts.esfuerzo")}
           {...form.getInputProps("perceived_effort")}
           min={1}
           max={10}
@@ -887,7 +889,7 @@ function LogWorkoutModal({
       </SimpleGrid>
 
       <Textarea
-        label={"Notas (opcional)"}
+        label={t("myWorkouts.notasOpcional")}
         placeholder={"¿Cómo te sentiste?"}
         {...form.getInputProps("notes")}
         minRows={2}
@@ -913,7 +915,7 @@ function LogWorkoutModal({
       radius="xl"
       styles={{ root: { height: 48, fontWeight: 700 } }}
     >
-      {"Registrar entrenamiento"}
+      {t("myWorkouts.registrarEntrenamiento")}
     </Button>
   );
 
@@ -1041,6 +1043,7 @@ function SwapExerciseModal({
   currentExerciseId,
   onSuccess,
 }: SwapExerciseModalProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [showAllExercises, setShowAllExercises] = useState(false);
@@ -1080,7 +1083,7 @@ function SwapExerciseModal({
     <NativeBottomSheet
       opened={opened}
       onClose={() => { onClose(); setShowAllExercises(false); setSelectedExerciseId(null); }}
-      title={"Sustituir ejercicio"}
+      title={t("myWorkouts.sustituirEjercicio")}
       subtitle={currentExerciseName}
       footer={
         <Button
@@ -1107,7 +1110,7 @@ function SwapExerciseModal({
           <Box>
             <Group gap="xs" mb="xs">
               <IconExchange size={14} color="var(--mantine-color-green-6)" />
-              <Text fw={600} size="sm" c="green.7">{"Alternativas recomendadas por tu entrenador"}</Text>
+              <Text fw={600} size="sm" c="green.7">{t("myWorkouts.alternativasRecomendadas")}</Text>
             </Group>
             <Stack gap="xs">
               {(alternatives || []).map((alt) => (
@@ -1162,16 +1165,16 @@ function SwapExerciseModal({
         {(!hasAlternatives || showAllExercises) && (
           <>
             {hasAlternatives && (
-              <Divider label={"Todos los ejercicios"} labelPosition="center" />
+              <Divider label={t("myWorkouts.todosLosEjercicios")} labelPosition="center" />
             )}
             <TextInput
-              placeholder={"Buscar ejercicio..."}
+              placeholder={t("myWorkouts.buscarEjercicio")}
               leftSection={<IconSearch size={16} />}
               value={search}
               onChange={(e) => setSearch(e.currentTarget.value)}
             />
 
-            <Text fw={500} size="sm">{"Elige el nuevo ejercicio:"}</Text>
+            <Text fw={500} size="sm">{t("myWorkouts.eligeNuevoEjercicio")}</Text>
             <ScrollArea h={220}>
               {isLoadingExercises ? (
                 <Center py="xl">
@@ -1202,7 +1205,7 @@ function SwapExerciseModal({
                     </Paper>
                   ))}
                   {exercises?.length === 0 && (
-                    <Text size="sm" c="dimmed" ta="center" py="md">{"No se encontraron ejercicios"}</Text>
+                    <Text size="sm" c="dimmed" ta="center" py="md">{t("myWorkouts.noSeEncontronEjercicios")}</Text>
                   )}
                 </Stack>
               )}
@@ -1211,8 +1214,8 @@ function SwapExerciseModal({
         )}
 
         <Textarea
-          label={"Motivo del cambio (opcional)"}
-          placeholder={"Ej: Lesión, máquina no disponible..."}
+          label={t("myWorkouts.motivoDelCambio")}
+          placeholder={t("myWorkouts.ejLesion")}
           {...form.getInputProps("reason")}
           minRows={2}
         />
@@ -1361,6 +1364,7 @@ function WeekDayDetail({
   onSwapDay?: () => void;
   isExecutedView?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <Box px="md" mb="sm">
@@ -1380,7 +1384,7 @@ function WeekDayDetail({
           </Box>
           {isExecutedView && onSwapDay && (
             <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal" onClick={onSwapDay}>
-              {"Intercambiar día"}
+              {t("myWorkouts.intercambiarDia")}
             </Button>
           )}
         </Group>
@@ -2685,7 +2689,7 @@ export function MyWorkoutsPage() {
               </Button>
               {targetExercises.length > 0 ? (
                 <>
-                  <Text size="sm" c="dimmed" mb="xs">Ejercicios de {targetDayLabel}:</Text>
+                  <Text size="sm" c="dimmed" mb="xs">{t("myWorkouts.ejerciciosDe", { day: targetDayLabel })}:</Text>
                   {targetExercises.map((tex, idx) => (
                     <Button
                       key={idx}
@@ -2711,7 +2715,7 @@ export function MyWorkoutsPage() {
                   ))}
                 </>
               ) : (
-                <Text c="dimmed" ta="center" py="md">No hay ejercicios en {targetDayLabel}</Text>
+                <Text c="dimmed" ta="center" py="md">{t("myWorkouts.noHayEjerciciosEn", { day: targetDayLabel })}</Text>
               )}
             </Stack>
           );

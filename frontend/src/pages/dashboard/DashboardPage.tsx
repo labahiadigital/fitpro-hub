@@ -332,6 +332,7 @@ function RecentClientsWidget() {
 
 // --- Resumen de progreso de clientes ---
 function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; total_clients: number } }) {
+  const { t } = useTranslation();
     const activeClients = kpis?.active_clients || 0;
   const totalClients = kpis?.total_clients || 1;
   const activePercentage = Math.round((activeClients / totalClients) * 100) || 0;
@@ -379,7 +380,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group justify="space-between">
           <Group gap="xs">
             <Box w={10} h={10} bg="gray" style={{ borderRadius: "50%" }} />
-            <Text size="xs">{"Clientes inactivos"}</Text>
+            <Text size="xs">{t("dashboard.clientesInactivos")}</Text>
           </Group>
           <Text size="xs" fw={600}>
             {totalClients - activeClients}
@@ -403,6 +404,7 @@ function TrainingStats({
   };
   loading?: boolean;
 }) {
+    const { t } = useTranslation();
     const stats = [
     {
       label: "Sesiones Pendientes",
@@ -411,7 +413,7 @@ function TrainingStats({
       color: "blue",
     },
     {
-      label: "Sesiones este mes",
+      label: t("dashboard.sesionesEsteMes"),
       value: kpis?.completed_sessions_month?.toString() || "0",
       icon: IconClock,
       color: "grape",
@@ -583,6 +585,7 @@ function ClientMetricsWidget({
     revenue_last_month: number;
   };
 }) {
+  const { t } = useTranslation();
     const revenueChange = kpis?.revenue_last_month
     ? (
         ((kpis.revenue_this_month - kpis.revenue_last_month) /
@@ -622,7 +625,7 @@ function ClientMetricsWidget({
           </Text>
         </Group>
         <Text size="xs" c="dimmed">
-          {"Este mes"}
+          {t("dashboard.esteMes")}
         </Text>
       </Group>
 

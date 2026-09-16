@@ -654,7 +654,7 @@ export function StockPage() {
       <Modal
         opened={detailModalOpened}
         onClose={closeDetailModal}
-        title={detailItem?.name || "Detalle de stock"}
+        title={detailItem?.name || t("stock.detalleDeStock")}
         size="md"
         radius="lg"
       >
@@ -760,7 +760,7 @@ export function StockPage() {
               <Paper p="sm" radius="md" bg="var(--mantine-color-blue-light)">
                 <Group justify="space-between">
                   <Text fw={600}>{movementItem.name}</Text>
-                  <Badge size="lg" variant="filled">Stock actual: {movementItem.current_stock} {movementItem.unit}</Badge>
+                  <Badge size="lg" variant="filled">{t("stock.stockActual", { stock: movementItem.current_stock, unit: movementItem.unit })}</Badge>
                 </Group>
               </Paper>
 

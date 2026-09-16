@@ -122,7 +122,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
         client_ids: [clientId],
       });
       notifications.show({
-        title: "Formulario enviado",
+        title: t("clientForms.formularioEnviado"),
         message: clientName
           ? `Se ha enviado a ${clientName}.`
           : "Se ha enviado al cliente.",
@@ -171,10 +171,10 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             <ThemeIcon color="indigo" variant="light" size="md">
               <IconForms size={16} />
             </ThemeIcon>
-            <Text fw={600}>{"Formularios del cliente"}</Text>
+            <Text fw={600}>{t("clientForms.formulariosDelCliente")}</Text>
           </Group>
           <Text c="dimmed" size="sm">
-            {"Envía formularios al cliente y revisa sus respuestas aquí."}
+            {t("clientForms.enviaFormulariosDesc")}
           </Text>
         </Box>
         <Button
@@ -184,14 +184,14 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             openSend();
           }}
         >
-          {"Enviar formulario"}
+          {t("clientForms.enviarFormulario")}
         </Button>
       </Group>
 
       {isLoadingSubmissions || isLoadingForms ? (
         <Paper withBorder p="lg" radius="md">
           <Text c="dimmed" size="sm">
-            {"Cargando formularios..."}
+            {t("clientForms.cargandoFormularios")}
           </Text>
         </Paper>
       ) : rows.length === 0 ? (
@@ -200,9 +200,9 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             <ThemeIcon color="gray" size="xl" variant="light">
               <IconFileText size={22} />
             </ThemeIcon>
-            <Text fw={600}>{"Aún no se han enviado formularios"}</Text>
+            <Text fw={600}>{t("clientForms.aunNoFormularios")}</Text>
             <Text c="dimmed" size="sm" ta="center">
-              {"Cuando envíes un formulario al cliente aparecerá aquí con su estado."}
+              {t("clientForms.cuandoEnviesFormulario")}
             </Text>
             <Button
               leftSection={<IconSend size={16} />}
@@ -212,7 +212,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                 openSend();
               }}
             >
-              {"Enviar formulario"}
+              {t("clientForms.enviarFormulario")}
             </Button>
           </Stack>
         </Paper>
@@ -296,7 +296,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
         onClose={closeSend}
         position="right"
         size="md"
-        title={"Enviar formulario al cliente"}
+        title={t("clientForms.enviarFormularioAlCliente")}
       >
         <Stack>
           <Text c="dimmed" size="sm">
@@ -307,7 +307,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
           {sendableForms.length === 0 ? (
             <Paper withBorder p="md" radius="md">
               <Stack gap={6}>
-                <Text fw={600} size="sm">{"No tienes formularios propios todavía"}</Text>
+                <Text fw={600} size="sm">{t("clientForms.noTienesFormularios")}</Text>
                 <Text size="xs" c="dimmed">
                   {t("clientsComp.noOwnFormsDesc")}
                 </Text>
@@ -319,14 +319,14 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                     window.location.assign("/forms");
                   }}
                 >
-                  {"Ir a Formularios"}
+                  {t("clientForms.irAFormularios")}
                 </Button>
               </Stack>
             </Paper>
           ) : (
             <Select
-              label={"Formulario"}
-              placeholder={"Selecciona un formulario activo"}
+              label={t("clientForms.formulario")}
+              placeholder={t("clientForms.seleccionaUnFormularioActivo")}
               searchable
               data={sendableForms.map((f) => ({
                 value: f.id,
@@ -357,7 +357,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
         opened={viewOpened}
         onClose={closeView}
         size="lg"
-        title={viewingForm?.name || "Respuesta del formulario"}
+        title={viewingForm?.name || t("clientForms.respuestaDelFormulario")}
       >
         {viewingSubmission && (
           <Stack>
@@ -380,7 +380,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                 <Group gap="xs">
                   <IconClock size={16} />
                   <Text size="sm" c="dimmed">
-                    {"El cliente aún no ha respondido este formulario."}
+                    {t("clientForms.clienteNoHaRespondido")}
                   </Text>
                 </Group>
               </Paper>

@@ -71,7 +71,7 @@ export function RecipesTab({
       <Group mb="md" gap="sm" wrap="wrap">
         <TextInput
           leftSection={<IconSearch size={14} />}
-          placeholder={"Buscar recetas..."}
+          placeholder={t("recipes.buscarRecetas")}
           value={recipeSearch}
           onChange={(e) => onSearchChange(e.target.value)}
           size="sm"
@@ -191,7 +191,7 @@ export function RecipesTab({
                       {"Editar"}
                     </Button>
                   )}
-                  <Tooltip label={"Duplicar"}>
+                  <Tooltip label={t("common.duplicar")}>
                     <ActionIcon
                       color="blue"
                       variant="light"
@@ -207,7 +207,7 @@ export function RecipesTab({
                     </ActionIcon>
                   </Tooltip>
                   {!recipe.is_global && (
-                    <Tooltip label={"Eliminar"}>
+                    <Tooltip label={t("common.eliminar")}>
                       <ActionIcon
                         color="red"
                         loading={deletePending}
@@ -239,7 +239,7 @@ export function RecipesTab({
           }
           icon={<IconToolsKitchen2 size={36} />}
           onAction={onCreate}
-          title={hasFilters ? "Sin resultados" : "No hay recetas"}
+          title={hasFilters ? t("recipes.sinResultados") : t("recipes.noHayRecetas")}
         />
       )}
     </>

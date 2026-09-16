@@ -77,6 +77,7 @@ export function AllergenList({
   clientIntolerances = [],
   size = "sm",
 }: AllergenListProps) {
+  const { t } = useTranslation();
   const clientRestrictions = [
     ...clientAllergens.map((a) => a.toLowerCase()),
     ...clientIntolerances.map((a) => a.toLowerCase()),
@@ -85,7 +86,7 @@ export function AllergenList({
   if (allergens.length === 0) {
     return (
       <Text c="dimmed" size="sm">
-        {"Sin alérgenos conocidos"}
+        {t("common.sinAlergenosConocidos")}
       </Text>
     );
   }

@@ -19,6 +19,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { useTranslation } from "react-i18next";
 
 interface NutritionTemplatesTabProps {
   templates: any[];
@@ -43,6 +44,7 @@ export function NutritionTemplatesTab({
   createPending,
   deletePending,
 }: NutritionTemplatesTabProps) {
+  const { t } = useTranslation();
   if (isLoading) {
     return <Center py="xl"><Loader size="md" /></Center>;
   }
@@ -82,10 +84,10 @@ export function NutritionTemplatesTab({
   return (
     <EmptyState
       actionLabel={"Crear Plantilla"}
-      description={"Crea tu primera plantilla nutricional reutilizable para asignarla a tus clientes."}
+      description={t("nutritionTemplates.creaTuPrimeraPlantilla")}
       icon={<IconTemplate size={36} />}
       onAction={onCreate}
-      title={"No hay plantillas"}
+      title={t("nutritionTemplates.noHayPlantillas")}
     />
   );
 }

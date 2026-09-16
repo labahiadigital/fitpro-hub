@@ -167,6 +167,7 @@ function LogMeasurementModal({
     notes?: string;
   }>;
 }) {
+  const { t } = useTranslation();
   const [measurementDate, setMeasurementDate] = useState<Date>(new Date());
   const form = useForm({
     initialValues: {
@@ -268,7 +269,7 @@ function LogMeasurementModal({
       {/* Scrollable content */}
       <Box style={{ flex: 1, overflowY: "auto" }} px="md" py="md">
         <DateInput
-          label={"Fecha"}
+          label={t("myProgress.fecha")}
           value={measurementDate}
           onChange={handleDateChange}
           maxDate={new Date()}
@@ -278,13 +279,13 @@ function LogMeasurementModal({
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         {existingForDate && (
-          <Badge color="blue" variant="light" mt="xs">{"Editando medidas existentes"}</Badge>
+          <Badge color="blue" variant="light" mt="xs">{t("myProgress.editandoMedidas")}</Badge>
         )}
 
         <Text fw={600} size="sm" mt="lg" mb="xs">{"Datos Corporales"}</Text>
         <SimpleGrid cols={3} spacing="sm">
           <NumberInput
-            label={"Peso (kg)"}
+            label={t("myProgress.pesoKg")}
             placeholder="78.5"
             {...form.getInputProps("weight_kg")}
             min={30}
@@ -306,7 +307,7 @@ function LogMeasurementModal({
             styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }}
           />
           <NumberInput
-            label={"Músculo (kg)"}
+            label={t("myProgress.musculoKg")}
             placeholder="35.2"
             {...form.getInputProps("muscle_mass_kg")}
             min={10}
@@ -320,15 +321,15 @@ function LogMeasurementModal({
 
         <Text fw={600} size="sm" mt="lg" mb="xs">{"Medidas Corporales (cm)"}</Text>
         <SimpleGrid cols={3} spacing="sm">
-          <NumberInput label={"Pecho"} placeholder="102" {...form.getInputProps("chest")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label={"Cintura"} placeholder="82" {...form.getInputProps("waist")} min={40} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label={"Cadera"} placeholder="98" {...form.getInputProps("hips")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label={"Brazos"} placeholder="36" {...form.getInputProps("arms")} min={15} max={60} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label={"Muslos"} placeholder="58" {...form.getInputProps("thighs")} min={30} max={100} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={t("myProgress.pecho")} placeholder="102" {...form.getInputProps("chest")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={t("myProgress.cintura")} placeholder="82" {...form.getInputProps("waist")} min={40} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={t("myProgress.cadera")} placeholder="98" {...form.getInputProps("hips")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={t("myProgress.brazos")} placeholder="36" {...form.getInputProps("arms")} min={15} max={60} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={t("myProgress.muslos")} placeholder="58" {...form.getInputProps("thighs")} min={30} max={100} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
         </SimpleGrid>
 
         <Textarea
-          label={"Notas (opcional)"}
+          label={t("myProgress.notasOpcional")}
           placeholder={"¿Cómo te sientes?"}
           {...form.getInputProps("notes")}
           minRows={2}
@@ -379,6 +380,7 @@ function UploadPhotoModal({
   onUpload: (file: File, type: string, notes?: string, measurement_date?: string) => void;
   isLoading: boolean;
 }) {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [photoType, setPhotoType] = useState<string>("front");
   const [notes, setNotes] = useState("");
@@ -412,8 +414,8 @@ function UploadPhotoModal({
     <NativeBottomSheet
       opened={opened}
       onClose={onClose}
-      title={"Subir Foto de Progreso"}
-      subtitle={"Añade una foto para comparar tu evolución"}
+      title={t("myProgress.subirFotoProgreso")}
+      subtitle={t("myProgress.anadeFotoEvolucion")}
       footer={
         <Button
           color="yellow"
@@ -432,7 +434,7 @@ function UploadPhotoModal({
     >
       <Stack gap="md">
         <DateInput
-          label={"Fecha de la foto"}
+          label={t("myProgress.fechaDeLaFoto")}
           value={photoDate}
           onChange={(d) => d && setPhotoDate(new Date(d))}
           maxDate={new Date()}
@@ -442,7 +444,7 @@ function UploadPhotoModal({
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         <Box>
-          <Text size="sm" fw={500} mb={6}>{"Tipo de foto"}</Text>
+          <Text size="sm" fw={500} mb={6}>{t("myProgress.tipoDeFoto")}</Text>
           <SegmentedControl
             fullWidth
             value={photoType}
@@ -483,7 +485,7 @@ function UploadPhotoModal({
         )}
 
         <Textarea
-          placeholder={"Notas (opcional)"}
+          placeholder={t("myProgress.notasOpcional")}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           minRows={2}
@@ -1136,7 +1138,7 @@ export function MyProgressPage() {
         <Tabs.Panel value="photos">
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group justify="space-between" mb="lg">
-              <Text fw={600}>Fotos de Evolución ({filteredPhotos.length} fotos)</Text>
+              <Text fw={600}>{t("myProgress.fotosEvolucion", { count: filteredPhotos.length })}</Text>
               <Button 
                 variant="light" 
                 leftSection={<IconCamera size={16} />}

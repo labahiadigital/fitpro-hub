@@ -661,7 +661,7 @@ export function ChatPage() {
                         <Text c="dimmed" size="xs">
                           {selectedConversation.preferred_channel === "whatsapp"
                             ? "Conectado por WhatsApp"
-                            : "Chat de plataforma"}
+                            : t("chat.chatDePlataforma")}
                         </Text>
                       </Box>
                     </Group>
@@ -980,7 +980,7 @@ export function ChatPage() {
                       label={
                         sendVia === "whatsapp" && isWhatsAppEnabled
                           ? "Enviar por WhatsApp"
-                          : "Enviar por plataforma"
+                          : t("chat.enviarPorPlataforma")
                       }
                     >
                       <ActionIcon

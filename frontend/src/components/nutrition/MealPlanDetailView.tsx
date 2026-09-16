@@ -544,7 +544,7 @@ export function MealPlanDetailView({
           <Group justify="space-between" align="flex-start">
             <Box>
               <Text size="sm" c="dimmed" tt="uppercase" fw={600}>
-                {"Datos del Cliente"}
+                {t("mealPlanDetail.datosDelCliente")}
               </Text>
               <Title order={3} mt="xs">
                 {client.first_name} {client.last_name}
@@ -616,7 +616,7 @@ export function MealPlanDetailView({
               {"Resumen Nutricional"}
             </Tabs.Tab>
             <Tabs.Tab value="meals" leftSection={<IconSalad size={14} />}>
-              {"Plan de Comidas"}
+              {t("mealPlanDetail.planDeComidas")}
             </Tabs.Tab>
             <Tabs.Tab value="calculator" leftSection={<IconCalculator size={14} />}>
               {"Calculadora Energética"}
@@ -633,7 +633,7 @@ export function MealPlanDetailView({
             {/* Macro distribution */}
             <Paper p="lg" radius="md" withBorder>
               <Text fw={600} mb="md">
-                {"Distribución de Macronutrientes - Kcal"}
+                {t("mealPlanDetail.distribucionDeMacros")}
               </Text>
               <Group justify="center" mb="md">
                 <RingProgress
@@ -701,11 +701,11 @@ export function MealPlanDetailView({
             <Paper p="lg" radius="md" withBorder>
               <Group justify="space-between" mb="md">
                 <Text fw={600}>
-                  {"Objetivos vs Actual"}
+                  {t("mealPlanDetail.objetivosVsActual")}
                 </Text>
                 {client && (
                   <Badge color="blue" variant="light" size="sm">
-                    {"Calculado desde cliente"}
+                    {t("mealPlanDetail.calculadoDesdeCliente")}
                   </Badge>
                 )}
               </Group>
@@ -877,7 +877,7 @@ export function MealPlanDetailView({
               mb="md"
               size="sm"
               w={200}
-              label={"Semana"}
+              label={t("mealPlanDetail.semana")}
             />
           )}
           <MealPlanDaysView
@@ -892,7 +892,7 @@ export function MealPlanDetailView({
             {/* Energy Requirements Calculator */}
             <Paper p="lg" radius="md" withBorder>
               <Group justify="space-between" mb="md">
-                <Text fw={600}>{"Cálculo de Requisitos Energéticos Diarios"}</Text>
+                <Text fw={600}>{t("mealPlanDetail.calculoRequisitosEnergeticos")}</Text>
                 <ActionIcon
                   variant="subtle"
                   color="gray"
@@ -917,7 +917,7 @@ export function MealPlanDetailView({
                 />
                 <SimpleGrid cols={2} spacing="md">
                   <Select
-                    label={"Sexo"}
+                    label={t("mealPlanDetail.sexo")}
                     data={[
                       { value: "male", label: "Hombre" },
                       { value: "female", label: "Mujer" },
@@ -926,7 +926,7 @@ export function MealPlanDetailView({
                     {...clientForm.getInputProps("gender")}
                   />
                   <NumberInput
-                    label={"Edad"}
+                    label={t("mealPlanDetail.edad")}
                     suffix={t("mealPlanDetailView.años")}
                     min={10}
                     max={100}
@@ -937,7 +937,7 @@ export function MealPlanDetailView({
 
                 <SimpleGrid cols={2} spacing="md">
                   <NumberInput
-                    label={"Peso"}
+                    label={t("mealPlanDetail.peso")}
                     suffix=" kg"
                     min={30}
                     max={300}
@@ -945,7 +945,7 @@ export function MealPlanDetailView({
                     {...clientForm.getInputProps("weight_kg")}
                   />
                   <NumberInput
-                    label={"Altura"}
+                    label={t("mealPlanDetail.altura")}
                     suffix=" cm"
                     min={100}
                     max={250}
@@ -955,14 +955,14 @@ export function MealPlanDetailView({
                 </SimpleGrid>
 
                 <Select
-                  label={"Actividad"}
+                  label={t("mealPlanDetail.actividad")}
                   data={Object.entries(ACTIVITY_LABELS).map(([value, label]) => ({ value, label }))}
                   disabled={!editingClient}
                   {...clientForm.getInputProps("activity_level")}
                 />
 
                 <Select
-                  label={"Tendencia Corporal"}
+                  label={t("mealPlanDetail.tendenciaCorporal")}
                   data={Object.entries(BODY_TENDENCY_LABELS).map(([value, label]) => ({ value, label }))}
                   disabled={!editingClient}
                   {...clientForm.getInputProps("body_tendency")}
@@ -981,13 +981,13 @@ export function MealPlanDetailView({
                       </Table.Td>
                     </Table.Tr>
                     <Table.Tr style={{ backgroundColor: "var(--mantine-color-green-0)" }}>
-                      <Table.Td fw={600}>{"Hipertrofia o Aumento de Peso"}</Table.Td>
+                      <Table.Td fw={600}>{t("mealPlanDetail.hipertrofiaAumento")}</Table.Td>
                       <Table.Td ta="right" fw={700}>
                         {energyTargets.hypertrophy} kcal
                       </Table.Td>
                     </Table.Tr>
                     <Table.Tr style={{ backgroundColor: "var(--mantine-color-red-0)" }}>
-                      <Table.Td fw={600}>{"Definición o Pérdida de Peso"}</Table.Td>
+                      <Table.Td fw={600}>{t("mealPlanDetail.definicionPerdida")}</Table.Td>
                       <Table.Td ta="right" fw={700}>
                         {energyTargets.definition} kcal
                       </Table.Td>
@@ -1011,7 +1011,7 @@ export function MealPlanDetailView({
             <Stack gap="lg">
               <Paper p="lg" radius="md" withBorder style={{ backgroundColor: "var(--mantine-color-cyan-0)" }}>
                 <Text fw={600} mb="md">
-                  {"Cálculo de Temporalización de Objetivos para Pérdida de Grasa"}
+                  {t("mealPlanDetail.calculoTemporizacion")}
                 </Text>
                 <SimpleGrid cols={2} spacing="md">
                   <Box>
@@ -1064,7 +1064,7 @@ export function MealPlanDetailView({
 
               <Paper p="lg" radius="md" withBorder style={{ backgroundColor: "var(--mantine-color-green-0)" }}>
                 <Text fw={600} mb="md">
-                  {"Cálculo de Temporalización de Objetivos para Pérdida de Grasa"}
+                  {t("mealPlanDetail.calculoTemporizacion")}
                 </Text>
                 <SimpleGrid cols={2} spacing="md">
                   <Box>
@@ -1150,15 +1150,15 @@ export function MealPlanDetailView({
                 <ThemeIcon color="gray" size={60} variant="light" radius="xl" mb="md">
                   <IconPill size={30} />
                 </ThemeIcon>
-                <Text fw={500}>{"No hay suplementación asignada"}</Text>
+                <Text fw={500}>{t("mealPlanDetail.noHaySuplementacion")}</Text>
                 <Text c="dimmed" size="sm">
-                  {"Añade suplementos recomendados para este plan"}
+                  {t("mealPlanDetail.anadeSuplementos")}
                 </Text>
               </Box>
             )}
 
             {/* Example supplementation recommendations */}
-            <Divider my="lg" label={"Recomendaciones de ejemplo"} labelPosition="center" />
+            <Divider my="lg" label={t("mealPlanDetail.recomendacionesDeEjemplo")} labelPosition="center" />
             <Stack gap="xs">
               <Text size="sm">
                 <strong>1 Multivitamínico</strong> con comida 1 y comida 5
@@ -1167,10 +1167,10 @@ export function MealPlanDetailView({
                 <strong>{"Omega 3"}</strong> - con comida 1, 3 y 5
               </Text>
               <Text size="sm">
-                <strong>{"Intra entrenamiento o 10g EAAs + 10g GLUTAMINA + 10g CREATINA"}</strong>
+                <strong>{t("mealPlanDetail.intraEntrenamiento")}</strong>
               </Text>
               <Text size="sm">
-                <strong>{"Antes de dormir:"}</strong> {"ZMA 3 cápsulas"}
+                <strong>{t("mealPlanDetail.antesDeDormir")}</strong> {t("mealPlanDetail.zma3Capsulas")}
               </Text>
             </Stack>
           </Paper>
@@ -1206,9 +1206,9 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
         <ThemeIcon color="gray" size={60} variant="light" radius="xl" mb="md">
           <IconSalad size={30} />
         </ThemeIcon>
-        <Text fw={500}>{"No hay comidas configuradas"}</Text>
+        <Text fw={500}>{t("mealPlanDetail.noHayComidasConfiguradas")}</Text>
         <Text c="dimmed" size="sm">
-          {"Edita el plan para añadir comidas"}
+          {t("mealPlanDetail.editaElPlan")}
         </Text>
       </Paper>
     );
@@ -1379,7 +1379,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
       {currentDay?.notes && (
         <Paper p="md" mt="md" withBorder radius="md">
           <Text fw={600} size="sm" mb="xs">
-            {"Notas del día:"}
+            {t("mealPlanDetail.notasDelDia")}
           </Text>
           <Text size="sm" c="dimmed">
             {currentDay.notes}

@@ -30,6 +30,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 interface Exercise {
   id: string;
@@ -97,6 +98,7 @@ export function ExerciseLibrary({
   exercises,
   onToggleFavorite,
 }: ExerciseLibraryProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
@@ -142,7 +144,7 @@ export function ExerciseLibrary({
         opened={opened}
         size="xl"
         styles={{ body: { padding: 0 } }}
-        title={"Biblioteca de Ejercicios"}
+        title={t("exerciseLibrary.bibliotecaDeEjercicios")}
       >
         <Stack gap={0}>
           {/* Search and Filters */}
@@ -154,7 +156,7 @@ export function ExerciseLibrary({
             <TextInput
               leftSection={<IconSearch size={16} />}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={"Buscar ejercicios..."}
+              placeholder={t("exerciseLibrary.buscarEjercicios")}
               value={search}
             />
             <Group gap="sm">
@@ -163,7 +165,7 @@ export function ExerciseLibrary({
                 data={muscleGroupOptions}
                 leftSection={<IconFilter size={14} />}
                 onChange={setSelectedMuscles}
-                placeholder={"Músculos"}
+                placeholder={t("exercises.musculos")}
                 size="xs"
                 value={selectedMuscles}
                 w={180}
@@ -172,7 +174,7 @@ export function ExerciseLibrary({
                 clearable
                 data={equipmentOptions}
                 onChange={setSelectedEquipment}
-                placeholder={"Equipamiento"}
+                placeholder={t("exercises.equipamiento")}
                 size="xs"
                 value={selectedEquipment}
                 w={180}
@@ -185,7 +187,7 @@ export function ExerciseLibrary({
                   { value: "advanced", label: "Avanzado" },
                 ]}
                 onChange={setSelectedDifficulty}
-                placeholder={"Dificultad"}
+                placeholder={t("common.dificultad")}
                 size="xs"
                 value={selectedDifficulty}
                 w={140}
@@ -210,7 +212,7 @@ export function ExerciseLibrary({
           <ScrollArea h={400} p="md">
             {filteredExercises.length === 0 ? (
               <Text c="dimmed" py="xl" ta="center">
-                {"No se encontraron ejercicios"}
+                {t("exerciseLibrary.noSeEncontronEjercicios")}
               </Text>
             ) : (
               <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">

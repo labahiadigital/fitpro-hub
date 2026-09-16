@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
 import { BottomSheet } from "../../../components/common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 interface ViewProgramModalProps {
   opened: boolean;
@@ -25,6 +26,7 @@ export function ViewProgramModal({
   onClose,
   onEdit,
 }: ViewProgramModalProps) {
+  const { t } = useTranslation();
   return (
     <BottomSheet
       opened={opened}
@@ -57,7 +59,7 @@ export function ViewProgramModal({
             )}
           </Group>
 
-          <Divider my="sm" label={"Ejercicios"} labelPosition="center" />
+          <Divider my="sm" label={t("workouts.ejercicios")} labelPosition="center" />
 
           {(() => {
             const tmpl = program.template as any;
@@ -70,7 +72,7 @@ export function ViewProgramModal({
                 : [];
 
             if (allWeeks.length === 0) {
-              return <Text c="dimmed" ta="center" py="md">{"No hay ejercicios definidos"}</Text>;
+              return <Text c="dimmed" ta="center" py="md">{t("workouts.noHayEjerciciosDefinidos")}</Text>;
             }
 
             return allWeeks.map((wk) => (
@@ -115,7 +117,7 @@ export function ViewProgramModal({
                 onEdit(program);
               }}
             >
-              {"Editar programa"}
+              {t("workouts.editarPrograma")}
             </Button>
           </Group>
         </Stack>

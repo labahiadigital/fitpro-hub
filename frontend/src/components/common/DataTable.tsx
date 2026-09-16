@@ -87,6 +87,7 @@ export function DataTable<T extends { id: string }>({
   emptyMessage,
 }: DataTableProps<T>) {
 
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 48em)");
   const columns = isMobile
     ? allColumns.filter((c) => !c.hideOnMobile)
@@ -162,12 +163,12 @@ export function DataTable<T extends { id: string }>({
                 },
               }}
             />
-            <Tooltip label={"Filtros avanzados"}>
+            <Tooltip label={t("common.filtrosAvanzados")}>
               <ActionIcon 
                 variant="default" 
                 size="md" 
                 radius="md"
-                aria-label={"Filtros avanzados"}
+                aria-label={t("common.filtrosAvanzados")}
                 style={{ 
                   borderColor: "var(--border-subtle)",
                   color: "var(--nv-slate)"
@@ -313,7 +314,7 @@ export function DataTable<T extends { id: string }>({
                             color="gray" 
                             variant="subtle"
                             radius="xl"
-                            aria-label={"Acciones"}
+                            aria-label={t("common.acciones")}
                           >
                             <IconDotsVertical size={18} />
                           </ActionIcon>
@@ -324,7 +325,7 @@ export function DataTable<T extends { id: string }>({
                               leftSection={<IconEye size={16} />}
                               onClick={() => onView(item)}
                             >
-                              {"Ver detalles"}
+                              {t("common.verDetalles")}
                             </Menu.Item>
                           )}
                           {onEdit && (

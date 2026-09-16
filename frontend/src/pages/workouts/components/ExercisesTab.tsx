@@ -22,6 +22,7 @@ import { Table } from "@mantine/core";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
 import { ViewModeToggle } from "../../../components/common/ViewModeToggle";
+import { useTranslation } from "react-i18next";
 
 interface ExercisesTabProps {
   filteredExercises: any[];
@@ -66,13 +67,14 @@ export function ExercisesTab({
   viewMode = "grid",
   onViewModeChange,
 }: ExercisesTabProps) {
+  const { t } = useTranslation();
   return (
     <>
       <Group gap="sm" mb="md">
         <TextInput
           leftSection={<IconSearch size={14} />}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={"Buscar ejercicios..."}
+          placeholder={t("workouts.buscarEjercicios")}
           value={searchExercise}
           radius="md"
           size="sm"
@@ -101,7 +103,7 @@ export function ExercisesTab({
             value={muscleGroupFilter || null}
             onChange={onMuscleGroupFilterChange}
             data={muscleGroups}
-            placeholder={"Grupo muscular"}
+            placeholder={t("workouts.grupoMuscular")}
             size="xs"
             radius="md"
             w={160}
@@ -113,7 +115,7 @@ export function ExercisesTab({
             value={equipmentFilter || null}
             onChange={onEquipmentFilterChange}
             data={equipmentOptions}
-            placeholder={"Equipamiento"}
+            placeholder={t("exercises.equipamiento")}
             size="xs"
             radius="md"
             w={160}
@@ -252,10 +254,10 @@ export function ExercisesTab({
       ) : loadingExercises ? null : (
         <EmptyState
           actionLabel={"Añadir Ejercicio"}
-          description={"Añade ejercicios a tu biblioteca para usarlos en tus programas."}
+          description={t("workouts.anadeEjerciciosBiblioteca")}
           icon={<IconBarbell size={36} />}
           onAction={() => onNewExercise()}
-          title={"No hay ejercicios"}
+          title={t("workouts.noHayEjercicios")}
         />
       )}
     </>

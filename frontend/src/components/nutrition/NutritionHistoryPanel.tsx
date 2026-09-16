@@ -118,7 +118,7 @@ export function NutritionHistoryPanel({
         >
           {sorted.length === 0 ? (
             <Text size="sm" c="dimmed" ta="center" py="xl">
-              {"Aún no hay objetivos nutricionales guardados en el histórico."}
+              {t("nutritionHistory.aunNoHayObjetivos")}
             </Text>
           ) : (
             <Stack gap="sm">
@@ -218,7 +218,7 @@ export function NutritionHistoryPanel({
                   loading={isClearing}
                   onClick={onClear}
                 >
-                  {"Vaciar histórico"}
+                  {t("nutritionHistory.vaciarHistorico")}
                 </Button>
                 <Button
                   size="xs"
@@ -227,7 +227,7 @@ export function NutritionHistoryPanel({
                   leftSection={<IconChevronUp size={14} />}
                   onClick={() => setOpen(false)}
                 >
-                  {"Ocultar histórico"}
+                  {t("nutritionHistory.ocultarHistorico")}
                 </Button>
               </Group>
             </Stack>

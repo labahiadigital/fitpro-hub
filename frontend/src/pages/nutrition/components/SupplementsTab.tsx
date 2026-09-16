@@ -21,6 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RectificationButton } from "../../../components/common/RectificationButton";
+import { useTranslation } from "react-i18next";
 
 interface SupplementsTabProps {
   filteredSupplements: any[];
@@ -55,13 +56,14 @@ export function SupplementsTab({
   onNew,
   togglePending,
 }: SupplementsTabProps) {
+  const { t } = useTranslation();
   return (
     <>
       <Group mb="md" gap="sm">
         <TextInput
           leftSection={<IconSearch size={14} />}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={"Buscar suplementos..."}
+          placeholder={t("supplements.buscarSuplementos")}
           value={searchSupplement}
           radius="md"
           size="sm"
@@ -132,7 +134,7 @@ export function SupplementsTab({
                     </Group>
                   </Box>
                   <Box className="food-card-actions">
-                    <Tooltip label={isSupplementFavorite(supp.id) ? "Quitar de favoritos" : "Añadir a favoritos"}>
+                    <Tooltip label={isSupplementFavorite(supp.id) ? t("common.quitarFavoritos") : t("common.anadirFavoritos")}>
                       <ActionIcon
                         color={isSupplementFavorite(supp.id) ? "yellow" : "gray"}
                         onClick={(e) => onToggleFavorite(supp.id, e)}
@@ -159,13 +161,13 @@ export function SupplementsTab({
                     )}
                   </Group>
                   <Group gap={4}>
-                    <Tooltip label={"Ver detalle"}>
+                    <Tooltip label={t("supplements.verDetalle")}>
                       <ActionIcon color="gray" onClick={() => onView(supp)} size="sm" variant="subtle" radius="md">
                         <IconEye size={16} />
                       </ActionIcon>
                     </Tooltip>
                     {!supp.is_global && (
-                      <Tooltip label={"Editar"}>
+                      <Tooltip label={t("common.editar")}>
                         <ActionIcon color="gray" onClick={() => onEdit(supp)} size="sm" variant="subtle" radius="md">
                           <IconEdit size={16} />
                         </ActionIcon>
@@ -194,7 +196,7 @@ export function SupplementsTab({
 
                 {supp.how_to_take && (
                   <Text size="xs" c="dimmed" lineClamp={2} style={{ paddingTop: "var(--space-xs)", borderTop: "1px solid var(--border-subtle)" }}>
-                    <Text component="span" fw={600} c="violet">{"Cómo tomar:"}</Text> {supp.how_to_take}
+                    <Text component="span" fw={600} c="violet">{t("supplements.comoTomar")}</Text> {supp.how_to_take}
                   </Text>
                 )}
 
@@ -202,7 +204,7 @@ export function SupplementsTab({
                   <Box
                     style={{ paddingTop: "var(--space-xs)", borderTop: supp.how_to_take ? undefined : "1px solid var(--border-subtle)" }}
                   >
-                    <Tooltip label={"Abrir enlace de compra"} withArrow>
+                    <Tooltip label={t("supplements.abrirEnlaceCompra")} withArrow>
                       <Button
                         component="a"
                         href={supp.purchase_url}
@@ -226,27 +228,27 @@ export function SupplementsTab({
         </>
       ) : supplementFilter === "favorites" ? (
         <EmptyState
-          actionLabel={"Ver todos"}
-          description={"No tienes suplementos marcados como favoritos."}
+          actionLabel={t("supplements.verTodos")}
+          description={t("supplements.noTienesFavoritos")}
           icon={<IconStar size={40} />}
           onAction={() => onFilterChange("all")}
-          title={"Sin favoritos"}
+          title={t("supplements.sinFavoritos")}
         />
       ) : debouncedSupplementSearch ? (
         <EmptyState
-          actionLabel={"Limpiar búsqueda"}
+          actionLabel={t("supplements.limpiarBusqueda")}
           description={`No se encontraron suplementos que coincidan con "${debouncedSupplementSearch}"`}
           icon={<IconSearch size={40} />}
           onAction={() => onSearchChange("")}
-          title={"Sin resultados"}
+          title={t("supplements.sinResultados")}
         />
       ) : (
         <EmptyState
           actionLabel={"Añadir Suplemento"}
-          description={"Los suplementos se cargan desde la base de datos. Añade suplementos para verlos aquí."}
+          description={t("supplements.suplementosCargados")}
           icon={<IconPill size={40} />}
           onAction={onNew}
-          title={"No hay suplementos"}
+          title={t("supplements.noHaySuplementos")}
         />
       )}
     </>

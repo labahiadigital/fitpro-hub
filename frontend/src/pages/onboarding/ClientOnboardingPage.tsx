@@ -474,7 +474,7 @@ export function ClientOnboardingPage() {
       }
       if (active === 1) {
         return {
-          primaryGoal: values.primaryGoal ? null : "Selecciona un objetivo",
+          primaryGoal: values.primaryGoal ? null : t("onboarding.seleccionaObjetivo"),
           activityLevel: values.activityLevel
             ? null
             : "Selecciona tu nivel de actividad",

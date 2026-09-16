@@ -1526,7 +1526,7 @@ export function CatalogPage() {
               </Group>
             </Radio.Group>
             <NumberInput
-              label={couponForm.values.discount_type === "percentage" ? "Porcentaje de descuento" : "Descuento en euros"}
+              label={couponForm.values.discount_type === "percentage" ? t("catalog.porcentajeDescuento") : t("catalog.descuentoEuros")}
               placeholder="0"
               min={0}
               max={couponForm.values.discount_type === "percentage" ? 100 : undefined}

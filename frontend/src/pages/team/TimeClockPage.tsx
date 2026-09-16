@@ -237,7 +237,7 @@ function ClockTab() {
             </ThemeIcon>
             <Text fw={700} size="lg" c="green">{successMessage}</Text>
             {status?.server_time && (
-              <Text size="xs" c="dimmed">Hora servidor: {formatTime(status.server_time as unknown as string)}</Text>
+              <Text size="xs" c="dimmed">{t("timeClock.horaServidor")}: {formatTime(status.server_time as unknown as string)}</Text>
             )}
           </Stack>
         </Paper>
@@ -250,7 +250,7 @@ function ClockTab() {
             {new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </Text>
           {status?.server_time && (
-            <Text size="xs" c="dimmed">Hora del servidor: {formatTime(status.server_time as unknown as string)}</Text>
+            <Text size="xs" c="dimmed">{t("timeClock.horaDelServidor")}: {formatTime(status.server_time as unknown as string)}</Text>
           )}
           <Divider w="100%" />
 
@@ -316,7 +316,7 @@ function ClockTab() {
                   loading={togglePause.isPending}
                   onClick={() => handleClockAction(isPaused ? "resume" : "pause")}
                 >
-                  {isPaused ? "Retorno de pausa" : "Pausa"}
+                  {isPaused ? t("timeClock.retornoPausa") : t("timeClock.pausa")}
                 </Button>
                 <Button
                   color="red"
@@ -849,7 +849,7 @@ function CalendarTab() {
         <Stack gap="md">
           <Paper shadow="xs" radius="md" p="sm" withBorder>
             <Text size="sm" fw={600} mb="xs">{t("team.estadisticasDelMes")}</Text>
-            <Text size="xs" c="dimmed">Total solicitudes: {monthStats.total}</Text>
+            <Text size="xs" c="dimmed">{t("timeClock.totalSolicitudes", { total: monthStats.total })}</Text>
             {Object.entries(monthStats.byType).map(([type, count]) => (
               <Group key={type} gap={4} mt={2}>
                 <Badge size="xs" color={LEAVE_TYPE_COLORS[type] || "gray"} variant="dot">{LEAVE_TYPE_LABELS[type] || type}</Badge>

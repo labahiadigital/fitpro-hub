@@ -30,6 +30,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface Notification {
   id: string;
@@ -94,6 +95,7 @@ export function NotificationCenter({
   onDelete,
   onClearAll,
 }: NotificationCenterProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string | null>("all");
   const navigate = useNavigate();
 
@@ -202,7 +204,7 @@ export function NotificationCenter({
                   onMarkAsRead(notification.id);
                 }}
               >
-                {"Marcar leído"}
+                {t("notifications.marcarLeido")}
               </Menu.Item>
             )}
             <Menu.Item
@@ -331,7 +333,7 @@ export function NotificationCenter({
             size="xs"
             variant="subtle"
           >
-            {"Marcar todo como leído"}
+            {t("notifications.marcarTodoComoLeido")}
           </Button>
           <Button
             color="red"
@@ -341,7 +343,7 @@ export function NotificationCenter({
             size="xs"
             variant="subtle"
           >
-            {"Limpiar todo"}
+            {t("notifications.limpiarTodo")}
           </Button>
         </Group>
 
@@ -365,7 +367,7 @@ export function NotificationCenter({
                 <IconBell size={24} />
               </ThemeIcon>
               <Text c="dimmed" size="sm">
-                {"No hay notificaciones"}
+                {t("notifications.noHayNotificaciones")}
               </Text>
             </Stack>
           ) : (
@@ -386,7 +388,7 @@ export function NotificationCenter({
               {todayNotifications.length === 0 ? (
                 <Box px="md" py="sm">
                   <Text c="dimmed" size="xs">
-                    {"No tienes nuevas notificaciones hoy."}
+                    {t("notifications.noTienesNotificaciones")}
                   </Text>
                 </Box>
               ) : (
@@ -424,7 +426,7 @@ export function NotificationCenter({
               navigate("/settings?tab=notifications");
             }}
           >
-            {"Configurar notificaciones"}
+            {t("notifications.configurarNotificaciones")}
           </Button>
         </Group>
       </Stack>

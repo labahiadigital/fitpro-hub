@@ -4,6 +4,7 @@ import { IconFlag } from "@tabler/icons-react";
 import { useState } from "react";
 import { BottomSheet } from "./BottomSheet";
 import { useCreateRectification } from "../../hooks/useRectifications";
+import { useTranslation } from "react-i18next";
 
 interface RectificationButtonProps {
   entityType: string;
@@ -13,6 +14,7 @@ interface RectificationButtonProps {
 }
 
 export function RectificationButton({ entityType, entityId, entityName, size = "sm" }: RectificationButtonProps) {
+  const { t } = useTranslation();
   const [opened, { open, close }] = useDisclosure(false);
   const [message, setMessage] = useState("");
   const createRectification = useCreateRectification();
@@ -31,7 +33,7 @@ export function RectificationButton({ entityType, entityId, entityName, size = "
 
   return (
     <>
-      <Tooltip label={"Solicitar rectificación"}>
+      <Tooltip label={t("rectification.solicitarRectificacion")}>
         <ActionIcon
           color="orange"
           variant="subtle"
@@ -43,14 +45,14 @@ export function RectificationButton({ entityType, entityId, entityName, size = "
         </ActionIcon>
       </Tooltip>
 
-      <BottomSheet opened={opened} onClose={close} title={"Solicitar rectificación"} desktopSize="sm">
+      <BottomSheet opened={opened} onClose={close} title={t("rectification.solicitarRectificacion")} desktopSize="sm">
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            {"Solicita la corrección de"} <strong>{entityName}</strong>
+            {t("rectification.solicitaCorreccion")} <strong>{entityName}</strong>
           </Text>
           <Textarea
-            label={"Describe la rectificación"}
-            placeholder={"Indica qué información es incorrecta y cuál sería la correcta..."}
+            label={t("rectification.describeLaRectificacion")}
+            placeholder={t("rectification.indicaQueInformacion")}
             minRows={3}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -63,7 +65,7 @@ export function RectificationButton({ entityType, entityId, entityName, size = "
               disabled={!message.trim()}
               color="orange"
             >
-              {"Enviar solicitud"}
+              {t("rectification.enviarSolicitud")}
             </Button>
           </Group>
         </Stack>

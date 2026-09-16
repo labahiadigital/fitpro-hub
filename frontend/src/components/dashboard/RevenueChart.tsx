@@ -1,5 +1,6 @@
 import { Box, Group, Text } from "@mantine/core";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
+import { useTranslation } from "react-i18next";
 
 interface RevenueData {
   month: string;
@@ -48,12 +49,13 @@ export function RevenueChart({
   currentMRR,
   currency = "€",
 }: RevenueChartProps) {
+  const { t } = useTranslation();
   return (
     <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%" }}>
       {/* Header */}
       <Group justify="space-between" mb={{ base: "xs", lg: "sm" }} align="flex-start" wrap="wrap" gap="sm">
         <Box>
-          <Text className="stat-label" mb={2}>{"Crecimiento de Ingresos"}</Text>
+          <Text className="stat-label" mb={2}>{t("dashboard.crecimientoDeIngresos")}</Text>
           <Group align="baseline" gap="xs">
             <Text fw={700} style={{ color: "var(--nv-dark)", fontSize: "clamp(1.25rem, 1.5vw, 1.75rem)" }}>
               {currency}{currentMRR.toLocaleString()}

@@ -41,6 +41,7 @@ import type {
 } from "../../types/recipe";
 import { RECIPE_CATEGORIES, RECIPE_DIFFICULTIES } from "../../types/recipe";
 import { BottomSheet } from "../common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 interface RecipeFormModalProps {
   opened: boolean;
@@ -71,7 +72,8 @@ export function RecipeFormModal({
   onSubmit,
   recipe,
   loading,
-}: RecipeFormModalProps) {
+}: RecipeFormModalProps) {
+  const { t } = useTranslation();
   const [foodSearch, setFoodSearch] = useState("");
   const [debouncedFoodSearch] = useDebouncedValue(foodSearch, 300);
   const [selectedFoods, setSelectedFoods] = useState<any[]>([]);
@@ -217,24 +219,24 @@ export function RecipeFormModal({
         <Stack gap="md">
           {/* Basic info */}
           <TextInput
-            label={"Nombre de la receta"}
-            placeholder={"Ej: Tortitas de avena y plátano"}
+            label={t("recipeForm.nombreDeLaReceta")}
+            placeholder={t("recipes.ejTortitas")}
             required
             {...form.getInputProps("name")}
           />
 
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             <Select
-              label={"Categoría"}
-              placeholder={"Seleccionar categoría"}
+              label={t("common.categoria")}
+              placeholder={t("recipeForm.seleccionarCategoria")}
               data={RECIPE_CATEGORIES}
               clearable
               searchable
               {...form.getInputProps("category")}
             />
             <Select
-              label={"Dificultad"}
-              placeholder={"Seleccionar dificultad"}
+              label={t("common.dificultad")}
+              placeholder={t("recipeForm.seleccionarDificultad")}
               data={RECIPE_DIFFICULTIES}
               clearable
               {...form.getInputProps("difficulty")}
@@ -243,14 +245,14 @@ export function RecipeFormModal({
 
           <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
             <NumberInput
-              label={"Porciones"}
+              label={t("recipes.porciones")}
               min={1}
               max={50}
               leftSection={<IconUsers size={14} />}
               {...form.getInputProps("servings")}
             />
             <NumberInput
-              label={"Prep (min)"}
+              label={t("recipes.prepMin")}
               min={0}
               max={600}
               leftSection={<IconClock size={14} />}
@@ -258,7 +260,7 @@ export function RecipeFormModal({
               {...form.getInputProps("prep_time_minutes")}
             />
             <NumberInput
-              label={"Cocción (min)"}
+              label={t("recipes.coccionMin")}
               min={0}
               max={600}
               leftSection={<IconClock size={14} />}
@@ -282,8 +284,8 @@ export function RecipeFormModal({
           </SimpleGrid>
 
           <Textarea
-            label={"Instrucciones de preparación"}
-            placeholder={"Describe los pasos para preparar esta receta..."}
+            label={t("recipeForm.instrucciones")}
+            placeholder={t("recipeForm.describeLosPasos")}
             minRows={3}
             autosize
             maxRows={8}
@@ -390,7 +392,7 @@ export function RecipeFormModal({
                 <Tabs.Panel value="foods" pt="xs">
                   <TextInput
                     leftSection={<IconSearch size={14} />}
-                    placeholder={"Buscar alimento para añadir..."}
+                    placeholder={t("recipeForm.buscarAlimentoAnadir")}
                     value={foodSearch}
                     onChange={(e) => {
                       setFoodSearch(e.target.value);
@@ -461,7 +463,7 @@ export function RecipeFormModal({
                       </Text>
                     ) : (
                       <Text c="dimmed" size="xs" ta="center" py="md">
-                        {"Escribe para buscar alimentos..."}
+                        {t("recipeForm.escribeParaBuscar")}
                       </Text>
                     )}
                   </ScrollArea>
@@ -483,7 +485,7 @@ export function RecipeFormModal({
 
                 <Tabs.Panel value="supplements" pt="xs">
                   <Text c="dimmed" size="xs" ta="center" py="md">
-                    {"Los suplementos se pueden añadir desde la pestaña de alimentos buscando por nombre."}
+                    {t("recipeForm.suplementosDesdeAlimentos")}
                   </Text>
                 </Tabs.Panel>
               </Tabs>
@@ -493,7 +495,7 @@ export function RecipeFormModal({
           {/* Macro summary */}
           {form.values.items.length > 0 && (
             <>
-              <Divider label={<Text fw={600} size="sm">{"Resumen nutricional"}</Text>} />
+              <Divider label={<Text fw={600} size="sm">{t("recipeForm.resumenNutricional")}</Text>} />
               <SimpleGrid cols={2} spacing="xs">
                 <Box
                   p="sm"
@@ -555,8 +557,8 @@ export function RecipeFormModal({
 
           {/* Additional fields */}
           <Textarea
-            label={"Notas internas (solo visible para el entrenador)"}
-            placeholder={"Notas privadas sobre esta receta..."}
+            label={t("recipeForm.notasInternas")}
+            placeholder={t("recipeForm.notasPrivadas")}
             minRows={2}
             autosize
             maxRows={4}
@@ -564,8 +566,8 @@ export function RecipeFormModal({
           />
 
           <Switch
-            label={"Visible para clientes"}
-            description={"Los clientes podrán ver esta receta en su sección de nutrición"}
+            label={t("recipeForm.visibleParaClientes")}
+            description={t("recipeForm.clientesVeranReceta")}
             {...form.getInputProps("is_public", { type: "checkbox" })}
             styles={{
               body: { alignItems: "center" },

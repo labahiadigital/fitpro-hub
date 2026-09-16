@@ -249,6 +249,7 @@ function ManualFoodNameInput({
   onChangeName: (name: string) => void;
   onPickFromDatabase: (food: SearchableFoodResult) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [debounced] = useDebouncedValue(value, 250);
   const queryActive = debounced.trim().length >= 2;
@@ -262,7 +263,7 @@ function ManualFoodNameInput({
   return (
     <Box pos="relative" style={{ flex: 1 }}>
       <TextInput
-        placeholder={"Nombre del alimento"}
+        placeholder={t("myNutrition.nombreDelAlimento")}
         value={value}
         onChange={(e) => {
           onChangeName(e.target.value);
@@ -292,7 +293,7 @@ function ManualFoodNameInput({
         >
           <Box px="xs" py={4}>
             <Text size="10px" c="dimmed" tt="uppercase" fw={700}>
-              {"Coincidencias en la base de datos"}
+              {t("myNutrition.coincidenciasEnBD")}
             </Text>
           </Box>
           {items.slice(0, 6).map((food) => (
@@ -364,7 +365,7 @@ function ManualFoodNameInput({
           p="xs"
         >
           <Text size="11px" c="dimmed" ta="center">
-            {"Sin coincidencias. Se guardará como manual."}
+            {t("myNutrition.sinCoincidencias")}
           </Text>
         </Paper>
       )}
@@ -377,6 +378,7 @@ function FoodSearchInput({
 }: {
   onSelect: (food: SearchableFoodResult, grams: number) => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(query, 300);
   const [showResults, setShowResults] = useState(false);
@@ -398,7 +400,7 @@ function FoodSearchInput({
             <IconX size={14} />
           </ActionIcon>
         ) : null}
-        placeholder={"Buscar alimento..."}
+        placeholder={t("myNutrition.buscarAlimento")}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -453,7 +455,7 @@ function FoodSearchInput({
       )}
       {showResults && debouncedQuery.length >= 2 && !isFetching && (!searchResults?.items?.length) && (
         <Paper shadow="md" radius="md" withBorder pos="absolute" left={16} right={16} style={{ zIndex: 50 }} p="md">
-          <Text size="sm" c="dimmed" ta="center">Sin resultados para "{debouncedQuery}"</Text>
+          <Text size="sm" c="dimmed" ta="center">{t("myNutrition.sinResultadosPara", { query: debouncedQuery })}</Text>
         </Paper>
       )}
     </Box>
@@ -476,6 +478,7 @@ function LogMealModal({
   }) => void;
   isLoading: boolean;
 }) {
+  const { t } = useTranslation();
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
 
@@ -625,7 +628,7 @@ function LogMealModal({
           />
         ) : (
           <TextInput
-            placeholder={"Nombre del alimento"}
+            placeholder={t("myNutrition.nombreDelAlimento")}
             value={food.name}
             onChange={(e) => updateFood(index, "name", e.target.value)}
             size="sm"
@@ -656,10 +659,10 @@ function LogMealModal({
         </ActionIcon>
       </Group>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-        <NumberInput placeholder={"Kcal"} value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
-        <NumberInput placeholder={"Prot"} value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
-        <NumberInput placeholder={"Carbs"} value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
-        <NumberInput placeholder={"Grasas"} value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={t("myNutrition.kcal")} value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={t("myNutrition.prot")} value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={t("myNutrition.carbs")} value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={t("myNutrition.grasas")} value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
       </div>
       {index === 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
@@ -671,7 +674,7 @@ function LogMealModal({
       )}
       {food.is_manual && (
         <Select
-          placeholder={"Categoría (opcional)"}
+          placeholder={t("myNutrition.categoriaOpcional")}
           data={FOOD_CATEGORY_ORDER.map((c) => ({ value: c, label: c }))}
           value={food.food_category || null}
           onChange={(val) => updateFood(index, "food_category", val || "")}
@@ -689,7 +692,7 @@ function LogMealModal({
       <FoodSearchInput onSelect={addFoodFromSearch} />
       <Box px="md">
         <Button variant="subtle" leftSection={<IconPlus size={16} />} onClick={addManualFood} fullWidth size="sm" radius="xl" color="gray">
-          {"Añadir manualmente"}
+          {t("myNutrition.anadirManualmente")}
         </Button>
       </Box>
     </Box>
@@ -697,7 +700,7 @@ function LogMealModal({
 
   const notesAndSatisfaction = (
     <Box px="md" mt="md">
-      <TextInput placeholder={"Notas (opcional)"} {...form.getInputProps("notes")} size="sm" styles={{ input: { height: 44, borderRadius: 10 } }} />
+      <TextInput placeholder={t("myNutrition.notasOpcional")} {...form.getInputProps("notes")} size="sm" styles={{ input: { height: 44, borderRadius: 10 } }} />
       <Box mt="sm">
         <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
       </Box>
@@ -726,7 +729,7 @@ function LogMealModal({
         onClose={onClose}
         title={
           <Group gap="xs">
-            <Text fw={700}>{"Registrar comida"}</Text>
+            <Text fw={700}>{t("myNutrition.registrarComida")}</Text>
             <Select
               data={MEAL_TYPES.map((m) => ({ value: m.value, label: m.label }))}
               {...form.getInputProps("meal_name")}
@@ -784,7 +787,7 @@ function LogMealModal({
               <IconX size={20} />
             </ActionIcon>
             <Box>
-              <Text fw={700} size="sm">{"Registrar comida"}</Text>
+              <Text fw={700} size="sm">{t("myNutrition.registrarComida")}</Text>
               <Text size="xs" c="dimmed">{foods.filter(f => f.name.trim()).length} alimentos • {Math.round(totalMacros.calories)} kcal</Text>
             </Box>
           </Group>
@@ -908,6 +911,7 @@ function LogPlanMealModal({
   meal: PlanMeal | null;
   existingLog?: { foods: FoodItem[]; notes?: string; satisfaction_rating?: number } | null;
 }) {
+  const { t } = useTranslation();
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [notes, setNotes] = useState("");
   const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
@@ -1091,7 +1095,7 @@ function LogPlanMealModal({
                 <Image src={food.image_url} alt={food.name} w={40} h={40} fit="cover" radius="md" style={{ flexShrink: 0 }} />
               ) : null}
               <TextInput
-                placeholder={"Nombre del alimento"}
+                placeholder={t("myNutrition.nombreDelAlimento")}
                 value={food.name}
                 onChange={(e) => updateFood(index, "name", e.target.value)}
                 size="sm"
@@ -1115,10 +1119,10 @@ function LogPlanMealModal({
               </ActionIcon>
             </Group>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-              <NumberInput placeholder={"Kcal"} value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
-              <NumberInput placeholder={"Prot"} value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
-              <NumberInput placeholder={"Carbs"} value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
-              <NumberInput placeholder={"Grasas"} value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={t("myNutrition.kcal")} value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={t("myNutrition.prot")} value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={t("myNutrition.carbs")} value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={t("myNutrition.grasas")} value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
             </div>
             {showLabels && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
@@ -1130,7 +1134,7 @@ function LogPlanMealModal({
             )}
             {food.is_manual && (
               <Select
-                placeholder={"Categoría (opcional)"}
+                placeholder={t("myNutrition.categoriaOpcional")}
                 data={FOOD_CATEGORY_ORDER.map((c) => ({ value: c, label: c }))}
                 value={food.food_category || null}
                 onChange={(val) => updateFood(index, "food_category", val || "")}
@@ -1188,14 +1192,14 @@ function LogPlanMealModal({
         <FoodSearchInput onSelect={addFoodFromSearch} />
         <Box px="md">
           <Button variant="subtle" leftSection={<IconPlus size={16} />} onClick={addManualFood} fullWidth size="sm" radius="xl" color="gray">
-            {"Añadir manualmente"}
+            {t("myNutrition.anadirManualmente")}
           </Button>
         </Box>
       </Box>
 
       <Box px="md" mt="md">
         <TextInput
-          placeholder={"Notas (opcional)"}
+          placeholder={t("myNutrition.notasOpcional")}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           size="sm"
@@ -1327,6 +1331,7 @@ function NutritionDayDetail({
   readOnly?: boolean;
   allDays?: PlanDay[];
 }) {
+  const { t } = useTranslation();
   const planDayLabels = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
   const swapDaysMutation = useSwapDays();
   const swapMealsMutation = useSwapMeals();
@@ -1344,11 +1349,11 @@ function NutritionDayDetail({
           <Menu shadow="md" position="bottom-end" withinPortal>
             <Menu.Target>
               <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal">
-                {"Intercambiar día"}
+                {t("myNutrition.intercambiarDia")}
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Label>{"Intercambiar comidas con"}</Menu.Label>
+              <Menu.Label>{t("myNutrition.intercambiarComidasCon")}</Menu.Label>
               {planDayLabels.map((label, idx) => {
                 const targetDayNum = idx + 1;
                 if (targetDayNum === dayData.planDayNum) return null;
@@ -1392,7 +1397,7 @@ function NutritionDayDetail({
 
       {planMeals && planMeals.length > 0 ? (
         <Box>
-          <Text fw={600} mb="sm">Comidas del plan para {dayData.dayName}</Text>
+          <Text fw={600} mb="sm">{t("myNutrition.comidasDelPlanPara", { day: dayData.dayName })}</Text>
           <Stack gap="sm">
             {[...planMeals].sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00")).map((meal: PlanMeal, mealIndex: number) => {
               const mealType = MEAL_TYPES.find(m => m.value === meal.name);
@@ -1459,7 +1464,7 @@ function NutritionDayDetail({
                             <Group gap={4}>
                               <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
                               {!readOnly && (
-                                <Tooltip label={"Editar nombre"}>
+                                <Tooltip label={t("myNutrition.editarNombre")}>
                                   <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditName({ idx: mealIndex, name: (meal as any).display_name || mealType?.label || meal.name })}>
                                     <IconEdit size={11} />
                                   </ActionIcon>
@@ -1496,7 +1501,7 @@ function NutritionDayDetail({
                             <Group gap={2}>
                               {meal.time && <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time}</Badge>}
                               {!readOnly && (
-                                <Tooltip label={"Editar hora"}>
+                                <Tooltip label={t("myNutrition.editarHora")}>
                                   <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditTime({ idx: mealIndex, time: meal.time || "12:00" })}>
                                     <IconEdit size={10} />
                                   </ActionIcon>
@@ -1530,7 +1535,7 @@ function NutritionDayDetail({
                         </>
                       )}
                       {!readOnly && (
-                        <Tooltip label={"Intercambiar comida"}>
+                        <Tooltip label={t("myNutrition.intercambiarComida")}>
                           <ActionIcon variant="subtle" color="teal" size="sm" onClick={() => setSwapState({ sourceMealIndex: mealIndex, step: "day" })}>
                             <IconArrowsExchange size={14} />
                           </ActionIcon>
@@ -1540,8 +1545,8 @@ function NutritionDayDetail({
                   </Group>
                   {meal.is_free_meal ? (
                     <Paper p="sm" radius="md" withBorder mt="sm" ml={54} style={{ background: "var(--mantine-color-teal-light)" }}>
-                      <Text fw={700} size="sm">{"Comida libre"}</Text>
-                      <Text c="dimmed" size="xs">{"Este bloque del plan está marcado como comida libre."}</Text>
+                      <Text fw={700} size="sm">{t("myNutrition.comidaLibre")}</Text>
+                      <Text c="dimmed" size="xs">{t("myNutrition.esteBloqueComidaLibre")}</Text>
                     </Paper>
                   ) : mealFoods.length > 0 && (
                     <Stack gap="xs" mt="sm" ml={54}>
@@ -1623,14 +1628,14 @@ function NutritionDayDetail({
           </Stack>
         </Box>
       ) : (
-        <Text c="dimmed" ta="center">{"No hay comidas asignadas en el plan para este día"}</Text>
+        <Text c="dimmed" ta="center">{t("myNutrition.noHayComidasAsignadas")}</Text>
       )}
 
       {/* Modal step 1: select target day */}
       <Modal
         opened={swapState?.step === "day"}
         onClose={() => setSwapState(null)}
-        title={"Intercambiar con"}
+        title={t("myNutrition.intercambiarCon")}
         size="sm"
       >
         <Stack gap="xs">
@@ -1657,7 +1662,7 @@ function NutritionDayDetail({
       <Modal
         opened={swapState?.step === "meal" && swapState.targetDay != null}
         onClose={() => setSwapState(null)}
-        title={"Selecciona la comida a intercambiar"}
+        title={t("myNutrition.seleccionaComidaIntercambiar")}
         size="sm"
       >
         {(() => {
@@ -1672,7 +1677,7 @@ function NutritionDayDetail({
           });
           const targetDayLabel = planDayLabels[(swapState.targetDay - 1) % 7] || `Día ${swapState.targetDay}`;
           if (targetMeals.length === 0) {
-            return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
+            return <Text c="dimmed" ta="center" py="md">{t("myNutrition.noHayComidasEn", { day: targetDayLabel })}</Text>;
           }
           return (
             <Stack gap="xs">
@@ -1692,9 +1697,9 @@ function NutritionDayDetail({
                   setSwapState(null);
                 }}
               >
-                {"Mover sin intercambiar"}
+                {t("myNutrition.moverSinIntercambiar")}
               </Button>
-              <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
+              <Text size="sm" c="dimmed" mb="xs">{t("myNutrition.comidasDe", { day: targetDayLabel })}:</Text>
               {targetMeals.map((meal: PlanMeal, tmi: number) => {
                 const mt = MEAL_TYPES.find(m => m.value === meal.name);
                 return (
@@ -2915,7 +2920,7 @@ export function MyNutritionPage() {
           });
           const targetDayLabel = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(registerSwapState.targetDay - 1) % 7] || `Día ${registerSwapState.targetDay}`;
           if (targetMeals.length === 0) {
-            return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
+            return <Text c="dimmed" ta="center" py="md">{t("myNutrition.noHayComidasEn", { day: targetDayLabel })}</Text>;
           }
           return (
             <Stack gap="xs">
@@ -2935,7 +2940,7 @@ export function MyNutritionPage() {
               >
                 {t("myNutrition.moverSinIntercambiar")}
               </Button>
-              <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
+              <Text size="sm" c="dimmed" mb="xs">{t("myNutrition.comidasDe", { day: targetDayLabel })}:</Text>
               {targetMeals.map((meal: PlanMeal, tmi: number) => {
                 const mt = MEAL_TYPES.find(m => m.value === meal.name);
                 return (
@@ -3131,7 +3136,7 @@ export function MyNutritionPage() {
                 {activeWeekData[selectedWeekDayIndex].planMeals && activeWeekData[selectedWeekDayIndex].planMeals.length > 0 ? (
                   <Box>
                     <Group justify="space-between" mb="sm">
-                      <Text fw={600}>Comidas del plan para {activeWeekData[selectedWeekDayIndex].dayName}</Text>
+                      <Text fw={600}>{t("myNutrition.comidasDelPlanPara", { day: activeWeekData[selectedWeekDayIndex].dayName })}</Text>
                       {planViewMode !== "original" && activeWeekData[selectedWeekDayIndex].planDayNum && (
                         <Menu shadow="md" position="bottom-end" withinPortal>
                           <Menu.Target>
@@ -3402,7 +3407,7 @@ export function MyNutritionPage() {
               const dayLabels = ["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"];
               const targetDayLabel = dayLabels[(planSwapState.targetDay - 1) % 7] || `Día ${planSwapState.targetDay}`;
               if (targetMeals.length === 0) {
-                return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
+                return <Text c="dimmed" ta="center" py="md">{t("myNutrition.noHayComidasEn", { day: targetDayLabel })}</Text>;
               }
               return (
                 <Stack gap="xs">
@@ -3422,7 +3427,7 @@ export function MyNutritionPage() {
                   >
                     {t("myNutrition.moverSinIntercambiar")}
                   </Button>
-                  <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
+                  <Text size="sm" c="dimmed" mb="xs">{t("myNutrition.comidasDe", { day: targetDayLabel })}:</Text>
                   {targetMeals.map((meal: PlanMeal, tmi: number) => {
                     const mt = MEAL_TYPES.find(m => m.value === meal.name);
                     return (
