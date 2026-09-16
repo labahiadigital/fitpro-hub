@@ -101,8 +101,10 @@ import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
+import { useTranslation } from "react-i18next";
 
 export function BillingPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
@@ -367,7 +369,7 @@ export function BillingPage() {
 
   const handleFinalizeInvoice = useCallback((inv: Invoice) => {
     openConfirm({
-      title: "Finalizar factura",
+      title: t("billing.finalizarFactura"),
       message: `¿Finalizar la factura ${inv.invoice_number}? Una vez emitida no se podrá editar.`,
       confirmLabel: "Finalizar",
       color: "blue",
@@ -377,7 +379,7 @@ export function BillingPage() {
 
   const handleMarkInvoicePaid = useCallback((inv: Invoice) => {
     openConfirm({
-      title: "Marcar como pagada",
+      title: t("billing.marcarComoPagada"),
       message: `¿Marcar como pagada la factura ${inv.invoice_number} (${formatDecimal(Number(inv.total), 2)} €)?`,
       confirmLabel: "Marcar pagada",
       color: "green",
@@ -387,7 +389,7 @@ export function BillingPage() {
 
   const handleDeleteInvoice = useCallback((inv: Invoice) => {
     openDangerConfirm({
-      title: "Eliminar factura",
+      title: t("billing.eliminarFactura"),
       message: `¿Eliminar la factura en borrador ${inv.invoice_number}?`,
       onConfirm: async () => { try { await deleteInvoice.mutateAsync(inv.id); } catch { /* handled */ } },
     });
@@ -399,7 +401,7 @@ export function BillingPage() {
 
   const handleRectifyInvoice = useCallback((inv: Invoice) => {
     openConfirm({
-      title: "Factura rectificativa",
+      title: t("billing.facturaRectificativa"),
       message: `¿Crear una factura rectificativa para ${inv.invoice_number}?`,
       confirmLabel: "Crear rectificativa",
       color: "orange",
@@ -409,11 +411,11 @@ export function BillingPage() {
 
   const handleSendInvoiceEmail = useCallback(async (inv: Invoice) => {
     if (!inv.client_email) {
-      notifications.show({ title: "Sin email", message: "El cliente no tiene email configurado", color: "orange" });
+      notifications.show({ title: t("billing.sinEmail"), message: t("billing.elClienteNoTieneEmail"), color: "orange" });
       return;
     }
     openConfirm({
-      title: "Enviar factura",
+      title: t("billing.enviarFactura"),
       message: `¿Enviar factura ${inv.invoice_number} a ${inv.client_email}?`,
       confirmLabel: "Enviar",
       color: "blue",
@@ -497,7 +499,7 @@ export function BillingPage() {
       const httpErr = err as { response?: unknown; message?: string };
       if (!httpErr.response) {
         notifications.show({
-          title: "No se pudo guardar",
+          title: t("billing.noSePudoGuardar"),
           message: httpErr.message || "Error inesperado al guardar la configuración",
           color: "red",
         });
@@ -526,7 +528,7 @@ export function BillingPage() {
 
   const handleMarkPaid = useCallback((payment: Payment) => {
     openConfirm({
-      title: "Marcar como pagado",
+      title: t("billing.marcarComoPagado"),
       message: `¿Marcar el cobro de €${formatDecimal(Number(payment.amount), 2)} como pagado?`,
       confirmLabel: "Marcar pagado",
       color: "green",
@@ -536,7 +538,7 @@ export function BillingPage() {
 
   const handleDeletePaymentAction = useCallback((payment: Payment) => {
     openDangerConfirm({
-      title: "Eliminar cobro",
+      title: t("billing.eliminarCobro"),
       message: `¿Eliminar este cobro de €${formatDecimal(Number(payment.amount), 2)}?`,
       onConfirm: async () => { try { await deletePayment.mutateAsync(payment.id); } catch { /* handled */ } },
     });
@@ -563,7 +565,7 @@ export function BillingPage() {
       window.URL.revokeObjectURL(url);
       notifications.show({
         color: "green",
-        title: "Factura generada",
+        title: t("billing.facturaGenerada"),
         message: `Se ha descargado la factura ${invoiceNumber}.`,
       });
     } catch (err: unknown) {
@@ -590,7 +592,7 @@ export function BillingPage() {
       }
       notifications.show({
         color: "red",
-        title: "Error al generar factura",
+        title: t("billing.errorAlGenerarFactura"),
         message: detail || "No se pudo generar la factura. Revisa tu configuración de facturación.",
       });
     } finally {
@@ -600,7 +602,7 @@ export function BillingPage() {
 
   const handleEmailPaymentInvoice = useCallback((payment: Payment) => {
     openConfirm({
-      title: "Enviar factura por email",
+      title: t("billing.enviarFacturaPorEmail"),
       message: `¿Enviar la factura de este cobro al cliente por email?`,
       confirmLabel: "Enviar",
       color: "blue",
@@ -611,14 +613,14 @@ export function BillingPage() {
           const data = res.data as { sent_to?: string; invoice_number?: string };
           notifications.show({
             color: "green",
-            title: "Factura enviada",
+            title: t("billing.facturaEnviada"),
             message: `Factura ${data.invoice_number || ""} enviada a ${data.sent_to || "el cliente"}.`,
           });
         } catch (err: unknown) {
           const detail =
             (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
             "No se pudo enviar la factura por email.";
-          notifications.show({ color: "red", title: "Error", message: detail });
+          notifications.show({ color: "red", title: t("billing.error"), message: detail });
         } finally {
           setInvoiceEmailLoadingPaymentId(null);
         }
@@ -779,11 +781,11 @@ export function BillingPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nuevo Cobro",
+          label: t("billing.nuevoCobro"),
           onClick: openChargeModal,
         }}
-        description="Gestiona ingresos, cobros y facturas"
-        title="Facturación"
+        description={t("billing.gestionaIngresosCobrosYFacturas")}
+        title={t("billing.facturacion")}
       />
 
       {/* KPI Cards */}
@@ -808,7 +810,7 @@ export function BillingPage() {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Ingresos del Mes</Text>
+              <Text className="text-label" mb="xs">{t("billing.ingresosDelMes")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-primary)" }}>
                 €{kpis.thisMonthRevenue.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
               </Text>
@@ -825,7 +827,7 @@ export function BillingPage() {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Suscripciones Activas</Text>
+              <Text className="text-label" mb="xs">{t("billing.suscripcionesActivas")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-brand)" }}>
                 {kpis.activeSubscriptions}
               </Text>
@@ -841,7 +843,7 @@ export function BillingPage() {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Pagos Pendientes</Text>
+              <Text className="text-label" mb="xs">{t("billing.pagosPendientes")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-warning)" }}>
                 {kpis.pendingPayments}
               </Text>
@@ -861,9 +863,9 @@ export function BillingPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "overview", label: "Resumen" },
-            { value: "payments", label: "Pagos y suscripciones" },
-            { value: "invoices", label: "Facturas" },
+            { value: "overview", label: t("billing.resumen") },
+            { value: "payments", label: t("billing.pagosYSuscripciones") },
+            { value: "invoices", label: t("billing.facturas") },
           ]}
           size="sm"
           radius="md"
@@ -874,13 +876,13 @@ export function BillingPage() {
         {!isMobile && (
           <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
             <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview" style={{ fontWeight: 500 }}>
-              Resumen
+              {t("billing.resumen")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
-              Pagos y suscripciones
+              {t("billing.pagosYSuscripciones")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileInvoice size={14} />} value="invoices" style={{ fontWeight: 500 }}>
-              Facturas
+              {t("billing.facturas")}
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -891,7 +893,7 @@ export function BillingPage() {
             {/* Revenue Distribution */}
             <Box className="nv-card" p="lg">
               <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>
-                Distribución de Ingresos
+                {t("billing.distribucionDeIngresos")}
               </Text>
               {(() => {
                 const subRevenue = payments.filter(p => p.payment_type === "subscription" && p.status === "completed").reduce((s, p) => s + p.amount, 0);
@@ -908,7 +910,7 @@ export function BillingPage() {
                             <Text fw={700} size="lg" style={{ color: "var(--nv-text-primary)" }}>
                               €{kpis.thisMonthRevenue.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
                             </Text>
-                            <Text c="dimmed" size="xs">Este mes</Text>
+                            <Text c="dimmed" size="xs">{t("billing.esteMes")}</Text>
                           </Box>
                         }
                         roundCaps
@@ -938,7 +940,7 @@ export function BillingPage() {
             {/* Recent Payments */}
             <Box className="nv-card" p="lg">
               <Group justify="space-between" mb="lg">
-                <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Pagos Recientes</Text>
+                <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{t("billing.pagosRecientes")}</Text>
                 <Button
                   rightSection={<IconArrowUpRight size={14} />}
                   size="xs"
@@ -946,12 +948,12 @@ export function BillingPage() {
                   style={{ color: "var(--nv-primary)" }}
                   onClick={() => setActiveTab("payments")}
                 >
-                  Ver todos
+                  {t("billing.verTodos")}
                 </Button>
               </Group>
               <Stack gap="sm">
                 {payments.length === 0 && (
-                  <Text c="dimmed" ta="center" py="lg" size="sm">No hay pagos registrados</Text>
+                  <Text c="dimmed" ta="center" py="lg" size="sm">{t("billing.noHayPagosRegistrados")}</Text>
                 )}
                 {payments.slice(0, 5).map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
@@ -984,10 +986,10 @@ export function BillingPage() {
 
             {/* Upcoming Renewals */}
             <Box className="nv-card" p="lg">
-              <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>Próximas Renovaciones</Text>
+              <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>{t("billing.proximasRenovaciones")}</Text>
               <Stack gap="sm">
                 {subscriptions.filter((s) => s.status === "active").length === 0 && (
-                  <Text c="dimmed" ta="center" py="lg" size="sm">No hay renovaciones pendientes</Text>
+                  <Text c="dimmed" ta="center" py="lg" size="sm">{t("billing.noHayRenovacionesPendientes")}</Text>
                 )}
                 {subscriptions
                   .filter((s) => s.status === "active")
@@ -1015,23 +1017,23 @@ export function BillingPage() {
                     <IconCreditCard size={20} />
                   </ThemeIcon>
                   <Box>
-                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Redsys TPV</Text>
-                    <Text c="dimmed" size="xs">Pasarela de pago configurada</Text>
+                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{t("billing.redsysTpv")}</Text>
+                    <Text c="dimmed" size="xs">{t("billing.pasarelaDePagoConfigurada")}</Text>
                   </Box>
                 </Group>
-                <Badge color="green" variant="light" radius="xl">Activo</Badge>
+                <Badge color="green" variant="light" radius="xl">{t("billing.activo")}</Badge>
               </Group>
               <Stack gap="sm">
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Ingresos este mes</Text>
+                  <Text c="dimmed" size="sm">{t("billing.ingresosEsteMes")}</Text>
                   <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{formatDecimal(kpis.thisMonthRevenue, 2)}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Suscripciones activas</Text>
+                  <Text c="dimmed" size="sm">{t("billing.suscripcionesActivas")}</Text>
                   <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>{kpis.activeSubscriptions}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Cobros pendientes</Text>
+                  <Text c="dimmed" size="sm">{t("billing.cobrosPendientes")}</Text>
                   <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{formatDecimal(kpis.pendingAmount, 2)}</Text>
                 </Group>
               </Stack>
@@ -1046,20 +1048,20 @@ export function BillingPage() {
               <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Descripción</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Tipo</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Fecha</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Importe</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.cliente")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.descripcion")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.tipo")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.estado")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.fecha")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("billing.importe")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("billing.acciones")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {payments.length === 0 && (
                   <Table.Tr>
                     <Table.Td colSpan={7}>
-                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay pagos registrados</Text>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">{t("billing.noHayPagosRegistrados")}</Text>
                     </Table.Td>
                   </Table.Tr>
                 )}
@@ -1092,7 +1094,7 @@ export function BillingPage() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs" justify="flex-end">
-                          <Tooltip label="Ir a ficha del cliente">
+                          <Tooltip label={t("billing.irAFichaDelCliente")}>
                             <ActionIcon
                               color="gray"
                               variant="subtle"
@@ -1103,11 +1105,11 @@ export function BillingPage() {
                               <IconUserCircle size={16} />
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label="Ver detalle">
+                          <Tooltip label={t("billing.verDetalle")}>
                             <ActionIcon color="blue" variant="subtle" radius="xl" onClick={() => handleViewPayment(payment)}><IconEye size={16} /></ActionIcon>
                           </Tooltip>
                           {payment.status === "completed" && (
-                            <Tooltip label="Descargar factura PDF">
+                            <Tooltip label={t("billing.descargarFacturaPdf")}>
                               <ActionIcon
                                 color="grape"
                                 variant="subtle"
@@ -1120,7 +1122,7 @@ export function BillingPage() {
                             </Tooltip>
                           )}
                           {payment.status === "completed" && (
-                            <Tooltip label="Enviar factura por email">
+                            <Tooltip label={t("billing.enviarFacturaPorEmail")}>
                               <ActionIcon
                                 color="indigo"
                                 variant="subtle"
@@ -1133,14 +1135,14 @@ export function BillingPage() {
                             </Tooltip>
                           )}
                           {payment.status === "pending" && (
-                            <Tooltip label="Marcar como pagado">
+                            <Tooltip label={t("billing.marcarComoPagado")}>
                               <ActionIcon color="green" variant="subtle" radius="xl" onClick={() => handleMarkPaid(payment)} loading={markPaymentPaid.isPending}>
                                 <IconCheck size={16} />
                               </ActionIcon>
                             </Tooltip>
                           )}
                           {payment.status === "pending" && (
-                            <Tooltip label="Eliminar cobro">
+                            <Tooltip label={t("billing.eliminarCobro")}>
                               <ActionIcon color="red" variant="subtle" radius="xl" onClick={() => handleDeletePaymentAction(payment)} loading={deletePayment.isPending}>
                                 <IconTrash size={16} />
                               </ActionIcon>
@@ -1163,7 +1165,7 @@ export function BillingPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Total Facturado</Text>
+                  <Text className="text-label" mb="xs">{t("billing.totalFacturado")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-primary)" }}>
                     {(invoiceStatsData?.total_invoiced || 0).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €
                   </Text>
@@ -1176,7 +1178,7 @@ export function BillingPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Pendiente de Cobro</Text>
+                  <Text className="text-label" mb="xs">{t("billing.pendienteDeCobro")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-warning)" }}>
                     {(invoiceStatsData?.total_pending || 0).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €
                   </Text>
@@ -1189,7 +1191,7 @@ export function BillingPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Vencidas</Text>
+                  <Text className="text-label" mb="xs">{t("billing.vencidas")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-error)" }}>
                     {(invoiceStatsData?.total_overdue || 0).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €
                   </Text>
@@ -1202,7 +1204,7 @@ export function BillingPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Facturas este Mes</Text>
+                  <Text className="text-label" mb="xs">{t("billing.facturasEsteMes")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-success)" }}>
                     {invoiceStatsData?.invoices_this_month || 0}
                   </Text>
@@ -1217,15 +1219,15 @@ export function BillingPage() {
           <Group justify="space-between" mb="md">
             <Group gap="sm">
               <Select
-                placeholder="Todos los estados"
+                placeholder={t("billing.todosLosEstados")}
                 data={[
-                  { value: "", label: "Todos" },
-                  { value: "draft", label: "Borrador" },
-                  { value: "finalized", label: "Emitida" },
-                  { value: "sent", label: "Enviada" },
-                  { value: "paid", label: "Pagada" },
-                  { value: "overdue", label: "Vencida" },
-                  { value: "rectified", label: "Rectificada" },
+                  { value: "", label: t("billing.todos") },
+                  { value: "draft", label: t("billing.borrador") },
+                  { value: "finalized", label: t("billing.emitida") },
+                  { value: "sent", label: t("billing.enviada") },
+                  { value: "paid", label: t("billing.pagada") },
+                  { value: "overdue", label: t("billing.vencida") },
+                  { value: "rectified", label: t("billing.rectificada") },
                 ]}
                 value={invoiceStatusFilter || ""}
                 onChange={(v) => setInvoiceStatusFilter(v || null)}
@@ -1236,13 +1238,13 @@ export function BillingPage() {
               />
             </Group>
             <Group gap="sm">
-              <Tooltip label="Configuración de facturación">
+              <Tooltip label={t("billing.configuracionDeFacturacion")}>
                 <ActionIcon variant="default" radius="md" size="lg" onClick={handleOpenSettings}>
                   <IconSettings size={18} />
                 </ActionIcon>
               </Tooltip>
               <Button leftSection={<IconPlus size={16} />} size="sm" onClick={handleOpenNewInvoice}>
-                Nueva Factura
+                {t("billing.nuevaFactura")}
               </Button>
             </Group>
           </Group>
@@ -1253,19 +1255,19 @@ export function BillingPage() {
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>N.º</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Fecha</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Vencimiento</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Total</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.cliente")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.fecha")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.vencimiento")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.estado")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("billing.total")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("billing.acciones")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {invoices.length === 0 && (
                   <Table.Tr>
                     <Table.Td colSpan={7}>
-                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay facturas. Crea tu primera factura.</Text>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">{t("billing.noHayFacturasCreaTu")}</Text>
                     </Table.Td>
                   </Table.Tr>
                 )}
@@ -1275,7 +1277,7 @@ export function BillingPage() {
                       <Group gap={6}>
                         <Text fw={600} size="sm" style={{ color: "var(--nv-primary)" }}>{inv.invoice_number}</Text>
                         {inv.verifactu_hash && (
-                          <Tooltip label="VeriFactu verificada">
+                          <Tooltip label={t("billing.verifactuVerificada")}>
                             <ThemeIcon size={16} radius="xl" variant="light" color="green"><IconShieldCheck size={10} /></ThemeIcon>
                           </Tooltip>
                         )}
@@ -1303,28 +1305,28 @@ export function BillingPage() {
                             <ActionIcon variant="subtle" radius="xl" color="gray"><IconDotsVertical size={16} /></ActionIcon>
                           </Menu.Target>
                           <Menu.Dropdown>
-                            <Menu.Item leftSection={<IconEye size={14} />} onClick={() => handleViewInvoice(inv)}>Ver detalle</Menu.Item>
+                            <Menu.Item leftSection={<IconEye size={14} />} onClick={() => handleViewInvoice(inv)}>{t("billing.verDetalle")}</Menu.Item>
                             {inv.status === "draft" && (
-                              <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleOpenEditInvoice(inv)}>Editar</Menu.Item>
+                              <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleOpenEditInvoice(inv)}>{t("billing.editar")}</Menu.Item>
                             )}
                             {inv.status === "draft" && (
-                              <Menu.Item leftSection={<IconLock size={14} />} color="blue" onClick={() => handleFinalizeInvoice(inv)}>Emitir factura</Menu.Item>
+                              <Menu.Item leftSection={<IconLock size={14} />} color="blue" onClick={() => handleFinalizeInvoice(inv)}>{t("billing.emitirFactura")}</Menu.Item>
                             )}
                             {["finalized", "sent", "overdue"].includes(inv.status) && (
-                              <Menu.Item leftSection={<IconCheck size={14} />} color="green" onClick={() => handleMarkInvoicePaid(inv)}>Marcar pagada</Menu.Item>
+                              <Menu.Item leftSection={<IconCheck size={14} />} color="green" onClick={() => handleMarkInvoicePaid(inv)}>{t("billing.marcarPagada")}</Menu.Item>
                             )}
-                            <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => handleDownloadPdf(inv)}>Descargar PDF</Menu.Item>
+                            <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => handleDownloadPdf(inv)}>{t("billing.descargarPdf")}</Menu.Item>
                             {inv.status !== "draft" && (
-                              <Menu.Item leftSection={<IconMail size={14} />} onClick={() => handleSendInvoiceEmail(inv)}>Enviar por email</Menu.Item>
+                              <Menu.Item leftSection={<IconMail size={14} />} onClick={() => handleSendInvoiceEmail(inv)}>{t("billing.enviarPorEmail")}</Menu.Item>
                             )}
-                            <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => handleDuplicateInvoice(inv)}>Duplicar</Menu.Item>
+                            <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => handleDuplicateInvoice(inv)}>{t("billing.duplicar")}</Menu.Item>
                             {inv.status !== "draft" && inv.status !== "rectified" && inv.status !== "cancelled" && (
-                              <Menu.Item leftSection={<IconRefresh size={14} />} color="orange" onClick={() => handleRectifyInvoice(inv)}>Rectificar</Menu.Item>
+                              <Menu.Item leftSection={<IconRefresh size={14} />} color="orange" onClick={() => handleRectifyInvoice(inv)}>{t("billing.rectificar")}</Menu.Item>
                             )}
                             {inv.status === "draft" && (
                               <>
                                 <Menu.Divider />
-                                <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={() => handleDeleteInvoice(inv)}>Eliminar</Menu.Item>
+                                <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={() => handleDeleteInvoice(inv)}>{t("billing.eliminar")}</Menu.Item>
                               </>
                             )}
                           </Menu.Dropdown>
@@ -1345,17 +1347,17 @@ export function BillingPage() {
         onClose={closeChargeModal}
         opened={chargeModalOpened}
         size="md"
-        title="Nuevo Cobro"
+        title={t("billing.nuevoCobro")}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={chargeForm.onSubmit(handleCreateCharge)}>
           <Stack>
-            <Select data={clientOptions} label="Cliente" placeholder="Selecciona un cliente" searchable clearable {...chargeForm.getInputProps("client_id")} />
+            <Select data={clientOptions} label={t("billing.cliente")} placeholder={t("billing.seleccionaUnCliente")} searchable clearable {...chargeForm.getInputProps("client_id")} />
             <Select
               data={products.map((p) => ({ value: p.id, label: `${p.name} - €${p.price}` }))}
-              label="Producto"
-              placeholder="Selecciona un producto (opcional)"
+              label={t("billing.producto")}
+              placeholder={t("billing.seleccionaUnProductoOpcional")}
               clearable
               onChange={(val) => {
                 chargeForm.setFieldValue("product_id", val || "");
@@ -1369,11 +1371,11 @@ export function BillingPage() {
               }}
               value={chargeForm.values.product_id || null}
             />
-            <NumberInput label="Importe (€)" min={0.01} placeholder="0" decimalScale={2} required {...chargeForm.getInputProps("amount")} />
-            <Textarea label="Descripción" placeholder="Descripción del cobro..." {...chargeForm.getInputProps("description")} />
+            <NumberInput label={t("billing.importe")} min={0.01} placeholder="0" decimalScale={2} required {...chargeForm.getInputProps("amount")} />
+            <Textarea label={t("billing.descripcion")} placeholder={t("billing.descripcionDelCobro")} {...chargeForm.getInputProps("description")} />
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeChargeModal} variant="default">Cancelar</Button>
-              <Button leftSection={<IconCreditCard size={16} />} type="submit" loading={createPayment.isPending}>Crear Cobro</Button>
+              <Button onClick={closeChargeModal} variant="default">{t("billing.cancelar")}</Button>
+              <Button leftSection={<IconCreditCard size={16} />} type="submit" loading={createPayment.isPending}>{t("billing.crearCobro")}</Button>
             </Group>
           </Stack>
         </form>
@@ -1384,7 +1386,7 @@ export function BillingPage() {
         onClose={closePaymentDetail}
         opened={paymentDetailOpened}
         size="md"
-        title="Detalle del Pago"
+        title={t("billing.detalleDelPago")}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
@@ -1432,49 +1434,49 @@ export function BillingPage() {
                     closePaymentDetail();
                   }}
                 >
-                  Ir a ficha del cliente
+                  {t("billing.irAFichaDelCliente")}
                 </Button>
               </Group>
             </Box>
 
-            <Divider label="Detalles del pago" labelPosition="left" />
+            <Divider label={t("billing.detallesDelPago")} labelPosition="left" />
 
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Descripción</Text>
+              <Text c="dimmed" size="sm">{t("billing.descripcion")}</Text>
               <Text fw={500} size="sm" ta="right" style={{ maxWidth: "60%" }}>{selectedPayment.description || "—"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Importe</Text>
+              <Text c="dimmed" size="sm">{t("billing.importe")}</Text>
               <Text fw={700} size="lg" style={{ color: "var(--nv-primary)" }}>€{formatDecimal(Number(selectedPayment.amount), 2)}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Estado</Text>
+              <Text c="dimmed" size="sm">{t("billing.estado")}</Text>
               <Badge color={getStatusColor(selectedPayment.status)} variant="light" radius="xl">{getStatusLabel(selectedPayment.status)}</Badge>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Tipo</Text>
+              <Text c="dimmed" size="sm">{t("billing.tipo")}</Text>
               <Text size="sm">{selectedPayment.payment_type === "subscription" ? "Suscripción" : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Método de pago</Text>
+              <Text c="dimmed" size="sm">{t("billing.metodoDePago")}</Text>
               <Badge variant="light" color="grape" radius="xl">{getPaymentMethodLabel(selectedPayment.payment_method)}</Badge>
             </Group>
             {selectedPayment.payment_type === "subscription" && (
               <>
                 <Divider style={{ borderColor: "var(--nv-border)" }} />
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Periodicidad del servicio</Text>
+                  <Text c="dimmed" size="sm">{t("billing.periodicidadDelServicio")}</Text>
                   <Text size="sm">
                     {getIntervalLabel(selectedPayment.subscription_interval) || "—"}
                   </Text>
                 </Group>
                 <Divider style={{ borderColor: "var(--nv-border)" }} />
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Inicio de la suscripción</Text>
+                  <Text c="dimmed" size="sm">{t("billing.inicioDeLaSuscripcion")}</Text>
                   <Text size="sm">
                     {selectedPayment.subscription_started_at
                       ? new Date(selectedPayment.subscription_started_at).toLocaleDateString("es-ES")
@@ -1483,7 +1485,7 @@ export function BillingPage() {
                 </Group>
                 <Divider style={{ borderColor: "var(--nv-border)" }} />
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Fin de la suscripción</Text>
+                  <Text c="dimmed" size="sm">{t("billing.finDeLaSuscripcion")}</Text>
                   <Text size="sm">
                     {selectedPayment.subscription_ends_at
                       ? new Date(selectedPayment.subscription_ends_at).toLocaleDateString("es-ES")
@@ -1494,14 +1496,14 @@ export function BillingPage() {
             )}
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Fecha de creación</Text>
+              <Text c="dimmed" size="sm">{t("billing.fechaDeCreacion")}</Text>
               <Text size="sm">{selectedPayment.created_at ? new Date(selectedPayment.created_at).toLocaleString("es-ES") : "—"}</Text>
             </Group>
             {selectedPayment.paid_at && (
               <>
                 <Divider style={{ borderColor: "var(--nv-border)" }} />
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Fecha de pago</Text>
+                  <Text c="dimmed" size="sm">{t("billing.fechaDePago")}</Text>
                   <Text size="sm">{new Date(selectedPayment.paid_at).toLocaleString("es-ES")}</Text>
                 </Group>
               </>
@@ -1510,14 +1512,14 @@ export function BillingPage() {
               {selectedPayment.status === "pending" && (
                 <>
                   <Button color="green" variant="light" leftSection={<IconCheck size={16} />} onClick={() => { handleMarkPaid(selectedPayment); closePaymentDetail(); }}>
-                    Marcar como pagado
+                    {t("billing.marcarComoPagado")}
                   </Button>
                   <Button color="red" variant="light" leftSection={<IconTrash size={16} />} onClick={() => { handleDeletePaymentAction(selectedPayment); closePaymentDetail(); }}>
-                    Eliminar
+                    {t("billing.eliminar")}
                   </Button>
                 </>
               )}
-              <Button onClick={closePaymentDetail} variant="default">Cerrar</Button>
+              <Button onClick={closePaymentDetail} variant="default">{t("billing.cerrar")}</Button>
             </Group>
           </Stack>
         )}
@@ -1536,51 +1538,51 @@ export function BillingPage() {
           <ScrollArea.Autosize mah="75vh">
             <Stack gap="md" pr="xs">
               <Group grow>
-                <Select label="Serie" data={[{ value: "F", label: "F - Ordinaria" }, { value: "R", label: "R - Rectificativa" }]} {...invoiceForm.getInputProps("invoice_series")} />
-                <TextInput label="Número (auto)" value={nextNumberData?.next_number || "—"} disabled styles={{ input: { fontFamily: "monospace", fontWeight: 600 } }} />
+                <Select label={t("billing.serie")} data={[{ value: "F", label: t("billing.fOrdinaria") }, { value: "R", label: t("billing.rRectificativa") }]} {...invoiceForm.getInputProps("invoice_series")} />
+                <TextInput label={t("billing.numeroAuto")} value={nextNumberData?.next_number || "—"} disabled styles={{ input: { fontFamily: "monospace", fontWeight: 600 } }} />
               </Group>
 
-              <Divider label="Datos del cliente" labelPosition="left" />
-              <Select label="Seleccionar cliente" placeholder="Buscar cliente..." data={clientOptions} searchable clearable value={invoiceForm.values.client_id || null} onChange={handleClientSelectForInvoice} />
+              <Divider label={t("billing.datosDelCliente")} labelPosition="left" />
+              <Select label={t("billing.seleccionarCliente")} placeholder={t("billing.buscarCliente")} data={clientOptions} searchable clearable value={invoiceForm.values.client_id || null} onChange={handleClientSelectForInvoice} />
               <Group grow>
-                <TextInput label="Nombre / Razón social" required {...invoiceForm.getInputProps("client_name")} />
+                <TextInput label={t("billing.nombreRazonSocial")} required {...invoiceForm.getInputProps("client_name")} />
                 <TextInput label="NIF/CIF" placeholder="99999999R" {...invoiceForm.getInputProps("client_tax_id")} />
               </Group>
               <Group grow>
-                <TextInput label="Dirección" {...invoiceForm.getInputProps("client_address")} />
-                <TextInput label="Ciudad" {...invoiceForm.getInputProps("client_city")} />
+                <TextInput label={t("billing.direccion")} {...invoiceForm.getInputProps("client_address")} />
+                <TextInput label={t("billing.ciudad")} {...invoiceForm.getInputProps("client_city")} />
                 <TextInput label="C.P." {...invoiceForm.getInputProps("client_postal_code")} />
               </Group>
-              <TextInput label="Email del cliente" {...invoiceForm.getInputProps("client_email")} />
+              <TextInput label={t("billing.emailDelCliente")} {...invoiceForm.getInputProps("client_email")} />
 
-              <Divider label="Fechas" labelPosition="left" />
+              <Divider label={t("billing.fechas")} labelPosition="left" />
               <Group grow>
-                <DateInput label="Fecha emisión" locale="es" valueFormat="DD/MM/YYYY" {...invoiceForm.getInputProps("issue_date")} />
-                <DateInput label="Fecha vencimiento" locale="es" valueFormat="DD/MM/YYYY" clearable {...invoiceForm.getInputProps("due_date")} />
+                <DateInput label={t("billing.fechaEmision")} locale="es" valueFormat="DD/MM/YYYY" {...invoiceForm.getInputProps("issue_date")} />
+                <DateInput label={t("billing.fechaVencimiento")} locale="es" valueFormat="DD/MM/YYYY" clearable {...invoiceForm.getInputProps("due_date")} />
                 <Select
-                  label="Método de pago"
+                  label={t("billing.metodoDePago")}
                   data={[
-                    { value: "transferencia", label: "Transferencia" },
-                    { value: "tarjeta", label: "Tarjeta" },
-                    { value: "efectivo", label: "Efectivo" },
-                    { value: "domiciliacion", label: "Domiciliación" },
-                    { value: "otro", label: "Otro" },
+                    { value: "transferencia", label: t("billing.transferencia") },
+                    { value: "tarjeta", label: t("billing.tarjeta") },
+                    { value: "efectivo", label: t("billing.efectivo") },
+                    { value: "domiciliacion", label: t("billing.domiciliacion") },
+                    { value: "otro", label: t("billing.otro") },
                   ]}
                   {...invoiceForm.getInputProps("payment_method")}
                 />
               </Group>
 
-              <Divider label="Líneas de factura" labelPosition="left" />
+              <Divider label={t("billing.lineasDeFactura")} labelPosition="left" />
 
               {invoiceForm.values.items.map((item, idx) => (
                 <Box key={idx} className="nv-card-compact" p="sm" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)" }}>
                   <Group align="flex-start" gap="sm" wrap="wrap">
-                    <TextInput label={idx === 0 ? "Descripción" : undefined} placeholder="Servicio de entrenamiento personal" style={{ flex: 3, minWidth: 200 }} {...invoiceForm.getInputProps(`items.${idx}.description`)} />
+                    <TextInput label={idx === 0 ? "Descripción" : undefined} placeholder={t("billing.servicioDeEntrenamientoPersonal")} style={{ flex: 3, minWidth: 200 }} {...invoiceForm.getInputProps(`items.${idx}.description`)} />
                     <NumberInput label={idx === 0 ? "Ud." : undefined} min={0.01} decimalScale={2} style={{ flex: 0.6, minWidth: 65 }} {...invoiceForm.getInputProps(`items.${idx}.quantity`)} />
                     <NumberInput label={idx === 0 ? "Precio" : undefined} min={0} decimalScale={2} suffix=" €" style={{ flex: 1, minWidth: 90 }} {...invoiceForm.getInputProps(`items.${idx}.unit_price`)} />
                     <Select
                       label={idx === 0 ? "IVA" : undefined}
-                      data={[{ value: "21", label: "21%" }, { value: "10", label: "10%" }, { value: "4", label: "4%" }, { value: "0", label: "Exento" }]}
+                      data={[{ value: "21", label: "21%" }, { value: "10", label: "10%" }, { value: "4", label: "4%" }, { value: "0", label: t("billing.exento") }]}
                       style={{ flex: 0.7, minWidth: 80 }}
                       value={String(item.tax_rate ?? 21)}
                       onChange={(v) => invoiceForm.setFieldValue(`items.${idx}.tax_rate`, v ? Number(v) : 21)}
@@ -1607,35 +1609,35 @@ export function BillingPage() {
               ))}
 
               <Button variant="light" leftSection={<IconPlus size={14} />} size="xs" onClick={() => invoiceForm.insertListItem("items", { description: "", quantity: 1, unit_price: 0, tax_rate: 21, tax_name: "IVA", discount_type: "percentage", discount_value: 0 })}>
-                Añadir línea
+                {t("billing.anadirLinea")}
               </Button>
 
               <Box className="nv-card-compact" p="md" style={{ borderRadius: "var(--radius-sm)", backgroundColor: "var(--nv-surface-subtle)" }}>
                 <Group grow mb="sm">
-                  <Select label="Descuento global" data={[{ value: "percentage", label: "Porcentaje (%)" }, { value: "fixed", label: "Importe fijo (€)" }]} size="xs" {...invoiceForm.getInputProps("discount_type")} />
+                  <Select label={t("billing.descuentoGlobal")} data={[{ value: "percentage", label: t("billing.porcentaje") }, { value: "fixed", label: t("billing.importeFijo") }]} size="xs" {...invoiceForm.getInputProps("discount_type")} />
                   <NumberInput label={invoiceForm.values.discount_type === "percentage" ? "% Descuento" : "€ Descuento"} min={0} decimalScale={2} size="xs" {...invoiceForm.getInputProps("discount_value")} />
                 </Group>
                 <Stack gap={4}>
-                  <Group justify="space-between"><Text size="sm" c="dimmed">Subtotal</Text><Text size="sm" fw={500}>{invoiceLineTotals.subtotal.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                  <Group justify="space-between"><Text size="sm" c="dimmed">{t("billing.subtotal")}</Text><Text size="sm" fw={500}>{invoiceLineTotals.subtotal.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                   {Object.entries(invoiceLineTotals.taxBreakdown).map(([rate, vals]) => (
                     <Group justify="space-between" key={rate}><Text size="sm" c="dimmed">IVA {rate}</Text><Text size="sm">{vals.tax.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                   ))}
                   {invoiceLineTotals.globalDisc > 0 && (
-                    <Group justify="space-between"><Text size="sm" c="dimmed">Descuento</Text><Text size="sm" c="red">-{invoiceLineTotals.globalDisc.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                    <Group justify="space-between"><Text size="sm" c="dimmed">{t("billing.descuento")}</Text><Text size="sm" c="red">-{invoiceLineTotals.globalDisc.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                   )}
                   <Divider my={4} />
                   <Group justify="space-between"><Text fw={700}>TOTAL</Text><Text fw={700} size="lg" style={{ color: "var(--nv-primary)" }}>{invoiceLineTotals.total.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 </Stack>
               </Box>
 
-              <Divider label="Notas" labelPosition="left" />
-              <Textarea label="Notas para el cliente" minRows={2} {...invoiceForm.getInputProps("notes")} />
-              <Textarea label="Notas internas" minRows={2} {...invoiceForm.getInputProps("internal_notes")} />
+              <Divider label={t("billing.notas")} labelPosition="left" />
+              <Textarea label={t("billing.notasParaElCliente")} minRows={2} {...invoiceForm.getInputProps("notes")} />
+              <Textarea label={t("billing.notasInternas")} minRows={2} {...invoiceForm.getInputProps("internal_notes")} />
             </Stack>
           </ScrollArea.Autosize>
 
           <Group justify="flex-end" mt="lg">
-            <Button onClick={() => { closeInvoiceModal(); setEditingInvoice(null); invoiceForm.reset(); }} variant="default">Cancelar</Button>
+            <Button onClick={() => { closeInvoiceModal(); setEditingInvoice(null); invoiceForm.reset(); }} variant="default">{t("billing.cancelar")}</Button>
             <Button type="submit" loading={createInvoice.isPending || updateInvoice.isPending}>
               {editingInvoice ? "Guardar Cambios" : "Crear Factura"}
             </Button>
@@ -1659,7 +1661,7 @@ export function BillingPage() {
                 <Badge size="lg" color={invoiceStatusColor(previewInvoice.status)} variant="light" radius="xl">{invoiceStatusLabel(previewInvoice.status)}</Badge>
                 <Group gap="xs">
                   {previewInvoice.verifactu_hash && (
-                    <Badge leftSection={<IconShieldCheck size={12} />} variant="light" color="green" radius="xl" size="sm">VeriFactu</Badge>
+                    <Badge leftSection={<IconShieldCheck size={12} />} variant="light" color="green" radius="xl" size="sm">{t("billing.verifactu")}</Badge>
                   )}
                   <Badge variant="outline" radius="xl" size="sm">{previewInvoice.invoice_type}</Badge>
                 </Group>
@@ -1667,17 +1669,17 @@ export function BillingPage() {
 
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <Box>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Cliente</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>{t("billing.cliente")}</Text>
                   <Text fw={600}>{previewInvoice.client_name}</Text>
                   {previewInvoice.client_tax_id && <Text size="sm" c="dimmed">NIF: {previewInvoice.client_tax_id}</Text>}
                   {previewInvoice.client_address && <Text size="sm" c="dimmed">{previewInvoice.client_address}</Text>}
                   {previewInvoice.client_email && <Text size="sm" c="dimmed">{previewInvoice.client_email}</Text>}
                 </Box>
                 <Box>
-                  <Group justify="space-between"><Text size="xs" c="dimmed">Fecha emisión</Text><Text size="sm">{previewInvoice.issue_date ? new Date(previewInvoice.issue_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
-                  <Group justify="space-between"><Text size="xs" c="dimmed">Vencimiento</Text><Text size="sm">{previewInvoice.due_date ? new Date(previewInvoice.due_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
-                  <Group justify="space-between"><Text size="xs" c="dimmed">Método de pago</Text><Text size="sm">{previewInvoice.payment_method || "—"}</Text></Group>
-                  {previewInvoice.paid_date && <Group justify="space-between"><Text size="xs" c="dimmed">Fecha pago</Text><Text size="sm" c="green">{new Date(previewInvoice.paid_date).toLocaleDateString("es-ES")}</Text></Group>}
+                  <Group justify="space-between"><Text size="xs" c="dimmed">{t("billing.fechaEmision")}</Text><Text size="sm">{previewInvoice.issue_date ? new Date(previewInvoice.issue_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
+                  <Group justify="space-between"><Text size="xs" c="dimmed">{t("billing.vencimiento")}</Text><Text size="sm">{previewInvoice.due_date ? new Date(previewInvoice.due_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
+                  <Group justify="space-between"><Text size="xs" c="dimmed">{t("billing.metodoDePago")}</Text><Text size="sm">{previewInvoice.payment_method || "—"}</Text></Group>
+                  {previewInvoice.paid_date && <Group justify="space-between"><Text size="xs" c="dimmed">{t("billing.fechaPago")}</Text><Text size="sm" c="green">{new Date(previewInvoice.paid_date).toLocaleDateString("es-ES")}</Text></Group>}
                 </Box>
               </SimpleGrid>
 
@@ -1686,11 +1688,11 @@ export function BillingPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th style={{ fontSize: "10px" }}>Concepto</Table.Th>
-                    <Table.Th style={{ fontSize: "10px" }} ta="center">Ud.</Table.Th>
-                    <Table.Th style={{ fontSize: "10px" }} ta="right">Precio</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }}>{t("billing.concepto")}</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }} ta="center">{t("billing.ud")}</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }} ta="right">{t("billing.precio")}</Table.Th>
                     <Table.Th style={{ fontSize: "10px" }} ta="center">IVA</Table.Th>
-                    <Table.Th style={{ fontSize: "10px" }} ta="right">Total</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }} ta="right">{t("billing.total")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1707,9 +1709,9 @@ export function BillingPage() {
               </Table>
 
               <Box style={{ borderTop: "2px solid var(--nv-border)", paddingTop: 12 }}>
-                <Group justify="space-between"><Text c="dimmed">Subtotal</Text><Text>{Number(previewInvoice.subtotal).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                <Group justify="space-between"><Text c="dimmed">{t("billing.subtotal")}</Text><Text>{Number(previewInvoice.subtotal).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 {Number(previewInvoice.discount_amount) > 0 && (
-                  <Group justify="space-between"><Text c="dimmed">Descuento</Text><Text c="red">-{Number(previewInvoice.discount_amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                  <Group justify="space-between"><Text c="dimmed">{t("billing.descuento")}</Text><Text c="red">-{Number(previewInvoice.discount_amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 )}
                 <Group justify="space-between"><Text c="dimmed">IVA</Text><Text>{Number(previewInvoice.tax_amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 <Divider my="xs" />
@@ -1718,7 +1720,7 @@ export function BillingPage() {
 
               {previewInvoice.notes && (
                 <Box>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>Notas</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>{t("billing.notas")}</Text>
                   <Text size="sm">{previewInvoice.notes}</Text>
                 </Box>
               )}
@@ -1727,7 +1729,7 @@ export function BillingPage() {
                 <Box className="nv-card-compact" p="sm" style={{ borderRadius: "var(--radius-sm)", backgroundColor: "var(--nv-success-bg)" }}>
                   <Group gap="xs" mb={4}>
                     <IconShieldCheck size={16} color="var(--nv-success)" />
-                    <Text size="sm" fw={600} style={{ color: "var(--nv-success)" }}>VeriFactu</Text>
+                    <Text size="sm" fw={600} style={{ color: "var(--nv-success)" }}>{t("billing.verifactu")}</Text>
                   </Group>
                   <Text size="xs" c="dimmed">UUID: {previewInvoice.verifactu_uuid}</Text>
                   <Text size="xs" c="dimmed" style={{ wordBreak: "break-all" }}>Hash: {previewInvoice.verifactu_hash}</Text>
@@ -1736,7 +1738,7 @@ export function BillingPage() {
 
               {auditLog.length > 0 && (
                 <Box>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">Historial de actividad</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">{t("billing.historialDeActividad")}</Text>
                   <Stack gap={4}>
                     {auditLog.map((entry) => (
                       <Group key={entry.id} gap="sm" style={{ borderBottom: "1px solid var(--nv-border)", paddingBottom: 4 }}>
@@ -1753,16 +1755,16 @@ export function BillingPage() {
 
               <Group justify="flex-end" mt="md" gap="sm">
                 {previewInvoice.status === "draft" && (
-                  <Button variant="light" color="blue" leftSection={<IconLock size={14} />} onClick={() => { handleFinalizeInvoice(previewInvoice); closeInvoicePreview(); }}>Emitir</Button>
+                  <Button variant="light" color="blue" leftSection={<IconLock size={14} />} onClick={() => { handleFinalizeInvoice(previewInvoice); closeInvoicePreview(); }}>{t("billing.emitir")}</Button>
                 )}
                 {["finalized", "sent", "overdue"].includes(previewInvoice.status) && (
-                  <Button variant="light" color="green" leftSection={<IconCheck size={14} />} onClick={() => { handleMarkInvoicePaid(previewInvoice); closeInvoicePreview(); }}>Marcar pagada</Button>
+                  <Button variant="light" color="green" leftSection={<IconCheck size={14} />} onClick={() => { handleMarkInvoicePaid(previewInvoice); closeInvoicePreview(); }}>{t("billing.marcarPagada")}</Button>
                 )}
                 <Button variant="light" leftSection={<IconDownload size={14} />} onClick={() => handleDownloadPdf(previewInvoice)}>PDF</Button>
                 {previewInvoice.status !== "draft" && (
-                  <Button variant="light" leftSection={<IconMail size={14} />} onClick={() => { handleSendInvoiceEmail(previewInvoice); closeInvoicePreview(); }}>Email</Button>
+                  <Button variant="light" leftSection={<IconMail size={14} />} onClick={() => { handleSendInvoiceEmail(previewInvoice); closeInvoicePreview(); }}>{t("billing.email")}</Button>
                 )}
-                <Button onClick={() => { closeInvoicePreview(); setPreviewInvoice(null); }} variant="default">Cerrar</Button>
+                <Button onClick={() => { closeInvoicePreview(); setPreviewInvoice(null); }} variant="default">{t("billing.cerrar")}</Button>
               </Group>
             </Stack>
           </ScrollArea.Autosize>
@@ -1774,63 +1776,63 @@ export function BillingPage() {
         onClose={closeSettingsModal}
         opened={settingsModalOpened}
         size="lg"
-        title="Configuración de Facturación"
+        title={t("billing.configuracionDeFacturacion")}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={settingsForm.onSubmit(handleSaveSettings)}>
           <ScrollArea.Autosize mah="75vh">
             <Stack gap="md" pr="xs">
-              <Divider label="Datos fiscales" labelPosition="left" />
+              <Divider label={t("billing.datosFiscales")} labelPosition="left" />
               <Group grow>
-                <TextInput label="Nombre / Razón social" required {...settingsForm.getInputProps("business_name")} />
+                <TextInput label={t("billing.nombreRazonSocial")} required {...settingsForm.getInputProps("business_name")} />
                 <TextInput label="NIF/CIF" {...settingsForm.getInputProps("tax_id")} />
-                <Select label="Tipo" data={["NIF", "NIE", "CIF"]} {...settingsForm.getInputProps("nif_type")} />
+                <Select label={t("billing.tipo")} data={["NIF", "NIE", "CIF"]} {...settingsForm.getInputProps("nif_type")} />
               </Group>
               <Group grow>
-                <TextInput label="Dirección" {...settingsForm.getInputProps("address")} />
-                <TextInput label="Ciudad" {...settingsForm.getInputProps("city")} />
+                <TextInput label={t("billing.direccion")} {...settingsForm.getInputProps("address")} />
+                <TextInput label={t("billing.ciudad")} {...settingsForm.getInputProps("city")} />
               </Group>
               <Group grow>
                 <TextInput label="C.P." {...settingsForm.getInputProps("postal_code")} />
-                <TextInput label="Provincia" {...settingsForm.getInputProps("province")} />
-                <TextInput label="País" {...settingsForm.getInputProps("country")} />
+                <TextInput label={t("billing.provincia")} {...settingsForm.getInputProps("province")} />
+                <TextInput label={t("billing.pais")} {...settingsForm.getInputProps("country")} />
               </Group>
               <Group grow>
-                <TextInput label="Teléfono" {...settingsForm.getInputProps("phone")} />
-                <TextInput label="Email" {...settingsForm.getInputProps("email")} />
-              </Group>
-
-              <Divider label="Numeración" labelPosition="left" />
-              <Group grow>
-                <TextInput label="Prefijo facturas" {...settingsForm.getInputProps("invoice_prefix")} />
-                <TextInput label="Prefijo rectificativas" {...settingsForm.getInputProps("rectificative_prefix")} />
+                <TextInput label={t("billing.telefono")} {...settingsForm.getInputProps("phone")} />
+                <TextInput label={t("billing.email")} {...settingsForm.getInputProps("email")} />
               </Group>
 
-              <Divider label="Impuestos y pagos" labelPosition="left" />
+              <Divider label={t("billing.numeracion")} labelPosition="left" />
               <Group grow>
-                <NumberInput label="IVA por defecto (%)" min={0} max={100} {...settingsForm.getInputProps("default_tax_rate")} />
-                <NumberInput label="Plazo de pago (días)" min={0} {...settingsForm.getInputProps("payment_terms_days")} />
-                <Select label="Método de pago" data={["transferencia", "tarjeta", "efectivo", "domiciliacion", "otro"]} {...settingsForm.getInputProps("default_payment_method")} />
+                <TextInput label={t("billing.prefijoFacturas")} {...settingsForm.getInputProps("invoice_prefix")} />
+                <TextInput label={t("billing.prefijoRectificativas")} {...settingsForm.getInputProps("rectificative_prefix")} />
               </Group>
 
-              <Divider label="Datos bancarios" labelPosition="left" />
+              <Divider label={t("billing.impuestosYPagos")} labelPosition="left" />
               <Group grow>
-                <TextInput label="Banco" {...settingsForm.getInputProps("bank_name")} />
+                <NumberInput label={t("billing.ivaPorDefecto")} min={0} max={100} {...settingsForm.getInputProps("default_tax_rate")} />
+                <NumberInput label={t("billing.plazoDePagoDias")} min={0} {...settingsForm.getInputProps("payment_terms_days")} />
+                <Select label={t("billing.metodoDePago")} data={["transferencia", "tarjeta", "efectivo", "domiciliacion", "otro"]} {...settingsForm.getInputProps("default_payment_method")} />
+              </Group>
+
+              <Divider label={t("billing.datosBancarios")} labelPosition="left" />
+              <Group grow>
+                <TextInput label={t("billing.banco")} {...settingsForm.getInputProps("bank_name")} />
                 <TextInput label="IBAN" placeholder="ES00 0000 0000 00 0000000000" {...settingsForm.getInputProps("bank_account")} />
               </Group>
 
-              <Divider label="Pie de factura" labelPosition="left" />
-              <Textarea label="Texto de pie de factura" minRows={2} {...settingsForm.getInputProps("footer_text")} />
-              <Textarea label="Condiciones generales" minRows={2} {...settingsForm.getInputProps("terms_and_conditions")} />
+              <Divider label={t("billing.pieDeFactura")} labelPosition="left" />
+              <Textarea label={t("billing.textoDePieDeFactura")} minRows={2} {...settingsForm.getInputProps("footer_text")} />
+              <Textarea label={t("billing.condicionesGenerales")} minRows={2} {...settingsForm.getInputProps("terms_and_conditions")} />
 
-              <Divider label={<Group gap="xs"><IconShieldCheck size={14} /><span>VeriFactu</span></Group>} labelPosition="left" />
+              <Divider label={<Group gap="xs"><IconShieldCheck size={14} /><span>{t("billing.verifactu")}</span></Group>} labelPosition="left" />
 
               <Box className="nv-card-compact" p="md" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)" }}>
                 <Group justify="space-between" mb="sm">
                   <Box>
-                    <Text fw={600} size="sm">Activar VeriFactu</Text>
-                    <Text size="xs" c="dimmed">Envío directo a AEAT con certificado digital FNMT</Text>
+                    <Text fw={600} size="sm">{t("billing.activarVerifactu")}</Text>
+                    <Text size="xs" c="dimmed">{t("billing.envioDirectoAAeatCon")}</Text>
                   </Box>
                   <Switch size="md" color="green" {...settingsForm.getInputProps("verifactu_enabled", { type: "checkbox" })} />
                 </Group>
@@ -1838,18 +1840,18 @@ export function BillingPage() {
                 {settingsForm.values.verifactu_enabled && (
                   <Stack gap="sm">
                     <Select
-                      label="Entorno de envío"
+                      label={t("billing.entornoDeEnvio")}
                       data={[
-                        { value: "none", label: "Solo hash local (sin envío a AEAT)" },
-                        { value: "direct_aeat_test", label: "Preproducción AEAT (pruebas)" },
-                        { value: "direct_aeat_prod", label: "Producción AEAT (real)" },
+                        { value: "none", label: t("billing.soloHashLocalSinEnvio") },
+                        { value: "direct_aeat_test", label: t("billing.preproduccionAeatPruebas") },
+                        { value: "direct_aeat_prod", label: t("billing.produccionAeatReal") },
                       ]}
                       {...settingsForm.getInputProps("verifactu_mode")}
                     />
 
                     {(settingsForm.values.verifactu_mode === "direct_aeat_test" || settingsForm.values.verifactu_mode === "direct_aeat_prod") && (
                       <>
-                        <Divider label="Certificado digital (FNMT)" labelPosition="left" variant="dashed" />
+                        <Divider label={t("billing.certificadoDigitalFnmt")} labelPosition="left" variant="dashed" />
 
                         {certStatus?.has_certificate ? (
                           <Box p="md" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)", background: "var(--nv-bg)" }}>
@@ -1859,7 +1861,7 @@ export function BillingPage() {
                                   <IconShieldCheck size={16} />
                                 </ThemeIcon>
                                 <Box>
-                                  <Text size="sm" fw={600}>Certificado configurado</Text>
+                                  <Text size="sm" fw={600}>{t("billing.certificadoConfigurado")}</Text>
                                   <Text size="xs" c="dimmed">{certStatus.subject}</Text>
                                 </Box>
                               </Group>
@@ -1871,27 +1873,27 @@ export function BillingPage() {
                               {certStatus.nif && (
                                 <Box><Text size="xs" c="dimmed">NIF</Text><Text size="sm" fw={500}>{certStatus.nif}</Text></Box>
                               )}
-                              <Box><Text size="xs" c="dimmed">N.º Serie</Text><Text size="sm" fw={500} style={{ fontFamily: "monospace", fontSize: 11 }}>{certStatus.serial_number?.slice(0, 20)}...</Text></Box>
+                              <Box><Text size="xs" c="dimmed">{t("billing.nSerie")}</Text><Text size="sm" fw={500} style={{ fontFamily: "monospace", fontSize: 11 }}>{certStatus.serial_number?.slice(0, 20)}...</Text></Box>
                               {certStatus.expires_at && (
-                                <Box><Text size="xs" c="dimmed">Caduca</Text><Text size="sm" fw={500}>{new Date(certStatus.expires_at).toLocaleDateString("es-ES")}</Text></Box>
+                                <Box><Text size="xs" c="dimmed">{t("billing.caduca")}</Text><Text size="sm" fw={500}>{new Date(certStatus.expires_at).toLocaleDateString("es-ES")}</Text></Box>
                               )}
                               {certStatus.uploaded_at && (
-                                <Box><Text size="xs" c="dimmed">Subido</Text><Text size="sm" fw={500}>{new Date(certStatus.uploaded_at).toLocaleDateString("es-ES")}</Text></Box>
+                                <Box><Text size="xs" c="dimmed">{t("billing.subido")}</Text><Text size="sm" fw={500}>{new Date(certStatus.uploaded_at).toLocaleDateString("es-ES")}</Text></Box>
                               )}
                             </SimpleGrid>
 
                             {!showRevokeConfirm ? (
                               <Button mt="md" variant="subtle" color="red" size="xs" leftSection={<IconTrash size={14} />} onClick={() => setShowRevokeConfirm(true)}>
-                                Revocar certificado
+                                {t("billing.revocarCertificado")}
                               </Button>
                             ) : (
-                              <Alert color="red" mt="md" title="¿Revocar certificado?" icon={<IconTrash size={16} />}>
-                                <Text size="xs" mb="sm">Se eliminará de forma segura el certificado y la clave privada. Necesitarás subir uno nuevo para enviar a AEAT.</Text>
+                              <Alert color="red" mt="md" title={t("billing.revocarCertificado")} icon={<IconTrash size={16} />}>
+                                <Text size="xs" mb="sm">{t("billing.seEliminaraDeFormaSegura")}</Text>
                                 <Group gap="xs">
                                   <Button size="xs" color="red" loading={revokeCertificate.isPending} onClick={async () => { await revokeCertificate.mutateAsync(); setShowRevokeConfirm(false); }}>
-                                    Sí, revocar
+                                    {t("billing.siRevocar")}
                                   </Button>
-                                  <Button size="xs" variant="subtle" onClick={() => setShowRevokeConfirm(false)}>Cancelar</Button>
+                                  <Button size="xs" variant="subtle" onClick={() => setShowRevokeConfirm(false)}>{t("billing.cancelar")}</Button>
                                 </Group>
                               </Alert>
                             )}
@@ -1919,11 +1921,11 @@ export function BillingPage() {
                             {certFile && (
                               <Stack gap="xs" mt="sm">
                                 <PasswordInput
-                                  label="Contraseña del certificado"
-                                  placeholder="Introduce la contraseña de tu .p12/.pfx"
+                                  label={t("billing.contrasenaDelCertificado")}
+                                  placeholder={t("billing.introduceLaContrasenaDeTu")}
                                   value={certPassword}
                                   onChange={(e) => setCertPassword(e.currentTarget.value)}
-                                  description="Solo se usa para la extracción. No se almacena."
+                                  description={t("billing.soloSeUsaParaLa")}
                                 />
                                 <Button
                                   leftSection={<IconUpload size={16} />}
@@ -1937,25 +1939,25 @@ export function BillingPage() {
                                     } catch { /* handled by hook */ }
                                   }}
                                 >
-                                  Subir certificado
+                                  {t("billing.subirCertificado")}
                                 </Button>
                               </Stack>
                             )}
                           </Box>
                         )}
 
-                        <Divider label="Sistema informático (obligatorio AEAT)" labelPosition="left" variant="dashed" />
+                        <Divider label={t("billing.sistemaInformaticoObligatorioAeat")} labelPosition="left" variant="dashed" />
                         <Group grow>
-                          <TextInput label="Razón social desarrollador" placeholder={settingsForm.values.business_name || "Tu empresa"} {...settingsForm.getInputProps("software_company_name")} />
-                          <TextInput label="NIF desarrollador" placeholder={settingsForm.values.tax_id || "B12345678"} {...settingsForm.getInputProps("software_company_nif")} />
+                          <TextInput label={t("billing.razonSocialDesarrollador")} placeholder={settingsForm.values.business_name || "Tu empresa"} {...settingsForm.getInputProps("software_company_name")} />
+                          <TextInput label={t("billing.nifDesarrollador")} placeholder={settingsForm.values.tax_id || "B12345678"} {...settingsForm.getInputProps("software_company_nif")} />
                         </Group>
                         <Group grow>
-                          <TextInput label="Nombre programa" {...settingsForm.getInputProps("software_name")} />
-                          <TextInput label="ID (2 chars)" maxLength={2} {...settingsForm.getInputProps("software_id")} />
+                          <TextInput label={t("billing.nombrePrograma")} {...settingsForm.getInputProps("software_name")} />
+                          <TextInput label={t("billing.id2Chars")} maxLength={2} {...settingsForm.getInputProps("software_id")} />
                         </Group>
                         <Group grow>
-                          <TextInput label="Versión" {...settingsForm.getInputProps("software_version")} />
-                          <TextInput label="N.º instalación" {...settingsForm.getInputProps("software_install_number")} />
+                          <TextInput label={t("billing.version")} {...settingsForm.getInputProps("software_version")} />
+                          <TextInput label={t("billing.nInstalacion")} {...settingsForm.getInputProps("software_install_number")} />
                         </Group>
                       </>
                     )}
@@ -1963,11 +1965,10 @@ export function BillingPage() {
                 )}
               </Box>
 
-              <Divider label="Diagnóstico VeriFactu" labelPosition="left" />
+              <Divider label={t("billing.diagnosticoVerifactu")} labelPosition="left" />
               <Box className="nv-card-compact" p="md" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)" }}>
                 <Text size="sm" c="dimmed" mb="sm">
-                  Ejecuta un test para verificar hash, cadena de registros, QR y estructura XML.
-                  Con la opción de envío real, se envía al entorno de pruebas de AEAT (preproducción).
+                  {t("billing.ejecutaUnTestParaVerificar")}
                 </Text>
                 <Group>
                   <Button
@@ -1981,7 +1982,7 @@ export function BillingPage() {
                       } catch { /* handled */ }
                     }}
                   >
-                    Test Local
+                    {t("billing.testLocal")}
                   </Button>
                   <Button
                     variant="filled"
@@ -1996,7 +1997,7 @@ export function BillingPage() {
                       } catch { /* handled */ }
                     }}
                   >
-                    Enviar a AEAT Pruebas
+                    {t("billing.enviarAAeatPruebas")}
                   </Button>
                 </Group>
 
@@ -2015,7 +2016,7 @@ export function BillingPage() {
                     ))}
                     {verifactuTestResult.verifactu_hash && (
                       <Box mt="xs" p="xs" style={{ background: "var(--nv-bg)", borderRadius: 8, fontFamily: "monospace", fontSize: 11, wordBreak: "break-all" }}>
-                        <Text size="xs" fw={600} mb={4}>Hash SHA-256:</Text>
+                        <Text size="xs" fw={600} mb={4}>{t("billing.hashSha256")}</Text>
                         {verifactuTestResult.verifactu_hash}
                       </Box>
                     )}
@@ -2027,7 +2028,7 @@ export function BillingPage() {
                     )}
                     {(verifactuTestResult as any).aeat_response && (
                       <Box p="xs" style={{ background: "var(--nv-bg)", borderRadius: 8, fontFamily: "monospace", fontSize: 11, wordBreak: "break-all" }}>
-                        <Text size="xs" fw={600} mb={4}>Respuesta AEAT:</Text>
+                        <Text size="xs" fw={600} mb={4}>{t("billing.respuestaAeat")}</Text>
                         <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                           {JSON.stringify((verifactuTestResult as any).aeat_response, null, 2)}
                         </pre>
@@ -2040,8 +2041,8 @@ export function BillingPage() {
           </ScrollArea.Autosize>
 
           <Group justify="flex-end" mt="lg">
-            <Button type="button" onClick={closeSettingsModal} variant="default">Cancelar</Button>
-            <Button type="submit" loading={updateInvoiceSettings.isPending}>Guardar Configuración</Button>
+            <Button type="button" onClick={closeSettingsModal} variant="default">{t("billing.cancelar")}</Button>
+            <Button type="submit" loading={updateInvoiceSettings.isPending}>{t("billing.guardarConfiguracion")}</Button>
           </Group>
         </form>
       </BottomSheet>

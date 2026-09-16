@@ -170,7 +170,7 @@ export function NotificationCenter({
               </Text>
               {!notification.isRead && (
                 <Badge color="blue" size="xs" variant="filled">
-                  Nuevo
+                  {"Nuevo"}
                 </Badge>
               )}
             </Group>
@@ -202,7 +202,7 @@ export function NotificationCenter({
                   onMarkAsRead(notification.id);
                 }}
               >
-                Marcar leído
+                {"Marcar leído"}
               </Menu.Item>
             )}
             <Menu.Item
@@ -213,7 +213,7 @@ export function NotificationCenter({
                 onDelete(notification.id);
               }}
             >
-              Eliminar
+              {"Eliminar"}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
@@ -232,7 +232,7 @@ export function NotificationCenter({
       title={
         <Group gap="sm">
           <IconBell size={20} />
-          <Text fw={600}>Notificaciones</Text>
+          <Text fw={600}>{"Notificaciones"}</Text>
           {(unreadCount > 0 || requiredPendingForms.length > 0) && (
             <Badge circle color="red" size="sm">
               {unreadCount + requiredPendingForms.length}
@@ -331,7 +331,7 @@ export function NotificationCenter({
             size="xs"
             variant="subtle"
           >
-            Marcar todo como leído
+            {"Marcar todo como leído"}
           </Button>
           <Button
             color="red"
@@ -341,19 +341,19 @@ export function NotificationCenter({
             size="xs"
             variant="subtle"
           >
-            Limpiar todo
+            {"Limpiar todo"}
           </Button>
         </Group>
 
         {/* Tabs */}
         <Tabs onChange={setActiveTab} value={activeTab}>
           <Tabs.List px="md">
-            <Tabs.Tab value="all">Todas</Tabs.Tab>
+            <Tabs.Tab value="all">{"Todas"}</Tabs.Tab>
             <Tabs.Tab value="unread">
               Sin leer {unreadCount > 0 && `(${unreadCount})`}
             </Tabs.Tab>
-            <Tabs.Tab value="booking">Reservas</Tabs.Tab>
-            <Tabs.Tab value="payment">Pagos</Tabs.Tab>
+            <Tabs.Tab value="booking">{"Reservas"}</Tabs.Tab>
+            <Tabs.Tab value="payment">{"Pagos"}</Tabs.Tab>
           </Tabs.List>
         </Tabs>
 
@@ -365,7 +365,7 @@ export function NotificationCenter({
                 <IconBell size={24} />
               </ThemeIcon>
               <Text c="dimmed" size="sm">
-                No hay notificaciones
+                {"No hay notificaciones"}
               </Text>
             </Stack>
           ) : (
@@ -377,7 +377,7 @@ export function NotificationCenter({
                 style={{ background: "var(--mantine-color-blue-0)" }}
               >
                 <Text size="xs" fw={800} c="blue" tt="uppercase" style={{ letterSpacing: 0.6 }}>
-                  Hoy
+                  {"Hoy"}
                 </Text>
                 <Badge size="xs" variant="filled" color="blue" radius="xl">
                   {todayNotifications.length}
@@ -386,7 +386,7 @@ export function NotificationCenter({
               {todayNotifications.length === 0 ? (
                 <Box px="md" py="sm">
                   <Text c="dimmed" size="xs">
-                    No tienes nuevas notificaciones hoy.
+                    {"No tienes nuevas notificaciones hoy."}
                   </Text>
                 </Box>
               ) : (
@@ -403,7 +403,7 @@ export function NotificationCenter({
                     tt="uppercase"
                     style={{ letterSpacing: 0.6, background: "var(--mantine-color-gray-0)" }}
                   >
-                    Anteriores
+                    {"Anteriores"}
                   </Text>
                   {earlierNotifications.map(renderNotification)}
                 </>
@@ -424,7 +424,7 @@ export function NotificationCenter({
               navigate("/settings?tab=notifications");
             }}
           >
-            Configurar notificaciones
+            {"Configurar notificaciones"}
           </Button>
         </Group>
       </Stack>

@@ -42,6 +42,7 @@ import { generateClientPlanPDF } from "../../services/pdfGenerator";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
+import { useTranslation } from "react-i18next";
 
 // Shape mínima del item de la "Cesta de suplementos" que el endpoint
 // ``GET /my/supplements`` devuelve. Definida aquí para no acoplar este
@@ -108,6 +109,7 @@ function NutrientProgress({
 }
 
 export function ClientDashboardPage() {
+  const { t } = useTranslation();
   const { data: dashboardData, isLoading } = useClientDashboard();
   const { data: profileData } = useClientProfile();
   const { data: pendingReviews = [] } = usePendingReviews();
@@ -207,7 +209,7 @@ export function ClientDashboardPage() {
               });
             }}
           >
-            Descargar Plan completo
+            {t("clientDashboard.descargarPlanCompleto")}
           </Button>
         </Group>
       </Box>
@@ -223,7 +225,7 @@ export function ClientDashboardPage() {
           variant="light"
           radius="md"
           mb="xl"
-          title="Tienes un formulario pendiente"
+          title={t("clientDashboard.tienesUnFormularioPendiente")}
         >
           <Stack gap="xs">
             <Text size="sm">
@@ -239,7 +241,7 @@ export function ClientDashboardPage() {
                 radius="md"
                 onClick={() => navigate("/my-forms")}
               >
-                Rellenar ahora
+                {t("clientDashboard.rellenarAhora")}
               </Button>
             </Group>
           </Stack>
@@ -253,7 +255,7 @@ export function ClientDashboardPage() {
           variant="light"
           radius="md"
           mb="xl"
-          title="Completa tus datos físicos"
+          title={t("clientDashboard.completaTusDatosFisicos")}
         >
           <Stack gap="xs">
             <Text size="sm">
@@ -267,7 +269,7 @@ export function ClientDashboardPage() {
                 radius="md"
                 onClick={() => navigate("/my-profile")}
               >
-                Completar ahora
+                {t("clientDashboard.completarAhora")}
               </Button>
             </Group>
           </Stack>
@@ -307,7 +309,7 @@ export function ClientDashboardPage() {
                   radius="md"
                   onClick={() => navigate("/my-progress")}
                 >
-                  Registrar revisión
+                  {t("clientDashboard.registrarRevision")}
                 </Button>
               </Group>
             </Stack>
@@ -345,7 +347,7 @@ export function ClientDashboardPage() {
               radius="md"
               onClick={() => navigate(`/my-calendar?session=${data.nextSession?.id}`)}
             >
-              Ver detalles
+              {t("clientDashboard.verDetalles")}
             </Button>
           </Group>
         </Paper>
@@ -358,21 +360,21 @@ export function ClientDashboardPage() {
           <SimpleGrid cols={{ base: 2, sm: 3 }} mb="lg">
             <StatCard
               icon={IconBarbell}
-              label="Entrenamientos"
+              label={t("clientDashboard.entrenamientos")}
               value={`${data.weekProgress.workouts_completed}/${data.weekProgress.workouts_total}`}
               subvalue="esta semana"
               color="blue"
             />
             <StatCard
               icon={IconFlame}
-              label="Calorías quemadas"
+              label={t("clientDashboard.caloriasQuemadas")}
               value={data.weekProgress.calories_burned.toLocaleString()}
               subvalue="esta semana"
               color="orange"
             />
             <StatCard
               icon={IconTarget}
-              label="Objetivo"
+              label={t("clientDashboard.objetivo")}
               value={data.goals.target_weight > 0 ? `${data.goals.progress}%` : "—"}
               subvalue={data.goals.target_weight > 0 ? data.goals.primary : "Configura tu objetivo"}
               color="green"
@@ -383,8 +385,8 @@ export function ClientDashboardPage() {
           <Card shadow="sm" padding="lg" radius="lg" withBorder mb="lg">
             <Group justify="space-between" mb="lg">
               <Box>
-                <Text fw={600} size="lg">Nutrición Hoy</Text>
-                <Text size="sm" c="dimmed">Tu progreso diario de macros</Text>
+                <Text fw={600} size="lg">{t("clientDashboard.nutricionHoy")}</Text>
+                <Text size="sm" c="dimmed">{t("clientDashboard.tuProgresoDiarioDeMacros")}</Text>
               </Box>
               <RingProgress
                 size={80}
@@ -403,26 +405,26 @@ export function ClientDashboardPage() {
             
             <Stack gap="md">
               <NutrientProgress
-                label="Calorías"
+                label={t("clientDashboard.calorias")}
                 current={data.nutritionToday.calories.current}
                 target={data.nutritionToday.calories.target}
                 color="yellow"
                 unit=" kcal"
               />
               <NutrientProgress
-                label="Proteínas"
+                label={t("clientDashboard.proteinas")}
                 current={data.nutritionToday.protein.current}
                 target={data.nutritionToday.protein.target}
                 color="red"
               />
               <NutrientProgress
-                label="Carbohidratos"
+                label={t("clientDashboard.carbohidratos")}
                 current={data.nutritionToday.carbs.current}
                 target={data.nutritionToday.carbs.target}
                 color="blue"
               />
               <NutrientProgress
-                label="Grasas"
+                label={t("clientDashboard.grasas")}
                 current={data.nutritionToday.fats.current}
                 target={data.nutritionToday.fats.target}
                 color="green"
@@ -434,7 +436,7 @@ export function ClientDashboardPage() {
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group justify="space-between" mb="lg">
               <Box>
-                <Text fw={600} size="lg">Mi Progreso</Text>
+                <Text fw={600} size="lg">{t("clientDashboard.miProgreso")}</Text>
                 <Text size="sm" c="dimmed">{data.goals.primary}</Text>
               </Box>
               {data.goals.current_weight > 0 && data.goals.start_weight > 0 && (
@@ -456,15 +458,15 @@ export function ClientDashboardPage() {
               <>
                 <Group justify="space-between" mb="sm">
                   <Box>
-                    <Text size="xs" c="dimmed">Inicio</Text>
+                    <Text size="xs" c="dimmed">{t("clientDashboard.inicio")}</Text>
                     <Text fw={600}>{formatDecimal(data.goals.start_weight, 1)}kg</Text>
                   </Box>
                   <Box ta="center">
-                    <Text size="xs" c="dimmed">Actual</Text>
+                    <Text size="xs" c="dimmed">{t("clientDashboard.actual")}</Text>
                     <Text fw={700} size="xl" c="yellow.6">{formatDecimal(data.goals.current_weight, 1)}kg</Text>
                   </Box>
                   <Box ta="right">
-                    <Text size="xs" c="dimmed">Objetivo</Text>
+                    <Text size="xs" c="dimmed">{t("clientDashboard.objetivo")}</Text>
                     <Text fw={600}>
                       {data.goals.target_weight > 0 ? `${formatDecimal(data.goals.target_weight, 1)}kg` : "—"}
                     </Text>
@@ -492,7 +494,7 @@ export function ClientDashboardPage() {
                       size="xs"
                       onClick={() => navigate("/my-progress")}
                     >
-                      Define tu objetivo
+                      {t("clientDashboard.defineTuObjetivo")}
                     </Button>
                   </Group>
                 )}
@@ -500,7 +502,7 @@ export function ClientDashboardPage() {
             ) : (
               <Stack align="center" gap="xs" py="sm">
                 <Text size="sm" c="dimmed" ta="center">
-                  Aún no has registrado tu peso inicial.
+                  {t("clientDashboard.aunNoHasRegistradoTu")}
                 </Text>
                 <Button
                   variant="light"
@@ -509,7 +511,7 @@ export function ClientDashboardPage() {
                   leftSection={<IconChartLine size={14} />}
                   onClick={() => navigate("/my-progress")}
                 >
-                  Registrar primera medición
+                  {t("clientDashboard.registrarPrimeraMedicion")}
                 </Button>
               </Stack>
             )}
@@ -520,7 +522,7 @@ export function ClientDashboardPage() {
         <Grid.Col span={{ base: 12, md: 4 }}>
           {/* Upcoming Sessions */}
           <Card shadow="sm" padding="lg" radius="lg" withBorder mb="lg">
-            <Text fw={600} size="lg" mb="md">Próximas Sesiones</Text>
+            <Text fw={600} size="lg" mb="md">{t("clientDashboard.proximasSesiones")}</Text>
             <Stack gap="sm">
               {data.upcomingSessions.length > 0 ? data.upcomingSessions.map((session, index) => (
                 <Paper key={index} p="sm" radius="md" withBorder>
@@ -538,11 +540,11 @@ export function ClientDashboardPage() {
                   </Group>
                 </Paper>
               )) : (
-                <Text size="sm" c="dimmed" ta="center">No hay sesiones programadas</Text>
+                <Text size="sm" c="dimmed" ta="center">{t("clientDashboard.noHaySesionesProgramadas")}</Text>
               )}
             </Stack>
             <Button variant="light" fullWidth mt="md" color="yellow" onClick={() => navigate("/my-calendar")}>
-              Ver calendario completo
+              {t("clientDashboard.verCalendarioCompleto")}
             </Button>
           </Card>
 
@@ -557,7 +559,7 @@ export function ClientDashboardPage() {
                   <ThemeIcon variant="light" color="grape" size="md" radius="md">
                     <IconPill size={16} />
                   </ThemeIcon>
-                  <Text fw={600} size="lg">Mis Suplementos</Text>
+                  <Text fw={600} size="lg">{t("clientDashboard.misSuplementos")}</Text>
                 </Group>
                 <Badge variant="light" color="grape" size="sm">
                   {supplementCount}
@@ -589,14 +591,14 @@ export function ClientDashboardPage() {
                 leftSection={<IconPill size={16} />}
                 onClick={() => navigate("/my-nutrition?tab=supplements")}
               >
-                Ver detalle de suplementos
+                {t("clientDashboard.verDetalleDeSuplementos")}
               </Button>
             </Card>
           )}
 
           {/* Recent Activity */}
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
-            <Text fw={600} size="lg" mb="md">Actividad Reciente</Text>
+            <Text fw={600} size="lg" mb="md">{t("clientDashboard.actividadReciente")}</Text>
             {data.recentActivity.length > 0 ? (
               <Timeline active={-1} bulletSize={24} lineWidth={2}>
                 {data.recentActivity.map((activity, index) => (
@@ -610,13 +612,13 @@ export function ClientDashboardPage() {
                 ))}
               </Timeline>
             ) : (
-              <Text size="sm" c="dimmed" ta="center">Sin actividad reciente</Text>
+              <Text size="sm" c="dimmed" ta="center">{t("clientDashboard.sinActividadReciente")}</Text>
             )}
           </Card>
 
           {/* Quick Actions */}
           <Card shadow="sm" padding="lg" radius="lg" withBorder mt="lg">
-            <Text fw={600} size="lg" mb="md">Acciones Rápidas</Text>
+            <Text fw={600} size="lg" mb="md">{t("clientDashboard.accionesRapidas")}</Text>
             <Stack gap="sm">
               <Button 
                 variant="light" 
@@ -625,7 +627,7 @@ export function ClientDashboardPage() {
                 justify="flex-start"
                 onClick={() => navigate("/my-workouts")}
               >
-                Ver mi entrenamiento de hoy
+                {t("clientDashboard.verMiEntrenamientoDeHoy")}
               </Button>
               <Button 
                 variant="light" 
@@ -635,7 +637,7 @@ export function ClientDashboardPage() {
                 color="green"
                 onClick={() => navigate("/my-nutrition")}
               >
-                Registrar comida
+                {t("clientDashboard.registrarComida")}
               </Button>
               <Button 
                 variant="light" 
@@ -645,7 +647,7 @@ export function ClientDashboardPage() {
                 color="blue"
                 onClick={() => navigate("/my-messages")}
               >
-                Mensaje a mi entrenador
+                {t("clientDashboard.mensajeAMiEntrenador")}
               </Button>
               <Button 
                 variant="light" 
@@ -655,7 +657,7 @@ export function ClientDashboardPage() {
                 color="violet"
                 onClick={() => navigate("/my-progress")}
               >
-                Registrar progreso
+                {t("clientDashboard.registrarProgreso")}
               </Button>
               {supplementCount > 0 && (
                 <Button
@@ -666,7 +668,7 @@ export function ClientDashboardPage() {
                   color="grape"
                   onClick={() => navigate("/my-nutrition?tab=supplements")}
                 >
-                  Mis suplementos
+                  {t("clientDashboard.misSuplementos")}
                 </Button>
               )}
             </Stack>

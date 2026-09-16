@@ -61,7 +61,7 @@ export function SupplementsTab({
         <TextInput
           leftSection={<IconSearch size={14} />}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Buscar suplementos..."
+          placeholder={"Buscar suplementos..."}
           value={searchSupplement}
           radius="md"
           size="sm"
@@ -98,7 +98,7 @@ export function SupplementsTab({
           radius="md"
           variant="light"
         >
-          Añadir
+          {"Añadir"}
         </Button>
       </Group>
 
@@ -127,7 +127,7 @@ export function SupplementsTab({
                   <Box className="food-card-info">
                     <Text className="food-card-name" title={supp.name}>{supp.name}</Text>
                     <Group gap={4}>
-                      {supp.is_global && <Badge color="gray" variant="light" size="xs">Sistema</Badge>}
+                      {supp.is_global && <Badge color="gray" variant="light" size="xs">{"Sistema"}</Badge>}
                       <Text className="food-card-serving">{supp.brand || supp.serving_size}</Text>
                     </Group>
                   </Box>
@@ -159,13 +159,13 @@ export function SupplementsTab({
                     )}
                   </Group>
                   <Group gap={4}>
-                    <Tooltip label="Ver detalle">
+                    <Tooltip label={"Ver detalle"}>
                       <ActionIcon color="gray" onClick={() => onView(supp)} size="sm" variant="subtle" radius="md">
                         <IconEye size={16} />
                       </ActionIcon>
                     </Tooltip>
                     {!supp.is_global && (
-                      <Tooltip label="Editar">
+                      <Tooltip label={"Editar"}>
                         <ActionIcon color="gray" onClick={() => onEdit(supp)} size="sm" variant="subtle" radius="md">
                           <IconEdit size={16} />
                         </ActionIcon>
@@ -179,22 +179,22 @@ export function SupplementsTab({
                   <Box className="food-card-macros">
                     <Box className="food-card-macro protein">
                       <Text className="food-card-macro-value">{supp.protein || 0}g</Text>
-                      <Text className="food-card-macro-label">Proteína</Text>
+                      <Text className="food-card-macro-label">{"Proteína"}</Text>
                     </Box>
                     <Box className="food-card-macro carbs">
                       <Text className="food-card-macro-value">{supp.carbs || 0}g</Text>
-                      <Text className="food-card-macro-label">Carbos</Text>
+                      <Text className="food-card-macro-label">{"Carbos"}</Text>
                     </Box>
                     <Box className="food-card-macro fat">
                       <Text className="food-card-macro-value">{supp.fat || 0}g</Text>
-                      <Text className="food-card-macro-label">Grasas</Text>
+                      <Text className="food-card-macro-label">{"Grasas"}</Text>
                     </Box>
                   </Box>
                 )}
 
                 {supp.how_to_take && (
                   <Text size="xs" c="dimmed" lineClamp={2} style={{ paddingTop: "var(--space-xs)", borderTop: "1px solid var(--border-subtle)" }}>
-                    <Text component="span" fw={600} c="violet">Cómo tomar:</Text> {supp.how_to_take}
+                    <Text component="span" fw={600} c="violet">{"Cómo tomar:"}</Text> {supp.how_to_take}
                   </Text>
                 )}
 
@@ -202,7 +202,7 @@ export function SupplementsTab({
                   <Box
                     style={{ paddingTop: "var(--space-xs)", borderTop: supp.how_to_take ? undefined : "1px solid var(--border-subtle)" }}
                   >
-                    <Tooltip label="Abrir enlace de compra" withArrow>
+                    <Tooltip label={"Abrir enlace de compra"} withArrow>
                       <Button
                         component="a"
                         href={supp.purchase_url}
@@ -215,7 +215,7 @@ export function SupplementsTab({
                         radius="xl"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        Comprar
+                        {"Comprar"}
                       </Button>
                     </Tooltip>
                   </Box>
@@ -226,27 +226,27 @@ export function SupplementsTab({
         </>
       ) : supplementFilter === "favorites" ? (
         <EmptyState
-          actionLabel="Ver todos"
-          description="No tienes suplementos marcados como favoritos."
+          actionLabel={"Ver todos"}
+          description={"No tienes suplementos marcados como favoritos."}
           icon={<IconStar size={40} />}
           onAction={() => onFilterChange("all")}
-          title="Sin favoritos"
+          title={"Sin favoritos"}
         />
       ) : debouncedSupplementSearch ? (
         <EmptyState
-          actionLabel="Limpiar búsqueda"
+          actionLabel={"Limpiar búsqueda"}
           description={`No se encontraron suplementos que coincidan con "${debouncedSupplementSearch}"`}
           icon={<IconSearch size={40} />}
           onAction={() => onSearchChange("")}
-          title="Sin resultados"
+          title={"Sin resultados"}
         />
       ) : (
         <EmptyState
-          actionLabel="Añadir Suplemento"
-          description="Los suplementos se cargan desde la base de datos. Añade suplementos para verlos aquí."
+          actionLabel={"Añadir Suplemento"}
+          description={"Los suplementos se cargan desde la base de datos. Añade suplementos para verlos aquí."}
           icon={<IconPill size={40} />}
           onAction={onNew}
-          title="No hay suplementos"
+          title={"No hay suplementos"}
         />
       )}
     </>

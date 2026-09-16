@@ -949,7 +949,7 @@ export function MealPlanBuilder({
         <Paper mb="md" p="sm" radius="lg" withBorder style={{ backgroundColor: "var(--nv-surface)" }}>
           <Group justify="space-between">
             <Group gap="sm">
-              <Text fw={600} size="sm">Semana</Text>
+              <Text fw={600} size="sm">{"Semana"}</Text>
               <Select
                 data={Array.from({ length: totalWeeks }, (_, i) => ({
                   value: String(i + 1),
@@ -966,7 +966,7 @@ export function MealPlanBuilder({
               <Popover position="bottom-end">
                 <Popover.Target>
                   <Button leftSection={<IconCopy size={14} />} size="xs" variant="light" radius="md" color="violet">
-                    Copiar a semanas
+                    {"Copiar a semanas"}
                   </Button>
                 </Popover.Target>
                 <Popover.Dropdown>
@@ -996,7 +996,7 @@ export function MealPlanBuilder({
 
       <Paper mb="md" p="md" radius="lg" withBorder style={{ backgroundColor: "var(--nv-surface)" }}>
         <Group justify="space-between" mb="md">
-          <Text fw={600}>Plan nutricional</Text>
+          <Text fw={600}>{"Plan nutricional"}</Text>
           <Group gap="xs">
             <Popover opened={copyDayPopoverOpened} onChange={setCopyDayPopoverOpened} position="bottom-end">
               <Popover.Target>
@@ -1010,12 +1010,12 @@ export function MealPlanBuilder({
                     setCopyToDayIds(days.filter((d) => d.id !== activeDay).map((d) => d.id));
                   }}
                 >
-                  Copiar a días
+                  {"Copiar a días"}
                 </Button>
               </Popover.Target>
               <Popover.Dropdown>
                 <Stack gap="sm">
-                  <Text size="sm" fw={500}>Copiar a días:</Text>
+                  <Text size="sm" fw={500}>{"Copiar a días"}</Text>
                   <Checkbox.Group value={copyToDayIds} onChange={setCopyToDayIds}>
                     <Stack gap="xs">
                       {DAY_PLAN_OPTIONS.filter((d) => d.id !== activeDay).map((d) => (
@@ -1024,7 +1024,7 @@ export function MealPlanBuilder({
                     </Stack>
                   </Checkbox.Group>
                   <Button size="xs" leftSection={<IconCopy size={12} />} onClick={copyToSelectedDays} disabled={copyToDayIds.length === 0}>
-                    Copiar
+                    {"Copiar"}
                   </Button>
                 </Stack>
               </Popover.Dropdown>
@@ -1038,7 +1038,7 @@ export function MealPlanBuilder({
                 color="teal"
                 radius="md"
               >
-                Mover comidas
+                {"Mover comidas"}
               </Button>
             )}
             <Button
@@ -1048,7 +1048,7 @@ export function MealPlanBuilder({
               variant="light"
               radius="md"
             >
-              Lista de Compra
+              {"Lista de Compra"}
             </Button>
           </Group>
         </Group>
@@ -1057,7 +1057,7 @@ export function MealPlanBuilder({
           <Box>
             <Group justify="space-between" mb={4}>
               <Text c="dimmed" size="xs">
-                Calorías
+                {"Calorías"}
               </Text>
               <Text fw={500} size="xs">
                 {Math.round(dayMacros.calories)} / {Math.round(targetCalories)}
@@ -1073,7 +1073,7 @@ export function MealPlanBuilder({
           <Box>
             <Group justify="space-between" mb={4}>
               <Text c="dimmed" size="xs">
-                Proteína
+                {"Proteína %"}
               </Text>
               <Text fw={500} size="xs">
                 {Math.round(dayMacros.protein)}g ({dayMacroPcts.protein_pct}%) / {Math.round(targetProtein)}g
@@ -1089,7 +1089,7 @@ export function MealPlanBuilder({
           <Box>
             <Group justify="space-between" mb={4}>
               <Text c="dimmed" size="xs">
-                Carbohidratos
+                {"Carbohidratos %"}
               </Text>
               <Text fw={500} size="xs">
                 {Math.round(dayMacros.carbs)}g ({dayMacroPcts.carbs_pct}%) / {Math.round(targetCarbs)}g
@@ -1105,7 +1105,7 @@ export function MealPlanBuilder({
           <Box>
             <Group justify="space-between" mb={4}>
               <Text c="dimmed" size="xs">
-                Grasas
+                {"Grasas %"}
               </Text>
               <Text fw={500} size="xs">
                 {Math.round(dayMacros.fat)}g ({dayMacroPcts.fat_pct}%) / {Math.round(targetFat)}g
@@ -1125,10 +1125,10 @@ export function MealPlanBuilder({
           <Box mt="md" pt="md" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
             <Group justify="space-between" mb="sm" align="baseline">
               <Text size="sm" fw={600}>
-                Distribución de macros
+                {"Distribución de macros"}
               </Text>
               <Text size="xs" c="dimmed">
-                Arrastra los separadores · ajusta con los %
+                {"Arrastra los separadores · ajusta con los %"}
               </Text>
             </Group>
             <MacroProportionBar
@@ -1200,7 +1200,7 @@ export function MealPlanBuilder({
           <Box key={currentDay.id}>
             <Group justify="flex-end" mb="sm">
               <Switch
-                label="Día Libre"
+                label={"Día Libre"}
                 checked={currentDay.is_free_day || false}
                 onChange={(e) => {
                   onChange(
@@ -1220,8 +1220,8 @@ export function MealPlanBuilder({
                 <ThemeIcon size={60} radius="xl" color="teal" variant="light" mb="md" style={{ margin: "0 auto" }}>
                   <IconCalendarOff size={30} />
                 </ThemeIcon>
-                <Text fw={700} size="lg" mb="xs">Día Libre</Text>
-                <Text c="dimmed" size="sm">Este día no tiene comidas preasignadas. El cliente puede comer libremente.</Text>
+                <Text fw={700} size="lg" mb="xs">{"Día Libre"}</Text>
+                <Text c="dimmed" size="sm">{"Este día no tiene comidas preasignadas. El cliente puede comer libremente."}</Text>
               </Paper>
             ) : (
             <Stack gap="md">
@@ -1257,7 +1257,7 @@ export function MealPlanBuilder({
                                 },
                               }}
                             />
-                            <Tooltip label="Editar nombre">
+                            <Tooltip label={"Editar nombre"}>
                               <ActionIcon size="xs" variant="subtle" color="gray">
                                 <IconEdit size={12} />
                               </ActionIcon>
@@ -1301,7 +1301,7 @@ export function MealPlanBuilder({
                             </Badge>
                           </>
                         )}
-                        <Tooltip label="Subir">
+                        <Tooltip label={"Subir"}>
                           <ActionIcon
                             color="gray"
                             onClick={() => moveMeal(meal.id, "up")}
@@ -1312,7 +1312,7 @@ export function MealPlanBuilder({
                             <IconChevronUp size={16} />
                           </ActionIcon>
                         </Tooltip>
-                        <Tooltip label="Bajar">
+                        <Tooltip label={"Bajar"}>
                           <ActionIcon
                             color="gray"
                             onClick={() => moveMeal(meal.id, "down")}
@@ -1323,7 +1323,7 @@ export function MealPlanBuilder({
                             <IconChevronDown size={16} />
                           </ActionIcon>
                         </Tooltip>
-                        <Tooltip label="Duplicar bloque">
+                        <Tooltip label={"Duplicar bloque"}>
                           <ActionIcon
                             color="gray"
                             onClick={() => duplicateMeal(meal.id)}
@@ -1346,7 +1346,7 @@ export function MealPlanBuilder({
 
                     <Group justify="flex-end" mb="xs">
                       <Switch
-                        label="Comida libre"
+                        label={"Comida libre"}
                         checked={meal.is_free_meal || false}
                         onChange={(e) => toggleFreeMeal(meal.id, e.currentTarget.checked)}
                         size="xs"
@@ -1359,8 +1359,8 @@ export function MealPlanBuilder({
                         <ThemeIcon size="lg" radius="xl" color="teal" variant="light" mb="xs">
                           <IconCalendarOff size={18} />
                         </ThemeIcon>
-                        <Text fw={700} size="sm">Comida libre</Text>
-                        <Text c="dimmed" size="xs">Este bloque no tiene alimentos preasignados. El cliente puede comer libremente en esta comida.</Text>
+                        <Text fw={700} size="sm">{"Comida libre"}</Text>
+                        <Text c="dimmed" size="xs">{"Este bloque no tiene alimentos preasignados. El cliente puede comer libremente en esta comida."}</Text>
                       </Paper>
                     ) : (
                     <Stack gap="xs">
@@ -1579,7 +1579,7 @@ export function MealPlanBuilder({
                                 />
                                 <TextInput
                                   defaultValue={item.notes || ""}
-                                  placeholder="Notas (ej: 1 pieza, a la plancha...)"
+                                  placeholder={"Notas (ej: 1 pieza, a la plancha...)"}
                                   size="xs"
                                   w={200}
                                   radius="md"
@@ -1589,7 +1589,7 @@ export function MealPlanBuilder({
                                 />
                                 <Popover width={250} position="bottom" withArrow shadow="md" radius="md">
                                   <Popover.Target>
-                                    <Tooltip label="Instrucciones / Nota">
+                                    <Tooltip label={"Instrucciones / Nota"}>
                                       <ActionIcon
                                         color={item.notes || item.cooking_method ? "blue" : "gray"}
                                         size="sm"
@@ -1603,8 +1603,8 @@ export function MealPlanBuilder({
                                   <Popover.Dropdown>
                                     <Stack gap="xs">
                                       <TextInput
-                                        label="Instrucciones"
-                                        placeholder="Ej: a la plancha, hervido..."
+                                        label={"Instrucciones"}
+                                        placeholder={"Ej: a la plancha, hervido..."}
                                         size="xs"
                                         value={item.notes || ""}
                                         onChange={(e) => {
@@ -1660,7 +1660,7 @@ export function MealPlanBuilder({
                         variant="light"
                         radius="md"
                       >
-                        Añadir Alimento o Suplemento
+                        {"Añadir Alimento o Suplemento"}
                       </Button>
                       {groupingMealId === meal.id ? (
                         <>
@@ -1680,7 +1680,7 @@ export function MealPlanBuilder({
                             radius="md"
                             onClick={cancelGroupingMode}
                           >
-                            Cancelar
+                            {"Cancelar"}
                           </Button>
                         </>
                       ) : (
@@ -1692,7 +1692,7 @@ export function MealPlanBuilder({
                             radius="md"
                             onClick={() => startGroupingMode(meal.id)}
                           >
-                            Agrupar como Receta
+                            {"Agrupar como Receta"}
                           </Button>
                         )
                       )}
@@ -1703,7 +1703,7 @@ export function MealPlanBuilder({
               })}
 
               <Divider
-                label="Añadir comida"
+                label={"Añadir comida"}
                 labelPosition="center"
                 style={{ borderColor: "var(--nv-border)" }}
               />
@@ -1717,7 +1717,7 @@ export function MealPlanBuilder({
                   radius="md"
                   size="xs"
                 >
-                  Comida 1
+                  {"Comida 1"}
                 </Button>
                 <Button
                   color="green"
@@ -1727,7 +1727,7 @@ export function MealPlanBuilder({
                   radius="md"
                   size="xs"
                 >
-                  Comida 2
+                  {"Comida 2"}
                 </Button>
                 <Button
                   color="orange"
@@ -1737,7 +1737,7 @@ export function MealPlanBuilder({
                   radius="md"
                   size="xs"
                 >
-                  Comida 3
+                  {"Comida 3"}
                 </Button>
                 <Button
                   color="yellow"
@@ -1747,7 +1747,7 @@ export function MealPlanBuilder({
                   radius="md"
                   size="xs"
                 >
-                  Comida 4
+                  {"Comida 4"}
                 </Button>
                 <Button
                   color="red"
@@ -1757,7 +1757,7 @@ export function MealPlanBuilder({
                   radius="md"
                   size="xs"
                 >
-                  Comida 5
+                  {"Comida 5"}
                 </Button>
                 <Button
                   color="grape"
@@ -1767,7 +1767,7 @@ export function MealPlanBuilder({
                   radius="md"
                   size="xs"
                 >
-                  Snack
+                  {"Snack"}
                 </Button>
               </SimpleGrid>
             </Stack>
@@ -1781,25 +1781,25 @@ export function MealPlanBuilder({
         onClose={closeFoodModal}
         opened={foodModalOpened}
         size="lg"
-        title="Seleccionar Alimento o Suplemento"
+        title={"Seleccionar Alimento o Suplemento"}
         radius="lg"
       >
         <Tabs defaultValue="foods">
           <Tabs.List mb="md">
             <Tabs.Tab value="foods" leftSection={<IconApple size={14} />}>
-              Alimentos
+              {"Alimentos"}
             </Tabs.Tab>
             <Tabs.Tab value="food-groups" leftSection={<IconApple size={14} />}>
-              Grupos
+              {"Grupos"}
             </Tabs.Tab>
             <Tabs.Tab value="supplements" leftSection={<IconPill size={14} />}>
-              Suplementos
+              {"Suplementos"}
             </Tabs.Tab>
             <Tabs.Tab value="recipes" leftSection={<IconStar size={14} />}>
-              Recetas
+              {"Recetas"}
             </Tabs.Tab>
             <Tabs.Tab value="beverages" leftSection={<IconBottle size={14} />}>
-              Bebidas
+              {"Bebidas"}
             </Tabs.Tab>
           </Tabs.List>
 
@@ -1812,12 +1812,12 @@ export function MealPlanBuilder({
                 onClick={openCreateFoodModal}
                 size="xs"
               >
-                Crear alimento
+                {"Crear alimento"}
               </Button>
               <TextInput
                 leftSection={<IconSearch size={16} />}
                 onChange={(e) => handleFoodSearchChange(e.target.value)}
-                placeholder="Buscar alimentos..."
+                placeholder={"Buscar alimentos..."}
                 value={foodSearch}
                 radius="md"
                 style={{ flex: 1 }}
@@ -1839,7 +1839,7 @@ export function MealPlanBuilder({
             <Group mb="xs">
               <Select
                 data={FOOD_CATEGORIES}
-                placeholder="Filtrar por categoría"
+                placeholder={"Filtrar por categoría"}
                 clearable
                 size="xs"
                 radius="md"
@@ -1983,7 +1983,7 @@ export function MealPlanBuilder({
             <TextInput
               leftSection={<IconSearch size={16} />}
               onChange={(e) => setFoodGroupSearch(e.target.value)}
-              placeholder="Buscar grupos de alimentos..."
+              placeholder={"Buscar grupos de alimentos..."}
               value={foodGroupSearch}
               radius="md"
               mb="md"
@@ -2029,7 +2029,7 @@ export function MealPlanBuilder({
                   ))}
                 </Stack>
               ) : (
-                <Center py="xl"><Text c="dimmed">No se encontraron grupos de alimentos</Text></Center>
+                <Center py="xl"><Text c="dimmed">{"No se encontraron grupos de alimentos"}</Text></Center>
               )}
             </ScrollArea>
           </Tabs.Panel>
@@ -2039,7 +2039,7 @@ export function MealPlanBuilder({
               <TextInput
                 leftSection={<IconSearch size={16} />}
                 onChange={(e) => setSupplementSearch(e.target.value)}
-                placeholder="Buscar suplementos..."
+                placeholder={"Buscar suplementos..."}
                 value={supplementSearch}
                 radius="md"
                 style={{ flex: 1 }}
@@ -2223,7 +2223,7 @@ export function MealPlanBuilder({
                 </Stack>
               ) : (
                 <Center py="xl">
-                  <Text c="dimmed" size="sm">No hay recetas. Crea recetas desde la pestaña &quot;Recetas&quot; en Nutrición.</Text>
+                  <Text c="dimmed" size="sm">{"No hay recetas. Crea recetas desde la pestaña &quot;Recetas&quot; en Nutrición."}</Text>
                 </Center>
               )}
             </ScrollArea>
@@ -2233,7 +2233,7 @@ export function MealPlanBuilder({
             <TextInput
               leftSection={<IconSearch size={16} />}
               onChange={(e) => setBeverageSearch(e.target.value)}
-              placeholder="Buscar bebidas..."
+              placeholder={"Buscar bebidas..."}
               value={beverageSearch}
               radius="md"
               mb="md"
@@ -2280,7 +2280,7 @@ export function MealPlanBuilder({
                   ))}
                 </Stack>
               ) : (
-                <Center py="xl"><Text c="dimmed">No se encontraron bebidas.</Text></Center>
+                <Center py="xl"><Text c="dimmed">{"No se encontraron bebidas."}</Text></Center>
               )}
             </ScrollArea>
           </Tabs.Panel>
@@ -2291,49 +2291,49 @@ export function MealPlanBuilder({
       <BottomSheet
         opened={createFoodModalOpened}
         onClose={() => { closeCreateFoodModal(); createFoodForm.reset(); }}
-        title="Crear alimento"
+        title={"Crear alimento"}
         size="md"
       >
         <form onSubmit={createFoodForm.onSubmit(handleCreateFood)}>
           <Stack gap="sm">
             <TextInput
-              label="Nombre"
-              placeholder="Nombre del alimento"
+              label={"Nombre"}
+              placeholder={"Nombre del alimento"}
               required
               {...createFoodForm.getInputProps("name")}
             />
             <Select
               data={FOOD_CATEGORIES}
-              label="Categoría"
+              label={"Categoría"}
               {...createFoodForm.getInputProps("category")}
             />
             <Group grow>
               <NumberInput
-                label="Porción (cantidad)"
+                label={"Porción (cantidad)"}
                 min={1}
                 {...createFoodForm.getInputProps("serving_size")}
               />
               <TextInput
-                label="Unidad"
+                label={"Unidad"}
                 placeholder="g"
                 {...createFoodForm.getInputProps("serving_unit")}
               />
             </Group>
             <Group grow>
-              <NumberInput label="Calorías" min={0} {...createFoodForm.getInputProps("calories")} />
-              <NumberInput label="Proteínas (g)" min={0} {...createFoodForm.getInputProps("protein_g")} />
+              <NumberInput label={"Calorías"} min={0} {...createFoodForm.getInputProps("calories")} />
+              <NumberInput label={"Proteínas (g)"} min={0} {...createFoodForm.getInputProps("protein_g")} />
             </Group>
             <Group grow>
-              <NumberInput label="Carbohidratos (g)" min={0} {...createFoodForm.getInputProps("carbs_g")} />
-              <NumberInput label="Grasas (g)" min={0} {...createFoodForm.getInputProps("fat_g")} />
+              <NumberInput label={"Carbohidratos (g)"} min={0} {...createFoodForm.getInputProps("carbs_g")} />
+              <NumberInput label={"Grasas (g)"} min={0} {...createFoodForm.getInputProps("fat_g")} />
             </Group>
-            <NumberInput label="Fibra (g)" min={0} {...createFoodForm.getInputProps("fiber_g")} />
+            <NumberInput label={"Fibra (g)"} min={0} {...createFoodForm.getInputProps("fiber_g")} />
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={() => { closeCreateFoodModal(); createFoodForm.reset(); }}>
-                Cancelar
+                {"Cancelar"}
               </Button>
               <Button type="submit" color="green" loading={createFoodMutation.isPending}>
-                Crear y añadir
+                {"Crear y añadir"}
               </Button>
             </Group>
           </Stack>
@@ -2345,7 +2345,7 @@ export function MealPlanBuilder({
         onClose={closeShoppingList}
         opened={shoppingListOpened}
         size="md"
-        title="Lista de la Compra"
+        title={"Lista de la Compra"}
         radius="lg"
       >
         <ScrollArea h={400}>
@@ -2366,7 +2366,7 @@ export function MealPlanBuilder({
           mt="md"
           radius="md"
         >
-          Exportar Lista
+          {"Exportar Lista"}
         </Button>
       </BottomSheet>
 
@@ -2381,12 +2381,12 @@ export function MealPlanBuilder({
       <Modal
         opened={moveMealsModalOpen}
         onClose={() => setMoveMealsModalOpen(false)}
-        title="Mover comidas a otro día"
+        title={"Mover comidas a otro día"}
         centered
         radius="lg"
       >
         <Stack gap="md">
-          <Text size="sm" fw={500}>Selecciona las comidas a mover:</Text>
+          <Text size="sm" fw={500}>{"Selecciona las comidas a mover:"}</Text>
           {currentDay?.meals.map((meal) => (
             <Checkbox
               key={meal.id}
@@ -2401,9 +2401,9 @@ export function MealPlanBuilder({
             />
           ))}
           <Divider />
-          <Text size="sm" fw={500}>Día destino:</Text>
+          <Text size="sm" fw={500}>{"Día destino:"}</Text>
           <Select
-            placeholder="Selecciona día"
+            placeholder={"Selecciona día"}
             data={DAY_PLAN_OPTIONS.filter((d) => d.id !== activeDay).map((d) => ({
               value: d.id,
               label: d.dayName,

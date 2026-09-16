@@ -36,8 +36,10 @@ import { PageHeader } from "../../components/common/PageHeader";
 import { StatsCard } from "../../components/common/StatsCard";
 import { useKPIs, useRevenueChart, useClientsChart } from "../../hooks/useReports";
 import { formatDecimal } from "../../utils/format";
+import { useTranslation } from "react-i18next";
 
 export function ReportsPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [period, setPeriod] = useState<string | null>("30");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
@@ -89,29 +91,29 @@ export function ReportsPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Exportar Datos",
+          label: t("reports.exportarDatos"),
           icon: <IconDownload size={16} />,
           onClick: () => {},
         }}
-        description="Analiza el rendimiento de tu negocio"
+        description={t("reports.analizaElRendimientoDeTu")}
         secondaryAction={{
-          label: "Actualizar",
+          label: t("reports.actualizar"),
           icon: <IconRefresh size={16} />,
           onClick: () => {},
           variant: "default",
         }}
-        title="Reportes y Analytics"
+        title={t("reports.reportesYAnalytics")}
       >
         <Group>
           <Select
             data={[
-              { value: "7", label: "Últimos 7 días" },
-              { value: "30", label: "Últimos 30 días" },
-              { value: "90", label: "Últimos 90 días" },
-              { value: "365", label: "Este año" },
+              { value: "7", label: t("reports.ultimos7Dias") },
+              { value: "30", label: t("reports.ultimos30Dias") },
+              { value: "90", label: t("reports.ultimos90Dias") },
+              { value: "365", label: t("reports.esteAno") },
             ]}
             onChange={setPeriod}
-            placeholder="Período"
+            placeholder={t("reports.periodo")}
             value={period}
             w={180}
           />
@@ -133,7 +135,7 @@ export function ReportsPage() {
           changeLabel="nuevos este mes"
           color="blue"
           icon={<IconUsers size={24} />}
-          title="Clientes Totales"
+          title={t("reports.clientesTotales")}
           value={kpis.totalClients}
         />
         <StatsCard
@@ -141,7 +143,7 @@ export function ReportsPage() {
           changeLabel="vs mes anterior"
           color="grape"
           icon={<IconCalendarEvent size={24} />}
-          title="Reservas del Mes"
+          title={t("reports.reservasDelMes")}
           value={kpis.bookingsThisMonth}
         />
         <StatsCard
@@ -149,7 +151,7 @@ export function ReportsPage() {
           changeLabel="vs mes anterior"
           color="teal"
           icon={<IconTrendingUp size={24} />}
-          title="Tasa de Cumplimiento"
+          title={t("reports.tasaDeCumplimiento")}
           value={`${kpis.completionRate}%`}
         />
       </SimpleGrid>
@@ -159,10 +161,10 @@ export function ReportsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "overview", label: "Resumen" },
-            { value: "revenue", label: "Ingresos" },
-            { value: "clients", label: "Clientes" },
-            { value: "activity", label: "Actividad" },
+            { value: "overview", label: t("reports.resumen") },
+            { value: "revenue", label: t("reports.ingresos") },
+            { value: "clients", label: t("reports.clientes") },
+            { value: "activity", label: t("reports.actividad") },
           ]}
           size="sm"
           radius="md"
@@ -173,16 +175,16 @@ export function ReportsPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconChartBar size={14} />} value="overview">
-            Resumen
+            {t("reports.resumen")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconChartLine size={14} />} value="revenue">
-            Ingresos
+            {t("reports.ingresos")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconUsers size={14} />} value="clients">
-            Clientes
+            {t("reports.clientes")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconChartPie size={14} />} value="activity">
-            Actividad
+            {t("reports.actividad")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -193,9 +195,9 @@ export function ReportsPage() {
             <Paper p="lg" radius="lg" withBorder>
               <Group justify="space-between" mb="lg">
                 <Box>
-                  <Text fw={600}>Ingresos Mensuales</Text>
+                  <Text fw={600}>{t("reports.ingresosMensuales")}</Text>
                   <Text c="dimmed" size="xs">
-                    Evolución de los últimos 7 meses
+                    {t("reports.evolucionDeLosUltimos7")}
                   </Text>
                 </Box>
                 <Badge color="green" variant="light">
@@ -260,9 +262,9 @@ export function ReportsPage() {
             <Paper p="lg" radius="lg" withBorder>
               <Group justify="space-between" mb="lg">
                 <Box>
-                  <Text fw={600}>Distribución de Clientes</Text>
+                  <Text fw={600}>{t("reports.distribucionDeClientes")}</Text>
                   <Text c="dimmed" size="xs">
-                    Estado actual de tu base de clientes
+                    {t("reports.estadoActualDeTuBase")}
                   </Text>
                 </Box>
               </Group>
@@ -275,7 +277,7 @@ export function ReportsPage() {
                         {kpis.totalClients}
                       </Text>
                       <Text c="dimmed" size="xs">
-                        Total
+                        {t("reports.total")}
                       </Text>
                     </Box>
                   }
@@ -314,9 +316,9 @@ export function ReportsPage() {
             <Paper p="lg" radius="lg" withBorder>
               <Group justify="space-between" mb="lg">
                 <Box>
-                  <Text fw={600}>Top Clientes</Text>
+                  <Text fw={600}>{t("reports.topClientes")}</Text>
                   <Text c="dimmed" size="xs">
-                    Por número de sesiones este mes
+                    {t("reports.porNumeroDeSesionesEste")}
                   </Text>
                 </Box>
                 <ActionIcon color="gray" variant="subtle">
@@ -327,10 +329,10 @@ export function ReportsPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Cliente</Table.Th>
-                    <Table.Th ta="center">Sesiones</Table.Th>
-                    <Table.Th ta="center">Cumplimiento</Table.Th>
-                    <Table.Th ta="right">Ingresos</Table.Th>
+                    <Table.Th>{t("reports.cliente")}</Table.Th>
+                    <Table.Th ta="center">{t("reports.sesiones")}</Table.Th>
+                    <Table.Th ta="center">{t("reports.cumplimiento")}</Table.Th>
+                    <Table.Th ta="right">{t("reports.ingresos")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -376,9 +378,9 @@ export function ReportsPage() {
             <Paper p="lg" radius="lg" withBorder>
               <Group justify="space-between" mb="lg">
                 <Box>
-                  <Text fw={600}>Pagos Recientes</Text>
+                  <Text fw={600}>{t("reports.pagosRecientes")}</Text>
                   <Text c="dimmed" size="xs">
-                    Últimas transacciones
+                    {t("reports.ultimasTransacciones")}
                   </Text>
                 </Box>
                 <ActionIcon color="gray" variant="subtle">
@@ -389,10 +391,10 @@ export function ReportsPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Cliente</Table.Th>
-                    <Table.Th>Fecha</Table.Th>
-                    <Table.Th ta="center">Estado</Table.Th>
-                    <Table.Th ta="right">Importe</Table.Th>
+                    <Table.Th>{t("reports.cliente")}</Table.Th>
+                    <Table.Th>{t("reports.fecha")}</Table.Th>
+                    <Table.Th ta="center">{t("reports.estado")}</Table.Th>
+                    <Table.Th ta="right">{t("reports.importe")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -437,7 +439,7 @@ export function ReportsPage() {
           <SimpleGrid cols={{ base: 1, lg: 3 }} mb="lg" spacing="lg">
             <Paper p="lg" radius="lg" withBorder>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                MRR Actual
+                {t("reports.mrrActual")}
               </Text>
               <Text fw={700} mt="xs" size="xl">
                 €{kpis.mrr.toLocaleString()}
@@ -460,13 +462,13 @@ export function ReportsPage() {
                 €{formatDecimal(kpis.avgRevenue, 2)}
               </Text>
               <Text c="dimmed" mt="xs" size="xs">
-                Ingreso promedio por usuario
+                {t("reports.ingresoPromedioPorUsuario")}
               </Text>
             </Paper>
 
             <Paper p="lg" radius="lg" withBorder>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Churn Rate
+                {t("reports.churnRate")}
               </Text>
               <Text fw={700} mt="xs" size="xl">
                 {kpis.churnRate}%
@@ -484,7 +486,7 @@ export function ReportsPage() {
 
           <Paper p="lg" radius="lg" withBorder>
             <Text fw={600} mb="lg">
-              Evolución de Ingresos
+              {t("reports.evolucionDeIngresos")}
             </Text>
             <Box h={300}>
               <Group align="flex-end" gap={8} h="100%">
@@ -517,7 +519,7 @@ export function ReportsPage() {
           <SimpleGrid cols={{ base: 1, lg: 3 }} mb="lg" spacing="lg">
             <Paper p="lg" radius="lg" withBorder>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Clientes Activos
+                {t("reports.clientesActivos")}
               </Text>
               <Text fw={700} mt="xs" size="xl">
                 {kpis.activeClients}
@@ -536,41 +538,41 @@ export function ReportsPage() {
 
             <Paper p="lg" radius="lg" withBorder>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Sesiones Completadas
+                {t("reports.sesionesCompletadas")}
               </Text>
               <Text fw={700} mt="xs" size="xl">
                 {kpis.bookingsThisMonth}
               </Text>
               <Text c="dimmed" mt="xs" size="xs">
-                Este mes
+                {t("reports.esteMes")}
               </Text>
             </Paper>
 
             <Paper p="lg" radius="lg" withBorder>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Tasa de Abandono
+                {t("reports.tasaDeAbandono")}
               </Text>
               <Text fw={700} mt="xs" size="xl">
                 {kpis.churnRate}%
               </Text>
               <Text c="dimmed" mt="xs" size="xs">
-                Churn rate mensual
+                {t("reports.churnRateMensual")}
               </Text>
             </Paper>
           </SimpleGrid>
 
           <Paper p="lg" radius="lg" withBorder>
             <Text fw={600} mb="lg">
-              Todos los Clientes
+              {t("reports.todosLosClientes")}
             </Text>
             <Table>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Sesiones</Table.Th>
-                  <Table.Th>Cumplimiento</Table.Th>
-                  <Table.Th>Ingresos</Table.Th>
-                  <Table.Th>Estado</Table.Th>
+                  <Table.Th>{t("reports.cliente")}</Table.Th>
+                  <Table.Th>{t("reports.sesiones")}</Table.Th>
+                  <Table.Th>{t("reports.cumplimiento")}</Table.Th>
+                  <Table.Th>{t("reports.ingresos")}</Table.Th>
+                  <Table.Th>{t("reports.estado")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -596,7 +598,7 @@ export function ReportsPage() {
                     <Table.Td>€{client.revenue}</Table.Td>
                     <Table.Td>
                       <Badge color="green" variant="light">
-                        Activo
+                        {t("reports.activo")}
                       </Badge>
                     </Table.Td>
                   </Table.Tr>
@@ -610,7 +612,7 @@ export function ReportsPage() {
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
             <Paper p="lg" radius="lg" withBorder>
               <Text fw={600} mb="lg">
-                Reservas por Día de la Semana
+                {t("reports.reservasPorDiaDeLa")}
               </Text>
               {kpis.bookingsThisMonth > 0 ? (
               <Stack gap="sm">
@@ -641,14 +643,14 @@ export function ReportsPage() {
               </Stack>
               ) : (
                 <Text c="dimmed" ta="center" py="xl">
-                  Sin datos de reservas aún
+                  {t("reports.sinDatosDeReservasAun")}
                 </Text>
               )}
             </Paper>
 
             <Paper p="lg" radius="lg" withBorder>
               <Text fw={600} mb="lg">
-                Horarios Más Populares
+                {t("reports.horariosMasPopulares")}
               </Text>
               {kpis.bookingsThisMonth > 0 ? (
               <Stack gap="sm">
@@ -679,30 +681,30 @@ export function ReportsPage() {
               </Stack>
               ) : (
                 <Text c="dimmed" ta="center" py="xl">
-                  Sin datos de horarios aún
+                  {t("reports.sinDatosDeHorariosAun")}
                 </Text>
               )}
             </Paper>
 
             <Paper p="lg" radius="lg" withBorder>
               <Text fw={600} mb="lg">
-                Resumen de Actividad
+                {t("reports.resumenDeActividad")}
               </Text>
               <Stack gap="md">
                 <Group justify="space-between">
-                  <Text size="sm">Sesiones Completadas</Text>
+                  <Text size="sm">{t("reports.sesionesCompletadas")}</Text>
                   <Text fw={500} size="sm">{kpis.bookingsThisMonth}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text size="sm">Tasa de Cumplimiento</Text>
+                  <Text size="sm">{t("reports.tasaDeCumplimiento")}</Text>
                   <Text fw={500} size="sm">{kpis.completionRate}%</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text size="sm">Clientes Activos</Text>
+                  <Text size="sm">{t("reports.clientesActivos")}</Text>
                   <Text fw={500} size="sm">{kpis.activeClients}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text size="sm">Ingreso Promedio por Cliente</Text>
+                  <Text size="sm">{t("reports.ingresoPromedioPorCliente")}</Text>
                   <Text fw={500} size="sm">€{formatDecimal(kpis.avgRevenue, 2)}</Text>
                 </Group>
               </Stack>
@@ -710,7 +712,7 @@ export function ReportsPage() {
 
             <Paper p="lg" radius="lg" withBorder>
               <Text fw={600} mb="lg">
-                Distribución de Clientes
+                {t("reports.distribucionDeClientes")}
               </Text>
               <Group justify="center" mb="md">
                 <RingProgress
@@ -720,7 +722,7 @@ export function ReportsPage() {
                         {kpis.totalClients}
                       </Text>
                       <Text c="dimmed" size="xs">
-                        Total
+                        {t("reports.total")}
                       </Text>
                     </Box>
                   }

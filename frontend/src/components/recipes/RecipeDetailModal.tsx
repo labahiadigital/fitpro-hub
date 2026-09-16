@@ -117,12 +117,12 @@ export function RecipeDetailModal({
             )}
             {recipe.is_global && (
               <Badge color="violet" variant="light" size="sm">
-                Sistema
+                {"Sistema"}
               </Badge>
             )}
             {recipe.is_public && (
               <Badge color="cyan" variant="light" size="sm">
-                Visible clientes
+                {"Visible clientes"}
               </Badge>
             )}
             {recipe.tags?.map((tag) => (
@@ -143,7 +143,7 @@ export function RecipeDetailModal({
           >
             <Group justify="space-between" mb="sm">
               <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-                Información nutricional
+                {"Información nutricional"}
               </Text>
               <Text size="xs" c="dimmed">
                 por porción / total
@@ -271,7 +271,7 @@ export function RecipeDetailModal({
           {/* Instructions */}
           {recipe.description && (
             <>
-              <Divider label={<Text fw={600} size="sm">Preparación</Text>} />
+              <Divider label={<Text fw={600} size="sm">{"Preparación"}</Text>} />
               <Box
                 p="sm"
                 style={{
@@ -290,7 +290,7 @@ export function RecipeDetailModal({
           {/* Notes (trainer only) */}
           {!readOnly && recipe.notes && (
             <>
-              <Divider label={<Text fw={600} size="sm">Notas internas</Text>} />
+              <Divider label={<Text fw={600} size="sm">{"Notas internas"}</Text>} />
               <Box
                 p="sm"
                 style={{
@@ -317,7 +317,7 @@ export function RecipeDetailModal({
                     onClick={() => onDuplicate(recipe)}
                     size="sm"
                   >
-                    Duplicar
+                    {"Duplicar"}
                   </Button>
                 )}
                 {onEdit && !recipe.is_global && (
@@ -333,7 +333,7 @@ export function RecipeDetailModal({
                       },
                     }}
                   >
-                    Editar
+                    {"Editar"}
                   </Button>
                 )}
               </Group>

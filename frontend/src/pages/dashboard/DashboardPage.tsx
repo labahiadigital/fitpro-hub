@@ -332,8 +332,7 @@ function RecentClientsWidget() {
 
 // --- Resumen de progreso de clientes ---
 function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; total_clients: number } }) {
-  const { t } = useTranslation();
-  const activeClients = kpis?.active_clients || 0;
+    const activeClients = kpis?.active_clients || 0;
   const totalClients = kpis?.total_clients || 1;
   const activePercentage = Math.round((activeClients / totalClients) * 100) || 0;
 
@@ -343,7 +342,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group gap="xs">
           <IconTarget size={18} color="var(--nv-accent)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            {t("dashboard.overallProgress")}
+            {"Progreso General"}
           </Text>
         </Group>
       </Group>
@@ -360,7 +359,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
                 {activePercentage}%
               </Text>
               <Text size="xs" c="dimmed">
-                {t("dashboard.active")}
+                {"Activos"}
               </Text>
             </Box>
           }
@@ -371,7 +370,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group justify="space-between">
           <Group gap="xs">
             <Box w={10} h={10} bg="green" style={{ borderRadius: "50%" }} />
-            <Text size="xs">{t("dashboard.activeClients")}</Text>
+            <Text size="xs">{"Clientes Activos"}</Text>
           </Group>
           <Text size="xs" fw={600}>
             {activeClients}
@@ -380,7 +379,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group justify="space-between">
           <Group gap="xs">
             <Box w={10} h={10} bg="gray" style={{ borderRadius: "50%" }} />
-            <Text size="xs">{t("dashboard.inactiveClients")}</Text>
+            <Text size="xs">{"Clientes inactivos"}</Text>
           </Group>
           <Text size="xs" fw={600}>
             {totalClients - activeClients}
@@ -404,16 +403,15 @@ function TrainingStats({
   };
   loading?: boolean;
 }) {
-  const { t } = useTranslation();
-  const stats = [
+    const stats = [
     {
-      label: t("dashboard.pendingSessions"),
+      label: "Sesiones Pendientes",
       value: kpis?.upcoming_sessions?.toString() || "0",
       icon: IconCalendarEvent,
       color: "blue",
     },
     {
-      label: t("dashboard.sessionsThisMonth"),
+      label: "Sesiones este mes",
       value: kpis?.completed_sessions_month?.toString() || "0",
       icon: IconClock,
       color: "grape",
@@ -425,7 +423,7 @@ function TrainingStats({
       color: "orange",
     },
     {
-      label: t("dashboard.monthRevenue"),
+      label: "Ingresos mes",
       value: `€${formatDecimal(kpis?.revenue_this_month || 0, 0)}`,
       icon: IconTarget,
       color: "green",
@@ -478,7 +476,7 @@ function TrainingStats({
 // --- Widget de actividad semanal ---
 function WeeklyActivityWidget() {
   const { t } = useTranslation();
-  const days = ["L", "M", "X", "J", "V", "S", "D"];
+    const days = ["L", "M", "X", "J", "V", "S", "D"];
   const activity = [0, 0, 0, 0, 0, 0, 0]; // Sin datos hardcodeados
 
   // Build weekly data with day index. Our array: 0=Mon..5=Sat, 6=Sun.
@@ -585,8 +583,7 @@ function ClientMetricsWidget({
     revenue_last_month: number;
   };
 }) {
-  const { t } = useTranslation();
-  const revenueChange = kpis?.revenue_last_month
+    const revenueChange = kpis?.revenue_last_month
     ? (
         ((kpis.revenue_this_month - kpis.revenue_last_month) /
           kpis.revenue_last_month) *
@@ -596,22 +593,22 @@ function ClientMetricsWidget({
 
   const metrics = [
     {
-      label: t("dashboard.mrrLabel"),
+      label: "Ingresos recurrentes (MRR)",
       value: `€${formatDecimal(kpis?.mrr || 0, 2)}`,
       icon: IconWeight,
       trend: `${Number(revenueChange) >= 0 ? "+" : ""}${revenueChange}%`,
     },
     {
-      label: t("dashboard.arpaLabel"),
+      label: "Ingreso por cliente (ARPA)",
       value: `€${formatDecimal(kpis?.arpa || 0, 2)}`,
       icon: IconRun,
       trend: "N/A",
     },
     {
-      label: t("dashboard.churnRate"),
+      label: "Tasa Abandono",
       value: `${formatDecimal(kpis?.churn_rate || 0, 1)}%`,
       icon: IconHeartbeat,
-      trend: `${(kpis?.churn_rate || 0) <= 5 ? t("dashboard.excellent") : t("dashboard.needsImprovement")}`,
+      trend: `${(kpis?.churn_rate || 0) <= 5 ? "Excelente" : "Revisar"}`,
     },
   ];
 
@@ -621,11 +618,11 @@ function ClientMetricsWidget({
         <Group gap="xs">
           <IconChartLine size={18} color="var(--nv-success)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            {t("dashboard.financialMetrics")}
+            {"Métricas Financieras"}
           </Text>
         </Group>
         <Text size="xs" c="dimmed">
-          {t("dashboard.thisMonth")}
+          {"Este mes"}
         </Text>
       </Group>
 
@@ -762,7 +759,7 @@ function ClockWidget() {
 // --- MAIN PAGE ---
 export function DashboardPage() {
   const { t } = useTranslation();
-  const { user } = useAuthStore();
+    const { user } = useAuthStore();
   const navigate = useNavigate();
   const [configOpened, { open: openConfig, close: closeConfig }] = useDisclosure(false);
   const [config, setConfig] = useLocalStorage<DashboardConfig>({

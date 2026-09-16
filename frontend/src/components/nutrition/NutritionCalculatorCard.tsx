@@ -125,7 +125,7 @@ export function NutritionCalculatorCard({
   latestMeasurement,
   onSave,
   isSaving,
-}: NutritionCalculatorCardProps) {
+}: NutritionCalculatorCardProps) {
   const clientAge = client.birth_date
     ? Math.floor(
         (Date.now() - new Date(client.birth_date).getTime()) /
@@ -266,7 +266,7 @@ export function NutritionCalculatorCard({
             size="lg"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            Calculadora Nutricional
+            {"Calculadora Nutricional"}
           </Text>
         </Group>
         <Button
@@ -274,14 +274,14 @@ export function NutritionCalculatorCard({
           variant="subtle"
           leftSection={<IconRefresh size={14} />}
           onClick={resetFromProgress}
-          title="Volver a cargar desde el último progreso"
+          title={"Volver a cargar desde el último progreso"}
         >
-          Reset
+          {"Reset"}
         </Button>
       </Group>
 
       <Text size="sm" c="dimmed" mb="sm">
-        Calcula nuevas calorías y macros a partir de los últimos datos de progreso del cliente.
+        {"Calcula nuevas calorías y macros a partir de los últimos datos de progreso del cliente."}
       </Text>
 
       {missingFields.length > 0 && (
@@ -291,7 +291,7 @@ export function NutritionCalculatorCard({
           variant="light"
           radius="md"
           mb="md"
-          title="Faltan datos del cliente"
+          title={"Faltan datos del cliente"}
         >
           <Text size="xs">
             No se puede calcular la dieta sin {missingFields.join(", ")}. Puedes
@@ -331,7 +331,7 @@ export function NutritionCalculatorCard({
           mb="md"
         >
           <Text size="xs">
-            No hay registros de progreso recientes. Se usarán los datos de la ficha.
+            {"No hay registros de progreso recientes. Se usarán los datos de la ficha."}
           </Text>
         </Alert>
       )}
@@ -339,7 +339,7 @@ export function NutritionCalculatorCard({
       <Stack gap="md">
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xs">
           <NumberInput
-            label="Peso (kg)"
+            label={"Peso (kg)"}
             value={weight}
             onChange={(v) => setWeight(Number(v) || 0)}
             decimalScale={1}
@@ -349,7 +349,7 @@ export function NutritionCalculatorCard({
             size="xs"
           />
           <NumberInput
-            label="Altura (cm)"
+            label={"Altura (cm)"}
             value={height}
             onChange={(v) => setHeight(Number(v) || 0)}
             min={100}
@@ -358,7 +358,7 @@ export function NutritionCalculatorCard({
             size="xs"
           />
           <NumberInput
-            label="Edad"
+            label={"Edad"}
             value={age}
             onChange={(v) => setAge(Number(v) || 0)}
             min={10}
@@ -369,7 +369,7 @@ export function NutritionCalculatorCard({
 
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
           <Select
-            label="Género"
+            label={"Género"}
             value={gender}
             onChange={(v) =>
               setGender((v === "female" ? "female" : "male") as typeof gender)
@@ -381,7 +381,7 @@ export function NutritionCalculatorCard({
             size="xs"
           />
           <NumberInput
-            label="% Grasa corporal (opcional)"
+            label={"% Grasa corporal (opcional)"}
             value={bodyFat ?? undefined}
             onChange={(v) => {
               if (v === "" || v == null) setBodyFat(null);
@@ -397,7 +397,7 @@ export function NutritionCalculatorCard({
         </SimpleGrid>
 
         <Select
-          label="Nivel de actividad"
+          label={"Nivel de actividad"}
           value={activity}
           onChange={(v) => v && setActivity(v)}
           data={ACTIVITY_OPTIONS}
@@ -405,7 +405,7 @@ export function NutritionCalculatorCard({
         />
 
         <Select
-          label="Objetivo"
+          label={"Objetivo"}
           value={goal}
           onChange={(v) => v && setGoal(v)}
           data={GOAL_OPTIONS}
@@ -414,7 +414,7 @@ export function NutritionCalculatorCard({
 
         <Box>
           <Text size="xs" fw={500} mb={4}>
-            Fórmula BMR
+            {"Fórmula BMR"}
           </Text>
           <SegmentedControl
             fullWidth
@@ -433,7 +433,7 @@ export function NutritionCalculatorCard({
           />
           {formula === "katch" && !bodyFat && (
             <Text size="xs" c="red" mt={4}>
-              Katch-McArdle requiere % grasa corporal.
+              {"Katch-McArdle requiere % grasa corporal."}
             </Text>
           )}
         </Box>
@@ -454,7 +454,7 @@ export function NutritionCalculatorCard({
             mb="xs"
             style={{ letterSpacing: "0.08em" }}
           >
-            Resultado del cálculo
+            {"Resultado del cálculo"}
           </Text>
           <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
             <Box
@@ -462,7 +462,7 @@ export function NutritionCalculatorCard({
               ta="center"
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
-              <Text size="xs" c="dimmed">Calorías</Text>
+              <Text size="xs" c="dimmed">{"Calorías"}</Text>
               <Text fw={700} size="lg" c="blue">
                 {canCompute ? preview.targetCalories : "—"}
               </Text>
@@ -472,7 +472,7 @@ export function NutritionCalculatorCard({
               ta="center"
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
-              <Text size="xs" c="dimmed">Proteínas</Text>
+              <Text size="xs" c="dimmed">{"Proteínas"}</Text>
               <Text fw={700} size="lg" c="green">
                 {canCompute ? `${preview.targetProtein}g` : "—"}
               </Text>
@@ -482,7 +482,7 @@ export function NutritionCalculatorCard({
               ta="center"
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
-              <Text size="xs" c="dimmed">Carbos</Text>
+              <Text size="xs" c="dimmed">{"Carbos"}</Text>
               <Text fw={700} size="lg" c="orange">
                 {canCompute ? `${preview.targetCarbs}g` : "—"}
               </Text>
@@ -492,7 +492,7 @@ export function NutritionCalculatorCard({
               ta="center"
               style={{ background: "rgba(255,255,255,0.9)", borderRadius: 8 }}
             >
-              <Text size="xs" c="dimmed">Grasas</Text>
+              <Text size="xs" c="dimmed">{"Grasas %"}</Text>
               <Text fw={700} size="lg" c="grape">
                 {canCompute ? `${preview.targetFat}g` : "—"}
               </Text>

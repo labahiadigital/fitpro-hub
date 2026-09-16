@@ -99,12 +99,12 @@ export function ClientProgramsTab({
 
               <Group gap={6}>
                 <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => onEdit(program)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>
-                  Editar
+                  {"Editar"}
                 </Button>
                 <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => onView(program)}>
                   <IconEye size={14} />
                 </ActionIcon>
-                <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title="Duplicar programa">
+                <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title={"Duplicar programa"}>
                   <IconCopy size={14} />
                 </ActionIcon>
                 <ActionIcon color="red" variant="light" radius="md" size="sm" onClick={() => onDelete(program.id)} loading={deletePending}>
@@ -130,11 +130,11 @@ export function ClientProgramsTab({
 
   return (
     <EmptyState
-      actionLabel="Crear Programa"
-      description="Asigna un programa a un cliente para verlo aquí."
+      actionLabel={"Crear Programa"}
+      description={"Asigna un programa a un cliente para verlo aquí."}
       icon={<IconUsers size={36} />}
       onAction={() => onEdit(undefined)}
-      title="No hay programas de clientes"
+      title={"No hay programas de clientes"}
     />
   );
 }

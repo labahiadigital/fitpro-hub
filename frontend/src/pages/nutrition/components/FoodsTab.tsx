@@ -111,7 +111,7 @@ export function FoodsTab({
   viewMode = "grid",
   onViewModeChange,
   canEditSystemFoods = false,
-}: FoodsTabProps) {
+}: FoodsTabProps) {
   // Helper para decidir si renderizar los botones de editar/eliminar de
   // un food. Foods propios del workspace: siempre. Foods globales del
   // sistema: solo si el usuario tiene permiso (lo concede el backend a
@@ -123,7 +123,7 @@ export function FoodsTab({
         <TextInput
           leftSection={<IconSearch size={14} />}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Buscar alimentos..."
+          placeholder={"Buscar alimentos..."}
           value={searchFood}
           radius="md"
           size="sm"
@@ -161,7 +161,7 @@ export function FoodsTab({
             size="xs"
             radius="md"
             w={180}
-            placeholder="Categoría"
+            placeholder={"Categoría"}
             clearable
             styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
           />
@@ -185,12 +185,12 @@ export function FoodsTab({
             <Table striped highlightOnHover withTableBorder withColumnBorders={false} style={{ borderRadius: 8, overflow: "hidden" }}>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Nombre</Table.Th>
-                  <Table.Th style={{ textAlign: "right" }}>Kcal</Table.Th>
-                  <Table.Th style={{ textAlign: "right" }}>Prot.</Table.Th>
-                  <Table.Th style={{ textAlign: "right" }}>Carbs</Table.Th>
-                  <Table.Th style={{ textAlign: "right" }}>Grasas</Table.Th>
-                  <Table.Th>Acciones</Table.Th>
+                  <Table.Th>{"Nombre"}</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>{"Kcal"}</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>{"Prot."}</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>{"Carbs"}</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>{"Grasas"}</Table.Th>
+                  <Table.Th>{"Acciones"}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -199,7 +199,7 @@ export function FoodsTab({
                     <Table.Td>
                       <Group gap={6} wrap="nowrap">
                         <Text size="sm" fw={500} lineClamp={1} style={{ minWidth: 0 }}>{food.name}</Text>
-                        {food.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>Sistema</Badge>}
+                        {food.is_global && <Badge color="gray" variant="light" size="xs" style={{ flexShrink: 0 }}>{"Sistema"}</Badge>}
                       </Group>
                     </Table.Td>
                     <Table.Td style={{ textAlign: "right" }}><Text size="sm">{formatDecimal(Number(food.calories || 0), 0)}</Text></Table.Td>
@@ -260,7 +260,7 @@ export function FoodsTab({
                     <Box className="food-card-info">
                       <Text className="food-card-name" title={food.name}>{food.name}</Text>
                       <Group gap={4}>
-                        {food.is_global && <Badge color="gray" variant="light" size="xs">Sistema</Badge>}
+                        {food.is_global && <Badge color="gray" variant="light" size="xs">{"Sistema"}</Badge>}
                         <Text className="food-card-serving">100g</Text>
                       </Group>
                     </Box>
@@ -285,13 +285,13 @@ export function FoodsTab({
                       🔥 {formatDecimal(Number(food.calories || 0), 0)} kcal
                     </Box>
                     <Group gap={4}>
-                      <Tooltip label="Ver detalle">
+                      <Tooltip label={"Ver detalle"}>
                         <ActionIcon color="gray" onClick={() => onView(food)} size="sm" variant="subtle" radius="md">
                           <IconEye size={16} />
                         </ActionIcon>
                       </Tooltip>
                       {onDuplicate && (
-                        <Tooltip label="Duplicar a mi workspace">
+                        <Tooltip label={"Duplicar a mi workspace"}>
                           <ActionIcon color="blue" onClick={() => onDuplicate(food.id)} size="sm" variant="subtle" radius="md">
                             <IconCopy size={16} />
                           </ActionIcon>
@@ -318,15 +318,15 @@ export function FoodsTab({
                   <Box className="food-card-macros">
                     <Box className="food-card-macro protein">
                       <Text className="food-card-macro-value">{formatDecimal(Number(food.protein || 0), 0)}g</Text>
-                      <Text className="food-card-macro-label">Proteína</Text>
+                      <Text className="food-card-macro-label">{"Proteína"}</Text>
                     </Box>
                     <Box className="food-card-macro carbs">
                       <Text className="food-card-macro-value">{formatDecimal(Number(food.carbs || 0), 0)}g</Text>
-                      <Text className="food-card-macro-label">Carbos</Text>
+                      <Text className="food-card-macro-label">{"Carbos"}</Text>
                     </Box>
                     <Box className="food-card-macro fat">
                       <Text className="food-card-macro-value">{formatDecimal(Number(food.fat || 0), 0)}g</Text>
-                      <Text className="food-card-macro-label">Grasas</Text>
+                      <Text className="food-card-macro-label">{"Grasas"}</Text>
                     </Box>
                   </Box>
                   {(() => {
@@ -358,19 +358,19 @@ export function FoodsTab({
         </>
       ) : debouncedSearch ? (
         <EmptyState
-          actionLabel="Limpiar búsqueda"
+          actionLabel={"Limpiar búsqueda"}
           description={`No se encontraron alimentos que coincidan con "${debouncedSearch}"`}
           icon={<IconSearch size={40} />}
           onAction={() => onSearchChange("")}
-          title="Sin resultados"
+          title={"Sin resultados"}
         />
       ) : (
         <EmptyState
-          actionLabel="Añadir Alimento"
-          description="Añade alimentos a tu biblioteca para usarlos en tus planes."
+          actionLabel={"Añadir Alimento"}
+          description={"Añade alimentos a tu biblioteca para usarlos en tus planes."}
           icon={<IconApple size={40} />}
           onAction={onNewFood}
-          title="No hay alimentos"
+          title={"No hay alimentos"}
         />
       )}
     </>

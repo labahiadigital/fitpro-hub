@@ -276,10 +276,10 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
           </Box>
 
           {/* Handle 1 (separa P | C) */}
-          <Tooltip label="Arrastra para ajustar Proteína / Carbohidratos" withArrow position="top">
+          <Tooltip label={"Arrastra para ajustar Proteína / Carbohidratos"} withArrow position="top">
             <Box
               role="slider"
-              aria-label="Separador proteína y carbohidratos"
+              aria-label={"Separador proteína y carbohidratos"}
               aria-valuenow={handle1Pos}
               aria-valuemin={MIN}
               aria-valuemax={MAX}
@@ -312,10 +312,10 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
           </Tooltip>
 
           {/* Handle 2 (separa C | G) */}
-          <Tooltip label="Arrastra para ajustar Carbohidratos / Grasas" withArrow position="top">
+          <Tooltip label={"Arrastra para ajustar Carbohidratos / Grasas"} withArrow position="top">
             <Box
               role="slider"
-              aria-label="Separador carbohidratos y grasas"
+              aria-label={"Separador carbohidratos y grasas"}
               aria-valuenow={handle2Pos}
               aria-valuemin={MIN}
               aria-valuemax={MAX}
@@ -376,7 +376,7 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
           {/* Inputs numéricos precisos */}
           <Group grow gap="xs">
             <NumberInput
-              label="Proteína %"
+              label={"Proteína %"}
               value={value.protein}
               onChange={handleNumberChange("protein")}
               min={MIN}
@@ -387,7 +387,7 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
               styles={{ label: { color: COLORS.protein.text, fontWeight: 600 } }}
             />
             <NumberInput
-              label="Carbohidratos %"
+              label={"Carbohidratos %"}
               value={value.carbs}
               onChange={handleNumberChange("carbs")}
               min={MIN}
@@ -398,7 +398,7 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
               styles={{ label: { color: COLORS.carbs.text, fontWeight: 600 } }}
             />
             <NumberInput
-              label="Grasas %"
+              label={"Grasas %"}
               value={value.fat}
               onChange={handleNumberChange("fat")}
               min={MIN}
@@ -413,7 +413,7 @@ export function MacroProportionBar({ value, onChange, targetCalories, compact = 
           {/* Presets rápidos */}
           <Group gap="xs" wrap="wrap">
             <Text size="xs" c="dimmed" fw={600}>
-              Presets:
+              {"Presets:"}
             </Text>
             {PRESETS.map((preset) => {
               const isActive =

@@ -33,6 +33,7 @@ import {
   useSendForm,
   type FormField,
 } from "../../hooks/useForms";
+import { useTranslation } from "react-i18next";
 
 function formatDate(iso?: string | null): string {
   if (!iso) return "—";
@@ -65,6 +66,7 @@ type SubmissionRow = {
 };
 
 export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
+  const { t } = useTranslation();
   const { data: formsData = [], isLoading: isLoadingForms } = useForms();
   const { data: submissions = [], isLoading: isLoadingSubmissions } =
     useClientForms(clientId);
@@ -141,20 +143,20 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
     if (status === "submitted") {
       return (
         <Badge color="green" variant="light" leftSection={<IconCheck size={12} />}>
-          Completado
+          {"Completado"}
         </Badge>
       );
     }
     if (status === "expired") {
       return (
         <Badge color="red" variant="light">
-          Expirado
+          {"Expirado"}
         </Badge>
       );
     }
     return (
       <Badge color="yellow" variant="light" leftSection={<IconClock size={12} />}>
-        Pendiente
+        {"Pendiente"}
       </Badge>
     );
   };
@@ -169,10 +171,10 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             <ThemeIcon color="indigo" variant="light" size="md">
               <IconForms size={16} />
             </ThemeIcon>
-            <Text fw={600}>Formularios del cliente</Text>
+            <Text fw={600}>{"Formularios del cliente"}</Text>
           </Group>
           <Text c="dimmed" size="sm">
-            Envía formularios al cliente y revisa sus respuestas aquí.
+            {"Envía formularios al cliente y revisa sus respuestas aquí."}
           </Text>
         </Box>
         <Button
@@ -182,14 +184,14 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             openSend();
           }}
         >
-          Enviar formulario
+          {"Enviar formulario"}
         </Button>
       </Group>
 
       {isLoadingSubmissions || isLoadingForms ? (
         <Paper withBorder p="lg" radius="md">
           <Text c="dimmed" size="sm">
-            Cargando formularios...
+            {"Cargando formularios..."}
           </Text>
         </Paper>
       ) : rows.length === 0 ? (
@@ -198,9 +200,9 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             <ThemeIcon color="gray" size="xl" variant="light">
               <IconFileText size={22} />
             </ThemeIcon>
-            <Text fw={600}>Aún no se han enviado formularios</Text>
+            <Text fw={600}>{"Aún no se han enviado formularios"}</Text>
             <Text c="dimmed" size="sm" ta="center">
-              Cuando envíes un formulario al cliente aparecerá aquí con su estado.
+              {"Cuando envíes un formulario al cliente aparecerá aquí con su estado."}
             </Text>
             <Button
               leftSection={<IconSend size={16} />}
@@ -210,7 +212,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                 openSend();
               }}
             >
-              Enviar formulario
+              {"Enviar formulario"}
             </Button>
           </Stack>
         </Paper>
@@ -220,11 +222,11 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
             <Table highlightOnHover style={{ minWidth: 720 }}>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Formulario</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                  <Table.Th>Enviado</Table.Th>
-                  <Table.Th>Completado</Table.Th>
-                  <Table.Th ta="right">Acciones</Table.Th>
+                  <Table.Th>{"Formulario"}</Table.Th>
+                  <Table.Th>{"Estado"}</Table.Th>
+                  <Table.Th>{"Enviado"}</Table.Th>
+                  <Table.Th>{"Completado"}</Table.Th>
+                  <Table.Th ta="right">{"Acciones"}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -239,12 +241,12 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                           </Text>
                           {f?.is_required && (
                             <Badge color="orange" size="xs" variant="filled">
-                              Obligatorio
+                              {"Obligatorio"}
                             </Badge>
                           )}
                           {f?.is_global && (
                             <Badge color="violet" size="xs" variant="light">
-                              Sistema
+                              {"Sistema"}
                             </Badge>
                           )}
                         </Group>
@@ -294,7 +296,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
         onClose={closeSend}
         position="right"
         size="md"
-        title="Enviar formulario al cliente"
+        title={"Enviar formulario al cliente"}
       >
         <Stack>
           <Text c="dimmed" size="sm">
@@ -305,11 +307,9 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
           {sendableForms.length === 0 ? (
             <Paper withBorder p="md" radius="md">
               <Stack gap={6}>
-                <Text fw={600} size="sm">No tienes formularios propios todavía</Text>
+                <Text fw={600} size="sm">{"No tienes formularios propios todavía"}</Text>
                 <Text size="xs" c="dimmed">
-                  Sólo se pueden enviar al cliente formularios de tu workspace.
-                  Las plantillas del sistema deben copiarse antes desde la
-                  pantalla de Formularios.
+                  {t("clientsComp.noOwnFormsDesc")}
                 </Text>
                 <Button
                   variant="light"
@@ -319,14 +319,14 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                     window.location.assign("/forms");
                   }}
                 >
-                  Ir a Formularios
+                  {"Ir a Formularios"}
                 </Button>
               </Stack>
             </Paper>
           ) : (
             <Select
-              label="Formulario"
-              placeholder="Selecciona un formulario activo"
+              label={"Formulario"}
+              placeholder={"Selecciona un formulario activo"}
               searchable
               data={sendableForms.map((f) => ({
                 value: f.id,
@@ -338,7 +338,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
           )}
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={closeSend}>
-              Cancelar
+              {"Cancelar"}
             </Button>
             <Button
               leftSection={<IconSend size={16} />}
@@ -346,7 +346,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
               loading={sendForm.isPending}
               onClick={handleSend}
             >
-              Enviar
+              {"Enviar"}
             </Button>
           </Group>
         </Stack>
@@ -380,7 +380,7 @@ export function ClientFormsTab({ clientId, clientName }: ClientFormsTabProps) {
                 <Group gap="xs">
                   <IconClock size={16} />
                   <Text size="sm" c="dimmed">
-                    El cliente aún no ha respondido este formulario.
+                    {"El cliente aún no ha respondido este formulario."}
                   </Text>
                 </Group>
               </Paper>

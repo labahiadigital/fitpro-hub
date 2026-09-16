@@ -122,7 +122,7 @@ export function EditableMealName({
       <Text fw={600} size={size}>
         {displayName}
       </Text>
-      <Tooltip label="Editar nombre">
+      <Tooltip label={"Editar nombre"}>
         <ActionIcon
           color="gray"
           variant="subtle"
@@ -161,10 +161,10 @@ export function MealNameManager({ mealNames, onChange }: MealNameManagerProps) {
   return (
     <Box>
       <Text fw={600} size="sm" mb="md">
-        Nombres de Comidas
+        {"Nombres de Comidas"}
       </Text>
       <Text c="dimmed" size="xs" mb="md">
-        Personaliza los nombres de las comidas para tus clientes
+        {"Personaliza los nombres de las comidas para tus clientes"}
       </Text>
 
       {Object.entries(DEFAULT_MEAL_NAMES).map(([mealId, defaultName]) => (
@@ -180,7 +180,7 @@ export function MealNameManager({ mealNames, onChange }: MealNameManagerProps) {
               w={150}
             />
             {mealNames[mealId] && mealNames[mealId] !== defaultName && (
-              <Tooltip label="Restaurar nombre por defecto">
+              <Tooltip label={"Restaurar nombre por defecto"}>
                 <ActionIcon
                   color="gray"
                   variant="subtle"

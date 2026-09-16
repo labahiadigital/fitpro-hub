@@ -142,7 +142,7 @@ export function ExerciseLibrary({
         opened={opened}
         size="xl"
         styles={{ body: { padding: 0 } }}
-        title="Biblioteca de Ejercicios"
+        title={"Biblioteca de Ejercicios"}
       >
         <Stack gap={0}>
           {/* Search and Filters */}
@@ -154,7 +154,7 @@ export function ExerciseLibrary({
             <TextInput
               leftSection={<IconSearch size={16} />}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar ejercicios..."
+              placeholder={"Buscar ejercicios..."}
               value={search}
             />
             <Group gap="sm">
@@ -163,7 +163,7 @@ export function ExerciseLibrary({
                 data={muscleGroupOptions}
                 leftSection={<IconFilter size={14} />}
                 onChange={setSelectedMuscles}
-                placeholder="Músculos"
+                placeholder={"Músculos"}
                 size="xs"
                 value={selectedMuscles}
                 w={180}
@@ -172,7 +172,7 @@ export function ExerciseLibrary({
                 clearable
                 data={equipmentOptions}
                 onChange={setSelectedEquipment}
-                placeholder="Equipamiento"
+                placeholder={"Equipamiento"}
                 size="xs"
                 value={selectedEquipment}
                 w={180}
@@ -185,7 +185,7 @@ export function ExerciseLibrary({
                   { value: "advanced", label: "Avanzado" },
                 ]}
                 onChange={setSelectedDifficulty}
-                placeholder="Dificultad"
+                placeholder={"Dificultad"}
                 size="xs"
                 value={selectedDifficulty}
                 w={140}
@@ -210,7 +210,7 @@ export function ExerciseLibrary({
           <ScrollArea h={400} p="md">
             {filteredExercises.length === 0 ? (
               <Text c="dimmed" py="xl" ta="center">
-                No se encontraron ejercicios
+                {"No se encontraron ejercicios"}
               </Text>
             ) : (
               <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
@@ -364,7 +364,7 @@ export function ExerciseLibrary({
               {filteredExercises.length} ejercicios encontrados
             </Text>
             <Button leftSection={<IconPlus size={16} />} variant="light">
-              Crear Ejercicio
+              {"Crear Ejercicio"}
             </Button>
           </Group>
         </Stack>
@@ -390,7 +390,7 @@ export function ExerciseLibrary({
             {videoModalExercise.instructions.length > 0 && (
               <>
                 <Text fw={600} size="sm">
-                  Instrucciones:
+                  {"Instrucciones:"}
                 </Text>
                 <Stack gap={4}>
                   {videoModalExercise.instructions.map((instruction, i) => (

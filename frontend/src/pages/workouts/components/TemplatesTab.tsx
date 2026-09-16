@@ -45,7 +45,7 @@ export function TemplatesTab({
         {templates.map((program: any) => (
           <Box key={program.id} className="nv-card" p="md">
             <Text fw={600} size="sm" style={{ color: "var(--nv-dark)", wordBreak: "break-word" }} lineClamp={2} mb={4} title={program.name}>{program.name}</Text>
-            <Badge color="teal" variant="light" radius="md" size="xs" mb="xs">Plantilla</Badge>
+            <Badge color="teal" variant="light" radius="md" size="xs" mb="xs">{"Plantilla"}</Badge>
 
             <Text c="dimmed" lineClamp={2} size="xs">
               {program.description || "Sin descripción"}
@@ -68,12 +68,12 @@ export function TemplatesTab({
 
             <Group gap={6}>
               <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => onEdit(program)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>
-                Editar
+                {"Editar"}
               </Button>
               <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => onView(program)}>
                 <IconEye size={14} />
               </ActionIcon>
-              <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title="Duplicar programa">
+              <ActionIcon color="gray" variant="light" radius="md" size="sm" onClick={() => onDuplicate(program)} loading={createPending} title={"Duplicar programa"}>
                 <IconCopy size={14} />
               </ActionIcon>
               <ActionIcon color="red" variant="light" radius="md" size="sm" onClick={() => onDelete(program.id)} loading={deletePending}>
@@ -98,11 +98,11 @@ export function TemplatesTab({
 
   return (
     <EmptyState
-      actionLabel="Crear Programa"
-      description="Crea tu primer programa de entrenamiento para asignarlo a tus clientes."
+      actionLabel={"Crear Programa"}
+      description={"Crea tu primer programa de entrenamiento para asignarlo a tus clientes."}
       icon={<IconTemplate size={36} />}
       onAction={() => onEdit(undefined)}
-      title="No hay plantillas"
+      title={"No hay plantillas"}
     />
   );
 }

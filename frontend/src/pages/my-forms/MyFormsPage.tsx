@@ -39,6 +39,7 @@ import {
   type ClientFormItem,
   type FormField,
 } from "../../hooks/useForms";
+import { useTranslation } from "react-i18next";
 
 function formatDate(iso?: string | null): string {
   if (!iso) return "—";
@@ -238,17 +239,17 @@ function FormRespondCard({ item }: FormRespondCardProps) {
           </Text>
           {item.is_required && (
             <Badge color="red" variant="filled">
-              Obligatorio
+              {"Obligatorio"}
             </Badge>
           )}
         </Group>
         {isDone ? (
           <Badge color="green" variant="light" leftSection={<IconCheck size={12} />}>
-            Completado
+            {"Completado"}
           </Badge>
         ) : (
           <Badge color="yellow" variant="light" leftSection={<IconClock size={12} />}>
-            Pendiente
+            {"Pendiente"}
           </Badge>
         )}
       </Group>
@@ -269,7 +270,7 @@ function FormRespondCard({ item }: FormRespondCardProps) {
       {isDone ? (
         <Stack gap="md">
           <Alert color="green" icon={<IconCheck size={16} />}>
-            Ya has respondido este formulario. Puedes revisar tus respuestas abajo.
+            {"Ya has respondido este formulario. Puedes revisar tus respuestas abajo."}
           </Alert>
           {item.fields.map((f) => (
             <Box key={f.id}>
@@ -305,7 +306,7 @@ function FormRespondCard({ item }: FormRespondCardProps) {
               onClick={handleSubmit}
               leftSection={<IconCheck size={16} />}
             >
-              Enviar respuesta
+              {"Enviar respuesta"}
             </Button>
           </Group>
         </Stack>
@@ -315,6 +316,7 @@ function FormRespondCard({ item }: FormRespondCardProps) {
 }
 
 export function MyFormsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<string | null>("pending");
   const { data: forms = [], isLoading } = useMyForms();
 
@@ -334,8 +336,8 @@ export function MyFormsPage() {
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Formularios"
-        description="Formularios que tu entrenador te ha compartido."
+        title={t("myForms.formularios")}
+        description={t("myForms.formulariosQueTuEntrenadorTe")}
       />
 
       {requiredPending.length > 0 && (
@@ -345,7 +347,7 @@ export function MyFormsPage() {
           mb="lg"
           title={`Tienes ${requiredPending.length} formulario${requiredPending.length === 1 ? "" : "s"} obligatorio${requiredPending.length === 1 ? "" : "s"} pendiente${requiredPending.length === 1 ? "" : "s"}`}
         >
-          Son requeridos por tu entrenador. Por favor, complétalos lo antes posible.
+          {t("myForms.sonRequeridosPorTuEntrenador")}
         </Alert>
       )}
 
@@ -362,10 +364,10 @@ export function MyFormsPage() {
               ) : null
             }
           >
-            Pendientes
+            {t("myForms.pendientes")}
           </Tabs.Tab>
           <Tabs.Tab value="done" leftSection={<IconCheck size={14} />}>
-            Completados
+            {t("myForms.completados")}
           </Tabs.Tab>
         </Tabs.List>
 
@@ -373,7 +375,7 @@ export function MyFormsPage() {
           {isLoading ? (
             <Paper withBorder p="lg" radius="md">
               <Text c="dimmed" size="sm">
-                Cargando...
+                {t("myForms.cargando")}
               </Text>
             </Paper>
           ) : pending.length === 0 ? (
@@ -382,9 +384,9 @@ export function MyFormsPage() {
                 <ThemeIcon color="gray" size="xl" variant="light">
                   <IconFileText size={22} />
                 </ThemeIcon>
-                <Text fw={600}>No tienes formularios pendientes</Text>
+                <Text fw={600}>{t("myForms.noTienesFormulariosPendientes")}</Text>
                 <Text c="dimmed" size="sm">
-                  Cuando tu entrenador te envíe uno lo verás aquí.
+                  {t("myForms.cuandoTuEntrenadorTeEnvie")}
                 </Text>
               </Stack>
             </Paper>
@@ -408,7 +410,7 @@ export function MyFormsPage() {
                 <ThemeIcon color="gray" size="xl" variant="light">
                   <IconCheck size={22} />
                 </ThemeIcon>
-                <Text fw={600}>Todavía no hay formularios completados</Text>
+                <Text fw={600}>{t("myForms.todaviaNoHayFormulariosCompletados")}</Text>
               </Stack>
             </Paper>
           ) : (

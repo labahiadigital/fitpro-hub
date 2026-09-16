@@ -31,7 +31,7 @@ export function RectificationButton({ entityType, entityId, entityName, size = "
 
   return (
     <>
-      <Tooltip label="Solicitar rectificación">
+      <Tooltip label={"Solicitar rectificación"}>
         <ActionIcon
           color="orange"
           variant="subtle"
@@ -43,27 +43,27 @@ export function RectificationButton({ entityType, entityId, entityName, size = "
         </ActionIcon>
       </Tooltip>
 
-      <BottomSheet opened={opened} onClose={close} title="Solicitar rectificación" desktopSize="sm">
+      <BottomSheet opened={opened} onClose={close} title={"Solicitar rectificación"} desktopSize="sm">
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Solicita la corrección de <strong>{entityName}</strong>
+            {"Solicita la corrección de"} <strong>{entityName}</strong>
           </Text>
           <Textarea
-            label="Describe la rectificación"
-            placeholder="Indica qué información es incorrecta y cuál sería la correcta..."
+            label={"Describe la rectificación"}
+            placeholder={"Indica qué información es incorrecta y cuál sería la correcta..."}
             minRows={3}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
           <Group justify="flex-end">
-            <Button variant="default" onClick={close}>Cancelar</Button>
+            <Button variant="default" onClick={close}>{"Cancelar"}</Button>
             <Button
               onClick={handleSubmit}
               loading={createRectification.isPending}
               disabled={!message.trim()}
               color="orange"
             >
-              Enviar solicitud
+              {"Enviar solicitud"}
             </Button>
           </Group>
         </Stack>

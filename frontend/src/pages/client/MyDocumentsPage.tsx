@@ -29,6 +29,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { openDangerConfirm } from "../../utils/confirmModal";
 import { notifications } from "@mantine/notifications";
+import { useTranslation } from "react-i18next";
 
 interface DocumentItem {
   id: string;
@@ -67,6 +68,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function MyDocumentsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
   const [uploading, setUploading] = useState(false);
@@ -85,10 +87,10 @@ export function MyDocumentsPage() {
     mutationFn: (id: string) => clientPortalApi.deleteDocument(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-documents"] });
-      notifications.show({ title: "Eliminado", message: "Documento eliminado", color: "blue" });
+      notifications.show({ title: t("myDocuments.eliminado"), message: t("myDocuments.documentoEliminado"), color: "blue" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo eliminar", color: "red" });
+      notifications.show({ title: t("myDocuments.error"), message: t("myDocuments.noSePudoEliminar"), color: "red" });
     },
   });
 
@@ -101,14 +103,14 @@ export function MyDocumentsPage() {
       await clientPortalApi.uploadDocument(formData, "general", file.name);
       queryClient.invalidateQueries({ queryKey: ["my-documents"] });
       notifications.show({
-        title: "Subido",
-        message: "Documento subido correctamente",
+        title: t("myDocuments.subido"),
+        message: t("myDocuments.documentoSubidoCorrectamente"),
         color: "green",
       });
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo subir el documento",
+        title: t("myDocuments.error"),
+        message: t("myDocuments.noSePudoSubirEl"),
         color: "red",
       });
     } finally {
@@ -120,8 +122,8 @@ export function MyDocumentsPage() {
     <Box p="xl">
       <Group justify="space-between" mb="xl">
         <Box>
-          <Title order={2}>Mis Documentos</Title>
-          <Text c="dimmed">Documentos compartidos por tu entrenador</Text>
+          <Title order={2}>{t("myDocuments.misDocumentos")}</Title>
+          <Text c="dimmed">{t("myDocuments.documentosCompartidosPorTuEntrenador")}</Text>
         </Box>
         <FileButton onChange={handleUpload} accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.csv,.txt">
           {(props) => (
@@ -131,7 +133,7 @@ export function MyDocumentsPage() {
               variant="light"
               loading={uploading}
             >
-              Subir documento
+              {t("myDocuments.subirDocumento")}
             </Button>
           )}
         </FileButton>
@@ -153,7 +155,7 @@ export function MyDocumentsPage() {
         <Card shadow="sm" padding="xl" radius="lg" withBorder>
           <Stack align="center" gap="md" py="xl">
             <IconFile size={48} color="var(--mantine-color-dimmed)" />
-            <Text fw={600}>No hay documentos</Text>
+            <Text fw={600}>{t("myDocuments.noHayDocumentos")}</Text>
             <Text size="sm" c="dimmed">
               {selectedCategory !== "Todos"
                 ? `No hay documentos en la categoría "${selectedCategory}".`
@@ -166,11 +168,11 @@ export function MyDocumentsPage() {
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Documento</Table.Th>
-                <Table.Th>Categoría</Table.Th>
-                <Table.Th>Tamaño</Table.Th>
-                <Table.Th>Fecha</Table.Th>
-                <Table.Th ta="right">Acciones</Table.Th>
+                <Table.Th>{t("myDocuments.documento")}</Table.Th>
+                <Table.Th>{t("myDocuments.categoria")}</Table.Th>
+                <Table.Th>{t("myDocuments.tamano")}</Table.Th>
+                <Table.Th>{t("myDocuments.fecha")}</Table.Th>
+                <Table.Th ta="right">{t("myDocuments.acciones")}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -212,8 +214,8 @@ export function MyDocumentsPage() {
                           color="red"
                           onClick={() => {
                             openDangerConfirm({
-                              title: "Eliminar documento",
-                              message: "¿Eliminar este documento?",
+                              title: t("myDocuments.eliminarDocumento"),
+                              message: t("myDocuments.eliminarEsteDocumento"),
                               onConfirm: () => deleteMutation.mutate(doc.id),
                             });
                           }}

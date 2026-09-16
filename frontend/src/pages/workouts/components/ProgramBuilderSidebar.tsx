@@ -59,20 +59,20 @@ export function ProgramBuilderSidebar({
   return (
     <Stack gap="md">
       <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>
-        Configuración
+        {"Configuración"}
       </Text>
 
       {isEditingTemplate ? (
         <Group gap="xs" align="center" wrap="nowrap">
           <IconTemplate size={16} color="var(--mantine-color-teal-6)" />
           <Text size="sm" fw={600} c="teal">
-            Editando plantilla reutilizable
+            {"Editando plantilla reutilizable"}
           </Text>
         </Group>
       ) : (
         <Select
-          label="Asignar a cliente"
-          placeholder="Buscar cliente..."
+          label={"Asignar a cliente"}
+          placeholder={"Buscar cliente..."}
           data={clientOptions}
           searchable
           clearable
@@ -96,11 +96,11 @@ export function ProgramBuilderSidebar({
             disabled={!programForm.values.name}
             onClick={onSaveAsTemplate}
           >
-            Crear como plantilla
+            {"Crear como plantilla"}
           </Button>
         ) : (
           <Switch
-            label="Crear como plantilla"
+            label={"Crear como plantilla"}
             description={selectedClientId || clientId
               ? "Guarda una copia reutilizable además del programa del cliente"
               : "Guarda como plantilla reutilizable"}
@@ -113,12 +113,12 @@ export function ProgramBuilderSidebar({
       )}
 
       {!canSaveProgram && !isEditingClientProgram && !isEditingTemplate && (
-        <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>
+        <Text size="xs" c="red">{"Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar"}</Text>
       )}
 
       <TextInput
-        label="Nombre del programa"
-        placeholder="Programa de Hipertrofia"
+        label={"Nombre del programa"}
+        placeholder={"Programa de Hipertrofia"}
         required
         radius="md"
         size="sm"
@@ -126,9 +126,9 @@ export function ProgramBuilderSidebar({
       />
 
       <Textarea
-        label="Descripción"
+        label={"Descripción"}
         minRows={2}
-        placeholder="Describe el programa..."
+        placeholder={"Describe el programa..."}
         radius="md"
         size="sm"
         {...programForm.getInputProps("description")}
@@ -136,7 +136,7 @@ export function ProgramBuilderSidebar({
 
       <Group grow>
         <NumberInput
-          label="Programación (semanal)"
+          label={"Programación (semanal)"}
           max={52}
           min={1}
           radius="md"
@@ -150,7 +150,7 @@ export function ProgramBuilderSidebar({
             { value: "intermediate", label: "Intermedio" },
             { value: "advanced", label: "Avanzado" },
           ]}
-          label="Dificultad"
+          label={"Dificultad"}
           radius="md"
           size="sm"
           {...programForm.getInputProps("difficulty")}
@@ -165,8 +165,8 @@ export function ProgramBuilderSidebar({
           { value: "tonificación", label: "Tonificación" },
           { value: "resistencia", label: "Resistencia" },
         ]}
-        label="Etiquetas"
-        placeholder="Añade etiquetas"
+        label={"Etiquetas"}
+        placeholder={"Añade etiquetas"}
         searchable
         radius="md"
         size="sm"
@@ -177,15 +177,15 @@ export function ProgramBuilderSidebar({
         <>
           <Group grow>
             <TextInput
-              label="Fecha de inicio"
+              label={"Fecha de inicio"}
               type="date"
               radius="md"
               size="sm"
               {...programForm.getInputProps("start_date")}
             />
             <TextInput
-              label="Fecha de fin (opcional)"
-              description="Si no se indica, las semanas se repiten indefinidamente"
+              label={"Fecha de fin (opcional)"}
+              description={"Si no se indica, las semanas se repiten indefinidamente"}
               type="date"
               radius="md"
               size="sm"
@@ -193,9 +193,9 @@ export function ProgramBuilderSidebar({
             />
           </Group>
           <NumberInput
-            label="Intervalo de revisión (días)"
-            description="Genera recordatorios automáticos para revisar el programa"
-            placeholder="Ej: 15"
+            label={"Intervalo de revisión (días)"}
+            description={"Genera recordatorios automáticos para revisar el programa"}
+            placeholder={"Ej: 15"}
             min={1}
             max={365}
             radius="md"

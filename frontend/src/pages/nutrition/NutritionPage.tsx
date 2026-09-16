@@ -98,6 +98,7 @@ import { FoodsTab } from "./components/FoodsTab";
 import { SupplementsTab } from "./components/SupplementsTab";
 import { BeveragesTab } from "./components/BeveragesTab";
 import { RectificationButton } from "../../components/common/RectificationButton";
+import { useTranslation } from "react-i18next";
 
 function mapCategory(dbCategory: string | null): string {
   if (!dbCategory) return "Otros";
@@ -162,6 +163,7 @@ function calculateAge(birthDate: string | null | undefined): number {
 }
 
 function FoodGroupsPanel() {
+  const { t } = useTranslation();
   const [fgSearch, setFgSearch] = useState("");
   const [fgCategoryFilter, setFgCategoryFilter] = useState("");
   const { data: foodGroups = [], isLoading } = useFoodGroups(fgSearch || undefined, fgCategoryFilter || undefined);
@@ -173,7 +175,7 @@ function FoodGroupsPanel() {
 
   const fgCategoryOptions = useMemo(() => {
     const cats = new Set<string>(foodGroups.map((fg: any) => fg.name as string).filter(Boolean));
-    return [{ value: "", label: "Todas las categorías" }, ...Array.from(cats).sort().map((c: string) => ({ value: c, label: c }))];
+    return [{ value: "", label: t("nutrition.todasLasCategorias") }, ...Array.from(cats).sort().map((c: string) => ({ value: c, label: c }))];
   }, [foodGroups]);
 
   const fgForm = useForm({
@@ -184,10 +186,10 @@ function FoodGroupsPanel() {
   const handleSaveFg = async (values: typeof fgForm.values) => {
     if (editingFg) {
       await updateFoodGroup.mutateAsync({ id: editingFg.id, data: values });
-      notifications.show({ title: "Grupo actualizado", message: values.name, color: "green" });
+      notifications.show({ title: t("nutrition.grupoActualizado"), message: values.name, color: "green" });
     } else {
       await createFoodGroup.mutateAsync(values);
-      notifications.show({ title: "Grupo creado", message: values.name, color: "green" });
+      notifications.show({ title: t("nutrition.grupoCreado"), message: values.name, color: "green" });
     }
     closeFgModal();
     fgForm.reset();
@@ -214,7 +216,7 @@ function FoodGroupsPanel() {
       <Group gap="sm">
         <TextInput
           leftSection={<IconSearch size={14} />}
-          placeholder="Buscar grupo de alimentos..."
+          placeholder={t("nutrition.buscarGrupoDeAlimentos")}
           value={fgSearch}
           onChange={(e) => setFgSearch(e.target.value)}
           radius="md"
@@ -229,12 +231,12 @@ function FoodGroupsPanel() {
           size="xs"
           radius="md"
           w={200}
-          placeholder="Categoría"
+          placeholder={t("nutrition.categoria")}
           clearable
           styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
         />
         <Button size="xs" radius="md" onClick={() => { setEditingFg(null); fgForm.reset(); openFgModal(); }}>
-          Nuevo Grupo
+          {t("nutrition.nuevoGrupo")}
         </Button>
       </Group>
 
@@ -263,30 +265,30 @@ function FoodGroupsPanel() {
           ))}
         </SimpleGrid>
       ) : (
-        <Text c="dimmed" ta="center" py="md">No se encontraron grupos de alimentos</Text>
+        <Text c="dimmed" ta="center" py="md">{t("nutrition.noSeEncontraronGruposDe")}</Text>
       )}
 
       <BottomSheet opened={fgModalOpened} onClose={() => { closeFgModal(); setEditingFg(null); fgForm.reset(); }} title={editingFg ? "Editar Grupo" : "Nuevo Grupo"} desktopSize="md">
         <form onSubmit={fgForm.onSubmit(handleSaveFg)}>
           <Stack>
-            <TextInput label="Nombre" placeholder="Legumbres" required {...fgForm.getInputProps("name")} />
-            <TextInput label="Subcategoría" placeholder="Opcional" {...fgForm.getInputProps("subcategory")} />
-            <TextInput label="Cantidad de referencia" placeholder="100g, 1 unidad..." {...fgForm.getInputProps("quantity")} />
+            <TextInput label={t("nutrition.nombre")} placeholder={t("nutrition.legumbres")} required {...fgForm.getInputProps("name")} />
+            <TextInput label={t("nutrition.subcategoria")} placeholder={t("nutrition.opcional")} {...fgForm.getInputProps("subcategory")} />
+            <TextInput label={t("nutrition.cantidadDeReferencia")} placeholder={t("nutrition.100g1Unidad")} {...fgForm.getInputProps("quantity")} />
             <Group grow>
-              <NumberInput label="Calorías" min={0} {...fgForm.getInputProps("calories")} />
-              <NumberInput label="Proteína (g)" min={0} decimalScale={1} {...fgForm.getInputProps("protein_g")} />
+              <NumberInput label={t("nutrition.calorias")} min={0} {...fgForm.getInputProps("calories")} />
+              <NumberInput label={t("nutrition.proteinaG")} min={0} decimalScale={1} {...fgForm.getInputProps("protein_g")} />
             </Group>
             <Group grow>
-              <NumberInput label="Carbohidratos (g)" min={0} decimalScale={1} {...fgForm.getInputProps("carbs_g")} />
-              <NumberInput label="Grasas (g)" min={0} decimalScale={1} {...fgForm.getInputProps("fat_g")} />
+              <NumberInput label={t("nutrition.carbohidratosG")} min={0} decimalScale={1} {...fgForm.getInputProps("carbs_g")} />
+              <NumberInput label={t("nutrition.grasasG")} min={0} decimalScale={1} {...fgForm.getInputProps("fat_g")} />
             </Group>
-            <NumberInput label="Fibra (g)" min={0} decimalScale={1} {...fgForm.getInputProps("fiber_g")} />
+            <NumberInput label={t("nutrition.fibraG")} min={0} decimalScale={1} {...fgForm.getInputProps("fiber_g")} />
             <Group justify="space-between" mt="md">
               {editingFg && (
-                <Button color="red" variant="subtle" onClick={async () => { await deleteFoodGroup.mutateAsync(editingFg.id); closeFgModal(); setEditingFg(null); fgForm.reset(); }} loading={deleteFoodGroup.isPending}>Eliminar</Button>
+                <Button color="red" variant="subtle" onClick={async () => { await deleteFoodGroup.mutateAsync(editingFg.id); closeFgModal(); setEditingFg(null); fgForm.reset(); }} loading={deleteFoodGroup.isPending}>{t("nutrition.eliminar")}</Button>
               )}
               <Group ml="auto">
-                <Button onClick={() => { closeFgModal(); setEditingFg(null); fgForm.reset(); }} variant="default">Cancelar</Button>
+                <Button onClick={() => { closeFgModal(); setEditingFg(null); fgForm.reset(); }} variant="default">{t("nutrition.cancelar")}</Button>
                 <Button type="submit" loading={createFoodGroup.isPending || updateFoodGroup.isPending}>{editingFg ? "Guardar" : "Crear"}</Button>
               </Group>
             </Group>
@@ -298,6 +300,7 @@ function FoodGroupsPanel() {
 }
 
 export function NutritionPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const editPlanId = searchParams.get("edit");
@@ -528,7 +531,7 @@ export function NutritionPage() {
       await toggleFoodFavorite.mutateAsync({ foodId, isFavorite: isFav });
       notifications.show({ title: isFav ? "Eliminado de favoritos" : "Añadido a favoritos", message: isFav ? "El alimento se ha eliminado de tus favoritos" : "El alimento se ha añadido a tus favoritos", color: isFav ? "gray" : "yellow" });
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo actualizar el favorito", color: "red" });
+      notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" });
     }
   };
 
@@ -539,7 +542,7 @@ export function NutritionPage() {
       await toggleSupplementFavorite.mutateAsync({ supplementId, isFavorite: isFav });
       notifications.show({ title: isFav ? "Eliminado de favoritos" : "Añadido a favoritos", message: isFav ? "El suplemento se ha eliminado de tus favoritos" : "El suplemento se ha añadido a tus favoritos", color: isFav ? "gray" : "yellow" });
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo actualizar el favorito", color: "red" });
+      notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" });
     }
   };
 
@@ -687,16 +690,16 @@ export function NutritionPage() {
   const handleCreateFood = async (values: typeof foodForm.values) => {
     try {
       await createFood.mutateAsync({ name: values.name, category: categoryToDb(values.category), calories: values.calories, protein_g: values.protein, carbs_g: values.carbs, fat_g: values.fat, quantity: values.serving_size });
-      notifications.show({ title: "Alimento creado", message: `${values.name} se ha añadido a tu biblioteca`, color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("nutrition.alimentoCreado"), message: `${values.name} se ha añadido a tu biblioteca`, color: "green", icon: <IconCheck size={16} /> });
       closeFoodModal(); foodForm.reset();
-    } catch { notifications.show({ title: "Error", message: "No se pudo crear el alimento", color: "red" }); }
+    } catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoCrearEl"), color: "red" }); }
   };
 
   const handleDeleteFood = async (foodId: string, foodName: string) => {
     try {
       await deleteFood.mutateAsync(foodId);
-      notifications.show({ title: "Alimento eliminado", message: `${foodName} se ha eliminado de tu biblioteca`, color: "green" });
-    } catch { notifications.show({ title: "Error", message: "No se pudo eliminar el alimento", color: "red" }); }
+      notifications.show({ title: t("nutrition.alimentoEliminado"), message: `${foodName} se ha eliminado de tu biblioteca`, color: "green" });
+    } catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoEliminarEl"), color: "red" }); }
   };
 
   const openPlanBuilder = (plan?: any) => {
@@ -764,13 +767,13 @@ export function NutritionPage() {
         end_date: undefined,
       });
       notifications.show({
-        title: "Plantilla creada",
-        message: "Se guardó una copia reutilizable del plan",
+        title: t("nutrition.plantillaCreada"),
+        message: t("nutrition.seGuardoUnaCopiaReutilizable"),
         color: "teal",
         icon: <IconTemplate size={16} />,
       });
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo crear la plantilla", color: "red" });
+      notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoCrearLa"), color: "red" });
     }
   };
 
@@ -790,11 +793,11 @@ export function NutritionPage() {
       };
       if (editingPlan) {
         await updateMealPlan.mutateAsync({ id: editingPlan.id, ...basePlanData, ...cleanDates, client_id: planClientId || undefined, is_template: editingPlan.is_template ?? !hasClient });
-        notifications.show({ title: "Plan actualizado", message: `${values.name} se ha actualizado correctamente`, color: "green", icon: <IconCheck size={16} /> });
+        notifications.show({ title: t("nutrition.planActualizado"), message: `${values.name} se ha actualizado correctamente`, color: "green", icon: <IconCheck size={16} /> });
       } else {
         if (hasClient) {
           await createMealPlan.mutateAsync({ ...basePlanData, ...cleanDates, client_id: planClientId || undefined, is_template: false });
-          notifications.show({ title: "Plan creado", message: `${values.name} se ha creado correctamente`, color: "green", icon: <IconCheck size={16} /> });
+          notifications.show({ title: t("nutrition.planCreado"), message: `${values.name} se ha creado correctamente`, color: "green", icon: <IconCheck size={16} /> });
         }
         if (isTemplateModeOn) {
           const templateName = hasClient ? `${values.name} (Plantilla)` : values.name;
@@ -807,19 +810,19 @@ export function NutritionPage() {
       planForm.reset(); setMealPlanWeeks([{ week: 1, days: [...initialDays] }]); setCurrentWeek(1); setEditingPlan(null);
       if (clientId) navigate(`/clients/${clientId}`, { replace: true });
       else if (returnTo) navigate(returnTo, { replace: true });
-    } catch { notifications.show({ title: "Error", message: "No se pudo guardar el plan", color: "red" }); }
+    } catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoGuardarEl"), color: "red" }); }
   };
 
   const handleDeletePlan = async (planId: string, planName: string) => {
-    try { await deleteMealPlan.mutateAsync(planId); notifications.show({ title: "Plan eliminado", message: `${planName} se ha eliminado correctamente`, color: "green" }); }
-    catch { notifications.show({ title: "Error", message: "No se pudo eliminar el plan", color: "red" }); }
+    try { await deleteMealPlan.mutateAsync(planId); notifications.show({ title: t("nutrition.planEliminado"), message: `${planName} se ha eliminado correctamente`, color: "green" }); }
+    catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoEliminarEl"), color: "red" }); }
   };
 
   const handleDuplicatePlan = async (plan: any) => {
     try {
       await createMealPlan.mutateAsync({ name: `${plan.name} (copia)`, description: plan.description, duration_days: plan.duration_days, duration_weeks: getDurationWeeks(plan), target_calories: plan.target_calories, target_protein: plan.target_protein, target_carbs: plan.target_carbs, target_fat: plan.target_fat, dietary_tags: plan.dietary_tags, plan: plan.plan, is_template: true });
-      notifications.show({ title: "Plan duplicado", message: `Se ha creado una copia de ${plan.name}`, color: "green", icon: <IconCheck size={16} /> });
-    } catch { notifications.show({ title: "Error", message: "No se pudo duplicar el plan", color: "red" }); }
+      notifications.show({ title: t("nutrition.planDuplicado"), message: `Se ha creado una copia de ${plan.name}`, color: "green", icon: <IconCheck size={16} /> });
+    } catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoDuplicarEl"), color: "red" }); }
   };
 
   const getCategoryIcon = (category: string) => {
@@ -903,14 +906,14 @@ export function NutritionPage() {
                   openPlanBuilder();
                 },
         }}
-        description="Gestiona planes nutricionales y alimentos"
-        title="Nutrición"
+        description={t("nutrition.gestionaPlanesNutricionalesYAlimentos")}
+        title={t("nutrition.nutricion")}
       />
 
       {isMobile && (
         <Select value={activeTab} onChange={setActiveTab} data={[
-          { value: "templates", label: "Plantillas" }, { value: "plans", label: "Planes de Clientes" },
-          { value: "recipes", label: "Recetas" }, { value: "foods", label: "Alimentos" }, { value: "supplements", label: "Suplementos" }, { value: "beverages", label: "Bebidas" },
+          { value: "templates", label: t("nutrition.plantillas") }, { value: "plans", label: t("nutrition.planesDeClientes") },
+          { value: "recipes", label: t("nutrition.recetas") }, { value: "foods", label: t("nutrition.alimentos") }, { value: "supplements", label: t("nutrition.suplementos") }, { value: "beverages", label: t("nutrition.bebidas") },
         ]} size="sm" radius="md" mb="md" />
       )}
 
@@ -918,13 +921,13 @@ export function NutritionPage() {
         {!isMobile && (
           <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)", flexWrap: "nowrap" }}>
             {([
-              { value: "templates", icon: <IconTemplate size={14} />, label: "Plantillas", count: templates.length },
-              { value: "plans", icon: <IconUsers size={14} />, label: "Planes de Clientes", count: clientPlans.length },
-              { value: "recipes", icon: <IconToolsKitchen2 size={14} />, label: "Recetas", count: recipes.length },
-              { value: "foods", icon: <IconApple size={14} />, label: "Alimentos", count: totalFoodsCount ?? 0 },
-              { value: "food-groups", icon: <IconSalad size={14} />, label: "Grupos", count: 0 },
-              { value: "supplements", icon: <IconPill size={14} />, label: "Suplementos", count: supplements.length },
-              { value: "beverages", icon: <IconGlass size={14} />, label: "Bebidas", count: 0 },
+              { value: "templates", icon: <IconTemplate size={14} />, label: t("nutrition.plantillas"), count: templates.length },
+              { value: "plans", icon: <IconUsers size={14} />, label: t("nutrition.planesDeClientes"), count: clientPlans.length },
+              { value: "recipes", icon: <IconToolsKitchen2 size={14} />, label: t("nutrition.recetas"), count: recipes.length },
+              { value: "foods", icon: <IconApple size={14} />, label: t("nutrition.alimentos"), count: totalFoodsCount ?? 0 },
+              { value: "food-groups", icon: <IconSalad size={14} />, label: t("nutrition.grupos"), count: 0 },
+              { value: "supplements", icon: <IconPill size={14} />, label: t("nutrition.suplementos"), count: supplements.length },
+              { value: "beverages", icon: <IconGlass size={14} />, label: t("nutrition.bebidas"), count: 0 },
             ] as const).map((t) => (
               <Tabs.Tab key={t.value} leftSection={t.icon} value={t.value} style={{ fontWeight: 600, fontSize: "13px", flexDirection: "column", gap: 2, alignItems: "center", minWidth: 0 }}>
                 {t.count > 0 && <Badge size="xs" radius="md" variant="light">{t.count.toLocaleString()}</Badge>}
@@ -964,8 +967,8 @@ export function NutritionPage() {
             canEditSystemFoods={canEditSystemFoods}
             onDuplicate={(foodId) => {
               duplicateFood.mutate(foodId, {
-                onSuccess: () => { notifications.show({ title: "Alimento duplicado", message: "Se ha creado una copia editable en tu workspace", color: "green" }); },
-                onError: () => { notifications.show({ title: "Error", message: "No se pudo duplicar el alimento", color: "red" }); },
+                onSuccess: () => { notifications.show({ title: t("nutrition.alimentoDuplicado"), message: t("nutrition.seHaCreadoUnaCopia"), color: "green" }); },
+                onError: () => { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoDuplicarEl"), color: "red" }); },
               });
             }}
           />
@@ -991,77 +994,77 @@ export function NutritionPage() {
       </Tabs>
 
       {/* Food Form Modal */}
-      <BottomSheet onClose={closeFoodModal} opened={foodModalOpened} size="md" title="Nuevo Alimento" radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
+      <BottomSheet onClose={closeFoodModal} opened={foodModalOpened} size="md" title={t("nutrition.nuevoAlimento")} radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
         <form onSubmit={foodForm.onSubmit(handleCreateFood)}>
           <Stack>
-            <TextInput label="Nombre" placeholder="Pechuga de Pollo" required {...foodForm.getInputProps("name")} />
+            <TextInput label={t("nutrition.nombre")} placeholder={t("nutrition.pechugaDePollo")} required {...foodForm.getInputProps("name")} />
             <Group grow>
-              <Select data={[{ value: "Proteínas", label: "Proteínas" }, { value: "Carbohidratos", label: "Carbohidratos" }, { value: "Verduras", label: "Verduras" }, { value: "Frutas", label: "Frutas" }, { value: "Lácteos", label: "Lácteos" }, { value: "Grasas", label: "Grasas" }, { value: "Frutos Secos", label: "Frutos Secos" }]} label="Categoría" placeholder="Selecciona" {...foodForm.getInputProps("category")} />
-              <TextInput label="Ración aproximada (gramos)" placeholder="Ej: 100g, 250g..." description="Aprox. una ración de este producto" {...foodForm.getInputProps("serving_size")} />
+              <Select data={[{ value: "Proteínas", label: t("nutrition.proteinas") }, { value: "Carbohidratos", label: t("nutrition.carbohidratos") }, { value: "Verduras", label: t("nutrition.verduras") }, { value: "Frutas", label: t("nutrition.frutas") }, { value: "Lácteos", label: t("nutrition.lacteos") }, { value: "Grasas", label: t("nutrition.grasas") }, { value: "Frutos Secos", label: t("nutrition.frutosSecos") }]} label={t("nutrition.categoria")} placeholder={t("nutrition.selecciona")} {...foodForm.getInputProps("category")} />
+              <TextInput label={t("nutrition.racionAproximadaGramos")} placeholder={t("nutrition.ej100g250g")} description={t("nutrition.aproxUnaRacionDeEste")} {...foodForm.getInputProps("serving_size")} />
             </Group>
-            <Text size="xs" c="dimmed" fw={500} mt="xs">Los valores nutricionales se introducen siempre por cada 100g</Text>
-            <NumberInput label="Calorías (por 100g)" min={0} placeholder="0" {...foodForm.getInputProps("calories")} />
+            <Text size="xs" c="dimmed" fw={500} mt="xs">{t("nutrition.losValoresNutricionalesSeIntroducen")}</Text>
+            <NumberInput label={t("nutrition.caloriasPor100g")} min={0} placeholder="0" {...foodForm.getInputProps("calories")} />
             <Group grow>
-              <NumberInput decimalScale={1} label="Proteína (g)" min={0} placeholder="0" {...foodForm.getInputProps("protein")} />
-              <NumberInput decimalScale={1} label="Carbohidratos (g)" min={0} placeholder="0" {...foodForm.getInputProps("carbs")} />
-              <NumberInput decimalScale={1} label="Grasas (g)" min={0} placeholder="0" {...foodForm.getInputProps("fat")} />
+              <NumberInput decimalScale={1} label={t("nutrition.proteinaG")} min={0} placeholder="0" {...foodForm.getInputProps("protein")} />
+              <NumberInput decimalScale={1} label={t("nutrition.carbohidratosG")} min={0} placeholder="0" {...foodForm.getInputProps("carbs")} />
+              <NumberInput decimalScale={1} label={t("nutrition.grasasG")} min={0} placeholder="0" {...foodForm.getInputProps("fat")} />
             </Group>
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeFoodModal} variant="default">Cancelar</Button>
-              <Button loading={createFood.isPending} type="submit">Crear Alimento</Button>
+              <Button onClick={closeFoodModal} variant="default">{t("nutrition.cancelar")}</Button>
+              <Button loading={createFood.isPending} type="submit">{t("nutrition.crearAlimento")}</Button>
             </Group>
           </Stack>
         </form>
       </BottomSheet>
 
       {/* Edit Food Modal */}
-      <BottomSheet onClose={() => { closeEditFoodModal(); setEditingFood(null); }} opened={editFoodModalOpened} size="xl" title="Editar Alimento" radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
+      <BottomSheet onClose={() => { closeEditFoodModal(); setEditingFood(null); }} opened={editFoodModalOpened} size="xl" title={t("nutrition.editarAlimento")} radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
         {editingFood && (
           <form onSubmit={async (e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
             try {
               await updateFood.mutateAsync({ id: editingFood.id, name: formData.get("name") as string, generic_name: formData.get("generic_name") as string || null, brand: formData.get("brand") as string || null, category: categoryToDb(formData.get("category") as string), barcode: formData.get("barcode") as string || null, serving_size: Number(formData.get("serving_size_num")) || 100, serving_unit: formData.get("serving_unit") as string || "g", quantity: formData.get("quantity") as string || null, calories: Number(formData.get("calories")) || 0, protein_g: Number(formData.get("protein")) || 0, carbs_g: Number(formData.get("carbs")) || 0, fat_g: Number(formData.get("fat")) || 0, fiber_g: Number(formData.get("fiber")) || 0, sugars_g: Number(formData.get("sugars")) || 0, saturated_fat_g: Number(formData.get("saturated_fat")) || 0, salt_g: Number(formData.get("salt")) || 0, sodium_mg: Number(formData.get("sodium")) || 0, ingredients_text: formData.get("ingredients") as string || null, allergens: formData.get("allergens") as string || null });
-              notifications.show({ title: "Alimento actualizado", message: "El alimento se ha actualizado correctamente", color: "green" });
+              notifications.show({ title: t("nutrition.alimentoActualizado"), message: t("nutrition.elAlimentoSeHaActualizado"), color: "green" });
               closeEditFoodModal(); setEditingFood(null);
-            } catch { notifications.show({ title: "Error", message: "No se pudo actualizar el alimento", color: "red" }); }
+            } catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" }); }
           }}>
             <ScrollArea h={500}>
               <Tabs value={editFoodTab} onChange={setEditFoodTab} radius="md">
-                {isMobile && <Select value={editFoodTab} onChange={setEditFoodTab} data={[{ value: "general", label: "General" }, { value: "nutrition", label: "Nutrición" }, { value: "details", label: "Detalles" }]} size="sm" radius="md" mb="md" />}
-                {!isMobile && <Tabs.List mb="md"><Tabs.Tab value="general">General</Tabs.Tab><Tabs.Tab value="nutrition">Nutrición</Tabs.Tab><Tabs.Tab value="details">Detalles</Tabs.Tab></Tabs.List>}
+                {isMobile && <Select value={editFoodTab} onChange={setEditFoodTab} data={[{ value: "general", label: t("nutrition.general") }, { value: "nutrition", label: t("nutrition.nutricion") }, { value: "details", label: t("nutrition.detalles") }]} size="sm" radius="md" mb="md" />}
+                {!isMobile && <Tabs.List mb="md"><Tabs.Tab value="general">{t("nutrition.general")}</Tabs.Tab><Tabs.Tab value="nutrition">{t("nutrition.nutricion")}</Tabs.Tab><Tabs.Tab value="details">{t("nutrition.detalles")}</Tabs.Tab></Tabs.List>}
                 <Tabs.Panel value="general">
                   <Stack gap="sm">
-                    <TextInput label="Nombre" name="name" placeholder="Pechuga de Pollo" required defaultValue={editingFood.name} />
-                    <TextInput label="Nombre genérico" name="generic_name" placeholder="Pollo" defaultValue={editingFood.generic_name || ""} />
-                    <Group grow><TextInput label="Marca" name="brand" placeholder="Marca del producto" defaultValue={editingFood.brand || ""} /><Select name="category" data={[{ value: "Proteínas", label: "Proteínas" }, { value: "Carbohidratos", label: "Carbohidratos" }, { value: "Verduras", label: "Verduras" }, { value: "Frutas", label: "Frutas" }, { value: "Lácteos", label: "Lácteos" }, { value: "Grasas", label: "Grasas" }, { value: "Frutos Secos", label: "Frutos Secos" }, { value: "Otros", label: "Otros" }]} label="Categoría" placeholder="Selecciona" defaultValue={mapCategory(editingFood.category)} /></Group>
-                    <Group grow><TextInput label="Código de barras" name="barcode" placeholder="8400000000000" defaultValue={editingFood.barcode || ""} /><TextInput label="Cantidad/Envase" name="quantity" placeholder="500g, 1L, etc." defaultValue={editingFood.quantity || ""} /></Group>
-                    <Group grow><NumberInput label="Tamaño porción" name="serving_size_num" min={0} defaultValue={editingFood.serving_size || 100} /><Select name="serving_unit" data={[{ value: "g", label: "gramos (g)" }, { value: "ml", label: "mililitros (ml)" }, { value: "unidad", label: "unidad" }, { value: "porción", label: "porción" }]} label="Unidad" defaultValue={editingFood.serving_unit || "g"} /></Group>
+                    <TextInput label={t("nutrition.nombre")} name="name" placeholder={t("nutrition.pechugaDePollo")} required defaultValue={editingFood.name} />
+                    <TextInput label={t("nutrition.nombreGenerico")} name="generic_name" placeholder={t("nutrition.pollo")} defaultValue={editingFood.generic_name || ""} />
+                    <Group grow><TextInput label={t("nutrition.marca")} name="brand" placeholder={t("nutrition.marcaDelProducto")} defaultValue={editingFood.brand || ""} /><Select name="category" data={[{ value: "Proteínas", label: t("nutrition.proteinas") }, { value: "Carbohidratos", label: t("nutrition.carbohidratos") }, { value: "Verduras", label: t("nutrition.verduras") }, { value: "Frutas", label: t("nutrition.frutas") }, { value: "Lácteos", label: t("nutrition.lacteos") }, { value: "Grasas", label: t("nutrition.grasas") }, { value: "Frutos Secos", label: t("nutrition.frutosSecos") }, { value: "Otros", label: t("nutrition.otros") }]} label={t("nutrition.categoria")} placeholder={t("nutrition.selecciona")} defaultValue={mapCategory(editingFood.category)} /></Group>
+                    <Group grow><TextInput label={t("nutrition.codigoDeBarras")} name="barcode" placeholder="8400000000000" defaultValue={editingFood.barcode || ""} /><TextInput label={t("nutrition.cantidadEnvase")} name="quantity" placeholder={t("nutrition.500g1lEtc")} defaultValue={editingFood.quantity || ""} /></Group>
+                    <Group grow><NumberInput label={t("nutrition.tamanoPorcion")} name="serving_size_num" min={0} defaultValue={editingFood.serving_size || 100} /><Select name="serving_unit" data={[{ value: "g", label: t("nutrition.gramosG") }, { value: "ml", label: t("nutrition.mililitrosMl") }, { value: "unidad", label: t("nutrition.unidad") }, { value: "porción", label: t("nutrition.porcion") }]} label={t("nutrition.unidad")} defaultValue={editingFood.serving_unit || "g"} /></Group>
                   </Stack>
                 </Tabs.Panel>
                 <Tabs.Panel value="nutrition">
                   <Stack gap="sm">
-                    <Text fw={600} size="sm" c="dimmed">Macronutrientes principales</Text>
-                    <Group grow><NumberInput label="Calorías (kcal)" name="calories" min={0} decimalScale={1} defaultValue={editingFood.calories || 0} /><NumberInput label="Proteínas (g)" name="protein" min={0} decimalScale={2} defaultValue={editingFood.protein_g || 0} /></Group>
-                    <Group grow><NumberInput label="Carbohidratos (g)" name="carbs" min={0} decimalScale={2} defaultValue={editingFood.carbs_g || 0} /><NumberInput label="Grasas (g)" name="fat" min={0} decimalScale={2} defaultValue={editingFood.fat_g || 0} /></Group>
-                    <Divider my="sm" /><Text fw={600} size="sm" c="dimmed">Información adicional</Text>
-                    <Group grow><NumberInput label="Fibra (g)" name="fiber" min={0} decimalScale={2} defaultValue={editingFood.fiber_g || 0} /><NumberInput label="Azúcares (g)" name="sugars" min={0} decimalScale={2} defaultValue={editingFood.sugars_g || 0} /></Group>
-                    <Group grow><NumberInput label="Grasas saturadas (g)" name="saturated_fat" min={0} decimalScale={2} defaultValue={editingFood.saturated_fat_g || 0} /><NumberInput label="Sal (g)" name="salt" min={0} decimalScale={3} defaultValue={editingFood.salt_g || 0} /></Group>
-                    <NumberInput label="Sodio (mg)" name="sodium" min={0} defaultValue={editingFood.sodium_mg || 0} />
+                    <Text fw={600} size="sm" c="dimmed">{t("nutrition.macronutrientesPrincipales")}</Text>
+                    <Group grow><NumberInput label={t("nutrition.caloriasKcal")} name="calories" min={0} decimalScale={1} defaultValue={editingFood.calories || 0} /><NumberInput label={t("nutrition.proteinasG")} name="protein" min={0} decimalScale={2} defaultValue={editingFood.protein_g || 0} /></Group>
+                    <Group grow><NumberInput label={t("nutrition.carbohidratosG")} name="carbs" min={0} decimalScale={2} defaultValue={editingFood.carbs_g || 0} /><NumberInput label={t("nutrition.grasasG")} name="fat" min={0} decimalScale={2} defaultValue={editingFood.fat_g || 0} /></Group>
+                    <Divider my="sm" /><Text fw={600} size="sm" c="dimmed">{t("nutrition.informacionAdicional")}</Text>
+                    <Group grow><NumberInput label={t("nutrition.fibraG")} name="fiber" min={0} decimalScale={2} defaultValue={editingFood.fiber_g || 0} /><NumberInput label={t("nutrition.azucaresG")} name="sugars" min={0} decimalScale={2} defaultValue={editingFood.sugars_g || 0} /></Group>
+                    <Group grow><NumberInput label={t("nutrition.grasasSaturadasG")} name="saturated_fat" min={0} decimalScale={2} defaultValue={editingFood.saturated_fat_g || 0} /><NumberInput label={t("nutrition.salG")} name="salt" min={0} decimalScale={3} defaultValue={editingFood.salt_g || 0} /></Group>
+                    <NumberInput label={t("nutrition.sodioMg")} name="sodium" min={0} defaultValue={editingFood.sodium_mg || 0} />
                   </Stack>
                 </Tabs.Panel>
                 <Tabs.Panel value="details">
                   <Stack gap="sm">
-                    <Textarea label="Ingredientes" name="ingredients" placeholder="Lista de ingredientes..." minRows={3} defaultValue={editingFood.ingredients_text || ""} />
-                    <Textarea label="Alérgenos" name="allergens" placeholder="Gluten, Leche, Frutos secos..." minRows={2} defaultValue={editingFood.allergens || ""} />
-                    {editingFood.image_url && <Box><Text size="xs" c="dimmed" mb="xs">Imagen actual</Text><img src={editingFood.image_url} alt={editingFood.name} style={{ maxHeight: 100, borderRadius: 8, objectFit: "contain" }} /></Box>}
+                    <Textarea label={t("nutrition.ingredientes")} name="ingredients" placeholder={t("nutrition.listaDeIngredientes")} minRows={3} defaultValue={editingFood.ingredients_text || ""} />
+                    <Textarea label={t("nutrition.alergenos")} name="allergens" placeholder={t("nutrition.glutenLecheFrutosSecos")} minRows={2} defaultValue={editingFood.allergens || ""} />
+                    {editingFood.image_url && <Box><Text size="xs" c="dimmed" mb="xs">{t("nutrition.imagenActual")}</Text><img src={editingFood.image_url} alt={editingFood.name} style={{ maxHeight: 100, borderRadius: 8, objectFit: "contain" }} /></Box>}
                   </Stack>
                 </Tabs.Panel>
               </Tabs>
             </ScrollArea>
             <Group justify="flex-end" mt="md">
-              <Button onClick={() => { closeEditFoodModal(); setEditingFood(null); }} variant="default">Cancelar</Button>
-              <Button loading={updateFood.isPending} type="submit">Guardar Cambios</Button>
+              <Button onClick={() => { closeEditFoodModal(); setEditingFood(null); }} variant="default">{t("nutrition.cancelar")}</Button>
+              <Button loading={updateFood.isPending} type="submit">{t("nutrition.guardarCambios")}</Button>
             </Group>
           </form>
         )}
@@ -1072,99 +1075,99 @@ export function NutritionPage() {
         {viewingFood && (
           <ScrollArea h={500}>
             <Tabs value={foodDetailTab} onChange={setFoodDetailTab} radius="md">
-              {isMobile && <Select value={foodDetailTab} onChange={setFoodDetailTab} data={[{ value: "general", label: "General" }, { value: "macros", label: "Macronutrientes" }, { value: "vitamins", label: "Vitaminas" }, { value: "minerals", label: "Minerales" }, { value: "other", label: "Otros" }]} size="sm" radius="md" mb="md" />}
-              {!isMobile && <Tabs.List mb="md"><Tabs.Tab value="general">General</Tabs.Tab><Tabs.Tab value="macros">Macronutrientes</Tabs.Tab><Tabs.Tab value="vitamins">Vitaminas</Tabs.Tab><Tabs.Tab value="minerals">Minerales</Tabs.Tab><Tabs.Tab value="other">Otros</Tabs.Tab></Tabs.List>}
+              {isMobile && <Select value={foodDetailTab} onChange={setFoodDetailTab} data={[{ value: "general", label: t("nutrition.general") }, { value: "macros", label: t("nutrition.macronutrientes") }, { value: "vitamins", label: t("nutrition.vitaminas") }, { value: "minerals", label: t("nutrition.minerales") }, { value: "other", label: t("nutrition.otros") }]} size="sm" radius="md" mb="md" />}
+              {!isMobile && <Tabs.List mb="md"><Tabs.Tab value="general">{t("nutrition.general")}</Tabs.Tab><Tabs.Tab value="macros">{t("nutrition.macronutrientes")}</Tabs.Tab><Tabs.Tab value="vitamins">{t("nutrition.vitaminas")}</Tabs.Tab><Tabs.Tab value="minerals">{t("nutrition.minerales")}</Tabs.Tab><Tabs.Tab value="other">{t("nutrition.otros")}</Tabs.Tab></Tabs.List>}
               <Tabs.Panel value="general">
                 <Stack gap="md">
                   {viewingFood.image_url && <Center><img src={viewingFood.image_url} alt={viewingFood.name} style={{ maxHeight: 150, borderRadius: 8, objectFit: "contain" }} /></Center>}
                   <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Nombre</Text><Text fw={600}>{viewingFood.name}</Text></Box>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Nombre genérico</Text><Text>{viewingFood.generic_name || "-"}</Text></Box>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Marca</Text><Text>{viewingFood.brand || "-"}</Text></Box>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Categoría</Text><Text>{viewingFood.category || "-"}</Text></Box>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Código de barras</Text><Text>{viewingFood.barcode || "-"}</Text></Box>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Valores nutricionales por</Text><Text>100g</Text></Box>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Ración aproximada</Text><Text>{viewingFood.quantity ? `Aprox. una ración son ${viewingFood.quantity}` : viewingFood.serving_size ? `Aprox. una ración son ${viewingFood.serving_size}g` : "-"}</Text></Box>
-                    <Box><Text size="xs" c="dimmed" fw={500}>Envase</Text><Text>{viewingFood.packaging || "-"}</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.nombre")}</Text><Text fw={600}>{viewingFood.name}</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.nombreGenerico")}</Text><Text>{viewingFood.generic_name || "-"}</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.marca")}</Text><Text>{viewingFood.brand || "-"}</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.categoria")}</Text><Text>{viewingFood.category || "-"}</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.codigoDeBarras")}</Text><Text>{viewingFood.barcode || "-"}</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.valoresNutricionalesPor")}</Text><Text>100g</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.racionAproximada")}</Text><Text>{viewingFood.quantity ? `Aprox. una ración son ${viewingFood.quantity}` : viewingFood.serving_size ? `Aprox. una ración son ${viewingFood.serving_size}g` : "-"}</Text></Box>
+                    <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.envase")}</Text><Text>{viewingFood.packaging || "-"}</Text></Box>
                   </SimpleGrid>
-                  {viewingFood.ingredients_text && <Box><Text size="xs" c="dimmed" fw={500}>Ingredientes</Text><Text size="sm">{viewingFood.ingredients_text}</Text></Box>}
-                  {(viewingFood.allergens || viewingFood.allergens_tags?.length > 0) && <Box><Text size="xs" c="dimmed" fw={500}>Alérgenos</Text><Group gap="xs" mt="xs">{viewingFood.allergens_tags?.map((tag: string) => <Badge key={tag} color="red" variant="light" size="sm">{tag}</Badge>) || <Text size="sm">{viewingFood.allergens}</Text>}</Group></Box>}
-                  {(viewingFood.traces || viewingFood.traces_tags?.length > 0) && <Box><Text size="xs" c="dimmed" fw={500}>Trazas</Text><Group gap="xs" mt="xs">{viewingFood.traces_tags?.map((tag: string) => <Badge key={tag} color="orange" variant="light" size="sm">{tag}</Badge>) || <Text size="sm">{viewingFood.traces}</Text>}</Group></Box>}
+                  {viewingFood.ingredients_text && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.ingredientes")}</Text><Text size="sm">{viewingFood.ingredients_text}</Text></Box>}
+                  {(viewingFood.allergens || viewingFood.allergens_tags?.length > 0) && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.alergenos")}</Text><Group gap="xs" mt="xs">{viewingFood.allergens_tags?.map((tag: string) => <Badge key={tag} color="red" variant="light" size="sm">{tag}</Badge>) || <Text size="sm">{viewingFood.allergens}</Text>}</Group></Box>}
+                  {(viewingFood.traces || viewingFood.traces_tags?.length > 0) && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.trazas")}</Text><Group gap="xs" mt="xs">{viewingFood.traces_tags?.map((tag: string) => <Badge key={tag} color="orange" variant="light" size="sm">{tag}</Badge>) || <Text size="sm">{viewingFood.traces}</Text>}</Group></Box>}
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                    {viewingFood.nutriscore_grade && <Box><Text size="xs" c="dimmed" fw={500}>Nutri-Score</Text><Badge color={viewingFood.nutriscore_grade === 'a' ? 'green' : viewingFood.nutriscore_grade === 'b' ? 'lime' : viewingFood.nutriscore_grade === 'c' ? 'yellow' : viewingFood.nutriscore_grade === 'd' ? 'orange' : 'red'} size="lg">{viewingFood.nutriscore_grade?.toUpperCase()}</Badge></Box>}
-                    {viewingFood.nova_group && <Box><Text size="xs" c="dimmed" fw={500}>NOVA Group</Text><Badge color="blue" size="lg">{viewingFood.nova_group}</Badge></Box>}
-                    {viewingFood.ecoscore_grade && <Box><Text size="xs" c="dimmed" fw={500}>Eco-Score</Text><Badge color={viewingFood.ecoscore_grade === 'a' ? 'green' : viewingFood.ecoscore_grade === 'b' ? 'lime' : viewingFood.ecoscore_grade === 'c' ? 'yellow' : viewingFood.ecoscore_grade === 'd' ? 'orange' : 'red'} size="lg">{viewingFood.ecoscore_grade?.toUpperCase()}</Badge></Box>}
+                    {viewingFood.nutriscore_grade && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.nutriScore")}</Text><Badge color={viewingFood.nutriscore_grade === 'a' ? 'green' : viewingFood.nutriscore_grade === 'b' ? 'lime' : viewingFood.nutriscore_grade === 'c' ? 'yellow' : viewingFood.nutriscore_grade === 'd' ? 'orange' : 'red'} size="lg">{viewingFood.nutriscore_grade?.toUpperCase()}</Badge></Box>}
+                    {viewingFood.nova_group && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.novaGroup")}</Text><Badge color="blue" size="lg">{viewingFood.nova_group}</Badge></Box>}
+                    {viewingFood.ecoscore_grade && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.ecoScore")}</Text><Badge color={viewingFood.ecoscore_grade === 'a' ? 'green' : viewingFood.ecoscore_grade === 'b' ? 'lime' : viewingFood.ecoscore_grade === 'c' ? 'yellow' : viewingFood.ecoscore_grade === 'd' ? 'orange' : 'red'} size="lg">{viewingFood.ecoscore_grade?.toUpperCase()}</Badge></Box>}
                   </SimpleGrid>
                 </Stack>
               </Tabs.Panel>
               <Tabs.Panel value="macros">
                 <Stack gap="md">
-                  <Text fw={600} size="lg">Información Nutricional (por 100g)</Text>
+                  <Text fw={600} size="lg">{t("nutrition.informacionNutricionalPor100g")}</Text>
                   <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Energía</Text><Text fw={600} size="lg">{formatDecimal(Number(viewingFood.calories || 0), 1)} kcal</Text>{viewingFood.energy_kj && <Text size="xs" c="dimmed">{viewingFood.energy_kj} kJ</Text>}</Box>
-                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Proteínas</Text><Text fw={600} size="lg" c="green">{formatDecimal(Number(viewingFood.protein_g || 0), 1)} g</Text></Box>
-                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Carbohidratos</Text><Text fw={600} size="lg" c="orange">{formatDecimal(Number(viewingFood.carbs_g || 0), 1)} g</Text>{viewingFood.sugars_g > 0 && <Text size="xs" c="dimmed">de los cuales azúcares: {viewingFood.sugars_g}g</Text>}{viewingFood.added_sugars_g > 0 && <Text size="xs" c="dimmed">azúcares añadidos: {viewingFood.added_sugars_g}g</Text>}{viewingFood.starch_g > 0 && <Text size="xs" c="dimmed">almidón: {viewingFood.starch_g}g</Text>}</Box>
-                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Grasas</Text><Text fw={600} size="lg" c="grape">{formatDecimal(Number(viewingFood.fat_g || 0), 1)} g</Text>{viewingFood.saturated_fat_g > 0 && <Text size="xs" c="dimmed">saturadas: {viewingFood.saturated_fat_g}g</Text>}{viewingFood.monounsaturated_fat_g > 0 && <Text size="xs" c="dimmed">monoinsaturadas: {viewingFood.monounsaturated_fat_g}g</Text>}{viewingFood.polyunsaturated_fat_g > 0 && <Text size="xs" c="dimmed">poliinsaturadas: {viewingFood.polyunsaturated_fat_g}g</Text>}{viewingFood.trans_fat_g > 0 && <Text size="xs" c="dimmed">trans: {viewingFood.trans_fat_g}g</Text>}</Box>
-                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Fibra</Text><Text fw={600} size="lg">{formatDecimal(Number(viewingFood.fiber_g || 0), 1)} g</Text></Box>
-                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Sal</Text><Text fw={600} size="lg">{formatDecimal(Number(viewingFood.salt_g || 0), 2)} g</Text>{viewingFood.sodium_mg > 0 && <Text size="xs" c="dimmed">sodio: {viewingFood.sodium_mg}mg</Text>}</Box>
+                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.energia")}</Text><Text fw={600} size="lg">{formatDecimal(Number(viewingFood.calories || 0), 1)} kcal</Text>{viewingFood.energy_kj && <Text size="xs" c="dimmed">{viewingFood.energy_kj} kJ</Text>}</Box>
+                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.proteinas")}</Text><Text fw={600} size="lg" c="green">{formatDecimal(Number(viewingFood.protein_g || 0), 1)} g</Text></Box>
+                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.carbohidratos")}</Text><Text fw={600} size="lg" c="orange">{formatDecimal(Number(viewingFood.carbs_g || 0), 1)} g</Text>{viewingFood.sugars_g > 0 && <Text size="xs" c="dimmed">de los cuales azúcares: {viewingFood.sugars_g}g</Text>}{viewingFood.added_sugars_g > 0 && <Text size="xs" c="dimmed">azúcares añadidos: {viewingFood.added_sugars_g}g</Text>}{viewingFood.starch_g > 0 && <Text size="xs" c="dimmed">almidón: {viewingFood.starch_g}g</Text>}</Box>
+                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.grasas")}</Text><Text fw={600} size="lg" c="grape">{formatDecimal(Number(viewingFood.fat_g || 0), 1)} g</Text>{viewingFood.saturated_fat_g > 0 && <Text size="xs" c="dimmed">saturadas: {viewingFood.saturated_fat_g}g</Text>}{viewingFood.monounsaturated_fat_g > 0 && <Text size="xs" c="dimmed">monoinsaturadas: {viewingFood.monounsaturated_fat_g}g</Text>}{viewingFood.polyunsaturated_fat_g > 0 && <Text size="xs" c="dimmed">poliinsaturadas: {viewingFood.polyunsaturated_fat_g}g</Text>}{viewingFood.trans_fat_g > 0 && <Text size="xs" c="dimmed">trans: {viewingFood.trans_fat_g}g</Text>}</Box>
+                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.fibra")}</Text><Text fw={600} size="lg">{formatDecimal(Number(viewingFood.fiber_g || 0), 1)} g</Text></Box>
+                    <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.sal")}</Text><Text fw={600} size="lg">{formatDecimal(Number(viewingFood.salt_g || 0), 2)} g</Text>{viewingFood.sodium_mg > 0 && <Text size="xs" c="dimmed">sodio: {viewingFood.sodium_mg}mg</Text>}</Box>
                   </SimpleGrid>
-                  {(viewingFood.cholesterol_mg > 0 || viewingFood.omega3_g > 0 || viewingFood.alcohol_g > 0) && <><Divider my="sm" /><SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>{viewingFood.cholesterol_mg > 0 && <Box><Text size="xs" c="dimmed">Colesterol</Text><Text fw={600}>{viewingFood.cholesterol_mg} mg</Text></Box>}{viewingFood.omega3_g > 0 && <Box><Text size="xs" c="dimmed">Omega-3</Text><Text fw={600}>{viewingFood.omega3_g} g</Text></Box>}{viewingFood.alcohol_g > 0 && <Box><Text size="xs" c="dimmed">Alcohol</Text><Text fw={600}>{viewingFood.alcohol_g} g</Text></Box>}</SimpleGrid></>}
+                  {(viewingFood.cholesterol_mg > 0 || viewingFood.omega3_g > 0 || viewingFood.alcohol_g > 0) && <><Divider my="sm" /><SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>{viewingFood.cholesterol_mg > 0 && <Box><Text size="xs" c="dimmed">{t("nutrition.colesterol")}</Text><Text fw={600}>{viewingFood.cholesterol_mg} mg</Text></Box>}{viewingFood.omega3_g > 0 && <Box><Text size="xs" c="dimmed">{t("nutrition.omega3")}</Text><Text fw={600}>{viewingFood.omega3_g} g</Text></Box>}{viewingFood.alcohol_g > 0 && <Box><Text size="xs" c="dimmed">{t("nutrition.alcohol")}</Text><Text fw={600}>{viewingFood.alcohol_g} g</Text></Box>}</SimpleGrid></>}
                 </Stack>
               </Tabs.Panel>
               <Tabs.Panel value="vitamins">
                 <Stack gap="md">
-                  <Text fw={600} size="lg">Vitaminas (por 100g)</Text>
+                  <Text fw={600} size="lg">{t("nutrition.vitaminasPor100g")}</Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                    {viewingFood.vitamin_a_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina A</Text><Text fw={600}>{viewingFood.vitamin_a_ug} µg</Text></Box>}
-                    {viewingFood.vitamin_d_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina D</Text><Text fw={600}>{viewingFood.vitamin_d_ug} µg</Text></Box>}
-                    {viewingFood.vitamin_e_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina E</Text><Text fw={600}>{viewingFood.vitamin_e_mg} mg</Text></Box>}
-                    {viewingFood.vitamin_k_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina K</Text><Text fw={600}>{viewingFood.vitamin_k_ug} µg</Text></Box>}
-                    {viewingFood.vitamin_c_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina C</Text><Text fw={600}>{viewingFood.vitamin_c_mg} mg</Text></Box>}
-                    {viewingFood.vitamin_b1_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina B1 (Tiamina)</Text><Text fw={600}>{viewingFood.vitamin_b1_mg} mg</Text></Box>}
-                    {viewingFood.vitamin_b2_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina B2 (Riboflavina)</Text><Text fw={600}>{viewingFood.vitamin_b2_mg} mg</Text></Box>}
-                    {viewingFood.vitamin_b6_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina B6</Text><Text fw={600}>{viewingFood.vitamin_b6_mg} mg</Text></Box>}
-                    {viewingFood.vitamin_b9_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina B9 (Ácido Fólico)</Text><Text fw={600}>{viewingFood.vitamin_b9_ug} µg</Text></Box>}
-                    {viewingFood.vitamin_b12_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina B12</Text><Text fw={600}>{viewingFood.vitamin_b12_ug} µg</Text></Box>}
-                    {viewingFood.vitamin_pp_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Vitamina PP (Niacina)</Text><Text fw={600}>{viewingFood.vitamin_pp_mg} mg</Text></Box>}
-                    {viewingFood.pantothenic_acid_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Ácido Pantoténico</Text><Text fw={600}>{viewingFood.pantothenic_acid_mg} mg</Text></Box>}
+                    {viewingFood.vitamin_a_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaA")}</Text><Text fw={600}>{viewingFood.vitamin_a_ug} µg</Text></Box>}
+                    {viewingFood.vitamin_d_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaD")}</Text><Text fw={600}>{viewingFood.vitamin_d_ug} µg</Text></Box>}
+                    {viewingFood.vitamin_e_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaE")}</Text><Text fw={600}>{viewingFood.vitamin_e_mg} mg</Text></Box>}
+                    {viewingFood.vitamin_k_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaK")}</Text><Text fw={600}>{viewingFood.vitamin_k_ug} µg</Text></Box>}
+                    {viewingFood.vitamin_c_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaC")}</Text><Text fw={600}>{viewingFood.vitamin_c_mg} mg</Text></Box>}
+                    {viewingFood.vitamin_b1_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaB1Tiamina")}</Text><Text fw={600}>{viewingFood.vitamin_b1_mg} mg</Text></Box>}
+                    {viewingFood.vitamin_b2_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaB2Riboflavina")}</Text><Text fw={600}>{viewingFood.vitamin_b2_mg} mg</Text></Box>}
+                    {viewingFood.vitamin_b6_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaB6")}</Text><Text fw={600}>{viewingFood.vitamin_b6_mg} mg</Text></Box>}
+                    {viewingFood.vitamin_b9_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaB9AcidoFolico")}</Text><Text fw={600}>{viewingFood.vitamin_b9_ug} µg</Text></Box>}
+                    {viewingFood.vitamin_b12_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaB12")}</Text><Text fw={600}>{viewingFood.vitamin_b12_ug} µg</Text></Box>}
+                    {viewingFood.vitamin_pp_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.vitaminaPpNiacina")}</Text><Text fw={600}>{viewingFood.vitamin_pp_mg} mg</Text></Box>}
+                    {viewingFood.pantothenic_acid_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.acidoPantotenico")}</Text><Text fw={600}>{viewingFood.pantothenic_acid_mg} mg</Text></Box>}
                   </SimpleGrid>
-                  {!viewingFood.vitamin_a_ug && !viewingFood.vitamin_c_mg && !viewingFood.vitamin_d_ug && <Text c="dimmed" ta="center">No hay información de vitaminas disponible</Text>}
+                  {!viewingFood.vitamin_a_ug && !viewingFood.vitamin_c_mg && !viewingFood.vitamin_d_ug && <Text c="dimmed" ta="center">{t("nutrition.noHayInformacionDeVitaminas")}</Text>}
                 </Stack>
               </Tabs.Panel>
               <Tabs.Panel value="minerals">
                 <Stack gap="md">
-                  <Text fw={600} size="lg">Minerales (por 100g)</Text>
+                  <Text fw={600} size="lg">{t("nutrition.mineralesPor100g")}</Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                    {viewingFood.calcium_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Calcio</Text><Text fw={600}>{viewingFood.calcium_mg} mg</Text></Box>}
-                    {viewingFood.iron_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Hierro</Text><Text fw={600}>{viewingFood.iron_mg} mg</Text></Box>}
-                    {viewingFood.magnesium_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Magnesio</Text><Text fw={600}>{viewingFood.magnesium_mg} mg</Text></Box>}
-                    {viewingFood.phosphorus_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Fósforo</Text><Text fw={600}>{viewingFood.phosphorus_mg} mg</Text></Box>}
-                    {viewingFood.potassium_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Potasio</Text><Text fw={600}>{viewingFood.potassium_mg} mg</Text></Box>}
-                    {viewingFood.zinc_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Zinc</Text><Text fw={600}>{viewingFood.zinc_mg} mg</Text></Box>}
-                    {viewingFood.copper_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Cobre</Text><Text fw={600}>{viewingFood.copper_mg} mg</Text></Box>}
-                    {viewingFood.manganese_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Manganeso</Text><Text fw={600}>{viewingFood.manganese_mg} mg</Text></Box>}
-                    {viewingFood.selenium_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Selenio</Text><Text fw={600}>{viewingFood.selenium_ug} µg</Text></Box>}
-                    {viewingFood.iodine_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Yodo</Text><Text fw={600}>{viewingFood.iodine_ug} µg</Text></Box>}
+                    {viewingFood.calcium_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.calcio")}</Text><Text fw={600}>{viewingFood.calcium_mg} mg</Text></Box>}
+                    {viewingFood.iron_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.hierro")}</Text><Text fw={600}>{viewingFood.iron_mg} mg</Text></Box>}
+                    {viewingFood.magnesium_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.magnesio")}</Text><Text fw={600}>{viewingFood.magnesium_mg} mg</Text></Box>}
+                    {viewingFood.phosphorus_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.fosforo")}</Text><Text fw={600}>{viewingFood.phosphorus_mg} mg</Text></Box>}
+                    {viewingFood.potassium_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.potasio")}</Text><Text fw={600}>{viewingFood.potassium_mg} mg</Text></Box>}
+                    {viewingFood.zinc_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.zinc")}</Text><Text fw={600}>{viewingFood.zinc_mg} mg</Text></Box>}
+                    {viewingFood.copper_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.cobre")}</Text><Text fw={600}>{viewingFood.copper_mg} mg</Text></Box>}
+                    {viewingFood.manganese_mg > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.manganeso")}</Text><Text fw={600}>{viewingFood.manganese_mg} mg</Text></Box>}
+                    {viewingFood.selenium_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.selenio")}</Text><Text fw={600}>{viewingFood.selenium_ug} µg</Text></Box>}
+                    {viewingFood.iodine_ug > 0 && <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.yodo")}</Text><Text fw={600}>{viewingFood.iodine_ug} µg</Text></Box>}
                   </SimpleGrid>
-                  {!viewingFood.calcium_mg && !viewingFood.iron_mg && !viewingFood.magnesium_mg && <Text c="dimmed" ta="center">No hay información de minerales disponible</Text>}
+                  {!viewingFood.calcium_mg && !viewingFood.iron_mg && !viewingFood.magnesium_mg && <Text c="dimmed" ta="center">{t("nutrition.noHayInformacionDeMinerales")}</Text>}
                 </Stack>
               </Tabs.Panel>
               <Tabs.Panel value="other">
                 <Stack gap="md">
-                  <Text fw={600} size="lg">Información Adicional</Text>
+                  <Text fw={600} size="lg">{t("nutrition.informacionAdicional")}</Text>
                   <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                    {viewingFood.caffeine_mg > 0 && <Box><Text size="xs" c="dimmed">Cafeína</Text><Text fw={600}>{viewingFood.caffeine_mg} mg</Text></Box>}
-                    {viewingFood.choline_mg > 0 && <Box><Text size="xs" c="dimmed">Colina</Text><Text fw={600}>{viewingFood.choline_mg} mg</Text></Box>}
-                    {viewingFood.polyols_g > 0 && <Box><Text size="xs" c="dimmed">Polialcoholes</Text><Text fw={600}>{viewingFood.polyols_g} g</Text></Box>}
+                    {viewingFood.caffeine_mg > 0 && <Box><Text size="xs" c="dimmed">{t("nutrition.cafeina")}</Text><Text fw={600}>{viewingFood.caffeine_mg} mg</Text></Box>}
+                    {viewingFood.choline_mg > 0 && <Box><Text size="xs" c="dimmed">{t("nutrition.colina")}</Text><Text fw={600}>{viewingFood.choline_mg} mg</Text></Box>}
+                    {viewingFood.polyols_g > 0 && <Box><Text size="xs" c="dimmed">{t("nutrition.polialcoholes")}</Text><Text fw={600}>{viewingFood.polyols_g} g</Text></Box>}
                   </SimpleGrid>
                   <Divider my="sm" />
                   <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                    {viewingFood.labels && <Box><Text size="xs" c="dimmed">Etiquetas</Text><Text size="sm">{viewingFood.labels}</Text></Box>}
-                    {viewingFood.origins && <Box><Text size="xs" c="dimmed">Origen</Text><Text size="sm">{viewingFood.origins}</Text></Box>}
-                    {viewingFood.manufacturing_places && <Box><Text size="xs" c="dimmed">Lugar de fabricación</Text><Text size="sm">{viewingFood.manufacturing_places}</Text></Box>}
-                    {viewingFood.food_groups && <Box><Text size="xs" c="dimmed">Grupo alimenticio</Text><Text size="sm">{viewingFood.food_groups}</Text></Box>}
-                    {viewingFood.source_supermarket && <Box><Text size="xs" c="dimmed">Supermercado</Text><Text size="sm">{viewingFood.source_supermarket}</Text></Box>}
-                    {viewingFood.data_source && <Box><Text size="xs" c="dimmed">Fuente de datos</Text><Text size="sm">{viewingFood.data_source}</Text></Box>}
+                    {viewingFood.labels && <Box><Text size="xs" c="dimmed">{t("nutrition.etiquetas")}</Text><Text size="sm">{viewingFood.labels}</Text></Box>}
+                    {viewingFood.origins && <Box><Text size="xs" c="dimmed">{t("nutrition.origen")}</Text><Text size="sm">{viewingFood.origins}</Text></Box>}
+                    {viewingFood.manufacturing_places && <Box><Text size="xs" c="dimmed">{t("nutrition.lugarDeFabricacion")}</Text><Text size="sm">{viewingFood.manufacturing_places}</Text></Box>}
+                    {viewingFood.food_groups && <Box><Text size="xs" c="dimmed">{t("nutrition.grupoAlimenticio")}</Text><Text size="sm">{viewingFood.food_groups}</Text></Box>}
+                    {viewingFood.source_supermarket && <Box><Text size="xs" c="dimmed">{t("nutrition.supermercado")}</Text><Text size="sm">{viewingFood.source_supermarket}</Text></Box>}
+                    {viewingFood.data_source && <Box><Text size="xs" c="dimmed">{t("nutrition.fuenteDeDatos")}</Text><Text size="sm">{viewingFood.data_source}</Text></Box>}
                   </SimpleGrid>
                 </Stack>
               </Tabs.Panel>
@@ -1179,27 +1182,27 @@ export function NutritionPage() {
           <ScrollArea h={400}>
             <Stack gap="md">
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <Box><Text size="xs" c="dimmed" fw={500}>Nombre</Text><Text fw={600}>{viewingSupplement.name}</Text></Box>
-                <Box><Text size="xs" c="dimmed" fw={500}>Marca</Text><Text>{viewingSupplement.brand || "-"}</Text></Box>
-                <Box><Text size="xs" c="dimmed" fw={500}>Categoría</Text><Text>{viewingSupplement.category || "-"}</Text></Box>
-                <Box><Text size="xs" c="dimmed" fw={500}>Porción</Text><Text>{viewingSupplement.serving_size} {viewingSupplement.serving_unit || ""}</Text></Box>
+                <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.nombre")}</Text><Text fw={600}>{viewingSupplement.name}</Text></Box>
+                <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.marca")}</Text><Text>{viewingSupplement.brand || "-"}</Text></Box>
+                <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.categoria")}</Text><Text>{viewingSupplement.category || "-"}</Text></Box>
+                <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.porcion")}</Text><Text>{viewingSupplement.serving_size} {viewingSupplement.serving_unit || ""}</Text></Box>
               </SimpleGrid>
-              {viewingSupplement.description && <Box><Text size="xs" c="dimmed" fw={500}>Descripción</Text><Text size="sm">{viewingSupplement.description}</Text></Box>}
+              {viewingSupplement.description && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.descripcion")}</Text><Text size="sm">{viewingSupplement.description}</Text></Box>}
               <Divider />
-              <Text fw={600}>Información Nutricional</Text>
+              <Text fw={600}>{t("nutrition.informacionNutricional")}</Text>
               <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }}>
-                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Calorías</Text><Text fw={600}>{viewingSupplement.calories || 0} kcal</Text></Box>
-                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Proteínas</Text><Text fw={600} c="green">{viewingSupplement.protein || 0} g</Text></Box>
-                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Carbohidratos</Text><Text fw={600} c="orange">{viewingSupplement.carbs || 0} g</Text></Box>
-                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">Grasas</Text><Text fw={600} c="grape">{viewingSupplement.fat || 0} g</Text></Box>
+                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.calorias")}</Text><Text fw={600}>{viewingSupplement.calories || 0} kcal</Text></Box>
+                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.proteinas")}</Text><Text fw={600} c="green">{viewingSupplement.protein || 0} g</Text></Box>
+                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.carbohidratos")}</Text><Text fw={600} c="orange">{viewingSupplement.carbs || 0} g</Text></Box>
+                <Box className="nv-card-compact" p="sm"><Text size="xs" c="dimmed">{t("nutrition.grasas")}</Text><Text fw={600} c="grape">{viewingSupplement.fat || 0} g</Text></Box>
               </SimpleGrid>
-              {viewingSupplement.usage_instructions && <><Divider /><Box><Text size="xs" c="dimmed" fw={500}>Instrucciones de uso</Text><Text size="sm">{viewingSupplement.usage_instructions}</Text></Box></>}
-              {viewingSupplement.warnings && <Box><Text size="xs" c="dimmed" fw={500}>Advertencias</Text><Text size="sm" c="red">{viewingSupplement.warnings}</Text></Box>}
+              {viewingSupplement.usage_instructions && <><Divider /><Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.instruccionesDeUso")}</Text><Text size="sm">{viewingSupplement.usage_instructions}</Text></Box></>}
+              {viewingSupplement.warnings && <Box><Text size="xs" c="dimmed" fw={500}>{t("nutrition.advertencias")}</Text><Text size="sm" c="red">{viewingSupplement.warnings}</Text></Box>}
               {viewingSupplement.purchase_url && (
                 <>
                   <Divider />
                   <Box>
-                    <Text size="xs" c="dimmed" fw={500} mb={4}>Enlace de compra</Text>
+                    <Text size="xs" c="dimmed" fw={500} mb={4}>{t("nutrition.enlaceDeCompra")}</Text>
                     <Group gap="xs" align="center">
                       <Text
                         size="sm"
@@ -1221,11 +1224,11 @@ export function NutritionPage() {
                         color="violet"
                         radius="xl"
                       >
-                        Abrir
+                        {t("nutrition.abrir")}
                       </Button>
                     </Group>
                     <Text size="xs" c="dimmed" mt={4}>
-                      Este enlace se mostrará al cliente para que pueda comprar el suplemento.
+                      {t("nutrition.esteEnlaceSeMostraraAl")}
                     </Text>
                   </Box>
                 </>
@@ -1239,14 +1242,14 @@ export function NutritionPage() {
       <PlanEditorLayout opened={builderOpened} onClose={handleCloseBuilder} title={editingPlan ? "Editar Plan Nutricional" : "Nuevo Plan Nutricional"} clientBadge={clientId && clientData ? `${clientData.first_name} ${clientData.last_name}` : undefined} badgeColor="green" isSaving={createMealPlan.isPending || updateMealPlan.isPending} onSave={handleSavePlan} saveDisabled={!canSavePlan || !planForm.values.name} saveLabel={editingPlan ? "Guardar Cambios" : "Crear Plan"}
         sidebarContent={
           <Stack gap="md">
-            <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>Configuración</Text>
+            <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: "0.05em" }}>{t("nutrition.configuracion")}</Text>
             {isEditingPlanTemplate ? (
               <Group gap="xs" align="center" wrap="nowrap">
                 <IconTemplate size={16} color="var(--mantine-color-teal-6)" />
-                <Text size="sm" fw={600} c="teal">Editando plantilla reutilizable</Text>
+                <Text size="sm" fw={600} c="teal">{t("nutrition.editandoPlantillaReutilizable")}</Text>
               </Group>
             ) : (
-              <Select label="Asignar a cliente" placeholder="Buscar cliente..." data={clientOptions} searchable clearable radius="md" size="sm" leftSection={<IconUser size={14} />} value={selectedClientId} disabled={!!clientId} onChange={(value) => { setSelectedClientId(value); if (value) loadClientData(value); else { setSelectedClient(null); planForm.setFieldValue("client_id", null); } }} />
+              <Select label={t("nutrition.asignarACliente")} placeholder={t("nutrition.buscarCliente")} data={clientOptions} searchable clearable radius="md" size="sm" leftSection={<IconUser size={14} />} value={selectedClientId} disabled={!!clientId} onChange={(value) => { setSelectedClientId(value); if (value) loadClientData(value); else { setSelectedClient(null); planForm.setFieldValue("client_id", null); } }} />
             )}
             {!isEditingPlanTemplate && (isEditingClientPlan ? (
               <Button
@@ -1259,100 +1262,100 @@ export function NutritionPage() {
                 disabled={!planForm.values.name}
                 onClick={handleSaveAsPlanTemplateFromEdit}
               >
-                Crear como plantilla
+                {t("nutrition.crearComoPlantilla")}
               </Button>
             ) : (
-              <Switch label="Crear como plantilla" description={selectedClientId || clientId ? "Guarda una copia reutilizable además del plan del cliente" : "Guarda como plantilla reutilizable"} checked={isTemplateModeOn} onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)} size="sm" color="teal" />
+              <Switch label={t("nutrition.crearComoPlantilla")} description={selectedClientId || clientId ? "Guarda una copia reutilizable además del plan del cliente" : "Guarda como plantilla reutilizable"} checked={isTemplateModeOn} onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)} size="sm" color="teal" />
             ))}
-            {!canSavePlan && !isEditingClientPlan && !isEditingPlanTemplate && <Text size="xs" c="red">Asigna un cliente o marca &quot;Crear como plantilla&quot; para poder guardar</Text>}
-            <TextInput label="Nombre del plan" placeholder="Plan de Pérdida de Peso" required radius="md" size="sm" {...planForm.getInputProps("name")} />
-            <Textarea label="Descripción" minRows={2} placeholder="Describe el plan..." radius="md" size="sm" {...planForm.getInputProps("description")} />
+            {!canSavePlan && !isEditingClientPlan && !isEditingPlanTemplate && <Text size="xs" c="red">{t("nutrition.asignaUnClienteOMarca")}</Text>}
+            <TextInput label={t("nutrition.nombreDelPlan")} placeholder={t("nutrition.planDePerdidaDePeso")} required radius="md" size="sm" {...planForm.getInputProps("name")} />
+            <Textarea label={t("nutrition.descripcion")} minRows={2} placeholder={t("nutrition.describeElPlan")} radius="md" size="sm" {...planForm.getInputProps("description")} />
             <Group grow>
-              <NumberInput label="Programación (semanal)" max={12} min={1} radius="md" size="sm" {...planForm.getInputProps("duration_weeks")} onChange={(v) => { const weeks = Number(v) || 1; planForm.setFieldValue("duration_weeks", weeks); setMealPlanWeeks((prev) => { if (weeks > prev.length) { const nw = [...prev]; for (let i = prev.length; i < weeks; i++) nw.push({ week: i + 1, days: initialDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.day}`, meals: [] })) }); return nw; } return prev.slice(0, weeks); }); }} />
+              <NumberInput label={t("nutrition.programacionSemanal")} max={12} min={1} radius="md" size="sm" {...planForm.getInputProps("duration_weeks")} onChange={(v) => { const weeks = Number(v) || 1; planForm.setFieldValue("duration_weeks", weeks); setMealPlanWeeks((prev) => { if (weeks > prev.length) { const nw = [...prev]; for (let i = prev.length; i < weeks; i++) nw.push({ week: i + 1, days: initialDays.map((d) => ({ ...d, id: `day-${i + 1}-${d.day}`, meals: [] })) }); return nw; } return prev.slice(0, weeks); }); }} />
             </Group>
-            {(selectedClientId || clientId) && !isEditingPlanTemplate && <Group grow><TextInput label="Fecha de inicio" type="date" radius="md" size="sm" {...planForm.getInputProps("start_date")} /><TextInput label="Fecha de fin (opcional)" description="Si no se indica, las semanas se repiten indefinidamente" type="date" radius="md" size="sm" {...planForm.getInputProps("end_date")} /></Group>}
-            {(selectedClientId || clientId) && !isEditingPlanTemplate && <NumberInput label="Intervalo de revisión (días)" description="Genera recordatorios automáticos para revisar el plan" placeholder="Ej: 15" min={1} max={365} radius="md" size="sm" {...planForm.getInputProps("review_interval_days")} />}
-            <Divider label="Objetivos nutricionales" labelPosition="center" styles={{ label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } }} />
-            <NumberInput label="Calorías objetivo" max={5000} min={1000} step={50} radius="md" size="sm" value={planForm.values.target_calories} onChange={(v) => { const cal = Number(v) || 1000; planForm.setFieldValue("target_calories", cal); const curP = planForm.values.target_protein; const curC = planForm.values.target_carbs; const curF = planForm.values.target_fat; const curCal = (curP * 4) + (curC * 4) + (curF * 9); if (curCal > 0) { const pPct = (curP * 4 / curCal) * 100; const cPct = (curC * 4 / curCal) * 100; const fPct = (curF * 9 / curCal) * 100; const g = gramsFromPercentages(cal, pPct, cPct, fPct); planForm.setFieldValue("target_protein", g.protein_g); planForm.setFieldValue("target_carbs", g.carbs_g); planForm.setFieldValue("target_fat", g.fat_g); } }} error={planForm.errors.target_calories} />
+            {(selectedClientId || clientId) && !isEditingPlanTemplate && <Group grow><TextInput label={t("nutrition.fechaDeInicio")} type="date" radius="md" size="sm" {...planForm.getInputProps("start_date")} /><TextInput label={t("nutrition.fechaDeFinOpcional")} description={t("nutrition.siNoSeIndicaLas")} type="date" radius="md" size="sm" {...planForm.getInputProps("end_date")} /></Group>}
+            {(selectedClientId || clientId) && !isEditingPlanTemplate && <NumberInput label={t("nutrition.intervaloDeRevisionDias")} description={t("nutrition.generaRecordatoriosAutomaticosParaRevisar")} placeholder={t("nutrition.ej15")} min={1} max={365} radius="md" size="sm" {...planForm.getInputProps("review_interval_days")} />}
+            <Divider label={t("nutrition.objetivosNutricionales")} labelPosition="center" styles={{ label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" } }} />
+            <NumberInput label={t("nutrition.caloriasObjetivo")} max={5000} min={1000} step={50} radius="md" size="sm" value={planForm.values.target_calories} onChange={(v) => { const cal = Number(v) || 1000; planForm.setFieldValue("target_calories", cal); const curP = planForm.values.target_protein; const curC = planForm.values.target_carbs; const curF = planForm.values.target_fat; const curCal = (curP * 4) + (curC * 4) + (curF * 9); if (curCal > 0) { const pPct = (curP * 4 / curCal) * 100; const cPct = (curC * 4 / curCal) * 100; const fPct = (curF * 9 / curCal) * 100; const g = gramsFromPercentages(cal, pPct, cPct, fPct); planForm.setFieldValue("target_protein", g.protein_g); planForm.setFieldValue("target_carbs", g.carbs_g); planForm.setFieldValue("target_fat", g.fat_g); } }} error={planForm.errors.target_calories} />
             <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xs">
-              <NumberInput label="Prot. (g)" max={500} min={0} radius="md" size="sm" {...planForm.getInputProps("target_protein")} />
-              <NumberInput label="Carbs (g)" max={500} min={0} radius="md" size="sm" {...planForm.getInputProps("target_carbs")} />
-              <NumberInput label="Grasas (g)" max={300} min={0} radius="md" size="sm" {...planForm.getInputProps("target_fat")} />
+              <NumberInput label={t("nutrition.protG")} max={500} min={0} radius="md" size="sm" {...planForm.getInputProps("target_protein")} />
+              <NumberInput label={t("nutrition.carbsG")} max={500} min={0} radius="md" size="sm" {...planForm.getInputProps("target_carbs")} />
+              <NumberInput label={t("nutrition.grasasG")} max={300} min={0} radius="md" size="sm" {...planForm.getInputProps("target_fat")} />
             </SimpleGrid>
           </Stack>
         }
         mainContent={
           <MealPlanBuilder selectedClient={selectedClient} availableFoods={foods} availableSupplements={supplements} days={mealPlanDays} onChange={setMealPlanDays} targetCalories={planForm.values.target_calories} targetCarbs={planForm.values.target_carbs} targetFat={planForm.values.target_fat} targetProtein={planForm.values.target_protein} onTargetMacrosChange={handleTargetMacrosChange} foodFavorites={foodFavorites} supplementFavorites={supplementFavorites} onToggleFoodFavorite={handleToggleFoodFavoriteForBuilder} onToggleSupplementFavorite={handleToggleSupplementFavoriteForBuilder} recipes={recipes} startDate={planForm.values.start_date} totalWeeks={planForm.values.duration_weeks} currentWeek={currentWeek} onWeekChange={setCurrentWeek}
-            onCopyWeek={(from, to) => { setMealPlanWeeks((prev) => { const srcWeek = prev.find((w) => w.week === from); if (!srcWeek) return prev; const now = Date.now(); const copiedDays = srcWeek.days.map((d, di) => ({ ...d, id: `day-${to}-${d.day}`, meals: d.meals.map((m, mi) => ({ ...m, id: `meal-${now}-${di}-${mi}`, items: m.items.map((item, ii) => ({ ...item, id: `item-${now}-${di}-${mi}-${ii}` })) })) })); return prev.map((w) => w.week === to ? { ...w, days: copiedDays } : w); }); setCurrentWeek(to); notifications.show({ title: "Semana copiada", message: `Semana ${from} copiada a Semana ${to}`, color: "green" }); }}
+            onCopyWeek={(from, to) => { setMealPlanWeeks((prev) => { const srcWeek = prev.find((w) => w.week === from); if (!srcWeek) return prev; const now = Date.now(); const copiedDays = srcWeek.days.map((d, di) => ({ ...d, id: `day-${to}-${d.day}`, meals: d.meals.map((m, mi) => ({ ...m, id: `meal-${now}-${di}-${mi}`, items: m.items.map((item, ii) => ({ ...item, id: `item-${now}-${di}-${mi}-${ii}` })) })) })); return prev.map((w) => w.week === to ? { ...w, days: copiedDays } : w); }); setCurrentWeek(to); notifications.show({ title: t("nutrition.semanaCopiada"), message: `Semana ${from} copiada a Semana ${to}`, color: "green" }); }}
           />
         }
       />
 
       {/* Supplement Create Modal */}
-      <BottomSheet onClose={closeSupplementModal} opened={supplementModalOpened} size="md" title="Nuevo Suplemento" radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
-        <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); const discountCodeRaw = ((formData.get("discount_code") as string) || "").trim(); try { await createSupplement.mutateAsync({ name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || undefined, discount_code: discountCodeRaw || undefined }); notifications.show({ title: "Suplemento creado", message: "El suplemento se ha creado correctamente", color: "green" }); closeSupplementModal(); } catch { notifications.show({ title: "Error", message: "No se pudo crear el suplemento", color: "red" }); } }}>
+      <BottomSheet onClose={closeSupplementModal} opened={supplementModalOpened} size="md" title={t("nutrition.nuevoSuplemento")} radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
+        <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); const discountCodeRaw = ((formData.get("discount_code") as string) || "").trim(); try { await createSupplement.mutateAsync({ name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || undefined, discount_code: discountCodeRaw || undefined }); notifications.show({ title: t("nutrition.suplementoCreado"), message: t("nutrition.elSuplementoSeHaCreado"), color: "green" }); closeSupplementModal(); } catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoCrearEl"), color: "red" }); } }}>
           <Stack>
-            <TextInput label="Nombre" name="name" placeholder="Proteína Whey" required />
-            <Group grow><TextInput label="Marca" name="brand" placeholder="Optimum Nutrition" /><Select name="category" data={[{ value: "protein", label: "Proteína" }, { value: "creatine", label: "Creatina" }, { value: "pre_workout", label: "Pre-entreno" }, { value: "vitamins", label: "Vitaminas" }, { value: "minerals", label: "Minerales" }, { value: "amino_acids", label: "Aminoácidos" }, { value: "fat_burner", label: "Quemador de grasa" }, { value: "general", label: "General" }]} label="Categoría" placeholder="Selecciona" defaultValue="general" /></Group>
-            <Group grow><NumberInput label="Porción" name="serving_size" min={1} defaultValue={30} /><Select name="serving_unit" data={[{ value: "g", label: "gramos" }, { value: "ml", label: "ml" }, { value: "caps", label: "cápsulas" }, { value: "tabs", label: "tabletas" }, { value: "scoop", label: "scoop" }]} label="Unidad" defaultValue="g" /></Group>
-            <NumberInput label="Calorías" name="calories" min={0} defaultValue={0} />
-            <Group grow><NumberInput label="Proteína (g)" name="protein" min={0} decimalScale={1} defaultValue={0} /><NumberInput label="Carbohidratos (g)" name="carbs" min={0} decimalScale={1} defaultValue={0} /><NumberInput label="Grasas (g)" name="fat" min={0} decimalScale={1} defaultValue={0} /></Group>
-            <Textarea label="Cómo tomar" name="usage_instructions" placeholder="Mezclar 1 scoop con 200ml de agua..." minRows={2} />
+            <TextInput label={t("nutrition.nombre")} name="name" placeholder={t("nutrition.proteinaWhey")} required />
+            <Group grow><TextInput label={t("nutrition.marca")} name="brand" placeholder={t("nutrition.optimumNutrition")} /><Select name="category" data={[{ value: "protein", label: t("nutrition.proteina") }, { value: "creatine", label: t("nutrition.creatina") }, { value: "pre_workout", label: t("nutrition.preEntreno") }, { value: "vitamins", label: t("nutrition.vitaminas") }, { value: "minerals", label: t("nutrition.minerales") }, { value: "amino_acids", label: t("nutrition.aminoacidos") }, { value: "fat_burner", label: t("nutrition.quemadorDeGrasa") }, { value: "general", label: t("nutrition.general") }]} label={t("nutrition.categoria")} placeholder={t("nutrition.selecciona")} defaultValue="general" /></Group>
+            <Group grow><NumberInput label={t("nutrition.porcion")} name="serving_size" min={1} defaultValue={30} /><Select name="serving_unit" data={[{ value: "g", label: t("nutrition.gramos") }, { value: "ml", label: t("nutrition.ml") }, { value: "caps", label: t("nutrition.capsulas") }, { value: "tabs", label: t("nutrition.tabletas") }, { value: "scoop", label: t("nutrition.scoop") }]} label={t("nutrition.unidad")} defaultValue="g" /></Group>
+            <NumberInput label={t("nutrition.calorias")} name="calories" min={0} defaultValue={0} />
+            <Group grow><NumberInput label={t("nutrition.proteinaG")} name="protein" min={0} decimalScale={1} defaultValue={0} /><NumberInput label={t("nutrition.carbohidratosG")} name="carbs" min={0} decimalScale={1} defaultValue={0} /><NumberInput label={t("nutrition.grasasG")} name="fat" min={0} decimalScale={1} defaultValue={0} /></Group>
+            <Textarea label={t("nutrition.comoTomar")} name="usage_instructions" placeholder={t("nutrition.mezclar1ScoopCon200ml")} minRows={2} />
             <TextInput
-              label="Enlace de compra"
+              label={t("nutrition.enlaceDeCompra")}
               name="purchase_url"
               placeholder="https://tienda.com/producto-suplemento"
               type="url"
-              description="Se compartirá con el cliente para que pueda comprarlo (afiliación, ecommerce propio, etc.)."
+              description={t("nutrition.seCompartiraConElCliente")}
             />
             <TextInput
-              label="Código de descuento"
+              label={t("nutrition.codigoDeDescuento")}
               name="discount_code"
               placeholder="TRACKFIZ10"
-              description="El cliente lo verá en su Cesta de suplementos con un botón de copiar."
+              description={t("nutrition.elClienteLoVeraEn")}
             />
-            <Group justify="flex-end" mt="md"><Button onClick={closeSupplementModal} variant="default">Cancelar</Button><Button loading={createSupplement.isPending} type="submit">Crear Suplemento</Button></Group>
+            <Group justify="flex-end" mt="md"><Button onClick={closeSupplementModal} variant="default">{t("nutrition.cancelar")}</Button><Button loading={createSupplement.isPending} type="submit">{t("nutrition.crearSuplemento")}</Button></Group>
           </Stack>
         </form>
       </BottomSheet>
 
       {/* Supplement Edit Modal */}
-      <BottomSheet onClose={() => { closeEditSupplementModal(); setEditingSupplement(null); }} opened={editSupplementModalOpened} size="md" title="Editar Suplemento" radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
+      <BottomSheet onClose={() => { closeEditSupplementModal(); setEditingSupplement(null); }} opened={editSupplementModalOpened} size="md" title={t("nutrition.editarSuplemento")} radius="lg" styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}>
         {editingSupplement && (
-          <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); const discountCodeRaw = ((formData.get("discount_code") as string) || "").trim(); try { await updateSupplement.mutateAsync({ id: editingSupplement.id, name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || null, discount_code: discountCodeRaw || null }); notifications.show({ title: "Suplemento actualizado", message: "El suplemento se ha actualizado correctamente", color: "green" }); closeEditSupplementModal(); setEditingSupplement(null); } catch { notifications.show({ title: "Error", message: "No se pudo actualizar el suplemento", color: "red" }); } }}>
+          <form onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); const purchaseUrlRaw = ((formData.get("purchase_url") as string) || "").trim(); const discountCodeRaw = ((formData.get("discount_code") as string) || "").trim(); try { await updateSupplement.mutateAsync({ id: editingSupplement.id, name: formData.get("name") as string, brand: formData.get("brand") as string || undefined, category: formData.get("category") as string || "general", serving_size: Number(formData.get("serving_size")) || 30, serving_unit: formData.get("serving_unit") as string || "g", calories: Number(formData.get("calories")) || 0, protein: Number(formData.get("protein")) || 0, carbs: Number(formData.get("carbs")) || 0, fat: Number(formData.get("fat")) || 0, usage_instructions: formData.get("usage_instructions") as string || undefined, purchase_url: purchaseUrlRaw || null, discount_code: discountCodeRaw || null }); notifications.show({ title: t("nutrition.suplementoActualizado"), message: t("nutrition.elSuplementoSeHaActualizado"), color: "green" }); closeEditSupplementModal(); setEditingSupplement(null); } catch { notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" }); } }}>
             <Stack>
-              <TextInput label="Nombre" name="name" placeholder="Proteína Whey" required defaultValue={editingSupplement.name} />
-              <Group grow><TextInput label="Marca" name="brand" placeholder="Optimum Nutrition" defaultValue={editingSupplement.brand || ""} /><Select name="category" data={[{ value: "protein", label: "Proteína" }, { value: "creatine", label: "Creatina" }, { value: "pre_workout", label: "Pre-entreno" }, { value: "vitamins", label: "Vitaminas" }, { value: "minerals", label: "Minerales" }, { value: "amino_acids", label: "Aminoácidos" }, { value: "fat_burner", label: "Quemador de grasa" }, { value: "general", label: "General" }]} label="Categoría" defaultValue={editingSupplement.category || "general"} /></Group>
-              <Group grow><NumberInput label="Porción" name="serving_size" min={1} defaultValue={editingSupplement.serving_size || 30} /><Select name="serving_unit" data={[{ value: "g", label: "gramos" }, { value: "ml", label: "ml" }, { value: "caps", label: "cápsulas" }, { value: "tabs", label: "tabletas" }, { value: "scoop", label: "scoop" }]} label="Unidad" defaultValue={editingSupplement.serving_unit || "g"} /></Group>
-              <NumberInput label="Calorías" name="calories" min={0} defaultValue={editingSupplement.calories || 0} />
-              <Group grow><NumberInput label="Proteína (g)" name="protein" min={0} decimalScale={1} defaultValue={editingSupplement.protein || 0} /><NumberInput label="Carbohidratos (g)" name="carbs" min={0} decimalScale={1} defaultValue={editingSupplement.carbs || 0} /><NumberInput label="Grasas (g)" name="fat" min={0} decimalScale={1} defaultValue={editingSupplement.fat || 0} /></Group>
-              <Textarea label="Cómo tomar" name="usage_instructions" placeholder="Mezclar 1 scoop con 200ml de agua..." minRows={2} defaultValue={editingSupplement.how_to_take || editingSupplement.usage_instructions || ""} />
+              <TextInput label={t("nutrition.nombre")} name="name" placeholder={t("nutrition.proteinaWhey")} required defaultValue={editingSupplement.name} />
+              <Group grow><TextInput label={t("nutrition.marca")} name="brand" placeholder={t("nutrition.optimumNutrition")} defaultValue={editingSupplement.brand || ""} /><Select name="category" data={[{ value: "protein", label: t("nutrition.proteina") }, { value: "creatine", label: t("nutrition.creatina") }, { value: "pre_workout", label: t("nutrition.preEntreno") }, { value: "vitamins", label: t("nutrition.vitaminas") }, { value: "minerals", label: t("nutrition.minerales") }, { value: "amino_acids", label: t("nutrition.aminoacidos") }, { value: "fat_burner", label: t("nutrition.quemadorDeGrasa") }, { value: "general", label: t("nutrition.general") }]} label={t("nutrition.categoria")} defaultValue={editingSupplement.category || "general"} /></Group>
+              <Group grow><NumberInput label={t("nutrition.porcion")} name="serving_size" min={1} defaultValue={editingSupplement.serving_size || 30} /><Select name="serving_unit" data={[{ value: "g", label: t("nutrition.gramos") }, { value: "ml", label: t("nutrition.ml") }, { value: "caps", label: t("nutrition.capsulas") }, { value: "tabs", label: t("nutrition.tabletas") }, { value: "scoop", label: t("nutrition.scoop") }]} label={t("nutrition.unidad")} defaultValue={editingSupplement.serving_unit || "g"} /></Group>
+              <NumberInput label={t("nutrition.calorias")} name="calories" min={0} defaultValue={editingSupplement.calories || 0} />
+              <Group grow><NumberInput label={t("nutrition.proteinaG")} name="protein" min={0} decimalScale={1} defaultValue={editingSupplement.protein || 0} /><NumberInput label={t("nutrition.carbohidratosG")} name="carbs" min={0} decimalScale={1} defaultValue={editingSupplement.carbs || 0} /><NumberInput label={t("nutrition.grasasG")} name="fat" min={0} decimalScale={1} defaultValue={editingSupplement.fat || 0} /></Group>
+              <Textarea label={t("nutrition.comoTomar")} name="usage_instructions" placeholder={t("nutrition.mezclar1ScoopCon200ml")} minRows={2} defaultValue={editingSupplement.how_to_take || editingSupplement.usage_instructions || ""} />
               <TextInput
-                label="Enlace de compra"
+                label={t("nutrition.enlaceDeCompra")}
                 name="purchase_url"
                 placeholder="https://tienda.com/producto-suplemento"
                 type="url"
                 defaultValue={editingSupplement.purchase_url || ""}
-                description="Se compartirá con el cliente para que pueda comprarlo (afiliación, ecommerce propio, etc.)."
+                description={t("nutrition.seCompartiraConElCliente")}
               />
               <TextInput
-                label="Código de descuento"
+                label={t("nutrition.codigoDeDescuento")}
                 name="discount_code"
                 placeholder="TRACKFIZ10"
                 defaultValue={editingSupplement.discount_code || ""}
-                description="El cliente lo verá en su Cesta de suplementos con un botón de copiar."
+                description={t("nutrition.elClienteLoVeraEn")}
               />
-              <Group justify="flex-end" mt="md"><Button onClick={() => { closeEditSupplementModal(); setEditingSupplement(null); }} variant="default">Cancelar</Button><Button loading={updateSupplement.isPending} type="submit">Guardar Cambios</Button></Group>
+              <Group justify="flex-end" mt="md"><Button onClick={() => { closeEditSupplementModal(); setEditingSupplement(null); }} variant="default">{t("nutrition.cancelar")}</Button><Button loading={updateSupplement.isPending} type="submit">{t("nutrition.guardarCambios")}</Button></Group>
             </Stack>
           </form>
         )}
       </BottomSheet>
 
       <RecipeFormModal opened={recipeModalOpened} onClose={() => { closeRecipeModal(); setEditingRecipe(null); }} recipe={editingRecipe} loading={createRecipeMutation.isPending || updateRecipeMutation.isPending}
-        onSubmit={async (data) => { if (editingRecipe) { await updateRecipeMutation.mutateAsync({ id: editingRecipe.id, ...data }); notifications.show({ title: "Receta actualizada", message: (data as any).name, color: "green", icon: <IconCheck size={16} /> }); } else { await createRecipeMutation.mutateAsync(data); notifications.show({ title: "Receta creada", message: (data as any).name, color: "green", icon: <IconCheck size={16} /> }); } closeRecipeModal(); setEditingRecipe(null); }} />
+        onSubmit={async (data) => { if (editingRecipe) { await updateRecipeMutation.mutateAsync({ id: editingRecipe.id, ...data }); notifications.show({ title: t("nutrition.recetaActualizada"), message: (data as any).name, color: "green", icon: <IconCheck size={16} /> }); } else { await createRecipeMutation.mutateAsync(data); notifications.show({ title: t("nutrition.recetaCreada"), message: (data as any).name, color: "green", icon: <IconCheck size={16} /> }); } closeRecipeModal(); setEditingRecipe(null); }} />
       <RecipeDetailModal opened={recipeDetailOpened} onClose={() => { closeRecipeDetail(); setViewingRecipe(null); }} recipe={viewingRecipe}
         onEdit={(r) => { closeRecipeDetail(); setEditingRecipe(r); openRecipeModal(); }}
-        onDuplicate={async (r) => { await duplicateRecipeMutation.mutateAsync(r.id); notifications.show({ title: "Receta duplicada", message: `${r.name} (copia)`, color: "teal" }); closeRecipeDetail(); }} />
+        onDuplicate={async (r) => { await duplicateRecipeMutation.mutateAsync(r.id); notifications.show({ title: t("nutrition.recetaDuplicada"), message: `${r.name} (copia)`, color: "teal" }); closeRecipeDetail(); }} />
     </Container>
   );
 }

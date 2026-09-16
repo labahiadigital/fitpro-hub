@@ -12,6 +12,7 @@ import {
   IconUserOff,
   IconTrophy,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 interface Alert {
   id: string;
@@ -37,14 +38,15 @@ const alertConfig = {
 };
 
 export function AlertsWidget({ alerts, onAlertClick, loading }: AlertsWidgetProps) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         <Group justify="space-between" mb="sm">
-          <Text className="stat-label">Acciones Requeridas</Text>
+          <Text className="stat-label">{t("dashboard.alerts.title")}</Text>
         </Group>
         <Stack gap="xs" style={{ flex: 1 }}>
-          <Text c="dimmed" ta="center" py="md">Cargando alertas...</Text>
+          <Text c="dimmed" ta="center" py="md">{t("dashboard.alerts.loading")}</Text>
         </Stack>
       </Box>
     );
@@ -53,20 +55,20 @@ export function AlertsWidget({ alerts, onAlertClick, loading }: AlertsWidgetProp
   return (
     <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Group justify="space-between" mb="sm">
-        <Text className="stat-label">Acciones Requeridas</Text>
+        <Text className="stat-label">{t("dashboard.alerts.title")}</Text>
         {alerts.length > 0 && (
           <Box 
             className="pill-badge" 
             style={{ backgroundColor: "var(--nv-error-bg)", color: "var(--nv-error)", fontSize: "10px", padding: "4px 8px" }}
           >
-            {alerts.length} Pendientes
+            {alerts.length} {t("dashboard.alerts.pending")}
           </Box>
         )}
       </Group>
 
       <Stack gap="xs" style={{ flex: 1 }}>
         {alerts.length === 0 ? (
-          <Text c="dimmed" ta="center" py="md" size="sm">No hay alertas pendientes</Text>
+          <Text c="dimmed" ta="center" py="md" size="sm">{t("dashboard.alerts.noAlerts")}</Text>
         ) : alerts.map((alert) => {
           const config = alertConfig[alert.type];
           const Icon = config.icon;

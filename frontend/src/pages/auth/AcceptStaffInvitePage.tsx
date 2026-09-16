@@ -21,10 +21,12 @@ import {
   PasswordRulesIndicator,
   passwordValidator,
 } from "../../components/common/PasswordRulesIndicator";
+import { useTranslation } from "react-i18next";
 
 type PageState = "loading" | "form" | "success" | "error";
 
 export function AcceptStaffInvitePage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token") || "";
@@ -79,7 +81,7 @@ export function AcceptStaffInvitePage() {
       setPageState("success");
     } catch (err: any) {
       notifications.show({
-        title: "Error",
+        title: t("auth.error"),
         message:
           err.response?.data?.detail || "No se pudo completar el registro",
         color: "red",
@@ -116,7 +118,7 @@ export function AcceptStaffInvitePage() {
         {pageState === "loading" && (
           <Stack align="center" gap="md" py="xl">
             <Loader color="teal" />
-            <Text c="dimmed">Verificando invitaciÃ³n...</Text>
+            <Text c="dimmed">{t("auth.verificandoInvitaciN")}</Text>
           </Stack>
         )}
 
@@ -126,7 +128,7 @@ export function AcceptStaffInvitePage() {
               <IconX size={30} />
             </ThemeIcon>
             <Title order={3} ta="center">
-              InvitaciÃ³n invÃ¡lida
+              {t("auth.invitaciNInvLida")}
             </Title>
             <Text c="dimmed" ta="center" size="sm">
               {errorMessage}
@@ -137,7 +139,7 @@ export function AcceptStaffInvitePage() {
               radius="xl"
               onClick={() => navigate("/login")}
             >
-              Ir a Iniciar SesiÃ³n
+              {t("auth.irAIniciarSesiN")}
             </Button>
           </Stack>
         )}
@@ -169,23 +171,23 @@ export function AcceptStaffInvitePage() {
               </Box>
 
               <TextInput
-                label="Email"
+                label={t("auth.email")}
                 value={inviteInfo.email}
                 disabled
                 radius="md"
               />
 
               <TextInput
-                label="Nombre completo"
-                placeholder="Tu nombre y apellidos"
+                label={t("auth.nombreCompleto")}
+                placeholder={t("auth.tuNombreYApellidos")}
                 radius="md"
                 {...form.getInputProps("full_name")}
               />
 
               <Box>
                 <PasswordInput
-                  label="ContraseÃ±a"
-                  placeholder="MÃ­nimo 8 caracteres"
+                  label={t("auth.contraseA")}
+                  placeholder={t("auth.mNimo8Caracteres")}
                   radius="md"
                   {...form.getInputProps("password")}
                 />
@@ -193,8 +195,8 @@ export function AcceptStaffInvitePage() {
               </Box>
 
               <PasswordInput
-                label="Confirmar contraseÃ±a"
-                placeholder="Repite tu contraseÃ±a"
+                label={t("auth.confirmarContraseA")}
+                placeholder={t("auth.repiteTuContraseA")}
                 radius="md"
                 {...form.getInputProps("password_confirm")}
               />
@@ -206,7 +208,7 @@ export function AcceptStaffInvitePage() {
                 loading={submitting}
                 style={{ backgroundColor: "var(--mantine-color-teal-7)" }}
               >
-                Activar mi cuenta
+                {t("auth.activarMiCuenta")}
               </Button>
             </Stack>
           </form>
@@ -221,7 +223,7 @@ export function AcceptStaffInvitePage() {
               Â¡Cuenta activada!
             </Title>
             <Text c="dimmed" ta="center" size="sm">
-              Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesiÃ³n.
+              {t("auth.tuCuentaHaSidoCreada")}
             </Text>
             <Button
               fullWidth
@@ -229,7 +231,7 @@ export function AcceptStaffInvitePage() {
               onClick={() => navigate("/login")}
               style={{ backgroundColor: "var(--mantine-color-teal-7)" }}
             >
-              Iniciar sesiÃ³n
+              {t("auth.iniciarSesiN")}
             </Button>
           </Stack>
         )}

@@ -33,6 +33,7 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { normalizeText } from "../../utils/text";
 
@@ -42,63 +43,72 @@ interface CommandPaletteProps {
   isClient?: boolean;
 }
 
-const trainerActions = [
-  {
-    group: "Navegación",
-    items: [
-      { icon: IconHome, label: "Panel Principal", description: "Vista general de métricas y KPIs", to: "/dashboard" },
-      { icon: IconUsers, label: "Clientes", description: "Gestionar clientes, invitaciones y etiquetas", to: "/clients" },
-      { icon: IconCalendarEvent, label: "Calendario", description: "Agenda y próximas sesiones", to: "/calendar" },
-      { icon: IconBarbell, label: "Entrenamientos", description: "Programas de entrenamiento y ejercicios", to: "/workouts" },
-      { icon: IconSalad, label: "Nutrición", description: "Planes de nutrición y recetas", to: "/nutrition" },
-      { icon: IconForms, label: "Formularios", description: "Formularios y cuestionarios", to: "/forms" },
-      { icon: IconFileText, label: "Documentos", description: "Documentos compartidos", to: "/documents" },
-      { icon: IconMessage, label: "Chat", description: "Mensajes con clientes", to: "/chat" },
-      { icon: IconPackage, label: "Catálogo", description: "Productos y servicios", to: "/catalog" },
-      { icon: IconReceipt, label: "Facturación", description: "Pagos, facturas y suscripciones", to: "/billing" },
-      { icon: IconTrophy, label: "Comunidad", description: "Retos y gamificación", to: "/community" },
-      { icon: IconUsersGroup, label: "Equipo", description: "Gestionar colaboradores", to: "/team" },
-      { icon: IconRobot, label: "Automatizaciones", description: "Flujos automáticos y triggers", to: "/automations" },
-      { icon: IconChartBar, label: "Reportes", description: "Informes y analíticas", to: "/reports" },
-      { icon: IconBook, label: "Academia / LMS", description: "Cursos y contenidos formativos", to: "/lms" },
-      { icon: IconVideo, label: "Clases en Vivo", description: "Sesiones en directo", to: "/live-classes" },
-      { icon: IconBulb, label: "Sugerencias", description: "Ideas y mejoras propuestas", to: "/suggestions" },
-      { icon: IconSettings, label: "Configuración", description: "Ajustes de cuenta y preferencias", to: "/settings" },
-    ],
-  },
-  {
-    group: "Acciones Rápidas",
-    items: [
-      { icon: IconUser, label: "Crear Nuevo Cliente", description: "Invitar o registrar un nuevo cliente", to: "/clients?action=new" },
-      { icon: IconCalendarEvent, label: "Nueva Reserva", description: "Crear una nueva sesión o cita", to: "/calendar?action=new" },
-      { icon: IconBarbell, label: "Nuevo Entrenamiento", description: "Crear un programa de entrenamiento", to: "/workouts?action=new" },
-    ],
-  },
-];
+function useTrainerActions() {
+  const { t } = useTranslation();
+  return useMemo(() => [
+    {
+      group: t("cmd.navigation"),
+      items: [
+        { icon: IconHome, label: t("nav.dashboard"), description: t("cmd.dashboardDesc"), to: "/dashboard" },
+        { icon: IconUsers, label: t("nav.clients"), description: t("cmd.clientsDesc"), to: "/clients" },
+        { icon: IconCalendarEvent, label: t("nav.calendar"), description: t("cmd.calendarDesc"), to: "/calendar" },
+        { icon: IconBarbell, label: t("nav.workouts"), description: t("cmd.workoutsDesc"), to: "/workouts" },
+        { icon: IconSalad, label: t("nav.nutrition"), description: t("cmd.nutritionDesc"), to: "/nutrition" },
+        { icon: IconForms, label: t("nav.forms"), description: t("cmd.formsDesc"), to: "/forms" },
+        { icon: IconFileText, label: t("nav.documents"), description: t("cmd.documentsDesc"), to: "/documents" },
+        { icon: IconMessage, label: t("nav.chat"), description: t("cmd.chatDesc"), to: "/chat" },
+        { icon: IconPackage, label: t("nav.catalog"), description: t("cmd.catalogDesc"), to: "/catalog" },
+        { icon: IconReceipt, label: t("nav.billing"), description: t("cmd.billingDesc"), to: "/billing" },
+        { icon: IconTrophy, label: t("nav.community"), description: t("cmd.communityDesc"), to: "/community" },
+        { icon: IconUsersGroup, label: t("nav.members"), description: t("cmd.teamDesc"), to: "/team" },
+        { icon: IconRobot, label: t("nav.automations"), description: t("cmd.automationsDesc"), to: "/automations" },
+        { icon: IconChartBar, label: t("nav.reports"), description: t("cmd.reportsDesc"), to: "/reports" },
+        { icon: IconBook, label: t("nav.academy"), description: t("cmd.lmsDesc"), to: "/lms" },
+        { icon: IconVideo, label: t("nav.liveClasses"), description: t("cmd.liveClassesDesc"), to: "/live-classes" },
+        { icon: IconBulb, label: t("nav.suggestions"), description: t("cmd.suggestionsDesc"), to: "/suggestions" },
+        { icon: IconSettings, label: t("nav.settings"), description: t("cmd.settingsDesc"), to: "/settings" },
+      ],
+    },
+    {
+      group: t("cmd.quickActions"),
+      items: [
+        { icon: IconUser, label: t("cmd.newClient"), description: t("cmd.newClientDesc"), to: "/clients?action=new" },
+        { icon: IconCalendarEvent, label: t("cmd.newBooking"), description: t("cmd.newBookingDesc"), to: "/calendar?action=new" },
+        { icon: IconBarbell, label: t("cmd.newWorkout"), description: t("cmd.newWorkoutDesc"), to: "/workouts?action=new" },
+      ],
+    },
+  ], [t]);
+}
 
-const clientActions = [
-  {
-    group: "Navegación",
-    items: [
-      { icon: IconHome, label: "Mi Panel", description: "Tu resumen y métricas", to: "/dashboard" },
-      { icon: IconBarbell, label: "Mis Entrenamientos", description: "Programas de entrenamiento asignados", to: "/my-workouts" },
-      { icon: IconSalad, label: "Mi Nutrición", description: "Tu plan de alimentación", to: "/my-nutrition" },
-      { icon: IconChartLine, label: "Mi Progreso", description: "Fotos, medidas y evolución", to: "/my-progress" },
-      { icon: IconCalendarEvent, label: "Mis Citas", description: "Agenda y próximas sesiones", to: "/my-calendar" },
-      { icon: IconMessage, label: "Mensajes", description: "Chat con tu entrenador", to: "/my-messages" },
-      { icon: IconFileText, label: "Mis Documentos", description: "Documentos compartidos", to: "/my-documents" },
-      { icon: IconBook, label: "Academia", description: "Cursos y contenidos formativos", to: "/lms" },
-      { icon: IconUser, label: "Mi Perfil", description: "Datos personales y preferencias", to: "/my-profile" },
-    ],
-  },
-];
+function useClientActions() {
+  const { t } = useTranslation();
+  return useMemo(() => [
+    {
+      group: t("cmd.navigation"),
+      items: [
+        { icon: IconHome, label: t("nav.myPanel"), description: t("cmd.myPanelDesc"), to: "/dashboard" },
+        { icon: IconBarbell, label: t("nav.myWorkouts"), description: t("cmd.myWorkoutsDesc"), to: "/my-workouts" },
+        { icon: IconSalad, label: t("nav.myNutrition"), description: t("cmd.myNutritionDesc"), to: "/my-nutrition" },
+        { icon: IconChartLine, label: t("nav.myProgress"), description: t("cmd.myProgressDesc"), to: "/my-progress" },
+        { icon: IconCalendarEvent, label: t("nav.myAppointments"), description: t("cmd.myAppointmentsDesc"), to: "/my-calendar" },
+        { icon: IconMessage, label: t("nav.myMessages"), description: t("cmd.myMessagesDesc"), to: "/my-messages" },
+        { icon: IconFileText, label: t("nav.myDocuments"), description: t("cmd.myDocumentsDesc"), to: "/my-documents" },
+        { icon: IconBook, label: t("nav.academy"), description: t("cmd.lmsDesc"), to: "/lms" },
+        { icon: IconUser, label: t("nav.myProfile"), description: t("cmd.myProfileDesc"), to: "/my-profile" },
+      ],
+    },
+  ], [t]);
+}
 
 export function CommandPalette({ opened, close, isClient }: CommandPaletteProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const actions = isClient ? clientActions : trainerActions;
+  const trainerActs = useTrainerActions();
+  const clientActs = useClientActions();
+  const actions = isClient ? clientActs : trainerActs;
 
   const filteredActions = useMemo(
     () =>
@@ -176,7 +186,7 @@ export function CommandPalette({ opened, close, isClient }: CommandPaletteProps)
         style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
       >
         <TextInput
-          placeholder="¿Qué necesitas hacer?..."
+          placeholder={t("cmd.placeholder")}
           value={query}
           onChange={(e) => {
             setQuery(e.currentTarget.value);
@@ -292,7 +302,7 @@ export function CommandPalette({ opened, close, isClient }: CommandPaletteProps)
           </Box>
         ) : (
           <Box py="xl" ta="center">
-            <Text c="dimmed">No se encontraron resultados</Text>
+            <Text c="dimmed">{t("cmd.noResults")}</Text>
           </Box>
         )}
       </ScrollArea.Autosize>
@@ -309,7 +319,7 @@ export function CommandPalette({ opened, close, isClient }: CommandPaletteProps)
         <Group justify="flex-end" gap="lg">
           <Group gap={6}>
             <IconArrowRight size={12} color="rgba(255,255,255,0.4)" />
-            <Text size="xs" c="dimmed">para seleccionar</Text>
+            <Text size="xs" c="dimmed">{t("cmd.toSelect")}</Text>
           </Group>
           <Group gap={6}>
             <Box
@@ -322,7 +332,7 @@ export function CommandPalette({ opened, close, isClient }: CommandPaletteProps)
               <IconArrowRight size={12} style={{ transform: "rotate(-90deg)" }} />
               <IconArrowRight size={12} style={{ transform: "rotate(90deg)" }} />
             </Box>
-            <Text size="xs" c="dimmed">para navegar</Text>
+            <Text size="xs" c="dimmed">{t("cmd.toNavigate")}</Text>
           </Group>
         </Group>
       </Box>

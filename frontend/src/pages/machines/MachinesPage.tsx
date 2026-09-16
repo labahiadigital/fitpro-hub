@@ -32,6 +32,7 @@ import { useMachines, useCreateMachine, useUpdateMachine, useDeleteMachine, useM
 import { useBoxes } from "../../hooks/useBoxes";
 import { useMachineSchedule, useUpdateMachineSchedule, defaultWeekSlots, type ScheduleSlot } from "../../hooks/useSchedules";
 import { WeeklyScheduleGrid } from "../../components/common/WeeklyScheduleGrid";
+import { useTranslation } from "react-i18next";
 
 function MachineStatCard({ machineId }: { machineId: string }) {
   const { data: stats } = useMachineStats(machineId);
@@ -40,25 +41,26 @@ function MachineStatCard({ machineId }: { machineId: string }) {
     <Group gap="lg" mt="xs">
       <Box>
         <Text size="xl" fw={700} c="blue">{stats.today}</Text>
-        <Text size="xs" c="dimmed">Hoy</Text>
+        <Text size="xs" c="dimmed">{"Hoy"}</Text>
       </Box>
       <Box>
         <Text size="xl" fw={700} c="green">{stats.upcoming}</Text>
-        <Text size="xs" c="dimmed">Próximas</Text>
+        <Text size="xs" c="dimmed">{"Próximas"}</Text>
       </Box>
       <Box>
         <Text size="xl" fw={700}>{stats.total}</Text>
-        <Text size="xs" c="dimmed">Total</Text>
+        <Text size="xs" c="dimmed">{"Total"}</Text>
       </Box>
       <Box>
         <Text size="xl" fw={700} c="red">{stats.cancel_rate}%</Text>
-        <Text size="xs" c="dimmed">Cancelación</Text>
+        <Text size="xs" c="dimmed">{"Cancelación"}</Text>
       </Box>
     </Group>
   );
 }
 
 export default function MachinesPage() {
+  const { t } = useTranslation();
   const { data: machines } = useMachines();
   const { data: boxes } = useBoxes();
   const createMachine = useCreateMachine();
@@ -127,17 +129,17 @@ export default function MachinesPage() {
   return (
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Maquinaria"
-        description="Gestiona el equipamiento técnico y sus reservas"
-        action={{ label: "Nueva Máquina", icon: <IconPlus size={16} />, onClick: () => handleOpen() }}
+        title={t("machines.maquinaria")}
+        description={t("machines.gestionaElEquipamientoTecnicoY")}
+        action={{ label: t("machines.nuevaMaquina"), icon: <IconPlus size={16} />, onClick: () => handleOpen() }}
       />
 
       {!machines || machines.length === 0 ? (
         <EmptyState
           icon={<IconSettings size={24} />}
-          title="Sin maquinaria"
-          description="Añade tu primer equipo para gestionar reservas de maquinaria"
-          actionLabel="Añadir Máquina"
+          title={t("machines.sinMaquinaria")}
+          description={t("machines.anadeTuPrimerEquipoPara")}
+          actionLabel={t("machines.anadirMaquina")}
           onAction={() => handleOpen()}
         />
       ) : (
@@ -163,12 +165,12 @@ export default function MachinesPage() {
               <MachineStatCard machineId={machine.id} />
               <Group mt="md" gap="xs">
                 <Button size="xs" variant="light" radius="xl" leftSection={<IconEdit size={14} />} onClick={() => handleOpen(machine)}>
-                  Editar
+                  {t("machines.editar")}
                 </Button>
                 <Button size="xs" variant="light" color="red" radius="xl" leftSection={<IconTrash size={14} />}
                   onClick={() => deleteMachine.mutate(machine.id)}
                 >
-                  Eliminar
+                  {t("machines.eliminar")}
                 </Button>
               </Group>
             </Paper>
@@ -179,22 +181,22 @@ export default function MachinesPage() {
       <BottomSheet opened={modalOpened} onClose={closeModal} title={editing ? "Editar Máquina" : "Nueva Máquina"}>
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
-            <TextInput label="Nombre" placeholder="Láser diodo" required {...form.getInputProps("name")} radius="md" />
-            <Textarea label="Descripción" placeholder="Características del equipo" {...form.getInputProps("description")} radius="md" />
-            <ColorInput label="Color" {...form.getInputProps("color_hex")} radius="md" />
+            <TextInput label={t("machines.nombre")} placeholder={t("machines.laserDiodo")} required {...form.getInputProps("name")} radius="md" />
+            <Textarea label={t("machines.descripcion")} placeholder={t("machines.caracteristicasDelEquipo")} {...form.getInputProps("description")} radius="md" />
+            <ColorInput label={t("machines.color")} {...form.getInputProps("color_hex")} radius="md" />
             <Select
-              label="Box fijo (opcional)"
-              placeholder="Sin box fijo"
+              label={t("machines.boxFijoOpcional")}
+              placeholder={t("machines.sinBoxFijo")}
               data={boxOptions}
               clearable
               {...form.getInputProps("fixed_box_id")}
               radius="md"
             />
-            <Switch label="Activa" {...form.getInputProps("is_active", { type: "checkbox" })} />
-            <Divider label="Horario de disponibilidad" labelPosition="center" />
+            <Switch label={t("machines.activa")} {...form.getInputProps("is_active", { type: "checkbox" })} />
+            <Divider label={t("machines.horarioDeDisponibilidad")} labelPosition="center" />
             <WeeklyScheduleGrid slots={scheduleSlots} onChange={setScheduleSlots} compact />
             <Group justify="flex-end">
-              <Button variant="default" onClick={closeModal} radius="xl">Cancelar</Button>
+              <Button variant="default" onClick={closeModal} radius="xl">{t("machines.cancelar")}</Button>
               <Button type="submit" radius="xl" loading={createMachine.isPending || updateMachine.isPending}>
                 {editing ? "Guardar" : "Crear"}
               </Button>

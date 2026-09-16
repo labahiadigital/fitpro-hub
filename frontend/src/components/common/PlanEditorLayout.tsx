@@ -101,7 +101,7 @@ export function PlanEditorLayout({
           {!isMobile && (
             <Group gap="sm">
               <Button onClick={onClose} variant="default" radius="xl" size="sm">
-                Cancelar
+                {"Cancelar"}
               </Button>
               <Button
                 loading={isSaving}
@@ -132,7 +132,7 @@ export function PlanEditorLayout({
                 label: (
                   <Group gap={4} justify="center">
                     <IconSettings size={14} />
-                    <span>Configuración</span>
+                    <span>{"Configuración"}</span>
                   </Group>
                 ),
               },

@@ -504,14 +504,14 @@ export function MealPlanDetailView({
           <Group>
             {onEdit && (
               <Button variant="light" leftSection={<IconEdit size={16} />} onClick={onEdit}>
-                Editar
+                {"Editar"}
               </Button>
             )}
             <Button variant="light" leftSection={<IconPrinter size={16} />} onClick={onPrint}>
-              Imprimir
+              {"Imprimir"}
             </Button>
             <Button leftSection={<IconDownload size={16} />} onClick={handleExportPDF}>
-              Exportar PDF
+              {"Exportar PDF"}
             </Button>
           </Group>
         </Group>
@@ -522,7 +522,7 @@ export function MealPlanDetailView({
             <Group gap="xs" mb="sm">
               <IconAlertTriangle size={20} color="var(--mantine-color-red-6)" />
               <Text fw={600} c="red">
-                ¡ADVERTENCIA! Alimentos con alérgenos detectados
+                {"¡ADVERTENCIA! Alimentos con alérgenos detectados"}
               </Text>
             </Group>
             <Stack gap="xs">
@@ -542,7 +542,7 @@ export function MealPlanDetailView({
           <Group justify="space-between" align="flex-start">
             <Box>
               <Text size="sm" c="dimmed" tt="uppercase" fw={600}>
-                Datos del Cliente
+                {"Datos del Cliente"}
               </Text>
               <Title order={3} mt="xs">
                 {client.first_name} {client.last_name}
@@ -550,23 +550,23 @@ export function MealPlanDetailView({
             </Box>
             <SimpleGrid cols={{ base: 2, sm: 4, md: 6 }} spacing="md">
               <Box ta="center">
-                <Text size="xs" c="dimmed">Peso</Text>
+                <Text size="xs" c="dimmed">{"Peso"}</Text>
                 <Text fw={700}>{clientForm.values.weight_kg} kg</Text>
               </Box>
               <Box ta="center">
-                <Text size="xs" c="dimmed">Altura</Text>
+                <Text size="xs" c="dimmed">{"Altura"}</Text>
                 <Text fw={700}>{clientForm.values.height_cm} cm</Text>
               </Box>
               <Box ta="center">
-                <Text size="xs" c="dimmed">Edad</Text>
+                <Text size="xs" c="dimmed">{"Edad"}</Text>
                 <Text fw={700}>{clientForm.values.age} años</Text>
               </Box>
               <Box ta="center">
-                <Text size="xs" c="dimmed">Actividad</Text>
+                <Text size="xs" c="dimmed">{"Actividad"}</Text>
                 <Text fw={700}>{ACTIVITY_LABELS[clientForm.values.activity_level as keyof typeof ACTIVITY_LABELS]}</Text>
               </Box>
               <Box ta="center">
-                <Text size="xs" c="dimmed">Objetivo</Text>
+                <Text size="xs" c="dimmed">{"Objetivo"}</Text>
                 <Badge color={
                   clientForm.values.goal_type === "fat_loss" ? "red" : 
                   clientForm.values.goal_type === "muscle_gain" ? "green" : "blue"
@@ -576,14 +576,14 @@ export function MealPlanDetailView({
                 </Badge>
               </Box>
               <Box ta="center">
-                <Text size="xs" c="dimmed">Kcal Objetivo</Text>
+                <Text size="xs" c="dimmed">{"Kcal Objetivo"}</Text>
                 <Text fw={700} c="blue">{clientTargets.calories} kcal</Text>
               </Box>
             </SimpleGrid>
           </Group>
           {(client.allergies?.length || client.intolerances?.length) && (
             <Group mt="md" gap="xs">
-              <Text size="sm" fw={500}>Alergias/Intolerancias:</Text>
+              <Text size="sm" fw={500}>{"Alergias/Intolerancias:"}</Text>
               {[...(client.allergies || []), ...(client.intolerances || [])].map((item, idx) => (
                 <Badge key={idx} color="red" variant="light" size="sm">{item}</Badge>
               ))}
@@ -611,16 +611,16 @@ export function MealPlanDetailView({
         {!isMobile && (
           <Tabs.List mb="lg">
             <Tabs.Tab value="overview" leftSection={<IconChartPie size={14} />}>
-              Resumen Nutricional
+              {"Resumen Nutricional"}
             </Tabs.Tab>
             <Tabs.Tab value="meals" leftSection={<IconSalad size={14} />}>
-              Plan de Comidas
+              {"Plan de Comidas"}
             </Tabs.Tab>
             <Tabs.Tab value="calculator" leftSection={<IconCalculator size={14} />}>
-              Calculadora Energética
+              {"Calculadora Energética"}
             </Tabs.Tab>
             <Tabs.Tab value="supplements" leftSection={<IconPill size={14} />}>
-              Suplementación
+              {"Suplementación"}
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -631,7 +631,7 @@ export function MealPlanDetailView({
             {/* Macro distribution */}
             <Paper p="lg" radius="md" withBorder>
               <Text fw={600} mb="md">
-                Distribución de Macronutrientes - Kcal
+                {"Distribución de Macronutrientes - Kcal"}
               </Text>
               <Group justify="center" mb="md">
                 <RingProgress
@@ -661,7 +661,7 @@ export function MealPlanDetailView({
                     {macroPercentages.protein}%
                   </Badge>
                   <Text size="sm" mt="xs">
-                    <GlossaryTooltip term="Proteína">Proteína</GlossaryTooltip>
+                    <GlossaryTooltip term="Proteína">{"Proteína %"}</GlossaryTooltip>
                   </Text>
                   <Text fw={600}>{actualMacros.protein}g</Text>
                   <Text size="xs" c="dimmed">
@@ -673,7 +673,7 @@ export function MealPlanDetailView({
                     {macroPercentages.carbs}%
                   </Badge>
                   <Text size="sm" mt="xs">
-                    Carbohidratos
+                    {"Carbohidratos %"}
                   </Text>
                   <Text fw={600}>{actualMacros.carbs}g</Text>
                   <Text size="xs" c="dimmed">
@@ -685,7 +685,7 @@ export function MealPlanDetailView({
                     {macroPercentages.fat}%
                   </Badge>
                   <Text size="sm" mt="xs">
-                    Grasas
+                    {"Grasas %"}
                   </Text>
                   <Text fw={600}>{actualMacros.fat}g</Text>
                   <Text size="xs" c="dimmed">
@@ -699,18 +699,18 @@ export function MealPlanDetailView({
             <Paper p="lg" radius="md" withBorder>
               <Group justify="space-between" mb="md">
                 <Text fw={600}>
-                  Objetivos vs Actual
+                  {"Objetivos vs Actual"}
                 </Text>
                 {client && (
                   <Badge color="blue" variant="light" size="sm">
-                    Calculado desde cliente
+                    {"Calculado desde cliente"}
                   </Badge>
                 )}
               </Group>
               <Stack gap="md">
                 <Box>
                   <Group justify="space-between" mb={4}>
-                    <Text size="sm">Calorías</Text>
+                    <Text size="sm">{"Calorías"}</Text>
                     <Text size="sm" fw={500}>
                       {actualMacros.calories} / {clientTargets.calories} kcal
                     </Text>
@@ -724,7 +724,7 @@ export function MealPlanDetailView({
                 </Box>
                 <Box>
                   <Group justify="space-between" mb={4}>
-                    <Text size="sm">Proteína</Text>
+                    <Text size="sm">{"Proteína %"}</Text>
                     <Text size="sm" fw={500}>
                       {actualMacros.protein} / {clientTargets.protein}g
                     </Text>
@@ -738,7 +738,7 @@ export function MealPlanDetailView({
                 </Box>
                 <Box>
                   <Group justify="space-between" mb={4}>
-                    <Text size="sm">Carbohidratos</Text>
+                    <Text size="sm">{"Carbohidratos %"}</Text>
                     <Text size="sm" fw={500}>
                       {actualMacros.carbs} / {clientTargets.carbs}g
                     </Text>
@@ -752,7 +752,7 @@ export function MealPlanDetailView({
                 </Box>
                 <Box>
                   <Group justify="space-between" mb={4}>
-                    <Text size="sm">Grasas</Text>
+                    <Text size="sm">{"Grasas %"}</Text>
                     <Text size="sm" fw={500}>
                       {actualMacros.fat} / {clientTargets.fat}g
                     </Text>
@@ -770,18 +770,18 @@ export function MealPlanDetailView({
             {/* Detailed macros table */}
             <Paper p={isMobile ? "sm" : "lg"} radius="md" withBorder style={{ gridColumn: "1 / -1" }}>
               <Text fw={600} mb="md">
-                Desglose Nutricional Detallado
+                {"Desglose Nutricional Detallado"}
               </Text>
               <ScrollArea type="auto">
                 <Table style={{ minWidth: isMobile ? 520 : undefined }}>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Nutriente</Table.Th>
-                      <Table.Th ta="right">Cantidad</Table.Th>
+                      <Table.Th>{"Nutriente"}</Table.Th>
+                      <Table.Th ta="right">{"Cantidad"}</Table.Th>
                       <Table.Th ta="right">% Kcal</Table.Th>
-                      <Table.Th ta="right">Kcal</Table.Th>
-                      <Table.Th ta="right">Objetivo</Table.Th>
-                      <Table.Th ta="right">Diferencia</Table.Th>
+                      <Table.Th ta="right">{"Kcal"}</Table.Th>
+                      <Table.Th ta="right">{"Objetivo"}</Table.Th>
+                      <Table.Th ta="right">{"Diferencia"}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -791,7 +791,7 @@ export function MealPlanDetailView({
                           <ThemeIcon color="green" variant="light" size="sm">
                             <IconMeat size={14} />
                           </ThemeIcon>
-                          <GlossaryTooltip term="Proteína">Proteína</GlossaryTooltip>
+                          <GlossaryTooltip term="Proteína">{"Proteína %"}</GlossaryTooltip>
                         </Group>
                       </Table.Td>
                       <Table.Td ta="right">{actualMacros.protein}g</Table.Td>
@@ -811,7 +811,7 @@ export function MealPlanDetailView({
                           <ThemeIcon color="orange" variant="light" size="sm">
                             <IconFlame size={14} />
                           </ThemeIcon>
-                          Carbohidratos
+                          {"Carbohidratos %"}
                         </Group>
                       </Table.Td>
                       <Table.Td ta="right">{actualMacros.carbs}g</Table.Td>
@@ -831,7 +831,7 @@ export function MealPlanDetailView({
                           <ThemeIcon color="grape" variant="light" size="sm">
                             <IconActivity size={14} />
                           </ThemeIcon>
-                          Grasas
+                          {"Grasas %"}
                         </Group>
                       </Table.Td>
                       <Table.Td ta="right">{actualMacros.fat}g</Table.Td>
@@ -846,7 +846,7 @@ export function MealPlanDetailView({
                       </Table.Td>
                     </Table.Tr>
                     <Table.Tr style={{ fontWeight: 600 }}>
-                      <Table.Td>Total</Table.Td>
+                      <Table.Td>{"Total"}</Table.Td>
                       <Table.Td ta="right">-</Table.Td>
                       <Table.Td ta="right">100%</Table.Td>
                       <Table.Td ta="right">{actualMacros.calories}</Table.Td>
@@ -875,7 +875,7 @@ export function MealPlanDetailView({
               mb="md"
               size="sm"
               w={200}
-              label="Semana"
+              label={"Semana"}
             />
           )}
           <MealPlanDaysView
@@ -890,7 +890,7 @@ export function MealPlanDetailView({
             {/* Energy Requirements Calculator */}
             <Paper p="lg" radius="md" withBorder>
               <Group justify="space-between" mb="md">
-                <Text fw={600}>Cálculo de Requisitos Energéticos Diarios</Text>
+                <Text fw={600}>{"Cálculo de Requisitos Energéticos Diarios"}</Text>
                 <ActionIcon
                   variant="subtle"
                   color="gray"
@@ -915,7 +915,7 @@ export function MealPlanDetailView({
                 />
                 <SimpleGrid cols={2} spacing="md">
                   <Select
-                    label="Sexo"
+                    label={"Sexo"}
                     data={[
                       { value: "male", label: "Hombre" },
                       { value: "female", label: "Mujer" },
@@ -924,7 +924,7 @@ export function MealPlanDetailView({
                     {...clientForm.getInputProps("gender")}
                   />
                   <NumberInput
-                    label="Edad"
+                    label={"Edad"}
                     suffix=" años"
                     min={10}
                     max={100}
@@ -935,7 +935,7 @@ export function MealPlanDetailView({
 
                 <SimpleGrid cols={2} spacing="md">
                   <NumberInput
-                    label="Peso"
+                    label={"Peso"}
                     suffix=" kg"
                     min={30}
                     max={300}
@@ -943,7 +943,7 @@ export function MealPlanDetailView({
                     {...clientForm.getInputProps("weight_kg")}
                   />
                   <NumberInput
-                    label="Altura"
+                    label={"Altura"}
                     suffix=" cm"
                     min={100}
                     max={250}
@@ -953,14 +953,14 @@ export function MealPlanDetailView({
                 </SimpleGrid>
 
                 <Select
-                  label="Actividad"
+                  label={"Actividad"}
                   data={Object.entries(ACTIVITY_LABELS).map(([value, label]) => ({ value, label }))}
                   disabled={!editingClient}
                   {...clientForm.getInputProps("activity_level")}
                 />
 
                 <Select
-                  label="Tendencia Corporal"
+                  label={"Tendencia Corporal"}
                   data={Object.entries(BODY_TENDENCY_LABELS).map(([value, label]) => ({ value, label }))}
                   disabled={!editingClient}
                   {...clientForm.getInputProps("body_tendency")}
@@ -972,20 +972,20 @@ export function MealPlanDetailView({
                   <Table.Tbody>
                     <Table.Tr style={{ backgroundColor: "var(--mantine-color-yellow-0)" }}>
                       <Table.Td fw={600}>
-                        Energía Estimada para <GlossaryTooltip term="TDEE">Mantenimiento</GlossaryTooltip>
+                        {"Energía Estimada para"} <GlossaryTooltip term="TDEE">{"Mantenimiento"}</GlossaryTooltip>
                       </Table.Td>
                       <Table.Td ta="right" fw={700}>
                         {energyTargets.maintenance} kcal
                       </Table.Td>
                     </Table.Tr>
                     <Table.Tr style={{ backgroundColor: "var(--mantine-color-green-0)" }}>
-                      <Table.Td fw={600}>Hipertrofia o Aumento de Peso</Table.Td>
+                      <Table.Td fw={600}>{"Hipertrofia o Aumento de Peso"}</Table.Td>
                       <Table.Td ta="right" fw={700}>
                         {energyTargets.hypertrophy} kcal
                       </Table.Td>
                     </Table.Tr>
                     <Table.Tr style={{ backgroundColor: "var(--mantine-color-red-0)" }}>
-                      <Table.Td fw={600}>Definición o Pérdida de Peso</Table.Td>
+                      <Table.Td fw={600}>{"Definición o Pérdida de Peso"}</Table.Td>
                       <Table.Td ta="right" fw={700}>
                         {energyTargets.definition} kcal
                       </Table.Td>
@@ -1009,12 +1009,12 @@ export function MealPlanDetailView({
             <Stack gap="lg">
               <Paper p="lg" radius="md" withBorder style={{ backgroundColor: "var(--mantine-color-cyan-0)" }}>
                 <Text fw={600} mb="md">
-                  Cálculo de Temporalización de Objetivos para Pérdida de Grasa
+                  {"Cálculo de Temporalización de Objetivos para Pérdida de Grasa"}
                 </Text>
                 <SimpleGrid cols={2} spacing="md">
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Peso Actual
+                      {"Peso Actual"}
                     </Text>
                     <Text fw={600} size="xl">
                       {clientForm.values.weight_kg} kg
@@ -1022,7 +1022,7 @@ export function MealPlanDetailView({
                   </Box>
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Peso Objetivo
+                      {"Peso Objetivo"}
                     </Text>
                     <NumberInput
                       value={clientForm.values.goal_weight_kg}
@@ -1038,7 +1038,7 @@ export function MealPlanDetailView({
                 <SimpleGrid cols={2} spacing="md">
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Semanas Previstas
+                      {"Semanas Previstas"}
                     </Text>
                     <Text fw={600} size="xl">
                       {goalTimeline.weeksNeeded}
@@ -1046,7 +1046,7 @@ export function MealPlanDetailView({
                   </Box>
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Meses
+                      {"Meses"}
                     </Text>
                     <Text fw={600} size="xl">
                       {goalTimeline.monthsNeeded}
@@ -1062,12 +1062,12 @@ export function MealPlanDetailView({
 
               <Paper p="lg" radius="md" withBorder style={{ backgroundColor: "var(--mantine-color-green-0)" }}>
                 <Text fw={600} mb="md">
-                  Cálculo de Temporalización de Objetivos para Aumento de Músculo
+                  {"Cálculo de Temporalización de Objetivos para Pérdida de Grasa"}
                 </Text>
                 <SimpleGrid cols={2} spacing="md">
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Peso Actual
+                      {"Peso Actual"}
                     </Text>
                     <Text fw={600} size="xl">
                       {clientForm.values.weight_kg} kg
@@ -1075,7 +1075,7 @@ export function MealPlanDetailView({
                   </Box>
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Peso Objetivo
+                      {"Peso Objetivo"}
                     </Text>
                     <Text fw={600} size="xl">
                       {clientForm.values.goal_weight_kg} kg
@@ -1086,7 +1086,7 @@ export function MealPlanDetailView({
                 <SimpleGrid cols={2} spacing="md">
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Semanas Previstas
+                      {"Semanas Previstas"}
                     </Text>
                     <Text fw={600} size="xl">
                       {clientForm.values.gender === "male" 
@@ -1097,7 +1097,7 @@ export function MealPlanDetailView({
                   </Box>
                   <Box>
                     <Text size="sm" c="dimmed">
-                      Meses
+                      {"Meses"}
                     </Text>
                     <Text fw={600} size="xl">
                       {clientForm.values.gender === "male"
@@ -1119,17 +1119,17 @@ export function MealPlanDetailView({
         <Tabs.Panel value="supplements">
           <Paper p="lg" radius="md" withBorder>
             <Text fw={600} mb="lg" size="lg">
-              Suplementación Deportiva
+              {"Suplementación Deportiva"}
             </Text>
 
             {mealPlan.supplements && mealPlan.supplements.length > 0 ? (
               <Table withTableBorder withColumnBorders>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Suplemento</Table.Th>
-                    <Table.Th>Dosis</Table.Th>
-                    <Table.Th>Momento</Table.Th>
-                    <Table.Th>Notas</Table.Th>
+                    <Table.Th>{"Suplemento"}</Table.Th>
+                    <Table.Th>{"Dosis"}</Table.Th>
+                    <Table.Th>{"Momento"}</Table.Th>
+                    <Table.Th>{"Notas"}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1148,27 +1148,27 @@ export function MealPlanDetailView({
                 <ThemeIcon color="gray" size={60} variant="light" radius="xl" mb="md">
                   <IconPill size={30} />
                 </ThemeIcon>
-                <Text fw={500}>No hay suplementación asignada</Text>
+                <Text fw={500}>{"No hay suplementación asignada"}</Text>
                 <Text c="dimmed" size="sm">
-                  Añade suplementos recomendados para este plan
+                  {"Añade suplementos recomendados para este plan"}
                 </Text>
               </Box>
             )}
 
             {/* Example supplementation recommendations */}
-            <Divider my="lg" label="Recomendaciones de ejemplo" labelPosition="center" />
+            <Divider my="lg" label={"Recomendaciones de ejemplo"} labelPosition="center" />
             <Stack gap="xs">
               <Text size="sm">
                 <strong>1 Multivitamínico</strong> con comida 1 y comida 5
               </Text>
               <Text size="sm">
-                <strong>Omega 3</strong> - con comida 1, 3 y 5
+                <strong>{"Omega 3"}</strong> - con comida 1, 3 y 5
               </Text>
               <Text size="sm">
-                <strong>Intra entrenamiento o 10g EAAs + 10g GLUTAMINA + 10g CREATINA</strong>
+                <strong>{"Intra entrenamiento o 10g EAAs + 10g GLUTAMINA + 10g CREATINA"}</strong>
               </Text>
               <Text size="sm">
-                <strong>Antes de dormir:</strong> ZMA 3 cápsulas
+                <strong>{"Antes de dormir:"}</strong> {"ZMA 3 cápsulas"}
               </Text>
             </Stack>
           </Paper>
@@ -1180,7 +1180,7 @@ export function MealPlanDetailView({
         <Group gap="xs">
           <IconAlertTriangle size={20} color="var(--mantine-color-red-6)" />
           <Text fw={600} c="red" size="sm">
-            IMPORTANTE: Siempre se debe revisar que el PDF no contenga ningún alimento al que el cliente pueda ser o sea intolerante o alérgico y avisar para su cambio.
+            {"IMPORTANTE: Siempre se debe revisar que el PDF no contenga ningún alimento al que el cliente pueda ser o sea intolerante o alérgico y avisar para su cambio."}
           </Text>
         </Group>
       </Paper>
@@ -1203,9 +1203,9 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
         <ThemeIcon color="gray" size={60} variant="light" radius="xl" mb="md">
           <IconSalad size={30} />
         </ThemeIcon>
-        <Text fw={500}>No hay comidas configuradas</Text>
+        <Text fw={500}>{"No hay comidas configuradas"}</Text>
         <Text c="dimmed" size="sm">
-          Edita el plan para añadir comidas
+          {"Edita el plan para añadir comidas"}
         </Text>
       </Paper>
     );
@@ -1353,7 +1353,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
                       >
                         {food.quantity}{food.unit || "g"} {food.name}
                         {isAllergen(food.name, food.allergens) && (
-                          <Tooltip label="¡Contiene alérgeno!">
+                          <Tooltip label={"¡Contiene alérgeno!"}>
                             <IconAlertTriangle size={14} style={{ marginLeft: 4, verticalAlign: "middle" }} color="red" />
                           </Tooltip>
                         )}
@@ -1376,7 +1376,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
       {currentDay?.notes && (
         <Paper p="md" mt="md" withBorder radius="md">
           <Text fw={600} size="sm" mb="xs">
-            Notas del día:
+            {"Notas del día:"}
           </Text>
           <Text size="sm" c="dimmed">
             {currentDay.notes}

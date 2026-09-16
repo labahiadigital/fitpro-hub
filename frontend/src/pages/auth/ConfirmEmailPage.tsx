@@ -21,8 +21,10 @@ import {
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { authApi } from "../../services/api";
+import { useTranslation } from "react-i18next";
 
 export function ConfirmEmailPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error" | "resend">("loading");
@@ -48,8 +50,8 @@ export function ConfirmEmailPage() {
         if (response.data.success) {
           setStatus("success");
           notifications.show({
-            title: "Â¡Email confirmado!",
-            message: "Tu cuenta ha sido verificada correctamente.",
+            title: t("auth.emailConfirmado"),
+            message: t("auth.tuCuentaHaSidoVerificada"),
             color: "green",
             icon: <IconCheck size={18} />,
           });
@@ -79,8 +81,8 @@ export function ConfirmEmailPage() {
   const handleResendVerification = async () => {
     if (!resendEmail || !/^\S+@\S+$/.test(resendEmail)) {
       notifications.show({
-        title: "Error",
-        message: "Por favor, introduce un email vÃ¡lido",
+        title: t("auth.error"),
+        message: t("auth.porFavorIntroduceUnEmail"),
         color: "red",
       });
       return;
@@ -91,7 +93,7 @@ export function ConfirmEmailPage() {
       const response = await authApi.resendVerification(resendEmail);
       
       notifications.show({
-        title: "Email enviado",
+        title: t("auth.emailEnviado"),
         message: response.data.message || "Si el email estÃ¡ registrado, recibirÃ¡s un enlace de verificaciÃ³n.",
         color: "green",
       });
@@ -100,7 +102,7 @@ export function ConfirmEmailPage() {
     } catch (error) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
-        title: "Error",
+        title: t("auth.error"),
         message: err.response?.data?.detail || "Error al enviar el email de verificaciÃ³n",
         color: "red",
       });
@@ -158,7 +160,7 @@ export function ConfirmEmailPage() {
               fontWeight: 700,
             }}
           >
-            Trackfiz
+            {t("auth.trackfiz")}
           </Title>
 
           <Title order={3} c="white" ta="center">
@@ -169,7 +171,7 @@ export function ConfirmEmailPage() {
             <Center py="xl">
               <Stack align="center" gap="md">
                 <Loader color="green" size="lg" />
-                <Text c="gray.5">Verificando tu email...</Text>
+                <Text c="gray.5">{t("auth.verificandoTuEmail")}</Text>
               </Stack>
             </Center>
           )}
@@ -208,7 +210,7 @@ export function ConfirmEmailPage() {
                   marginTop: 10,
                 }}
               >
-                Ir a Iniciar SesiÃ³n
+                {t("auth.irAIniciarSesiN")}
               </Button>
             </Stack>
           )}
@@ -225,7 +227,7 @@ export function ConfirmEmailPage() {
               </ThemeIcon>
 
               <Text c="white" size="lg" fw={500} ta="center">
-                No se pudo verificar
+                {t("auth.noSePudoVerificar")}
               </Text>
 
               <Text c="gray.5" size="sm" ta="center">
@@ -238,7 +240,7 @@ export function ConfirmEmailPage() {
                 </Text>
                 
                 <TextInput
-                  placeholder="tu@email.com"
+                  placeholder={t("auth.tuEmailCom")}
                   value={resendEmail}
                   onChange={(e) => setResendEmail(e.target.value)}
                   leftSection={<IconMail size={16} />}
@@ -246,7 +248,7 @@ export function ConfirmEmailPage() {
                     input: {
                       background: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
-                      color: "white",
+                      color: t("auth.white"),
                       "&::placeholder": {
                         color: "rgba(255, 255, 255, 0.4)",
                       },
@@ -262,7 +264,7 @@ export function ConfirmEmailPage() {
                   variant="gradient"
                   gradient={{ from: "primary", to: "accent" }}
                 >
-                  Enviar nuevo enlace
+                  {t("auth.enviarNuevoEnlace")}
                 </Button>
 
                 <Button
@@ -272,10 +274,10 @@ export function ConfirmEmailPage() {
                   onClick={() => navigate("/login")}
                   style={{
                     borderColor: "rgba(255, 255, 255, 0.2)",
-                    color: "white",
+                    color: t("auth.white"),
                   }}
                 >
-                  Volver al inicio de sesiÃ³n
+                  {t("auth.volverAlInicioDeSesi")}
                 </Button>
               </Stack>
             </Stack>
@@ -297,8 +299,7 @@ export function ConfirmEmailPage() {
               </Text>
 
               <Text c="gray.5" size="sm" ta="center">
-                Hemos enviado un nuevo enlace de verificaciÃ³n a tu email. 
-                Revisa tu bandeja de entrada (y la carpeta de spam).
+                {t("auth.hemosEnviadoUnNuevoEnlace")}
               </Text>
 
               <Button
@@ -308,11 +309,11 @@ export function ConfirmEmailPage() {
                 onClick={() => navigate("/login")}
                 style={{
                   borderColor: "rgba(255, 255, 255, 0.2)",
-                  color: "white",
+                  color: t("auth.white"),
                   marginTop: 10,
                 }}
               >
-                Volver al inicio de sesiÃ³n
+                {t("auth.volverAlInicioDeSesi")}
               </Button>
             </Stack>
           )}

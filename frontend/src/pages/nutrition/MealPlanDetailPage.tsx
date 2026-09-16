@@ -7,8 +7,10 @@ import { MealPlanDetailView } from "../../components/nutrition/MealPlanDetailVie
 import { useSupabaseMealPlan, useClient } from "../../hooks/useSupabaseData";
 import { generateMealPlanPDF } from "../../services/pdfGenerator";
 import { useAuthStore } from "../../stores/auth";
+import { useTranslation } from "react-i18next";
 
 export function MealPlanDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const clientIdFromUrl = searchParams.get("clientId");
@@ -27,8 +29,8 @@ export function MealPlanDetailPage() {
     try {
       notifications.show({
         id: "pdf-export",
-        title: "Generando PDF",
-        message: "Por favor espera mientras se genera el documento...",
+        title: t("nutrition.generandoPdf"),
+        message: t("nutrition.porFavorEsperaMientrasSe"),
         loading: true,
         autoClose: false,
       });
@@ -68,8 +70,8 @@ export function MealPlanDetailPage() {
 
       notifications.update({
         id: "pdf-export",
-        title: "PDF Generado",
-        message: "El documento se ha descargado correctamente",
+        title: t("nutrition.pdfGenerado"),
+        message: t("nutrition.elDocumentoSeHaDescargado"),
         color: "green",
         icon: <IconCheck size={16} />,
         loading: false,
@@ -79,8 +81,8 @@ export function MealPlanDetailPage() {
       console.error("Error generating PDF:", error);
       notifications.update({
         id: "pdf-export",
-        title: "Error",
-        message: "No se pudo generar el PDF. Intenta de nuevo.",
+        title: t("nutrition.error"),
+        message: t("nutrition.noSePudoGenerarEl"),
         color: "red",
         loading: false,
         autoClose: 5000,
@@ -117,13 +119,13 @@ export function MealPlanDetailPage() {
       <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
         <PageHeader
           breadcrumbs={[
-            { label: "Nutrición", href: "/nutrition" },
-            { label: "Plan no encontrado" },
+            { label: t("nutrition.nutricion"), href: "/nutrition" },
+            { label: t("nutrition.planNoEncontrado") },
           ]}
-          title="Plan no encontrado"
+          title={t("nutrition.planNoEncontrado")}
         />
         <Box ta="center" py="xl">
-          El plan nutricional solicitado no existe o no tienes acceso.
+          {t("nutrition.elPlanNutricionalSolicitadoNo")}
         </Box>
       </Container>
     );
@@ -169,7 +171,7 @@ export function MealPlanDetailPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         breadcrumbs={[
-          { label: "Nutrición", href: "/nutrition" },
+          { label: t("nutrition.nutricion"), href: "/nutrition" },
           { label: mealPlan.name },
         ]}
         title=""

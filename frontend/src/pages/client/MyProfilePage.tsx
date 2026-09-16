@@ -61,6 +61,7 @@ import {
   PasswordRulesIndicator,
   passwordValidator,
 } from "../../components/common/PasswordRulesIndicator";
+import { useTranslation } from "react-i18next";
 
 interface SubscriptionPayment {
   id: string;
@@ -143,6 +144,7 @@ async function _downloadBlob(blob: Blob, filename: string): Promise<void> {
 }
 
 function SubscriptionSection() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [pauseModalOpen, setPauseModalOpen] = useState(false);
@@ -166,15 +168,15 @@ function SubscriptionSection() {
       queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
       setCancelModalOpen(false);
       notifications.show({
-        title: "Suscripción cancelada",
-        message: "Tu acceso continuará hasta el fin del periodo actual.",
+        title: t("myProfile.suscripcionCancelada"),
+        message: t("myProfile.tuAccesoContinuaraHastaEl"),
         color: "blue",
       });
     },
     onError: () => {
       notifications.show({
-        title: "Error",
-        message: "No se pudo cancelar la suscripción. Inténtalo de nuevo.",
+        title: t("myProfile.error"),
+        message: t("myProfile.noSePudoCancelarLa"),
         color: "red",
       });
     },
@@ -187,14 +189,14 @@ function SubscriptionSection() {
       queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
       setPauseModalOpen(false);
       notifications.show({
-        title: "Suscripción pausada",
-        message: "Tu suscripción se reanudará automáticamente al finalizar la pausa.",
+        title: t("myProfile.suscripcionPausada"),
+        message: t("myProfile.tuSuscripcionSeReanudaraAutomaticamente"),
         color: "blue",
       });
     },
     onError: (err: { response?: { data?: { detail?: string } } }) => {
       notifications.show({
-        title: "No se pudo pausar",
+        title: t("myProfile.noSePudoPausar"),
         message: err?.response?.data?.detail || "Inténtalo de nuevo.",
         color: "red",
       });
@@ -206,15 +208,15 @@ function SubscriptionSection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
       notifications.show({
-        title: "Suscripción reanudada",
-        message: "Vuelves a tener acceso completo.",
+        title: t("myProfile.suscripcionReanudada"),
+        message: t("myProfile.vuelvesATenerAccesoCompleto"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
-        title: "Error",
-        message: "No se pudo reanudar la suscripción.",
+        title: t("myProfile.error"),
+        message: t("myProfile.noSePudoReanudarLa"),
         color: "red",
       });
     },
@@ -228,7 +230,7 @@ function SubscriptionSection() {
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } };
       notifications.show({
-        title: "No se pudo descargar la factura",
+        title: t("myProfile.noSePudoDescargarLa"),
         message: e?.response?.data?.detail || "Inténtalo de nuevo más tarde.",
         color: "red",
       });
@@ -246,7 +248,7 @@ function SubscriptionSection() {
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } };
       notifications.show({
-        title: "No se pudo descargar el PDF combinado",
+        title: t("myProfile.noSePudoDescargarEl"),
         message: e?.response?.data?.detail || "Comprueba el periodo seleccionado.",
         color: "red",
       });
@@ -258,7 +260,7 @@ function SubscriptionSection() {
       <Card shadow="sm" padding="lg" radius="lg" withBorder>
         <Group justify="center" p="xl">
           <Loader size="sm" />
-          <Text size="sm" c="dimmed">Cargando suscripción...</Text>
+          <Text size="sm" c="dimmed">{t("myProfile.cargandoSuscripcion")}</Text>
         </Group>
       </Card>
     );
@@ -269,9 +271,9 @@ function SubscriptionSection() {
       <Card shadow="sm" padding="lg" radius="lg" withBorder>
         <Group mb="md">
           <IconCreditCard size={20} />
-          <Text fw={600}>Mi Suscripción</Text>
+          <Text fw={600}>{t("myProfile.miSuscripcion")}</Text>
         </Group>
-        <Text size="sm" c="dimmed">No tienes una suscripción activa.</Text>
+        <Text size="sm" c="dimmed">{t("myProfile.noTienesUnaSuscripcionActiva")}</Text>
       </Card>
     );
   }
@@ -280,7 +282,7 @@ function SubscriptionSection() {
   const isPeriodExpired = sub.is_period_expired === true ||
     (sub.current_period_end && new Date(sub.current_period_end) < new Date());
   const stConfig = isPeriodExpired && sub.status === "active"
-    ? { label: "Expirada", color: "red" }
+    ? { label: t("myProfile.expirada"), color: "red" }
     : statusConfig[sub.status] || { label: sub.status, color: "gray" };
 
   return (
@@ -289,7 +291,7 @@ function SubscriptionSection() {
         <Group justify="space-between" mb="lg">
           <Group>
             <IconCreditCard size={20} />
-            <Text fw={600}>Mi Suscripción</Text>
+            <Text fw={600}>{t("myProfile.miSuscripcion")}</Text>
           </Group>
           <Badge color={stConfig.color} variant="light" size="lg">
             {stConfig.label}
@@ -319,7 +321,7 @@ function SubscriptionSection() {
           <Paper p="sm" radius="md" withBorder>
             <Group gap="xs" mb={4}>
               <IconCalendar size={14} color="var(--mantine-color-dimmed)" />
-              <Text size="xs" c="dimmed">Fecha inicio</Text>
+              <Text size="xs" c="dimmed">{t("myProfile.fechaInicio")}</Text>
             </Group>
             <Text size="sm" fw={500}>{formatDate(sub.current_period_start)}</Text>
           </Paper>
@@ -342,7 +344,7 @@ function SubscriptionSection() {
                 <Text size="sm" fw={500}>
                   {sub.card_brand || "Tarjeta"} ····{sub.card_last4}
                 </Text>
-                <Text size="xs" c="dimmed">Método de pago</Text>
+                <Text size="xs" c="dimmed">{t("myProfile.metodoDePago")}</Text>
               </Box>
             </Group>
           </Paper>
@@ -359,7 +361,7 @@ function SubscriptionSection() {
               leftSection={<IconRefresh size={14} />}
               onClick={() => window.location.href = "/subscription-expired"}
             >
-              Renovar suscripción
+              {t("myProfile.renovarSuscripcion")}
             </Button>
           </Alert>
         )}
@@ -378,16 +380,16 @@ function SubscriptionSection() {
             <Divider mb="md" />
             <Group mb="sm">
               <IconReceipt size={16} />
-              <Text size="sm" fw={600}>Historial de pagos</Text>
+              <Text size="sm" fw={600}>{t("myProfile.historialDePagos")}</Text>
             </Group>
             <Table striped highlightOnHover withTableBorder withColumnBorders={false} fz="sm">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Descripción</Table.Th>
-                  <Table.Th ta="right">Importe</Table.Th>
-                  <Table.Th ta="center">Estado</Table.Th>
-                  <Table.Th ta="center">Factura</Table.Th>
+                  <Table.Th>{t("myProfile.fecha")}</Table.Th>
+                  <Table.Th>{t("myProfile.descripcion")}</Table.Th>
+                  <Table.Th ta="right">{t("myProfile.importe")}</Table.Th>
+                  <Table.Th ta="center">{t("myProfile.estado")}</Table.Th>
+                  <Table.Th ta="center">{t("myProfile.factura")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -404,7 +406,7 @@ function SubscriptionSection() {
                       </Table.Td>
                       <Table.Td ta="center">
                         {canDownload ? (
-                          <Tooltip label="Descargar factura">
+                          <Tooltip label={t("myProfile.descargarFactura")}>
                             <ActionIcon
                               variant="subtle"
                               color="green"
@@ -430,26 +432,26 @@ function SubscriptionSection() {
         <Divider mt="md" mb="md" />
         <Group mb="sm">
           <IconFileDownload size={16} />
-          <Text size="sm" fw={600}>Mis facturas</Text>
+          <Text size="sm" fw={600}>{t("myProfile.misFacturas")}</Text>
         </Group>
         <Text size="xs" c="dimmed" mb="sm">
-          Selecciona el periodo y descarga todas tus facturas pagadas en un único PDF.
+          {t("myProfile.seleccionaElPeriodoYDescarga")}
         </Text>
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
           <MonthPickerInput
-            label="Desde"
+            label={t("myProfile.desde")}
             value={bulkFrom}
             onChange={(value) => setBulkFrom(value as Date | null)}
-            placeholder="Inicio"
+            placeholder={t("myProfile.inicio")}
             clearable
             valueFormat="MM/YYYY"
             maxDate={new Date()}
           />
           <MonthPickerInput
-            label="Hasta"
+            label={t("myProfile.hasta")}
             value={bulkTo}
             onChange={(value) => setBulkTo(value as Date | null)}
-            placeholder="Hoy"
+            placeholder={t("myProfile.hoy")}
             clearable
             valueFormat="MM/YYYY"
             maxDate={new Date()}
@@ -460,7 +462,7 @@ function SubscriptionSection() {
             onClick={handleDownloadBulk}
             disabled={!sub.payments || sub.payments.length === 0}
           >
-            Descargar PDF combinado
+            {t("myProfile.descargarPdfCombinado")}
           </Button>
         </SimpleGrid>
 
@@ -475,7 +477,7 @@ function SubscriptionSection() {
                 leftSection={<IconPlayerPause size={14} />}
                 onClick={() => setPauseModalOpen(true)}
               >
-                Pausar suscripción
+                {t("myProfile.pausarSuscripcion")}
               </Button>
               <Button
                 variant="subtle"
@@ -483,7 +485,7 @@ function SubscriptionSection() {
                 size="xs"
                 onClick={() => setCancelModalOpen(true)}
               >
-                Cancelar suscripción
+                {t("myProfile.cancelarSuscripcion")}
               </Button>
             </Group>
           </>
@@ -493,7 +495,7 @@ function SubscriptionSection() {
           <>
             <Divider mt="md" mb="md" />
             <Alert color="blue" variant="light" mb="sm" icon={<IconAlertCircle size={16} />}>
-              Tu suscripción está pausada. Reanudará automáticamente cuando termine la pausa.
+              {t("myProfile.tuSuscripcionEstaPausadaReanudara")}
             </Alert>
             <Button
               variant="filled"
@@ -503,7 +505,7 @@ function SubscriptionSection() {
               onClick={() => resumeMutation.mutate(sub.id)}
               loading={resumeMutation.isPending}
             >
-              Reanudar ahora
+              {t("myProfile.reanudarAhora")}
             </Button>
           </>
         )}
@@ -512,7 +514,7 @@ function SubscriptionSection() {
       <NativeBottomSheet
         opened={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
-        title="Cancelar suscripción"
+        title={t("myProfile.cancelarSuscripcion")}
       >
         <Stack gap="md">
           <Alert color="orange" variant="light" icon={<IconAlertCircle size={16} />}>
@@ -521,11 +523,11 @@ function SubscriptionSection() {
             Después de esa fecha, no se realizarán más cobros.
           </Alert>
           <Text size="sm" c="dimmed">
-            Si cambias de opinión, podrás reactivar tu suscripción contactando con tu entrenador.
+            {t("myProfile.siCambiasDeOpinionPodras")}
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setCancelModalOpen(false)}>
-              Mantener suscripción
+              {t("myProfile.mantenerSuscripcion")}
             </Button>
             <Button
               color="red"
@@ -533,7 +535,7 @@ function SubscriptionSection() {
               loading={cancelMutation.isPending}
               leftSection={<IconX size={16} />}
             >
-              Confirmar cancelación
+              {t("myProfile.confirmarCancelacion")}
             </Button>
           </Group>
         </Stack>
@@ -542,19 +544,18 @@ function SubscriptionSection() {
       <NativeBottomSheet
         opened={pauseModalOpen}
         onClose={() => setPauseModalOpen(false)}
-        title="Pausar suscripción"
+        title={t("myProfile.pausarSuscripcion")}
       >
         <Stack gap="md">
           <Alert color="blue" variant="light" icon={<IconAlertCircle size={16} />}>
-            Mientras esté pausada no se realizarán cobros y tu plan quedará suspendido.
-            La suscripción se reanudará automáticamente al finalizar el periodo seleccionado.
+            {t("myProfile.mientrasEstePausadaNoSe")}
           </Alert>
           <SegmentedControl
             value={pauseUnit}
             onChange={(v) => setPauseUnit(v as "days" | "months")}
             data={[
-              { label: "Días", value: "days" },
-              { label: "Meses", value: "months" },
+              { label: t("myProfile.dias"), value: "days" },
+              { label: t("myProfile.meses"), value: "months" },
             ]}
           />
           <NumberInput
@@ -567,7 +568,7 @@ function SubscriptionSection() {
           />
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setPauseModalOpen(false)}>
-              Cancelar
+              {t("myProfile.cancelar")}
             </Button>
             <Button
               color="blue"
@@ -580,7 +581,7 @@ function SubscriptionSection() {
                 })
               }
             >
-              Confirmar pausa
+              {t("myProfile.confirmarPausa")}
             </Button>
           </Group>
         </Stack>
@@ -647,6 +648,7 @@ const NOTIF_CATEGORIES: Array<{
 ];
 
 function NotificationsSection() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: prefs, isLoading } = useQuery<NotificationPrefs>({
     queryKey: ["notification-preferences"],
@@ -664,8 +666,8 @@ function NotificationsSection() {
     },
     onError: () => {
       notifications.show({
-        title: "Error",
-        message: "No se pudieron guardar las preferencias",
+        title: t("myProfile.error"),
+        message: t("myProfile.noSePudieronGuardarLas"),
         color: "red",
       });
     },
@@ -687,17 +689,17 @@ function NotificationsSection() {
     <Card shadow="sm" padding="lg" radius="lg" withBorder>
       <Group mb="lg">
         <IconBell size={20} />
-        <Text fw={600}>Notificaciones</Text>
+        <Text fw={600}>{t("myProfile.notificaciones")}</Text>
       </Group>
 
       <Group justify="flex-end" mb="sm" gap="lg" pr={4}>
         <Group gap={4}>
           <IconMail size={14} />
-          <Text size="xs" fw={600} c="dimmed">Email</Text>
+          <Text size="xs" fw={600} c="dimmed">{t("myProfile.email")}</Text>
         </Group>
         <Group gap={4}>
           <IconBell size={14} />
-          <Text size="xs" fw={600} c="dimmed">App</Text>
+          <Text size="xs" fw={600} c="dimmed">{t("myProfile.app")}</Text>
         </Group>
       </Group>
 
@@ -757,6 +759,7 @@ const PROFILE_TABS = [
 type ProfileTab = (typeof PROFILE_TABS)[number]["value"];
 
 export function MyProfilePage() {
+  const { t } = useTranslation();
   const { user, currentWorkspace } = useAuthStore();
   const [passwordModalOpened, { open: openPasswordModal, close: closePasswordModal }] = useDisclosure(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -876,15 +879,15 @@ export function MyProfilePage() {
       }
       profileQueryClient.invalidateQueries({ queryKey: ["my-profile"] });
       notifications.show({
-        title: "Perfil actualizado",
-        message: "Tus datos han sido guardados correctamente.",
+        title: t("myProfile.perfilActualizado"),
+        message: t("myProfile.tusDatosHanSidoGuardados"),
         color: "green",
       });
     },
     onError: () => {
       notifications.show({
-        title: "Error",
-        message: "No se pudieron guardar los cambios.",
+        title: t("myProfile.error"),
+        message: t("myProfile.noSePudieronGuardarLos"),
         color: "red",
       });
     },
@@ -941,14 +944,14 @@ export function MyProfilePage() {
         avatar_url: avatarUrl,
       });
       notifications.show({
-        title: "Foto actualizada",
-        message: "Tu foto de perfil se ha cambiado correctamente.",
+        title: t("myProfile.fotoActualizada"),
+        message: t("myProfile.tuFotoDePerfilSe"),
         color: "green",
       });
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo subir la foto. Inténtalo de nuevo.",
+        title: t("myProfile.error"),
+        message: t("myProfile.noSePudoSubirLa"),
         color: "red",
       });
     } finally {
@@ -977,8 +980,8 @@ export function MyProfilePage() {
       changePasswordForm.reset();
       closePasswordModal();
       notifications.show({
-        title: "Contraseña actualizada",
-        message: "Tu contraseña ha sido cambiada correctamente.",
+        title: t("myProfile.contrasenaActualizada"),
+        message: t("myProfile.tuContrasenaHaSidoCambiada"),
         color: "green",
       });
     },
@@ -987,7 +990,7 @@ export function MyProfilePage() {
         typeof error.response?.data?.detail === "string"
           ? error.response.data.detail
           : "No se pudo cambiar la contraseña.";
-      notifications.show({ title: "Error", message: detail, color: "red" });
+      notifications.show({ title: t("myProfile.error"), message: detail, color: "red" });
     },
   });
 
@@ -1017,8 +1020,8 @@ export function MyProfilePage() {
       });
       changeEmailForm.reset();
       notifications.show({
-        title: "Email actualizado",
-        message: "Tu email ha sido cambiado correctamente.",
+        title: t("myProfile.emailActualizado"),
+        message: t("myProfile.tuEmailHaSidoCambiado"),
         color: "blue",
       });
     },
@@ -1027,7 +1030,7 @@ export function MyProfilePage() {
         typeof error.response?.data?.detail === "string"
           ? error.response.data.detail
           : "No se pudo cambiar el email. Inténtalo de nuevo.";
-      notifications.show({ title: "Error", message: detail, color: "red" });
+      notifications.show({ title: t("myProfile.error"), message: detail, color: "red" });
     },
   });
 
@@ -1035,7 +1038,7 @@ export function MyProfilePage() {
 
   return (
     <Box p="xl">
-      <Title order={2} mb="xl">Mi Perfil</Title>
+      <Title order={2} mb="xl">{t("myProfile.miPerfil")}</Title>
 
       {/* Header con avatar siempre visible — el cliente quiere identificarse
           de un vistazo independientemente de la pestaña activa. */}
@@ -1072,7 +1075,7 @@ export function MyProfilePage() {
           <Box style={{ flex: 1, minWidth: 0 }}>
             <Title order={3}>{user?.full_name || "Usuario"}</Title>
             <Text c="dimmed" truncate>{user?.email}</Text>
-            <Badge color="yellow" variant="light" mt="xs">Cliente</Badge>
+            <Badge color="yellow" variant="light" mt="xs">{t("myProfile.cliente")}</Badge>
           </Box>
         </Group>
       </Card>
@@ -1097,17 +1100,17 @@ export function MyProfilePage() {
           />
         ) : (
           <Tabs.List mb="lg">
-            <Tabs.Tab leftSection={<IconUser size={16} />} value="datos">Datos</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUser size={16} />} value="datos">{t("myProfile.datos")}</Tabs.Tab>
             <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="subscription">
-              Mi suscripción y pagos
+              {t("myProfile.miSuscripcionYPagos")}
             </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconLock size={16} />} value="security">Seguridad</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconMail size={16} />} value="email">Cambiar email</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconLock size={16} />} value="security">{t("myProfile.seguridad")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconMail size={16} />} value="email">{t("myProfile.cambiarEmail")}</Tabs.Tab>
             <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications">
-              Notificaciones
+              {t("myProfile.notificaciones")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconPalette size={16} />} value="trainer">
-              Mi entrenador
+              {t("myProfile.miEntrenador")}
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -1120,24 +1123,24 @@ export function MyProfilePage() {
             <Card shadow="sm" padding="xl" radius="lg" withBorder>
               <Group mb="md">
                 <IconUser size={20} />
-                <Text fw={600}>Datos personales</Text>
+                <Text fw={600}>{t("myProfile.datosPersonales")}</Text>
               </Group>
               <Stack gap="md">
                 <TextInput
-                  label="Nombre completo"
-                  placeholder="Tu nombre"
+                  label={t("myProfile.nombreCompleto")}
+                  placeholder={t("myProfile.tuNombre")}
                   leftSection={<IconUser size={16} />}
                   {...profileForm.getInputProps("full_name")}
                 />
                 <TextInput
-                  label="Email"
-                  placeholder="tu@email.com"
+                  label={t("myProfile.email")}
+                  placeholder={t("myProfile.tuEmailCom")}
                   value={user?.email || ""}
                   leftSection={<IconMail size={16} />}
                   disabled
                 />
                 <TextInput
-                  label="Teléfono"
+                  label={t("myProfile.telefono")}
                   placeholder="+34 600 000 000"
                   leftSection={<IconPhone size={16} />}
                   {...profileForm.getInputProps("phone")}
@@ -1149,7 +1152,7 @@ export function MyProfilePage() {
                   loading={updateProfileMutation.isPending}
                   leftSection={<IconCheck size={16} />}
                 >
-                  Guardar cambios
+                  {t("myProfile.guardarCambios")}
                 </Button>
               </Stack>
             </Card>
@@ -1157,15 +1160,14 @@ export function MyProfilePage() {
             <Card shadow="sm" padding="xl" radius="lg" withBorder>
               <Group mb="md">
                 <IconHeartbeat size={20} />
-                <Text fw={600}>Datos físicos</Text>
+                <Text fw={600}>{t("myProfile.datosFisicos")}</Text>
               </Group>
               <Text size="xs" c="dimmed" mb="md">
-                Tu entrenador los necesita para calcular las calorías y
-                macros de tu dieta. Puedes actualizarlos cuando quieras.
+                {t("myProfile.tuEntrenadorLosNecesitaPara")}
               </Text>
               <Stack gap="md">
                 <TextInput
-                  label="Fecha de nacimiento"
+                  label={t("myProfile.fechaDeNacimiento")}
                   type="date"
                   leftSection={<IconCalendar size={16} />}
                   value={physicalForm.birth_date}
@@ -1177,12 +1179,12 @@ export function MyProfilePage() {
                   }
                 />
                 <Select
-                  label="Género"
-                  placeholder="Selecciona"
+                  label={t("myProfile.genero")}
+                  placeholder={t("myProfile.selecciona")}
                   data={[
-                    { value: "male", label: "Hombre" },
-                    { value: "female", label: "Mujer" },
-                    { value: "other", label: "Otro" },
+                    { value: "male", label: t("myProfile.hombre") },
+                    { value: "female", label: t("myProfile.mujer") },
+                    { value: "other", label: t("myProfile.otro") },
                   ]}
                   value={physicalForm.gender || null}
                   onChange={(v) =>
@@ -1197,7 +1199,7 @@ export function MyProfilePage() {
                 />
                 <SimpleGrid cols={2} spacing="md">
                   <NumberInput
-                    label="Altura (cm)"
+                    label={t("myProfile.alturaCm")}
                     placeholder="165"
                     min={100}
                     max={250}
@@ -1214,7 +1216,7 @@ export function MyProfilePage() {
                     }
                   />
                   <NumberInput
-                    label="Peso (kg)"
+                    label={t("myProfile.pesoKg")}
                     placeholder="65"
                     min={30}
                     max={300}
@@ -1239,7 +1241,7 @@ export function MyProfilePage() {
                   loading={updateProfileMutation.isPending}
                   leftSection={<IconCheck size={16} />}
                 >
-                  Guardar datos físicos
+                  {t("myProfile.guardarDatosFisicos")}
                 </Button>
               </Stack>
             </Card>
@@ -1247,15 +1249,14 @@ export function MyProfilePage() {
             <Card shadow="sm" padding="xl" radius="lg" withBorder>
               <Group mb="md">
                 <IconReceipt size={20} />
-                <Text fw={600}>Datos de facturación</Text>
+                <Text fw={600}>{t("myProfile.datosDeFacturacion")}</Text>
               </Group>
               <Text size="xs" c="dimmed" mb="md">
-                Estos datos aparecen en cada factura. Puedes corregirlos en
-                cualquier momento.
+                {t("myProfile.estosDatosAparecenEnCada")}
               </Text>
               <Stack gap="md">
                 <Radio.Group
-                  label="Tipo de cliente"
+                  label={t("myProfile.tipoDeCliente")}
                   value={billingForm.fiscal_type}
                   onChange={(v) =>
                     setBillingForm((s) => ({
@@ -1265,15 +1266,15 @@ export function MyProfilePage() {
                   }
                 >
                   <Group mt="xs">
-                    <Radio value="individual" label="Persona Física" />
-                    <Radio value="company" label="Persona Jurídica" />
+                    <Radio value="individual" label={t("myProfile.personaFisica")} />
+                    <Radio value="company" label={t("myProfile.personaJuridica")} />
                   </Group>
                 </Radio.Group>
 
                 {isCompany ? (
                   <TextInput
-                    label="Razón Social"
-                    placeholder="Empresa S.L."
+                    label={t("myProfile.razonSocial")}
+                    placeholder={t("myProfile.empresaSL")}
                     value={billingForm.legal_name}
                     onChange={(e) =>
                       setBillingForm((s) => ({
@@ -1284,7 +1285,7 @@ export function MyProfilePage() {
                   />
                 ) : (
                   <Text size="xs" c="dimmed">
-                    Para Persona Física se factura con tu nombre y apellidos.
+                    {t("myProfile.paraPersonaFisicaSeFactura")}
                   </Text>
                 )}
 
@@ -1300,8 +1301,8 @@ export function MyProfilePage() {
                   }
                 />
                 <TextInput
-                  label="Dirección"
-                  placeholder="Calle Mayor 12, 3ºB"
+                  label={t("myProfile.direccion")}
+                  placeholder={t("myProfile.calleMayor123B")}
                   value={billingForm.billing_address}
                   onChange={(e) =>
                     setBillingForm((s) => ({
@@ -1312,7 +1313,7 @@ export function MyProfilePage() {
                 />
                 <SimpleGrid cols={{ base: 1, sm: 3 }}>
                   <TextInput
-                    label="Población"
+                    label={t("myProfile.poblacion")}
                     value={billingForm.billing_city}
                     onChange={(e) =>
                       setBillingForm((s) => ({
@@ -1332,7 +1333,7 @@ export function MyProfilePage() {
                     }
                   />
                   <TextInput
-                    label="País"
+                    label={t("myProfile.pais")}
                     value={billingForm.billing_country}
                     onChange={(e) =>
                       setBillingForm((s) => ({
@@ -1349,7 +1350,7 @@ export function MyProfilePage() {
                   loading={updateProfileMutation.isPending}
                   leftSection={<IconCheck size={16} />}
                 >
-                  Guardar datos de facturación
+                  {t("myProfile.guardarDatosDeFacturacion")}
                 </Button>
               </Stack>
             </Card>
@@ -1364,14 +1365,13 @@ export function MyProfilePage() {
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconLock size={20} />
-              <Text fw={600}>Seguridad</Text>
+              <Text fw={600}>{t("myProfile.seguridad")}</Text>
             </Group>
             <Text size="sm" c="dimmed" mb="md">
-              Cambia tu contraseña cada cierto tiempo para mantener tu cuenta
-              segura.
+              {t("myProfile.cambiaTuContrasenaCadaCierto")}
             </Text>
             <Button variant="light" onClick={openPasswordModal}>
-              Cambiar contraseña
+              {t("myProfile.cambiarContrasena")}
             </Button>
           </Card>
         </Tabs.Panel>
@@ -1380,7 +1380,7 @@ export function MyProfilePage() {
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconMail size={20} />
-              <Text fw={600}>Cambiar email</Text>
+              <Text fw={600}>{t("myProfile.cambiarEmail")}</Text>
             </Group>
             <form
               onSubmit={changeEmailForm.onSubmit((values) =>
@@ -1392,20 +1392,20 @@ export function MyProfilePage() {
             >
               <Stack gap="md">
                 <TextInput
-                  label="Email actual"
+                  label={t("myProfile.emailActual")}
                   value={user?.email || ""}
                   leftSection={<IconMail size={16} />}
                   disabled
                 />
                 <TextInput
-                  label="Nuevo email"
-                  placeholder="nuevo@email.com"
+                  label={t("myProfile.nuevoEmail")}
+                  placeholder={t("myProfile.nuevoEmailCom")}
                   leftSection={<IconMail size={16} />}
                   {...changeEmailForm.getInputProps("new_email")}
                 />
                 <PasswordInput
-                  label="Contraseña actual"
-                  placeholder="Tu contraseña actual"
+                  label={t("myProfile.contrasenaActual")}
+                  placeholder={t("myProfile.tuContrasenaActual")}
                   {...changeEmailForm.getInputProps("password")}
                 />
                 <Button
@@ -1413,7 +1413,7 @@ export function MyProfilePage() {
                   color="yellow"
                   loading={changeEmailMutation.isPending}
                 >
-                  Cambiar email
+                  {t("myProfile.cambiarEmail")}
                 </Button>
               </Stack>
             </form>
@@ -1428,7 +1428,7 @@ export function MyProfilePage() {
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group mb="md">
               <IconPalette size={20} />
-              <Text fw={600}>Mi Entrenador</Text>
+              <Text fw={600}>{t("myProfile.miEntrenador")}</Text>
             </Group>
             <Paper p="md" radius="md" withBorder>
               <Group>
@@ -1437,7 +1437,7 @@ export function MyProfilePage() {
                 </Avatar>
                 <Box>
                   <Text fw={600}>{currentWorkspace?.name || "Trackfiz"}</Text>
-                  <Text size="sm" c="dimmed">Tu centro de entrenamiento</Text>
+                  <Text size="sm" c="dimmed">{t("myProfile.tuCentroDeEntrenamiento")}</Text>
                 </Box>
               </Group>
             </Paper>
@@ -1448,7 +1448,7 @@ export function MyProfilePage() {
       <NativeBottomSheet
         opened={passwordModalOpened}
         onClose={closePasswordModal}
-        title="Cambiar contraseña"
+        title={t("myProfile.cambiarContrasena")}
       >
         <form
           onSubmit={changePasswordForm.onSubmit((values) =>
@@ -1460,21 +1460,21 @@ export function MyProfilePage() {
         >
           <Stack gap="md">
             <PasswordInput
-              label="Contraseña actual"
-              placeholder="Tu contraseña actual"
+              label={t("myProfile.contrasenaActual")}
+              placeholder={t("myProfile.tuContrasenaActual")}
               {...changePasswordForm.getInputProps("current_password")}
             />
             <Box>
               <PasswordInput
-                label="Nueva contraseña"
-                placeholder="Mínimo 8 caracteres"
+                label={t("myProfile.nuevaContrasena")}
+                placeholder={t("myProfile.minimo8Caracteres")}
                 {...changePasswordForm.getInputProps("new_password")}
               />
               <PasswordRulesIndicator value={changePasswordForm.values.new_password} />
             </Box>
             <PasswordInput
-              label="Confirmar contraseña"
-              placeholder="Repite la nueva contraseña"
+              label={t("myProfile.confirmarContrasena")}
+              placeholder={t("myProfile.repiteLaNuevaContrasena")}
               {...changePasswordForm.getInputProps("confirm_password")}
             />
             <Button
@@ -1483,7 +1483,7 @@ export function MyProfilePage() {
               fullWidth
               loading={changePasswordMutation.isPending}
             >
-              Cambiar contraseña
+              {t("myProfile.cambiarContrasena")}
             </Button>
           </Stack>
         </form>

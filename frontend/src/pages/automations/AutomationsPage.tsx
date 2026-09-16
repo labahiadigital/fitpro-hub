@@ -54,6 +54,7 @@ import {
   useToggleAutomation,
   type Automation as ApiAutomation,
 } from "../../hooks/useAutomations";
+import { useTranslation } from "react-i18next";
 
 interface AutomationTrigger {
   type: string;
@@ -171,6 +172,7 @@ const actionTypes = [
 ];
 
 export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
+  const { t } = useTranslation();
   // API hooks
   const { data: automationsData = [] } = useAutomations();
   const createAutomation = useCreateAutomation();
@@ -273,7 +275,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
       trigger_type: values.trigger_type,
       trigger_config: values.trigger_config,
       actions: actions.map((a) => ({
-        type: a.type as "send_email" | "send_in_app" | "create_task" | "update_tag" | "webhook" | "send_form",
+        type: a.type,
         config: a.config,
       })),
       is_active: editingAutomation?.is_active ?? true,
@@ -365,15 +367,15 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
             label: "Nueva Automatización",
             onClick: () => openAutomationBuilder(),
           }}
-          description="Configura workflows automáticos para tu negocio"
-          title="Automatizaciones"
+          description={"Configura workflows automáticos para tu negocio"}
+          title={"Automatizaciones"}
         />
       )}
       {embedded && (
         <Group justify="space-between" mb="lg">
-          <Text fw={700} size="lg">Automatizaciones</Text>
+          <Text fw={700} size="lg">{"Automatizaciones"}</Text>
           <Button leftSection={<IconBolt size={14} />} size="xs" radius="xl" onClick={() => openAutomationBuilder()}>
-            Nueva Automatización
+            {"Nueva Automatización"}
           </Button>
         </Group>
       )}
@@ -485,11 +487,11 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
         </SimpleGrid>
       ) : (
         <EmptyState
-          actionLabel="Crear Automatización"
-          description="Crea tu primera automatización para optimizar tu negocio."
+          actionLabel={"Crear Automatización"}
+          description={"Crea tu primera automatización para optimizar tu negocio."}
           icon={<IconRobot size={40} />}
           onAction={() => openAutomationBuilder()}
-          title="No hay automatizaciones"
+          title={"No hay automatizaciones"}
         />
       )}
 
@@ -506,29 +508,29 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
         <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
           <Stepper active={activeStep} mb="xl" onStepClick={setActiveStep}>
             <Stepper.Step
-              description="Nombre y descripción"
-              label="Información"
+              description={"Nombre y descripción"}
+              label={"Información"}
             >
               <Stack mt="md">
                 <TextInput
-                  label="Nombre de la automatización"
-                  placeholder="Ej: Onboarding de nuevos clientes"
+                  label={"Nombre de la automatización"}
+                  placeholder={"Ej: Onboarding de nuevos clientes"}
                   required
                   {...form.getInputProps("name")}
                 />
                 <Textarea
-                  label="Descripción"
+                  label={"Descripción"}
                   minRows={2}
-                  placeholder="Describe qué hace esta automatización..."
+                  placeholder={"Describe qué hace esta automatización..."}
                   {...form.getInputProps("description")}
                 />
               </Stack>
             </Stepper.Step>
 
-            <Stepper.Step description="Cuándo se activa" label="Disparador">
+            <Stepper.Step description={"Cuándo se activa"} label={"Disparador"}>
               <Stack mt="md">
                 <Text fw={500} mb="xs" size="sm">
-                  ¿Cuándo debe activarse esta automatización?
+                  {"¿Cuándo debe activarse esta automatización?"}
                 </Text>
                 <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                   {triggerTypes.map((trigger) => {
@@ -580,7 +582,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                       { value: "24", label: "24 horas antes" },
                       { value: "48", label: "48 horas antes" },
                     ]}
-                    label="¿Cuánto tiempo antes?"
+                    label={"¿Cuánto tiempo antes?"}
                     mt="md"
                   />
                 )}
@@ -593,17 +595,17 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                       { value: "30", label: "30 días" },
                       { value: "60", label: "60 días" },
                     ]}
-                    label="¿Después de cuántos días?"
+                    label={"¿Después de cuántos días?"}
                     mt="md"
                   />
                 )}
               </Stack>
             </Stepper.Step>
 
-            <Stepper.Step description="Qué hacer" label="Acciones">
+            <Stepper.Step description={"Qué hacer"} label={"Acciones"}>
               <Stack mt="md">
                 <Text fw={500} size="sm">
-                  Acciones a ejecutar
+                  {"Acciones a ejecutar"}
                 </Text>
 
                 {actions.length > 0 && (
@@ -666,7 +668,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                                     config: { ...action.config, template: v },
                                   })
                                 }
-                                placeholder="Selecciona plantilla"
+                                placeholder={"Selecciona plantilla"}
                                 size="xs"
                                 value={action.config.template}
                               />
@@ -682,7 +684,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                                     },
                                   })
                                 }
-                                placeholder="Escribe el mensaje..."
+                                placeholder={"Escribe el mensaje..."}
                                 size="xs"
                                 value={action.config.message || ""}
                               />
@@ -690,7 +692,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                             {actionIndex > 0 && (
                               <Group gap="xs">
                                 <Text c="dimmed" size="xs">
-                                  Esperar
+                                  {"Esperar"}
                                 </Text>
                                 <Select
                                   data={[
@@ -734,7 +736,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                   </Timeline>
                 )}
 
-                <Divider label="Añadir acción" labelPosition="center" />
+                <Divider label={"Añadir acción"} labelPosition="center" />
 
                 <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
                   {actionTypes.map((action) => {
@@ -761,17 +763,16 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                 color="green"
                 icon={<IconCheck />}
                 mt="md"
-                title="¡Automatización lista!"
+                title={"¡Automatización lista!"}
               >
-                Tu automatización está configurada. Revisa los detalles y
-                guárdala.
+{t("automations.automationReadyDesc")}
               </Alert>
 
               <Paper mt="md" p="md" radius="md" withBorder>
                 <Stack gap="sm">
                   <Group justify="space-between">
                     <Text c="dimmed" size="sm">
-                      Nombre
+                      {"Nombre"}
                     </Text>
                     <Text fw={500} size="sm">
                       {form.values.name || "-"}
@@ -779,7 +780,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                   </Group>
                   <Group justify="space-between">
                     <Text c="dimmed" size="sm">
-                      Disparador
+                      {"Disparador"}
                     </Text>
                     <Text fw={500} size="sm">
                       {getTriggerInfo(form.values.trigger_type)?.label || "-"}
@@ -787,7 +788,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                   </Group>
                   <Group justify="space-between">
                     <Text c="dimmed" size="sm">
-                      Acciones
+                      {"Acciones"}
                     </Text>
                     <Text fw={500} size="sm">
                       {actions.length} acciones
@@ -810,17 +811,17 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
             onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
             variant="default"
           >
-            Anterior
+            {"Anterior"}
           </Button>
           <Group>
             <Button onClick={closeBuilder} variant="default">
-              Cancelar
+              {"Cancelar"}
             </Button>
             {activeStep < 3 ? (
               <Button
                 onClick={() => setActiveStep(Math.min(3, activeStep + 1))}
               >
-                Siguiente
+                {"Siguiente"}
               </Button>
             ) : (
               <Button color="green" onClick={handleSaveAutomation}>

@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { clientPortalApi } from "../../services/api";
 import "dayjs/locale/es";
+import { useTranslation } from "react-i18next";
 
 dayjs.extend(relativeTime);
 dayjs.locale("es");
@@ -111,6 +112,7 @@ function MessageBubble({ message, isFromTrainer }: { message: Message; isFromTra
 }
 
 export function MyMessagesPage() {
+  const { t } = useTranslation();
   const [newMessage, setNewMessage] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -237,7 +239,7 @@ export function MyMessagesPage() {
           <Box>
             <Text fw={600}>{conversation?.trainer_name || "Tu Entrenador"}</Text>
             <Text size="xs" c="dimmed">
-              Chat de la plataforma
+              {t("myMessages.chatDeLaPlataforma")}
             </Text>
           </Box>
         </Group>
@@ -267,9 +269,9 @@ export function MyMessagesPage() {
               <IconMessage size={30} />
             </ThemeIcon>
             <Text c="dimmed" ta="center">
-              No hay mensajes aún.
+              {t("myMessages.noHayMensajesAun")}
               <br />
-              ¡Envía un mensaje a tu entrenador!
+              {t("myMessages.enviaUnMensajeATu")}
             </Text>
           </Stack>
         ) : (
@@ -333,7 +335,7 @@ export function MyMessagesPage() {
           <TextInput
             ref={inputRef}
             flex={1}
-            placeholder="Escribe un mensaje..."
+            placeholder={t("myMessages.escribeUnMensaje")}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyPress}

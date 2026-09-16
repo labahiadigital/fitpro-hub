@@ -88,6 +88,7 @@ import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
 import { sanitizeHtml } from "../../utils/safeHtml";
 import { RichTextEditorField } from "../../components/common/RichTextEditor";
+import { useTranslation } from "react-i18next";
 
 interface SessionPackage {
   id: string;
@@ -123,6 +124,7 @@ const sessionTypeOptions = [
 ];
 
 export function CatalogPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("services");
   const [bonosSubTab, setBonosSubTab] = useState<string | null>("packages");
@@ -360,7 +362,7 @@ export function CatalogPage() {
 
   const handleDeleteProduct = useCallback((product: Product) => {
     openDangerConfirm({
-      title: "Eliminar producto",
+      title: t("catalog.eliminarProducto"),
       message: `¿Estás seguro de que quieres eliminar "${product.name}"?`,
       onConfirm: async () => { try { await deleteProduct.mutateAsync(product.id); } catch { /* handled */ } },
     });
@@ -372,7 +374,7 @@ export function CatalogPage() {
 
   const handleCancelSubscription = useCallback((sub: Subscription) => {
     openDangerConfirm({
-      title: "Cancelar suscripción",
+      title: t("catalog.cancelarSuscripcion"),
       message: `¿Cancelar la suscripción "${sub.plan_name || sub.name}" de ${sub.client_name || "este cliente"}?`,
       confirmLabel: "Cancelar suscripción",
       onConfirm: async () => { try { await cancelSubscription.mutateAsync(sub.id); } catch { /* handled */ } },
@@ -437,15 +439,15 @@ export function CatalogPage() {
       };
       if (editingPackage) {
         await updatePackage.mutateAsync({ id: editingPackage.id, data: packageData });
-        notifications.show({ title: "Paquete actualizado", message: "El paquete se ha actualizado correctamente", color: "green" });
+        notifications.show({ title: t("catalog.paqueteActualizado"), message: t("catalog.elPaqueteSeHaActualizado"), color: "green" });
       } else {
         await createPackage.mutateAsync(packageData);
-        notifications.show({ title: "Paquete creado", message: "El paquete se ha creado correctamente", color: "green" });
+        notifications.show({ title: t("catalog.paqueteCreado"), message: t("catalog.elPaqueteSeHaCreado"), color: "green" });
       }
       closePackageModal();
       packageForm.reset();
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo guardar el paquete", color: "red" });
+      notifications.show({ title: t("catalog.error"), message: t("catalog.noSePudoGuardarEl"), color: "red" });
     }
   };
 
@@ -459,7 +461,7 @@ export function CatalogPage() {
       try {
         await updatePackage.mutateAsync({ id, data: { is_active: !pkg.isActive } });
       } catch {
-        notifications.show({ title: "Error", message: "No se pudo actualizar el estado", color: "red" });
+        notifications.show({ title: t("catalog.error"), message: t("catalog.noSePudoActualizarEl"), color: "red" });
       }
     }
   };
@@ -514,26 +516,26 @@ export function CatalogPage() {
       };
       if (editingCoupon) {
         await updateCoupon.mutateAsync({ id: editingCoupon.id, data: couponData });
-        notifications.show({ title: "Cupón actualizado", message: "El cupón se ha actualizado correctamente", color: "green" });
+        notifications.show({ title: t("catalog.cuponActualizado"), message: t("catalog.elCuponSeHaActualizado"), color: "green" });
       } else {
         await createCoupon.mutateAsync(couponData);
-        notifications.show({ title: "Cupón creado", message: "El cupón se ha creado correctamente", color: "green" });
+        notifications.show({ title: t("catalog.cuponCreado"), message: t("catalog.elCuponSeHaCreado"), color: "green" });
       }
       closeCouponModal();
       couponForm.reset();
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo guardar el cupón", color: "red" });
+      notifications.show({ title: t("catalog.error"), message: t("catalog.noSePudoGuardarEl"), color: "red" });
     }
   };
 
   const handleDeleteCoupon = (coupon: CouponType) => {
     openDangerConfirm({
-      title: "Eliminar cupón",
+      title: t("catalog.eliminarCupon"),
       message: `¿Estás seguro de que quieres eliminar el cupón "${coupon.code}"?`,
       onConfirm: async () => {
         try {
           await deleteCoupon.mutateAsync(coupon.id);
-          notifications.show({ title: "Cupón eliminado", message: "El cupón ha sido eliminado", color: "green" });
+          notifications.show({ title: t("catalog.cuponEliminado"), message: t("catalog.elCuponHaSidoEliminado"), color: "green" });
         } catch { /* handled */ }
       },
     });
@@ -543,7 +545,7 @@ export function CatalogPage() {
     try {
       await updateCoupon.mutateAsync({ id: coupon.id, data: { is_active: !coupon.is_active } });
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo actualizar el estado", color: "red" });
+      notifications.show({ title: t("catalog.error"), message: t("catalog.noSePudoActualizarEl"), color: "red" });
     }
   };
 
@@ -596,7 +598,7 @@ export function CatalogPage() {
                 : "Puntual"}
           </Badge>
           {product.kind === "product" && (
-            <Badge color="grape" variant="light" radius="xl">Producto físico</Badge>
+            <Badge color="grape" variant="light" radius="xl">{t("catalog.productoFisico")}</Badge>
           )}
         </Group>
         <Group gap="xs">
@@ -667,12 +669,12 @@ export function CatalogPage() {
           </Text>
         </Box>
         <Group gap="xs">
-          <Tooltip label="Editar">
+          <Tooltip label={t("catalog.editar")}>
             <ActionIcon color="blue" variant="light" radius="xl" onClick={() => handleOpenEditProduct(product)}>
               <IconEdit size={16} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Eliminar">
+          <Tooltip label={t("catalog.eliminar")}>
             <ActionIcon
               color="red"
               variant="light"
@@ -694,7 +696,7 @@ export function CatalogPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={activeTab === "coupons" ? {
-          label: "Nuevo Cupón",
+          label: t("catalog.nuevoCupon"),
           icon: <IconPlus size={16} />,
           onClick: () => handleOpenCouponModal(),
         } : {
@@ -702,8 +704,8 @@ export function CatalogPage() {
           icon: <IconPlus size={16} />,
           onClick: () => handleOpenNewProduct(activeTab === "physical" ? "product" : "service"),
         }}
-        description="Gestiona servicios, productos, suscripciones y paquetes de sesiones"
-        title="Catálogo"
+        description={t("catalog.gestionaServiciosProductosSuscripcionesY")}
+        title={t("catalog.catalogo")}
       />
 
       {isMobile && (
@@ -711,11 +713,11 @@ export function CatalogPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "services", label: "Servicios" },
-            { value: "physical", label: "Productos" },
-            { value: "subscriptions", label: "Suscripciones" },
-            { value: "bonos", label: "Bonos" },
-            { value: "coupons", label: "Cupones" },
+            { value: "services", label: t("catalog.servicios") },
+            { value: "physical", label: t("catalog.productos") },
+            { value: "subscriptions", label: t("catalog.suscripciones") },
+            { value: "bonos", label: t("catalog.bonos") },
+            { value: "coupons", label: t("catalog.cupones") },
           ]}
           size="sm"
           radius="md"
@@ -726,19 +728,19 @@ export function CatalogPage() {
         {!isMobile && (
           <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
             <Tabs.Tab leftSection={<IconPackage size={14} />} value="services" style={{ fontWeight: 500 }}>
-              Servicios
+              {t("catalog.servicios")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconPackage size={14} />} value="physical" style={{ fontWeight: 500 }}>
-              Productos
+              {t("catalog.productos")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
-              Suscripciones
+              {t("catalog.suscripciones")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconCurrencyEuro size={14} />} value="bonos" style={{ fontWeight: 500 }}>
-              Bonos
+              {t("catalog.bonos")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconDiscount2 size={14} />} value="coupons" style={{ fontWeight: 500 }}>
-              Cupones
+              {t("catalog.cupones")}
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -747,7 +749,7 @@ export function CatalogPage() {
         <Tabs.Panel value="services">
           {servicesProducts.length === 0 && (
             <Box className="nv-card" p="xl">
-              <Text c="dimmed" ta="center">No hay servicios creados. Usa "Nuevo Servicio" para crear uno.</Text>
+              <Text c="dimmed" ta="center">{t("catalog.noHayServiciosCreadosUsa")}</Text>
             </Box>
           )}
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
@@ -759,7 +761,7 @@ export function CatalogPage() {
         <Tabs.Panel value="physical">
           {physicalProducts.length === 0 && (
             <Box className="nv-card" p="xl">
-              <Text c="dimmed" ta="center">No hay productos físicos creados. Usa "Nuevo Producto" para crear uno.</Text>
+              <Text c="dimmed" ta="center">{t("catalog.noHayProductosFisicosCreados")}</Text>
             </Box>
           )}
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
@@ -774,19 +776,19 @@ export function CatalogPage() {
               <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Plan</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Próxima renovación</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Importe</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("catalog.cliente")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("catalog.plan")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("catalog.estado")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("catalog.proximaRenovacion")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("catalog.importe")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("catalog.acciones")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {subscriptions.length === 0 && (
                   <Table.Tr>
                     <Table.Td colSpan={6}>
-                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay suscripciones</Text>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">{t("catalog.noHaySuscripciones")}</Text>
                     </Table.Td>
                   </Table.Tr>
                 )}
@@ -808,7 +810,7 @@ export function CatalogPage() {
                     <Table.Td>
                       <Text c="dimmed" size="sm">{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("es-ES") : "—"}</Text>
                       {sub.cancel_at_period_end && (
-                        <Text c="red" size="xs">Cancela al finalizar</Text>
+                        <Text c="red" size="xs">{t("catalog.cancelaAlFinalizar")}</Text>
                       )}
                     </Table.Td>
                     <Table.Td ta="right">
@@ -826,7 +828,7 @@ export function CatalogPage() {
                     <Table.Td>
                       <Group gap="xs" justify="flex-end">
                         {sub.status === "active" && (
-                          <Tooltip label="Cancelar suscripción">
+                          <Tooltip label={t("catalog.cancelarSuscripcion")}>
                             <ActionIcon
                               color="red"
                               variant="subtle"
@@ -855,7 +857,7 @@ export function CatalogPage() {
             <Card p="md" radius="md" withBorder>
               <Group justify="space-between">
                 <div>
-                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">Ingresos por Bonos</Text>
+                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">{t("catalog.ingresosPorBonos")}</Text>
                   <Text fw={700} size="xl">€{totalRevenue.toLocaleString()}</Text>
                 </div>
                 <ThemeIcon color="green" radius="md" size="lg" variant="light">
@@ -866,7 +868,7 @@ export function CatalogPage() {
             <Card p="md" radius="md" withBorder>
               <Group justify="space-between">
                 <div>
-                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">Bonos Activos</Text>
+                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">{t("catalog.bonosActivos")}</Text>
                   <Text fw={700} size="xl">{activePackagesCount}</Text>
                 </div>
                 <ThemeIcon color="blue" radius="md" size="lg" variant="light">
@@ -877,7 +879,7 @@ export function CatalogPage() {
             <Card p="md" radius="md" withBorder>
               <Group justify="space-between">
                 <div>
-                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">Sesiones Vendidas</Text>
+                  <Text c="dimmed" fw={600} size="xs" tt="uppercase">{t("catalog.sesionesVendidas")}</Text>
                   <Text fw={700} size="xl">{totalSessionsSold}</Text>
                 </div>
                 <ThemeIcon color="violet" radius="md" size="lg" variant="light">
@@ -889,7 +891,7 @@ export function CatalogPage() {
 
           <Group justify="flex-end" mb="md">
             <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpenPackageModal()}>
-              Nuevo Paquete
+              {t("catalog.nuevoPaquete")}
             </Button>
           </Group>
 
@@ -898,8 +900,8 @@ export function CatalogPage() {
               value={bonosSubTab}
               onChange={setBonosSubTab}
               data={[
-                { value: "packages", label: "Paquetes Disponibles" },
-                { value: "clients", label: "Bonos de Clientes" },
+                { value: "packages", label: t("catalog.paquetesDisponibles") },
+                { value: "clients", label: t("catalog.bonosDeClientes") },
               ]}
               size="sm"
               radius="md"
@@ -910,10 +912,10 @@ export function CatalogPage() {
             {!isMobile && (
               <Tabs.List mb="lg">
                 <Tabs.Tab leftSection={<IconPackage size={16} />} value="packages">
-                  Paquetes Disponibles
+                  {t("catalog.paquetesDisponibles")}
                 </Tabs.Tab>
                 <Tabs.Tab leftSection={<IconUsers size={16} />} value="clients">
-                  Bonos de Clientes
+                  {t("catalog.bonosDeClientes")}
                 </Tabs.Tab>
               </Tabs.List>
             )}
@@ -947,7 +949,7 @@ export function CatalogPage() {
                         </Menu.Target>
                         <Menu.Dropdown>
                           <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleOpenPackageModal(pkg)}>
-                            Editar
+                            {t("catalog.editar")}
                           </Menu.Item>
                           <Menu.Item
                             leftSection={pkg.isActive ? <IconX size={14} /> : <IconCheck size={14} />}
@@ -957,7 +959,7 @@ export function CatalogPage() {
                           </Menu.Item>
                           <Menu.Divider />
                           <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={() => handleDeletePackage(pkg.id)}>
-                            Eliminar
+                            {t("catalog.eliminar")}
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
@@ -967,15 +969,15 @@ export function CatalogPage() {
 
                     <Stack gap="xs" mb="md">
                       <Group justify="space-between">
-                        <Text c="dimmed" size="sm">Sesiones</Text>
+                        <Text c="dimmed" size="sm">{t("catalog.sesiones")}</Text>
                         <Text fw={600} size="sm">{pkg.totalSessions}</Text>
                       </Group>
                       <Group justify="space-between">
-                        <Text c="dimmed" size="sm">Validez</Text>
+                        <Text c="dimmed" size="sm">{t("catalog.validez")}</Text>
                         <Text fw={600} size="sm">{pkg.validityDays} días</Text>
                       </Group>
                       <Group justify="space-between">
-                        <Text c="dimmed" size="sm">Vendidos</Text>
+                        <Text c="dimmed" size="sm">{t("catalog.vendidos")}</Text>
                         <Text fw={600} size="sm">{pkg.soldCount}</Text>
                       </Group>
                     </Stack>
@@ -1003,12 +1005,12 @@ export function CatalogPage() {
                   <Table highlightOnHover striped style={{ minWidth: 700 }}>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Cliente</Table.Th>
-                      <Table.Th>Paquete</Table.Th>
-                      <Table.Th>Sesiones</Table.Th>
-                      <Table.Th>Progreso</Table.Th>
-                      <Table.Th>Expira</Table.Th>
-                      <Table.Th>Estado</Table.Th>
+                      <Table.Th>{t("catalog.cliente")}</Table.Th>
+                      <Table.Th>{t("catalog.paquete")}</Table.Th>
+                      <Table.Th>{t("catalog.sesiones")}</Table.Th>
+                      <Table.Th>{t("catalog.progreso")}</Table.Th>
+                      <Table.Th>{t("catalog.expira")}</Table.Th>
+                      <Table.Th>{t("catalog.estado")}</Table.Th>
                       <Table.Th />
                     </Table.Tr>
                   </Table.Thead>
@@ -1048,9 +1050,9 @@ export function CatalogPage() {
                                 <ActionIcon variant="subtle"><IconDotsVertical size={16} /></ActionIcon>
                               </Menu.Target>
                               <Menu.Dropdown>
-                                <Menu.Item leftSection={<IconCalendarEvent size={14} />}>Ver sesiones</Menu.Item>
-                                <Menu.Item leftSection={<IconClock size={14} />}>Extender validez</Menu.Item>
-                                <Menu.Item leftSection={<IconPlus size={14} />}>Añadir sesiones</Menu.Item>
+                                <Menu.Item leftSection={<IconCalendarEvent size={14} />}>{t("catalog.verSesiones")}</Menu.Item>
+                                <Menu.Item leftSection={<IconClock size={14} />}>{t("catalog.extenderValidez")}</Menu.Item>
+                                <Menu.Item leftSection={<IconPlus size={14} />}>{t("catalog.anadirSesiones")}</Menu.Item>
                               </Menu.Dropdown>
                             </Menu>
                           </Table.Td>
@@ -1068,13 +1070,13 @@ export function CatalogPage() {
         <Tabs.Panel value="coupons">
           <Group justify="flex-end" mb="md">
             <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpenCouponModal()}>
-              Nuevo Cupón
+              {t("catalog.nuevoCupon")}
             </Button>
           </Group>
 
           {coupons.length === 0 ? (
             <Box className="nv-card" p="xl">
-              <Text c="dimmed" ta="center">No hay cupones creados. Crea uno para ofrecer descuentos a tus clientes.</Text>
+              <Text c="dimmed" ta="center">{t("catalog.noHayCuponesCreadosCrea")}</Text>
             </Box>
           ) : (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
@@ -1121,7 +1123,7 @@ export function CatalogPage() {
                       </Menu.Target>
                       <Menu.Dropdown>
                         <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleOpenCouponModal(coupon)}>
-                          Editar
+                          {t("catalog.editar")}
                         </Menu.Item>
                         <Menu.Item
                           leftSection={coupon.is_active ? <IconX size={14} /> : <IconCheck size={14} />}
@@ -1131,7 +1133,7 @@ export function CatalogPage() {
                         </Menu.Item>
                         <Menu.Divider />
                         <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={() => handleDeleteCoupon(coupon)}>
-                          Eliminar
+                          {t("catalog.eliminar")}
                         </Menu.Item>
                       </Menu.Dropdown>
                     </Menu>
@@ -1143,7 +1145,7 @@ export function CatalogPage() {
 
                   <Stack gap="xs" mb="md">
                     <Group justify="space-between">
-                      <Text c="dimmed" size="sm">Descuento</Text>
+                      <Text c="dimmed" size="sm">{t("catalog.descuento")}</Text>
                       <Badge color="violet" variant="light" size="lg">
                         {coupon.discount_type === "percentage"
                           ? `${coupon.discount_value}%`
@@ -1151,13 +1153,13 @@ export function CatalogPage() {
                       </Badge>
                     </Group>
                     <Group justify="space-between">
-                      <Text c="dimmed" size="sm">Usos</Text>
+                      <Text c="dimmed" size="sm">{t("catalog.usos")}</Text>
                       <Text fw={600} size="sm">
                         {coupon.current_uses}{coupon.max_uses ? ` / ${coupon.max_uses}` : " (ilimitado)"}
                       </Text>
                     </Group>
                     <Group justify="space-between">
-                      <Text c="dimmed" size="sm">Aplica a</Text>
+                      <Text c="dimmed" size="sm">{t("catalog.aplicaA")}</Text>
                       <Text fw={600} size="sm">
                         {coupon.applicable_product_ids?.length
                           ? `${coupon.applicable_product_ids.length} producto${coupon.applicable_product_ids.length > 1 ? "s" : ""}`
@@ -1184,74 +1186,74 @@ export function CatalogPage() {
         <form onSubmit={productForm.onSubmit(handleSaveProduct)}>
           <Stack>
             <Select
-              label="Catálogo"
+              label={t("catalog.catalogo")}
               description={isPhysicalKind ? "Producto físico: no se puede vincular a boxes, máquinas ni miembros del equipo." : "Servicio: puede vincularse a boxes, máquinas y miembros del equipo."}
               data={[
-                { value: "service", label: "Servicio" },
-                { value: "product", label: "Producto" },
+                { value: "service", label: t("catalog.servicio") },
+                { value: "product", label: t("catalog.producto") },
               ]}
               value={productForm.values.kind}
               onChange={(val) => productForm.setFieldValue("kind", (val === "product" ? "product" : "service"))}
             />
-            <TextInput label="Nombre" placeholder="Plan Premium" required {...productForm.getInputProps("name")} />
+            <TextInput label={t("catalog.nombre")} placeholder={t("catalog.planPremium")} required {...productForm.getInputProps("name")} />
             <RichTextEditorField
-              label="Descripción"
-              description="Da formato (negritas, listas, encabezados, enlaces). Se mantiene en el onboarding y en la ficha pública."
-              placeholder="Describe el producto..."
+              label={t("catalog.descripcion")}
+              description={t("catalog.daFormatoNegritasListasEncabezados")}
+              placeholder={t("catalog.describeElProducto")}
               value={productForm.values.description}
               onChange={(val) => productForm.setFieldValue("description", val)}
             />
             <Group grow>
-              <NumberInput label="Precio (€)" min={0} placeholder="0" required decimalScale={2} {...productForm.getInputProps("price")} />
+              <NumberInput label={t("catalog.precio")} min={0} placeholder="0" required decimalScale={2} {...productForm.getInputProps("price")} />
               <Select
                 data={[
-                  { value: "subscription", label: "Suscripción" },
-                  { value: "package", label: "Bono/Paquete" },
-                  { value: "one_time", label: "Pago único" },
+                  { value: "subscription", label: t("catalog.suscripcion") },
+                  { value: "package", label: t("catalog.bonoPaquete") },
+                  { value: "one_time", label: t("catalog.pagoUnico") },
                 ]}
-                label="Tipo"
+                label={t("catalog.tipo")}
                 {...productForm.getInputProps("type")}
               />
             </Group>
             {productForm.values.type === "subscription" && (
               <Select
                 data={[
-                  { value: "week", label: "Semanal" },
-                  { value: "biweekly", label: "Quincenal" },
-                  { value: "month", label: "Mensual" },
-                  { value: "quarter", label: "Trimestral" },
-                  { value: "semester", label: "Semestral" },
-                  { value: "year", label: "Anual" },
+                  { value: "week", label: t("catalog.semanal") },
+                  { value: "biweekly", label: t("catalog.quincenal") },
+                  { value: "month", label: t("catalog.mensual") },
+                  { value: "quarter", label: t("catalog.trimestral") },
+                  { value: "semester", label: t("catalog.semestral") },
+                  { value: "year", label: t("catalog.anual") },
                 ]}
-                label="Intervalo de cobro"
+                label={t("catalog.intervaloDeCobro")}
                 {...productForm.getInputProps("interval")}
               />
             )}
             {productForm.values.type === "package" && (
-              <NumberInput label="Sesiones incluidas" min={1} placeholder="0" {...productForm.getInputProps("sessions_included")} />
+              <NumberInput label={t("catalog.sesionesIncluidas")} min={1} placeholder="0" {...productForm.getInputProps("sessions_included")} />
             )}
 
             <NumberInput
-              label="Límite de usuarios"
-              description="Máximo de usuarios suscritos simultáneamente. Déjalo vacío para ilimitado."
-              placeholder="Ilimitado"
+              label={t("catalog.limiteDeUsuarios")}
+              description={t("catalog.maximoDeUsuariosSuscritosSimultaneamente")}
+              placeholder={t("catalog.ilimitado")}
               min={1}
               {...productForm.getInputProps("max_users")}
               value={productForm.values.max_users ?? ""}
               onChange={(val) => productForm.setFieldValue("max_users", val === "" || val === null ? null : Number(val))}
             />
 
-            <Divider label="Cuando se agote el stock" labelPosition="center" />
+            <Divider label={t("catalog.cuandoSeAgoteElStock")} labelPosition="center" />
             <Text size="xs" c="dimmed">
-              Elige qué pasa cuando un cliente intente registrarse en este producto una vez alcanzado el límite.
+              {t("catalog.eligeQuePasaCuandoUn")}
             </Text>
             <Select
-              label="Acción al agotarse"
+              label={t("catalog.accionAlAgotarse")}
               data={[
-                { value: "", label: "Ninguna (mostrar mensaje por defecto)" },
-                { value: "redirect", label: "Redirigir a otra URL" },
-                { value: "message", label: "Mostrar ventana emergente con texto/HTML" },
-                { value: "waitlist", label: "Recoger emails en una waitlist" },
+                { value: "", label: t("catalog.ningunaMostrarMensajePorDefecto") },
+                { value: "redirect", label: t("catalog.redirigirAOtraUrl") },
+                { value: "message", label: t("catalog.mostrarVentanaEmergenteConTexto") },
+                { value: "waitlist", label: t("catalog.recogerEmailsEnUnaWaitlist") },
               ]}
               value={productForm.values.sold_out_action}
               onChange={(val) =>
@@ -1263,15 +1265,15 @@ export function CatalogPage() {
             />
             {productForm.values.sold_out_action === "redirect" && (
               <TextInput
-                label="URL de redirección"
+                label={t("catalog.urlDeRedireccion")}
                 placeholder="https://..."
                 {...productForm.getInputProps("sold_out_redirect_url")}
               />
             )}
             {productForm.values.sold_out_action === "message" && (
               <Textarea
-                label="Contenido del pop-up"
-                description="Se admite HTML. Por ejemplo enlaces, listas, etc."
+                label={t("catalog.contenidoDelPopUp")}
+                description={t("catalog.seAdmiteHtmlPorEjemplo")}
                 autosize
                 minRows={4}
                 {...productForm.getInputProps("sold_out_message_html")}
@@ -1280,14 +1282,14 @@ export function CatalogPage() {
             {productForm.values.sold_out_action === "waitlist" && (
               <Stack gap="xs">
                 <TextInput
-                  label="Email para recibir avisos (opcional)"
-                  description="Si lo dejas vacío, avisaremos al owner del workspace."
-                  placeholder="contacto@tudominio.com"
+                  label={t("catalog.emailParaRecibirAvisosOpcional")}
+                  description={t("catalog.siLoDejasVacioAvisaremos")}
+                  placeholder={t("catalog.contactoTudominioCom")}
                   {...productForm.getInputProps("sold_out_waitlist_email")}
                 />
                 <Textarea
-                  label="Mensaje de confirmación"
-                  description="Se muestra al cliente cuando se apunta a la waitlist."
+                  label={t("catalog.mensajeDeConfirmacion")}
+                  description={t("catalog.seMuestraAlClienteCuando")}
                   autosize
                   minRows={3}
                   {...productForm.getInputProps("sold_out_waitlist_success")}
@@ -1295,8 +1297,8 @@ export function CatalogPage() {
               </Stack>
             )}
 
-            <Divider label="Stock vinculado" labelPosition="center" />
-            <Text size="xs" c="dimmed">Añade productos de stock que se consumen con cada venta de este producto.</Text>
+            <Divider label={t("catalog.stockVinculado")} labelPosition="center" />
+            <Text size="xs" c="dimmed">{t("catalog.anadeProductosDeStockQue")}</Text>
             {stockConsumption.map((sc, idx) => (
               <Group key={idx} gap="xs">
                 <Select
@@ -1309,7 +1311,7 @@ export function CatalogPage() {
                       setStockConsumption(next);
                     }
                   }}
-                  placeholder="Seleccionar artículo"
+                  placeholder={t("catalog.seleccionarArticulo")}
                   searchable
                   style={{ flex: 1 }}
                   size="sm"
@@ -1324,7 +1326,7 @@ export function CatalogPage() {
                   min={0.01}
                   step={0.5}
                   decimalScale={2}
-                  label="Uds."
+                  label={t("catalog.uds")}
                   w={80}
                   size="sm"
                 />
@@ -1334,15 +1336,15 @@ export function CatalogPage() {
               </Group>
             ))}
             <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setStockConsumption([...stockConsumption, { stock_item_id: "", quantity: 1 }])}>
-              Añadir stock
+              {t("catalog.anadirStock")}
             </Button>
 
             {!isPhysicalKind && (
             <>
-            <Divider label="Recursos vinculados" labelPosition="center" />
-            <Text size="xs" c="dimmed">Vincula boxes, máquinas y miembros del equipo a este producto para gestionar disponibilidad.</Text>
+            <Divider label={t("catalog.recursosVinculados")} labelPosition="center" />
+            <Text size="xs" c="dimmed">{t("catalog.vinculaBoxesMaquinasYMiembros")}</Text>
 
-            <Text size="sm" fw={500}>Boxes</Text>
+            <Text size="sm" fw={500}>{t("catalog.boxes")}</Text>
             {boxBindings.map((b, idx) => (
               <Group key={idx} gap="xs">
                 <Select
@@ -1355,7 +1357,7 @@ export function CatalogPage() {
                       setBoxBindings(next);
                     }
                   }}
-                  placeholder="Seleccionar box"
+                  placeholder={t("catalog.seleccionarBox")}
                   searchable
                   style={{ flex: 1 }}
                   size="sm"
@@ -1376,10 +1378,10 @@ export function CatalogPage() {
               </Group>
             ))}
             <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setBoxBindings([...boxBindings, { id: "", is_primary: true }])}>
-              Añadir box
+              {t("catalog.anadirBox")}
             </Button>
 
-            <Text size="sm" fw={500}>Máquinas</Text>
+            <Text size="sm" fw={500}>{t("catalog.maquinas")}</Text>
             {machineBindings.map((m, idx) => (
               <Group key={idx} gap="xs">
                 <Select
@@ -1392,7 +1394,7 @@ export function CatalogPage() {
                       setMachineBindings(next);
                     }
                   }}
-                  placeholder="Seleccionar máquina"
+                  placeholder={t("catalog.seleccionarMaquina")}
                   searchable
                   style={{ flex: 1 }}
                   size="sm"
@@ -1413,10 +1415,10 @@ export function CatalogPage() {
               </Group>
             ))}
             <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setMachineBindings([...machineBindings, { id: "", is_primary: true }])}>
-              Añadir máquina
+              {t("catalog.anadirMaquina")}
             </Button>
 
-            <Text size="sm" fw={500}>Miembros del equipo</Text>
+            <Text size="sm" fw={500}>{t("catalog.miembrosDelEquipo")}</Text>
             {staffAssignments.map((s, idx) => (
               <Group key={idx} gap="xs">
                 <Select
@@ -1429,7 +1431,7 @@ export function CatalogPage() {
                       setStaffAssignments(next);
                     }
                   }}
-                  placeholder="Seleccionar miembro"
+                  placeholder={t("catalog.seleccionarMiembro")}
                   searchable
                   style={{ flex: 1 }}
                   size="sm"
@@ -1450,13 +1452,13 @@ export function CatalogPage() {
               </Group>
             ))}
             <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => setStaffAssignments([...staffAssignments, { user_id: "", is_primary: false }])}>
-              Añadir miembro
+              {t("catalog.anadirMiembro")}
             </Button>
             </>
             )}
 
             <Group justify="flex-end" mt="md">
-              <Button onClick={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }} variant="default">Cancelar</Button>
+              <Button onClick={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }} variant="default">{t("catalog.cancelar")}</Button>
               <Button type="submit" loading={createProduct.isPending || updateProduct.isPending}>
                 {editingProduct ? "Guardar Cambios" : "Crear Producto"}
               </Button>
@@ -1474,17 +1476,17 @@ export function CatalogPage() {
       >
         <form onSubmit={packageForm.onSubmit(handleSavePackage)}>
           <Stack gap="md">
-            <TextInput label="Nombre del paquete" placeholder="Ej: Bono 10 Sesiones" required {...packageForm.getInputProps("name")} />
-            <TextInput label="Descripción" placeholder="Descripción del paquete" {...packageForm.getInputProps("description")} />
+            <TextInput label={t("catalog.nombreDelPaquete")} placeholder={t("catalog.ejBono10Sesiones")} required {...packageForm.getInputProps("name")} />
+            <TextInput label={t("catalog.descripcion")} placeholder={t("catalog.descripcionDelPaquete")} {...packageForm.getInputProps("description")} />
             <Group grow>
-              <NumberInput label="Número de sesiones" min={1} required {...packageForm.getInputProps("totalSessions")} />
-              <NumberInput decimalScale={2} label="Precio (€)" min={0} required {...packageForm.getInputProps("price")} />
+              <NumberInput label={t("catalog.numeroDeSesiones")} min={1} required {...packageForm.getInputProps("totalSessions")} />
+              <NumberInput decimalScale={2} label={t("catalog.precio")} min={0} required {...packageForm.getInputProps("price")} />
             </Group>
-            <NumberInput description="Días desde la compra hasta que expira" label="Validez (días)" min={1} {...packageForm.getInputProps("validityDays")} />
-            <MultiSelect data={sessionTypeOptions} description="Deja vacío para aplicar a todos" label="Tipos de sesión aplicables" {...packageForm.getInputProps("sessionTypes")} />
-            <Switch description="Los paquetes inactivos no se pueden comprar" label="Paquete activo" {...packageForm.getInputProps("isActive", { type: "checkbox" })} />
+            <NumberInput description={t("catalog.diasDesdeLaCompraHasta")} label={t("catalog.validezDias")} min={1} {...packageForm.getInputProps("validityDays")} />
+            <MultiSelect data={sessionTypeOptions} description={t("catalog.dejaVacioParaAplicarA")} label={t("catalog.tiposDeSesionAplicables")} {...packageForm.getInputProps("sessionTypes")} />
+            <Switch description={t("catalog.losPaquetesInactivosNoSe")} label={t("catalog.paqueteActivo")} {...packageForm.getInputProps("isActive", { type: "checkbox" })} />
             <Group justify="flex-end" mt="md">
-              <Button onClick={closePackageModal} variant="subtle">Cancelar</Button>
+              <Button onClick={closePackageModal} variant="subtle">{t("catalog.cancelar")}</Button>
               <Button type="submit">{editingPackage ? "Guardar Cambios" : "Crear Paquete"}</Button>
             </Group>
           </Stack>
@@ -1500,27 +1502,27 @@ export function CatalogPage() {
         <form onSubmit={couponForm.onSubmit(handleSaveCoupon)}>
           <Stack gap="md">
             <TextInput
-              label="Código del cupón"
-              placeholder="Ej: DESCUENTO20"
-              description="El código que los clientes introducirán al pagar. Se guardará en mayúsculas."
+              label={t("catalog.codigoDelCupon")}
+              placeholder={t("catalog.ejDescuento20")}
+              description={t("catalog.elCodigoQueLosClientes")}
               required
               {...couponForm.getInputProps("code")}
               onChange={(e) => couponForm.setFieldValue("code", e.currentTarget.value.toUpperCase())}
               styles={{ input: { fontFamily: "monospace", fontWeight: 700, letterSpacing: 1 } }}
             />
             <TextInput
-              label="Descripción (opcional)"
-              placeholder="Ej: Descuento de verano para nuevos clientes"
+              label={t("catalog.descripcionOpcional")}
+              placeholder={t("catalog.ejDescuentoDeVeranoPara")}
               {...couponForm.getInputProps("description")}
             />
             <Radio.Group
-              label="Tipo de descuento"
+              label={t("catalog.tipoDeDescuento")}
               value={couponForm.values.discount_type}
               onChange={(val) => couponForm.setFieldValue("discount_type", val as "percentage" | "fixed")}
             >
               <Group mt="xs">
-                <Radio value="percentage" label="Porcentaje (%)" />
-                <Radio value="fixed" label="Cantidad fija (€)" />
+                <Radio value="percentage" label={t("catalog.porcentaje")} />
+                <Radio value="fixed" label={t("catalog.cantidadFija")} />
               </Group>
             </Radio.Group>
             <NumberInput
@@ -1534,17 +1536,17 @@ export function CatalogPage() {
               {...couponForm.getInputProps("discount_value")}
             />
             <NumberInput
-              label="Máximo de usos (opcional)"
-              description="Déjalo vacío para usos ilimitados"
-              placeholder="Ilimitado"
+              label={t("catalog.maximoDeUsosOpcional")}
+              description={t("catalog.dejaloVacioParaUsosIlimitados")}
+              placeholder={t("catalog.ilimitado")}
               min={1}
               value={couponForm.values.max_uses ?? ""}
               onChange={(val) => couponForm.setFieldValue("max_uses", val === "" || val === null ? null : Number(val))}
             />
             <MultiSelect
-              label="Productos aplicables"
-              description="Deja vacío para que el cupón sea general (se aplica a todos los productos)"
-              placeholder="General — todos los productos"
+              label={t("catalog.productosAplicables")}
+              description={t("catalog.dejaVacioParaQueEl")}
+              placeholder={t("catalog.generalTodosLosProductos")}
               data={products.map((p) => ({ value: p.id, label: `${p.name} (${formatDecimal(p.price)} €)` }))}
               value={couponForm.values.applicable_product_ids}
               onChange={(val) => couponForm.setFieldValue("applicable_product_ids", val)}
@@ -1552,12 +1554,12 @@ export function CatalogPage() {
               clearable
             />
             <Switch
-              description="Solo los cupones activos pueden ser usados"
-              label="Cupón activo"
+              description={t("catalog.soloLosCuponesActivosPueden")}
+              label={t("catalog.cuponActivo")}
               {...couponForm.getInputProps("is_active", { type: "checkbox" })}
             />
             <Group justify="flex-end" mt="md">
-              <Button onClick={() => { closeCouponModal(); setEditingCoupon(null); couponForm.reset(); }} variant="subtle">Cancelar</Button>
+              <Button onClick={() => { closeCouponModal(); setEditingCoupon(null); couponForm.reset(); }} variant="subtle">{t("catalog.cancelar")}</Button>
               <Button type="submit" loading={createCoupon.isPending || updateCoupon.isPending}>
                 {editingCoupon ? "Guardar Cambios" : "Crear Cupón"}
               </Button>

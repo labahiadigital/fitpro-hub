@@ -30,6 +30,7 @@ import {
   IconWorld,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface BrandingConfig {
   workspaceName: string;
@@ -59,6 +60,7 @@ export function BrandingSettings({
   onSave,
   isPro,
 }: BrandingSettingsProps) {
+  const { t } = useTranslation();
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
 
@@ -78,9 +80,9 @@ export function BrandingSettings({
             <IconPalette size={20} />
           </ThemeIcon>
           <div>
-            <Title order={4}>Identidad de Marca</Title>
+            <Title order={4}>{"Identidad de Marca"}</Title>
             <Text c="dimmed" size="sm">
-              Personaliza la apariencia de tu plataforma
+              {"Personaliza la apariencia de tu plataforma"}
             </Text>
           </div>
         </Group>
@@ -88,22 +90,22 @@ export function BrandingSettings({
         <Stack gap="md">
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
-              label="Nombre del Negocio"
+              label={"Nombre del Negocio"}
               onChange={(e) => updateConfig("workspaceName", e.target.value)}
-              placeholder="Mi Estudio Fitness"
+              placeholder={"Mi Estudio Fitness"}
               value={config.workspaceName}
             />
             <TextInput
-              label="Eslogan"
+              label={"Eslogan"}
               onChange={(e) => updateConfig("tagline", e.target.value)}
-              placeholder="Tu mejor versión comienza aquí"
+              placeholder={"Tu mejor versión comienza aquí"}
               value={config.tagline}
             />
           </SimpleGrid>
 
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <ColorInput
-              label="Color Principal"
+              label={"Color Principal"}
               onChange={(value) => updateConfig("primaryColor", value)}
               placeholder="#10B981"
               swatches={[
@@ -117,7 +119,7 @@ export function BrandingSettings({
               value={config.primaryColor}
             />
             <ColorInput
-              label="Color Secundario"
+              label={"Color Secundario"}
               onChange={(value) => updateConfig("secondaryColor", value)}
               placeholder="#1F2937"
               swatches={["#1F2937", "#374151", "#4B5563", "#6B7280", "#9CA3AF"]}
@@ -131,10 +133,10 @@ export function BrandingSettings({
             <div>
               <FileInput
                 accept="image/*"
-                label="Logo"
+                label={"Logo"}
                 leftSection={<IconPhoto size={14} />}
                 onChange={setLogoFile}
-                placeholder="Sube tu logo"
+                placeholder={"Sube tu logo"}
                 value={logoFile}
               />
               {config.logoUrl && (
@@ -146,14 +148,14 @@ export function BrandingSettings({
             <div>
               <FileInput
                 accept="image/*"
-                label="Favicon"
+                label={"Favicon"}
                 leftSection={<IconPhoto size={14} />}
                 onChange={setFaviconFile}
-                placeholder="Sube tu favicon"
+                placeholder={"Sube tu favicon"}
                 value={faviconFile}
               />
               <Text c="dimmed" mt={4} size="xs">
-                Recomendado: 32x32px o 64x64px
+                {"Recomendado: 32x32px o 64x64px"}
               </Text>
             </div>
           </SimpleGrid>
@@ -168,15 +170,15 @@ export function BrandingSettings({
               <IconWorld size={20} />
             </ThemeIcon>
             <div>
-              <Title order={4}>White Label</Title>
+              <Title order={4}>{"White Label"}</Title>
               <Text c="dimmed" size="sm">
-                Elimina el branding de Trackfiz
+                {"Elimina el branding de Trackfiz"}
               </Text>
             </div>
           </Group>
           {!isPro && (
             <Badge color="yellow" variant="light">
-              Plan Business requerido
+              {"Plan Business requerido"}
             </Badge>
           )}
         </Group>
@@ -185,34 +187,33 @@ export function BrandingSettings({
           <Stack gap="md">
             <Switch
               checked={config.enableWhiteLabel}
-              description="Elimina todas las referencias a Trackfiz"
-              label="Habilitar White Label"
+              description={"Elimina todas las referencias a Trackfiz"}
+              label={"Habilitar White Label"}
               onChange={(e) =>
                 updateConfig("enableWhiteLabel", e.currentTarget.checked)
               }
             />
             <Switch
               checked={config.hideFooterBranding}
-              description="Elimina 'Powered by Trackfiz' del pie de página"
+              description={"Elimina 'Powered by Trackfiz' del pie de página"}
               disabled={!config.enableWhiteLabel}
-              label="Ocultar branding en footer"
+              label={"Ocultar branding en footer"}
               onChange={(e) =>
                 updateConfig("hideFooterBranding", e.currentTarget.checked)
               }
             />
             <TextInput
               disabled={!config.enableWhiteLabel}
-              label="Dominio Personalizado"
+              label={"Dominio Personalizado"}
               leftSection={<IconWorld size={14} />}
               onChange={(e) => updateConfig("customDomain", e.target.value)}
-              placeholder="app.tudominio.com"
+              placeholder={"app.tudominio.com"}
               value={config.customDomain}
             />
           </Stack>
         ) : (
           <Alert color="yellow" icon={<IconAlertCircle size={16} />}>
-            Actualiza a Business para acceder a las opciones de white label y
-            personalizar completamente tu plataforma.
+{t("settings.upgradeToBusinessWhiteLabel")}
           </Alert>
         )}
       </Paper>
@@ -224,33 +225,33 @@ export function BrandingSettings({
             <IconMail size={20} />
           </ThemeIcon>
           <div>
-            <Title order={4}>Personalización de Emails</Title>
+            <Title order={4}>{"Personalización de Emails"}</Title>
             <Text c="dimmed" size="sm">
-              Configura cómo se envían los emails a tus clientes
+              {"Configura cómo se envían los emails a tus clientes"}
             </Text>
           </div>
         </Group>
 
         <Stack gap="md">
           <TextInput
-            label="Email de Soporte"
+            label={"Email de Soporte"}
             leftSection={<IconMail size={14} />}
             onChange={(e) => updateConfig("supportEmail", e.target.value)}
-            placeholder="soporte@tudominio.com"
+            placeholder={"soporte@tudominio.com"}
             value={config.supportEmail}
           />
           <TextInput
             disabled={!isPro}
-            label="Remitente de Emails"
+            label={"Remitente de Emails"}
             onChange={(e) => updateConfig("customEmailFrom", e.target.value)}
-            placeholder="Tu Nombre <noreply@tudominio.com>"
+            placeholder={"Tu Nombre <noreply@tudominio.com>"}
             value={config.customEmailFrom}
           />
           <Textarea
-            label="Firma de Email"
+            label={"Firma de Email"}
             minRows={3}
             onChange={(e) => updateConfig("emailSignature", e.target.value)}
-            placeholder="Escribe tu firma personalizada..."
+            placeholder={"Escribe tu firma personalizada..."}
             value={config.emailSignature}
           />
         </Stack>
@@ -264,14 +265,14 @@ export function BrandingSettings({
               <IconBrandApple size={20} />
             </ThemeIcon>
             <div>
-              <Title order={4}>App Móvil Personalizada</Title>
+              <Title order={4}>{"App Móvil Personalizada"}</Title>
               <Text c="dimmed" size="sm">
-                Tu propia app en las tiendas
+                {"Tu propia app en las tiendas"}
               </Text>
             </div>
           </Group>
           <Badge color="orange" variant="light">
-            Próximamente
+            {"Próximamente"}
           </Badge>
         </Group>
 
@@ -282,22 +283,22 @@ export function BrandingSettings({
               <Text fw={600}>iOS App</Text>
             </Group>
             <Text c="dimmed" mb="md" size="sm">
-              Tu app personalizada en la App Store con tu marca y colores.
+              {"Tu app personalizada en la App Store con tu marca y colores."}
             </Text>
             <Button disabled fullWidth variant="light">
-              Solicitar App iOS
+              {"Solicitar App iOS"}
             </Button>
           </Card>
           <Card p="md" radius="md" withBorder>
             <Group gap="sm" mb="sm">
               <IconBrandAndroid size={24} />
-              <Text fw={600}>Android App</Text>
+              <Text fw={600}>{"Android App"}</Text>
             </Group>
             <Text c="dimmed" mb="md" size="sm">
-              Tu app personalizada en Google Play con tu marca y colores.
+              {"Tu app personalizada en Google Play con tu marca y colores."}
             </Text>
             <Button disabled fullWidth variant="light">
-              Solicitar App Android
+              {"Solicitar App Android"}
             </Button>
           </Card>
         </SimpleGrid>
@@ -306,7 +307,7 @@ export function BrandingSettings({
       {/* Save Button */}
       <Group justify="flex-end">
         <Button leftSection={<IconCheck size={16} />} onClick={onSave}>
-          Guardar Cambios
+          {"Guardar Cambios"}
         </Button>
       </Group>
     </Stack>

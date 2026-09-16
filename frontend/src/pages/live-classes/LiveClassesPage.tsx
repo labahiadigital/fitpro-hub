@@ -48,6 +48,7 @@ import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { useLiveClasses, useLiveClassStats } from "../../hooks/useLiveClasses";
+import { useTranslation } from "react-i18next";
 
 // Tipos
 interface LiveClass {
@@ -158,7 +159,7 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
                 </ActionIcon>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item leftSection={<IconEdit size={14} />}>Editar</Menu.Item>
+                <Menu.Item leftSection={<IconEdit size={14} />}>{"Editar"}</Menu.Item>
                 {liveClass.meeting_url && (
                   <Menu.Item
                     leftSection={<IconCopy size={14} />}
@@ -171,12 +172,12 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
                       });
                     }}
                   >
-                    Copiar enlace
+                    {"Copiar enlace"}
                   </Menu.Item>
                 )}
                 <Menu.Divider />
                 <Menu.Item color="red" leftSection={<IconTrash size={14} />}>
-                  Eliminar
+                  {"Eliminar"}
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>
@@ -206,7 +207,7 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
           <Box>
             <Group justify="space-between" mb={4}>
               <Text size="xs" c="dimmed">
-                Participantes
+                {"Participantes"}
               </Text>
               <Text size="xs" fw={500}>
                 {liveClass.current_participants}/{liveClass.max_participants}
@@ -226,7 +227,7 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
             <Text fw={600} size="lg" style={{ color: "var(--nv-primary)" }}>
               {liveClass.is_free ? (
                 <Badge color="var(--nv-success)" variant="light">
-                  Gratis
+                  {"Gratis"}
                 </Badge>
               ) : (
                 `${liveClass.price}${liveClass.currency}`
@@ -242,11 +243,11 @@ function ClassCard({ liveClass }: { liveClass: LiveClass }) {
                 target="_blank"
                 className="nv-button"
               >
-                Unirse
+                {"Unirse"}
               </Button>
             ) : liveClass.status === "scheduled" ? (
               <Button size="xs" variant="light" className="nv-button">
-                Ver detalles
+                {"Ver detalles"}
               </Button>
             ) : null}
           </Group>
@@ -307,7 +308,7 @@ function ClassRow({ liveClass }: { liveClass: LiveClass }) {
         <Group gap="md">
           <Box ta="center">
             <Text size="xs" c="dimmed">
-              Participantes
+              {"Participantes"}
             </Text>
             <Text fw={500}>
               {liveClass.current_participants}/{liveClass.max_participants}
@@ -326,15 +327,15 @@ function ClassRow({ liveClass }: { liveClass: LiveClass }) {
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item leftSection={<IconEdit size={14} />}>Editar</Menu.Item>
+              <Menu.Item leftSection={<IconEdit size={14} />}>{"Editar"}</Menu.Item>
               {liveClass.meeting_url && (
                 <Menu.Item leftSection={<IconExternalLink size={14} />}>
-                  Abrir enlace
+                  {"Abrir enlace"}
                 </Menu.Item>
               )}
               <Menu.Divider />
               <Menu.Item color="red" leftSection={<IconTrash size={14} />}>
-                Eliminar
+                {"Eliminar"}
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
@@ -382,7 +383,7 @@ function CreateClassModal({
     <BottomSheet
       opened={opened}
       onClose={onClose}
-      title="Nueva Clase en Vivo"
+      title={"Nueva Clase en Vivo"}
       size="lg"
       styles={{
         header: { borderBottom: "1px solid var(--nv-border)" },
@@ -392,22 +393,22 @@ function CreateClassModal({
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           <TextInput
-            label="Título de la clase"
-            placeholder="Ej: HIIT Intensivo"
+            label={"Título de la clase"}
+            placeholder={"Ej: HIIT Intensivo"}
             required
             {...form.getInputProps("title")}
           />
 
           <Textarea
-            label="Descripción"
-            placeholder="Describe el contenido de la clase..."
+            label={"Descripción"}
+            placeholder={"Describe el contenido de la clase..."}
             rows={3}
             {...form.getInputProps("description")}
           />
 
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <Select
-              label="Tipo de clase"
+              label={"Tipo de clase"}
               data={[
                 { value: "individual", label: "Individual" },
                 { value: "group", label: "Grupal" },
@@ -418,7 +419,7 @@ function CreateClassModal({
             />
 
             <Select
-              label="Categoría"
+              label={"Categoría"}
               data={[
                 { value: "fitness", label: "Fitness" },
                 { value: "yoga", label: "Yoga" },
@@ -433,14 +434,14 @@ function CreateClassModal({
 
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <DateTimePicker
-              label="Fecha y hora"
-              placeholder="Selecciona fecha y hora"
+              label={"Fecha y hora"}
+              placeholder={"Selecciona fecha y hora"}
               valueFormat="DD/MM/YYYY HH:mm"
               {...form.getInputProps("scheduled_start")}
             />
 
             <NumberInput
-              label="Duración (minutos)"
+              label={"Duración (minutos)"}
               min={15}
               max={180}
               step={15}
@@ -450,14 +451,14 @@ function CreateClassModal({
 
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <NumberInput
-              label="Máximo de participantes"
+              label={"Máximo de participantes"}
               min={1}
               max={500}
               {...form.getInputProps("max_participants")}
             />
 
             <Select
-              label="Nivel de dificultad"
+              label={"Nivel de dificultad"}
               data={[
                 { value: "all", label: "Todos los niveles" },
                 { value: "beginner", label: "Principiante" },
@@ -468,18 +469,18 @@ function CreateClassModal({
             />
           </SimpleGrid>
 
-          <Divider label="Precio" labelPosition="center" />
+          <Divider label={"Precio"} labelPosition="center" />
 
           <Group>
             <Switch
-              label="Clase gratuita"
+              label={"Clase gratuita"}
               {...form.getInputProps("is_free", { type: "checkbox" })}
             />
           </Group>
 
           {!form.values.is_free && (
             <NumberInput
-              label="Precio (€)"
+              label={"Precio"}
               min={0}
               step={0.5}
               decimalScale={2}
@@ -487,20 +488,20 @@ function CreateClassModal({
             />
           )}
 
-          <Divider label="Opciones" labelPosition="center" />
+          <Divider label={"Opciones"} labelPosition="center" />
 
           <Switch
-            label="Grabar clase automáticamente"
-            description="La grabación estará disponible para los participantes"
+            label={"Grabar clase automáticamente"}
+            description={"La grabación estará disponible para los participantes"}
             {...form.getInputProps("is_recorded", { type: "checkbox" })}
           />
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>
-              Cancelar
+              {"Cancelar"}
             </Button>
             <Button type="submit" leftSection={<IconPlus size={16} />} className="nv-button">
-              Crear Clase
+              {"Crear Clase"}
             </Button>
           </Group>
         </Stack>
@@ -511,6 +512,7 @@ function CreateClassModal({
 
 // Componente principal
 export function LiveClassesPage() {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<string>("grid");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [createModalOpened, { open: openCreateModal, close: closeCreateModal }] =
@@ -531,11 +533,11 @@ export function LiveClassesPage() {
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Clases en Vivo"
-        description="Gestiona tus clases online y sesiones grupales"
+        title={t("liveClasses.clasesEnVivo")}
+        description={t("liveClasses.gestionaTusClasesOnlineY")}
         action={
           <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal} className="nv-button">
-            Nueva Clase
+            {t("liveClasses.nuevaClase")}
           </Button>
         }
       />
@@ -545,7 +547,7 @@ export function LiveClassesPage() {
         <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Clases Programadas</Text>
+              <Text className="text-label" mb="xs">{t("liveClasses.clasesProgramadas")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem" }}>
                 {stats?.upcoming_classes || 3}
               </Text>
@@ -558,7 +560,7 @@ export function LiveClassesPage() {
         <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">En Vivo Ahora</Text>
+              <Text className="text-label" mb="xs">{t("liveClasses.enVivoAhora")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-error)" }}>
                 {displayClasses.filter((c) => c.status === "live").length}
               </Text>
@@ -571,7 +573,7 @@ export function LiveClassesPage() {
         <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Participantes Totales</Text>
+              <Text className="text-label" mb="xs">{t("liveClasses.participantesTotales")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
                 {stats?.total_participants || 80}
               </Text>
@@ -584,12 +586,12 @@ export function LiveClassesPage() {
         <Box className="nv-card" p="lg">
           <Group justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Ingresos del Mes</Text>
+              <Text className="text-label" mb="xs">{t("liveClasses.ingresosDelMes")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem" }}>
                 {stats?.total_revenue || 450}€
               </Text>
             </Box>
-            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" }}>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: t("liveClasses.8b5cf6") }}>
               <IconCalendar size={24} />
             </ThemeIcon>
           </Group>
@@ -603,10 +605,10 @@ export function LiveClassesPage() {
             value={statusFilter}
             onChange={setStatusFilter}
             data={[
-              { value: "all", label: "Todas" },
-              { value: "scheduled", label: "Programadas" },
-              { value: "live", label: "En vivo" },
-              { value: "completed", label: "Finalizadas" },
+              { value: "all", label: t("liveClasses.todas") },
+              { value: "scheduled", label: t("liveClasses.programadas") },
+              { value: "live", label: t("liveClasses.enVivo") },
+              { value: "completed", label: t("liveClasses.finalizadas") },
             ]}
             styles={{
               root: { backgroundColor: "var(--nv-surface-subtle)" },
@@ -614,7 +616,7 @@ export function LiveClassesPage() {
           />
 
           <Group gap="xs">
-            <Tooltip label="Vista de cuadrícula">
+            <Tooltip label={t("liveClasses.vistaDeCuadricula")}>
               <ActionIcon
                 variant={viewMode === "grid" ? "filled" : "light"}
                 onClick={() => setViewMode("grid")}
@@ -623,7 +625,7 @@ export function LiveClassesPage() {
                 <IconLayoutGrid size={18} />
               </ActionIcon>
             </Tooltip>
-            <Tooltip label="Vista de lista">
+            <Tooltip label={t("liveClasses.vistaDeLista")}>
               <ActionIcon
                 variant={viewMode === "list" ? "filled" : "light"}
                 onClick={() => setViewMode("list")}
@@ -647,13 +649,13 @@ export function LiveClassesPage() {
             <IconVideoOff size={30} />
           </ThemeIcon>
           <Text fw={600} mb="xs" style={{ fontFamily: "var(--font-heading)" }}>
-            No hay clases
+            {t("liveClasses.noHayClases")}
           </Text>
           <Text c="dimmed" mb="lg">
-            No se encontraron clases con los filtros seleccionados
+            {t("liveClasses.noSeEncontraronClasesCon")}
           </Text>
           <Button leftSection={<IconPlus size={16} />} onClick={openCreateModal} className="nv-button">
-            Crear Primera Clase
+            {t("liveClasses.crearPrimeraClase")}
           </Button>
         </Box>
       ) : viewMode === "grid" ? (

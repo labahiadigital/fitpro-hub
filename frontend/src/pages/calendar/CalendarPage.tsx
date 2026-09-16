@@ -71,6 +71,7 @@ import { useBoxes } from "../../hooks/useBoxes";
 import { useMachines } from "../../hooks/useMachines";
 import { useNavigate } from "react-router-dom";
 import "dayjs/locale/es";
+import { useTranslation } from "react-i18next";
 
 dayjs.locale("es");
 
@@ -112,6 +113,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export function CalendarPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day" | "list">("week");
@@ -227,7 +229,7 @@ export function CalendarPage() {
       start_time: e.start,
       end_time: e.end,
       type: "google",
-      color: "grape",
+      color: t("calendar.grape"),
       googleEvent: e,
     })) : []),
     // Citas (appointments) como subcalendarios
@@ -354,8 +356,8 @@ export function CalendarPage() {
 
   const handleCancelBooking = (bookingId: string) => {
     openDangerConfirm({
-      title: "Cancelar sesión",
-      message: "¿Estás seguro de que quieres cancelar esta sesión?",
+      title: t("calendar.cancelarSesion"),
+      message: t("calendar.estasSeguroDeQueQuieres"),
       confirmLabel: "Cancelar sesión",
       onConfirm: async () => {
         try {
@@ -368,8 +370,8 @@ export function CalendarPage() {
 
   const handleDeleteBooking = (bookingId: string) => {
     openDangerConfirm({
-      title: "Eliminar sesión",
-      message: "¿Estás seguro de que quieres ELIMINAR esta sesión permanentemente? Esta acción no se puede deshacer.",
+      title: t("calendar.eliminarSesion"),
+      message: t("calendar.estasSeguroDeQueQuieres"),
       onConfirm: async () => {
         try {
           await deleteBooking.mutateAsync(bookingId);
@@ -560,11 +562,11 @@ export function CalendarPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nueva Sesión/Cita",
+          label: t("calendar.nuevaSesionCita"),
           onClick: openModal,
         }}
-        description="Gestiona tus sesiones/citas y reservas de forma eficiente"
-        title="Calendario"
+        description={t("calendar.gestionaTusSesionesCitasY")}
+        title={t("calendar.calendario")}
       >
         <Group justify="space-between" wrap="wrap">
           <Group>
@@ -598,35 +600,35 @@ export function CalendarPage() {
               size="sm"
               variant="light"
             >
-              Hoy
+              {t("calendar.hoy")}
             </Button>
           </Group>
           <Group gap="sm">
             <Group gap={6}>
               <Checkbox
                 size="xs"
-                label="Sesiones/Citas"
+                label={t("calendar.sesionesCitas")}
                 checked={eventFilters.bookings}
                 color="teal"
                 onChange={(e) => setEventFilters(p => ({ ...p, bookings: e.currentTarget.checked }))}
               />
               <Checkbox
                 size="xs"
-                label="Citas"
+                label={t("calendar.citas")}
                 checked={eventFilters.appointments}
                 color="cyan"
                 onChange={(e) => setEventFilters(p => ({ ...p, appointments: e.currentTarget.checked }))}
               />
               <Checkbox
                 size="xs"
-                label="Tareas"
+                label={t("calendar.tareas")}
                 checked={eventFilters.tasks}
                 color="orange"
                 onChange={(e) => setEventFilters(p => ({ ...p, tasks: e.currentTarget.checked }))}
               />
               <Checkbox
                 size="xs"
-                label="Google Cal"
+                label={t("calendar.googleCal")}
                 checked={eventFilters.google}
                 color="grape"
                 onChange={(e) => setEventFilters(p => ({ ...p, google: e.currentTarget.checked }))}
@@ -636,20 +638,20 @@ export function CalendarPage() {
             <Group gap={6}>
               <Checkbox
                 size="xs"
-                label="Personal"
+                label={t("calendar.personal")}
                 checked={layers.staff}
                 onChange={(e) => setLayers(p => ({ ...p, staff: e.currentTarget.checked }))}
               />
               <Checkbox
                 size="xs"
-                label="Boxes"
+                label={t("calendar.boxes")}
                 checked={layers.boxes}
                 color="blue"
                 onChange={(e) => setLayers(p => ({ ...p, boxes: e.currentTarget.checked }))}
               />
               <Checkbox
                 size="xs"
-                label="Máquinas"
+                label={t("calendar.maquinas")}
                 checked={layers.machines}
                 color="violet"
                 onChange={(e) => setLayers(p => ({ ...p, machines: e.currentTarget.checked }))}
@@ -657,7 +659,7 @@ export function CalendarPage() {
             </Group>
             {teamMemberOptions.length > 1 && (
               <Select
-                placeholder="Todos los miembros"
+                placeholder={t("calendar.todosLosMiembros")}
                 data={teamMemberOptions}
                 value={filterMemberId}
                 onChange={setFilterMemberId}
@@ -668,22 +670,22 @@ export function CalendarPage() {
             )}
             <SegmentedControl
               data={[
-                { label: "Mes", value: "month" },
-                { label: "Semana", value: "week" },
-                { label: "Día", value: "day" },
-                { label: "Lista", value: "list" },
+                { label: t("calendar.mes"), value: "month" },
+                { label: t("calendar.semana"), value: "week" },
+                { label: t("calendar.dia"), value: "day" },
+                { label: t("calendar.lista"), value: "list" },
               ]}
               onChange={(v) => setView(v as "month" | "week" | "day" | "list")}
               value={view}
             />
             {(view === "day" || view === "week") && (
               <Select
-                placeholder="Organizar por"
+                placeholder={t("calendar.organizarPor")}
                 data={[
-                  { value: "none", label: "Sin agrupar" },
-                  { value: "staff", label: "Por miembro" },
-                  { value: "box", label: "Por box/sala" },
-                  { value: "machine", label: "Por máquina" },
+                  { value: "none", label: t("calendar.sinAgrupar") },
+                  { value: "staff", label: t("calendar.porMiembro") },
+                  { value: "box", label: t("calendar.porBoxSala") },
+                  { value: "machine", label: t("calendar.porMaquina") },
                 ]}
                 value={organizeBy}
                 onChange={(v) => setOrganizeBy((v || "none") as "none" | "staff" | "box" | "machine")}
@@ -692,7 +694,7 @@ export function CalendarPage() {
                 clearable={false}
               />
             )}
-            <Tooltip label="Configurar calendario">
+            <Tooltip label={t("calendar.configurarCalendario")}>
               <ActionIcon variant="light" size="lg" onClick={() => navigate("/settings")}>
                 <IconSettings size={18} />
               </ActionIcon>
@@ -727,7 +729,7 @@ export function CalendarPage() {
             variant="light"
             radius="md"
             mb="md"
-            title="Próximas revisiones y fines de plan"
+            title={t("calendar.proximasRevisionesYFinesDe")}
           >
             <Stack gap={4}>
               {upcoming.map((t) => {
@@ -747,7 +749,7 @@ export function CalendarPage() {
               })}
               <Group justify="flex-end">
                 <Button size="xs" variant="subtle" onClick={() => navigate("/tasks")}>
-                  Ver todas las tareas
+                  {t("calendar.verTodasLasTareas")}
                 </Button>
               </Group>
             </Stack>
@@ -766,7 +768,7 @@ export function CalendarPage() {
           <Group justify="space-between">
             <Box>
               <Text className="text-label" mb="xs">
-                Sesiones/Citas Hoy
+                {t("calendar.sesionesCitasHoy")}
               </Text>
               <Text
                 className="text-display"
@@ -792,7 +794,7 @@ export function CalendarPage() {
           <Group justify="space-between">
             <Box>
               <Text className="text-label" mb="xs">
-                Confirmadas
+                {t("calendar.confirmadas")}
               </Text>
               <Text
                 className="text-display"
@@ -818,7 +820,7 @@ export function CalendarPage() {
           <Group justify="space-between">
             <Box>
               <Text className="text-label" mb="xs">
-                Pendientes
+                {t("calendar.pendientes")}
               </Text>
               <Text
                 className="text-display"
@@ -847,13 +849,13 @@ export function CalendarPage() {
         <Paper radius="lg" p="xl" ta="center" withBorder>
           <Loader size="lg" />
           <Text c="dimmed" mt="md">
-            Cargando calendario...
+            {t("calendar.cargandoCalendario")}
           </Text>
         </Paper>
       ) : bookingsError ? (
         <Paper radius="lg" p="xl" ta="center" withBorder>
-          <Text c="dimmed" mb="md">Error al cargar las reservas</Text>
-          <Button variant="light" onClick={() => refetchBookings()}>Reintentar</Button>
+          <Text c="dimmed" mb="md">{t("calendar.errorAlCargarLasReservas")}</Text>
+          <Button variant="light" onClick={() => refetchBookings()}>{t("calendar.reintentar")}</Button>
         </Paper>
       ) : view === "month" ? (
         <Paper radius="lg" style={{ overflow: "hidden" }} withBorder>
@@ -972,20 +974,20 @@ export function CalendarPage() {
                                         </ActionIcon>
                                       </Menu.Target>
                                       <Menu.Dropdown>
-                                        <Menu.Item onClick={() => setSelectedBooking(booking)}>Ver detalle</Menu.Item>
+                                        <Menu.Item onClick={() => setSelectedBooking(booking)}>{t("calendar.verDetalle")}</Menu.Item>
                                         {booking.status === "pending" && (
                                           <>
-                                            <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleConfirmBooking(booking.id)}>Aprobar</Menu.Item>
-                                            <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Rechazar</Menu.Item>
+                                            <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleConfirmBooking(booking.id)}>{t("calendar.aprobar")}</Menu.Item>
+                                            <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>{t("calendar.rechazar")}</Menu.Item>
                                           </>
                                         )}
                                         {booking.status === "confirmed" && (
                                           <>
-                                            <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleCompleteBooking(booking.id)}>Completar</Menu.Item>
-                                            <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>Cancelar</Menu.Item>
+                                            <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleCompleteBooking(booking.id)}>{t("calendar.completar")}</Menu.Item>
+                                            <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>{t("calendar.cancelar")}</Menu.Item>
                                           </>
                                         )}
-                                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => { setSelectedBooking(booking); handleOpenEdit(booking); }}>Modificar</Menu.Item>
+                                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => { setSelectedBooking(booking); handleOpenEdit(booking); }}>{t("calendar.modificar")}</Menu.Item>
                                       </Menu.Dropdown>
                                     </Menu>
                                   </Group>
@@ -1035,11 +1037,11 @@ export function CalendarPage() {
             <Table striped highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Hora</Table.Th>
-                  <Table.Th>Título</Table.Th>
-                  <Table.Th>Tipo</Table.Th>
-                  <Table.Th>Recurso</Table.Th>
-                  <Table.Th>Estado</Table.Th>
+                  <Table.Th>{t("calendar.hora")}</Table.Th>
+                  <Table.Th>{t("calendar.titulo")}</Table.Th>
+                  <Table.Th>{t("calendar.tipo")}</Table.Th>
+                  <Table.Th>{t("calendar.recurso")}</Table.Th>
+                  <Table.Th>{t("calendar.estado")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -1068,7 +1070,7 @@ export function CalendarPage() {
                     );
                   })}
                 {allEvents.length === 0 && (
-                  <Table.Tr><Table.Td colSpan={5}><Text ta="center" c="dimmed" py="lg">No hay eventos en este periodo</Text></Table.Td></Table.Tr>
+                  <Table.Tr><Table.Td colSpan={5}><Text ta="center" c="dimmed" py="lg">{t("calendar.noHayEventosEnEste")}</Text></Table.Td></Table.Tr>
                 )}
               </Table.Tbody>
             </Table>
@@ -1410,30 +1412,30 @@ export function CalendarPage() {
                               </Menu.Target>
                               <Menu.Dropdown>
                                 <Menu.Item onClick={() => setSelectedBooking(booking)}>
-                                  Ver detalle
+                                  {t("calendar.verDetalle")}
                                 </Menu.Item>
                                 {booking.status === "pending" && (
                                   <>
                                     <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleConfirmBooking(booking.id)}>
-                                      Aprobar
+                                      {t("calendar.aprobar")}
                                     </Menu.Item>
                                     <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>
-                                      Rechazar
+                                      {t("calendar.rechazar")}
                                     </Menu.Item>
                                   </>
                                 )}
                                 {booking.status === "confirmed" && (
                                   <>
                                     <Menu.Item color="green" leftSection={<IconCheck size={14} />} onClick={() => handleCompleteBooking(booking.id)}>
-                                      Completar
+                                      {t("calendar.completar")}
                                     </Menu.Item>
                                     <Menu.Item color="red" leftSection={<IconX size={14} />} onClick={() => handleCancelBooking(booking.id)}>
-                                      Cancelar
+                                      {t("calendar.cancelar")}
                                     </Menu.Item>
                                   </>
                                 )}
                                 <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => { setSelectedBooking(booking); handleOpenEdit(booking); }}>
-                                  Modificar
+                                  {t("calendar.modificar")}
                                 </Menu.Item>
                               </Menu.Dropdown>
                             </Menu>
@@ -1508,23 +1510,23 @@ export function CalendarPage() {
         onClose={closeModal}
         opened={modalOpened}
         size="lg"
-        title="Nueva Sesión/Cita"
+        title={t("calendar.nuevaSesionCita")}
       >
         <form onSubmit={form.onSubmit(handleCreateBooking)}>
           <Stack>
             <TextInput
-              label="Título"
+              label={t("calendar.titulo")}
               leftSection={<IconCalendarEvent size={16} />}
-              placeholder="Entrenamiento Personal"
+              placeholder={t("calendar.entrenamientoPersonal")}
               required
               {...form.getInputProps("title")}
             />
 
             <Select
               data={clientOptions}
-              label="Cliente"
+              label={t("calendar.cliente")}
               leftSection={<IconUser size={16} />}
-              placeholder="Selecciona un cliente"
+              placeholder={t("calendar.seleccionaUnCliente")}
               searchable
               {...form.getInputProps("client_id")}
             />
@@ -1532,25 +1534,25 @@ export function CalendarPage() {
             <Group grow>
               <Select
                 data={[
-                  { value: "individual", label: "Individual" },
-                  { value: "group", label: "Grupal" },
+                  { value: "individual", label: t("calendar.individual") },
+                  { value: "group", label: t("calendar.grupal") },
                 ]}
-                label="Tipo de sesión"
+                label={t("calendar.tipoDeSesion")}
                 {...form.getInputProps("session_type")}
               />
               <Select
                 data={[
-                  { value: "in_person", label: "Presencial" },
-                  { value: "online", label: "Online" },
+                  { value: "in_person", label: t("calendar.presencial") },
+                  { value: "online", label: t("calendar.online") },
                 ]}
-                label="Modalidad"
+                label={t("calendar.modalidad")}
                 {...form.getInputProps("modality")}
               />
             </Group>
 
             {form.values.session_type === "group" && (
               <NumberInput
-                label="Máximo de participantes"
+                label={t("calendar.maximoDeParticipantes")}
                 max={50}
                 min={2}
                 {...form.getInputProps("max_participants")}
@@ -1559,9 +1561,9 @@ export function CalendarPage() {
 
             <Group grow>
               <DateTimePicker
-                label="Inicio"
+                label={t("calendar.inicio")}
                 leftSection={<IconClock size={16} />}
-                placeholder="Fecha y hora de inicio"
+                placeholder={t("calendar.fechaYHoraDeInicio")}
                 required
                 valueFormat="DD/MM/YYYY HH:mm"
                 value={form.values.start_time}
@@ -1577,9 +1579,9 @@ export function CalendarPage() {
                 error={form.errors.start_time}
               />
               <DateTimePicker
-                label="Fin"
+                label={t("calendar.fin")}
                 leftSection={<IconClock size={16} />}
-                placeholder="Fecha y hora de fin"
+                placeholder={t("calendar.fechaYHoraDeFin")}
                 required
                 valueFormat="DD/MM/YYYY HH:mm"
                 minDate={form.values.start_time instanceof Date ? form.values.start_time : undefined}
@@ -1614,36 +1616,36 @@ export function CalendarPage() {
             />
 
             <Switch
-              label="Sesión/Cita recurrente"
+              label={t("calendar.sesionCitaRecurrente")}
               {...form.getInputProps("is_recurring", { type: "checkbox" })}
             />
 
             {form.values.is_recurring && (
               <Select
                 data={[
-                  { value: "daily", label: "Diariamente" },
-                  { value: "weekly", label: "Semanalmente" },
-                  { value: "biweekly", label: "Cada 2 semanas" },
-                  { value: "monthly", label: "Mensualmente" },
+                  { value: "daily", label: t("calendar.diariamente") },
+                  { value: "weekly", label: t("calendar.semanalmente") },
+                  { value: "biweekly", label: t("calendar.cada2Semanas") },
+                  { value: "monthly", label: t("calendar.mensualmente") },
                 ]}
-                label="Repetir"
+                label={t("calendar.repetir")}
                 {...form.getInputProps("recurrence_type")}
               />
             )}
 
             <Textarea
-              label="Notas"
+              label={t("calendar.notas")}
               minRows={2}
-              placeholder="Notas adicionales..."
+              placeholder={t("calendar.notasAdicionales")}
               {...form.getInputProps("notes")}
             />
 
             <Group justify="flex-end" mt="md">
               <Button onClick={closeModal} variant="default">
-                Cancelar
+                {t("calendar.cancelar")}
               </Button>
               <Button loading={createBooking.isPending} type="submit">
-                Crear Sesión/Cita
+                {t("calendar.crearSesionCita")}
               </Button>
             </Group>
           </Stack>
@@ -1682,7 +1684,7 @@ export function CalendarPage() {
                 <IconUser size={16} />
               </ThemeIcon>
               <Box>
-                <Text c="dimmed" size="xs">Cliente</Text>
+                <Text c="dimmed" size="xs">{t("calendar.cliente")}</Text>
                 <Text fw={500} size="sm">
                   {selectedBooking.client_name || "No especificado"}
                 </Text>
@@ -1694,7 +1696,7 @@ export function CalendarPage() {
                 <IconClock size={16} />
               </ThemeIcon>
               <Box>
-                <Text c="dimmed" size="xs">Horario</Text>
+                <Text c="dimmed" size="xs">{t("calendar.horario")}</Text>
                 <Text fw={500} size="sm">
                   {dayjs(selectedBooking.start_time).format("dddd, D MMMM YYYY")}
                 </Text>
@@ -1730,7 +1732,7 @@ export function CalendarPage() {
                 <IconUsers size={16} />
               </ThemeIcon>
               <Box>
-                <Text c="dimmed" size="xs">Tipo</Text>
+                <Text c="dimmed" size="xs">{t("calendar.tipo")}</Text>
                 <Text fw={500} size="sm">
                   {selectedBooking.session_type === "individual" ? "Individual" : "Grupal"}
                 </Text>
@@ -1743,31 +1745,31 @@ export function CalendarPage() {
               {selectedBooking.status === "pending" && (
                 <>
                   <Button color="green" leftSection={<IconCheck size={16} />} loading={updateBooking.isPending} onClick={() => handleConfirmBooking(selectedBooking.id)} variant="light">
-                    Aprobar
+                    {t("calendar.aprobar")}
                   </Button>
                   <Button color="red" leftSection={<IconX size={16} />} loading={cancelBooking.isPending} onClick={() => handleCancelBooking(selectedBooking.id)} variant="light">
-                    Rechazar
+                    {t("calendar.rechazar")}
                   </Button>
                 </>
               )}
               {selectedBooking.status === "confirmed" && (
                 <>
                   <Button color="green" leftSection={<IconCheck size={16} />} loading={completeBooking.isPending} onClick={() => handleCompleteBooking(selectedBooking.id)} variant="light">
-                    Completar
+                    {t("calendar.completar")}
                   </Button>
                   <Button color="red" leftSection={<IconX size={16} />} loading={cancelBooking.isPending} onClick={() => handleCancelBooking(selectedBooking.id)} variant="light">
-                    Cancelar
+                    {t("calendar.cancelar")}
                   </Button>
                 </>
               )}
               <Button variant="light" leftSection={<IconEdit size={16} />} onClick={() => handleOpenEdit(selectedBooking)}>
-                Modificar fecha/hora
+                {t("calendar.modificarFechaHora")}
               </Button>
               <Button color="red" leftSection={<IconTrash size={16} />} loading={deleteBooking.isPending} onClick={() => handleDeleteBooking(selectedBooking.id)} variant="outline">
-                Eliminar
+                {t("calendar.eliminar")}
               </Button>
               <Button onClick={() => { setSelectedBooking(null); setIsEditing(false); }} variant="default">
-                Cerrar
+                {t("calendar.cerrar")}
               </Button>
             </Group>
           </Stack>
@@ -1780,7 +1782,7 @@ export function CalendarPage() {
             </Badge>
             <Divider />
             <DateTimePicker
-              label="Nuevo inicio"
+              label={t("calendar.nuevoInicio")}
               leftSection={<IconClock size={16} />}
               valueFormat="DD/MM/YYYY HH:mm"
               value={editForm.values.start_time}
@@ -1794,7 +1796,7 @@ export function CalendarPage() {
               }}
             />
             <DateTimePicker
-              label="Nuevo fin"
+              label={t("calendar.nuevoFin")}
               leftSection={<IconClock size={16} />}
               valueFormat="DD/MM/YYYY HH:mm"
               value={editForm.values.end_time}
@@ -1806,10 +1808,10 @@ export function CalendarPage() {
             />
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={() => setIsEditing(false)}>
-                Volver
+                {t("calendar.volver")}
               </Button>
               <Button loading={updateBooking.isPending} onClick={handleSaveEdit}>
-                Guardar cambios
+                {t("calendar.guardarCambios")}
               </Button>
             </Group>
           </Stack>

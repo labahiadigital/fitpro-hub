@@ -44,6 +44,7 @@ import {
   type SupplierBankAccount,
   type SupplierPayload,
 } from "../../hooks/useSuppliers";
+import { useTranslation } from "react-i18next";
 
 const COUNTRIES = [
   { value: "España", label: "España" },
@@ -167,6 +168,7 @@ function supplierToValues(s: Supplier): FormValues {
 }
 
 export default function SuppliersPage() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const { data: suppliers = [], isLoading } = useSuppliers();
   const createSupplier = useCreateSupplier();
@@ -227,14 +229,14 @@ export default function SuppliersPage() {
       if (editing) {
         await updateSupplier.mutateAsync({ id: editing.id, data: payload });
         notifications.show({
-          title: "Proveedor actualizado",
+          title: t("suppliers.proveedorActualizado"),
           message: `${values.legal_name} se ha guardado correctamente`,
           color: "green",
         });
       } else {
         await createSupplier.mutateAsync(payload);
         notifications.show({
-          title: "Proveedor creado",
+          title: t("suppliers.proveedorCreado"),
           message: `${values.legal_name} se ha creado correctamente`,
           color: "green",
         });
@@ -244,8 +246,8 @@ export default function SuppliersPage() {
       form.reset();
     } catch (error) {
       notifications.show({
-        title: "Error",
-        message: "No se pudo guardar el proveedor",
+        title: t("suppliers.error"),
+        message: t("suppliers.noSePudoGuardarEl"),
         color: "red",
       });
     }
@@ -253,21 +255,21 @@ export default function SuppliersPage() {
 
   const handleDelete = (supplier: Supplier) => {
     openDangerConfirm({
-      title: "Eliminar proveedor",
+      title: t("suppliers.eliminarProveedor"),
       message: `¿Seguro que quieres eliminar a ${supplier.legal_name}? Esta acción no se puede deshacer.`,
       confirmLabel: "Eliminar",
       onConfirm: async () => {
         try {
           await deleteSupplier.mutateAsync(supplier.id);
           notifications.show({
-            title: "Proveedor eliminado",
+            title: t("suppliers.proveedorEliminado"),
             message: supplier.legal_name,
             color: "green",
           });
         } catch (error) {
           notifications.show({
-            title: "Error",
-            message: "No se pudo eliminar el proveedor",
+            title: t("suppliers.error"),
+            message: t("suppliers.noSePudoEliminarEl"),
             color: "red",
           });
         }
@@ -313,11 +315,11 @@ export default function SuppliersPage() {
   return (
     <Container size="xl" py="md">
       <PageHeader
-        title="Proveedores"
-        description="Gestiona los proveedores de stock de tu workspace"
+        title={t("suppliers.proveedores")}
+        description={t("suppliers.gestionaLosProveedoresDeStock")}
         action={
           <Button leftSection={<IconPlus size={18} />} onClick={handleOpenNew}>
-            Nuevo proveedor
+            {t("suppliers.nuevoProveedor")}
           </Button>
         }
       />
@@ -326,9 +328,9 @@ export default function SuppliersPage() {
         {filteredSuppliers.length === 0 && !isLoading ? (
           <EmptyState
             icon={<IconBuildingStore size={48} />}
-            title="Sin proveedores"
-            description="Crea tu primer proveedor para poder vincular stock y gestionar compras."
-            actionLabel="Nuevo proveedor"
+            title={t("suppliers.sinProveedores")}
+            description={t("suppliers.creaTuPrimerProveedorPara")}
+            actionLabel={t("suppliers.nuevoProveedor")}
             onAction={handleOpenNew}
           />
         ) : (
@@ -341,7 +343,7 @@ export default function SuppliersPage() {
             columns={[
               {
                 key: "legal_name",
-                title: "Nombre",
+                title: t("suppliers.nombre"),
                 render: (s) => (
                   <Stack gap={2}>
                     <Text fw={600} size="sm">
@@ -376,7 +378,7 @@ export default function SuppliersPage() {
               },
               {
                 key: "address",
-                title: "Dirección",
+                title: t("suppliers.direccion"),
                 hideOnMobile: true,
                 render: (s) => {
                   const parts = [s.address, s.postal_code, s.city, s.province, s.country]
@@ -391,7 +393,7 @@ export default function SuppliersPage() {
               },
               {
                 key: "phone",
-                title: "Teléfono",
+                title: t("suppliers.telefono"),
                 hideOnMobile: true,
                 render: (s) => (
                   <Text size="sm" c={s.phone || s.mobile ? undefined : "dimmed"}>
@@ -401,7 +403,7 @@ export default function SuppliersPage() {
               },
               {
                 key: "email",
-                title: "Email",
+                title: t("suppliers.email"),
                 hideOnMobile: true,
                 render: (s) => (
                   <Text size="sm" c={s.email ? undefined : "dimmed"}>
@@ -411,15 +413,15 @@ export default function SuppliersPage() {
               },
               {
                 key: "is_active",
-                title: "Estado",
+                title: t("suppliers.estado"),
                 render: (s) =>
                   s.is_active ? (
                     <Badge color="green" variant="light">
-                      Activo
+                      {t("suppliers.activo")}
                     </Badge>
                   ) : (
                     <Badge color="gray" variant="light">
-                      Inactivo
+                      {t("suppliers.inactivo")}
                     </Badge>
                   ),
               },
@@ -445,7 +447,7 @@ export default function SuppliersPage() {
           <Stack gap="lg">
             <Box>
               <Text fw={600} mb="xs">
-                Datos de facturación
+                {t("suppliers.datosDeFacturacion")}
               </Text>
               <Grid>
                 <Grid.Col span={{ base: 12, sm: 4 }}>
@@ -457,8 +459,8 @@ export default function SuppliersPage() {
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 8 }}>
                   <TextInput
-                    label="Nombre o razón social"
-                    placeholder="Mi Proveedor SL"
+                    label={t("suppliers.nombreORazonSocial")}
+                    placeholder={t("suppliers.miProveedorSl")}
                     required
                     {...form.getInputProps("legal_name")}
                   />
@@ -468,39 +470,39 @@ export default function SuppliersPage() {
 
             <Box>
               <Text fw={600} mb="xs">
-                Dirección
+                {t("suppliers.direccion")}
               </Text>
               <Stack gap="xs">
                 <TextInput
-                  label="Dirección"
-                  placeholder="Calle, número, piso..."
+                  label={t("suppliers.direccion")}
+                  placeholder={t("suppliers.calleNumeroPiso")}
                   {...form.getInputProps("address")}
                 />
                 <Grid>
                   <Grid.Col span={{ base: 6, sm: 3 }}>
                     <TextInput
-                      label="Código postal"
+                      label={t("suppliers.codigoPostal")}
                       placeholder="46001"
                       {...form.getInputProps("postal_code")}
                     />
                   </Grid.Col>
                   <Grid.Col span={{ base: 6, sm: 3 }}>
                     <TextInput
-                      label="Población"
-                      placeholder="Valencia"
+                      label={t("suppliers.poblacion")}
+                      placeholder={t("suppliers.valencia")}
                       {...form.getInputProps("city")}
                     />
                   </Grid.Col>
                   <Grid.Col span={{ base: 6, sm: 3 }}>
                     <TextInput
-                      label="Provincia"
-                      placeholder="Valencia"
+                      label={t("suppliers.provincia")}
+                      placeholder={t("suppliers.valencia")}
                       {...form.getInputProps("province")}
                     />
                   </Grid.Col>
                   <Grid.Col span={{ base: 6, sm: 3 }}>
                     <Select
-                      label="País"
+                      label={t("suppliers.pais")}
                       data={COUNTRIES}
                       searchable
                       {...form.getInputProps("country")}
@@ -510,7 +512,7 @@ export default function SuppliersPage() {
                 <Grid>
                   <Grid.Col span={{ base: 6, sm: 3 }}>
                     <NumberInput
-                      label="Latitud"
+                      label={t("suppliers.latitud")}
                       placeholder="39.469"
                       decimalScale={6}
                       min={-90}
@@ -520,7 +522,7 @@ export default function SuppliersPage() {
                   </Grid.Col>
                   <Grid.Col span={{ base: 6, sm: 3 }}>
                     <NumberInput
-                      label="Longitud"
+                      label={t("suppliers.longitud")}
                       placeholder="-0.376"
                       decimalScale={6}
                       min={-180}
@@ -534,10 +536,10 @@ export default function SuppliersPage() {
 
             <Box>
               <Text fw={600} mb="xs">
-                Descuento
+                {t("suppliers.descuento")}
               </Text>
               <NumberInput
-                label="Porcentaje de descuento por defecto"
+                label={t("suppliers.porcentajeDeDescuentoPorDefecto")}
                 placeholder="0"
                 suffix="%"
                 min={0}
@@ -549,19 +551,19 @@ export default function SuppliersPage() {
 
             <Box>
               <Group justify="space-between" align="flex-end" mb="xs">
-                <Text fw={600}>Cuentas bancarias</Text>
+                <Text fw={600}>{t("suppliers.cuentasBancarias")}</Text>
                 <Button
                   size="xs"
                   variant="light"
                   leftSection={<IconPlus size={14} />}
                   onClick={addBankAccount}
                 >
-                  Añadir cuenta
+                  {t("suppliers.anadirCuenta")}
                 </Button>
               </Group>
               {form.values.bank_accounts.length === 0 ? (
                 <Text size="sm" c="dimmed">
-                  No hay cuentas bancarias registradas.
+                  {t("suppliers.noHayCuentasBancariasRegistradas")}
                 </Text>
               ) : (
                 <Stack gap="sm">
@@ -590,8 +592,8 @@ export default function SuppliersPage() {
                         </Grid.Col>
                         <Grid.Col span={{ base: 6, sm: 4 }}>
                           <TextInput
-                            label="Notas"
-                            placeholder="Opcional"
+                            label={t("suppliers.notas")}
+                            placeholder={t("suppliers.opcional")}
                             value={acc.notes ?? ""}
                             onChange={(e) =>
                               updateBankField(idx, "notes", e.currentTarget.value)
@@ -621,7 +623,7 @@ export default function SuppliersPage() {
                               color="red"
                               variant="subtle"
                               onClick={() => removeBankAccount(idx)}
-                              aria-label="Eliminar cuenta"
+                              aria-label={t("suppliers.eliminarCuenta")}
                             >
                               <IconTrash size={16} />
                             </ActionIcon>
@@ -636,28 +638,28 @@ export default function SuppliersPage() {
 
             <Box>
               <Text fw={600} mb="xs">
-                Datos de contacto
+                {t("suppliers.datosDeContacto")}
               </Text>
               <Grid>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <TextInput label="Teléfono" {...form.getInputProps("phone")} />
+                  <TextInput label={t("suppliers.telefono")} {...form.getInputProps("phone")} />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <TextInput label="Móvil" {...form.getInputProps("mobile")} />
+                  <TextInput label={t("suppliers.movil")} {...form.getInputProps("mobile")} />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <TextInput
-                    label="Email"
+                    label={t("suppliers.email")}
                     type="email"
                     {...form.getInputProps("email")}
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                  <TextInput label="Fax" {...form.getInputProps("fax")} />
+                  <TextInput label={t("suppliers.fax")} {...form.getInputProps("fax")} />
                 </Grid.Col>
                 <Grid.Col span={12}>
                   <TextInput
-                    label="Sitio web"
+                    label={t("suppliers.sitioWeb")}
                     placeholder="https://..."
                     {...form.getInputProps("url")}
                   />
@@ -667,24 +669,24 @@ export default function SuppliersPage() {
 
             <Box>
               <Text fw={600} mb="xs">
-                Otros
+                {t("suppliers.otros")}
               </Text>
               <Grid>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <TextInput
-                    label="Personalizado 1"
+                    label={t("suppliers.personalizado1")}
                     {...form.getInputProps("custom_field_1")}
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <TextInput
-                    label="Personalizado 2"
+                    label={t("suppliers.personalizado2")}
                     {...form.getInputProps("custom_field_2")}
                   />
                 </Grid.Col>
                 <Grid.Col span={12}>
                   <Textarea
-                    label="Notas"
+                    label={t("suppliers.notas")}
                     minRows={3}
                     autosize
                     {...form.getInputProps("notes")}
@@ -692,14 +694,14 @@ export default function SuppliersPage() {
                 </Grid.Col>
                 <Grid.Col span={12}>
                   <TagsInput
-                    label="Etiquetas"
-                    placeholder="Pulsa Enter para añadir"
+                    label={t("suppliers.etiquetas")}
+                    placeholder={t("suppliers.pulsaEnterParaAnadir")}
                     {...form.getInputProps("tags")}
                   />
                 </Grid.Col>
                 <Grid.Col span={12}>
                   <Switch
-                    label="Proveedor activo"
+                    label={t("suppliers.proveedorActivo")}
                     {...form.getInputProps("is_active", { type: "checkbox" })}
                   />
                 </Grid.Col>
@@ -715,7 +717,7 @@ export default function SuppliersPage() {
                   setEditing(null);
                 }}
               >
-                Cancelar
+                {t("suppliers.cancelar")}
               </Button>
               <Button
                 type="submit"

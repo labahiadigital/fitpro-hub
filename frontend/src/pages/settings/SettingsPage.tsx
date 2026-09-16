@@ -159,10 +159,10 @@ function WeeklyScheduleSection({
     },
     onSuccess: (res) => {
       setWorkspace(res.data);
-      notifications.show({ title: t("settings.booking.schedule.saved"), message: t("settings.booking.schedule.savedMsg"), color: "green" });
+      notifications.show({ title: "Horario guardado", message: "Tu disponibilidad semanal ha sido actualizada", color: "green" });
     },
     onError: () => {
-      notifications.show({ title: t("common.error"), message: t("common.errorSaving"), color: "red" });
+      notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
     },
   });
 
@@ -191,10 +191,10 @@ function WeeklyScheduleSection({
   return (
     <Box className="nv-card" p="lg" mt="lg">
       <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-        {t("settings.booking.schedule.title")}
+        {"Horario de Disponibilidad"}
       </Text>
       <Text c="dimmed" size="sm" mb="md">
-        {t("settings.booking.schedule.description")}
+        {"Configura los horarios en los que tus clientes pueden solicitar citas."}
       </Text>
       <Stack gap="sm">
         {DAY_KEYS.map((day) => (
@@ -203,11 +203,11 @@ function WeeklyScheduleSection({
               <Text fw={500} size="sm" w={100}>{t(DAY_KEYS_I18N[day])}</Text>
               {(schedule[day] || []).length === 0 ? (
                 <Group gap="xs">
-                  <Badge variant="light" color="gray" size="sm">{t("common.notAvailable")}</Badge>
-                  <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>{t("common.add")}</Button>
+                  <Badge variant="light" color="gray" size="sm">{"No disponible"}</Badge>
+                  <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>{"Añadir"}</Button>
                 </Group>
               ) : (
-                <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>{t("common.addRange")}</Button>
+                <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>{"+ Rango"}</Button>
               )}
             </Group>
             {(schedule[day] || []).map((slot, idx) => (
@@ -219,7 +219,7 @@ function WeeklyScheduleSection({
                   placeholder="09:00"
                   w={80}
                 />
-                <Text size="xs">{t("common.to")}</Text>
+                <Text size="xs">{"a"}</Text>
                 <TextInput
                   size="xs"
                   value={slot.end}
@@ -242,7 +242,7 @@ function WeeklyScheduleSection({
           style={{ backgroundColor: "var(--nv-primary)" }}
           radius="xl"
         >
-          {t("settings.booking.schedule.saveBtn")}
+          {"Guardar Horario"}
         </Button>
       </Group>
     </Box>
@@ -300,8 +300,8 @@ export function SettingsPage() {
     const setupResult = searchParams.get("setup");
     if (setupResult === "success") {
       notifications.show({
-        title: "WhatsApp conectado",
-        message: "Estamos sincronizando con Kapso, un momento…",
+        title: t("settings.whatsappConectado"),
+        message: t("settings.estamosSincronizandoConKapsoUn"),
         color: "green",
         icon: <IconCheck size={16} />,
       });
@@ -309,8 +309,8 @@ export function SettingsPage() {
       syncWhatsApp.mutate();
     } else if (setupResult === "failed") {
       notifications.show({
-        title: "Error de conexión",
-        message: "No se pudo conectar WhatsApp. Por favor, intenta de nuevo.",
+        title: t("settings.errorDeConexion"),
+        message: t("settings.noSePudoConectarWhatsapp"),
         color: "red",
       });
       setIsConnecting(false);
@@ -325,16 +325,16 @@ export function SettingsPage() {
     const googleResult = searchParams.get("google");
     if (googleResult === "success") {
       notifications.show({
-        title: "Google Calendar conectado",
-        message: "Tu calendario de Google ha sido conectado correctamente",
+        title: t("settings.googleCalendarConectado"),
+        message: t("settings.tuCalendarioDeGoogleHa"),
         color: "green",
         icon: <IconCheck size={16} />,
       });
       window.history.replaceState({}, "", "/settings?tab=integrations");
     } else if (googleResult === "error") {
       notifications.show({
-        title: "Error de conexión",
-        message: "No se pudo conectar Google Calendar. Por favor, intenta de nuevo.",
+        title: t("settings.errorDeConexion"),
+        message: t("settings.noSePudoConectarGoogle"),
         color: "red",
       });
       window.history.replaceState({}, "", "/settings?tab=integrations");
@@ -355,8 +355,8 @@ export function SettingsPage() {
 
   const handleDisconnectWhatsApp = () => {
     openDangerConfirm({
-      title: "Desconectar WhatsApp",
-      message: "¿Estás seguro de que quieres desconectar WhatsApp? Los mensajes existentes se conservarán.",
+      title: t("settings.desconectarWhatsapp"),
+      message: t("settings.estasSeguroDeQueQuieres"),
       confirmLabel: "Desconectar",
       onConfirm: async () => { await disconnectWhatsApp.mutateAsync(); },
     });
@@ -375,8 +375,8 @@ export function SettingsPage() {
 
   const handleDisconnectGoogleCalendar = () => {
     openDangerConfirm({
-      title: "Desconectar Google Calendar",
-      message: "¿Estás seguro de que quieres desconectar Google Calendar?",
+      title: t("settings.desconectarGoogleCalendar"),
+      message: t("settings.estasSeguroDeQueQuieres"),
       confirmLabel: "Desconectar",
       onConfirm: async () => { await disconnectGoogleCalendar.mutateAsync(); },
     });
@@ -478,7 +478,7 @@ export function SettingsPage() {
       const detail =
         (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
         "No se pudo guardar";
-      notifications.show({ title: "Error", message: detail, color: "red" });
+      notifications.show({ title: t("settings.error"), message: detail, color: "red" });
     },
   });
 
@@ -522,7 +522,7 @@ export function SettingsPage() {
       notifications.show({ title: t("settings.profile.updated"), message: t("common.savedSuccessfully"), color: "green", icon: <IconCheck size={16} /> });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: t("settings.noSePudoGuardar"), color: "red" });
     },
   });
 
@@ -537,15 +537,15 @@ export function SettingsPage() {
       const avatarUrl = (res.data as { avatar_url: string }).avatar_url;
       setUser({ ...user, avatar_url: avatarUrl });
       notifications.show({
-        title: "Foto actualizada",
-        message: "Tu foto de perfil se ha cambiado correctamente",
+        title: t("settings.fotoActualizada"),
+        message: t("settings.tuFotoDePerfilSe"),
         color: "green",
         icon: <IconCheck size={16} />,
       });
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo subir la foto. Prueba con JPEG, PNG o WebP (máx. 5 MB).",
+        title: t("settings.error"),
+        message: t("settings.noSePudoSubirLa"),
         color: "red",
       });
     } finally {
@@ -567,10 +567,10 @@ export function SettingsPage() {
       const { new_email } = response.data as { new_email: string };
       setUser({ ...user!, email: new_email });
       changeEmailForm.reset();
-      notifications.show({ title: "Email actualizado", message: "Cambiado correctamente", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("settings.emailActualizado"), message: t("settings.cambiadoCorrectamente"), color: "green", icon: <IconCheck size={16} /> });
     },
     onError: (error: any) => {
-      notifications.show({ title: "Error", message: error.response?.data?.detail || "No se pudo cambiar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: error.response?.data?.detail || "No se pudo cambiar", color: "red" });
     },
   });
 
@@ -603,12 +603,12 @@ export function SettingsPage() {
     mutationFn: (data: { email: string; role: string }) => usersApi.invite(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
-      notifications.show({ title: "Invitación enviada", message: "Se ha enviado la invitación", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("settings.invitacionEnviada"), message: t("settings.seHaEnviadoLaInvitacion"), color: "green", icon: <IconCheck size={16} /> });
       closeInviteModal();
       inviteForm.reset();
     },
     onError: (err: any) => {
-      notifications.show({ title: "Error", message: err.response?.data?.detail || "No se pudo invitar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: err.response?.data?.detail || "No se pudo invitar", color: "red" });
     },
   });
 
@@ -616,11 +616,11 @@ export function SettingsPage() {
     mutationFn: (userId: string) => usersApi.remove(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
-      notifications.show({ title: "Miembro eliminado", message: "Eliminado del equipo", color: "green" });
+      notifications.show({ title: t("settings.miembroEliminado"), message: t("settings.eliminadoDelEquipo"), color: "green" });
       setDeleteConfirmMember(null);
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo eliminar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: t("settings.noSePudoEliminar"), color: "red" });
     },
   });
 
@@ -653,10 +653,10 @@ export function SettingsPage() {
     onSuccess: (res) => {
       setWorkspace(res.data);
       applyWorkspaceCssVars(res.data.branding);
-      notifications.show({ title: "Marca actualizada", message: "Colores aplicados en toda la plataforma", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("settings.marcaActualizada"), message: t("settings.coloresAplicadosEnTodaLa"), color: "green", icon: <IconCheck size={16} /> });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: t("settings.noSePudoGuardar"), color: "red" });
     },
   });
 
@@ -702,10 +702,10 @@ export function SettingsPage() {
     },
     onSuccess: (res) => {
       setWorkspace(res.data);
-      notifications.show({ title: "Reservas actualizado", message: "Políticas guardadas", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("settings.reservasActualizado"), message: t("settings.politicasGuardadas"), color: "green", icon: <IconCheck size={16} /> });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: t("settings.noSePudoGuardar"), color: "red" });
     },
   });
 
@@ -724,10 +724,10 @@ export function SettingsPage() {
       authApi.changePassword(values.current_password, values.new_password),
     onSuccess: () => {
       passwordForm.reset();
-      notifications.show({ title: "Contraseña cambiada", message: "Tu contraseña ha sido actualizada", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("settings.contrasenaCambiada"), message: t("settings.tuContrasenaHaSidoActualizada"), color: "green", icon: <IconCheck size={16} /> });
     },
     onError: (err: any) => {
-      notifications.show({ title: "Error", message: err.response?.data?.detail || "No se pudo cambiar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: err.response?.data?.detail || "No se pudo cambiar", color: "red" });
     },
   });
 
@@ -741,10 +741,10 @@ export function SettingsPage() {
       accountApi.requestDeletion({ password: values.password, reason: values.reason || undefined }),
     onSuccess: () => {
       closeDeleteAccount();
-      notifications.show({ title: "Solicitud enviada", message: "Tu cuenta será eliminada en 30 días", color: "orange" });
+      notifications.show({ title: t("settings.solicitudEnviada"), message: t("settings.tuCuentaSeraEliminadaEn"), color: "orange" });
     },
     onError: (err: any) => {
-      notifications.show({ title: "Error", message: err.response?.data?.detail || "No se pudo procesar", color: "red" });
+      notifications.show({ title: t("settings.error"), message: err.response?.data?.detail || "No se pudo procesar", color: "red" });
     },
   });
 
@@ -842,9 +842,9 @@ export function SettingsPage() {
                       try {
                         const res = await workspacesApi.uploadLogo(currentWorkspace.id, file);
                         setWorkspace({ ...currentWorkspace, logo_url: res.data.logo_url });
-                        notifications.show({ title: "Foto actualizada", message: "La foto del workspace se ha guardado", color: "green" });
+                        notifications.show({ title: t("settings.fotoActualizada"), message: t("settings.laFotoDelWorkspaceSe"), color: "green" });
                       } catch {
-                        notifications.show({ title: "Error", message: "No se pudo subir la foto", color: "red" });
+                        notifications.show({ title: t("settings.error"), message: t("settings.noSePudoSubirLa"), color: "red" });
                       }
                     }}
                   >
@@ -864,9 +864,9 @@ export function SettingsPage() {
                   <Group grow>
                     <TextInput label={t("settings.workspace.businessName")} placeholder={t("settings.workspace.businessNamePlaceholder")} {...workspaceForm.getInputProps("name")} />
                     <TextInput
-                      label="Slug (URL pública)"
+                      label={t("settings.slugUrlPublica")}
                       description={`Alta de clientes: ${getPublicAppBaseUrl({ domain: currentWorkspace?.domain, slug: workspaceForm.values.slug })}/onboarding/${workspaceForm.values.slug || "tu-slug"}`}
-                      placeholder="mi-centro-fitness"
+                      placeholder={t("settings.miCentroFitness")}
                       {...workspaceForm.getInputProps("slug")}
                       onChange={(e) => {
                         const raw = e.currentTarget.value
@@ -878,15 +878,15 @@ export function SettingsPage() {
                     />
                   </Group>
                   <TextInput
-                    label="Dominio personalizado (white-label)"
-                    description="Hostname propio (ej. app.micentro.com). Tras guardarlo, apunta un CNAME a app.trackfiz.com."
-                    placeholder="app.micentro.com"
+                    label={t("settings.dominioPersonalizadoWhiteLabel")}
+                    description={t("settings.hostnamePropioEjAppMicentro")}
+                    placeholder={t("settings.appMicentroCom")}
                     leftSection={<IconWorld size={16} />}
                     {...workspaceForm.getInputProps("domain")}
                   />
                   {workspaceForm.values.domain?.trim() ? (
                     <Alert color="blue" radius="md" variant="light" icon={<IconWorld size={16} />}>
-                      <Text size="sm" fw={600} mb={6}>Configuración DNS</Text>
+                      <Text size="sm" fw={600} mb={6}>{t("settings.configuracionDns")}</Text>
                       <Text size="sm" mb={4}>
                         1. Crea un registro <b>CNAME</b> en tu DNS:
                       </Text>
@@ -906,42 +906,42 @@ export function SettingsPage() {
                     </Alert>
                   ) : null}
                   <Group grow>
-                    <TextInput label="Email de contacto" placeholder="contacto@ejemplo.com" {...workspaceForm.getInputProps("email")} />
-                    <TextInput label="Teléfono" placeholder="+34 600 000 000" {...workspaceForm.getInputProps("phone")} />
+                    <TextInput label={t("settings.emailDeContacto")} placeholder={t("settings.contactoEjemploCom")} {...workspaceForm.getInputProps("email")} />
+                    <TextInput label={t("settings.telefono")} placeholder="+34 600 000 000" {...workspaceForm.getInputProps("phone")} />
                   </Group>
-                  <TextInput label="Dirección" placeholder="Calle, número, ciudad" {...workspaceForm.getInputProps("address")} />
-                  <TextInput label="Sitio web" placeholder="https://tuwebsite.com" {...workspaceForm.getInputProps("website")} />
-                  <Textarea label="Descripción" minRows={3} placeholder="Describe tu negocio..." {...workspaceForm.getInputProps("description")} />
+                  <TextInput label={t("settings.direccion")} placeholder={t("settings.calleNumeroCiudad")} {...workspaceForm.getInputProps("address")} />
+                  <TextInput label={t("settings.sitioWeb")} placeholder="https://tuwebsite.com" {...workspaceForm.getInputProps("website")} />
+                  <Textarea label={t("settings.descripcion")} minRows={3} placeholder={t("settings.describeTuNegocio")} {...workspaceForm.getInputProps("description")} />
 
                   <Divider
                     my="sm"
-                    label="Datos de contacto de soporte de tu Workspace"
+                    label={t("settings.datosDeContactoDeSoporte")}
                     labelPosition="left"
                   />
                   <Alert color="blue" variant="light" radius="md">
                     <Text size="sm">
-                      Estos datos son <b>públicos</b>: aparecerán en la pantalla
+                      {t("settings.estosDatosSon")} <b>públicos</b>: aparecerán en la pantalla
                       que ven los clientes tras pagar, en los emails que les
                       enviamos y en sus avisos cuando tengan algún problema.
                     </Text>
                   </Alert>
                   <Group grow>
                     <TextInput
-                      label="Móvil de soporte"
+                      label={t("settings.movilDeSoporte")}
                       placeholder="+34 600 000 000"
                       leftSection={<IconBrandWhatsapp size={16} />}
                       {...workspaceForm.getInputProps("support_phone")}
                     />
                     <TextInput
-                      label="Email de soporte"
-                      placeholder="soporte@tudominio.com"
+                      label={t("settings.emailDeSoporte")}
+                      placeholder={t("settings.soporteTudominioCom")}
                       leftSection={<IconMail size={16} />}
                       {...workspaceForm.getInputProps("support_email")}
                     />
                   </Group>
                   <Textarea
-                    label="Pie de email"
-                    description="Texto que aparecerá al final de los emails que reciben tus clientes (por ejemplo, tu nombre y una frase motivacional)."
+                    label={t("settings.pieDeEmail")}
+                    description={t("settings.textoQueApareceraAlFinal")}
                     placeholder={"Vamos a darle GAS 💪🏽\nBorja Sanfélix"}
                     minRows={3}
                     autosize
@@ -979,7 +979,7 @@ export function SettingsPage() {
                         variant="light"
                         loading={avatarUploading}
                       >
-                        Cambiar foto
+                        {t("settings.cambiarFoto")}
                       </Button>
                     )}
                   </FileButton>
@@ -1023,15 +1023,15 @@ export function SettingsPage() {
 
               <Divider my="xl" />
 
-              <Text fw={600} mb="md" size="md" style={{ color: "var(--nv-text-primary)" }}>Cambiar email</Text>
+              <Text fw={600} mb="md" size="md" style={{ color: "var(--nv-text-primary)" }}>{t("settings.cambiarEmail")}</Text>
               <form onSubmit={changeEmailForm.onSubmit((v) => changeEmailMutation.mutate(v))}>
                 <Stack gap="md">
-                  <TextInput label="Email actual" value={user?.email || ""} leftSection={<IconMail size={16} />} readOnly disabled />
-                  <TextInput label="Nuevo email" placeholder="nuevo@email.com" leftSection={<IconMail size={16} />} {...changeEmailForm.getInputProps("new_email")} />
-                  <PasswordInput label="Contraseña actual" placeholder="Tu contraseña actual" {...changeEmailForm.getInputProps("password")} />
+                  <TextInput label={t("settings.emailActual")} value={user?.email || ""} leftSection={<IconMail size={16} />} readOnly disabled />
+                  <TextInput label={t("settings.nuevoEmail")} placeholder={t("settings.nuevoEmailCom")} leftSection={<IconMail size={16} />} {...changeEmailForm.getInputProps("new_email")} />
+                  <PasswordInput label={t("settings.contrasenaActual")} placeholder={t("settings.tuContrasenaActual")} {...changeEmailForm.getInputProps("password")} />
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" loading={changeEmailMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
-                      Cambiar email
+                      {t("settings.cambiarEmail")}
                     </Button>
                   </Group>
                 </Stack>
@@ -1111,12 +1111,12 @@ export function SettingsPage() {
           <Tabs.Panel value="branding">
             <Box className="nv-card" p="lg">
               <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-                Personalización de Marca
+                {t("settings.personalizacionDeMarca")}
               </Text>
 
               <Stack gap="lg">
                 <Box>
-                  <Text fw={500} mb="xs" size="sm">Logo</Text>
+                  <Text fw={500} mb="xs" size="sm">{t("settings.logo")}</Text>
                   <Group>
                     <Avatar color="primary" radius="md" size={80} src={currentWorkspace?.logo_url}>
                       {currentWorkspace?.name?.charAt(0) || "F"}
@@ -1130,22 +1130,22 @@ export function SettingsPage() {
                             const res = await workspacesApi.uploadLogo(currentWorkspace.id, file);
                             setWorkspace({ ...currentWorkspace, logo_url: res.data.logo_url });
                             notifications.show({
-                              title: "Logo actualizado",
-                              message: "Se mostrará en el menú, PDFs y onboarding",
+                              title: t("settings.logoActualizado"),
+                              message: t("settings.seMostraraEnElMenu"),
                               color: "green",
                             });
                           } catch {
-                            notifications.show({ title: "Error", message: "No se pudo subir el logo", color: "red" });
+                            notifications.show({ title: t("settings.error"), message: t("settings.noSePudoSubirEl"), color: "red" });
                           }
                         }}
                       >
                         {(props) => (
                           <Button {...props} leftSection={<IconUpload size={14} />} size="sm" variant="light">
-                            Subir logo
+                            {t("settings.subirLogo")}
                           </Button>
                         )}
                       </FileButton>
-                      <Text c="dimmed" mt={4} size="xs">PNG, JPG o WebP. Máximo 5MB.</Text>
+                      <Text c="dimmed" mt={4} size="xs">{t("settings.pngJpgOWebpMaximo")}</Text>
                     </Box>
                   </Group>
                 </Box>
@@ -1158,13 +1158,13 @@ export function SettingsPage() {
                     brandingUpdateMutation.mutate(v);
                   })}
                 >
-                  <Text fw={500} mb="md" size="sm">Colores</Text>
+                  <Text fw={500} mb="md" size="sm">{t("settings.colores")}</Text>
                   <Text c="dimmed" mb="md" size="xs">
-                    Los colores se aplican en toda la plataforma (botones, menú, acentos) para tu workspace.
+                    {t("settings.losColoresSeAplicanEn")}
                   </Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} mb="lg" spacing="md">
                     <ColorInput
-                      label="Color primario"
+                      label={t("settings.colorPrimario")}
                       {...brandingForm.getInputProps("primary_color")}
                       onChange={(value) => {
                         brandingForm.setFieldValue("primary_color", value);
@@ -1175,7 +1175,7 @@ export function SettingsPage() {
                       }}
                     />
                     <ColorInput
-                      label="Color secundario"
+                      label={t("settings.colorSecundario")}
                       {...brandingForm.getInputProps("secondary_color")}
                       onChange={(value) => {
                         brandingForm.setFieldValue("secondary_color", value);
@@ -1186,7 +1186,7 @@ export function SettingsPage() {
                       }}
                     />
                     <ColorInput
-                      label="Color de acento"
+                      label={t("settings.colorDeAcento")}
                       {...brandingForm.getInputProps("accent_color")}
                       onChange={(value) => {
                         brandingForm.setFieldValue("accent_color", value);
@@ -1199,7 +1199,7 @@ export function SettingsPage() {
                   </SimpleGrid>
 
                   <Box mb="lg">
-                    <Text fw={500} mb="xs" size="sm">Vista previa</Text>
+                    <Text fw={500} mb="xs" size="sm">{t("settings.vistaPrevia")}</Text>
                     <Paper
                       p="md"
                       radius="md"
@@ -1208,8 +1208,8 @@ export function SettingsPage() {
                       }}
                     >
                       <Text c="white" fw={600}>{currentWorkspace?.name || "Trackfiz"}</Text>
-                      <Text c="white" opacity={0.8} size="sm">Tu centro de entrenamiento</Text>
-                      <Button mt="sm" size="xs" style={{ backgroundColor: brandingForm.values.accent_color }}>Reservar</Button>
+                      <Text c="white" opacity={0.8} size="sm">{t("settings.tuCentroDeEntrenamiento")}</Text>
+                      <Button mt="sm" size="xs" style={{ backgroundColor: brandingForm.values.accent_color }}>{t("settings.reservar")}</Button>
                     </Paper>
                   </Box>
 
@@ -1240,31 +1240,29 @@ export function SettingsPage() {
           <Tabs.Panel value="notifications">
             <Box className="nv-card" p="lg">
               <Text fw={600} mb="xs" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-                Preferencias de Notificaciones
+                {t("settings.preferenciasDeNotificaciones")}
               </Text>
               <Text c="dimmed" size="sm" mb="lg">
-                Elige cómo quieres recibir cada tipo de notificación. Puedes activar el correo electrónico,
-                las notificaciones in-app (campanita), ambos, o ninguno. Para notificaciones de tipo recordatorio
-                puedes configurar los días de antelación.
+                {t("settings.eligeComoQuieresRecibirCada")}
               </Text>
 
               <Group justify="space-between" mb="sm" px="md">
-                <Text fw={600} size="sm" style={{ flex: 1 }}>Tipo de notificación</Text>
+                <Text fw={600} size="sm" style={{ flex: 1 }}>{t("settings.tipoDeNotificacion")}</Text>
                 <Group gap="lg" wrap="nowrap">
-                  <Group gap={4}><IconMail size={14} /><Text fw={600} size="xs">Email</Text></Group>
-                  <Group gap={4}><IconBell size={14} /><Text fw={600} size="xs">App/Web</Text></Group>
+                  <Group gap={4}><IconMail size={14} /><Text fw={600} size="xs">{t("settings.email")}</Text></Group>
+                  <Group gap={4}><IconBell size={14} /><Text fw={600} size="xs">{t("settings.appWeb")}</Text></Group>
                 </Group>
               </Group>
 
               <Divider mb="md" />
 
-              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Reservas y pagos</Text>
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>{t("settings.reservasYPagos")}</Text>
               <Stack gap="sm" mb="lg">
                 {[
-                  { key: "booking_created", label: "Nuevas reservas", desc: "Cuando un cliente hace una reserva" },
-                  { key: "booking_cancelled", label: "Cancelaciones", desc: "Cuando se cancela una reserva" },
-                  { key: "payment_received", label: "Pagos recibidos", desc: "Cuando se procesa un pago" },
-                  { key: "payment_failed", label: "Pagos fallidos", desc: "Cuando falla un cobro" },
+                  { key: "booking_created", label: t("settings.nuevasReservas"), desc: "Cuando un cliente hace una reserva" },
+                  { key: "booking_cancelled", label: t("settings.cancelaciones"), desc: "Cuando se cancela una reserva" },
+                  { key: "payment_received", label: t("settings.pagosRecibidos"), desc: "Cuando se procesa un pago" },
+                  { key: "payment_failed", label: t("settings.pagosFallidos"), desc: "Cuando falla un cobro" },
                 ].map((item) => {
                   const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
                   const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
@@ -1277,8 +1275,8 @@ export function SettingsPage() {
                           <Text c="dimmed" size="xs">{item.desc}</Text>
                         </Box>
                         <Group gap="lg" wrap="nowrap">
-                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
-                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.email")}><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.appWeb")}><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
                         </Group>
                       </Group>
                     </Paper>
@@ -1286,13 +1284,13 @@ export function SettingsPage() {
                 })}
               </Stack>
 
-              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Clientes y comunicación</Text>
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>{t("settings.clientesYComunicacion")}</Text>
               <Stack gap="sm" mb="lg">
                 {[
-                  { key: "new_message", label: "Nuevos mensajes", desc: "Cuando un cliente te envía un mensaje" },
-                  { key: "new_client", label: "Nuevos clientes", desc: "Cuando se registra un nuevo cliente" },
-                  { key: "form_submitted", label: "Formularios completados", desc: "Cuando un cliente completa un formulario" },
-                  { key: "progress_milestone", label: "Hitos de progreso", desc: "Cuando un cliente alcanza un hito" },
+                  { key: "new_message", label: t("settings.nuevosMensajes"), desc: "Cuando un cliente te envía un mensaje" },
+                  { key: "new_client", label: t("settings.nuevosClientes"), desc: "Cuando se registra un nuevo cliente" },
+                  { key: "form_submitted", label: t("settings.formulariosCompletados"), desc: "Cuando un cliente completa un formulario" },
+                  { key: "progress_milestone", label: t("settings.hitosDeProgreso"), desc: "Cuando un cliente alcanza un hito" },
                 ].map((item) => {
                   const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
                   const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
@@ -1305,8 +1303,8 @@ export function SettingsPage() {
                           <Text c="dimmed" size="xs">{item.desc}</Text>
                         </Box>
                         <Group gap="lg" wrap="nowrap">
-                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
-                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.email")}><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.appWeb")}><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
                         </Group>
                       </Group>
                     </Paper>
@@ -1314,13 +1312,13 @@ export function SettingsPage() {
                 })}
               </Stack>
 
-              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Tareas y automatizaciones</Text>
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>{t("settings.tareasYAutomatizaciones")}</Text>
               <Stack gap="sm" mb="lg">
                 {[
-                  { key: "task_assigned", label: "Tareas asignadas", desc: "Cuando se te asigna una nueva tarea" },
-                  { key: "task_due", label: "Tareas por vencer", desc: "Recordatorio de tareas próximas a su fecha límite" },
-                  { key: "low_stock", label: "Stock bajo", desc: "Cuando un producto tiene cantidades bajas en inventario" },
-                  { key: "automation_completed", label: "Automatizaciones completadas", desc: "Cuando una automatización finaliza su ejecución" },
+                  { key: "task_assigned", label: t("settings.tareasAsignadas"), desc: "Cuando se te asigna una nueva tarea" },
+                  { key: "task_due", label: t("settings.tareasPorVencer"), desc: "Recordatorio de tareas próximas a su fecha límite" },
+                  { key: "low_stock", label: t("settings.stockBajo"), desc: "Cuando un producto tiene cantidades bajas en inventario" },
+                  { key: "automation_completed", label: t("settings.automatizacionesCompletadas"), desc: "Cuando una automatización finaliza su ejecución" },
                 ].map((item) => {
                   const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
                   const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
@@ -1333,8 +1331,8 @@ export function SettingsPage() {
                           <Text c="dimmed" size="xs">{item.desc}</Text>
                         </Box>
                         <Group gap="lg" wrap="nowrap">
-                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
-                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.email")}><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.appWeb")}><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
                         </Group>
                       </Group>
                     </Paper>
@@ -1342,12 +1340,12 @@ export function SettingsPage() {
                 })}
               </Stack>
 
-              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>Control horario</Text>
+              <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>{t("settings.controlHorario")}</Text>
               <Stack gap="sm" mb="lg">
                 {[
-                  { key: "clock_in_reminder", label: "Recordatorio de fichaje", desc: "Aviso para recordarte que debes fichar tu entrada" },
-                  { key: "clock_event", label: "Evento de fichaje", desc: "Notificación cuando se realiza un fichaje (dentro/fuera de horario)" },
-                  { key: "clock_missed", label: "Fichaje no realizado", desc: "Aviso cuando no se ha fichado y debería haberse hecho" },
+                  { key: "clock_in_reminder", label: t("settings.recordatorioDeFichaje"), desc: "Aviso para recordarte que debes fichar tu entrada" },
+                  { key: "clock_event", label: t("settings.eventoDeFichaje"), desc: "Notificación cuando se realiza un fichaje (dentro/fuera de horario)" },
+                  { key: "clock_missed", label: t("settings.fichajeNoRealizado"), desc: "Aviso cuando no se ha fichado y debería haberse hecho" },
                 ].map((item) => {
                   const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
                   const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
@@ -1360,8 +1358,8 @@ export function SettingsPage() {
                           <Text c="dimmed" size="xs">{item.desc}</Text>
                         </Box>
                         <Group gap="lg" wrap="nowrap">
-                          <Tooltip label="Email"><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
-                          <Tooltip label="App/Web"><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.email")}><Switch size="sm" checked={emailOn} onChange={(e) => handleNotifPrefChange(item.key, "email", e.currentTarget.checked)} thumbIcon={<IconMail size={10} />} /></Tooltip>
+                          <Tooltip label={t("settings.appWeb")}><Switch size="sm" checked={inAppOn} onChange={(e) => handleNotifPrefChange(item.key, "in_app", e.currentTarget.checked)} thumbIcon={<IconBell size={10} />} /></Tooltip>
                         </Group>
                       </Group>
                     </Paper>
@@ -1371,19 +1369,18 @@ export function SettingsPage() {
 
               <Divider my="lg" />
 
-              <Text fw={600} size="sm" mb="sm" style={{ color: "var(--nv-text-primary)" }}>Anticipación de notificaciones</Text>
+              <Text fw={600} size="sm" mb="sm" style={{ color: "var(--nv-text-primary)" }}>{t("settings.anticipacionDeNotificaciones")}</Text>
               <Text c="dimmed" size="xs" mb="md">
-                Configura con cuántos días de antelación quieres recibir recordatorios para tareas, revisiones y eventos próximos.
-                Puedes configurar hasta dos recordatorios con días de antelación distintos.
+                {t("settings.configuraConCuantosDiasDe")}
               </Text>
               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mb="md">
                 <Paper p="md" withBorder radius="md">
-                  <Text fw={500} size="sm" mb="xs">Primer recordatorio</Text>
+                  <Text fw={500} size="sm" mb="xs">{t("settings.primerRecordatorio")}</Text>
                   <NumberInput
                     size="sm"
                     radius="md"
-                    label="Días de antelación"
-                    placeholder="Ej: 3"
+                    label={t("settings.diasDeAntelacion")}
+                    placeholder={t("settings.ej3")}
                     min={1}
                     max={30}
                     value={(notifPrefs as Record<string, unknown>)?.advance_days_1 as number ?? 3}
@@ -1391,12 +1388,12 @@ export function SettingsPage() {
                   />
                 </Paper>
                 <Paper p="md" withBorder radius="md">
-                  <Text fw={500} size="sm" mb="xs">Segundo recordatorio (opcional)</Text>
+                  <Text fw={500} size="sm" mb="xs">{t("settings.segundoRecordatorioOpcional")}</Text>
                   <NumberInput
                     size="sm"
                     radius="md"
-                    label="Días de antelación"
-                    placeholder="Ej: 1"
+                    label={t("settings.diasDeAntelacion")}
+                    placeholder={t("settings.ej1")}
                     min={1}
                     max={30}
                     value={(notifPrefs as Record<string, unknown>)?.advance_days_2 as number ?? undefined}
@@ -1418,31 +1415,31 @@ export function SettingsPage() {
           <Tabs.Panel value="booking">
             <Box className="nv-card" p="lg">
               <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-                Configuración de Reservas
+                {t("settings.configuracionDeReservas")}
               </Text>
               <form onSubmit={bookingForm.onSubmit((v) => bookingUpdateMutation.mutate(v))}>
                 <Stack gap="md">
                   <Group grow>
-                    <NumberInput label="Duración por defecto (minutos)" max={240} min={15} step={15} {...bookingForm.getInputProps("default_duration")} />
-                    <NumberInput label="Tiempo entre sesiones (minutos)" max={60} min={0} step={5} {...bookingForm.getInputProps("buffer_time")} />
+                    <NumberInput label={t("settings.duracionPorDefectoMinutos")} max={240} min={15} step={15} {...bookingForm.getInputProps("default_duration")} />
+                    <NumberInput label={t("settings.tiempoEntreSesionesMinutos")} max={60} min={0} step={5} {...bookingForm.getInputProps("buffer_time")} />
                   </Group>
                   <Group grow>
-                    <NumberInput label="Máximo días de antelación" max={365} min={1} {...bookingForm.getInputProps("max_advance_days")} />
-                    <NumberInput label="Mínimo horas de antelación" max={72} min={0} {...bookingForm.getInputProps("min_advance_hours")} />
+                    <NumberInput label={t("settings.maximoDiasDeAntelacion")} max={365} min={1} {...bookingForm.getInputProps("max_advance_days")} />
+                    <NumberInput label={t("settings.minimoHorasDeAntelacion")} max={72} min={0} {...bookingForm.getInputProps("min_advance_hours")} />
                   </Group>
-                  <NumberInput description="El cliente puede cancelar sin penalización hasta X horas antes" label="Política de cancelación (horas antes)" max={72} min={0} {...bookingForm.getInputProps("cancellation_policy_hours")} />
+                  <NumberInput description={t("settings.elClientePuedeCancelarSin")} label={t("settings.politicaDeCancelacionHorasAntes")} max={72} min={0} {...bookingForm.getInputProps("cancellation_policy_hours")} />
 
                   <Divider my="sm" />
 
-                  <Switch description="Los clientes pueden reservar sesiones desde su app/portal" label="Permitir reservas de clientes" {...bookingForm.getInputProps("allow_client_booking", { type: "checkbox" })} />
-                  <Switch description="Los clientes pueden cancelar sus propias reservas" label="Permitir cancelaciones de clientes" {...bookingForm.getInputProps("allow_client_cancellation", { type: "checkbox" })} />
-                  <Switch description="El cliente debe pagar al hacer la reserva" label="Requerir pago por adelantado" {...bookingForm.getInputProps("require_payment_upfront", { type: "checkbox" })} />
+                  <Switch description={t("settings.losClientesPuedenReservarSesiones")} label={t("settings.permitirReservasDeClientes")} {...bookingForm.getInputProps("allow_client_booking", { type: "checkbox" })} />
+                  <Switch description={t("settings.losClientesPuedenCancelarSus")} label={t("settings.permitirCancelacionesDeClientes")} {...bookingForm.getInputProps("allow_client_cancellation", { type: "checkbox" })} />
+                  <Switch description={t("settings.elClienteDebePagarAl")} label={t("settings.requerirPagoPorAdelantado")} {...bookingForm.getInputProps("require_payment_upfront", { type: "checkbox" })} />
 
                   <Divider my="sm" />
 
-                  <Switch description="Envía recordatorios por email antes de las sesiones" label="Enviar recordatorios automáticos" {...bookingForm.getInputProps("send_reminders", { type: "checkbox" })} />
+                  <Switch description={t("settings.enviaRecordatoriosPorEmailAntes")} label={t("settings.enviarRecordatoriosAutomaticos")} {...bookingForm.getInputProps("send_reminders", { type: "checkbox" })} />
                   {bookingForm.values.send_reminders && (
-                    <NumberInput label="Horas antes del recordatorio" max={72} min={1} {...bookingForm.getInputProps("reminder_hours")} />
+                    <NumberInput label={t("settings.horasAntesDelRecordatorio")} max={72} min={1} {...bookingForm.getInputProps("reminder_hours")} />
                   )}
 
                   <Group justify="flex-end">
@@ -1466,19 +1463,19 @@ export function SettingsPage() {
                   <Box>
                     <Group gap="sm" mb={4}>
                       <IconBrandGoogle size={24} color="#4285F4" />
-                      <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>Google Calendar</Text>
+                      <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.googleCalendar")}</Text>
                     </Group>
-                    <Text c="dimmed" size="sm">Sincroniza tus reservas con Google Calendar de forma bidireccional</Text>
+                    <Text c="dimmed" size="sm">{t("settings.sincronizaTusReservasConGoogle")}</Text>
                   </Box>
                   {googleCalendarStatus?.connected && (
-                    <Badge color="green" size="lg" variant="light" leftSection={<IconCheck size={14} />}>Conectado</Badge>
+                    <Badge color="green" size="lg" variant="light" leftSection={<IconCheck size={14} />}>{t("settings.conectado")}</Badge>
                   )}
                 </Group>
 
                 {loadingGoogleCalendar ? (
                   <Box py="xl" ta="center">
                     <Loader size="sm" />
-                    <Text c="dimmed" size="sm" mt="sm">Cargando estado de Google Calendar...</Text>
+                    <Text c="dimmed" size="sm" mt="sm">{t("settings.cargandoEstadoDeGoogleCalendar")}</Text>
                   </Box>
                 ) : googleCalendarStatus?.connected ? (
                   <Stack gap="md">
@@ -1491,34 +1488,34 @@ export function SettingsPage() {
                           <Text c="dimmed" size="xs">{formatLastSync(googleCalendarStatus.last_sync_at)}</Text>
                         </Box>
                         <Group>
-                          <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={() => syncGoogleCalendar.mutate()} loading={syncGoogleCalendar.isPending}>Sincronizar</Button>
-                          <Button color="red" variant="subtle" onClick={handleDisconnectGoogleCalendar} loading={disconnectGoogleCalendar.isPending}>Desconectar</Button>
+                          <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={() => syncGoogleCalendar.mutate()} loading={syncGoogleCalendar.isPending}>{t("settings.sincronizar")}</Button>
+                          <Button color="red" variant="subtle" onClick={handleDisconnectGoogleCalendar} loading={disconnectGoogleCalendar.isPending}>{t("settings.desconectar")}</Button>
                         </Group>
                       </Group>
                     </Paper>
                     <Group>
-                      <Switch checked={googleCalendarStatus.sync_enabled} onChange={(e) => updateGoogleCalendarSettings.mutate(e.currentTarget.checked)} label="Sincronización automática" description="Las reservas se sincronizan automáticamente con Google Calendar" />
+                      <Switch checked={googleCalendarStatus.sync_enabled} onChange={(e) => updateGoogleCalendarSettings.mutate(e.currentTarget.checked)} label={t("settings.sincronizacionAutomatica")} description={t("settings.lasReservasSeSincronizanAutomaticamente")} />
                     </Group>
                     <Alert color="blue" variant="light" radius="lg">
-                      <Text size="sm">Tus reservas se sincronizarán automáticamente con Google Calendar. Los cambios en cualquier plataforma se reflejarán en la otra.</Text>
+                      <Text size="sm">{t("settings.tusReservasSeSincronizaranAutomaticamente")}</Text>
                     </Alert>
                   </Stack>
                 ) : (
                   <Stack gap="md">
                     <Paper p="xl" radius="lg" style={{ backgroundColor: "var(--nv-surface)", border: "1px dashed var(--nv-border)", textAlign: "center" }}>
                       <ThemeIcon color="blue" size={64} radius="xl" variant="light" mx="auto" mb="md"><IconCalendarEvent size={36} /></ThemeIcon>
-                      <Text fw={600} size="lg" mb="xs">Conecta tu Google Calendar</Text>
-                      <Text c="dimmed" size="sm" mb="lg" maw={400} mx="auto">Sincroniza tus reservas de forma bidireccional con Google Calendar.</Text>
-                      <Button color="blue" size="md" radius="xl" leftSection={<IconBrandGoogle size={18} />} onClick={handleConnectGoogleCalendar} loading={googleCalendarAuthUrl.isPending}>Conectar con Google</Button>
+                      <Text fw={600} size="lg" mb="xs">{t("settings.conectaTuGoogleCalendar")}</Text>
+                      <Text c="dimmed" size="sm" mb="lg" maw={400} mx="auto">{t("settings.sincronizaTusReservasDeForma")}</Text>
+                      <Button color="blue" size="md" radius="xl" leftSection={<IconBrandGoogle size={18} />} onClick={handleConnectGoogleCalendar} loading={googleCalendarAuthUrl.isPending}>{t("settings.conectarConGoogle")}</Button>
                     </Paper>
                     <Box>
-                      <Text fw={500} mb="sm">Beneficios de conectar Google Calendar:</Text>
+                      <Text fw={500} mb="sm">{t("settings.beneficiosDeConectarGoogleCalendar")}</Text>
                       <List spacing="xs" size="sm" icon={<IconCheck size={14} color="var(--mantine-color-green-6)" />}>
-                        <List.Item>Sincronización bidireccional de reservas</List.Item>
-                        <List.Item>Ve tus sesiones junto a tus otros eventos</List.Item>
-                        <List.Item>Recibe recordatorios de Google Calendar</List.Item>
-                        <List.Item>Evita conflictos de horario automáticamente</List.Item>
-                        <List.Item>Comparte disponibilidad fácilmente</List.Item>
+                        <List.Item>{t("settings.sincronizacionBidireccionalDeReservas")}</List.Item>
+                        <List.Item>{t("settings.veTusSesionesJuntoA")}</List.Item>
+                        <List.Item>{t("settings.recibeRecordatoriosDeGoogleCalendar")}</List.Item>
+                        <List.Item>{t("settings.evitaConflictosDeHorarioAutomaticamente")}</List.Item>
+                        <List.Item>{t("settings.comparteDisponibilidadFacilmente")}</List.Item>
                       </List>
                     </Box>
                   </Stack>
@@ -1533,19 +1530,19 @@ export function SettingsPage() {
                   <Box>
                     <Group gap="sm" mb={4}>
                       <IconBrandWhatsapp size={24} color="#25D366" />
-                      <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>WhatsApp Business</Text>
+                      <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.whatsappBusiness")}</Text>
                     </Group>
-                    <Text c="dimmed" size="sm">Conecta tu cuenta de WhatsApp Business para comunicarte con tus clientes</Text>
+                    <Text c="dimmed" size="sm">{t("settings.conectaTuCuentaDeWhatsapp")}</Text>
                   </Box>
                   {whatsappStatus?.connected && (
-                    <Badge color="green" size="lg" variant="light" leftSection={<IconCheck size={14} />}>Conectado</Badge>
+                    <Badge color="green" size="lg" variant="light" leftSection={<IconCheck size={14} />}>{t("settings.conectado")}</Badge>
                   )}
                 </Group>
 
                 {loadingWhatsApp ? (
                   <Box py="xl" ta="center">
                     <Loader size="sm" />
-                    <Text c="dimmed" size="sm" mt="sm">Cargando estado de WhatsApp...</Text>
+                    <Text c="dimmed" size="sm" mt="sm">{t("settings.cargandoEstadoDeWhatsapp")}</Text>
                   </Box>
                 ) : whatsappStatus?.connected ? (
                   <Stack gap="md">
@@ -1556,7 +1553,7 @@ export function SettingsPage() {
                           <Text fw={600} size="lg">{formatPhoneNumber(whatsappStatus.display_phone_number)}</Text>
                           <Text c="dimmed" size="sm">{getConnectionTime(whatsappStatus.connected_at)}</Text>
                         </Box>
-                        <Button color="red" variant="subtle" onClick={handleDisconnectWhatsApp} loading={disconnectWhatsApp.isPending}>Desconectar</Button>
+                        <Button color="red" variant="subtle" onClick={handleDisconnectWhatsApp} loading={disconnectWhatsApp.isPending}>{t("settings.desconectar")}</Button>
                       </Group>
                     </Paper>
                     {whatsappStatus.is_coexistence ? (
@@ -1564,7 +1561,7 @@ export function SettingsPage() {
                         color="yellow"
                         icon={<IconAlertTriangle size={16} />}
                         radius="lg"
-                        title="Modo coexistencia activo"
+                        title={t("settings.modoCoexistenciaActivo")}
                         variant="light"
                       >
                         <Text size="sm">
@@ -1579,15 +1576,14 @@ export function SettingsPage() {
                         <Text mt={4} size="sm">
                           Si necesitas iniciar conversaciones libremente,
                           desconecta y vuelve a conectar eligiendo{" "}
-                          <b>API nativa (dedicated)</b>, o crea plantillas
+                          <b>{t("settings.apiNativaDedicated")}</b>, o crea plantillas
                           aprobadas para tus mensajes proactivos.
                         </Text>
                       </Alert>
                     ) : (
                       <Alert color="blue" variant="light" radius="lg">
                         <Text size="sm">
-                          Los mensajes de WhatsApp ahora aparecerán en tu
-                          bandeja de Chat.
+                          {t("settings.losMensajesDeWhatsappAhora")}
                         </Text>
                       </Alert>
                     )}
@@ -1596,21 +1592,21 @@ export function SettingsPage() {
                   <Stack gap="md">
                     <Paper p="xl" radius="lg" style={{ backgroundColor: "var(--nv-surface)", border: "1px dashed var(--nv-border)", textAlign: "center" }}>
                       <ThemeIcon color="green" size={64} radius="xl" variant="light" mx="auto" mb="md"><IconBrandWhatsapp size={36} /></ThemeIcon>
-                      <Text fw={600} size="lg" mb="xs">Conecta tu WhatsApp Business</Text>
-                      <Text c="dimmed" size="sm" mb="lg" maw={400} mx="auto">Integra tu cuenta de WhatsApp Business para enviar y recibir mensajes directamente desde la plataforma.</Text>
+                      <Text fw={600} size="lg" mb="xs">{t("settings.conectaTuWhatsappBusiness")}</Text>
+                      <Text c="dimmed" size="sm" mb="lg" maw={400} mx="auto">{t("settings.integraTuCuentaDeWhatsapp")}</Text>
                       <Button color="green" size="md" radius="xl" leftSection={<IconPlugConnected size={18} />} onClick={handleConnectWhatsApp} loading={connectWhatsApp.isPending || isConnecting}>
                         {isConnecting ? "Esperando conexión..." : "Conectar WhatsApp"}
                       </Button>
-                      {isConnecting && <Text c="dimmed" size="xs" mt="sm">Completa el proceso en la ventana emergente</Text>}
+                      {isConnecting && <Text c="dimmed" size="xs" mt="sm">{t("settings.completaElProcesoEnLa")}</Text>}
                     </Paper>
                     <Box>
-                      <Text fw={500} mb="sm">Beneficios de conectar WhatsApp:</Text>
+                      <Text fw={500} mb="sm">{t("settings.beneficiosDeConectarWhatsapp")}</Text>
                       <List spacing="xs" size="sm" icon={<IconCheck size={14} color="var(--mantine-color-green-6)" />}>
-                        <List.Item>Recibe mensajes de clientes en tu bandeja de chat unificada</List.Item>
-                        <List.Item>Envía mensajes a clientes por WhatsApp o plataforma</List.Item>
-                        <List.Item>Indicadores visuales claros del origen de cada mensaje</List.Item>
-                        <List.Item>Historial completo de conversaciones en un solo lugar</List.Item>
-                        <List.Item>Notificaciones cuando recibas nuevos mensajes</List.Item>
+                        <List.Item>{t("settings.recibeMensajesDeClientesEn")}</List.Item>
+                        <List.Item>{t("settings.enviaMensajesAClientesPor")}</List.Item>
+                        <List.Item>{t("settings.indicadoresVisualesClarosDelOrigen")}</List.Item>
+                        <List.Item>{t("settings.historialCompletoDeConversacionesEn")}</List.Item>
+                        <List.Item>{t("settings.notificacionesCuandoRecibasNuevosMensajes")}</List.Item>
                       </List>
                     </Box>
                   </Stack>
@@ -1619,11 +1615,11 @@ export function SettingsPage() {
 
               {/* Info section */}
               <Box className="nv-card" p="lg">
-                <Text fw={600} mb="md" size="lg" style={{ color: "var(--nv-text-primary)" }}>Información sobre integraciones</Text>
+                <Text fw={600} mb="md" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.informacionSobreIntegraciones")}</Text>
                 <Stack gap="sm">
-                  <Group><ThemeIcon color="blue" variant="light" size="sm"><IconShield size={14} /></ThemeIcon><Text size="sm">Tus credenciales están seguras. Utilizamos OAuth para autenticación segura.</Text></Group>
-                  <Group><ThemeIcon color="blue" variant="light" size="sm"><IconRefresh size={14} /></ThemeIcon><Text size="sm">Las sincronizaciones se realizan automáticamente cuando creas o modificas reservas.</Text></Group>
-                  <Group><ThemeIcon color="blue" variant="light" size="sm"><IconExternalLink size={14} /></ThemeIcon><Text size="sm">Puedes revocar el acceso en cualquier momento desde la configuración de tu cuenta de Google/WhatsApp.</Text></Group>
+                  <Group><ThemeIcon color="blue" variant="light" size="sm"><IconShield size={14} /></ThemeIcon><Text size="sm">{t("settings.tusCredencialesEstanSegurasUtilizamos")}</Text></Group>
+                  <Group><ThemeIcon color="blue" variant="light" size="sm"><IconRefresh size={14} /></ThemeIcon><Text size="sm">{t("settings.lasSincronizacionesSeRealizanAutomaticamente")}</Text></Group>
+                  <Group><ThemeIcon color="blue" variant="light" size="sm"><IconExternalLink size={14} /></ThemeIcon><Text size="sm">{t("settings.puedesRevocarElAccesoEn")}</Text></Group>
                 </Stack>
               </Box>
             </Stack>
@@ -1633,7 +1629,7 @@ export function SettingsPage() {
           <Tabs.Panel value="billing">
             <Stack gap="lg">
               <Box className="nv-card" p="lg">
-                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Plan Actual</Text>
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.planActual")}</Text>
                 <Group justify="space-between" mb="md">
                   <Box>
                     <Badge color="primary" mb="xs" size="lg">{billingData?.plan_name || "Plan Pro"}</Badge>
@@ -1645,16 +1641,16 @@ export function SettingsPage() {
                   </Box>
                   <Box ta="right">
                     <Text fw={700} size="xl">{billingData?.price || "—"}</Text>
-                    <Button size="xs" variant="light">Cambiar plan</Button>
+                    <Button size="xs" variant="light">{t("settings.cambiarPlan")}</Button>
                   </Box>
                 </Group>
                 <Alert color="green" icon={<IconCheck size={16} />} variant="light" radius="lg">
-                  Tu plan incluye: clientes ilimitados, automatizaciones, chat, y soporte prioritario.
+                  {t("settings.tuPlanIncluyeClientesIlimitados")}
                 </Alert>
               </Box>
 
               <Box className="nv-card" p="lg">
-                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Método de Pago</Text>
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.metodoDePago")}</Text>
                 <Group justify="space-between" p="md" style={{ border: "1px solid var(--nv-border)", borderRadius: "var(--radius-item)" }}>
                   <Group>
                     <ThemeIcon color="blue" size="lg" variant="light" radius="xl"><IconCreditCard size={20} /></ThemeIcon>
@@ -1667,21 +1663,21 @@ export function SettingsPage() {
                       </Text>
                     </Box>
                   </Group>
-                  <Button size="xs" variant="light" radius="xl">Actualizar</Button>
+                  <Button size="xs" variant="light" radius="xl">{t("settings.actualizar")}</Button>
                 </Group>
               </Box>
 
               <Box className="nv-card" p="lg">
-                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Historial de Facturas</Text>
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.historialDeFacturas")}</Text>
                 {billingData?.invoices?.length > 0 ? (
                   <ScrollArea type="auto">
                     <Table style={{ minWidth: 500 }}>
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th>Fecha</Table.Th>
-                          <Table.Th>Concepto</Table.Th>
-                          <Table.Th>Importe</Table.Th>
-                          <Table.Th>Estado</Table.Th>
+                          <Table.Th>{t("settings.fecha")}</Table.Th>
+                          <Table.Th>{t("settings.concepto")}</Table.Th>
+                          <Table.Th>{t("settings.importe")}</Table.Th>
+                          <Table.Th>{t("settings.estado")}</Table.Th>
                           <Table.Th />
                         </Table.Tr>
                       </Table.Thead>
@@ -1692,14 +1688,14 @@ export function SettingsPage() {
                             <Table.Td>{inv.description}</Table.Td>
                             <Table.Td>{inv.amount}</Table.Td>
                             <Table.Td><Badge color={inv.status === "paid" ? "green" : "orange"} variant="light">{inv.status === "paid" ? "Pagado" : "Pendiente"}</Badge></Table.Td>
-                            <Table.Td>{inv.pdf_url && <Button size="xs" variant="subtle" component="a" href={inv.pdf_url} target="_blank">Descargar</Button>}</Table.Td>
+                            <Table.Td>{inv.pdf_url && <Button size="xs" variant="subtle" component="a" href={inv.pdf_url} target="_blank">{t("settings.descargar")}</Button>}</Table.Td>
                           </Table.Tr>
                         ))}
                       </Table.Tbody>
                     </Table>
                   </ScrollArea>
                 ) : (
-                  <Text c="dimmed" size="sm" ta="center" py="lg">No hay facturas disponibles</Text>
+                  <Text c="dimmed" size="sm" ta="center" py="lg">{t("settings.noHayFacturasDisponibles")}</Text>
                 )}
               </Box>
             </Stack>
@@ -1709,18 +1705,18 @@ export function SettingsPage() {
           <Tabs.Panel value="security">
             <Stack gap="lg">
               <Box className="nv-card" p="lg">
-                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Cambiar Contraseña</Text>
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.cambiarContrasena")}</Text>
                 <form onSubmit={passwordForm.onSubmit((v) => changePasswordMutation.mutate(v))}>
                   <Stack gap="md">
-                    <PasswordInput label="Contraseña actual" placeholder="Tu contraseña actual" {...passwordForm.getInputProps("current_password")} />
+                    <PasswordInput label={t("settings.contrasenaActual")} placeholder={t("settings.tuContrasenaActual")} {...passwordForm.getInputProps("current_password")} />
                     <Box>
-                      <PasswordInput label="Nueva contraseña" placeholder="Mínimo 8 caracteres" {...passwordForm.getInputProps("new_password")} />
+                      <PasswordInput label={t("settings.nuevaContrasena")} placeholder={t("settings.minimo8Caracteres")} {...passwordForm.getInputProps("new_password")} />
                       <PasswordRulesIndicator value={passwordForm.values.new_password} />
                     </Box>
-                    <PasswordInput label="Confirmar nueva contraseña" placeholder="Confirmar nueva contraseña" {...passwordForm.getInputProps("confirm_password")} />
+                    <PasswordInput label={t("settings.confirmarNuevaContrasena")} placeholder={t("settings.confirmarNuevaContrasena")} {...passwordForm.getInputProps("confirm_password")} />
                     <Group justify="flex-end">
                       <Button type="submit" radius="xl" loading={changePasswordMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
-                        Cambiar Contraseña
+                        {t("settings.cambiarContrasena")}
                       </Button>
                     </Group>
                   </Stack>
@@ -1728,49 +1724,49 @@ export function SettingsPage() {
               </Box>
 
               <Box className="nv-card" p="lg">
-                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Autenticación de Dos Factores</Text>
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.autenticacionDeDosFactores")}</Text>
                 <Group justify="space-between">
                   <Box>
-                    <Text size="sm" style={{ color: "var(--nv-text-primary)" }}>Protege tu cuenta con 2FA</Text>
-                    <Text c="dimmed" size="xs">Añade una capa extra de seguridad a tu cuenta</Text>
+                    <Text size="sm" style={{ color: "var(--nv-text-primary)" }}>{t("settings.protegeTuCuentaCon2fa")}</Text>
+                    <Text c="dimmed" size="xs">{t("settings.anadeUnaCapaExtraDe")}</Text>
                   </Box>
-                  <Button leftSection={<IconLock size={16} />} variant="light" radius="xl">Configurar 2FA</Button>
+                  <Button leftSection={<IconLock size={16} />} variant="light" radius="xl">{t("settings.configurar2fa")}</Button>
                 </Group>
               </Box>
 
               <Box className="nv-card" p="lg">
-                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Sesiones Activas</Text>
+                <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.sesionesActivas")}</Text>
                 <Stack gap="sm">
                   <Group justify="space-between" p="sm" style={{ border: "1px solid var(--nv-border)", borderRadius: "var(--radius-item)" }}>
                     <Box>
-                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>Este dispositivo</Text>
-                      <Text c="dimmed" size="xs">Sesión actual</Text>
+                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{t("settings.esteDispositivo")}</Text>
+                      <Text c="dimmed" size="xs">{t("settings.sesionActual")}</Text>
                     </Box>
-                    <Badge color="green" variant="light" radius="xl">Actual</Badge>
+                    <Badge color="green" variant="light" radius="xl">{t("settings.actual")}</Badge>
                   </Group>
                 </Stack>
               </Box>
 
               <Box className="nv-card" p="lg" style={{ borderColor: "var(--nv-error)" }}>
-                <Text c="red" fw={600} mb="lg" size="lg">Zona de Peligro</Text>
+                <Text c="red" fw={600} mb="lg" size="lg">{t("settings.zonaDePeligro")}</Text>
                 <Alert color="red" icon={<IconAlertCircle size={16} />} mb="md" variant="light" radius="lg">
-                  Estas acciones son irreversibles. Procede con precaución.
+                  {t("settings.estasAccionesSonIrreversiblesProcede")}
                 </Alert>
                 <Stack gap="sm">
                   <Group justify="space-between">
                     <Box>
-                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>Exportar todos mis datos</Text>
-                      <Text c="dimmed" size="xs">Descarga una copia de todos tus datos (GDPR)</Text>
+                      <Text fw={500} size="sm" style={{ color: "var(--nv-text-primary)" }}>{t("settings.exportarTodosMisDatos")}</Text>
+                      <Text c="dimmed" size="xs">{t("settings.descargaUnaCopiaDeTodos")}</Text>
                     </Box>
-                    <Button variant="light" radius="xl">Exportar</Button>
+                    <Button variant="light" radius="xl">{t("settings.exportar")}</Button>
                   </Group>
                   <Divider style={{ borderColor: "var(--nv-border)" }} />
                   <Group justify="space-between">
                     <Box>
-                      <Text c="red" fw={500} size="sm">Eliminar cuenta</Text>
-                      <Text c="dimmed" size="xs">Elimina permanentemente tu cuenta y todos los datos</Text>
+                      <Text c="red" fw={500} size="sm">{t("settings.eliminarCuenta")}</Text>
+                      <Text c="dimmed" size="xs">{t("settings.eliminaPermanentementeTuCuentaY")}</Text>
                     </Box>
-                    <Button color="red" variant="light" radius="xl" onClick={openDeleteAccount}>Eliminar Cuenta</Button>
+                    <Button color="red" variant="light" radius="xl" onClick={openDeleteAccount}>{t("settings.eliminarCuenta")}</Button>
                   </Group>
                 </Stack>
               </Box>
@@ -1830,17 +1826,17 @@ export function SettingsPage() {
       </BottomSheet>
 
       {/* Delete account confirmation */}
-      <BottomSheet opened={deleteAccountModal} onClose={closeDeleteAccount} title="Eliminar Cuenta" size="md" radius="lg" centered>
+      <BottomSheet opened={deleteAccountModal} onClose={closeDeleteAccount} title={t("settings.eliminarCuenta")} size="md" radius="lg" centered>
         <form onSubmit={deleteAccountForm.onSubmit((v) => deleteAccountMutation.mutate(v))}>
           <Stack gap="md">
             <Alert color="red" icon={<IconAlertCircle size={16} />} variant="light" radius="lg">
-              Esta acción es irreversible. Tu cuenta y todos los datos asociados serán eliminados permanentemente tras un periodo de gracia de 30 días.
+              {t("settings.estaAccionEsIrreversibleTu")}
             </Alert>
-            <PasswordInput label="Confirma tu contraseña" placeholder="Tu contraseña actual" {...deleteAccountForm.getInputProps("password")} />
-            <Textarea label="Motivo (opcional)" placeholder="¿Por qué quieres eliminar tu cuenta?" {...deleteAccountForm.getInputProps("reason")} />
+            <PasswordInput label={t("settings.confirmaTuContrasena")} placeholder={t("settings.tuContrasenaActual")} {...deleteAccountForm.getInputProps("password")} />
+            <Textarea label={t("settings.motivoOpcional")} placeholder={t("settings.porQueQuieresEliminarTu")} {...deleteAccountForm.getInputProps("reason")} />
             <Group justify="flex-end">
-              <Button variant="default" onClick={closeDeleteAccount} radius="xl">Cancelar</Button>
-              <Button color="red" type="submit" loading={deleteAccountMutation.isPending} radius="xl">Eliminar Cuenta</Button>
+              <Button variant="default" onClick={closeDeleteAccount} radius="xl">{t("settings.cancelar")}</Button>
+              <Button color="red" type="submit" loading={deleteAccountMutation.isPending} radius="xl">{t("settings.eliminarCuenta")}</Button>
             </Group>
           </Stack>
         </form>

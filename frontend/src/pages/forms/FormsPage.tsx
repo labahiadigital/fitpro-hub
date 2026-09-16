@@ -74,6 +74,7 @@ import {
 import { useClients } from "../../hooks/useClients";
 import { useProducts, type Product } from "../../hooks/useProducts";
 import { formatDecimal } from "../../utils/format";
+import { useTranslation } from "react-i18next";
 
 interface FormField {
   id: string;
@@ -135,6 +136,7 @@ const fieldTypes = [
 ];
 
 export function FormsPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string | null>("forms");
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [documents] = useState<Document[]>([]);
@@ -230,14 +232,14 @@ export function FormsPage() {
     try {
       await updateSubmissionMutation.mutateAsync({ submissionId, status: newStatus });
       notifications.show({
-        title: "Estado actualizado",
+        title: t("forms.estadoActualizado"),
         message: `La respuesta se ha marcado como ${newStatus === "completed" ? "completada" : newStatus === "read" ? "leída" : "pendiente"}`,
         color: "green",
       });
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo actualizar el estado",
+        title: t("forms.error"),
+        message: t("forms.noSePudoActualizarEl"),
         color: "red",
       });
     }
@@ -304,8 +306,8 @@ export function FormsPage() {
       URL.revokeObjectURL(url);
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo descargar la respuesta",
+        title: t("forms.error"),
+        message: t("forms.noSePudoDescargarLa"),
         color: "red",
       });
     }
@@ -361,7 +363,7 @@ export function FormsPage() {
     setEditingForm(null);
     form.setValues({
       name: "Canal de Denuncias",
-      description: "Formulario para reportar incidentes de forma confidencial",
+      description: t("forms.formularioParaReportarIncidentesDe"),
       type: "custom",
       send_on_signup: false,
       send_on_product_purchase: false,
@@ -371,7 +373,7 @@ export function FormsPage() {
       {
         id: `field-${Date.now()}-1`,
         type: "select",
-        label: "Tipo de denuncia",
+        label: t("forms.tipoDeDenuncia"),
         required: true,
         options: ["Acoso", "Discriminación", "Seguridad", "Otro"],
         order: 0,
@@ -379,7 +381,7 @@ export function FormsPage() {
       {
         id: `field-${Date.now()}-2`,
         type: "textarea",
-        label: "Descripción del incidente",
+        label: t("forms.descripcionDelIncidente"),
         placeholder: "Describe lo sucedido con el mayor detalle posible...",
         required: true,
         order: 1,
@@ -387,14 +389,14 @@ export function FormsPage() {
       {
         id: `field-${Date.now()}-3`,
         type: "date",
-        label: "Fecha del incidente",
+        label: t("forms.fechaDelIncidente"),
         required: false,
         order: 2,
       },
       {
         id: `field-${Date.now()}-4`,
         type: "text",
-        label: "Personas involucradas",
+        label: t("forms.personasInvolucradas"),
         placeholder: "Nombres o descripciones de las personas involucradas",
         required: false,
         order: 3,
@@ -402,7 +404,7 @@ export function FormsPage() {
       {
         id: `field-${Date.now()}-5`,
         type: "radio",
-        label: "¿Desea mantener el anonimato?",
+        label: t("forms.deseaMantenerElAnonimato"),
         required: true,
         options: ["Sí", "No"],
         order: 4,
@@ -468,14 +470,14 @@ export function FormsPage() {
       if (editingForm) {
         await updateForm.mutateAsync({ id: editingForm.id, data: formData });
         notifications.show({
-          title: "Formulario actualizado",
+          title: t("forms.formularioActualizado"),
           message: `${values.name} se ha actualizado correctamente`,
           color: "green",
         });
       } else {
         await createForm.mutateAsync(formData);
         notifications.show({
-          title: "Formulario creado",
+          title: t("forms.formularioCreado"),
           message: `${values.name} se ha creado correctamente`,
           color: "green",
         });
@@ -487,8 +489,8 @@ export function FormsPage() {
       setEditingForm(null);
     } catch (error) {
       notifications.show({
-        title: "Error",
-        message: "No se pudo guardar el formulario",
+        title: t("forms.error"),
+        message: t("forms.noSePudoGuardarEl"),
         color: "red",
       });
     }
@@ -501,7 +503,7 @@ export function FormsPage() {
         data: { is_active: !currentStatus },
       });
       notifications.show({
-        title: "Estado actualizado",
+        title: t("forms.estadoActualizado"),
         message: !currentStatus
           ? "El formulario está activo."
           : "El formulario se ha desactivado.",
@@ -509,8 +511,8 @@ export function FormsPage() {
       });
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo cambiar el estado del formulario",
+        title: t("forms.error"),
+        message: t("forms.noSePudoCambiarEl"),
         color: "red",
       });
     }
@@ -531,8 +533,8 @@ export function FormsPage() {
       });
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo cambiar el carácter obligatorio del formulario",
+        title: t("forms.error"),
+        message: t("forms.noSePudoCambiarEl"),
         color: "red",
       });
     }
@@ -540,14 +542,14 @@ export function FormsPage() {
 
   const handleDeleteForm = (formId: string, formName: string) => {
     openDangerConfirm({
-      title: "Eliminar formulario",
+      title: t("forms.eliminarFormulario"),
       message: `¿Estás seguro de que quieres eliminar "${formName}"?`,
       onConfirm: async () => {
         try {
           await deleteFormMutation.mutateAsync(formId);
-          notifications.show({ title: "Formulario eliminado", message: `${formName} se ha eliminado correctamente`, color: "green" });
+          notifications.show({ title: t("forms.formularioEliminado"), message: `${formName} se ha eliminado correctamente`, color: "green" });
         } catch {
-          notifications.show({ title: "Error", message: "No se pudo eliminar el formulario", color: "red" });
+          notifications.show({ title: t("forms.error"), message: t("forms.noSePudoEliminarEl"), color: "red" });
         }
       },
     });
@@ -557,14 +559,14 @@ export function FormsPage() {
     try {
       await copyFormMutation.mutateAsync(formTemplate.id);
       notifications.show({
-        title: "Plantilla copiada",
+        title: t("forms.plantillaCopiada"),
         message: `"${formTemplate.name}" se ha copiado a tu workspace y ya puedes editarla.`,
         color: "green",
       });
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo copiar el formulario",
+        title: t("forms.error"),
+        message: t("forms.noSePudoCopiarEl"),
         color: "red",
       });
     }
@@ -599,7 +601,7 @@ export function FormsPage() {
         ? results.filter((r: { status: string }) => r.status === "already_pending").length
         : 0;
       notifications.show({
-        title: "Formulario enviado",
+        title: t("forms.formularioEnviado"),
         message:
           `Enviado a ${sent} cliente${sent === 1 ? "" : "s"}.` +
           (already > 0 ? ` ${already} ya tenían uno pendiente.` : ""),
@@ -610,8 +612,8 @@ export function FormsPage() {
       setSelectedClientIds([]);
     } catch {
       notifications.show({
-        title: "Error",
-        message: "No se pudo enviar el formulario",
+        title: t("forms.error"),
+        message: t("forms.noSePudoEnviarEl"),
         color: "red",
       });
     }
@@ -696,14 +698,14 @@ export function FormsPage() {
                 size="sm"
                 leftSection={<IconForms size={12} />}
               >
-                Sistema
+                {t("forms.sistema")}
               </Badge>
             )}
           </Group>
           {isSystem ? (
-            <Tooltip label="Las plantillas del sistema siempre están activas" withArrow>
+            <Tooltip label={t("forms.lasPlantillasDelSistemaSiempre")} withArrow>
               <Badge color="gray" variant="outline" size="sm">
-                Plantilla
+                {t("forms.plantilla")}
               </Badge>
             </Tooltip>
           ) : (
@@ -733,17 +735,17 @@ export function FormsPage() {
         <Group gap="xs" mb="md">
           {formTemplate.send_on_signup && (
             <Badge color="blue" size="xs" variant="outline">
-              Al registrarse
+              {t("forms.alRegistrarse")}
             </Badge>
           )}
           {formTemplate.send_on_product_purchase && (
             <Badge color="teal" size="xs" variant="outline">
-              Al contratar
+              {t("forms.alContratar")}
             </Badge>
           )}
           {formTemplate.is_required && (
             <Badge color="orange" size="xs" variant="filled">
-              Obligatorio
+              {t("forms.obligatorio")}
             </Badge>
           )}
           {!isSystem && (
@@ -759,7 +761,7 @@ export function FormsPage() {
         {!isSystem && (
           <Group justify="space-between" mb="xs" gap="xs">
             <Text size="xs" c="dimmed">
-              Marcar como obligatorio
+              {t("forms.marcarComoObligatorio")}
             </Text>
             <Switch
               checked={formTemplate.is_required}
@@ -784,7 +786,7 @@ export function FormsPage() {
               variant="light"
               color="violet"
             >
-              Ver formulario
+              {t("forms.verFormulario")}
             </Button>
             <Button
               flex={1}
@@ -794,7 +796,7 @@ export function FormsPage() {
               variant="filled"
               loading={copyFormMutation.isPending}
             >
-              Copiar y editar
+              {t("forms.copiarYEditar")}
             </Button>
           </Group>
         ) : isSystem ? (
@@ -807,7 +809,7 @@ export function FormsPage() {
               variant="light"
               color="violet"
             >
-              Ver plantilla
+              {t("forms.verPlantilla")}
             </Button>
             <Button
               flex={1}
@@ -817,7 +819,7 @@ export function FormsPage() {
               variant="filled"
               loading={copyFormMutation.isPending}
             >
-              Copiar y editar
+              {t("forms.copiarYEditar")}
             </Button>
           </Group>
         ) : (
@@ -829,20 +831,20 @@ export function FormsPage() {
               size="xs"
               variant="light"
             >
-              Editar
+              {t("forms.editar")}
             </Button>
             <ActionIcon
               color="blue"
               variant="light"
               onClick={() => openPreviewDrawer(formTemplate)}
-              title="Previsualizar"
+              title={t("forms.previsualizar")}
             >
               <IconEye size={16} />
             </ActionIcon>
             <ActionIcon
               color="green"
               variant="light"
-              title="Enviar a clientes"
+              title={t("forms.enviarAClientes")}
               onClick={() => openSendDrawer(formTemplate)}
             >
               <IconSend size={16} />
@@ -852,7 +854,7 @@ export function FormsPage() {
               variant="light"
               onClick={() => handleCopyForm(formTemplate)}
               loading={copyFormMutation.isPending}
-              title="Duplicar"
+              title={t("forms.duplicar")}
             >
               <IconCopy size={16} />
             </ActionIcon>
@@ -861,7 +863,7 @@ export function FormsPage() {
               loading={deleteFormMutation.isPending}
               onClick={() => handleDeleteForm(formTemplate.id, formTemplate.name)}
               variant="light"
-              title="Eliminar"
+              title={t("forms.eliminar")}
             >
               <IconTrash size={16} />
             </ActionIcon>
@@ -879,8 +881,8 @@ export function FormsPage() {
           onClick:
             activeTab === "forms" ? () => openFormBuilder() : openUploadModal,
         }}
-        description="Gestiona formularios, cuestionarios y documentos compartidos"
-        title="Formularios y Documentos"
+        description={t("forms.gestionaFormulariosCuestionariosYDocumentos")}
+        title={t("forms.formulariosYDocumentos")}
       />
 
       {activeTab === "forms" && (
@@ -891,7 +893,7 @@ export function FormsPage() {
             leftSection={<IconAlertTriangle size={16} />}
             onClick={openCanalDenuncias}
           >
-            Canal de Denuncias
+            {t("forms.canalDeDenuncias")}
           </Button>
         </Group>
       )}
@@ -899,9 +901,9 @@ export function FormsPage() {
       {isMobile && (
         <Select
           data={[
-            { value: "forms", label: "Formularios" },
-            { value: "documents", label: "Documentos" },
-            { value: "submissions", label: "Respuestas" },
+            { value: "forms", label: t("forms.formularios") },
+            { value: "documents", label: t("forms.documentos") },
+            { value: "submissions", label: t("forms.respuestas") },
           ]}
           mb="md"
           onChange={setActiveTab}
@@ -914,13 +916,13 @@ export function FormsPage() {
         {!isMobile && (
           <Tabs.List mb="lg">
             <Tabs.Tab leftSection={<IconForms size={14} />} value="forms">
-              Formularios
+              {t("forms.formularios")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconFolder size={14} />} value="documents">
-              Documentos
+              {t("forms.documentos")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconCheck size={14} />} value="submissions">
-              Respuestas
+              {t("forms.respuestas")}
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -941,16 +943,14 @@ export function FormsPage() {
                 <Box>
                   <Group gap="xs" mb="sm">
                     <Text fw={700} size="md">
-                      Formularios del Sistema
+                      {t("forms.formulariosDelSistema")}
                     </Text>
                     <Badge color="violet" variant="filled" size="sm">
                       {systemBuiltinForms.length}
                     </Badge>
                   </Group>
                   <Text c="dimmed" size="sm" mb="md">
-                    Formularios obligatorios de Trackfiz que se asignan
-                    automáticamente a cada cliente tras completar la
-                    compra. No se pueden editar ni copiar.
+                    {t("forms.formulariosObligatoriosDeTrackfizQue")}
                   </Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
                     {systemBuiltinForms.map(renderFormCard)}
@@ -965,15 +965,14 @@ export function FormsPage() {
                 <Box>
                   <Group gap="xs" mb="sm">
                     <Text fw={700} size="md">
-                      Plantillas de Formularios
+                      {t("forms.plantillasDeFormularios")}
                     </Text>
                     <Badge color="violet" variant="light" size="sm">
                       {systemTemplateForms.length}
                     </Badge>
                   </Group>
                   <Text c="dimmed" size="sm" mb="md">
-                    Plantillas predefinidas listas para copiar a tu
-                    workspace y personalizarlas a tu medida.
+                    {t("forms.plantillasPredefinidasListasParaCopiar")}
                   </Text>
                   <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
                     {systemTemplateForms.map(renderFormCard)}
@@ -985,7 +984,7 @@ export function FormsPage() {
               <Box>
                 <Group gap="xs" mb="sm">
                   <Text fw={700} size="md">
-                    Mis formularios
+                    {t("forms.misFormularios")}
                   </Text>
                   <Badge color="blue" variant="light" size="sm">
                     {workspaceForms.length}
@@ -997,22 +996,22 @@ export function FormsPage() {
                   </SimpleGrid>
                 ) : (
                   <EmptyState
-                    actionLabel="Crear Formulario"
-                    description="Crea tu primer formulario o copia una plantilla del sistema para empezar."
+                    actionLabel={t("forms.crearFormulario")}
+                    description={t("forms.creaTuPrimerFormularioO")}
                     icon={<IconForms size={40} />}
                     onAction={() => openFormBuilder()}
-                    title="Aún no tienes formularios propios"
+                    title={t("forms.aunNoTienesFormulariosPropios")}
                   />
                 )}
               </Box>
             </Stack>
           ) : (
             <EmptyState
-              actionLabel="Crear Formulario"
-              description="Crea tu primer formulario para recoger información de tus clientes."
+              actionLabel={t("forms.crearFormulario")}
+              description={t("forms.creaTuPrimerFormularioPara")}
               icon={<IconForms size={40} />}
               onAction={() => openFormBuilder()}
-              title="No hay formularios"
+              title={t("forms.noHayFormularios")}
             />
           )}
         </Tabs.Panel>
@@ -1024,11 +1023,11 @@ export function FormsPage() {
                 <Table style={{ minWidth: 600 }}>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Nombre</Table.Th>
-                    <Table.Th>Carpeta</Table.Th>
-                    <Table.Th>Tamaño</Table.Th>
-                    <Table.Th>Fecha</Table.Th>
-                    <Table.Th ta="right">Acciones</Table.Th>
+                    <Table.Th>{t("forms.nombre")}</Table.Th>
+                    <Table.Th>{t("forms.carpeta")}</Table.Th>
+                    <Table.Th>{t("forms.tamano")}</Table.Th>
+                    <Table.Th>{t("forms.fecha")}</Table.Th>
+                    <Table.Th ta="right">{t("forms.acciones")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1086,11 +1085,11 @@ export function FormsPage() {
             </Paper>
           ) : (
             <EmptyState
-              actionLabel="Subir Documento"
-              description="Sube documentos para compartir con tus clientes."
+              actionLabel={t("forms.subirDocumento")}
+              description={t("forms.subeDocumentosParaCompartirCon")}
               icon={<IconFolder size={40} />}
               onAction={openUploadModal}
-              title="No hay documentos"
+              title={t("forms.noHayDocumentos")}
             />
           )}
         </Tabs.Panel>
@@ -1100,7 +1099,7 @@ export function FormsPage() {
             <Paper p="xl" radius="lg" withBorder>
               <Group justify="center" py="xl">
                 <IconLoader size={24} className="mantine-loader" />
-                <Text c="dimmed">Cargando respuestas...</Text>
+                <Text c="dimmed">{t("forms.cargandoRespuestas")}</Text>
               </Group>
             </Paper>
           ) : submissions.length > 0 ? (
@@ -1112,11 +1111,11 @@ export function FormsPage() {
                 <Table style={{ minWidth: 600 }}>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Cliente</Table.Th>
-                    <Table.Th>Formulario</Table.Th>
-                    <Table.Th>Estado</Table.Th>
-                    <Table.Th>Fecha</Table.Th>
-                    <Table.Th ta="right">Acciones</Table.Th>
+                    <Table.Th>{t("forms.cliente")}</Table.Th>
+                    <Table.Th>{t("forms.formulario")}</Table.Th>
+                    <Table.Th>{t("forms.estado")}</Table.Th>
+                    <Table.Th>{t("forms.fecha")}</Table.Th>
+                    <Table.Th ta="right">{t("forms.acciones")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1162,7 +1161,7 @@ export function FormsPage() {
                           <ActionIcon
                             color="blue"
                             variant="subtle"
-                            title="Ver respuesta"
+                            title={t("forms.verRespuesta")}
                             onClick={() => handleViewSubmission(submission)}
                           >
                             <IconEye size={16} />
@@ -1170,7 +1169,7 @@ export function FormsPage() {
                           <ActionIcon
                             color="green"
                             variant="subtle"
-                            title="Descargar"
+                            title={t("forms.descargar")}
                             onClick={() => handleDownloadSubmission(submission)}
                           >
                             <IconDownload size={16} />
@@ -1179,7 +1178,7 @@ export function FormsPage() {
                             <ActionIcon
                               color="green"
                               variant="light"
-                              title="Marcar como Completado"
+                              title={t("forms.marcarComoCompletado")}
                               loading={updateSubmissionMutation.isPending}
                               onClick={() => handleUpdateSubmissionStatus(submission.id, "completed")}
                             >
@@ -1190,7 +1189,7 @@ export function FormsPage() {
                             <ActionIcon
                               color="yellow"
                               variant="light"
-                              title="Devolver a Pendiente"
+                              title={t("forms.devolverAPendiente")}
                               loading={updateSubmissionMutation.isPending}
                               onClick={() => handleUpdateSubmissionStatus(submission.id, "pending")}
                             >
@@ -1207,9 +1206,9 @@ export function FormsPage() {
             </Paper>
           ) : (
             <EmptyState
-              description="Cuando tus clientes respondan formularios, las respuestas aparecerán aquí."
+              description={t("forms.cuandoTusClientesRespondanFormularios")}
               icon={<IconCheck size={40} />}
-              title="No hay respuestas"
+              title={t("forms.noHayRespuestas")}
             />
           )}
         </Tabs.Panel>
@@ -1233,17 +1232,17 @@ export function FormsPage() {
                   </Badge>
                   {previewForm.is_global && (
                     <Badge color="violet" variant="filled">
-                      Plantilla del sistema
+                      {t("forms.plantillaDelSistema")}
                     </Badge>
                   )}
                   {previewForm.send_on_signup && (
                     <Badge color="blue" variant="outline">
-                      Al registrarse
+                      {t("forms.alRegistrarse")}
                     </Badge>
                   )}
                   {previewForm.send_on_product_purchase && (
                     <Badge color="teal" variant="outline">
-                      Al contratar
+                      {t("forms.alContratar")}
                     </Badge>
                   )}
                 </Group>
@@ -1270,7 +1269,7 @@ export function FormsPage() {
                         </Text>
                         {field.required && (
                           <Badge size="xs" color="red" variant="light">
-                            Obligatorio
+                            {t("forms.obligatorio")}
                           </Badge>
                         )}
                       </Group>
@@ -1306,7 +1305,7 @@ export function FormsPage() {
           style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
         >
           <Button onClick={closePreview} variant="default">
-            Cerrar
+            {t("forms.cerrar")}
           </Button>
           {previewForm?.is_global && previewForm?.type !== "system" && (
             <Button
@@ -1319,7 +1318,7 @@ export function FormsPage() {
                 }
               }}
             >
-              Copiar a mi workspace
+              {t("forms.copiarAMiWorkspace")}
             </Button>
           )}
         </Group>
@@ -1373,7 +1372,7 @@ export function FormsPage() {
 
                 {fields.length === 0 && Object.keys(answers).length === 0 ? (
                   <Text c="dimmed" ta="center" py="md">
-                    Sin respuestas registradas
+                    {t("forms.sinRespuestasRegistradas")}
                   </Text>
                 ) : (
                   <Stack gap="sm">
@@ -1408,7 +1407,7 @@ export function FormsPage() {
             leftSection={<IconDownload size={16} />}
             onClick={() => viewingSubmission && handleDownloadSubmission(viewingSubmission)}
           >
-            Descargar
+            {t("forms.descargar")}
           </Button>
           {viewingSubmission && viewingSubmission.status !== "completed" && viewingSubmission.status !== "reviewed" && (
             <Button
@@ -1420,7 +1419,7 @@ export function FormsPage() {
                 setViewingSubmission({ ...viewingSubmission, status: "completed" });
               }}
             >
-              Marcar como completado
+              {t("forms.marcarComoCompletado")}
             </Button>
           )}
         </Group>
@@ -1439,44 +1438,44 @@ export function FormsPage() {
             <Paper p="md" radius="md" withBorder>
               <Stack gap="sm">
                 <TextInput
-                  label="Nombre del formulario"
-                  placeholder="Ej: Cuestionario de Salud"
+                  label={t("forms.nombreDelFormulario")}
+                  placeholder={t("forms.ejCuestionarioDeSalud")}
                   required
                   {...form.getInputProps("name")}
                 />
 
                 <Textarea
-                  label="Descripción"
+                  label={t("forms.descripcion")}
                   minRows={2}
-                  placeholder="Describe el propósito del formulario..."
+                  placeholder={t("forms.describeElPropositoDelFormulario")}
                   {...form.getInputProps("description")}
                 />
 
                 <Group grow>
                   <Select
                     data={[
-                      { value: "custom", label: "Personalizado" },
+                      { value: "custom", label: t("forms.personalizado") },
                       { value: "par_q", label: "PAR-Q" },
-                      { value: "consent", label: "Consentimiento" },
-                      { value: "health", label: "Historial de Salud" },
-                      { value: "feedback", label: "Feedback" },
+                      { value: "consent", label: t("forms.consentimiento") },
+                      { value: "health", label: t("forms.historialDeSalud") },
+                      { value: "feedback", label: t("forms.feedback") },
                     ]}
-                    label="Tipo de formulario"
+                    label={t("forms.tipoDeFormulario")}
                     {...form.getInputProps("type")}
                   />
                 </Group>
 
                 <Stack gap={6}>
                   <Switch
-                    label="Enviar automáticamente al registrarse el cliente"
-                    description="Se asigna a TODO cliente que completa el onboarding. Útil para protección de datos, consentimientos generales, etc."
+                    label={t("forms.enviarAutomaticamenteAlRegistrarseEl")}
+                    description={t("forms.seAsignaATodoCliente")}
                     {...form.getInputProps("send_on_signup", {
                       type: "checkbox",
                     })}
                   />
                   <Switch
-                    label="Enviar al contratar uno de los siguientes productos"
-                    description="Se asigna SÓLO cuando el cliente compra uno de los productos seleccionados. Útil para cuestionarios específicos por servicio."
+                    label={t("forms.enviarAlContratarUnoDe")}
+                    description={t("forms.seAsignaSoloCuandoEl")}
                     {...form.getInputProps("send_on_product_purchase", {
                       type: "checkbox",
                     })}
@@ -1485,9 +1484,9 @@ export function FormsPage() {
 
                 {form.values.send_on_product_purchase && (
                   <MultiSelect
-                    label="Productos vinculados"
-                    description="Selecciona los productos para los que este formulario se enviará automáticamente al contratarse."
-                    placeholder="Selecciona uno o varios productos"
+                    label={t("forms.productosVinculados")}
+                    description={t("forms.seleccionaLosProductosParaLos")}
+                    placeholder={t("forms.seleccionaUnoOVariosProductos")}
                     data={productOptions}
                     searchable
                     clearable
@@ -1498,7 +1497,7 @@ export function FormsPage() {
               </Stack>
             </Paper>
 
-            <Divider label="Campos del formulario" labelPosition="center" />
+            <Divider label={t("forms.camposDelFormulario")} labelPosition="center" />
 
             {formFields.length > 0 && (
               <Stack gap="sm">
@@ -1539,7 +1538,7 @@ export function FormsPage() {
                           onChange={(e) =>
                             updateField(field.id, { label: e.target.value })
                           }
-                          placeholder="Etiqueta del campo"
+                          placeholder={t("forms.etiquetaDelCampo")}
                           size="sm"
                           value={field.label}
                         />
@@ -1549,7 +1548,7 @@ export function FormsPage() {
                               placeholder: e.target.value,
                             })
                           }
-                          placeholder="Texto de ayuda (opcional)"
+                          placeholder={t("forms.textoDeAyudaOpcional")}
                           size="sm"
                           value={field.placeholder || ""}
                         />
@@ -1564,14 +1563,14 @@ export function FormsPage() {
                                 options: e.target.value.split("\n"),
                               })
                             }
-                            placeholder="Opciones (una por línea)"
+                            placeholder={t("forms.opcionesUnaPorLinea")}
                             size="sm"
                             value={field.options?.join("\n") || ""}
                           />
                         )}
                         <Checkbox
                           checked={field.required}
-                          label="Campo obligatorio"
+                          label={t("forms.campoObligatorio")}
                           onChange={(e) =>
                             updateField(field.id, {
                               required: e.currentTarget.checked,
@@ -1586,7 +1585,7 @@ export function FormsPage() {
               </Stack>
             )}
 
-            <Divider label="Añadir campo" labelPosition="center" />
+            <Divider label={t("forms.anadirCampo")} labelPosition="center" />
 
             <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
               {fieldTypes.map((fieldType) => {
@@ -1616,7 +1615,7 @@ export function FormsPage() {
           style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
         >
           <Button onClick={closeBuilder} variant="default">
-            Cancelar
+            {t("forms.cancelar")}
           </Button>
           <Button onClick={handleSaveForm}>
             {editingForm ? "Guardar Cambios" : "Crear Formulario"}
@@ -1634,16 +1633,14 @@ export function FormsPage() {
       >
         <Stack>
           <Text c="dimmed" size="sm">
-            Selecciona los clientes a los que se les enviará este formulario.
-            Recibirán una notificación y podrán responderlo desde su portal.
+            {t("forms.seleccionaLosClientesALos")}
           </Text>
           {sendingForm?.is_required && (
             <Paper withBorder p="sm" radius="md" bg="orange.0">
               <Group gap={6}>
                 <IconAlertTriangle color="orange" size={16} />
                 <Text size="xs" c="orange.8" fw={500}>
-                  Este formulario es obligatorio: generará una alerta persistente
-                  hasta que el cliente lo complete.
+                  {t("forms.esteFormularioEsObligatorioGenerara")}
                 </Text>
               </Group>
             </Paper>
@@ -1687,7 +1684,7 @@ export function FormsPage() {
               })}
               {clientsList.length === 0 && (
                 <Text c="dimmed" size="sm">
-                  No hay clientes disponibles.
+                  {t("forms.noHayClientesDisponibles")}
                 </Text>
               )}
             </Stack>
@@ -1703,21 +1700,21 @@ export function FormsPage() {
                 size="xs"
                 onClick={() => setSelectedClientIds(clientsList.map((c) => c.id))}
               >
-                Seleccionar todos
+                {t("forms.seleccionarTodos")}
               </Button>
               <Button
                 variant="default"
                 size="xs"
                 onClick={() => setSelectedClientIds([])}
               >
-                Ninguno
+                {t("forms.ninguno")}
               </Button>
             </Group>
           </Group>
 
           <Group justify="flex-end" mt="sm">
             <Button variant="default" onClick={closeSend}>
-              Cancelar
+              {t("forms.cancelar")}
             </Button>
             <Button
               leftSection={<IconSend size={16} />}
@@ -1736,7 +1733,7 @@ export function FormsPage() {
         onClose={closeUploadModal}
         opened={uploadModalOpened}
         size="md"
-        title="Subir Documento"
+        title={t("forms.subirDocumento")}
       >
         <Stack>
           <Paper
@@ -1760,7 +1757,7 @@ export function FormsPage() {
               <IconUpload size={30} />
             </ThemeIcon>
             <Text fw={500} mb="xs">
-              Arrastra archivos aquí
+              {t("forms.arrastraArchivosAqui")}
             </Text>
             <Text c="dimmed" mb="md" size="sm">
               o haz clic para seleccionar
@@ -1771,7 +1768,7 @@ export function FormsPage() {
             >
               {(props) => (
                 <Button variant="light" {...props}>
-                  Seleccionar Archivo
+                  {t("forms.seleccionarArchivo")}
                 </Button>
               )}
             </FileButton>
@@ -1779,20 +1776,20 @@ export function FormsPage() {
 
           <Select
             data={[
-              { value: "Recursos", label: "Recursos" },
-              { value: "Plantillas", label: "Plantillas" },
-              { value: "Legal", label: "Legal" },
-              { value: "Otros", label: "Otros" },
+              { value: "Recursos", label: t("forms.recursos") },
+              { value: "Plantillas", label: t("forms.plantillas") },
+              { value: "Legal", label: t("forms.legal") },
+              { value: "Otros", label: t("forms.otros") },
             ]}
-            label="Carpeta"
-            placeholder="Selecciona una carpeta"
+            label={t("forms.carpeta")}
+            placeholder={t("forms.seleccionaUnaCarpeta")}
           />
 
           <Group justify="flex-end" mt="md">
             <Button onClick={closeUploadModal} variant="default">
-              Cancelar
+              {t("forms.cancelar")}
             </Button>
-            <Button>Subir</Button>
+            <Button>{t("forms.subir")}</Button>
           </Group>
         </Stack>
       </BottomSheet>

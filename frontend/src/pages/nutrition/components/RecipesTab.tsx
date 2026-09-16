@@ -61,7 +61,7 @@ export function RecipesTab({
   onCreate,
   duplicatePending,
   deletePending,
-}: RecipesTabProps) {
+}: RecipesTabProps) {
   const hasFilters = !!(recipeSearch || recipeCategoryFilter || recipeDifficultyFilter);
 
   return (
@@ -69,7 +69,7 @@ export function RecipesTab({
       <Group mb="md" gap="sm" wrap="wrap">
         <TextInput
           leftSection={<IconSearch size={14} />}
-          placeholder="Buscar recetas..."
+          placeholder={"Buscar recetas..."}
           value={recipeSearch}
           onChange={(e) => onSearchChange(e.target.value)}
           size="sm"
@@ -77,7 +77,7 @@ export function RecipesTab({
           styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
         />
         <Select
-          placeholder="Categoría"
+          placeholder={"Categoría"}
           data={RECIPE_CATEGORIES}
           value={recipeCategoryFilter}
           onChange={(v) => onCategoryChange(v || "")}
@@ -121,10 +121,10 @@ export function RecipesTab({
                 </Text>
                 <Group gap={4} mb="xs">
                   {recipe.is_global && (
-                    <Badge size="xs" variant="light" color="violet" radius="md">Sistema</Badge>
+                    <Badge size="xs" variant="light" color="violet" radius="md">{"Sistema"}</Badge>
                   )}
                   {recipe.is_public && (
-                    <Badge size="xs" variant="light" color="cyan" radius="md">Público</Badge>
+                    <Badge size="xs" variant="light" color="cyan" radius="md">{"Público"}</Badge>
                   )}
                 </Group>
 
@@ -186,10 +186,10 @@ export function RecipesTab({
                       radius="md"
                       styles={{ root: { height: 28 } }}
                     >
-                      Editar
+                      {"Editar"}
                     </Button>
                   )}
-                  <Tooltip label="Duplicar">
+                  <Tooltip label={"Duplicar"}>
                     <ActionIcon
                       color="blue"
                       variant="light"
@@ -205,7 +205,7 @@ export function RecipesTab({
                     </ActionIcon>
                   </Tooltip>
                   {!recipe.is_global && (
-                    <Tooltip label="Eliminar">
+                    <Tooltip label={"Eliminar"}>
                       <ActionIcon
                         color="red"
                         loading={deletePending}
@@ -229,7 +229,7 @@ export function RecipesTab({
         </SimpleGrid>
       ) : (
         <EmptyState
-          actionLabel="Crear Receta"
+          actionLabel={"Crear Receta"}
           description={
             hasFilters
               ? "No se encontraron recetas con los filtros seleccionados."

@@ -87,6 +87,7 @@ import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
 import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
+import { useTranslation } from "react-i18next";
 
 function mapFoodCategory(name: string): string {
   const lower = name.toLowerCase();
@@ -187,7 +188,7 @@ function SatisfactionSelector({
   ];
   return (
     <Box>
-      <Text size="sm" fw={500} mb={4}>¿Cómo te ha sentado?</Text>
+      <Text size="sm" fw={500} mb={4}>{"¿Cómo te ha sentado?"}</Text>
       <Group gap="xs">
         {options.map((opt) => {
           const Icon = opt.icon;
@@ -261,7 +262,7 @@ function ManualFoodNameInput({
   return (
     <Box pos="relative" style={{ flex: 1 }}>
       <TextInput
-        placeholder="Nombre del alimento"
+        placeholder={"Nombre del alimento"}
         value={value}
         onChange={(e) => {
           onChangeName(e.target.value);
@@ -291,7 +292,7 @@ function ManualFoodNameInput({
         >
           <Box px="xs" py={4}>
             <Text size="10px" c="dimmed" tt="uppercase" fw={700}>
-              Coincidencias en la base de datos
+              {"Coincidencias en la base de datos"}
             </Text>
           </Box>
           {items.slice(0, 6).map((food) => (
@@ -363,7 +364,7 @@ function ManualFoodNameInput({
           p="xs"
         >
           <Text size="11px" c="dimmed" ta="center">
-            Sin coincidencias. Se guardará como manual.
+            {"Sin coincidencias. Se guardará como manual."}
           </Text>
         </Paper>
       )}
@@ -397,7 +398,7 @@ function FoodSearchInput({
             <IconX size={14} />
           </ActionIcon>
         ) : null}
-        placeholder="Buscar alimento..."
+        placeholder={"Buscar alimento..."}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -624,7 +625,7 @@ function LogMealModal({
           />
         ) : (
           <TextInput
-            placeholder="Nombre del alimento"
+            placeholder={"Nombre del alimento"}
             value={food.name}
             onChange={(e) => updateFood(index, "name", e.target.value)}
             size="sm"
@@ -655,22 +656,22 @@ function LogMealModal({
         </ActionIcon>
       </Group>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-        <NumberInput placeholder="Kcal" value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
-        <NumberInput placeholder="Prot" value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
-        <NumberInput placeholder="Carbs" value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
-        <NumberInput placeholder="Grasas" value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={"Kcal"} value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={"Prot"} value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={"Carbs"} value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
+        <NumberInput placeholder={"Grasas"} value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
       </div>
       {index === 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
-          <Text size="xs" c="dimmed" ta="center">Kcal</Text>
-          <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
-          <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
-          <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Kcal"}</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Prot (g)"}</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Carbs (g)"}</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Grasas (g)"}</Text>
         </div>
       )}
       {food.is_manual && (
         <Select
-          placeholder="Categoría (opcional)"
+          placeholder={"Categoría (opcional)"}
           data={FOOD_CATEGORY_ORDER.map((c) => ({ value: c, label: c }))}
           value={food.food_category || null}
           onChange={(val) => updateFood(index, "food_category", val || "")}
@@ -688,7 +689,7 @@ function LogMealModal({
       <FoodSearchInput onSelect={addFoodFromSearch} />
       <Box px="md">
         <Button variant="subtle" leftSection={<IconPlus size={16} />} onClick={addManualFood} fullWidth size="sm" radius="xl" color="gray">
-          Añadir manualmente
+          {"Añadir manualmente"}
         </Button>
       </Box>
     </Box>
@@ -696,7 +697,7 @@ function LogMealModal({
 
   const notesAndSatisfaction = (
     <Box px="md" mt="md">
-      <TextInput placeholder="Notas (opcional)" {...form.getInputProps("notes")} size="sm" styles={{ input: { height: 44, borderRadius: 10 } }} />
+      <TextInput placeholder={"Notas (opcional)"} {...form.getInputProps("notes")} size="sm" styles={{ input: { height: 44, borderRadius: 10 } }} />
       <Box mt="sm">
         <SatisfactionSelector value={satisfactionRating} onChange={setSatisfactionRating} />
       </Box>
@@ -725,7 +726,7 @@ function LogMealModal({
         onClose={onClose}
         title={
           <Group gap="xs">
-            <Text fw={700}>Registrar Comida</Text>
+            <Text fw={700}>{"Registrar comida"}</Text>
             <Select
               data={MEAL_TYPES.map((m) => ({ value: m.value, label: m.label }))}
               {...form.getInputProps("meal_name")}
@@ -783,7 +784,7 @@ function LogMealModal({
               <IconX size={20} />
             </ActionIcon>
             <Box>
-              <Text fw={700} size="sm">Registrar Comida</Text>
+              <Text fw={700} size="sm">{"Registrar comida"}</Text>
               <Text size="xs" c="dimmed">{foods.filter(f => f.name.trim()).length} alimentos • {Math.round(totalMacros.calories)} kcal</Text>
             </Box>
           </Group>
@@ -1090,7 +1091,7 @@ function LogPlanMealModal({
                 <Image src={food.image_url} alt={food.name} w={40} h={40} fit="cover" radius="md" style={{ flexShrink: 0 }} />
               ) : null}
               <TextInput
-                placeholder="Nombre del alimento"
+                placeholder={"Nombre del alimento"}
                 value={food.name}
                 onChange={(e) => updateFood(index, "name", e.target.value)}
                 size="sm"
@@ -1114,22 +1115,22 @@ function LogPlanMealModal({
               </ActionIcon>
             </Group>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-              <NumberInput placeholder="Kcal" value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
-              <NumberInput placeholder="Prot" value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
-              <NumberInput placeholder="Carbs" value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
-              <NumberInput placeholder="Grasas" value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={"Kcal"} value={food.calories || ""} onChange={(val) => updateFood(index, "calories", val || 0)} min={0} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-gray-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={"Prot"} value={food.protein || ""} onChange={(val) => updateFood(index, "protein", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-red-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={"Carbs"} value={food.carbs || ""} onChange={(val) => updateFood(index, "carbs", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-blue-0)", border: "none", fontWeight: 600 } }} />
+              <NumberInput placeholder={"Grasas"} value={food.fat || ""} onChange={(val) => updateFood(index, "fat", val || 0)} min={0} decimalScale={1} size="sm" hideControls styles={{ input: { height: 40, borderRadius: 8, textAlign: "center", background: "var(--mantine-color-grape-0)", border: "none", fontWeight: 600 } }} />
             </div>
             {showLabels && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginTop: -2 }}>
-                <Text size="xs" c="dimmed" ta="center">Kcal</Text>
-                <Text size="xs" c="dimmed" ta="center">Prot (g)</Text>
-                <Text size="xs" c="dimmed" ta="center">Carbs (g)</Text>
-                <Text size="xs" c="dimmed" ta="center">Grasas (g)</Text>
+                <Text size="xs" c="dimmed" ta="center">{"Kcal"}</Text>
+                <Text size="xs" c="dimmed" ta="center">{"Prot (g)"}</Text>
+                <Text size="xs" c="dimmed" ta="center">{"Carbs (g)"}</Text>
+                <Text size="xs" c="dimmed" ta="center">{"Grasas (g)"}</Text>
               </div>
             )}
             {food.is_manual && (
               <Select
-                placeholder="Categoría (opcional)"
+                placeholder={"Categoría (opcional)"}
                 data={FOOD_CATEGORY_ORDER.map((c) => ({ value: c, label: c }))}
                 value={food.food_category || null}
                 onChange={(val) => updateFood(index, "food_category", val || "")}
@@ -1187,14 +1188,14 @@ function LogPlanMealModal({
         <FoodSearchInput onSelect={addFoodFromSearch} />
         <Box px="md">
           <Button variant="subtle" leftSection={<IconPlus size={16} />} onClick={addManualFood} fullWidth size="sm" radius="xl" color="gray">
-            Añadir manualmente
+            {"Añadir manualmente"}
           </Button>
         </Box>
       </Box>
 
       <Box px="md" mt="md">
         <TextInput
-          placeholder="Notas (opcional)"
+          placeholder={"Notas (opcional)"}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           size="sm"
@@ -1209,6 +1210,7 @@ function LogPlanMealModal({
 }
 
 function ClientRecipesTab() {
+  const { t } = useTranslation();
   const [recipeSearch, setRecipeSearch] = useState("");
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [detailOpened, setDetailOpened] = useState(false);
@@ -1220,7 +1222,7 @@ function ClientRecipesTab() {
     <Stack gap="md">
       <TextInput
         leftSection={<IconSearch size={14} />}
-        placeholder="Buscar recetas..."
+        placeholder={t("myNutrition.buscarRecetas")}
         value={recipeSearch}
         onChange={(e) => setRecipeSearch(e.target.value)}
         size="sm"
@@ -1252,7 +1254,7 @@ function ClientRecipesTab() {
                     {recipe.name}
                   </Text>
                   {recipe.is_global && (
-                    <Badge size="xs" variant="light" color="violet">Sistema</Badge>
+                    <Badge size="xs" variant="light" color="violet">{t("myNutrition.sistema")}</Badge>
                   )}
                 </Group>
 
@@ -1295,7 +1297,7 @@ function ClientRecipesTab() {
       ) : (
         <Paper p="xl" radius="lg" ta="center" withBorder>
           <IconToolsKitchen2 size={36} style={{ color: "var(--mantine-color-dimmed)", marginBottom: 8 }} />
-          <Text fw={600} size="md" mb={4}>No hay recetas disponibles</Text>
+          <Text fw={600} size="md" mb={4}>{t("myNutrition.noHayRecetasDisponibles")}</Text>
           <Text size="sm" c="dimmed">
             {recipeSearch ? "No se encontraron recetas con esa búsqueda." : "Tu entrenador aún no ha compartido recetas contigo."}
           </Text>
@@ -1342,11 +1344,11 @@ function NutritionDayDetail({
           <Menu shadow="md" position="bottom-end" withinPortal>
             <Menu.Target>
               <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal">
-                Intercambiar día
+                {"Intercambiar día"}
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Label>Intercambiar comidas con</Menu.Label>
+              <Menu.Label>{"Intercambiar comidas con"}</Menu.Label>
               {planDayLabels.map((label, idx) => {
                 const targetDayNum = idx + 1;
                 if (targetDayNum === dayData.planDayNum) return null;
@@ -1376,15 +1378,15 @@ function NutritionDayDetail({
         </Box>
         <Box ta="center" p="md" style={{ background: "var(--mantine-color-red-light)", borderRadius: "var(--mantine-radius-md)" }}>
           <Text size="xl" fw={700}>{Math.round(dayData.totals?.protein || 0)}g</Text>
-          <Text size="xs" c="dimmed">Proteína</Text>
+          <Text size="xs" c="dimmed">{"Proteína"}</Text>
         </Box>
         <Box ta="center" p="md" style={{ background: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
           <Text size="xl" fw={700}>{Math.round(dayData.totals?.carbs || 0)}g</Text>
-          <Text size="xs" c="dimmed">Carbohidratos</Text>
+          <Text size="xs" c="dimmed">{"Carbohidratos"}</Text>
         </Box>
         <Box ta="center" p="md" style={{ background: "var(--mantine-color-grape-light)", borderRadius: "var(--mantine-radius-md)" }}>
           <Text size="xl" fw={700}>{Math.round(dayData.totals?.fat || 0)}g</Text>
-          <Text size="xs" c="dimmed">Grasas</Text>
+          <Text size="xs" c="dimmed">{"Grasas"}</Text>
         </Box>
       </SimpleGrid>
 
@@ -1457,7 +1459,7 @@ function NutritionDayDetail({
                             <Group gap={4}>
                               <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
                               {!readOnly && (
-                                <Tooltip label="Editar nombre">
+                                <Tooltip label={"Editar nombre"}>
                                   <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditName({ idx: mealIndex, name: (meal as any).display_name || mealType?.label || meal.name })}>
                                     <IconEdit size={11} />
                                   </ActionIcon>
@@ -1494,7 +1496,7 @@ function NutritionDayDetail({
                             <Group gap={2}>
                               {meal.time && <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time}</Badge>}
                               {!readOnly && (
-                                <Tooltip label="Editar hora">
+                                <Tooltip label={"Editar hora"}>
                                   <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditTime({ idx: mealIndex, time: meal.time || "12:00" })}>
                                     <IconEdit size={10} />
                                   </ActionIcon>
@@ -1528,7 +1530,7 @@ function NutritionDayDetail({
                         </>
                       )}
                       {!readOnly && (
-                        <Tooltip label="Intercambiar comida">
+                        <Tooltip label={"Intercambiar comida"}>
                           <ActionIcon variant="subtle" color="teal" size="sm" onClick={() => setSwapState({ sourceMealIndex: mealIndex, step: "day" })}>
                             <IconArrowsExchange size={14} />
                           </ActionIcon>
@@ -1538,8 +1540,8 @@ function NutritionDayDetail({
                   </Group>
                   {meal.is_free_meal ? (
                     <Paper p="sm" radius="md" withBorder mt="sm" ml={54} style={{ background: "var(--mantine-color-teal-light)" }}>
-                      <Text fw={700} size="sm">Comida libre</Text>
-                      <Text c="dimmed" size="xs">Este bloque del plan está marcado como comida libre.</Text>
+                      <Text fw={700} size="sm">{"Comida libre"}</Text>
+                      <Text c="dimmed" size="xs">{"Este bloque del plan está marcado como comida libre."}</Text>
                     </Paper>
                   ) : mealFoods.length > 0 && (
                     <Stack gap="xs" mt="sm" ml={54}>
@@ -1621,14 +1623,14 @@ function NutritionDayDetail({
           </Stack>
         </Box>
       ) : (
-        <Text c="dimmed" ta="center">No hay comidas asignadas en el plan para este día</Text>
+        <Text c="dimmed" ta="center">{"No hay comidas asignadas en el plan para este día"}</Text>
       )}
 
       {/* Modal step 1: select target day */}
       <Modal
         opened={swapState?.step === "day"}
         onClose={() => setSwapState(null)}
-        title="Intercambiar con"
+        title={"Intercambiar con"}
         size="sm"
       >
         <Stack gap="xs">
@@ -1655,7 +1657,7 @@ function NutritionDayDetail({
       <Modal
         opened={swapState?.step === "meal" && swapState.targetDay != null}
         onClose={() => setSwapState(null)}
-        title="Selecciona la comida a intercambiar"
+        title={"Selecciona la comida a intercambiar"}
         size="sm"
       >
         {(() => {
@@ -1690,7 +1692,7 @@ function NutritionDayDetail({
                   setSwapState(null);
                 }}
               >
-                Mover sin intercambiar
+                {"Mover sin intercambiar"}
               </Button>
               <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
               {targetMeals.map((meal: PlanMeal, tmi: number) => {
@@ -1748,6 +1750,7 @@ const NUTRITION_TAB_VALUES = new Set([
 ]);
 
 export function MyNutritionPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isMdUp = useMediaQuery("(min-width: 1024px)");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -2270,8 +2273,8 @@ export function MyNutritionPage() {
       <Box mb="xl">
         <Group justify="space-between" align="flex-start">
           <Box>
-            <Title order={2}>Mi Nutrición</Title>
-            <Text c="dimmed">Seguimiento de tu alimentación diaria</Text>
+            <Title order={2}>{t("myNutrition.miNutricion")}</Title>
+            <Text c="dimmed">{t("myNutrition.seguimientoDeTuAlimentacionDiaria")}</Text>
           </Box>
           {mealPlan && (
             <Button
@@ -2324,7 +2327,7 @@ export function MyNutritionPage() {
                 });
               }}
             >
-              Descargar mi nutrición
+              {t("myNutrition.descargarMiNutricion")}
             </Button>
           )}
         </Group>
@@ -2333,7 +2336,7 @@ export function MyNutritionPage() {
       {!mealPlan && (
         <Paper p="md" radius="lg" mb="xl" style={{ background: "var(--mantine-color-gray-light)" }}>
           <Text ta="center" c="dimmed">
-            No tienes un plan nutricional asignado. Contacta con tu entrenador.
+            {t("myNutrition.noTienesUnPlanNutricional")}
           </Text>
         </Paper>
       )}
@@ -2343,12 +2346,12 @@ export function MyNutritionPage() {
           value={activeTab}
           onChange={handleTabChange}
           data={[
-            { value: "today", label: "Registrar comida" },
-            { value: "week", label: "Tu plan" },
-            { value: "history", label: "Historial" },
-            { value: "recipes", label: "Recetas" },
-            { value: "shopping", label: "Cesta de la compra" },
-            { value: "supplements", label: "Cesta de suplementos" },
+            { value: "today", label: t("myNutrition.registrarComida") },
+            { value: "week", label: t("myNutrition.tuPlan") },
+            { value: "history", label: t("myNutrition.historial") },
+            { value: "recipes", label: t("myNutrition.recetas") },
+            { value: "shopping", label: t("myNutrition.cestaDeLaCompra") },
+            { value: "supplements", label: t("myNutrition.cestaDeSuplementos") },
           ]}
           size="sm"
           radius="md"
@@ -2359,22 +2362,22 @@ export function MyNutritionPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconApple size={16} />}>
-            Registrar comida
+            {t("myNutrition.registrarComida")}
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
-            Tu plan
+            {t("myNutrition.tuPlan")}
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconHistory size={16} />}>
-            Historial
+            {t("myNutrition.historial")}
           </Tabs.Tab>
           <Tabs.Tab value="recipes" leftSection={<IconToolsKitchen2 size={16} />}>
-            Recetas
+            {t("myNutrition.recetas")}
           </Tabs.Tab>
           <Tabs.Tab value="shopping" leftSection={<IconShoppingCart size={16} />}>
-            Cesta de la compra
+            {t("myNutrition.cestaDeLaCompra")}
           </Tabs.Tab>
           <Tabs.Tab value="supplements" leftSection={<IconPill size={16} />}>
-            Cesta de suplementos
+            {t("myNutrition.cestaDeSuplementos")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -2383,15 +2386,15 @@ export function MyNutritionPage() {
           {!mealPlan ? (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">🍽️</Text>
-              <Text fw={600} size="lg">No tienes ningún plan nutricional activo</Text>
-              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un plan cuando esté listo.</Text>
+              <Text fw={600} size="lg">{t("myNutrition.noTienesNingunPlanNutricional")}</Text>
+              <Text c="dimmed" size="sm" mt="xs">{t("myNutrition.tuEntrenadorTeAsignaraUn")}</Text>
             </Box>
           ) : (
           <>
           <Card shadow="sm" padding="md" radius="lg" withBorder mb="lg">
             <Group gap="md" align="flex-end">
               <DateInput
-                label="Fecha de registro"
+                label={t("myNutrition.fechaDeRegistro")}
                 value={selectedDate}
                 onChange={(d) => d && setSelectedDate(new Date(d))}
                 minDate={nutritionDateRange?.start || undefined}
@@ -2402,7 +2405,7 @@ export function MyNutritionPage() {
               />
               {!isToday && (
                 <Button variant="subtle" size="sm" onClick={() => setSelectedDate(new Date())}>
-                  Volver a hoy
+                  {t("myNutrition.volverAHoy")}
                 </Button>
               )}
               <Text size="sm" c="dimmed">
@@ -2414,7 +2417,7 @@ export function MyNutritionPage() {
           {!isSelectedDateInRange && (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">📅</Text>
-              <Text fw={700} size="lg">Fecha fuera del plan nutricional</Text>
+              <Text fw={700} size="lg">{t("myNutrition.fechaFueraDelPlanNutricional")}</Text>
               <Text c="dimmed" size="sm" mt="xs">
                 Tu plan va del {nutritionDateRange?.startStr} al {nutritionDateRange?.endStr || "—"}.
                 Selecciona una fecha dentro de ese rango.
@@ -2429,25 +2432,25 @@ export function MyNutritionPage() {
         <Group justify="space-between" align="flex-start">
           <Box>
             <Text size="lg" fw={600} mb="md">
-              Resumen del Día
+              {t("myNutrition.resumenDelDia")}
             </Text>
             <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="md">
               <MacroCard
-                label="Proteínas"
+                label={t("myNutrition.proteinas")}
                 current={Math.round(dailyTotals.protein)}
                 target={targets.protein}
                 unit="g"
                 color="red"
               />
               <MacroCard
-                label="Carbohidratos"
+                label={t("myNutrition.carbohidratos")}
                 current={Math.round(dailyTotals.carbs)}
                 target={targets.carbs}
                 unit="g"
                 color="blue"
               />
               <MacroCard
-                label="Grasas"
+                label={t("myNutrition.grasas")}
                 current={Math.round(dailyTotals.fats)}
                 target={targets.fats}
                 unit="g"
@@ -2474,7 +2477,7 @@ export function MyNutritionPage() {
               }
             />
             <Text size="sm" fw={500} mt="xs">
-              Calorías consumidas
+              {t("myNutrition.caloriasConsumidas")}
             </Text>
           </Box>
         </Group>
@@ -2487,7 +2490,7 @@ export function MyNutritionPage() {
           const fatPct = totalMacroCals > 0 ? Math.round((dailyTotals.fats * 9 / totalMacroCals) * 100) : 0;
           return (
             <Box mt="md">
-              <Text size="sm" fw={600} mb="xs">Distribución de macros</Text>
+              <Text size="sm" fw={600} mb="xs">{t("myNutrition.distribucionDeMacros")}</Text>
               <Group gap="xs" mb={4}>
                 <Box style={{ flex: protPct, height: 8, borderRadius: 4, background: "var(--mantine-color-red-5)", minWidth: protPct > 0 ? 8 : 0 }} />
                 <Box style={{ flex: carbsPct, height: 8, borderRadius: 4, background: "var(--mantine-color-blue-5)", minWidth: carbsPct > 0 ? 8 : 0 }} />
@@ -2519,8 +2522,8 @@ export function MyNutritionPage() {
                   {dailySatisfaction >= 80 ? "😊" : dailySatisfaction >= 50 ? "😐" : "😞"}
                 </Text>
                 <Box>
-                  <Text size="sm" fw={600}>Satisfacción del día</Text>
-                  <Text size="xs" c="dimmed">Basado en las comidas registradas</Text>
+                  <Text size="sm" fw={600}>{t("myNutrition.satisfaccionDelDia")}</Text>
+                  <Text size="xs" c="dimmed">{t("myNutrition.basadoEnLasComidasRegistradas")}</Text>
                 </Box>
               </Group>
               <Text size="xl" fw={700}>{dailySatisfaction}%</Text>
@@ -2607,7 +2610,7 @@ export function MyNutritionPage() {
                         <Group gap={4} wrap="nowrap">
                           <Text fw={600} size="sm" lineClamp={1}>{displayName}</Text>
                           {planViewMode !== "original" && (
-                            <Tooltip label="Editar nombre">
+                            <Tooltip label={t("myNutrition.editarNombre")}>
                               <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealName({ dayNum: selectedPlanDay, mealIndex: originalMealIndex, name: displayName })}>
                                 <IconEdit size={11} />
                               </ActionIcon>
@@ -2645,7 +2648,7 @@ export function MyNutritionPage() {
                         <Group gap={2}>
                           <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time || "--:--"}</Badge>
                           {planViewMode !== "original" && (
-                            <Tooltip label="Editar hora">
+                            <Tooltip label={t("myNutrition.editarHora")}>
                               <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealTime({ dayNum: selectedPlanDay, mealIndex: originalMealIndex, time: meal.time || "12:00" })}>
                                 <IconEdit size={10} />
                               </ActionIcon>
@@ -2675,20 +2678,20 @@ export function MyNutritionPage() {
                               leftSection={<IconToolsKitchen2 size={14} />}
                               onClick={() => handleOpenPlanMeal(meal)}
                             >
-                              Editar registro
+                              {t("myNutrition.editarRegistro")}
                             </Menu.Item>
                             <Menu.Item
                               leftSection={<IconArrowsExchange size={14} />}
                               onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
                             >
-                              Intercambiar
+                              {t("myNutrition.intercambiar")}
                             </Menu.Item>
                             <Menu.Item
                               color="red"
                               leftSection={<IconTrash size={14} />}
                               onClick={() => handleUnregisterMeal(meal.name)}
                             >
-                              Eliminar registro
+                              {t("myNutrition.eliminarRegistro")}
                             </Menu.Item>
                           </Menu.Dropdown>
                         </Menu>
@@ -2701,7 +2704,7 @@ export function MyNutritionPage() {
                             radius="xl"
                             onClick={() => handleOpenPlanMeal(meal)}
                           >
-                            Registrar
+                            {t("myNutrition.registrar")}
                           </Button>
                           <Button
                             size="xs"
@@ -2710,7 +2713,7 @@ export function MyNutritionPage() {
                             radius="xl"
                             onClick={() => setRegisterSwapState({ sourceMealIndex: originalMealIndex, step: "day" })}
                           >
-                            Intercambiar
+                            {t("myNutrition.intercambiar")}
                           </Button>
                         </>
                       )}
@@ -2871,7 +2874,7 @@ export function MyNutritionPage() {
       <Modal
         opened={registerSwapState?.step === "day"}
         onClose={() => setRegisterSwapState(null)}
-        title="Selecciona el día de destino"
+        title={t("myNutrition.seleccionaElDiaDeDestino")}
         size="sm"
       >
         <Stack gap="xs">
@@ -2896,7 +2899,7 @@ export function MyNutritionPage() {
       <Modal
         opened={registerSwapState?.step === "meal" && registerSwapState?.targetDay != null}
         onClose={() => setRegisterSwapState(null)}
-        title="Selecciona la comida a intercambiar"
+        title={t("myNutrition.seleccionaLaComidaAIntercambiar")}
         size="sm"
       >
         {(() => {
@@ -2930,7 +2933,7 @@ export function MyNutritionPage() {
                   setRegisterSwapState(null);
                 }}
               >
-                Mover sin intercambiar
+                {t("myNutrition.moverSinIntercambiar")}
               </Button>
               <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
               {targetMeals.map((meal: PlanMeal, tmi: number) => {
@@ -2971,8 +2974,8 @@ export function MyNutritionPage() {
           {!mealPlan ? (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">🍽️</Text>
-              <Text fw={600} size="lg">No tienes ningún plan nutricional activo</Text>
-              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un plan cuando esté listo.</Text>
+              <Text fw={600} size="lg">{t("myNutrition.noTienesNingunPlanNutricional")}</Text>
+              <Text c="dimmed" size="sm" mt="xs">{t("myNutrition.tuEntrenadorTeAsignaraUn")}</Text>
             </Box>
           ) : (
           <>
@@ -2982,8 +2985,8 @@ export function MyNutritionPage() {
                 value={planViewMode}
                 onChange={(v) => setPlanViewMode(v || "modified")}
                 data={[
-                  { value: "modified", label: "Plan ejecutado" },
-                  { value: "original", label: "Plan asignado" },
+                  { value: "modified", label: t("myNutrition.planEjecutado") },
+                  { value: "original", label: t("myNutrition.planAsignado") },
                 ]}
                 size="xs"
                 radius="md"
@@ -3028,25 +3031,25 @@ export function MyNutritionPage() {
           </Stack>
 
           <Card shadow="sm" padding="lg" radius="lg" withBorder mb="md">
-            <Title order={5} mb="md">Resumen de la Semana</Title>
+            <Title order={5} mb="md">{t("myNutrition.resumenDeLaSemana")}</Title>
             <SimpleGrid cols={{ base: 1, xs: 3 }}>
               <Box ta="center">
                 <Text size="xl" fw={700} c="yellow">
                   {nutritionHistory?.summary?.avg_calories || 0}
                 </Text>
-                <Text size="sm" c="dimmed">Promedio kcal/día</Text>
+                <Text size="sm" c="dimmed">{t("myNutrition.promedioKcalDia")}</Text>
               </Box>
               <Box ta="center">
                 <Text size="xl" fw={700} c="green">
                   {nutritionHistory?.summary?.total_days || 0}
                 </Text>
-                <Text size="sm" c="dimmed">Días registrados</Text>
+                <Text size="sm" c="dimmed">{t("myNutrition.diasRegistrados")}</Text>
               </Box>
               <Box ta="center">
                 <Text size="xl" fw={700} c="blue">
                   {targets.calories}
                 </Text>
-                <Text size="sm" c="dimmed">Objetivo kcal/día</Text>
+                <Text size="sm" c="dimmed">{t("myNutrition.objetivoKcalDia")}</Text>
               </Box>
             </SimpleGrid>
           </Card>
@@ -3108,19 +3111,19 @@ export function MyNutritionPage() {
                     <Text size="xl" fw={700}>
                       {Math.round(activeWeekData[selectedWeekDayIndex].totals?.protein || 0)}g
                     </Text>
-                    <Text size="xs" c="dimmed">Proteína</Text>
+                    <Text size="xs" c="dimmed">{t("myNutrition.proteina")}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
                       {Math.round(activeWeekData[selectedWeekDayIndex].totals?.carbs || 0)}g
                     </Text>
-                    <Text size="xs" c="dimmed">Carbohidratos</Text>
+                    <Text size="xs" c="dimmed">{t("myNutrition.carbohidratos")}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "var(--mantine-color-grape-light)", borderRadius: "var(--mantine-radius-md)" }}>
                     <Text size="xl" fw={700}>
                       {Math.round(activeWeekData[selectedWeekDayIndex].totals?.fat || 0)}g
                     </Text>
-                    <Text size="xs" c="dimmed">Grasas</Text>
+                    <Text size="xs" c="dimmed">{t("myNutrition.grasas")}</Text>
                   </Box>
                 </SimpleGrid>
 
@@ -3133,11 +3136,11 @@ export function MyNutritionPage() {
                         <Menu shadow="md" position="bottom-end" withinPortal>
                           <Menu.Target>
                             <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal">
-                              Intercambiar día
+                              {t("myNutrition.intercambiarDia")}
                             </Button>
                           </Menu.Target>
                           <Menu.Dropdown>
-                            <Menu.Label>Intercambiar comidas con</Menu.Label>
+                            <Menu.Label>{t("myNutrition.intercambiarComidasCon")}</Menu.Label>
                             {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, idx) => {
                               const targetDayNum = idx + 1;
                               if (targetDayNum === activeWeekData[selectedWeekDayIndex].planDayNum) return null;
@@ -3226,10 +3229,10 @@ export function MyNutritionPage() {
                                       <Group gap={4} wrap="nowrap">
                                         <Text fw={600} size="sm">{(meal as PlanMeal & { display_name?: string }).display_name || mealType?.label || meal.name}</Text>
                                         {planViewMode !== "original" && (activeWeekData[selectedWeekDayIndex] as any)?.registeredMealNames?.has(meal.name) && (
-                                          <Badge variant="light" color="green" size="xs">Registrada</Badge>
+                                          <Badge variant="light" color="green" size="xs">{t("myNutrition.registrada")}</Badge>
                                         )}
                                         {planViewMode !== "original" && (
-                                          <Tooltip label="Editar nombre">
+                                          <Tooltip label={t("myNutrition.editarNombre")}>
                                             <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealName({ dayNum: currentPlanDayNum!, mealIndex, name: (meal as any).display_name || mealType?.label || meal.name })}>
                                               <IconEdit size={11} />
                                             </ActionIcon>
@@ -3264,7 +3267,7 @@ export function MyNutritionPage() {
                                       <Group gap={2}>
                                         <Badge variant="light" color="gray" size="xs" leftSection={<IconClock size={10} />}>{meal.time || "--:--"}</Badge>
                                         {planViewMode !== "original" && (
-                                          <Tooltip label="Editar hora">
+                                          <Tooltip label={t("myNutrition.editarHora")}>
                                             <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setEditingMealTime({ dayNum: currentPlanDayNum!, mealIndex, time: meal.time || "12:00" })}>
                                               <IconEdit size={10} />
                                             </ActionIcon>
@@ -3288,7 +3291,7 @@ export function MyNutritionPage() {
                                   </>
                                 )}
                                 {planViewMode !== "original" && currentPlanDayNum && (
-                                  <Tooltip label="Intercambiar comida">
+                                  <Tooltip label={t("myNutrition.intercambiarComida")}>
                                     <ActionIcon variant="subtle" color="teal" size="sm" onClick={() => setPlanSwapState({ sourceMealIndex: mealIndex, sourceDayNum: currentPlanDayNum, step: "day" })}>
                                       <IconArrowsExchange size={14} />
                                     </ActionIcon>
@@ -3298,8 +3301,8 @@ export function MyNutritionPage() {
                             </Group>
                             {meal.is_free_meal ? (
                               <Paper p="sm" radius="md" withBorder mt="sm" ml={54} style={{ background: "var(--mantine-color-teal-light)" }}>
-                                <Text fw={700} size="sm">Comida libre</Text>
-                                <Text c="dimmed" size="xs">Este bloque del plan está marcado como comida libre.</Text>
+                                <Text fw={700} size="sm">{t("myNutrition.comidaLibre")}</Text>
+                                <Text c="dimmed" size="xs">{t("myNutrition.esteBloqueDelPlanEsta")}</Text>
                               </Paper>
                             ) : mealFoods.length > 0 && (
                               <Stack gap={6} mt="sm" ml={54}>
@@ -3331,7 +3334,7 @@ export function MyNutritionPage() {
                     </Stack>
                   </Box>
                 ) : (
-                  <Text c="dimmed" ta="center">No hay comidas asignadas en el plan para este día</Text>
+                  <Text c="dimmed" ta="center">{t("myNutrition.noHayComidasAsignadasEn")}</Text>
                 )}
               </FullPageDetail>
             )}
@@ -3355,7 +3358,7 @@ export function MyNutritionPage() {
           <Modal
             opened={planSwapState?.step === "day"}
             onClose={() => setPlanSwapState(null)}
-            title="Intercambiar con"
+            title={t("myNutrition.intercambiarCon")}
             size="sm"
           >
             <Stack gap="xs">
@@ -3382,7 +3385,7 @@ export function MyNutritionPage() {
           <Modal
             opened={planSwapState?.step === "meal" && planSwapState?.targetDay != null}
             onClose={() => setPlanSwapState(null)}
-            title="Selecciona la comida a intercambiar"
+            title={t("myNutrition.seleccionaLaComidaAIntercambiar")}
             size="sm"
           >
             {(() => {
@@ -3417,7 +3420,7 @@ export function MyNutritionPage() {
                       setPlanSwapState(null);
                     }}
                   >
-                    Mover sin intercambiar
+                    {t("myNutrition.moverSinIntercambiar")}
                   </Button>
                   <Text size="sm" c="dimmed" mb="xs">Comidas de {targetDayLabel}:</Text>
                   {targetMeals.map((meal: PlanMeal, tmi: number) => {
@@ -3468,7 +3471,7 @@ export function MyNutritionPage() {
                     {dProt !== 0 && <Badge size="xs" variant="light" color={dProt > 0 ? "red" : "green"}>{dProt > 0 ? "+" : ""}{dProt}g P</Badge>}
                     {dCarbs !== 0 && <Badge size="xs" variant="light" color={dCarbs > 0 ? "red" : "green"}>{dCarbs > 0 ? "+" : ""}{dCarbs}g C</Badge>}
                     {dFat !== 0 && <Badge size="xs" variant="light" color={dFat > 0 ? "red" : "green"}>{dFat > 0 ? "+" : ""}{dFat}g G</Badge>}
-                    {day.has_modifications && <Badge size="xs" variant="light" color="yellow">Modificado</Badge>}
+                    {day.has_modifications && <Badge size="xs" variant="light" color="yellow">{t("myNutrition.modificado")}</Badge>}
                   </Group>
                 );
               };
@@ -3530,8 +3533,8 @@ export function MyNutritionPage() {
             })() || (
               <Paper p="xl" ta="center" radius="lg" withBorder>
                 <IconHistory size={48} color="gray" style={{ opacity: 0.5 }} />
-                <Text c="dimmed" mt="md">No hay historial de nutrición disponible</Text>
-                <Text size="sm" c="dimmed">Registra tus comidas para ver tu historial aquí</Text>
+                <Text c="dimmed" mt="md">{t("myNutrition.noHayHistorialDeNutricion")}</Text>
+                <Text size="sm" c="dimmed">{t("myNutrition.registraTusComidasParaVer")}</Text>
               </Paper>
             )}
           </Stack>
@@ -3554,19 +3557,19 @@ export function MyNutritionPage() {
               >
                 <SimpleGrid cols={2} spacing="sm" mb="md">
                   <Paper p="sm" radius="md" withBorder ta="center">
-                    <Text size="xs" c="dimmed">Kcal</Text>
+                    <Text size="xs" c="dimmed">{t("myNutrition.kcal")}</Text>
                     <Text fw={700} size="lg">{selectedDay.totals.calories}</Text>
                   </Paper>
                   <Paper p="sm" radius="md" withBorder ta="center">
-                    <Text size="xs" c="dimmed">Proteína</Text>
+                    <Text size="xs" c="dimmed">{t("myNutrition.proteina")}</Text>
                     <Text fw={700} size="lg">{Math.round(selectedDay.totals.protein)}g</Text>
                   </Paper>
                   <Paper p="sm" radius="md" withBorder ta="center">
-                    <Text size="xs" c="dimmed">Carbohidratos</Text>
+                    <Text size="xs" c="dimmed">{t("myNutrition.carbohidratos")}</Text>
                     <Text fw={700} size="lg">{Math.round(selectedDay.totals.carbs)}g</Text>
                   </Paper>
                   <Paper p="sm" radius="md" withBorder ta="center">
-                    <Text size="xs" c="dimmed">Grasas</Text>
+                    <Text size="xs" c="dimmed">{t("myNutrition.grasas")}</Text>
                     <Text fw={700} size="lg">{Math.round(selectedDay.totals.fat)}g</Text>
                   </Paper>
                 </SimpleGrid>
@@ -3603,10 +3606,10 @@ export function MyNutritionPage() {
                         {ref && (
                           <Box p="xs" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
                             {addedFoods.length === 0 && removedFoods.length === 0 && Math.abs(diffCal) < 5 && Math.abs(diffProt) < 1 && Math.abs(diffCarbs) < 1 && Math.abs(diffFat) < 1 ? (
-                              <Badge size="sm" variant="light" color="green">Sin variaciones</Badge>
+                              <Badge size="sm" variant="light" color="green">{t("myNutrition.sinVariaciones")}</Badge>
                             ) : (
                               <>
-                                <Text size="xs" fw={600} mb={4}>Variación vs plan:</Text>
+                                <Text size="xs" fw={600} mb={4}>{t("myNutrition.variacionVsPlan")}</Text>
                                 <Group gap={6} wrap="wrap" mb={4}>
                                   <Badge size="xs" variant="light" color={diffColor(diffCal)}>{fmtDiff(diffCal)} kcal</Badge>
                                   <Badge size="xs" variant="light" color={diffColor(diffProt)}>{fmtDiff(diffProt)}g prot</Badge>
@@ -3615,7 +3618,7 @@ export function MyNutritionPage() {
                                 </Group>
                                 {(addedFoods.length > 0 || removedFoods.length > 0) && (
                                   <Box mt={4}>
-                                    <Text size="xs" fw={600} mb={2}>Alimentos originales vs finales:</Text>
+                                    <Text size="xs" fw={600} mb={2}>{t("myNutrition.alimentosOriginalesVsFinales")}</Text>
                                     {ref.foods.map((pf, pi) => {
                                       const loggedEquiv = meal.foods.find(f => f.name === pf.name);
                                       return (
@@ -3630,7 +3633,7 @@ export function MyNutritionPage() {
                                     {addedFoods.map((af, ai) => (
                                       <Group key={`a-${ai}`} gap={4} mb={2}>
                                         <Text size="xs" c="teal" style={{ flex: 1 }}>+ {af.name} ({af.quantity || "?"}g)</Text>
-                                        <Text size="xs" c="dimmed">Añadido</Text>
+                                        <Text size="xs" c="dimmed">{t("myNutrition.anadido")}</Text>
                                       </Group>
                                     ))}
                                   </Box>
@@ -3656,23 +3659,23 @@ export function MyNutritionPage() {
           {shoppingList.length === 0 ? (
             <Paper p="xl" ta="center" radius="lg" withBorder>
               <Text size="xl" mb="sm">🛒</Text>
-              <Title order={4} mb="xs">Cesta de la compra vacía</Title>
+              <Title order={4} mb="xs">{t("myNutrition.cestaDeLaCompraVacia")}</Title>
               <Text c="dimmed" size="sm">
-                No hay alimentos en tu plan nutricional para esta semana. Consulta con tu entrenador.
+                {t("myNutrition.noHayAlimentosEnTu")}
               </Text>
             </Paper>
           ) : (
             <Stack gap="lg">
               <Group justify="space-between" align="flex-start">
                 <Box>
-                  <Title order={4}>Cesta de la compra</Title>
+                  <Title order={4}>{t("myNutrition.cestaDeLaCompra")}</Title>
                   <Text size="sm" c="dimmed">
                     {shoppingList.reduce((sum, g) => sum + g.items.length, 0)} alimentos
                   </Text>
                 </Box>
                 {checkedItems.size > 0 && (
                   <Button variant="subtle" size="xs" onClick={() => setCheckedItems(new Set())}>
-                    Desmarcar todos
+                    {t("myNutrition.desmarcarTodos")}
                   </Button>
                 )}
               </Group>
@@ -3754,7 +3757,7 @@ export function MyNutritionPage() {
 
               <Paper p="sm" radius="md" withBorder>
                 <Group justify="space-between">
-                  <Text size="sm" c="dimmed">Progreso</Text>
+                  <Text size="sm" c="dimmed">{t("myNutrition.progreso")}</Text>
                   <Text size="sm" fw={600}>
                     {checkedItems.size} / {shoppingList.reduce((sum, g) => sum + g.items.length, 0)} comprados
                   </Text>
@@ -3848,6 +3851,7 @@ interface ClientSupplementCartItem {
 }
 
 function SupplementCartPanel() {
+  const { t } = useTranslation();
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["my-supplements-cart"],
     queryFn: async () => {
@@ -3871,11 +3875,10 @@ function SupplementCartPanel() {
       <Paper p="xl" ta="center" radius="lg" withBorder>
         <Text size="xl" mb="sm">💊</Text>
         <Title order={4} mb="xs">
-          Tu cesta de suplementos está vacía
+          {t("myNutrition.tuCestaDeSuplementosEsta")}
         </Title>
         <Text c="dimmed" size="sm">
-          Cuando tu entrenador te asigne suplementos aparecerán aquí con su URL
-          de compra y código de descuento si los tiene configurados.
+          {t("myNutrition.cuandoTuEntrenadorTeAsigne")}
         </Text>
       </Paper>
     );
@@ -3947,7 +3950,7 @@ function SupplementCartPanel() {
                         onClick={copy}
                         size="lg"
                         radius="md"
-                        aria-label="Copiar código"
+                        aria-label={t("myNutrition.copiarCodigo")}
                       >
                         {copied ? (
                           <IconCheck size={16} />
@@ -3969,7 +3972,7 @@ function SupplementCartPanel() {
                 color="yellow"
                 rightSection={<IconExternalLink size={16} />}
               >
-                Comprar aquí
+                {t("myNutrition.comprarAqui")}
               </Button>
             )}
           </Stack>

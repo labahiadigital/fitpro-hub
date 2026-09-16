@@ -48,6 +48,7 @@ import { useProgressSummary, useMeasurements, useCreateMeasurement, useUploadPro
 import { formatDecimal } from "../../utils/format";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 import { IconArrowLeft } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 function StatProgress({ 
   label, 
@@ -259,7 +260,7 @@ function LogMeasurementModal({
           </ActionIcon>
           <Box style={{ flex: 1 }}>
             <Text fw={700} size="sm">{existingForDate ? "Editar Medidas" : "Registrar Medidas"}</Text>
-            <Text size="xs" c="dimmed">Peso, grasa y medidas corporales</Text>
+            <Text size="xs" c="dimmed">{"Peso, grasa y medidas corporales"}</Text>
           </Box>
         </Group>
       </Box>
@@ -267,7 +268,7 @@ function LogMeasurementModal({
       {/* Scrollable content */}
       <Box style={{ flex: 1, overflowY: "auto" }} px="md" py="md">
         <DateInput
-          label="Fecha"
+          label={"Fecha"}
           value={measurementDate}
           onChange={handleDateChange}
           maxDate={new Date()}
@@ -277,13 +278,13 @@ function LogMeasurementModal({
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         {existingForDate && (
-          <Badge color="blue" variant="light" mt="xs">Editando medidas existentes</Badge>
+          <Badge color="blue" variant="light" mt="xs">{"Editando medidas existentes"}</Badge>
         )}
 
-        <Text fw={600} size="sm" mt="lg" mb="xs">Datos Corporales</Text>
+        <Text fw={600} size="sm" mt="lg" mb="xs">{"Datos Corporales"}</Text>
         <SimpleGrid cols={3} spacing="sm">
           <NumberInput
-            label="Peso (kg)"
+            label={"Peso (kg)"}
             placeholder="78.5"
             {...form.getInputProps("weight_kg")}
             min={30}
@@ -294,7 +295,7 @@ function LogMeasurementModal({
             styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }}
           />
           <NumberInput
-            label="% Grasa"
+            label={"% Grasa"}
             placeholder="18.5"
             {...form.getInputProps("body_fat_percentage")}
             min={3}
@@ -305,7 +306,7 @@ function LogMeasurementModal({
             styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }}
           />
           <NumberInput
-            label="Músculo (kg)"
+            label={"Músculo (kg)"}
             placeholder="35.2"
             {...form.getInputProps("muscle_mass_kg")}
             min={10}
@@ -317,18 +318,18 @@ function LogMeasurementModal({
           />
         </SimpleGrid>
 
-        <Text fw={600} size="sm" mt="lg" mb="xs">Medidas Corporales (cm)</Text>
+        <Text fw={600} size="sm" mt="lg" mb="xs">{"Medidas Corporales (cm)"}</Text>
         <SimpleGrid cols={3} spacing="sm">
-          <NumberInput label="Pecho" placeholder="102" {...form.getInputProps("chest")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label="Cintura" placeholder="82" {...form.getInputProps("waist")} min={40} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label="Cadera" placeholder="98" {...form.getInputProps("hips")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label="Brazos" placeholder="36" {...form.getInputProps("arms")} min={15} max={60} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
-          <NumberInput label="Muslos" placeholder="58" {...form.getInputProps("thighs")} min={30} max={100} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={"Pecho"} placeholder="102" {...form.getInputProps("chest")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={"Cintura"} placeholder="82" {...form.getInputProps("waist")} min={40} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={"Cadera"} placeholder="98" {...form.getInputProps("hips")} min={50} max={200} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={"Brazos"} placeholder="36" {...form.getInputProps("arms")} min={15} max={60} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
+          <NumberInput label={"Muslos"} placeholder="58" {...form.getInputProps("thighs")} min={30} max={100} size="sm" hideControls styles={{ input: { height: 44, borderRadius: 10, textAlign: "center", fontWeight: 700 } }} />
         </SimpleGrid>
 
         <Textarea
-          label="Notas (opcional)"
-          placeholder="¿Cómo te sientes?"
+          label={"Notas (opcional)"}
+          placeholder={"¿Cómo te sientes?"}
           {...form.getInputProps("notes")}
           minRows={2}
           mt="md"
@@ -359,7 +360,7 @@ function LogMeasurementModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          Guardar Medidas
+          {"Guardar Medidas"}
         </Button>
       </Box>
     </Box>
@@ -411,8 +412,8 @@ function UploadPhotoModal({
     <NativeBottomSheet
       opened={opened}
       onClose={onClose}
-      title="Subir Foto de Progreso"
-      subtitle="Añade una foto para comparar tu evolución"
+      title={"Subir Foto de Progreso"}
+      subtitle={"Añade una foto para comparar tu evolución"}
       footer={
         <Button
           color="yellow"
@@ -425,13 +426,13 @@ function UploadPhotoModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          Subir Foto
+          {"Subir Foto"}
         </Button>
       }
     >
       <Stack gap="md">
         <DateInput
-          label="Fecha de la foto"
+          label={"Fecha de la foto"}
           value={photoDate}
           onChange={(d) => d && setPhotoDate(new Date(d))}
           maxDate={new Date()}
@@ -441,7 +442,7 @@ function UploadPhotoModal({
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         <Box>
-          <Text size="sm" fw={500} mb={6}>Tipo de foto</Text>
+          <Text size="sm" fw={500} mb={6}>{"Tipo de foto"}</Text>
           <SegmentedControl
             fullWidth
             value={photoType}
@@ -482,7 +483,7 @@ function UploadPhotoModal({
         )}
 
         <Textarea
-          placeholder="Notas (opcional)"
+          placeholder={"Notas (opcional)"}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           minRows={2}
@@ -495,6 +496,7 @@ function UploadPhotoModal({
 }
 
 export function MyProgressPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const { data: summary, isLoading: isLoadingSummary } = useProgressSummary();
@@ -641,15 +643,15 @@ export function MyProgressPage() {
     <Box p="xl" maw={1280} mx="auto">
       <Group justify="space-between" mb="xl">
         <Box>
-          <Title order={2}>Mi Progreso</Title>
-          <Text c="dimmed">Seguimiento de tu evolución física</Text>
+          <Title order={2}>{t("myProgress.miProgreso")}</Title>
+          <Text c="dimmed">{t("myProgress.seguimientoDeTuEvolucionFisica")}</Text>
         </Box>
         <Group>
           <Button variant="light" leftSection={<IconCamera size={16} />} onClick={openPhotoModal}>
-            Subir foto
+            {t("myProgress.subirFoto")}
           </Button>
           <Button leftSection={<IconPlus size={16} />} color="yellow" onClick={openModal}>
-            Registrar medidas
+            {t("myProgress.registrarMedidas")}
           </Button>
         </Group>
       </Group>
@@ -687,7 +689,7 @@ export function MyProgressPage() {
                   leftSection={<IconRuler size={14} />}
                   onClick={openModal}
                 >
-                  Registrar medidas
+                  {t("myProgress.registrarMedidas")}
                 </Button>
                 <Button
                   size="xs"
@@ -697,7 +699,7 @@ export function MyProgressPage() {
                   leftSection={<IconCamera size={14} />}
                   onClick={openPhotoModal}
                 >
-                  Subir foto
+                  {t("myProgress.subirFoto")}
                 </Button>
               </Group>
             </Stack>
@@ -710,11 +712,11 @@ export function MyProgressPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "overview", label: "Resumen" },
-            { value: "measurements", label: "Medidas" },
-            { value: "history", label: "Historial" },
-            { value: "photos", label: "Fotos" },
-            { value: "visual-evolution", label: "Evolución" },
+            { value: "overview", label: t("myProgress.resumen") },
+            { value: "measurements", label: t("myProgress.medidas") },
+            { value: "history", label: t("myProgress.historial") },
+            { value: "photos", label: t("myProgress.fotos") },
+            { value: "visual-evolution", label: t("myProgress.evolucion") },
           ]}
           size="sm"
           radius="md"
@@ -725,19 +727,19 @@ export function MyProgressPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="overview" leftSection={<IconChartLine size={16} />}>
-            Resumen
+            {t("myProgress.resumen")}
           </Tabs.Tab>
           <Tabs.Tab value="measurements" leftSection={<IconRuler size={16} />}>
-            Medidas
+            {t("myProgress.medidas")}
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconTrendingUp size={16} />}>
-            Historial
+            {t("myProgress.historial")}
           </Tabs.Tab>
           <Tabs.Tab value="photos" leftSection={<IconCamera size={16} />}>
-            Fotos
+            {t("myProgress.fotos")}
           </Tabs.Tab>
           <Tabs.Tab value="visual-evolution" leftSection={<IconPhoto size={16} />}>
-            Evolución visual
+            {t("myProgress.evolucionVisual")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -746,14 +748,14 @@ export function MyProgressPage() {
           {/* Main Stats */}
           <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl">
             <StatProgress
-              label="Peso"
+              label={t("myProgress.peso")}
               current={data.currentStats.weight}
               start={data.startStats.weight}
               target={data.targetStats.weight}
               unit="kg"
             />
             <StatProgress
-              label="% Grasa Corporal"
+              label={t("myProgress.grasaCorporal")}
               current={data.currentStats.bodyFat}
               start={data.startStats.bodyFat}
               target={data.targetStats.bodyFat}
@@ -761,7 +763,7 @@ export function MyProgressPage() {
               inverse
             />
             <StatProgress
-              label="Masa Muscular"
+              label={t("myProgress.masaMuscular")}
               current={data.currentStats.muscleMass}
               start={data.startStats.muscleMass}
               target={data.targetStats.muscleMass}
@@ -774,11 +776,11 @@ export function MyProgressPage() {
             <Grid.Col span={{ base: 12, md: 8 }}>
               <Card shadow="sm" padding="lg" radius="lg" withBorder>
                 <Group justify="space-between" mb="md">
-                  <Text fw={600}>Evolución Corporal</Text>
+                  <Text fw={600}>{t("myProgress.evolucionCorporal")}</Text>
                   <Group gap="md">
                     <Group gap={4}>
                       <Box w={12} h={12} style={{ background: "#fab005", borderRadius: 2 }} />
-                      <Text size="xs">Peso (kg)</Text>
+                      <Text size="xs">{t("myProgress.pesoKg")}</Text>
                     </Group>
                     <Group gap={4}>
                       <Box w={12} h={12} style={{ background: "#fa5252", borderRadius: 2 }} />
@@ -786,7 +788,7 @@ export function MyProgressPage() {
                     </Group>
                     <Group gap={4}>
                       <Box w={12} h={12} style={{ background: "#40c057", borderRadius: 2 }} />
-                      <Text size="xs">Músculo (kg)</Text>
+                      <Text size="xs">{t("myProgress.musculoKg")}</Text>
                     </Group>
                   </Group>
                 </Group>
@@ -803,7 +805,7 @@ export function MyProgressPage() {
                   >
                     <Stack align="center" gap="xs">
                       <IconChartLine size={40} color="var(--mantine-color-dimmed)" />
-                      <Text c="dimmed" size="sm">Registra tu primera medida para ver la evolución</Text>
+                      <Text c="dimmed" size="sm">{t("myProgress.registraTuPrimeraMedidaPara")}</Text>
                     </Stack>
                   </Box>
                 ) : (
@@ -955,19 +957,19 @@ export function MyProgressPage() {
                     <SimpleGrid cols={{ base: 1, xs: 3 }} mt="md">
                       {data.weightHistory.length > 0 && data.weightHistory[data.weightHistory.length - 1].weight > 0 && (
                         <Box ta="center">
-                          <Text size="xs" c="dimmed">Último peso</Text>
+                          <Text size="xs" c="dimmed">{t("myProgress.ultimoPeso")}</Text>
                           <Text fw={600} c="yellow">{data.weightHistory[data.weightHistory.length - 1].weight} kg</Text>
                         </Box>
                       )}
                       {data.weightHistory.length > 0 && data.weightHistory[data.weightHistory.length - 1].body_fat > 0 && (
                         <Box ta="center">
-                          <Text size="xs" c="dimmed">Última grasa</Text>
+                          <Text size="xs" c="dimmed">{t("myProgress.ultimaGrasa")}</Text>
                           <Text fw={600} c="red">{data.weightHistory[data.weightHistory.length - 1].body_fat}%</Text>
                         </Box>
                       )}
                       {data.weightHistory.length > 0 && data.weightHistory[data.weightHistory.length - 1].muscle_mass > 0 && (
                         <Box ta="center">
-                          <Text size="xs" c="dimmed">Último músculo</Text>
+                          <Text size="xs" c="dimmed">{t("myProgress.ultimoMusculo")}</Text>
                           <Text fw={600} c="green">{data.weightHistory[data.weightHistory.length - 1].muscle_mass} kg</Text>
                         </Box>
                       )}
@@ -980,19 +982,19 @@ export function MyProgressPage() {
             {/* Quick Stats */}
             <Grid.Col span={{ base: 12, md: 4 }}>
               <Card shadow="sm" padding="lg" radius="lg" withBorder h="100%">
-                <Text fw={600} mb="lg">Estadísticas</Text>
+                <Text fw={600} mb="lg">{t("myProgress.estadisticas")}</Text>
                 <Stack gap="md">
                   <Box>
-                    <Text size="sm" c="dimmed">Total de mediciones</Text>
+                    <Text size="sm" c="dimmed">{t("myProgress.totalDeMediciones")}</Text>
                     <Text size="xl" fw={700}>{measurements?.length || 0}</Text>
                   </Box>
                   <Box>
-                    <Text size="sm" c="dimmed">Fotos de progreso</Text>
+                    <Text size="sm" c="dimmed">{t("myProgress.fotosDeProgreso")}</Text>
                     <Text size="xl" fw={700}>{photos.length}</Text>
                   </Box>
                   {data.weightHistory.length >= 2 && (
                     <Box>
-                      <Text size="sm" c="dimmed">Cambio total de peso</Text>
+                      <Text size="sm" c="dimmed">{t("myProgress.cambioTotalDePeso")}</Text>
                       <Badge 
                         size="lg"
                         color={(data.weightHistory[data.weightHistory.length - 1]?.weight - data.weightHistory[0]?.weight) <= 0 ? "green" : "red"}
@@ -1011,12 +1013,12 @@ export function MyProgressPage() {
         <Tabs.Panel value="measurements">
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Group justify="space-between" mb="lg">
-              <Text fw={600}>Medidas Corporales</Text>
+              <Text fw={600}>{t("myProgress.medidasCorporales")}</Text>
               {measurements && measurements.length > 1 && (
                 <Select
                   size="xs"
                   w={200}
-                  label="Comparar con"
+                  label={t("myProgress.compararCon")}
                   data={measurements.slice(1).map((m, i) => ({
                     value: String(i + 1),
                     label: m.measured_at 
@@ -1039,25 +1041,25 @@ export function MyProgressPage() {
                 <Table>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Zona</Table.Th>
-                      <Table.Th ta="center">Actual</Table.Th>
-                      <Table.Th ta="center">Comparación</Table.Th>
-                      <Table.Th ta="right">Cambio</Table.Th>
+                      <Table.Th>{t("myProgress.zona")}</Table.Th>
+                      <Table.Th ta="center">{t("myProgress.actual")}</Table.Th>
+                      <Table.Th ta="center">{t("myProgress.comparacion")}</Table.Th>
+                      <Table.Th ta="right">{t("myProgress.cambio")}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    <MeasurementRow label="Pecho" {...data.measurements.chest} />
-                    <MeasurementRow label="Cintura" {...data.measurements.waist} />
-                    <MeasurementRow label="Cadera" {...data.measurements.hips} />
-                    <MeasurementRow label="Brazos" {...data.measurements.arms} />
-                    <MeasurementRow label="Muslos" {...data.measurements.thighs} />
+                    <MeasurementRow label={t("myProgress.pecho")} {...data.measurements.chest} />
+                    <MeasurementRow label={t("myProgress.cintura")} {...data.measurements.waist} />
+                    <MeasurementRow label={t("myProgress.cadera")} {...data.measurements.hips} />
+                    <MeasurementRow label={t("myProgress.brazos")} {...data.measurements.arms} />
+                    <MeasurementRow label={t("myProgress.muslos")} {...data.measurements.thighs} />
                   </Table.Tbody>
                 </Table>
                 </ScrollArea>
               </>
             ) : (
               <Text c="dimmed" ta="center" py="xl">
-                No has registrado medidas corporales aún
+                {t("myProgress.noHasRegistradoMedidasCorporales")}
               </Text>
             )}
           </Card>
@@ -1071,12 +1073,12 @@ export function MyProgressPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Fecha</Table.Th>
-                    <Table.Th>Peso</Table.Th>
+                    <Table.Th>{t("myProgress.fecha")}</Table.Th>
+                    <Table.Th>{t("myProgress.peso")}</Table.Th>
                     <Table.Th>% Grasa</Table.Th>
-                    <Table.Th>Músculo</Table.Th>
-                    <Table.Th>Cambio</Table.Th>
-                    <Table.Th>Notas</Table.Th>
+                    <Table.Th>{t("myProgress.musculo")}</Table.Th>
+                    <Table.Th>{t("myProgress.cambio")}</Table.Th>
+                    <Table.Th>{t("myProgress.notas")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1125,7 +1127,7 @@ export function MyProgressPage() {
               </ScrollArea>
             ) : (
               <Text c="dimmed" ta="center" py="xl">
-                No has registrado medidas aún. ¡Empieza ahora!
+                {t("myProgress.noHasRegistradoMedidasAun")}
               </Text>
             )}
           </Card>
@@ -1141,7 +1143,7 @@ export function MyProgressPage() {
                 onClick={openPhotoModal}
                 size="sm"
               >
-                Subir foto
+                {t("myProgress.subirFoto")}
               </Button>
             </Group>
 
@@ -1149,10 +1151,10 @@ export function MyProgressPage() {
               value={photoTypeFilter}
               onChange={setPhotoTypeFilter}
               data={[
-                { value: "all", label: "Todas" },
-                { value: "front", label: "Frontal" },
-                { value: "back", label: "Espalda" },
-                { value: "side", label: "Lateral" },
+                { value: "all", label: t("myProgress.todas") },
+                { value: "front", label: t("myProgress.frontal") },
+                { value: "back", label: t("myProgress.espalda") },
+                { value: "side", label: t("myProgress.lateral") },
               ]}
               mb="md"
               size="sm"
@@ -1184,8 +1186,8 @@ export function MyProgressPage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               openDangerConfirm({
-                                title: "Eliminar foto",
-                                message: "¿Eliminar esta foto?",
+                                title: t("myProgress.eliminarFoto"),
+                                message: t("myProgress.eliminarEstaFoto"),
                                 onConfirm: () => deletePhotoMutation.mutate(photo.ref_url || photo.url),
                               });
                             }}
@@ -1233,14 +1235,14 @@ export function MyProgressPage() {
               <ThemeIcon size="xl" color="yellow" variant="light" radius="xl">
                 <IconPlus size={24} />
               </ThemeIcon>
-              <Text size="sm" fw={500} mt="xs">Subir nueva foto</Text>
+              <Text size="sm" fw={500} mt="xs">{t("myProgress.subirNuevaFoto")}</Text>
             </Paper>
           </Card>
         </Tabs.Panel>
 
         <Tabs.Panel value="visual-evolution">
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
-            <Text fw={600} size="lg" mb="md">Evolución visual</Text>
+            <Text fw={600} size="lg" mb="md">{t("myProgress.evolucionVisual")}</Text>
             {photos.length > 0 ? (
               <Stack gap="xl">
                 {[...photos]
@@ -1280,17 +1282,17 @@ export function MyProgressPage() {
                             <Text fw={500} mb="sm">Medidas - {dateLabel}</Text>
                             {matchingMeasurement ? (
                               <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs">
-                                {matchingMeasurement.weight_kg && <Box><Text size="xs" c="dimmed">Peso</Text><Text fw={600}>{matchingMeasurement.weight_kg} kg</Text></Box>}
+                                {matchingMeasurement.weight_kg && <Box><Text size="xs" c="dimmed">{t("myProgress.peso")}</Text><Text fw={600}>{matchingMeasurement.weight_kg} kg</Text></Box>}
                                 {matchingMeasurement.body_fat_percentage && <Box><Text size="xs" c="dimmed">% Grasa</Text><Text fw={600}>{matchingMeasurement.body_fat_percentage}%</Text></Box>}
-                                {matchingMeasurement.muscle_mass_kg && <Box><Text size="xs" c="dimmed">Masa muscular</Text><Text fw={600}>{matchingMeasurement.muscle_mass_kg} kg</Text></Box>}
-                                {matchingMeasurement.measurements?.chest && <Box><Text size="xs" c="dimmed">Pecho</Text><Text fw={600}>{matchingMeasurement.measurements.chest} cm</Text></Box>}
-                                {matchingMeasurement.measurements?.waist && <Box><Text size="xs" c="dimmed">Cintura</Text><Text fw={600}>{matchingMeasurement.measurements.waist} cm</Text></Box>}
-                                {matchingMeasurement.measurements?.hips && <Box><Text size="xs" c="dimmed">Cadera</Text><Text fw={600}>{matchingMeasurement.measurements.hips} cm</Text></Box>}
-                                {matchingMeasurement.measurements?.arms && <Box><Text size="xs" c="dimmed">Brazos</Text><Text fw={600}>{matchingMeasurement.measurements.arms} cm</Text></Box>}
-                                {matchingMeasurement.measurements?.thighs && <Box><Text size="xs" c="dimmed">Muslos</Text><Text fw={600}>{matchingMeasurement.measurements.thighs} cm</Text></Box>}
+                                {matchingMeasurement.muscle_mass_kg && <Box><Text size="xs" c="dimmed">{t("myProgress.masaMuscular")}</Text><Text fw={600}>{matchingMeasurement.muscle_mass_kg} kg</Text></Box>}
+                                {matchingMeasurement.measurements?.chest && <Box><Text size="xs" c="dimmed">{t("myProgress.pecho")}</Text><Text fw={600}>{matchingMeasurement.measurements.chest} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.waist && <Box><Text size="xs" c="dimmed">{t("myProgress.cintura")}</Text><Text fw={600}>{matchingMeasurement.measurements.waist} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.hips && <Box><Text size="xs" c="dimmed">{t("myProgress.cadera")}</Text><Text fw={600}>{matchingMeasurement.measurements.hips} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.arms && <Box><Text size="xs" c="dimmed">{t("myProgress.brazos")}</Text><Text fw={600}>{matchingMeasurement.measurements.arms} cm</Text></Box>}
+                                {matchingMeasurement.measurements?.thighs && <Box><Text size="xs" c="dimmed">{t("myProgress.muslos")}</Text><Text fw={600}>{matchingMeasurement.measurements.thighs} cm</Text></Box>}
                               </SimpleGrid>
                             ) : (
-                              <Text size="sm" c="dimmed">No hay medidas registradas para esta fecha</Text>
+                              <Text size="sm" c="dimmed">{t("myProgress.noHayMedidasRegistradasPara")}</Text>
                             )}
                           </Box>
                         </Group>
@@ -1302,8 +1304,8 @@ export function MyProgressPage() {
               <Center py="xl">
                 <Stack align="center" gap="sm">
                   <ThemeIcon size="xl" color="gray" variant="light" radius="xl"><IconPhoto size={24} /></ThemeIcon>
-                  <Text c="dimmed" size="sm">Sube fotos de progreso para ver tu evolución visual</Text>
-                  <Button variant="light" leftSection={<IconCamera size={16} />} onClick={openPhotoModal}>Subir foto</Button>
+                  <Text c="dimmed" size="sm">{t("myProgress.subeFotosDeProgresoPara")}</Text>
+                  <Button variant="light" leftSection={<IconCamera size={16} />} onClick={openPhotoModal}>{t("myProgress.subirFoto")}</Button>
                 </Stack>
               </Center>
             )}

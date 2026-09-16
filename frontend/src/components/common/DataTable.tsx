@@ -58,7 +58,6 @@ interface DataTableProps<T> {
   onView?: (item: T) => void;
   getDeleteLabel?: (item: T) => string;
   getDeleteIcon?: (item: T) => React.ReactNode;
-  /** Acciones extra que se añaden al menú (⋮) después de Ver/Editar. */
   extraActions?: DataTableExtraAction<T>[];
   pagination?: {
     page: number;
@@ -87,7 +86,7 @@ export function DataTable<T extends { id: string }>({
   pagination,
   emptyMessage,
 }: DataTableProps<T>) {
-  const { t } = useTranslation();
+
   const isMobile = useMediaQuery("(max-width: 48em)");
   const columns = isMobile
     ? allColumns.filter((c) => !c.hideOnMobile)
@@ -150,7 +149,7 @@ export function DataTable<T extends { id: string }>({
             <TextInput
               leftSection={<IconSearch size={16} color="var(--nv-slate)" />}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder={searchPlaceholder || t("common.search")}
+              placeholder={searchPlaceholder || "Buscar..."}
               value={searchQuery}
               radius="md"
               size="sm"
@@ -163,12 +162,12 @@ export function DataTable<T extends { id: string }>({
                 },
               }}
             />
-            <Tooltip label={t("common.advancedFilters")}>
+            <Tooltip label={"Filtros avanzados"}>
               <ActionIcon 
                 variant="default" 
                 size="md" 
                 radius="md"
-                aria-label={t("common.advancedFilters")}
+                aria-label={"Filtros avanzados"}
                 style={{ 
                   borderColor: "var(--border-subtle)",
                   color: "var(--nv-slate)"
@@ -257,7 +256,7 @@ export function DataTable<T extends { id: string }>({
                 >
                   <Box py="xl" ta="center">
                     <Text c="dimmed" size="sm" fw={500}>
-                      {emptyMessage || t("common.noDataAvailable")}
+                      {emptyMessage || "No hay datos disponibles"}
                     </Text>
                   </Box>
                 </Table.Td>
@@ -314,7 +313,7 @@ export function DataTable<T extends { id: string }>({
                             color="gray" 
                             variant="subtle"
                             radius="xl"
-                            aria-label={t("common.actions")}
+                            aria-label={"Acciones"}
                           >
                             <IconDotsVertical size={18} />
                           </ActionIcon>
@@ -325,7 +324,7 @@ export function DataTable<T extends { id: string }>({
                               leftSection={<IconEye size={16} />}
                               onClick={() => onView(item)}
                             >
-                              {t("common.viewDetails")}
+                              {"Ver detalles"}
                             </Menu.Item>
                           )}
                           {onEdit && (
@@ -333,7 +332,7 @@ export function DataTable<T extends { id: string }>({
                               leftSection={<IconEdit size={16} />}
                               onClick={() => onEdit(item)}
                             >
-                              {t("common.edit")}
+                              {"Editar"}
                             </Menu.Item>
                           )}
                           {extraActions
@@ -356,7 +355,7 @@ export function DataTable<T extends { id: string }>({
                                 leftSection={getDeleteIcon ? getDeleteIcon(item) : <IconTrash size={16} />}
                                 onClick={() => onDelete(item)}
                               >
-                                {getDeleteLabel ? getDeleteLabel(item) : t("common.delete")}
+                                {getDeleteLabel ? getDeleteLabel(item) : "Eliminar"}
                               </Menu.Item>
                             </>
                           )}
@@ -383,7 +382,7 @@ export function DataTable<T extends { id: string }>({
           }}
         >
           <Text size="xs" c="dimmed" className="hide-mobile">
-            {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} {t("common.of")} {pagination.total}
+            {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} {"de"} {pagination.total}
           </Text>
           <Pagination
             onChange={pagination.onChange}

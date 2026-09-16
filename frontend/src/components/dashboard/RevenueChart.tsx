@@ -33,7 +33,7 @@ const CustomTooltip = ({ active, payload, label, currency }: any) => {
         <Text size="xs" c="dimmed" mb={4} style={{ textTransform: "uppercase", letterSpacing: "1px" }}>{label}</Text>
         <Group gap="xl">
           <Box>
-            <Text size="xs" c="rgba(255,255,255,0.7)">Revenue</Text>
+            <Text size="xs" c="rgba(255,255,255,0.7)">{"Revenue"}</Text>
             <Text fw={700}>{currency}{payload[0].value.toLocaleString()}</Text>
           </Box>
         </Group>
@@ -53,7 +53,7 @@ export function RevenueChart({
       {/* Header */}
       <Group justify="space-between" mb={{ base: "xs", lg: "sm" }} align="flex-start" wrap="wrap" gap="sm">
         <Box>
-          <Text className="stat-label" mb={2}>Crecimiento de Ingresos</Text>
+          <Text className="stat-label" mb={2}>{"Crecimiento de Ingresos"}</Text>
           <Group align="baseline" gap="xs">
             <Text fw={700} style={{ color: "var(--nv-dark)", fontSize: "clamp(1.25rem, 1.5vw, 1.75rem)" }}>
               {currency}{currentMRR.toLocaleString()}
@@ -68,11 +68,11 @@ export function RevenueChart({
         <Group gap="md" className="hide-mobile">
           <Group gap="xs">
             <Box w={8} h={8} style={{ borderRadius: "50%", background: "var(--nv-primary)" }} />
-            <Text size="sm" fw={500} c="var(--nv-slate)">Suscripciones</Text>
+            <Text size="sm" fw={500} c="var(--nv-slate)">{"Suscripciones"}</Text>
           </Group>
           <Group gap="xs">
             <Box w={8} h={8} style={{ borderRadius: "50%", background: "var(--nv-accent)" }} />
-            <Text size="sm" fw={500} c="var(--nv-slate)">Únicos</Text>
+            <Text size="sm" fw={500} c="var(--nv-slate)">{"Únicos"}</Text>
           </Group>
         </Group>
       </Group>

@@ -44,6 +44,7 @@ import api from "../../services/api";
 import { PageHeader } from "../../components/common/PageHeader";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { EmptyState } from "../../components/common/EmptyState";
+import { useTranslation } from "react-i18next";
 
 interface Document {
   id: string;
@@ -66,6 +67,7 @@ interface DocumentFolder {
 }
 
 export function DocumentsPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("documents");
   const [
@@ -151,18 +153,18 @@ export function DocumentsPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nuevo Documento",
+          label: t("documents.nuevoDocumento"),
           icon: <IconPlus size={16} />,
           onClick: openDocumentModal,
         }}
-        description="Gestiona contratos, consentimientos y documentos con firma digital"
+        description={t("documents.gestionaContratosConsentimientosYDocumentos")}
         secondaryAction={{
-          label: "Nueva Carpeta",
+          label: t("documents.nuevaCarpeta"),
           icon: <IconFolder size={16} />,
           onClick: openFolderModal,
           variant: "default",
         }}
-        title="Documentos"
+        title={t("documents.documentos")}
       />
 
       {/* Stats */}
@@ -171,7 +173,7 @@ export function DocumentsPage() {
           <Group justify="space-between">
             <div>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Total Documentos
+                {t("documents.totalDocumentos")}
               </Text>
               <Text fw={700} size="xl">
                 {totalDocuments}
@@ -186,7 +188,7 @@ export function DocumentsPage() {
           <Group justify="space-between">
             <div>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Documentos Firmados
+                {t("documents.documentosFirmados")}
               </Text>
               <Text fw={700} size="xl">
                 {signedDocuments}
@@ -201,7 +203,7 @@ export function DocumentsPage() {
           <Group justify="space-between">
             <div>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Pendientes de Firma
+                {t("documents.pendientesDeFirma")}
               </Text>
               <Text fw={700} size="xl">
                 {pendingSignatures}
@@ -219,10 +221,10 @@ export function DocumentsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "documents", label: "Documentos" },
-            { value: "folders", label: "Carpetas" },
-            { value: "templates", label: "Plantillas" },
-            { value: "exports", label: "Exportaciones" },
+            { value: "documents", label: t("documents.documentos") },
+            { value: "folders", label: t("documents.carpetas") },
+            { value: "templates", label: t("documents.plantillas") },
+            { value: "exports", label: t("documents.exportaciones") },
           ]}
           size="sm"
           radius="md"
@@ -233,16 +235,16 @@ export function DocumentsPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">
-            Documentos
+            {t("documents.documentos")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconFolder size={16} />} value="folders">
-            Carpetas
+            {t("documents.carpetas")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconSignature size={16} />} value="templates">
-            Plantillas
+            {t("documents.plantillas")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconDownload size={16} />} value="exports">
-            Exportaciones
+            {t("documents.exportaciones")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -252,15 +254,15 @@ export function DocumentsPage() {
           {isModuleDisabled ? (
             <EmptyState
               icon={<IconFileText size={48} />}
-              title="Módulo en desarrollo"
-              description="La gestión de documentos estará disponible próximamente. Esta funcionalidad permitirá subir, firmar y gestionar contratos y documentos."
+              title={t("documents.moduloEnDesarrollo")}
+              description={t("documents.laGestionDeDocumentosEstara")}
             />
           ) : documents.length === 0 ? (
             <EmptyState
               icon={<IconFileText size={48} />}
-              title="No hay documentos"
-              description="Crea tu primer documento para empezar a gestionar contratos y consentimientos."
-              actionLabel="Crear Documento"
+              title={t("documents.noHayDocumentos")}
+              description={t("documents.creaTuPrimerDocumentoPara")}
+              actionLabel={t("documents.crearDocumento")}
               onAction={openDocumentModal}
             />
           ) : (
@@ -289,7 +291,7 @@ export function DocumentsPage() {
                         </Badge>
                         {doc.requiresSignature && (
                           <Badge color="violet" size="xs" variant="outline">
-                            Requiere firma
+                            {t("documents.requiereFirma")}
                           </Badge>
                         )}
                       </Group>
@@ -317,12 +319,12 @@ export function DocumentsPage() {
                       </div>
                     )}
                     <Group gap="xs">
-                      <Tooltip label="Ver documento">
+                      <Tooltip label={t("documents.verDocumento")}>
                         <ActionIcon color="gray" variant="subtle">
                           <IconEye size={18} />
                         </ActionIcon>
                       </Tooltip>
-                      <Tooltip label="Enviar">
+                      <Tooltip label={t("documents.enviar")}>
                         <ActionIcon color="blue" variant="subtle">
                           <IconSend size={18} />
                         </ActionIcon>
@@ -335,17 +337,17 @@ export function DocumentsPage() {
                         </Menu.Target>
                         <Menu.Dropdown>
                           <Menu.Item leftSection={<IconEdit size={14} />}>
-                            Editar
+                            {t("documents.editar")}
                           </Menu.Item>
                           <Menu.Item leftSection={<IconDownload size={14} />}>
-                            Descargar
+                            {t("documents.descargar")}
                           </Menu.Item>
                           <Menu.Divider />
                           <Menu.Item
                             color="red"
                             leftSection={<IconTrash size={14} />}
                           >
-                            Eliminar
+                            {t("documents.eliminar")}
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
@@ -386,13 +388,13 @@ export function DocumentsPage() {
                     </Menu.Target>
                     <Menu.Dropdown>
                       <Menu.Item leftSection={<IconEdit size={14} />}>
-                        Renombrar
+                        {t("documents.renombrar")}
                       </Menu.Item>
                       <Menu.Item
                         color="red"
                         leftSection={<IconTrash size={14} />}
                       >
-                        Eliminar
+                        {t("documents.eliminar")}
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
@@ -436,7 +438,7 @@ export function DocumentsPage() {
                 </Text>
                 <Group gap="xs">
                   <Button fullWidth size="xs" variant="light">
-                    Usar Plantilla
+                    {t("documents.usarPlantilla")}
                   </Button>
                 </Group>
               </Card>
@@ -447,7 +449,7 @@ export function DocumentsPage() {
         <Tabs.Panel value="exports">
           <Stack gap="lg">
             <Text c="dimmed" size="sm">
-              Descarga los datos generados por el sistema en diferentes apartados. Selecciona el tipo de exportación que necesitas.
+              {t("documents.descargaLosDatosGeneradosPor")}
             </Text>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
               <Card p="lg" radius="md" withBorder>
@@ -456,8 +458,8 @@ export function DocumentsPage() {
                     <IconDownload size={20} />
                   </ThemeIcon>
                   <div>
-                    <Text fw={600} size="sm">Stock / Inventario</Text>
-                    <Text size="xs" c="dimmed">Exporta todo el inventario actual</Text>
+                    <Text fw={600} size="sm">{t("documents.stockInventario")}</Text>
+                    <Text size="xs" c="dimmed">{t("documents.exportaTodoElInventarioActual")}</Text>
                   </div>
                 </Group>
                 <Button size="sm" variant="light" color="green" fullWidth leftSection={<IconDownload size={14} />}
@@ -475,7 +477,7 @@ export function DocumentsPage() {
                     } catch { /* ignore */ }
                   }}
                 >
-                  Descargar Excel
+                  {t("documents.descargarExcel")}
                 </Button>
               </Card>
 
@@ -485,13 +487,13 @@ export function DocumentsPage() {
                     <IconUsers size={20} />
                   </ThemeIcon>
                   <div>
-                    <Text fw={600} size="sm">Clientes</Text>
-                    <Text size="xs" c="dimmed">Exporta el listado de clientes</Text>
+                    <Text fw={600} size="sm">{t("documents.clientes")}</Text>
+                    <Text size="xs" c="dimmed">{t("documents.exportaElListadoDeClientes")}</Text>
                   </div>
                 </Group>
-                <Tooltip label="Próximamente">
+                <Tooltip label={t("documents.proximamente")}>
                   <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
-                    Descargar Excel
+                    {t("documents.descargarExcel")}
                   </Button>
                 </Tooltip>
               </Card>
@@ -502,13 +504,13 @@ export function DocumentsPage() {
                     <IconFileText size={20} />
                   </ThemeIcon>
                   <div>
-                    <Text fw={600} size="sm">Facturas</Text>
-                    <Text size="xs" c="dimmed">Exporta el registro de facturas</Text>
+                    <Text fw={600} size="sm">{t("documents.facturas")}</Text>
+                    <Text size="xs" c="dimmed">{t("documents.exportaElRegistroDeFacturas")}</Text>
                   </div>
                 </Group>
-                <Tooltip label="Próximamente">
+                <Tooltip label={t("documents.proximamente")}>
                   <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
-                    Descargar Excel
+                    {t("documents.descargarExcel")}
                   </Button>
                 </Tooltip>
               </Card>
@@ -519,13 +521,13 @@ export function DocumentsPage() {
                     <IconClock size={20} />
                   </ThemeIcon>
                   <div>
-                    <Text fw={600} size="sm">Registro Horario</Text>
-                    <Text size="xs" c="dimmed">Exporta fichajes del equipo</Text>
+                    <Text fw={600} size="sm">{t("documents.registroHorario")}</Text>
+                    <Text size="xs" c="dimmed">{t("documents.exportaFichajesDelEquipo")}</Text>
                   </div>
                 </Group>
-                <Tooltip label="Próximamente">
+                <Tooltip label={t("documents.proximamente")}>
                   <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
-                    Descargar Excel
+                    {t("documents.descargarExcel")}
                   </Button>
                 </Tooltip>
               </Card>
@@ -536,13 +538,13 @@ export function DocumentsPage() {
                     <IconFileText size={20} />
                   </ThemeIcon>
                   <div>
-                    <Text fw={600} size="sm">PDFs generados</Text>
-                    <Text size="xs" c="dimmed">Historial de PDFs del sistema</Text>
+                    <Text fw={600} size="sm">{t("documents.pdfsGenerados")}</Text>
+                    <Text size="xs" c="dimmed">{t("documents.historialDePdfsDelSistema")}</Text>
                   </div>
                 </Group>
-                <Tooltip label="Próximamente">
+                <Tooltip label={t("documents.proximamente")}>
                   <Button size="sm" variant="light" fullWidth disabled leftSection={<IconDownload size={14} />}>
-                    Ver historial
+                    {t("documents.verHistorial")}
                   </Button>
                 </Tooltip>
               </Card>
@@ -557,7 +559,7 @@ export function DocumentsPage() {
         onClose={closeDocumentModal}
         opened={documentModalOpened}
         size="lg"
-        title="Nuevo Documento"
+        title={t("documents.nuevoDocumento")}
       >
         <form
           onSubmit={documentForm.onSubmit((_values) => {
@@ -566,46 +568,46 @@ export function DocumentsPage() {
         >
           <Stack>
             <TextInput
-              label="Nombre del Documento"
-              placeholder="Ej: Contrato de Servicios"
+              label={t("documents.nombreDelDocumento")}
+              placeholder={t("documents.ejContratoDeServicios")}
               {...documentForm.getInputProps("name")}
             />
             <Select
               data={[
-                { value: "contract", label: "Contrato" },
-                { value: "consent", label: "Consentimiento" },
-                { value: "waiver", label: "Exención de Responsabilidad" },
-                { value: "custom", label: "Personalizado" },
+                { value: "contract", label: t("documents.contrato") },
+                { value: "consent", label: t("documents.consentimiento") },
+                { value: "waiver", label: t("documents.exencionDeResponsabilidad") },
+                { value: "custom", label: t("documents.personalizado") },
               ]}
-              label="Tipo de Documento"
+              label={t("documents.tipoDeDocumento")}
               {...documentForm.getInputProps("type")}
             />
             <Textarea
-              label="Contenido"
+              label={t("documents.contenido")}
               minRows={6}
-              placeholder="Escribe el contenido del documento..."
+              placeholder={t("documents.escribeElContenidoDelDocumento")}
               {...documentForm.getInputProps("content")}
             />
             <FileInput
               accept=".pdf,.doc,.docx"
-              label="O sube un archivo"
+              label={t("documents.oSubeUnArchivo")}
               leftSection={<IconUpload size={14} />}
-              placeholder="Selecciona un archivo PDF"
+              placeholder={t("documents.seleccionaUnArchivoPdf")}
               {...documentForm.getInputProps("file")}
             />
             <Divider />
             <Checkbox
-              description="Los clientes deberán firmar este documento"
-              label="Requiere firma digital"
+              description={t("documents.losClientesDeberanFirmarEste")}
+              label={t("documents.requiereFirmaDigital")}
               {...documentForm.getInputProps("requiresSignature", {
                 type: "checkbox",
               })}
             />
             <Group justify="flex-end" mt="md">
               <Button onClick={closeDocumentModal} variant="default">
-                Cancelar
+                {t("documents.cancelar")}
               </Button>
-              <Button type="submit">Crear Documento</Button>
+              <Button type="submit">{t("documents.crearDocumento")}</Button>
             </Group>
           </Stack>
         </form>
@@ -616,7 +618,7 @@ export function DocumentsPage() {
         centered
         onClose={closeFolderModal}
         opened={folderModalOpened}
-        title="Nueva Carpeta"
+        title={t("documents.nuevaCarpeta")}
       >
         <form
           onSubmit={folderForm.onSubmit((_values) => {
@@ -625,26 +627,26 @@ export function DocumentsPage() {
         >
           <Stack>
             <TextInput
-              label="Nombre de la Carpeta"
-              placeholder="Ej: Contratos 2024"
+              label={t("documents.nombreDeLaCarpeta")}
+              placeholder={t("documents.ejContratos2024")}
               {...folderForm.getInputProps("name")}
             />
             <Select
               data={[
-                { value: "blue", label: "Azul" },
-                { value: "green", label: "Verde" },
-                { value: "violet", label: "Violeta" },
-                { value: "orange", label: "Naranja" },
-                { value: "red", label: "Rojo" },
+                { value: "blue", label: t("documents.azul") },
+                { value: "green", label: t("documents.verde") },
+                { value: "violet", label: t("documents.violeta") },
+                { value: "orange", label: t("documents.naranja") },
+                { value: "red", label: t("documents.rojo") },
               ]}
-              label="Color"
+              label={t("documents.color")}
               {...folderForm.getInputProps("color")}
             />
             <Group justify="flex-end" mt="md">
               <Button onClick={closeFolderModal} variant="default">
-                Cancelar
+                {t("documents.cancelar")}
               </Button>
-              <Button type="submit">Crear Carpeta</Button>
+              <Button type="submit">{t("documents.crearCarpeta")}</Button>
             </Group>
           </Stack>
         </form>

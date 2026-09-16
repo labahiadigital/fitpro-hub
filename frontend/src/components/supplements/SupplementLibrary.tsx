@@ -33,6 +33,7 @@ import { useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { supplementsApi } from "../../services/api";
 import { BottomSheet } from "../common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 interface Supplement {
   id: string;
@@ -70,6 +71,7 @@ function getCategoryLabel(value?: string) {
 }
 
 export function SupplementLibrary() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -99,13 +101,13 @@ export function SupplementLibrary() {
     mutationFn: (data: object) => supplementsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["supplements"] });
-      notifications.show({ title: "Suplemento creado", message: "Añadido correctamente", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("supplementsComp.suplementoCreado"), message: t("supplementsComp.anadidoCorrectamente"), color: "green", icon: <IconCheck size={16} /> });
       closeModal();
       form.reset();
       setEditingSupplement(null);
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo crear el suplemento", color: "red" });
+      notifications.show({ title: t("supplementsComp.error"), message: t("supplementsComp.noSePudoCrearEl"), color: "red" });
     },
   });
 
@@ -113,13 +115,13 @@ export function SupplementLibrary() {
     mutationFn: ({ id, data }: { id: string; data: object }) => supplementsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["supplements"] });
-      notifications.show({ title: "Suplemento actualizado", message: "Guardado correctamente", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("supplementsComp.suplementoActualizado"), message: t("supplementsComp.guardadoCorrectamente"), color: "green", icon: <IconCheck size={16} /> });
       closeModal();
       form.reset();
       setEditingSupplement(null);
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo actualizar", color: "red" });
+      notifications.show({ title: t("supplementsComp.error"), message: t("supplementsComp.noSePudoActualizar"), color: "red" });
     },
   });
 
@@ -127,11 +129,11 @@ export function SupplementLibrary() {
     mutationFn: (id: string) => supplementsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["supplements"] });
-      notifications.show({ title: "Suplemento eliminado", message: "Eliminado correctamente", color: "green" });
+      notifications.show({ title: t("supplementsComp.suplementoEliminado"), message: t("supplementsComp.eliminadoCorrectamente"), color: "green" });
       setDeleteConfirmId(null);
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo eliminar", color: "red" });
+      notifications.show({ title: t("supplementsComp.error"), message: t("supplementsComp.noSePudoEliminar"), color: "red" });
     },
   });
 
@@ -204,7 +206,7 @@ export function SupplementLibrary() {
     return (
       <Box py="xl" ta="center">
         <Loader size="sm" />
-        <Text c="dimmed" size="sm" mt="sm">Cargando suplementos...</Text>
+        <Text c="dimmed" size="sm" mt="sm">{t("supplementsComp.cargandoSuplementos")}</Text>
       </Box>
     );
   }
@@ -214,7 +216,7 @@ export function SupplementLibrary() {
       <Group justify="space-between" mb="lg">
         <Group gap="sm">
           <TextInput
-            placeholder="Buscar suplementos..."
+            placeholder={t("supplementsComp.buscarSuplementos")}
             leftSection={<IconSearch size={16} />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -234,7 +236,7 @@ export function SupplementLibrary() {
           />
         </Group>
         <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpenModal()} radius="xl">
-          Nuevo Suplemento
+          {t("supplementsComp.nuevoSuplemento")}
         </Button>
       </Group>
 
@@ -247,9 +249,9 @@ export function SupplementLibrary() {
                   <Group gap={6} wrap="nowrap">
                     <Text fw={600} lineClamp={1}>{supplement.name}</Text>
                     {supplement.is_global ? (
-                      <Badge color="gray" variant="light" size="xs" leftSection={<IconDatabase size={10} />} style={{ flexShrink: 0 }}>Sistema</Badge>
+                      <Badge color="gray" variant="light" size="xs" leftSection={<IconDatabase size={10} />} style={{ flexShrink: 0 }}>{t("supplementsComp.sistema")}</Badge>
                     ) : (
-                      <Badge color="teal" variant="light" size="xs" style={{ flexShrink: 0 }}>Propio</Badge>
+                      <Badge color="teal" variant="light" size="xs" style={{ flexShrink: 0 }}>{t("supplementsComp.propio")}</Badge>
                     )}
                   </Group>
                   <Text c="dimmed" size="xs">{supplement.brand}</Text>
@@ -298,7 +300,7 @@ export function SupplementLibrary() {
                     onClick={() => handleOpenModal(supplement)}
                     radius="md"
                   >
-                    Editar
+                    {t("supplementsComp.editar")}
                   </Button>
                 )}
                 {supplement.purchase_url && (
@@ -330,9 +332,9 @@ export function SupplementLibrary() {
       ) : (
         <EmptyState
           icon={<IconPill size={40} />}
-          title="No hay suplementos"
-          description="Añade suplementos a tu biblioteca para recomendarlos a tus clientes"
-          actionLabel="Añadir Suplemento"
+          title={t("supplementsComp.noHaySuplementos")}
+          description={t("supplementsComp.anadeSuplementosATuBiblioteca")}
+          actionLabel={t("supplementsComp.anadirSuplemento")}
           onAction={() => handleOpenModal()}
         />
       )}
@@ -348,67 +350,67 @@ export function SupplementLibrary() {
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack>
             <Group grow>
-              <TextInput label="Nombre" placeholder="Whey Protein" required {...form.getInputProps("name")} />
-              <TextInput label="Marca" placeholder="Prozis" {...form.getInputProps("brand")} />
+              <TextInput label={t("supplementsComp.nombre")} placeholder={t("supplementsComp.wheyProtein")} required {...form.getInputProps("name")} />
+              <TextInput label={t("supplementsComp.marca")} placeholder={t("supplementsComp.prozis")} {...form.getInputProps("brand")} />
             </Group>
 
             <Group grow>
               <Select
-                label="Categoría"
-                placeholder="Selecciona"
+                label={t("supplementsComp.categoria")}
+                placeholder={t("supplementsComp.selecciona")}
                 data={SUPPLEMENT_CATEGORIES}
                 clearable
                 {...form.getInputProps("category")}
               />
               <Group grow>
-                <NumberInput label="Porción" min={0} decimalScale={1} {...form.getInputProps("serving_size")} />
-                <TextInput label="Unidad" placeholder="g, ml, caps..." {...form.getInputProps("serving_unit")} />
+                <NumberInput label={t("supplementsComp.porcion")} min={0} decimalScale={1} {...form.getInputProps("serving_size")} />
+                <TextInput label={t("supplementsComp.unidad")} placeholder={t("supplementsComp.gMlCaps")} {...form.getInputProps("serving_unit")} />
               </Group>
             </Group>
 
             <Textarea
-              label="Descripción"
-              placeholder="Descripción del suplemento..."
+              label={t("supplementsComp.descripcion")}
+              placeholder={t("supplementsComp.descripcionDelSuplemento")}
               minRows={2}
               {...form.getInputProps("description")}
             />
 
             <Group grow>
-              <NumberInput label="Calorías" min={0} {...form.getInputProps("calories")} />
-              <NumberInput label="Proteína (g)" min={0} decimalScale={1} {...form.getInputProps("protein")} />
-              <NumberInput label="Carbos (g)" min={0} decimalScale={1} {...form.getInputProps("carbs")} />
-              <NumberInput label="Grasas (g)" min={0} decimalScale={1} {...form.getInputProps("fat")} />
+              <NumberInput label={t("supplementsComp.calorias")} min={0} {...form.getInputProps("calories")} />
+              <NumberInput label={t("supplementsComp.proteinaG")} min={0} decimalScale={1} {...form.getInputProps("protein")} />
+              <NumberInput label={t("supplementsComp.carbosG")} min={0} decimalScale={1} {...form.getInputProps("carbs")} />
+              <NumberInput label={t("supplementsComp.grasasG")} min={0} decimalScale={1} {...form.getInputProps("fat")} />
             </Group>
 
             <Textarea
-              label="Instrucciones de uso"
-              placeholder="Cómo tomar el suplemento..."
+              label={t("supplementsComp.instruccionesDeUso")}
+              placeholder={t("supplementsComp.comoTomarElSuplemento")}
               minRows={2}
               {...form.getInputProps("usage_instructions")}
             />
 
             <TextInput
-              label="URL de compra"
+              label={t("supplementsComp.urlDeCompra")}
               placeholder="https://prozis.com/..."
               {...form.getInputProps("purchase_url")}
             />
 
             <TextInput
-              label="URL de imagen"
+              label={t("supplementsComp.urlDeImagen")}
               placeholder="https://..."
               {...form.getInputProps("image_url")}
             />
 
             <Textarea
-              label="Advertencias"
-              placeholder="Alergenos, contraindicaciones..."
+              label={t("supplementsComp.advertencias")}
+              placeholder={t("supplementsComp.alergenosContraindicaciones")}
               minRows={1}
               {...form.getInputProps("warnings")}
             />
 
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={() => { closeModal(); setEditingSupplement(null); form.reset(); }} radius="xl">
-                Cancelar
+                {t("supplementsComp.cancelar")}
               </Button>
               <Button
                 type="submit"
@@ -427,22 +429,22 @@ export function SupplementLibrary() {
       <BottomSheet
         opened={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
-        title="Confirmar eliminación"
+        title={t("supplementsComp.confirmarEliminacion")}
         size="sm"
         radius="lg"
         centered
       >
         <Stack gap="md">
-          <Text size="sm">¿Estás seguro de que quieres eliminar este suplemento?</Text>
+          <Text size="sm">{t("supplementsComp.estasSeguroDeQueQuieres")}</Text>
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setDeleteConfirmId(null)} radius="xl">Cancelar</Button>
+            <Button variant="default" onClick={() => setDeleteConfirmId(null)} radius="xl">{t("supplementsComp.cancelar")}</Button>
             <Button
               color="red"
               loading={deleteMutation.isPending}
               onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}
               radius="xl"
             >
-              Eliminar
+              {t("supplementsComp.eliminar")}
             </Button>
           </Group>
         </Stack>

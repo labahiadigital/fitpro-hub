@@ -49,6 +49,7 @@ import {
   type ClientPackage as ClientPackageType,
 } from "../../hooks/usePackages";
 import { formatDecimal } from "../../utils/format";
+import { useTranslation } from "react-i18next";
 
 interface SessionPackage {
   id: string;
@@ -84,6 +85,7 @@ const sessionTypeOptions = [
 ];
 
 export function PackagesPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("packages");
   
@@ -180,15 +182,15 @@ export function PackagesPage() {
           data: packageData,
         });
         notifications.show({
-          title: "Paquete actualizado",
-          message: "El paquete se ha actualizado correctamente",
+          title: t("packages.paqueteActualizado"),
+          message: t("packages.elPaqueteSeHaActualizado"),
           color: "green",
         });
       } else {
         await createPackage.mutateAsync(packageData);
         notifications.show({
-          title: "Paquete creado",
-          message: "El paquete se ha creado correctamente",
+          title: t("packages.paqueteCreado"),
+          message: t("packages.elPaqueteSeHaCreado"),
           color: "green",
         });
       }
@@ -196,8 +198,8 @@ export function PackagesPage() {
       packageForm.reset();
     } catch (error) {
       notifications.show({
-        title: "Error",
-        message: "No se pudo guardar el paquete",
+        title: t("packages.error"),
+        message: t("packages.noSePudoGuardarEl"),
         color: "red",
       });
     }
@@ -217,8 +219,8 @@ export function PackagesPage() {
         });
       } catch (error) {
         notifications.show({
-          title: "Error",
-          message: "No se pudo actualizar el estado",
+          title: t("packages.error"),
+          message: t("packages.noSePudoActualizarEl"),
           color: "red",
         });
       }
@@ -272,11 +274,11 @@ export function PackagesPage() {
             leftSection={<IconPlus size={16} />}
             onClick={() => handleOpenPackageModal()}
           >
-            Nuevo Paquete
+            {t("packages.nuevoPaquete")}
           </Button>
         }
-        subtitle="Gestiona paquetes de sesiones para tus clientes"
-        title="Bonos y Paquetes"
+        subtitle={t("packages.gestionaPaquetesDeSesionesPara")}
+        title={t("packages.bonosYPaquetes")}
       />
 
       {/* Stats */}
@@ -285,7 +287,7 @@ export function PackagesPage() {
           <Group justify="space-between">
             <div>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Ingresos por Bonos
+                {t("packages.ingresosPorBonos")}
               </Text>
               <Text fw={700} size="xl">
                 €{totalRevenue.toLocaleString()}
@@ -300,7 +302,7 @@ export function PackagesPage() {
           <Group justify="space-between">
             <div>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Bonos Activos
+                {t("packages.bonosActivos")}
               </Text>
               <Text fw={700} size="xl">
                 {activePackagesCount}
@@ -315,7 +317,7 @@ export function PackagesPage() {
           <Group justify="space-between">
             <div>
               <Text c="dimmed" fw={600} size="xs" tt="uppercase">
-                Sesiones Vendidas
+                {t("packages.sesionesVendidas")}
               </Text>
               <Text fw={700} size="xl">
                 {totalSessionsSold}
@@ -333,8 +335,8 @@ export function PackagesPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "packages", label: "Paquetes Disponibles" },
-            { value: "clients", label: "Bonos de Clientes" },
+            { value: "packages", label: t("packages.paquetesDisponibles") },
+            { value: "clients", label: t("packages.bonosDeClientes") },
           ]}
           size="sm"
           radius="md"
@@ -345,10 +347,10 @@ export function PackagesPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconPackage size={16} />} value="packages">
-            Paquetes Disponibles
+            {t("packages.paquetesDisponibles")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconUsers size={16} />} value="clients">
-            Bonos de Clientes
+            {t("packages.bonosDeClientes")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -389,7 +391,7 @@ export function PackagesPage() {
                         leftSection={<IconEdit size={14} />}
                         onClick={() => handleOpenPackageModal(pkg)}
                       >
-                        Editar
+                        {t("packages.editar")}
                       </Menu.Item>
                       <Menu.Item
                         leftSection={
@@ -409,7 +411,7 @@ export function PackagesPage() {
                         leftSection={<IconTrash size={14} />}
                         onClick={() => handleDeletePackage(pkg.id)}
                       >
-                        Eliminar
+                        {t("packages.eliminar")}
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
@@ -422,7 +424,7 @@ export function PackagesPage() {
                 <Stack gap="xs" mb="md">
                   <Group justify="space-between">
                     <Text c="dimmed" size="sm">
-                      Sesiones
+                      {t("packages.sesiones")}
                     </Text>
                     <Text fw={600} size="sm">
                       {pkg.totalSessions}
@@ -430,7 +432,7 @@ export function PackagesPage() {
                   </Group>
                   <Group justify="space-between">
                     <Text c="dimmed" size="sm">
-                      Validez
+                      {t("packages.validez")}
                     </Text>
                     <Text fw={600} size="sm">
                       {pkg.validityDays} días
@@ -438,7 +440,7 @@ export function PackagesPage() {
                   </Group>
                   <Group justify="space-between">
                     <Text c="dimmed" size="sm">
-                      Vendidos
+                      {t("packages.vendidos")}
                     </Text>
                     <Text fw={600} size="sm">
                       {pkg.soldCount}
@@ -474,12 +476,12 @@ export function PackagesPage() {
             <Table highlightOnHover striped>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Paquete</Table.Th>
-                  <Table.Th>Sesiones</Table.Th>
-                  <Table.Th>Progreso</Table.Th>
-                  <Table.Th>Expira</Table.Th>
-                  <Table.Th>Estado</Table.Th>
+                  <Table.Th>{t("packages.cliente")}</Table.Th>
+                  <Table.Th>{t("packages.paquete")}</Table.Th>
+                  <Table.Th>{t("packages.sesiones")}</Table.Th>
+                  <Table.Th>{t("packages.progreso")}</Table.Th>
+                  <Table.Th>{t("packages.expira")}</Table.Th>
+                  <Table.Th>{t("packages.estado")}</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
@@ -548,13 +550,13 @@ export function PackagesPage() {
                             <Menu.Item
                               leftSection={<IconCalendarEvent size={14} />}
                             >
-                              Ver sesiones
+                              {t("packages.verSesiones")}
                             </Menu.Item>
                             <Menu.Item leftSection={<IconClock size={14} />}>
-                              Extender validez
+                              {t("packages.extenderValidez")}
                             </Menu.Item>
                             <Menu.Item leftSection={<IconPlus size={14} />}>
-                              Añadir sesiones
+                              {t("packages.anadirSesiones")}
                             </Menu.Item>
                           </Menu.Dropdown>
                         </Menu>
@@ -578,51 +580,51 @@ export function PackagesPage() {
         <form onSubmit={packageForm.onSubmit(handleSavePackage)}>
           <Stack gap="md">
             <TextInput
-              label="Nombre del paquete"
-              placeholder="Ej: Bono 10 Sesiones"
+              label={t("packages.nombreDelPaquete")}
+              placeholder={t("packages.ejBono10Sesiones")}
               required
               {...packageForm.getInputProps("name")}
             />
             <TextInput
-              label="Descripción"
-              placeholder="Descripción del paquete"
+              label={t("packages.descripcion")}
+              placeholder={t("packages.descripcionDelPaquete")}
               {...packageForm.getInputProps("description")}
             />
             <Group grow>
               <NumberInput
-                label="Número de sesiones"
+                label={t("packages.numeroDeSesiones")}
                 min={1}
                 required
                 {...packageForm.getInputProps("totalSessions")}
               />
               <NumberInput
                 decimalScale={2}
-                label="Precio (€)"
+                label={t("packages.precio")}
                 min={0}
                 required
                 {...packageForm.getInputProps("price")}
               />
             </Group>
             <NumberInput
-              description="Días desde la compra hasta que expira"
-              label="Validez (días)"
+              description={t("packages.diasDesdeLaCompraHasta")}
+              label={t("packages.validezDias")}
               min={1}
               {...packageForm.getInputProps("validityDays")}
             />
             <MultiSelect
               data={sessionTypeOptions}
-              description="Deja vacío para aplicar a todos"
-              label="Tipos de sesión aplicables"
+              description={t("packages.dejaVacioParaAplicarA")}
+              label={t("packages.tiposDeSesionAplicables")}
               {...packageForm.getInputProps("sessionTypes")}
             />
             <Switch
-              description="Los paquetes inactivos no se pueden comprar"
-              label="Paquete activo"
+              description={t("packages.losPaquetesInactivosNoSe")}
+              label={t("packages.paqueteActivo")}
               {...packageForm.getInputProps("isActive", { type: "checkbox" })}
             />
             <Group justify="flex-end" mt="md">
               <Button onClick={closePackageModal} variant="subtle">
-                Cancelar
+                {t("packages.cancelar")}
               </Button>
               <Button type="submit">
                 {editingPackage ? "Guardar Cambios" : "Crear Paquete"}

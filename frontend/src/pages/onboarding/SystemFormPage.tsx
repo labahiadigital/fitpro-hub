@@ -35,6 +35,7 @@ import {
   type ClientFormItem,
   type FormField,
 } from "../../hooks/useForms";
+import { useTranslation } from "react-i18next";
 
 function renderField(
   field: FormField,
@@ -155,6 +156,7 @@ function renderField(
 }
 
 export function SystemFormPage() {
+  const { t } = useTranslation();
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
   const respond = useRespondMyForm();
@@ -183,7 +185,7 @@ export function SystemFormPage() {
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
           <Loader size="lg" />
-          <Text c="dimmed" mt="md">Cargando cuestionario...</Text>
+          <Text c="dimmed" mt="md">{t("onboarding.cargandoCuestionario")}</Text>
         </Paper>
       </Container>
     );
@@ -197,13 +199,13 @@ export function SystemFormPage() {
             <IconAlertCircle size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            Cuestionario no encontrado
+            {t("onboarding.cuestionarioNoEncontrado")}
           </Title>
           <Text c="dimmed" mb="xl">
-            El enlace que has usado no es válido o ya no está disponible.
+            {t("onboarding.elEnlaceQueHasUsado")}
           </Text>
           <Button size="lg" onClick={() => navigate("/my-dashboard")}>
-            Ir al panel
+            {t("onboarding.irAlPanel")}
           </Button>
         </Paper>
       </Container>
@@ -233,8 +235,8 @@ export function SystemFormPage() {
       });
       setSubmitted(true);
       notifications.show({
-        title: "¡Cuestionario enviado!",
-        message: "Te llevaremos a tu panel en unos segundos.",
+        title: t("onboarding.cuestionarioEnviado"),
+        message: t("onboarding.teLlevaremosATuPanel"),
         color: "green",
       });
       // Damos margen visual: 2.5s en la pantalla de éxito y luego al
@@ -244,8 +246,8 @@ export function SystemFormPage() {
       }, 2500);
     } catch (e) {
       notifications.show({
-        title: "Error",
-        message: "No se pudo enviar el cuestionario. Inténtalo de nuevo.",
+        title: t("onboarding.error"),
+        message: t("onboarding.noSePudoEnviarEl"),
         color: "red",
       });
     }
@@ -259,14 +261,13 @@ export function SystemFormPage() {
             <IconCheck size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            ¡Listo!
+            {t("onboarding.listo")}
           </Title>
           <Text c="dimmed" mb="xl">
-            Tu cuestionario se ha enviado. Te hemos mandado un segundo email con
-            los próximos pasos para acceder a tu plataforma.
+            {t("onboarding.tuCuestionarioSeHaEnviado")}
           </Text>
           <Button size="lg" onClick={() => navigate("/my-dashboard")}>
-            Ir a mi panel
+            {t("onboarding.irAMiPanel")}
           </Button>
         </Paper>
       </Container>
@@ -317,7 +318,7 @@ export function SystemFormPage() {
               loading={respond.isPending}
               leftSection={<IconCheck size={18} />}
             >
-              Enviar cuestionario
+              {t("onboarding.enviarCuestionario")}
             </Button>
           </Group>
         </Stack>

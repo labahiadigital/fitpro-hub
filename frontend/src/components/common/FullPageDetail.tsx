@@ -60,7 +60,7 @@ export function FullPageDetail({ opened, onClose, title, subtitle, children, foo
         }}
       >
         <Group gap="sm" wrap="nowrap" style={{ width: "100%" }}>
-          <ActionIcon variant="subtle" size="lg" onClick={onClose} aria-label="Volver" radius="xl">
+          <ActionIcon variant="subtle" size="lg" onClick={onClose} aria-label={"Volver"} radius="xl">
             <IconArrowLeft size={22} />
           </ActionIcon>
           <Box style={{ flex: 1, minWidth: 0 }}>

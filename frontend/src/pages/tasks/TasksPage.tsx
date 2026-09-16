@@ -56,6 +56,7 @@ import {
 import { useTeamMembers } from "../../hooks/useTeam";
 import { useTeamGroupsList } from "../../hooks/useTeamGroups";
 import { useClients } from "../../hooks/useClients";
+import { useTranslation } from "react-i18next";
 
 const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string }> = {
   high: { label: "Alta", color: "red" },
@@ -163,13 +164,13 @@ function TaskCard({
                     leftSection={<IconCheck size={14} />}
                     onClick={() => onEdit(task)}
                   >
-                    Editar
+                    {"Editar"}
                   </Menu.Item>
                   <Menu.Item
                     leftSection={<IconArchive size={14} />}
                     onClick={() => onArchive(task.id)}
                   >
-                    Archivar
+                    {"Archivar"}
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item
@@ -177,7 +178,7 @@ function TaskCard({
                     leftSection={<IconTrash size={14} />}
                     onClick={() => onDelete(task.id)}
                   >
-                    Eliminar
+                    {"Eliminar"}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
@@ -190,6 +191,7 @@ function TaskCard({
 }
 
 export function TasksPage() {
+  const { t } = useTranslation();
   const [createOpened, { open: openCreate, close: closeCreate }] =
     useDisclosure(false);
   const [editOpened, { open: openEdit, close: closeEdit }] =
@@ -399,12 +401,12 @@ export function TasksPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nueva Tarea",
+          label: t("tasks.nuevaTarea"),
           icon: <IconPlus size={16} />,
           onClick: openCreate,
         }}
-        description="Gestiona las tareas de tu equipo"
-        title="Tareas"
+        description={t("tasks.gestionaLasTareasDeTu")}
+        title={t("tasks.tareas")}
       />
 
       {/* Filters */}
@@ -413,14 +415,14 @@ export function TasksPage() {
           value={filterState}
           onChange={(v) => setFilterState(v as TaskState)}
           data={[
-            { value: "created", label: "Activas" },
-            { value: "archived", label: "Archivadas" },
-            { value: "deleted", label: "Eliminadas" },
+            { value: "created", label: t("tasks.activas") },
+            { value: "archived", label: t("tasks.archivadas") },
+            { value: "deleted", label: t("tasks.eliminadas") },
           ]}
           size="sm"
         />
         <Select
-          placeholder="Prioridad"
+          placeholder={t("tasks.prioridad")}
           clearable
           size="sm"
           w={140}
@@ -428,13 +430,13 @@ export function TasksPage() {
           value={filterPriority}
           onChange={setFilterPriority}
           data={[
-            { value: "high", label: "Alta" },
-            { value: "medium", label: "Media" },
-            { value: "low", label: "Baja" },
+            { value: "high", label: t("tasks.alta") },
+            { value: "medium", label: t("tasks.media") },
+            { value: "low", label: t("tasks.baja") },
           ]}
         />
         <Select
-          placeholder="Asignado a"
+          placeholder={t("tasks.asignadoA")}
           clearable
           searchable
           size="sm"
@@ -444,7 +446,7 @@ export function TasksPage() {
           data={memberOptions}
         />
         <TextInput
-          placeholder="Buscar tareas..."
+          placeholder={t("tasks.buscarTareas")}
           size="sm"
           leftSection={<IconSearch size={14} />}
           value={searchQuery}
@@ -458,7 +460,7 @@ export function TasksPage() {
             leftSection={<IconX size={14} />}
             onClick={clearFilters}
           >
-            Limpiar
+            {t("tasks.limpiar")}
           </Button>
         )}
       </Group>
@@ -513,7 +515,7 @@ export function TasksPage() {
                           py="xl"
                           style={{ opacity: 0.6 }}
                         >
-                          Sin tareas
+                          {t("tasks.sinTareas")}
                         </Text>
                       )}
                       {columns[col.id].map((task, idx) => (
@@ -541,7 +543,7 @@ export function TasksPage() {
       <BottomSheet
         opened={createOpened}
         onClose={closeCreate}
-        title="Nueva Tarea"
+        title={t("tasks.nuevaTarea")}
         centered
         size="lg"
         styles={{
@@ -552,14 +554,14 @@ export function TasksPage() {
         <form onSubmit={handleCreate}>
           <Stack>
             <TextInput
-              label="Título"
-              placeholder="¿Qué hay que hacer?"
+              label={t("tasks.titulo")}
+              placeholder={t("tasks.queHayQueHacer")}
               required
               {...createForm.getInputProps("title")}
             />
             <Textarea
-              label="Descripción"
-              placeholder="Detalles adicionales (opcional)"
+              label={t("tasks.descripcion")}
+              placeholder={t("tasks.detallesAdicionalesOpcional")}
               autosize
               minRows={2}
               maxRows={6}
@@ -567,17 +569,17 @@ export function TasksPage() {
             />
             <Group grow>
               <Select
-                label="Prioridad"
+                label={t("tasks.prioridad")}
                 data={[
-                  { value: "high", label: "Alta" },
-                  { value: "medium", label: "Media" },
-                  { value: "low", label: "Baja" },
+                  { value: "high", label: t("tasks.alta") },
+                  { value: "medium", label: t("tasks.media") },
+                  { value: "low", label: t("tasks.baja") },
                 ]}
                 {...createForm.getInputProps("priority")}
               />
               <Select
-                label="Asignar a"
-                placeholder="Sin asignar"
+                label={t("tasks.asignarA")}
+                placeholder={t("tasks.sinAsignar")}
                 clearable
                 searchable
                 data={memberOptions}
@@ -586,16 +588,16 @@ export function TasksPage() {
             </Group>
             <Group grow>
               <Select
-                label="Asignar a equipo"
-                placeholder="Sin equipo"
+                label={t("tasks.asignarAEquipo")}
+                placeholder={t("tasks.sinEquipo")}
                 clearable
                 searchable
                 data={groupOptions}
                 {...createForm.getInputProps("team_group_id")}
               />
               <Select
-                label="Vincular a cliente"
-                placeholder="Sin cliente"
+                label={t("tasks.vincularACliente")}
+                placeholder={t("tasks.sinCliente")}
                 clearable
                 searchable
                 data={clientOptions}
@@ -604,8 +606,8 @@ export function TasksPage() {
             </Group>
             <Group grow>
               <DatePickerInput
-                label="Fecha límite"
-                placeholder="Sin fecha límite"
+                label={t("tasks.fechaLimite")}
+                placeholder={t("tasks.sinFechaLimite")}
                 clearable
                 valueFormat="DD MMM YYYY"
                 locale="es"
@@ -613,7 +615,7 @@ export function TasksPage() {
                 {...createForm.getInputProps("due_date")}
               />
               <TextInput
-                label="Hora"
+                label={t("tasks.hora")}
                 placeholder="HH:MM"
                 type="time"
                 {...createForm.getInputProps("due_time")}
@@ -621,7 +623,7 @@ export function TasksPage() {
             </Group>
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeCreate}>
-                Cancelar
+                {t("tasks.cancelar")}
               </Button>
               <Button
                 type="submit"
@@ -629,7 +631,7 @@ export function TasksPage() {
                 loading={createMutation.isPending}
                 leftSection={<IconPlus size={14} />}
               >
-                Crear Tarea
+                {t("tasks.crearTarea")}
               </Button>
             </Group>
           </Stack>
@@ -643,7 +645,7 @@ export function TasksPage() {
           closeEdit();
           setEditingTask(null);
         }}
-        title="Editar Tarea"
+        title={t("tasks.editarTarea")}
         centered
         size="lg"
         styles={{
@@ -654,14 +656,14 @@ export function TasksPage() {
         <form onSubmit={handleEdit}>
           <Stack>
             <TextInput
-              label="Título"
-              placeholder="¿Qué hay que hacer?"
+              label={t("tasks.titulo")}
+              placeholder={t("tasks.queHayQueHacer")}
               required
               {...editForm.getInputProps("title")}
             />
             <Textarea
-              label="Descripción"
-              placeholder="Detalles adicionales (opcional)"
+              label={t("tasks.descripcion")}
+              placeholder={t("tasks.detallesAdicionalesOpcional")}
               autosize
               minRows={2}
               maxRows={6}
@@ -669,17 +671,17 @@ export function TasksPage() {
             />
             <Group grow>
               <Select
-                label="Prioridad"
+                label={t("tasks.prioridad")}
                 data={[
-                  { value: "high", label: "Alta" },
-                  { value: "medium", label: "Media" },
-                  { value: "low", label: "Baja" },
+                  { value: "high", label: t("tasks.alta") },
+                  { value: "medium", label: t("tasks.media") },
+                  { value: "low", label: t("tasks.baja") },
                 ]}
                 {...editForm.getInputProps("priority")}
               />
               <Select
-                label="Asignar a"
-                placeholder="Sin asignar"
+                label={t("tasks.asignarA")}
+                placeholder={t("tasks.sinAsignar")}
                 clearable
                 searchable
                 data={memberOptions}
@@ -688,16 +690,16 @@ export function TasksPage() {
             </Group>
             <Group grow>
               <Select
-                label="Asignar a equipo"
-                placeholder="Sin equipo"
+                label={t("tasks.asignarAEquipo")}
+                placeholder={t("tasks.sinEquipo")}
                 clearable
                 searchable
                 data={groupOptions}
                 {...editForm.getInputProps("team_group_id")}
               />
               <Select
-                label="Vincular a cliente"
-                placeholder="Sin cliente"
+                label={t("tasks.vincularACliente")}
+                placeholder={t("tasks.sinCliente")}
                 clearable
                 searchable
                 data={clientOptions}
@@ -706,8 +708,8 @@ export function TasksPage() {
             </Group>
             <Group grow>
               <DatePickerInput
-                label="Fecha límite"
-                placeholder="Sin fecha límite"
+                label={t("tasks.fechaLimite")}
+                placeholder={t("tasks.sinFechaLimite")}
                 clearable
                 valueFormat="DD MMM YYYY"
                 locale="es"
@@ -715,7 +717,7 @@ export function TasksPage() {
                 {...editForm.getInputProps("due_date")}
               />
               <TextInput
-                label="Hora"
+                label={t("tasks.hora")}
                 placeholder="HH:MM"
                 type="time"
                 {...editForm.getInputProps("due_time")}
@@ -729,14 +731,14 @@ export function TasksPage() {
                   setEditingTask(null);
                 }}
               >
-                Cancelar
+                {t("tasks.cancelar")}
               </Button>
               <Button
                 type="submit"
                 className="nv-button"
                 loading={updateMutation.isPending}
               >
-                Guardar Cambios
+                {t("tasks.guardarCambios")}
               </Button>
             </Group>
           </Stack>

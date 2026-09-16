@@ -30,6 +30,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { BottomSheet } from "../common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 // Types
 interface Permission {
@@ -170,6 +171,7 @@ const mockRoles: CustomRole[] = [
 ];
 
 export function RoleManager() {
+  const { t } = useTranslation();
   const [roles, setRoles] = useState<CustomRole[]>(mockRoles);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [editingRole, setEditingRole] = useState<CustomRole | null>(null);
@@ -221,7 +223,7 @@ export function RoleManager() {
         )
       );
       notifications.show({
-        title: "Rol actualizado",
+        title: t("teamComp.rolActualizado"),
         message: `${values.name} se ha actualizado correctamente`,
         color: "green",
         icon: <IconCheck size={16} />,
@@ -239,7 +241,7 @@ export function RoleManager() {
       };
       setRoles((prev) => [...prev, newRole]);
       notifications.show({
-        title: "Rol creado",
+        title: t("teamComp.rolCreado"),
         message: `${values.name} se ha creado correctamente`,
         color: "green",
         icon: <IconCheck size={16} />,
@@ -272,8 +274,8 @@ export function RoleManager() {
   const deleteRole = (roleId: string) => {
     setRoles((prev) => prev.filter((r) => r.id !== roleId));
     notifications.show({
-      title: "Rol eliminado",
-      message: "El rol se ha eliminado correctamente",
+      title: t("teamComp.rolEliminado"),
+      message: t("teamComp.elRolSeHaEliminado"),
       color: "green",
     });
   };
@@ -283,14 +285,14 @@ export function RoleManager() {
       <Group justify="space-between" mb="lg">
         <Box>
           <Text fw={600} size="lg">
-            Roles Personalizados
+            {t("teamComp.rolesPersonalizados")}
           </Text>
           <Text c="dimmed" size="sm">
-            Configura roles con permisos específicos para tu equipo
+            {t("teamComp.configuraRolesConPermisosEspecificos")}
           </Text>
         </Box>
         <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpenModal()}>
-          Nuevo Rol
+          {t("teamComp.nuevoRol")}
         </Button>
       </Group>
 
@@ -345,7 +347,7 @@ export function RoleManager() {
             </Group>
 
             <Text size="xs" fw={600} c="dimmed" mb="xs">
-              Permisos:
+              {t("teamComp.permisos")}
             </Text>
             <Group gap={4}>
               {Object.entries(role.permissions)
@@ -378,13 +380,13 @@ export function RoleManager() {
           <Stack>
             <Group grow>
               <TextInput
-                label="Nombre del rol"
-                placeholder="Entrenador Senior"
+                label={t("teamComp.nombreDelRol")}
+                placeholder={t("teamComp.entrenadorSenior")}
                 required
                 {...form.getInputProps("name")}
               />
               <ColorInput
-                label="Color"
+                label={t("teamComp.color")}
                 format="hex"
                 swatches={[
                   "#2D6A4F",
@@ -399,27 +401,27 @@ export function RoleManager() {
             </Group>
 
             <Textarea
-              label="Descripción"
-              placeholder="Describe las responsabilidades de este rol..."
+              label={t("teamComp.descripcion")}
+              placeholder={t("teamComp.describeLasResponsabilidadesDeEste")}
               {...form.getInputProps("description")}
             />
 
             <Select
-              label="Rol base"
-              description="Los permisos del rol base se usarán como punto de partida"
+              label={t("teamComp.rolBase")}
+              description={t("teamComp.losPermisosDelRolBase")}
               data={BASE_ROLES}
               {...form.getInputProps("baseRole")}
             />
 
             <Box>
               <Text fw={600} size="sm" mb="md">
-                Permisos
+                {t("teamComp.permisos")}
               </Text>
               <Paper withBorder radius="md" style={{ overflow: "hidden" }}>
                 <Table>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Recurso</Table.Th>
+                      <Table.Th>{t("teamComp.recurso")}</Table.Th>
                       {["create", "read", "update", "delete", "send"].map((action) => (
                         <Table.Th key={action} ta="center">
                           {ACTION_LABELS[action]}
@@ -456,7 +458,7 @@ export function RoleManager() {
 
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeModal}>
-                Cancelar
+                {t("teamComp.cancelar")}
               </Button>
               <Button type="submit">
                 {editingRole ? "Guardar Cambios" : "Crear Rol"}

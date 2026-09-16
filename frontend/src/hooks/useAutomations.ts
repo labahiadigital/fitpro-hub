@@ -84,7 +84,7 @@ export function useCreateAutomation() {
 
   return useMutation({
     mutationFn: async (data: Partial<Automation>) => {
-      const response = await api.post("/automations/", {
+      const response = await api.post("/automations", {
         ...data,
         workspace_id: currentWorkspace?.id,
       });

@@ -72,7 +72,7 @@ export function ExercisesTab({
         <TextInput
           leftSection={<IconSearch size={14} />}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Buscar ejercicios..."
+          placeholder={"Buscar ejercicios..."}
           value={searchExercise}
           radius="md"
           size="sm"
@@ -101,7 +101,7 @@ export function ExercisesTab({
             value={muscleGroupFilter || null}
             onChange={onMuscleGroupFilterChange}
             data={muscleGroups}
-            placeholder="Grupo muscular"
+            placeholder={"Grupo muscular"}
             size="xs"
             radius="md"
             w={160}
@@ -113,7 +113,7 @@ export function ExercisesTab({
             value={equipmentFilter || null}
             onChange={onEquipmentFilterChange}
             data={equipmentOptions}
-            placeholder="Equipamiento"
+            placeholder={"Equipamiento"}
             size="xs"
             radius="md"
             w={160}
@@ -128,9 +128,9 @@ export function ExercisesTab({
           <Table striped highlightOnHover withTableBorder style={{ borderRadius: 8, overflow: "hidden" }}>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Nombre</Table.Th>
-                <Table.Th>Músculos</Table.Th>
-                <Table.Th>Acciones</Table.Th>
+                <Table.Th>{"Nombre"}</Table.Th>
+                <Table.Th>{"Músculos"}</Table.Th>
+                <Table.Th>{"Acciones"}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -251,11 +251,11 @@ export function ExercisesTab({
         )
       ) : loadingExercises ? null : (
         <EmptyState
-          actionLabel="Añadir Ejercicio"
-          description="Añade ejercicios a tu biblioteca para usarlos en tus programas."
+          actionLabel={"Añadir Ejercicio"}
+          description={"Añade ejercicios a tu biblioteca para usarlos en tus programas."}
           icon={<IconBarbell size={36} />}
           onAction={() => onNewExercise()}
-          title="No hay ejercicios"
+          title={"No hay ejercicios"}
         />
       )}
     </>

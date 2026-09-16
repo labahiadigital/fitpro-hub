@@ -31,6 +31,7 @@ import { BottomSheet } from "../../components/common/BottomSheet";
 import { useBoxes, useCreateBox, useUpdateBox, useDeleteBox, useBoxStats, type BoxData } from "../../hooks/useBoxes";
 import { useBoxSchedule, useUpdateBoxSchedule, defaultWeekSlots, type ScheduleSlot } from "../../hooks/useSchedules";
 import { WeeklyScheduleGrid } from "../../components/common/WeeklyScheduleGrid";
+import { useTranslation } from "react-i18next";
 
 function BoxStatCard({ boxId }: { boxId: string }) {
   const { data: stats } = useBoxStats(boxId);
@@ -39,25 +40,26 @@ function BoxStatCard({ boxId }: { boxId: string }) {
     <Group gap="lg" mt="xs">
       <Box>
         <Text size="xl" fw={700} c="blue">{stats.today}</Text>
-        <Text size="xs" c="dimmed">Hoy</Text>
+        <Text size="xs" c="dimmed">{"Hoy"}</Text>
       </Box>
       <Box>
         <Text size="xl" fw={700} c="green">{stats.upcoming}</Text>
-        <Text size="xs" c="dimmed">Próximas</Text>
+        <Text size="xs" c="dimmed">{"Próximas"}</Text>
       </Box>
       <Box>
         <Text size="xl" fw={700}>{stats.total}</Text>
-        <Text size="xs" c="dimmed">Total</Text>
+        <Text size="xs" c="dimmed">{"Total"}</Text>
       </Box>
       <Box>
         <Text size="xl" fw={700} c="red">{stats.cancel_rate}%</Text>
-        <Text size="xs" c="dimmed">Cancelación</Text>
+        <Text size="xs" c="dimmed">{"Cancelación"}</Text>
       </Box>
     </Group>
   );
 }
 
 export default function BoxesPage() {
+  const { t } = useTranslation();
   const { data: boxes } = useBoxes();
   const createBox = useCreateBox();
   const updateBox = useUpdateBox();
@@ -122,17 +124,17 @@ export default function BoxesPage() {
   return (
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Boxes / Consultas"
-        description="Gestiona los espacios físicos donde se realizan los servicios"
-        action={{ label: "Nuevo Box", icon: <IconPlus size={16} />, onClick: () => handleOpen() }}
+        title={t("boxes.boxesConsultas")}
+        description={t("boxes.gestionaLosEspaciosFisicosDonde")}
+        action={{ label: t("boxes.nuevoBox"), icon: <IconPlus size={16} />, onClick: () => handleOpen() }}
       />
 
       {!boxes || boxes.length === 0 ? (
         <EmptyState
           icon={<IconBuilding size={24} />}
-          title="Sin boxes"
-          description="Crea tu primer espacio para empezar a gestionar reservas"
-          actionLabel="Crear Box"
+          title={t("boxes.sinBoxes")}
+          description={t("boxes.creaTuPrimerEspacioPara")}
+          actionLabel={t("boxes.crearBox")}
           onAction={() => handleOpen()}
         />
       ) : (
@@ -158,12 +160,12 @@ export default function BoxesPage() {
               <BoxStatCard boxId={box.id} />
               <Group mt="md" gap="xs">
                 <Button size="xs" variant="light" radius="xl" leftSection={<IconEdit size={14} />} onClick={() => handleOpen(box)}>
-                  Editar
+                  {t("boxes.editar")}
                 </Button>
                 <Button size="xs" variant="light" color="red" radius="xl" leftSection={<IconTrash size={14} />}
                   onClick={() => deleteBox.mutate(box.id)}
                 >
-                  Eliminar
+                  {t("boxes.eliminar")}
                 </Button>
               </Group>
             </Paper>
@@ -174,15 +176,15 @@ export default function BoxesPage() {
       <BottomSheet opened={modalOpened} onClose={closeModal} title={editingBox ? "Editar Box" : "Nuevo Box"}>
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
-            <TextInput label="Nombre" placeholder="Consulta 1" required {...form.getInputProps("name")} radius="md" />
-            <Textarea label="Descripción" placeholder="Descripción del espacio" {...form.getInputProps("description")} radius="md" />
-            <ColorInput label="Color" {...form.getInputProps("color_hex")} radius="md" />
-            <NumberInput label="Orden" {...form.getInputProps("sort_order")} radius="md" />
-            <Switch label="Activo" {...form.getInputProps("is_active", { type: "checkbox" })} />
-            <Divider label="Horario de disponibilidad" labelPosition="center" />
+            <TextInput label={t("boxes.nombre")} placeholder={t("boxes.consulta1")} required {...form.getInputProps("name")} radius="md" />
+            <Textarea label={t("boxes.descripcion")} placeholder={t("boxes.descripcionDelEspacio")} {...form.getInputProps("description")} radius="md" />
+            <ColorInput label={t("boxes.color")} {...form.getInputProps("color_hex")} radius="md" />
+            <NumberInput label={t("boxes.orden")} {...form.getInputProps("sort_order")} radius="md" />
+            <Switch label={t("boxes.activo")} {...form.getInputProps("is_active", { type: "checkbox" })} />
+            <Divider label={t("boxes.horarioDeDisponibilidad")} labelPosition="center" />
             <WeeklyScheduleGrid slots={scheduleSlots} onChange={setScheduleSlots} compact />
             <Group justify="flex-end">
-              <Button variant="default" onClick={closeModal} radius="xl">Cancelar</Button>
+              <Button variant="default" onClick={closeModal} radius="xl">{t("boxes.cancelar")}</Button>
               <Button type="submit" radius="xl" loading={createBox.isPending || updateBox.isPending}>
                 {editingBox ? "Guardar" : "Crear"}
               </Button>

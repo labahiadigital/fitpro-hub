@@ -12,6 +12,7 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 
 interface Session {
   id: string;
@@ -38,14 +39,15 @@ export function UpcomingSessionsWidget({
   onViewAll,
   loading,
 }: UpcomingSessionsWidgetProps) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         <Group justify="space-between" mb="sm">
-          <Text className="stat-label">Agenda de Hoy</Text>
+          <Text className="stat-label">{t("dashboard.agenda.title")}</Text>
         </Group>
         <Stack gap="xs" style={{ flex: 1 }}>
-          <Text c="dimmed" ta="center" py="md">Cargando sesiones...</Text>
+          <Text c="dimmed" ta="center" py="md">{t("dashboard.agenda.loading")}</Text>
         </Stack>
       </Box>
     );
@@ -54,7 +56,7 @@ export function UpcomingSessionsWidget({
   return (
     <Box className="premium-card" p={{ base: "sm", lg: "md", xl: "lg" }} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <Group justify="space-between" mb="sm">
-        <Text className="stat-label">Agenda de Hoy</Text>
+        <Text className="stat-label">{t("dashboard.agenda.title")}</Text>
         <ActionIcon variant="subtle" color="gray" size="sm" onClick={onViewAll}>
           <IconChevronRight size={14} />
         </ActionIcon>
@@ -62,7 +64,7 @@ export function UpcomingSessionsWidget({
 
       <Stack gap="xs" style={{ flex: 1 }}>
         {sessions.length === 0 ? (
-          <Text c="dimmed" ta="center" py="xl" size="sm">No hay sesiones programadas para hoy</Text>
+          <Text c="dimmed" ta="center" py="xl" size="sm">{t("dashboard.agenda.noSessions")}</Text>
         ) : sessions.map((session) => (
           <Box 
             key={session.id}
@@ -100,7 +102,7 @@ export function UpcomingSessionsWidget({
                 
                 <Box className="pill-badge" mt={6} style={{ backgroundColor: "var(--nv-surface-subtle)", color: "var(--nv-slate)", padding: "2px 6px", fontSize: "10px", display: "inline-flex", alignItems: "center" }}>
                   {session.modality === "online" ? <IconVideo size={10} style={{marginRight:3}} /> : <IconMapPin size={10} style={{marginRight:3}} />}
-                  {session.modality === "online" ? "Online" : "Presencial"}
+                  {session.modality === "online" ? "Online" : t("dashboard.agenda.inPerson")}
                 </Box>
               </Box>
             </Group>

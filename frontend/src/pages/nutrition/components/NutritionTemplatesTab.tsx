@@ -53,11 +53,11 @@ export function NutritionTemplatesTab({
         {templates.map((plan: any) => (
           <Box key={plan.id} className="nv-card" p="md">
             <Text fw={600} size="sm" style={{ color: "var(--nv-dark)", wordBreak: "break-word" }} lineClamp={2} mb={4} title={plan.name}>{plan.name}</Text>
-            <Badge color="teal" variant="light" radius="md" size="xs" mb="xs">Plantilla</Badge>
+            <Badge color="teal" variant="light" radius="md" size="xs" mb="xs">{"Plantilla"}</Badge>
             <Text c="dimmed" lineClamp={2} size="xs">{plan.description || "Sin descripción"}</Text>
             <Stack gap={4} mt="sm">
               <Group justify="space-between">
-                <Text c="dimmed" size="xs">Calorías</Text>
+                <Text c="dimmed" size="xs">{"Calorías"}</Text>
                 <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>{Math.round(plan.target_calories || 0)} kcal</Text>
               </Group>
               <Group gap={4}>
@@ -68,7 +68,7 @@ export function NutritionTemplatesTab({
             </Stack>
             <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
             <Group gap={6}>
-              <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => onEdit(plan)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>Editar</Button>
+              <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => onEdit(plan)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>{"Editar"}</Button>
               <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => onView(plan.id)}><IconEye size={14} /></ActionIcon>
               <ActionIcon color="gray" loading={createPending} onClick={() => onDuplicate(plan)} variant="light" radius="md" size="sm"><IconCopy size={14} /></ActionIcon>
               <ActionIcon color="red" loading={deletePending} onClick={() => onDelete(plan.id, plan.name)} variant="light" radius="md" size="sm"><IconTrash size={14} /></ActionIcon>
@@ -81,11 +81,11 @@ export function NutritionTemplatesTab({
 
   return (
     <EmptyState
-      actionLabel="Crear Plantilla"
-      description="Crea tu primera plantilla nutricional reutilizable para asignarla a tus clientes."
+      actionLabel={"Crear Plantilla"}
+      description={"Crea tu primera plantilla nutricional reutilizable para asignarla a tus clientes."}
       icon={<IconTemplate size={36} />}
       onAction={onCreate}
-      title="No hay plantillas"
+      title={"No hay plantillas"}
     />
   );
 }

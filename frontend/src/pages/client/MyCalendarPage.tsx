@@ -33,6 +33,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMyBookings, useAvailableSlots, useCreateClientBooking, useCancelClientBooking, useUpdateClientBooking } from "../../hooks/useClientPortal";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
+import { useTranslation } from "react-i18next";
 
 function formatTimeUTC(isoStr: string) {
   const d = new Date(isoStr);
@@ -96,8 +97,8 @@ function RequestBookingModal({
     <NativeBottomSheet
       opened={opened}
       onClose={onClose}
-      title="Solicitar cita"
-      subtitle="Selecciona fecha y horario"
+      title={"Solicitar cita"}
+      subtitle={"Selecciona fecha y horario"}
       footer={
         <Button
           color="yellow"
@@ -110,7 +111,7 @@ function RequestBookingModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          Solicitar Cita
+          {"Solicitar cita"}
         </Button>
       }
     >
@@ -148,13 +149,13 @@ function RequestBookingModal({
               ))}
             </Group>
           ) : (
-            <Text size="sm" c="dimmed" ta="center">No hay horarios disponibles</Text>
+            <Text size="sm" c="dimmed" ta="center">{"No hay horarios disponibles"}</Text>
           )}
         </Box>
       )}
 
       <Textarea
-        placeholder="Notas (opcional)"
+        placeholder={"Notas (opcional)"}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         minRows={2}
@@ -200,8 +201,8 @@ function EditBookingModal({
     <NativeBottomSheet
       opened={opened}
       onClose={onClose}
-      title="Modificar cita"
-      subtitle="Selecciona nueva fecha y horario"
+      title={"Modificar cita"}
+      subtitle={"Selecciona nueva fecha y horario"}
       footer={
         <Button
           color="blue"
@@ -214,7 +215,7 @@ function EditBookingModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          Confirmar cambio
+          {"Confirmar cambio"}
         </Button>
       }
     >
@@ -252,13 +253,13 @@ function EditBookingModal({
               ))}
             </Group>
           ) : (
-            <Text size="sm" c="dimmed" ta="center">No hay horarios disponibles</Text>
+            <Text size="sm" c="dimmed" ta="center">{"No hay horarios disponibles"}</Text>
           )}
         </Box>
       )}
 
       <Textarea
-        placeholder="Notas (opcional)"
+        placeholder={"Notas (opcional)"}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         minRows={2}
@@ -271,6 +272,7 @@ function EditBookingModal({
 }
 
 export function MyCalendarPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: upcomingBookings, isLoading: isLoadingUpcoming } = useMyBookings({ upcoming_only: true, limit: 20 });
   const { data: allBookings, isLoading: isLoadingAll } = useMyBookings({ upcoming_only: false, limit: 100 });
@@ -375,11 +377,11 @@ export function MyCalendarPage() {
     <Box p="xl" maw={1280} mx="auto">
       <Group justify="space-between" mb="xl">
         <Box>
-          <Title order={2}>Mis Citas</Title>
-          <Text c="dimmed">Tus sesiones programadas con tu entrenador</Text>
+          <Title order={2}>{t("myCalendar.misCitas")}</Title>
+          <Text c="dimmed">{t("myCalendar.tusSesionesProgramadasConTu")}</Text>
         </Box>
         <Button leftSection={<IconCalendarPlus size={16} />} color="yellow" onClick={openBookingModal}>
-          Solicitar cita
+          {t("myCalendar.solicitarCita")}
         </Button>
       </Group>
 
@@ -396,13 +398,13 @@ export function MyCalendarPage() {
             </ActionIcon>
             {weekOffset !== 0 && (
               <Button variant="subtle" size="xs" color="yellow" onClick={() => setWeekOffset(0)}>
-                Hoy
+                {t("myCalendar.hoy")}
               </Button>
             )}
           </Group>
           {selectedDayDate && (
             <Button variant="subtle" size="xs" color="gray" onClick={() => setSelectedDayDate(null)}>
-              Ver todas
+              {t("myCalendar.verTodas")}
             </Button>
           )}
         </Group>
@@ -452,7 +454,7 @@ export function MyCalendarPage() {
       </Card>
 
       {/* Upcoming Sessions */}
-      <Title order={4} mb="md">Próximas Sesiones</Title>
+      <Title order={4} mb="md">{t("myCalendar.proximasSesiones")}</Title>
       <Stack gap="md" mb="xl">
         {filteredUpcoming.length === 0 && (
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
@@ -516,7 +518,7 @@ export function MyCalendarPage() {
               </Group>
               <Stack gap="xs">
                 {session.type === "online" && (
-                  <Button size="sm" color="blue" onClick={(e: React.MouseEvent) => e.stopPropagation()}>Unirse</Button>
+                  <Button size="sm" color="blue" onClick={(e: React.MouseEvent) => e.stopPropagation()}>{t("myCalendar.unirse")}</Button>
                 )}
               </Stack>
             </Group>
@@ -525,7 +527,7 @@ export function MyCalendarPage() {
       </Stack>
 
       {/* Past Sessions */}
-      <Title order={4} mb="md">Sesiones Anteriores</Title>
+      <Title order={4} mb="md">{t("myCalendar.sesionesAnteriores")}</Title>
       <Stack gap="sm">
         {filteredPast.length === 0 && (
           <Card shadow="sm" padding="md" radius="md" withBorder style={{ opacity: 0.8 }}>
@@ -560,7 +562,7 @@ export function MyCalendarPage() {
                   <Text size="sm" c="dimmed">{session.date} &bull; {session.time}</Text>
                 </Box>
               </Group>
-              <Badge color="green" variant="light">Completada</Badge>
+              <Badge color="green" variant="light">{t("myCalendar.completada")}</Badge>
             </Group>
           </Card>
         ))}
@@ -570,17 +572,17 @@ export function MyCalendarPage() {
       <EditBookingModal opened={editModalOpened} onClose={() => { closeEditModal(); setEditingBookingId(null); }} bookingId={editingBookingId} />
 
       {/* Cancel confirmation modal */}
-      <Modal opened={!!cancelConfirmId} onClose={() => setCancelConfirmId(null)} title="Cancelar cita" centered size="sm">
-        <Text size="sm" mb="lg">¿Estás seguro de que quieres cancelar esta cita?</Text>
+      <Modal opened={!!cancelConfirmId} onClose={() => setCancelConfirmId(null)} title={t("myCalendar.cancelarCita")} centered size="sm">
+        <Text size="sm" mb="lg">{t("myCalendar.estasSeguroDeQueQuieres")}</Text>
         <Group justify="flex-end">
-          <Button variant="subtle" color="gray" onClick={() => setCancelConfirmId(null)}>No, volver</Button>
+          <Button variant="subtle" color="gray" onClick={() => setCancelConfirmId(null)}>{t("myCalendar.noVolver")}</Button>
           <Button color="red" loading={cancelBooking.isPending} onClick={async () => {
             if (cancelConfirmId) {
               await cancelBooking.mutateAsync(cancelConfirmId);
               setCancelConfirmId(null);
               setSelectedSession(null);
             }
-          }}>Sí, cancelar cita</Button>
+          }}>{t("myCalendar.siCancelarCita")}</Button>
         </Group>
       </Modal>
 
@@ -617,7 +619,7 @@ export function MyCalendarPage() {
                   <IconClock size={16} />
                 </ThemeIcon>
                 <Box>
-                  <Text size="sm" fw={500}>Horario</Text>
+                  <Text size="sm" fw={500}>{t("myCalendar.horario")}</Text>
                   <Text size="sm" c="dimmed">{selectedSession.date} &bull; {selectedSession.time}</Text>
                 </Box>
               </Group>
@@ -626,7 +628,7 @@ export function MyCalendarPage() {
                   <IconUser size={16} />
                 </ThemeIcon>
                 <Box>
-                  <Text size="sm" fw={500}>Entrenador</Text>
+                  <Text size="sm" fw={500}>{t("myCalendar.entrenador")}</Text>
                   <Text size="sm" c="dimmed">{selectedSession.trainer}</Text>
                 </Box>
               </Group>
@@ -635,7 +637,7 @@ export function MyCalendarPage() {
                   <IconMapPin size={16} />
                 </ThemeIcon>
                 <Box>
-                  <Text size="sm" fw={500}>Ubicación</Text>
+                  <Text size="sm" fw={500}>{t("myCalendar.ubicacion")}</Text>
                   <Text size="sm" c="dimmed">{selectedSession.location}</Text>
                 </Box>
               </Group>
@@ -644,7 +646,7 @@ export function MyCalendarPage() {
                   {selectedSession.type === "online" ? <IconVideo size={16} /> : <IconCalendarEvent size={16} />}
                 </ThemeIcon>
                 <Box>
-                  <Text size="sm" fw={500}>Tipo</Text>
+                  <Text size="sm" fw={500}>{t("myCalendar.tipo")}</Text>
                   <Text size="sm" c="dimmed">{selectedSession.type === "online" ? "Online" : "Presencial"}</Text>
                 </Box>
               </Group>
@@ -662,7 +664,7 @@ export function MyCalendarPage() {
                     setSelectedSession(null);
                   }}
                 >
-                  Modificar
+                  {t("myCalendar.modificar")}
                 </Button>
                 <Button
                   variant="light"
@@ -670,7 +672,7 @@ export function MyCalendarPage() {
                   leftSection={<IconTrash size={16} />}
                   onClick={() => setCancelConfirmId(selectedSession.id)}
                 >
-                  Cancelar cita
+                  {t("myCalendar.cancelarCita")}
                 </Button>
               </Group>
             )}

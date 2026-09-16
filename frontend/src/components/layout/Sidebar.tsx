@@ -191,7 +191,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                 size="lg"
                 style={{ letterSpacing: "-0.03em", lineHeight: 1.1 }}
               >
-                Trackfiz
+                {"Trackfiz"}
               </Text>
               <Text c="dimmed" size="xs" fw={500}>
                 {currentWorkspace?.name || "Espacio de trabajo"}
@@ -228,7 +228,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
                 fontSize: "10px",
               }}
             >
-              Menu Principal
+              {"Menu Principal"}
             </Text>
           )}
           {navItems.map((item) => (
@@ -295,13 +295,13 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
               color: "white",
             }}
           >
-            <Menu.Label c="dimmed">Mi Cuenta</Menu.Label>
+            <Menu.Label c="dimmed">{"Mi Cuenta"}</Menu.Label>
             <Menu.Item
               leftSection={<IconSettings size={14} />}
               style={{ color: "white" }}
               className="menu-item-hover"
             >
-              ConfiguraciÃ³n
+              {"ConfiguraciÃ³n"}
             </Menu.Item>
             <Menu.Divider style={{ borderColor: "rgba(255,255,255,0.1)" }} />
             <Menu.Item
@@ -310,7 +310,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
               onClick={logout}
               className="menu-item-hover"
             >
-              Cerrar sesiÃ³n
+              {"Cerrar sesiÃ³n"}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>

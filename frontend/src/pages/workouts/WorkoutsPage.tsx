@@ -44,6 +44,7 @@ import { CategoryExercisesTab } from "./components/CategoryExercisesTab";
 import { ExerciseFormModal } from "./components/ExerciseFormModal";
 import { ProgramBuilderSidebar } from "./components/ProgramBuilderSidebar";
 import { ViewProgramModal } from "./components/ViewProgramModal";
+import { useTranslation } from "react-i18next";
 
 const CATEGORY_TAB_CONFIGS = {
   warmup: { category: "calentamiento", placeholder: "Buscar ejercicios de calentamiento...", gradient: "rgba(255, 107, 0, 0.2)", icon: <IconFlame color="var(--mantine-color-orange-6)" size={28} />, color: "orange", emptyTitle: "No hay ejercicios de calentamiento", emptyDesc: "Añade ejercicios de calentamiento a tu biblioteca.", emptyLabel: "Añadir Calentamiento", emptyIcon: <IconFlame size={36} /> },
@@ -76,6 +77,7 @@ const equipmentOptions = [
 ];
 
 export function WorkoutsPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const editProgramId = searchParams.get("edit");
@@ -451,9 +453,9 @@ export function WorkoutsPage() {
         video_url: newExercise.video_url || "",
       });
       openExerciseModal();
-      notifications.show({ title: "Copia creada", message: `"${cloneData.name}" se ha clonado como ejercicio propio`, color: "green" });
+      notifications.show({ title: t("workouts.copiaCreada"), message: `"${cloneData.name}" se ha clonado como ejercicio propio`, color: "green" });
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo clonar el ejercicio", color: "red" });
+      notifications.show({ title: t("workouts.error"), message: t("workouts.noSePudoClonarEl"), color: "red" });
     }
   };
 
@@ -597,8 +599,8 @@ export function WorkoutsPage() {
         end_date: undefined,
       } as any);
       notifications.show({
-        title: "Plantilla creada",
-        message: "Se guardó una copia reutilizable del programa",
+        title: t("workouts.plantillaCreada"),
+        message: t("workouts.seGuardoUnaCopiaReutilizable"),
         color: "teal",
         icon: <IconTemplate size={16} />,
       });
@@ -654,8 +656,8 @@ export function WorkoutsPage() {
           });
           if (planClientId) {
             notifications.show({
-              title: "Plantilla creada",
-              message: "Se guardó también como plantilla reutilizable",
+              title: t("workouts.plantillaCreada"),
+              message: t("workouts.seGuardoTambienComoPlantilla"),
               color: "teal",
               icon: <IconTemplate size={16} />,
             });
@@ -696,8 +698,8 @@ export function WorkoutsPage() {
 
   const handleDeleteProgram = (programId: string) => {
     openDangerConfirm({
-      title: "Eliminar programa",
-      message: "¿Estás seguro de que quieres eliminar este programa?",
+      title: t("workouts.eliminarPrograma"),
+      message: t("workouts.estasSeguroDeQueQuieres"),
       onConfirm: async () => { try { await deleteProgram.mutateAsync(programId); } catch { /* handled */ } },
     });
   };
@@ -766,8 +768,8 @@ export function WorkoutsPage() {
                     ? () => openNewExercise("cardio")
                     : () => openProgramBuilder(),
         }}
-        description="Gestiona ejercicios y programas de entrenamiento"
-        title="Entrenamientos"
+        description={t("workouts.gestionaEjerciciosYProgramasDe")}
+        title={t("workouts.entrenamientos")}
       />
 
       {isMobile && (
@@ -775,12 +777,12 @@ export function WorkoutsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "templates", label: "Plantillas" },
-            { value: "client-programs", label: "Programas de Clientes" },
-            { value: "exercises", label: "Ejercicios" },
-            { value: "warmup", label: "Calentamiento" },
-            { value: "stretching", label: "Estiramientos" },
-            { value: "cardio", label: "Cardio" },
+            { value: "templates", label: t("workouts.plantillas") },
+            { value: "client-programs", label: t("workouts.programasDeClientes") },
+            { value: "exercises", label: t("workouts.ejercicios") },
+            { value: "warmup", label: t("workouts.calentamiento") },
+            { value: "stretching", label: t("workouts.estiramientos") },
+            { value: "cardio", label: t("workouts.cardio") },
           ]}
           size="sm"
           radius="md"
@@ -791,12 +793,12 @@ export function WorkoutsPage() {
         {!isMobile && (
           <Tabs.List mb="md" style={{ borderBottom: "1px solid var(--border-subtle)", flexWrap: "nowrap" }}>
             {([
-              { value: "templates", icon: <IconTemplate size={14} />, label: "Plantillas", count: templates.length },
-              { value: "client-programs", icon: <IconUsers size={14} />, label: "Programas de Clientes", count: clientPrograms.length },
-              { value: "exercises", icon: <IconBarbell size={14} />, label: "Ejercicios", count: exerciseCounts.fuerza },
-              { value: "warmup", icon: <IconFlame size={14} />, label: "Calentamiento", count: exerciseCounts.calentamiento },
-              { value: "stretching", icon: <IconStretching size={14} />, label: "Estiramientos", count: exerciseCounts.estiramiento },
-              { value: "cardio", icon: <IconHeartbeat size={14} />, label: "Cardio", count: exerciseCounts.cardio },
+              { value: "templates", icon: <IconTemplate size={14} />, label: t("workouts.plantillas"), count: templates.length },
+              { value: "client-programs", icon: <IconUsers size={14} />, label: t("workouts.programasDeClientes"), count: clientPrograms.length },
+              { value: "exercises", icon: <IconBarbell size={14} />, label: t("workouts.ejercicios"), count: exerciseCounts.fuerza },
+              { value: "warmup", icon: <IconFlame size={14} />, label: t("workouts.calentamiento"), count: exerciseCounts.calentamiento },
+              { value: "stretching", icon: <IconStretching size={14} />, label: t("workouts.estiramientos"), count: exerciseCounts.estiramiento },
+              { value: "cardio", icon: <IconHeartbeat size={14} />, label: t("workouts.cardio"), count: exerciseCounts.cardio },
             ] as const).map((t) => (
               <Tabs.Tab key={t.value} leftSection={t.icon} value={t.value} style={{ fontWeight: 600, fontSize: "13px", flexDirection: "column", gap: 2, alignItems: "center", minWidth: 0 }}>
                 {t.count > 0 && <Badge size="xs" radius="md" variant="light">{t.count}</Badge>}
@@ -965,7 +967,7 @@ export function WorkoutsPage() {
                 return prev.map((w) => w.week === to ? { ...w, days: copiedDays } : w);
               });
               setCurrentWeek(to);
-              notifications.show({ title: "Semana copiada", message: `Semana ${from} copiada a Semana ${to}`, color: "green" });
+              notifications.show({ title: t("workouts.semanaCopiada"), message: `Semana ${from} copiada a Semana ${to}`, color: "green" });
             }}
           />
         }

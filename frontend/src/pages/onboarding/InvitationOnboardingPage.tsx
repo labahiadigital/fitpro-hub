@@ -39,6 +39,7 @@ import { useAuthStore } from "../../stores/auth";
 import { applyWorkspaceCssVars } from "../../theme/workspaceBranding";
 import { formatDecimal } from "../../utils/format";
 import { sanitizeHtml } from "../../utils/safeHtml";
+import { useTranslation } from "react-i18next";
 
 interface ProductInfo {
   id: string;
@@ -115,6 +116,7 @@ function InvitationWorkspaceHeader({
 }
 
 export function InvitationOnboardingPage() {
+  const { t } = useTranslation();
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -172,7 +174,7 @@ export function InvitationOnboardingPage() {
       }, { params: { workspace_id: invitationData.workspace_id } });
       setCouponResult(valRes.data);
     } catch {
-      setCouponResult({ is_valid: false, message: "Error al validar el cupón" });
+      setCouponResult({ is_valid: false, message: t("onboarding.errorAlValidarElCupon") });
     } finally {
       setCouponValidating(false);
     }
@@ -651,7 +653,7 @@ export function InvitationOnboardingPage() {
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
-        title: "Error",
+        title: t("onboarding.error"),
         message: err.response?.data?.detail || err.message || "Error al completar el registro",
         color: "red",
       });
@@ -735,8 +737,8 @@ export function InvitationOnboardingPage() {
         const detail = err.response?.data?.detail || err.message || "Error al completar el registro";
         setAutoCompleteError(detail);
         notifications.show({
-          title: "Tu cuenta puede haberse creado",
-          message: "Si ves un error, intenta iniciar sesión con el email y contraseña que registraste. Tu pago está confirmado.",
+          title: t("onboarding.tuCuentaPuedeHaberseCreado"),
+          message: t("onboarding.siVesUnErrorIntenta"),
           color: "yellow",
         });
       } finally {
@@ -750,7 +752,7 @@ export function InvitationOnboardingPage() {
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
           <Loader size="lg" />
-          <Text c="dimmed" mt="md">Verificando invitación...</Text>
+          <Text c="dimmed" mt="md">{t("onboarding.verificandoInvitacion")}</Text>
         </Paper>
       </Container>
     );
@@ -764,13 +766,12 @@ export function InvitationOnboardingPage() {
             <IconAlertCircle size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            Invitación no válida
+            {t("onboarding.invitacionNoValida")}
           </Title>
           <Text c="dimmed" mb="xl">
-            Esta invitación no es válida o ha expirado.
-            Contacta con tu entrenador para obtener una nueva invitación.
+            {t("onboarding.estaInvitacionNoEsValida")}
           </Text>
-          <Button size="lg" onClick={() => navigate("/")}>Ir al inicio</Button>
+          <Button size="lg" onClick={() => navigate("/")}>{t("onboarding.irAlInicio")}</Button>
         </Paper>
       </Container>
     );
@@ -787,7 +788,7 @@ export function InvitationOnboardingPage() {
             <IconMail size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            ¡Cuenta lista!
+            {t("onboarding.cuentaLista")}
           </Title>
           <Text mb="md">
             {systemFormSubmissionId
@@ -803,10 +804,10 @@ export function InvitationOnboardingPage() {
           {(supportPhone || supportEmail) && (
             <Paper p="md" radius="md" withBorder mb="lg" style={{ background: "rgba(45,106,79,0.04)" }}>
               <Text fw={600} size="sm" mb={6}>
-                Si no recibes tu email o tienes algún problema
+                {t("onboarding.siNoRecibesTuEmail")}
               </Text>
               <Text c="dimmed" size="sm" mb="xs">
-                Los datos de contacto de soporte son:
+                {t("onboarding.losDatosDeContactoDe")}
               </Text>
               <Stack gap={4} align="center">
                 {supportPhone && (
@@ -861,10 +862,10 @@ export function InvitationOnboardingPage() {
         <Container py="xl" size="sm">
           <Box mb="md" ta="center">
             <Title mb="xs" order={3}>
-              Completar pago con SeQura
+              {t("onboarding.completarPagoConSequra")}
             </Title>
             <Text c="dimmed" size="sm">
-              Completa la verificación de identidad para finalizar el pago fraccionado
+              {t("onboarding.completaLaVerificacionDeIdentidad")}
             </Text>
           </Box>
 
@@ -880,7 +881,7 @@ export function InvitationOnboardingPage() {
                 setSequraFormHtml(null);
               }}
             >
-              Cancelar y volver
+              {t("onboarding.cancelarYVolver")}
             </Button>
           </Group>
         </Container>
@@ -891,14 +892,14 @@ export function InvitationOnboardingPage() {
       <Container py="xl" size="sm">
         <InvitationWorkspaceHeader
           invitation={invitationData}
-          subtitle="Para completar tu registro, primero debes activar tu plan"
+          subtitle={t("onboarding.paraCompletarTuRegistroPrimero")}
         />
 
         <Paper p="xl" radius="lg" withBorder>
           {checkingPayment ? (
             <Stack align="center" gap="md" py="xl">
               <Loader size="lg" />
-              <Text c="dimmed">Verificando estado del pago...</Text>
+              <Text c="dimmed">{t("onboarding.verificandoEstadoDelPago")}</Text>
             </Stack>
           ) : (
             <Stack gap="lg">
@@ -943,11 +944,11 @@ export function InvitationOnboardingPage() {
               {/* Coupon section */}
               {product.price > 0 && (
                 <>
-                  <Divider label="¿Tienes un cupón de descuento?" labelPosition="center" />
+                  <Divider label={t("onboarding.tienesUnCuponDeDescuento")} labelPosition="center" />
                   <Group align="flex-end" gap="xs">
                     <TextInput
-                      label="Código de cupón"
-                      placeholder="Ej: DESCUENTO20"
+                      label={t("onboarding.codigoDeCupon")}
+                      placeholder={t("onboarding.ejDescuento20")}
                       value={couponCode}
                       onChange={(e) => {
                         setCouponCode(e.currentTarget.value.toUpperCase());
@@ -962,7 +963,7 @@ export function InvitationOnboardingPage() {
                       loading={couponValidating}
                       disabled={!couponCode.trim()}
                     >
-                      Aplicar
+                      {t("onboarding.aplicar")}
                     </Button>
                   </Group>
                   {couponResult && (
@@ -989,7 +990,7 @@ export function InvitationOnboardingPage() {
                 </>
               )}
 
-              <Divider label="Elige tu método de pago" labelPosition="center" />
+              <Divider label={t("onboarding.eligeTuMetodoDePago")} labelPosition="center" />
 
               <Stack gap="sm">
                 <Paper
@@ -1014,11 +1015,11 @@ export function InvitationOnboardingPage() {
                       <IconCreditCard size={22} />
                     </ThemeIcon>
                     <div style={{ flex: 1 }}>
-                      <Text fw={600} size="sm">Pagar con tarjeta</Text>
+                      <Text fw={600} size="sm">{t("onboarding.pagarConTarjeta")}</Text>
                       <Group gap={6} mt={2}>
-                        <Badge variant="light" size="xs">Visa</Badge>
-                        <Badge variant="light" size="xs">Mastercard</Badge>
-                        <Badge variant="light" size="xs">Google Pay</Badge>
+                        <Badge variant="light" size="xs">{t("onboarding.visa")}</Badge>
+                        <Badge variant="light" size="xs">{t("onboarding.mastercard")}</Badge>
+                        <Badge variant="light" size="xs">{t("onboarding.googlePay")}</Badge>
                       </Group>
                     </div>
                     <Text fw={700} size="lg">{formatDecimal(couponResult?.is_valid ? discountedPrice : product.price, 2)}€</Text>
@@ -1048,7 +1049,7 @@ export function InvitationOnboardingPage() {
                         <IconCalendarDollar size={22} />
                       </ThemeIcon>
                       <div style={{ flex: 1 }}>
-                        <Text fw={600} size="sm">Pagar a plazos con SeQura</Text>
+                        <Text fw={600} size="sm">{t("onboarding.pagarAPlazosConSequra")}</Text>
                         <Text c="dimmed" size="xs" mt={2}>
                           {sequraAgreements.length > 0
                             ? `Fracciona tu pago en cómodos plazos`
@@ -1125,30 +1126,26 @@ export function InvitationOnboardingPage() {
               <ThemeIcon color="yellow" radius="xl" size={48} variant="light">
                 <IconMail size={24} />
               </ThemeIcon>
-              <Title order={4}>Tu pago está confirmado</Title>
+              <Title order={4}>{t("onboarding.tuPagoEstaConfirmado")}</Title>
               <Text c="dimmed">
-                Tu cuenta puede haberse creado correctamente. Por favor, inicia
-                sesión con el email y la contraseña que registraste antes del
-                pago. Te hemos enviado un email de bienvenida con los siguientes
-                pasos.
+                {t("onboarding.tuCuentaPuedeHaberseCreado")}
               </Text>
               <Text size="xs" c="dimmed">
-                Si el problema persiste, contacta con tu entrenador adjuntando
-                este código: <strong>{token?.slice(0, 12)}…</strong>
+                {t("onboarding.siElProblemaPersisteContacta")} <strong>{token?.slice(0, 12)}…</strong>
               </Text>
               <Button
                 fullWidth
                 onClick={() => navigate("/login")}
                 color="teal"
               >
-                Iniciar sesión
+                {t("onboarding.iniciarSesion")}
               </Button>
             </Stack>
           ) : (
             <>
               <Loader size="lg" />
               <Text c="dimmed" mt="md">
-                Estamos finalizando tu registro y enviándote el email de bienvenida...
+                {t("onboarding.estamosFinalizandoTuRegistroY")}
               </Text>
             </>
           )}
@@ -1162,7 +1159,7 @@ export function InvitationOnboardingPage() {
     <Container py="xl" size="sm">
       <InvitationWorkspaceHeader
         invitation={invitationData}
-        subtitle="Crea tu cuenta para empezar tu transformación"
+        subtitle={t("onboarding.creaTuCuentaParaEmpezar")}
       />
       {invitationData.message && (
         <Paper p="md" mb="md" radius="md" withBorder style={{ background: "rgba(45, 106, 79, 0.05)" }}>
@@ -1177,25 +1174,25 @@ export function InvitationOnboardingPage() {
           <ThemeIcon color="teal" radius="xl" size={36} variant="light">
             <IconUser size={18} />
           </ThemeIcon>
-          <Title order={4}>Información personal</Title>
+          <Title order={4}>{t("onboarding.informacionPersonal")}</Title>
         </Group>
 
         <Stack gap="md">
           <TextInput
-            label="Nombre"
-            placeholder="Tu nombre"
+            label={t("onboarding.nombre")}
+            placeholder={t("onboarding.tuNombre")}
             required
             {...form.getInputProps("firstName")}
           />
           <TextInput
-            label="Apellidos"
-            placeholder="Tus apellidos"
+            label={t("onboarding.apellidos")}
+            placeholder={t("onboarding.tusApellidos")}
             required
             {...form.getInputProps("lastName")}
           />
           <TextInput
-            label="Email"
-            placeholder="tu@email.com"
+            label={t("onboarding.email")}
+            placeholder={t("onboarding.tuEmailCom")}
             required
             disabled={!!invitationData.email}
             leftSection={<IconMail size={16} />}
@@ -1203,8 +1200,8 @@ export function InvitationOnboardingPage() {
           />
           {!invitationData.email && (
             <TextInput
-              label="Confirma tu email"
-              placeholder="Repite tu email"
+              label={t("onboarding.confirmaTuEmail")}
+              placeholder={t("onboarding.repiteTuEmail")}
               required
               leftSection={<IconMail size={16} />}
               {...form.getInputProps("confirmEmail")}
@@ -1217,29 +1214,29 @@ export function InvitationOnboardingPage() {
             />
           )}
           <PasswordInput
-            label="Contraseña"
-            placeholder="Mínimo 8 caracteres"
+            label={t("onboarding.contrasena")}
+            placeholder={t("onboarding.minimo8Caracteres")}
             required
             leftSection={<IconLock size={16} />}
             {...form.getInputProps("password")}
           />
           <TextInput
-            label="Móvil"
+            label={t("onboarding.movil")}
             placeholder="+34 600 000 000"
             required
             leftSection={<IconPhone size={16} />}
-            description="Lo necesitamos para contactarte por WhatsApp"
+            description={t("onboarding.loNecesitamosParaContactartePor")}
             {...form.getInputProps("phone")}
           />
 
-          <Divider my="sm" label="Consentimientos" labelPosition="center" />
+          <Divider my="sm" label={t("onboarding.consentimientos")} labelPosition="center" />
 
           <Checkbox
             label={
               <Text size="sm">
                 Acepto los{" "}
                 <Anchor href="#" size="sm">
-                  Términos y Condiciones
+                  {t("onboarding.terminosYCondiciones")}
                 </Anchor>{" "}
                 del servicio *
               </Text>
@@ -1252,7 +1249,7 @@ export function InvitationOnboardingPage() {
               <Text size="sm">
                 Acepto la{" "}
                 <Anchor href="#" size="sm">
-                  Política de Privacidad
+                  {t("onboarding.politicaDePrivacidad")}
                 </Anchor>{" "}
                 y el tratamiento de mis datos de salud *
               </Text>
@@ -1261,7 +1258,7 @@ export function InvitationOnboardingPage() {
             error={form.errors.acceptPrivacy}
           />
           <Checkbox
-            label="Deseo recibir comunicaciones comerciales y novedades (opcional)"
+            label={t("onboarding.deseoRecibirComunicacionesComercialesY")}
             {...form.getInputProps("acceptMarketing", { type: "checkbox" })}
           />
         </Stack>
@@ -1269,7 +1266,7 @@ export function InvitationOnboardingPage() {
 
       <Group justify="flex-end" mt="xl">
         <Button onClick={handleSubmit} loading={loading} size="lg">
-          Completar registro
+          {t("onboarding.completarRegistro")}
         </Button>
       </Group>
     </Container>

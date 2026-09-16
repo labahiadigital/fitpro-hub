@@ -34,7 +34,7 @@ export function AllergenBadge({
   if (isClientAllergen) {
     return (
       <Tooltip
-        label="¡ALERTA! El cliente es alérgico/intolerante a este ingrediente"
+        label={"¡ALERTA! El cliente es alérgico/intolerante a este ingrediente"}
         withArrow
         color="red"
       >
@@ -83,7 +83,7 @@ export function AllergenList({
   if (allergens.length === 0) {
     return (
       <Text c="dimmed" size="sm">
-        Sin alérgenos conocidos
+        {"Sin alérgenos conocidos"}
       </Text>
     );
   }

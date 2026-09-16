@@ -23,9 +23,15 @@ class TriggerType(str, PyEnum):
 class ActionType(str, PyEnum):
     SEND_EMAIL = "send_email"
     SEND_IN_APP = "send_in_app"
+    SEND_NOTIFICATION = "send_notification"
+    SEND_MESSAGE = "send_message"
     SEND_SMS = "send_sms"
+    SEND_FORM = "send_form"
+    ASSIGN_FORM = "assign_form"
+    ASSIGN_PROGRAM = "assign_program"
     CREATE_TASK = "create_task"
     UPDATE_TAG = "update_tag"
+    UPDATE_TAGS = "update_tags"
     WEBHOOK = "webhook"
 
 

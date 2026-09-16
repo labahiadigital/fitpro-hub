@@ -6,8 +6,10 @@ import {
   useBrandLogoUrl,
   useIsWhiteLabelHost,
 } from "../../hooks/useWhiteLabelBootstrap";
+import { useTranslation } from "react-i18next";
 
 export function AuthLayout() {
+  const { t } = useTranslation();
   const brandName = useBrandDisplayName();
   const logoUrl = useBrandLogoUrl();
   const isWhiteLabel = useIsWhiteLabelHost();
@@ -106,7 +108,7 @@ export function AuthLayout() {
             </Group>
             <Group gap="xs">
               <IconBrandAndroid size={16} color="white" />
-              <Text size="xs" c="gray.5">Android App</Text>
+              <Text size="xs" c="gray.5">{t("layout.androidApp")}</Text>
             </Group>
           </Group>
         )}

@@ -42,6 +42,7 @@ import {
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { BottomSheet } from "../../components/common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 interface Challenge {
   id: string;
@@ -80,6 +81,7 @@ interface LeaderboardEntry {
 }
 
 export function CommunityPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("challenges");
   const [
@@ -150,19 +152,19 @@ export function CommunityPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nuevo Reto",
+          label: t("community.nuevoReto"),
           icon: <IconPlus size={16} />,
           onClick: openChallengeModal,
         }}
-        description="Gestiona retos, grupos y ranking de tus clientes"
+        description={t("community.gestionaRetosGruposYRanking")}
         secondaryAction={{
-          label: "Nuevo Grupo",
+          label: t("community.nuevoGrupo"),
           icon: <IconUsers size={16} />,
           onClick: openGroupModal,
           variant: "default",
         }}
-        title="Gamificación"
-        subtitle="Retos, grupos y leaderboard de tu comunidad"
+        title={t("community.gamificacion")}
+        subtitle={t("community.retosGruposYLeaderboardDe")}
       />
 
       {isMobile && (
@@ -170,9 +172,9 @@ export function CommunityPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "challenges", label: "Retos" },
-            { value: "groups", label: "Grupos" },
-            { value: "leaderboard", label: "Ranking" },
+            { value: "challenges", label: t("community.retos") },
+            { value: "groups", label: t("community.grupos") },
+            { value: "leaderboard", label: t("community.ranking") },
           ]}
           size="sm"
           radius="md"
@@ -183,13 +185,13 @@ export function CommunityPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab leftSection={<IconTrophy size={16} />} value="challenges">
-            Retos
+            {t("community.retos")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconUsers size={16} />} value="groups">
-            Grupos
+            {t("community.grupos")}
           </Tabs.Tab>
           <Tabs.Tab leftSection={<IconMedal size={16} />} value="leaderboard">
-            Ranking
+            {t("community.ranking")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -224,16 +226,16 @@ export function CommunityPage() {
                     </Menu.Target>
                     <Menu.Dropdown>
                       <Menu.Item leftSection={<IconEdit size={14} />}>
-                        Editar
+                        {t("community.editar")}
                       </Menu.Item>
                       <Menu.Item leftSection={<IconShare size={14} />}>
-                        Compartir
+                        {t("community.compartir")}
                       </Menu.Item>
                       <Menu.Item
                         color="red"
                         leftSection={<IconTrash size={14} />}
                       >
-                        Eliminar
+                        {t("community.eliminar")}
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
@@ -307,7 +309,7 @@ export function CommunityPage() {
                   </Avatar>
                   {group.isPrivate && (
                     <Badge color="gray" variant="light">
-                      Privado
+                      {t("community.privado")}
                     </Badge>
                   )}
                 </Group>
@@ -325,7 +327,7 @@ export function CommunityPage() {
                     </Text>
                   </Group>
                   <Button size="xs" variant="light">
-                    Ver Grupo
+                    {t("community.verGrupo")}
                   </Button>
                 </Group>
               </Card>
@@ -337,7 +339,7 @@ export function CommunityPage() {
         <Tabs.Panel value="leaderboard">
           <Paper p="lg" radius="md" withBorder>
             <Title mb="lg" order={4}>
-              Ranking General
+              {t("community.rankingGeneral")}
             </Title>
             <Stack gap="sm">
               {leaderboard.map((entry) => (
@@ -394,7 +396,7 @@ export function CommunityPage() {
         centered
         onClose={closeChallengeModal}
         opened={challengeModalOpened}
-        title="Nuevo Reto"
+        title={t("community.nuevoReto")}
       >
         <form
           onSubmit={challengeForm.onSubmit((_values) => {
@@ -403,47 +405,47 @@ export function CommunityPage() {
         >
           <Stack>
             <TextInput
-              label="Nombre del Reto"
-              placeholder="Ej: Reto 30 Días"
+              label={t("community.nombreDelReto")}
+              placeholder={t("community.ejReto30Dias")}
               {...challengeForm.getInputProps("name")}
             />
             <Textarea
-              label="Descripción"
-              placeholder="Describe el reto..."
+              label={t("community.descripcion")}
+              placeholder={t("community.describeElReto")}
               {...challengeForm.getInputProps("description")}
             />
             <Select
               data={[
-                { value: "workouts", label: "Entrenamientos completados" },
-                { value: "steps", label: "Pasos caminados" },
-                { value: "weight_loss", label: "Pérdida de peso" },
-                { value: "custom", label: "Personalizado" },
+                { value: "workouts", label: t("community.entrenamientosCompletados") },
+                { value: "steps", label: t("community.pasosCaminados") },
+                { value: "weight_loss", label: t("community.perdidaDePeso") },
+                { value: "custom", label: t("community.personalizado") },
               ]}
-              label="Tipo de Reto"
+              label={t("community.tipoDeReto")}
               {...challengeForm.getInputProps("type")}
             />
             <NumberInput
-              label="Meta"
+              label={t("community.meta")}
               min={1}
               {...challengeForm.getInputProps("goal")}
             />
             <Group grow>
               <DatePickerInput
-                label="Fecha Inicio"
-                placeholder="Selecciona fecha"
+                label={t("community.fechaInicio")}
+                placeholder={t("community.seleccionaFecha")}
                 {...challengeForm.getInputProps("startDate")}
               />
               <DatePickerInput
-                label="Fecha Fin"
-                placeholder="Selecciona fecha"
+                label={t("community.fechaFin")}
+                placeholder={t("community.seleccionaFecha")}
                 {...challengeForm.getInputProps("endDate")}
               />
             </Group>
             <Group justify="flex-end" mt="md">
               <Button onClick={closeChallengeModal} variant="default">
-                Cancelar
+                {t("community.cancelar")}
               </Button>
-              <Button type="submit">Crear Reto</Button>
+              <Button type="submit">{t("community.crearReto")}</Button>
             </Group>
           </Stack>
         </form>
@@ -454,7 +456,7 @@ export function CommunityPage() {
         centered
         onClose={closeGroupModal}
         opened={groupModalOpened}
-        title="Nuevo Grupo"
+        title={t("community.nuevoGrupo")}
       >
         <form
           onSubmit={groupForm.onSubmit((_values) => {
@@ -463,20 +465,20 @@ export function CommunityPage() {
         >
           <Stack>
             <TextInput
-              label="Nombre del Grupo"
-              placeholder="Ej: Runners Club"
+              label={t("community.nombreDelGrupo")}
+              placeholder={t("community.ejRunnersClub")}
               {...groupForm.getInputProps("name")}
             />
             <Textarea
-              label="Descripción"
-              placeholder="Describe el grupo..."
+              label={t("community.descripcion")}
+              placeholder={t("community.describeElGrupo")}
               {...groupForm.getInputProps("description")}
             />
             <Group justify="flex-end" mt="md">
               <Button onClick={closeGroupModal} variant="default">
-                Cancelar
+                {t("community.cancelar")}
               </Button>
-              <Button type="submit">Crear Grupo</Button>
+              <Button type="submit">{t("community.crearGrupo")}</Button>
             </Group>
           </Stack>
         </form>

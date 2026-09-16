@@ -89,6 +89,7 @@ import { api, productsApi } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
 import { BottomSheet } from "../../components/common/BottomSheet";
 import { formatDecimal } from "../../utils/format";
+import { useTranslation } from "react-i18next";
 
 function getClientStatus(client: { is_active: boolean; has_user_account?: boolean }): string {
   if (!client.is_active) return "inactive";
@@ -151,10 +152,10 @@ function ClientCard({
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Item leftSection={<IconEye size={14} />} onClick={onView}>
-              Ver perfil
+              {"Ver perfil"}
             </Menu.Item>
             <Menu.Item leftSection={<IconEdit size={14} />}>
-              Editar
+              {"Editar"}
             </Menu.Item>
             {onResetPassword && client.email && !client.deleted_at && (
               <Menu.Item
@@ -164,12 +165,12 @@ function ClientCard({
                   onResetPassword(client);
                 }}
               >
-                Restablecer contraseña
+                {"Restablecer contraseña"}
               </Menu.Item>
             )}
             <Menu.Divider />
             <Menu.Item leftSection={<IconTrash size={14} />} color="red">
-              Eliminar
+              {"Eliminar"}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
@@ -263,7 +264,7 @@ function SegmentClientList({
   if (loading) {
     return (
       <Box className="nv-card" p="lg">
-        <Group justify="center"><Text size="sm" c="dimmed">Cargando segmento…</Text></Group>
+        <Group justify="center"><Text size="sm" c="dimmed">{"Cargando segmento…"}</Text></Group>
       </Box>
     );
   }
@@ -298,8 +299,8 @@ function SegmentClientList({
                   />
                 </Table.Th>
               )}
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Cliente</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Cliente"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Email"}</Text></Table.Th>
               {extraColumn && <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{extraColumn.title}</Text></Table.Th>}
               <Table.Th />
             </Table.Tr>
@@ -406,15 +407,15 @@ function AbandonedCartList({
 }) {
   if (loading) {
     return (
-      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">Cargando carrito abandonado…</Text></Box>
+      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">{"Cargando carrito abandonado…"}</Text></Box>
     );
   }
   if (items.length === 0) {
     return (
       <EmptyState
         icon={<IconShoppingCartX size={48} />}
-        title="No hay carritos abandonados"
-        description="Aquí aparecerán las invitaciones con producto asignado pero sin pago completado."
+        title={"No hay carritos abandonados"}
+        description={"Aquí aparecerán las invitaciones con producto asignado pero sin pago completado."}
       />
     );
   }
@@ -480,12 +481,12 @@ function AbandonedCartList({
                   }}
                 />
               </Table.Th>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Producto</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Invitado</Text></Table.Th>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Estado</Text></Table.Th>
-              <Table.Th visibleFrom="md"><Text fw={700} size="xs" tt="uppercase">Marketing</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Email"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Producto"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Invitado"}</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Email"}</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Estado"}</Text></Table.Th>
+              <Table.Th visibleFrom="md"><Text fw={700} size="xs" tt="uppercase">{"Marketing"}</Text></Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -541,7 +542,7 @@ function AbandonedCartList({
                   {i.last_email_sent_at ? (
                     <Stack gap={2}>
                       <Group gap={4} wrap="nowrap">
-                        <Tooltip label="Email enviado" withArrow>
+                        <Tooltip label={"Email enviado"} withArrow>
                           <Badge
                             size="xs"
                             color="blue"
@@ -552,24 +553,24 @@ function AbandonedCartList({
                           </Badge>
                         </Tooltip>
                         {i.email_read ? (
-                          <Tooltip label="Leído por el destinatario" withArrow>
+                          <Tooltip label={"Leído por el destinatario"} withArrow>
                             <Badge
                               size="xs"
                               color="teal"
                               variant="filled"
                               leftSection={<IconMailOpened size={10} />}
                             >
-                              Leído
+                              {"Leído"}
                             </Badge>
                           </Tooltip>
                         ) : i.last_email_status === "delivered" ? (
-                          <Tooltip label="Entregado, sin abrir aún" withArrow>
-                            <Badge size="xs" color="gray" variant="light">Sin leer</Badge>
+                          <Tooltip label={"Entregado, sin abrir aún"} withArrow>
+                            <Badge size="xs" color="gray" variant="light">{"Sin leer"}</Badge>
                           </Tooltip>
                         ) : i.last_email_status && i.last_email_status.includes("bounce") ? (
-                          <Tooltip label="Rebote del servidor" withArrow>
+                          <Tooltip label={"Rebote del servidor"} withArrow>
                             <Badge size="xs" color="red" variant="light" leftSection={<IconMailX size={10} />}>
-                              Rebote
+                              {"Rebote"}
                             </Badge>
                           </Tooltip>
                         ) : null}
@@ -581,22 +582,22 @@ function AbandonedCartList({
                       )}
                     </Stack>
                   ) : (
-                    <Tooltip label="Aún no se ha enviado ningún email" withArrow>
-                      <Badge size="xs" color="gray" variant="light">Sin enviar</Badge>
+                    <Tooltip label={"Aún no se ha enviado ningún email"} withArrow>
+                      <Badge size="xs" color="gray" variant="light">{"Sin enviar"}</Badge>
                     </Tooltip>
                   )}
                 </Table.Td>
                 <Table.Td>
                   {i.won ? (
                     <Badge size="xs" color="green" variant="filled" leftSection={<IconTrophy size={10} />}>
-                      Ganado
+                      {"Ganado"}
                     </Badge>
                   ) : i.invitation_status === "expired" ? (
-                    <Badge size="xs" color="red" variant="light">Expirado</Badge>
+                    <Badge size="xs" color="red" variant="light">{"Expirado"}</Badge>
                   ) : i.invitation_status === "cancelled" ? (
-                    <Badge size="xs" color="gray" variant="light">Cancelado</Badge>
+                    <Badge size="xs" color="gray" variant="light">{"Cancelado"}</Badge>
                   ) : (
-                    <Badge size="xs" color="orange" variant="light">Pendiente</Badge>
+                    <Badge size="xs" color="orange" variant="light">{"Pendiente"}</Badge>
                   )}
                 </Table.Td>
                 <Table.Td visibleFrom="md">
@@ -610,7 +611,7 @@ function AbandonedCartList({
                 </Table.Td>
                 <Table.Td onClick={(e) => e.stopPropagation()}>
                   {!i.won && (
-                    <Tooltip label="Eliminar carrito" withArrow>
+                    <Tooltip label={"Eliminar carrito"} withArrow>
                       <ActionIcon
                         size="sm"
                         color="red"
@@ -664,8 +665,8 @@ function InvitedList({
     return (
       <EmptyState
         icon={<IconMail size={48} />}
-        title="Sin invitaciones pendientes"
-        description="Cuando un cliente acepte la invitación pasará a su tab correspondiente."
+        title={"Sin invitaciones pendientes"}
+        description={"Cuando un cliente acepte la invitación pasará a su tab correspondiente."}
       />
     );
   }
@@ -675,9 +676,9 @@ function InvitedList({
         <Table verticalSpacing="sm" horizontalSpacing="md">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Nombre</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Expira</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Email"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Nombre"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Expira"}</Text></Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -694,9 +695,9 @@ function InvitedList({
                 <Table.Td>
                   <Group gap="xs" justify="flex-end">
                     <Button size="xs" variant="light" radius="xl" leftSection={<IconRefresh size={14} />} onClick={() => onResend(inv.id)} loading={isPending}>
-                      Reenviar
+                      {"Reenviar"}
                     </Button>
-                    <ActionIcon size="sm" variant="subtle" color="red" onClick={() => onCancel(inv.id)} title="Cancelar invitación">
+                    <ActionIcon size="sm" variant="subtle" color="red" onClick={() => onCancel(inv.id)} title={"Cancelar invitación"}>
                       <IconTrash size={14} />
                     </ActionIcon>
                   </Group>
@@ -741,15 +742,15 @@ function TrackingList({
 }) {
   if (loading) {
     return (
-      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">Cargando seguimiento…</Text></Box>
+      <Box className="nv-card" p="lg"><Text size="sm" c="dimmed">{"Cargando seguimiento…"}</Text></Box>
     );
   }
   if (items.length === 0) {
     return (
       <EmptyState
         icon={<IconMailOpened size={48} />}
-        title="No hay invitaciones que seguir"
-        description="Aquí verás el estado (entregado, abierto, clicado) del último email enviado a cada invitación."
+        title={"No hay invitaciones que seguir"}
+        description={"Aquí verás el estado (entregado, abierto, clicado) del último email enviado a cada invitación."}
       />
     );
   }
@@ -759,10 +760,10 @@ function TrackingList({
         <Table verticalSpacing="sm" horizontalSpacing="md">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Email</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Último email</Text></Table.Th>
-              <Table.Th><Text fw={700} size="xs" tt="uppercase">Estado</Text></Table.Th>
-              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">Asunto</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Email"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Último email"}</Text></Table.Th>
+              <Table.Th><Text fw={700} size="xs" tt="uppercase">{"Estado"}</Text></Table.Th>
+              <Table.Th visibleFrom="sm"><Text fw={700} size="xs" tt="uppercase">{"Asunto"}</Text></Table.Th>
               <Table.Th />
             </Table.Tr>
           </Table.Thead>
@@ -817,7 +818,7 @@ function TrackingList({
                         )}
                       </Stack>
                     ) : (
-                      <Text size="xs" c="dimmed">Sin envíos</Text>
+                      <Text size="xs" c="dimmed">{"Sin envíos"}</Text>
                     )}
                   </Table.Td>
                   <Table.Td>
@@ -841,13 +842,13 @@ function TrackingList({
                         <Text size="xs" c="dimmed">—</Text>
                       )}
                       {item.status === "accepted" && (
-                        <Badge size="xs" variant="filled" color="green">Aceptada</Badge>
+                        <Badge size="xs" variant="filled" color="green">{"Aceptada"}</Badge>
                       )}
                       {item.status === "cancelled" && (
-                        <Badge size="xs" variant="light" color="gray">Cancelada</Badge>
+                        <Badge size="xs" variant="light" color="gray">{"Cancelada"}</Badge>
                       )}
                       {item.status === "expired" && (
-                        <Badge size="xs" variant="light" color="orange">Expirada</Badge>
+                        <Badge size="xs" variant="light" color="orange">{"Expirada"}</Badge>
                       )}
                     </Stack>
                   </Table.Td>
@@ -933,6 +934,7 @@ function KPICard({ title, value, subtitle, color }: { title: string; value: stri
 }
 
 export function ClientsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -1135,14 +1137,14 @@ export function ClientsPage() {
       try {
         await resendInvitation.mutateAsync(existingInvitation.id);
         notifications.show({
-          title: "Invitación reenviada",
+          title: t("clients.invitacionReenviada"),
           message: `Se ha reenviado la invitación a ${client.email}`,
           color: "green",
         });
       } catch {
         notifications.show({
-          title: "Error",
-          message: "No se pudo reenviar la invitación",
+          title: t("clients.error"),
+          message: t("clients.noSePudoReenviarLa"),
           color: "red",
         });
       }
@@ -1176,8 +1178,8 @@ export function ClientsPage() {
     // Para clientes demo, solo mostramos mensaje y cerramos
     if (editingClient.id.startsWith("demo-client-")) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, los cambios no se guardan permanentemente",
+        title: t("clients.modoDemo"),
+        message: t("clients.enModoDemoLosCambios"),
         color: "yellow",
       });
       closeEditModal();
@@ -1204,14 +1206,14 @@ export function ClientsPage() {
     try {
       await api.post(`/clients/${client.id}/send-password-reset`);
       notifications.show({
-        title: "Email enviado",
+        title: t("clients.emailEnviado"),
         message: `Se ha enviado un email para restablecer la contraseña a ${client.email}`,
         color: "green",
       });
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
-        title: "Error",
+        title: t("clients.error"),
         message:
           e.response?.data?.detail ||
           e.message ||
@@ -1225,7 +1227,7 @@ export function ClientsPage() {
     try {
       await updateClient.mutateAsync({ id: client.id, data: { is_active: true } });
       notifications.show({
-        title: "Cliente reactivado",
+        title: t("clients.clienteReactivado"),
         message: `${client.first_name} ${client.last_name} ha sido reactivado`,
         color: "green",
       });
@@ -1239,7 +1241,7 @@ export function ClientsPage() {
     try {
       await deleteClient.mutateAsync(client.id);
       notifications.show({
-        title: "Cliente desasignado",
+        title: t("clients.clienteDesasignado"),
         message: `${client.first_name} ${client.last_name} ha sido desactivado`,
         color: "yellow",
       });
@@ -1297,7 +1299,7 @@ export function ClientsPage() {
   const columns = [
     {
       key: "name",
-      title: "Cliente",
+      title: t("clients.cliente"),
       render: (client: {
         first_name: string;
         last_name: string;
@@ -1313,7 +1315,7 @@ export function ClientsPage() {
     },
     {
       key: "phone",
-      title: "Teléfono",
+      title: t("clients.telefono"),
       hideOnMobile: true,
       render: (client: { phone?: string }) => (
         <Text size="sm" fw={500} style={{ color: client.phone ? "var(--nv-dark)" : "var(--nv-slate-light)" }}>
@@ -1325,7 +1327,7 @@ export function ClientsPage() {
       ? [
           {
             key: "tags",
-            title: "Etiquetas",
+            title: t("clients.etiquetas"),
             hideOnMobile: true,
             render: (client: { tags?: Array<{ name: string; color: string }> }) =>
               client.tags && client.tags.length > 0 ? (
@@ -1338,7 +1340,7 @@ export function ClientsPage() {
       : []),
     {
       key: "is_active",
-      title: "Estado",
+      title: t("clients.estado"),
       render: (client: { is_active: boolean; has_user_account?: boolean }) => (
         <StatusBadge status={getClientStatus(client)} />
       ),
@@ -1365,7 +1367,7 @@ export function ClientsPage() {
               }}
               styles={{ root: { fontSize: "11px" } }}
             >
-              Restaurar
+              {t("clients.restaurar")}
             </Button>
           );
         }
@@ -1383,7 +1385,7 @@ export function ClientsPage() {
               }}
               styles={{ root: { fontSize: "11px" } }}
             >
-              Reactivar
+              {t("clients.reactivar")}
             </Button>
           );
         }
@@ -1392,7 +1394,7 @@ export function ClientsPage() {
     },
     {
       key: "created_at",
-      title: "Registro",
+      title: t("clients.registro"),
       hideOnMobile: true,
       render: (client: { created_at: string }) => (
         <Group gap="xs">
@@ -1428,50 +1430,50 @@ export function ClientsPage() {
     <Container py="lg" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Invitar Cliente",
+          label: t("clients.invitarCliente"),
           icon: <IconSend size={16} />,
           onClick: openInviteModal,
         }}
-        description="Gestiona tu cartera de clientes y su información"
+        description={t("clients.gestionaTuCarteraDeClientes")}
         secondaryAction={{
-          label: "Crear Manual",
+          label: t("clients.crearManual"),
           icon: <IconUserPlus size={14} />,
           onClick: openClientModal,
           variant: "default",
         }}
-        title="Clientes"
+        title={t("clients.clientes")}
       />
 
       {/* KPIs */}
       <SimpleGrid cols={{ base: 2, sm: 5, xl: 6 }} mb="lg" spacing="sm" className="stagger">
         <KPICard 
-          title="Total Clientes" 
+          title={t("clients.totalClientes")} 
           value={stats.total} 
-          subtitle="En tu cartera"
+          subtitle={t("clients.enTuCartera")}
           color="var(--nv-dark)"
         />
         <KPICard 
-          title="Activos" 
+          title={t("clients.activos")} 
           value={stats.active} 
-          subtitle="Con plan activo"
+          subtitle={t("clients.conPlanActivo")}
           color="var(--nv-success)"
         />
         <KPICard 
-          title="Pendientes" 
+          title={t("clients.pendientes")} 
           value={stats.pending} 
-          subtitle="Sin cuenta creada"
+          subtitle={t("clients.sinCuentaCreada")}
           color="var(--nv-primary)"
         />
         <KPICard 
-          title="Inactivos" 
+          title={t("clients.inactivos")} 
           value={stats.inactive} 
-          subtitle="Sin actividad"
+          subtitle={t("clients.sinActividad")}
           color="var(--nv-slate)"
         />
         <KPICard 
-          title="Nuevos" 
+          title={t("clients.nuevos")} 
           value={stats.newThisMonth} 
-          subtitle="Este mes"
+          subtitle={t("clients.esteMes")}
           color="var(--nv-primary)"
         />
       </SimpleGrid>
@@ -1495,7 +1497,7 @@ export function ClientsPage() {
               { value: "invited", label: `Invitados (${(invitations || []).filter((i) => i.status === "pending").length})` },
               { value: "tracking", label: `Seguimiento (${trackingQuery.data?.length ?? 0})` },
               ...(stats.deleted > 0 ? [{ value: "deleted", label: `Eliminados (${stats.deleted})` }] : []),
-              { value: "tags", label: "Etiquetas" },
+              { value: "tags", label: t("clients.etiquetas") },
             ]}
             size="sm"
             radius="md"
@@ -1567,7 +1569,7 @@ export function ClientsPage() {
                 onClick={openTagModal}
                 style={{ fontWeight: 600, fontSize: "13px" }}
               >
-                Etiquetas
+                {t("clients.etiquetas")}
               </Tabs.Tab>
             </Tabs.List>
           </Tabs>
@@ -1579,40 +1581,40 @@ export function ClientsPage() {
         <SegmentClientList
           loading={pendingFormQuery.isLoading}
           items={pendingFormQuery.data || []}
-          emptyTitle="Nadie pendiente del formulario"
-          emptyDesc="Todos tus clientes pagados ya completaron el cuestionario inicial."
+          emptyTitle={t("clients.nadiePendienteDelFormulario")}
+          emptyDesc={t("clients.todosTusClientesPagadosYa")}
           extraColumn={{
-            title: "Email cuestionario",
+            title: t("clients.emailCuestionario"),
             render: (c) => {
               if (!c.last_email_sent_at) {
                 return (
-                  <Tooltip label="Aún no se ha enviado el correo del cuestionario" withArrow>
-                    <Badge size="xs" color="gray" variant="light">Sin enviar</Badge>
+                  <Tooltip label={t("clients.aunNoSeHaEnviado")} withArrow>
+                    <Badge size="xs" color="gray" variant="light">{t("clients.sinEnviar")}</Badge>
                   </Tooltip>
                 );
               }
               return (
                 <Stack gap={4}>
                   <Group gap={4} wrap="nowrap">
-                    <Tooltip label="Email enviado" withArrow>
+                    <Tooltip label={t("clients.emailEnviado")} withArrow>
                       <Badge size="xs" color="blue" variant="light" leftSection={<IconSend size={10} />}>
                         {new Date(c.last_email_sent_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                       </Badge>
                     </Tooltip>
                     {c.email_read ? (
-                      <Tooltip label="Cliente abrió el email" withArrow>
+                      <Tooltip label={t("clients.clienteAbrioElEmail")} withArrow>
                         <Badge size="xs" color="teal" variant="filled" leftSection={<IconMailOpened size={10} />}>
-                          Leído
+                          {t("clients.leido")}
                         </Badge>
                       </Tooltip>
                     ) : c.last_email_status === "delivered" ? (
-                      <Tooltip label="Entregado, sin abrir" withArrow>
-                        <Badge size="xs" color="gray" variant="light">Sin leer</Badge>
+                      <Tooltip label={t("clients.entregadoSinAbrir")} withArrow>
+                        <Badge size="xs" color="gray" variant="light">{t("clients.sinLeer")}</Badge>
                       </Tooltip>
                     ) : c.last_email_status && c.last_email_status.includes("bounce") ? (
-                      <Tooltip label="Rebote del servidor" withArrow>
+                      <Tooltip label={t("clients.reboteDelServidor")} withArrow>
                         <Badge size="xs" color="red" variant="light" leftSection={<IconMailX size={10} />}>
-                          Rebote
+                          {t("clients.rebote")}
                         </Badge>
                       </Tooltip>
                     ) : null}
@@ -1628,7 +1630,7 @@ export function ClientsPage() {
           }}
           rowAction={(c) => (
             <Group gap={4} wrap="nowrap">
-              <Tooltip label="Reenviar email del cuestionario" withArrow>
+              <Tooltip label={t("clients.reenviarEmailDelCuestionario")} withArrow>
                 <Button
                   size="xs"
                   variant="light"
@@ -1641,10 +1643,10 @@ export function ClientsPage() {
                     resendSystemForm.mutate(c.id);
                   }}
                 >
-                  Reenviar
+                  {t("clients.reenviar")}
                 </Button>
               </Tooltip>
-              <Tooltip label="Cancelar la solicitud del cuestionario" withArrow>
+              <Tooltip label={t("clients.cancelarLaSolicitudDelCuestionario")} withArrow>
                 <ActionIcon
                   size="lg"
                   variant="subtle"
@@ -1701,8 +1703,8 @@ export function ClientsPage() {
         <SegmentClientList
           loading={inactiveSubQuery.isLoading}
           items={inactiveSubQuery.data || []}
-          emptyTitle="No hay clientes inactivos"
-          emptyDesc="Aquí aparecerán los clientes que cancelen su suscripción."
+          emptyTitle={t("clients.noHayClientesInactivos")}
+          emptyDesc={t("clients.aquiApareceranLosClientesQue")}
           headerExtras={
             <Group gap="xs">
               <SegmentedControl
@@ -1713,9 +1715,9 @@ export function ClientsPage() {
                   setMarketingFilter(value === "all" ? null : value === "yes" ? true : false)
                 }
                 data={[
-                  { label: "Todos", value: "all" },
-                  { label: "Acepta marketing", value: "yes" },
-                  { label: "No acepta", value: "no" },
+                  { label: t("clients.todos"), value: "all" },
+                  { label: t("clients.aceptaMarketing"), value: "yes" },
+                  { label: t("clients.noAcepta"), value: "no" },
                 ]}
               />
               <Button
@@ -1732,7 +1734,7 @@ export function ClientsPage() {
             </Group>
           }
           extraColumn={{
-            title: "Cancelada",
+            title: t("clients.cancelada"),
             render: (c) =>
               c.subscription_cancelled_at
                 ? new Date(c.subscription_cancelled_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
@@ -1744,11 +1746,11 @@ export function ClientsPage() {
           rowAction={(c) =>
             c.marketing_consent === true ? (
               <Badge color="green" variant="light" size="xs">
-                Marketing OK
+                {t("clients.marketingOk")}
               </Badge>
             ) : c.marketing_consent === false ? (
               <Badge color="gray" variant="light" size="xs">
-                Sin consentimiento
+                {t("clients.sinConsentimiento")}
               </Badge>
             ) : null
           }
@@ -1790,7 +1792,7 @@ export function ClientsPage() {
             onRowClick={(client: { id: string }) => navigate(`/clients/${client.id}`)}
             extraActions={[
               {
-                label: "Restablecer contraseña",
+                label: t("clients.restablecerContrasena"),
                 icon: <IconKey size={16} />,
                 onClick: (client: any) => handleSendPasswordReset(client),
                 // Sólo tiene sentido para clientes con cuenta (no descartados y con email)
@@ -1829,9 +1831,9 @@ export function ClientsPage() {
       ) : showLegacyTable && isError ? (
         <EmptyState
           icon={<IconUsers size={48} />}
-          title="Error al cargar clientes"
-          description="No se pudieron obtener los clientes. Comprueba tu conexión e inténtalo de nuevo."
-          actionLabel="Reintentar"
+          title={t("clients.errorAlCargarClientes")}
+          description={t("clients.noSePudieronObtenerLos")}
+          actionLabel={t("clients.reintentar")}
           onAction={() => refetch()}
         />
       ) : showLegacyTable && isLoading ? null : showLegacyTable ? (
@@ -1869,16 +1871,16 @@ export function ClientsPage() {
               radius="xl"
               onClick={() => navigate("/email-templates")}
             >
-              Gestionar plantillas →
+              {t("clients.gestionarPlantillas")}
             </Button>
           </Group>
           {(campaignTemplatesQuery.data || []).length === 0 && !campaignTemplatesQuery.isLoading && (
             <Text size="xs" c="orange">
-              No tienes plantillas para este segmento. Crea una desde "Gestionar plantillas".
+              {t("clients.noTienesPlantillasParaEste")}
             </Text>
           )}
           <Select
-            label="Plantilla"
+            label={t("clients.plantilla")}
             placeholder={campaignTemplatesQuery.isLoading ? "Cargando…" : "Selecciona una plantilla"}
             data={(campaignTemplatesQuery.data || []).map((t) => ({
               value: t.id,
@@ -1894,7 +1896,7 @@ export function ClientsPage() {
           />
           <Group justify="flex-end">
             <Button variant="default" onClick={() => { setCampaignModalOpen(false); setSelectedTemplateId(null); }} radius="xl">
-              Cancelar
+              {t("clients.cancelar")}
             </Button>
             <Button
               loading={sendCampaign.isPending}
@@ -1913,7 +1915,7 @@ export function ClientsPage() {
                 setSelectedRecipients(new Set());
               }}
             >
-              Enviar
+              {t("clients.enviar")}
             </Button>
           </Group>
         </Stack>
@@ -1924,44 +1926,44 @@ export function ClientsPage() {
         onClose={closeClientModal}
         opened={clientModalOpened}
         size="lg"
-        title="Nuevo Cliente"
+        title={t("clients.nuevoCliente")}
         radius="lg"
       >
         <form onSubmit={clientForm.onSubmit(handleCreateClient)}>
           <Stack gap="md">
             <Group grow>
               <TextInput
-                label="Nombre"
-                placeholder="Juan"
+                label={t("clients.nombre")}
+                placeholder={t("clients.juan")}
                 required
                 radius="md"
                 {...clientForm.getInputProps("first_name")}
               />
               <TextInput
-                label="Apellido"
-                placeholder="García"
+                label={t("clients.apellido")}
+                placeholder={t("clients.garcia")}
                 required
                 radius="md"
                 {...clientForm.getInputProps("last_name")}
               />
             </Group>
             <TextInput
-              label="Email"
-              placeholder="juan@email.com"
+              label={t("clients.email")}
+              placeholder={t("clients.juanEmailCom")}
               required
               radius="md"
               {...clientForm.getInputProps("email")}
             />
             <TextInput
-              label="Teléfono"
+              label={t("clients.telefono")}
               placeholder="+34 600 000 000"
               radius="md"
               {...clientForm.getInputProps("phone")}
             />
             <Textarea
-              label="Objetivos"
+              label={t("clients.objetivos")}
               minRows={3}
-              placeholder="Describe los objetivos del cliente..."
+              placeholder={t("clients.describeLosObjetivosDelCliente")}
               radius="md"
               {...clientForm.getInputProps("goals")}
             />
@@ -1971,7 +1973,7 @@ export function ClientsPage() {
                 variant="default"
                 radius="xl"
               >
-                Cancelar
+                {t("clients.cancelar")}
               </Button>
               <Button 
                 loading={createClient.isPending} 
@@ -1988,7 +1990,7 @@ export function ClientsPage() {
                   }
                 }}
               >
-                Crear Cliente
+                {t("clients.crearCliente")}
               </Button>
             </Group>
           </Stack>
@@ -2000,21 +2002,21 @@ export function ClientsPage() {
         onClose={closeTagModal}
         opened={tagModalOpened}
         size="sm"
-        title="Nueva Etiqueta"
+        title={t("clients.nuevaEtiqueta")}
         radius="lg"
       >
         <form onSubmit={tagForm.onSubmit(handleCreateTag)}>
           <Stack gap="md">
             <TextInput
-              label="Nombre"
-              placeholder="VIP, Premium, Nuevo..."
+              label={t("clients.nombre")}
+              placeholder={t("clients.vipPremiumNuevo")}
               required
               radius="md"
               {...tagForm.getInputProps("name")}
             />
             <ColorInput
               format="hex"
-              label="Color"
+              label={t("clients.color")}
               radius="md"
               swatches={[
                 "#5C80BC",
@@ -2034,7 +2036,7 @@ export function ClientsPage() {
                 variant="default"
                 radius="xl"
               >
-                Cancelar
+                {t("clients.cancelar")}
               </Button>
               <Button 
                 loading={createTag.isPending} 
@@ -2051,7 +2053,7 @@ export function ClientsPage() {
                   }
                 }}
               >
-                Crear Etiqueta
+                {t("clients.crearEtiqueta")}
               </Button>
             </Group>
           </Stack>
@@ -2070,37 +2072,37 @@ export function ClientsPage() {
           <Stack gap="md">
             <Group grow>
               <TextInput
-                label="Nombre"
-                placeholder="Juan"
+                label={t("clients.nombre")}
+                placeholder={t("clients.juan")}
                 required
                 radius="md"
                 {...editForm.getInputProps("first_name")}
               />
               <TextInput
-                label="Apellido"
-                placeholder="García"
+                label={t("clients.apellido")}
+                placeholder={t("clients.garcia")}
                 required
                 radius="md"
                 {...editForm.getInputProps("last_name")}
               />
             </Group>
             <TextInput
-              label="Email"
-              placeholder="juan@email.com"
+              label={t("clients.email")}
+              placeholder={t("clients.juanEmailCom")}
               required
               radius="md"
               {...editForm.getInputProps("email")}
             />
             <TextInput
-              label="Teléfono"
+              label={t("clients.telefono")}
               placeholder="+34 600 000 000"
               radius="md"
               {...editForm.getInputProps("phone")}
             />
             <Textarea
-              label="Objetivos"
+              label={t("clients.objetivos")}
               minRows={3}
-              placeholder="Describe los objetivos del cliente..."
+              placeholder={t("clients.describeLosObjetivosDelCliente")}
               radius="md"
               {...editForm.getInputProps("goals")}
             />
@@ -2110,7 +2112,7 @@ export function ClientsPage() {
                 variant="default"
                 radius="xl"
               >
-                Cancelar
+                {t("clients.cancelar")}
               </Button>
               <Button 
                 loading={updateClient.isPending} 
@@ -2127,7 +2129,7 @@ export function ClientsPage() {
                   }
                 }}
               >
-                Guardar Cambios
+                {t("clients.guardarCambios")}
               </Button>
             </Group>
           </Stack>
@@ -2139,7 +2141,7 @@ export function ClientsPage() {
         onClose={handleCloseInviteModal}
         opened={inviteModalOpened}
         size="md"
-        title="Invitar Cliente"
+        title={t("clients.invitarCliente")}
         radius="lg"
       >
         {lastInvitationUrl ? (
@@ -2155,18 +2157,16 @@ export function ClientsPage() {
               <Group gap="sm" mb="sm">
                 <IconCheck size={20} color="#10B981" />
                 <Text fw={600} style={{ color: "#10B981" }}>
-                  ¡Invitación enviada!
+                  {t("clients.invitacionEnviada")}
                 </Text>
               </Group>
               <Text size="sm" c="dimmed">
-                Se ha enviado un email con el enlace de registro al cliente. 
-                El enlace es válido por 7 días.
+                {t("clients.seHaEnviadoUnEmail")}
               </Text>
             </Box>
             
             <Text size="sm" c="dimmed">
-              El cliente recibirá un correo con un enlace para completar su registro 
-              e introducir toda su información personal, objetivos y datos de salud.
+              {t("clients.elClienteRecibiraUnCorreo")}
             </Text>
 
             <Button 
@@ -2181,20 +2181,19 @@ export function ClientsPage() {
                 }
               }}
             >
-              Cerrar
+              {t("clients.cerrar")}
             </Button>
           </Stack>
         ) : (
           <form onSubmit={inviteForm.onSubmit(handleInviteClient)}>
             <Stack gap="md">
               <Text size="sm" c="dimmed">
-                Envía una invitación por email para que el cliente complete su registro 
-                con toda la información que necesitas (datos personales, objetivos, salud, etc.)
+                {t("clients.enviaUnaInvitacionPorEmail")}
               </Text>
               
               <TextInput
-                label="Email del cliente"
-                placeholder="cliente@email.com"
+                label={t("clients.emailDelCliente")}
+                placeholder={t("clients.clienteEmailCom")}
                 required
                 radius="md"
                 leftSection={<IconMail size={16} />}
@@ -2203,37 +2202,37 @@ export function ClientsPage() {
               
               <Group grow>
                 <TextInput
-                  label="Nombre (opcional)"
-                  placeholder="Juan"
+                  label={t("clients.nombreOpcional")}
+                  placeholder={t("clients.juan")}
                   radius="md"
                   {...inviteForm.getInputProps("first_name")}
                 />
                 <TextInput
-                  label="Apellido (opcional)"
-                  placeholder="García"
+                  label={t("clients.apellidoOpcional")}
+                  placeholder={t("clients.garcia")}
                   radius="md"
                   {...inviteForm.getInputProps("last_name")}
                 />
               </Group>
               
               <Textarea
-                label="Mensaje personalizado (opcional)"
-                placeholder="Hola, te invito a unirte a mi programa de entrenamiento..."
+                label={t("clients.mensajePersonalizadoOpcional")}
+                placeholder={t("clients.holaTeInvitoAUnirte")}
                 minRows={3}
                 radius="md"
                 {...inviteForm.getInputProps("message")}
               />
 
               <Select
-                label="Plan de suscripción"
-                placeholder="Selecciona un plan..."
+                label={t("clients.planDeSuscripcion")}
+                placeholder={t("clients.seleccionaUnPlan")}
                 data={[
-                  { value: "", label: "Gratuito — Sin plan de pago" },
+                  { value: "", label: t("clients.gratuitoSinPlanDePago") },
                   ...productOptions,
                 ]}
                 clearable
                 radius="md"
-                description="Selecciona 'Gratuito' para clientes que pagan en efectivo o no requieren pago online"
+                description={t("clients.seleccionaGratuitoParaClientesQue")}
                 {...inviteForm.getInputProps("product_id")}
               />
 
@@ -2243,7 +2242,7 @@ export function ClientsPage() {
                   variant="default"
                   radius="xl"
                 >
-                  Cancelar
+                  {t("clients.cancelar")}
                 </Button>
                 <Button 
                   loading={createInvitation.isPending} 
@@ -2261,7 +2260,7 @@ export function ClientsPage() {
                     }
                   }}
                 >
-                  Enviar Invitación
+                  {t("clients.enviarInvitacion")}
                 </Button>
               </Group>
             </Stack>
@@ -2289,7 +2288,7 @@ export function ClientsPage() {
                 <Text span fw={700}>{clientToDelete?.first_name} {clientToDelete?.last_name}</Text>?
               </Text>
               <Text size="xs" c="red">
-                Esta acción no se puede deshacer. Se borrarán todos los datos del cliente.
+                {t("clients.estaAccionNoSePuede")}
               </Text>
             </>
           ) : (
@@ -2299,13 +2298,13 @@ export function ClientsPage() {
                 <Text span fw={700}>{clientToDelete?.first_name} {clientToDelete?.last_name}</Text>?
               </Text>
               <Text size="xs" c="dimmed">
-                Podrás restaurarlo desde la pestaña Eliminados. Para borrarlo del todo, elimínalo otra vez desde ahí.
+                {t("clients.podrasRestaurarloDesdeLaPestana")}
               </Text>
             </>
           )}
           <Group justify="flex-end">
             <Button variant="default" onClick={() => { closeDeleteConfirm(); setClientToDelete(null); }} radius="xl">
-              Cancelar
+              {t("clients.cancelar")}
             </Button>
             <Button
               color="red"

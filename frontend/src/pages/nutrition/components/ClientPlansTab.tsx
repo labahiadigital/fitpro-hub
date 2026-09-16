@@ -81,7 +81,7 @@ export function ClientPlansTab({
               )}
               <Stack gap={4} mt="sm">
                 <Group justify="space-between">
-                  <Text c="dimmed" size="xs">Calorías</Text>
+                  <Text c="dimmed" size="xs">{"Calorías"}</Text>
                   <Text fw={600} size="xs" style={{ color: "var(--nv-dark)" }}>{Math.round(plan.target_calories || 0)} kcal</Text>
                 </Group>
                 <Group gap={4}>
@@ -92,7 +92,7 @@ export function ClientPlansTab({
               </Stack>
               <Divider my="sm" style={{ borderColor: "var(--border-subtle)" }} />
               <Group gap={6}>
-                <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => onEdit(plan)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>Editar</Button>
+                <Button flex={1} leftSection={<IconEdit size={12} />} onClick={() => onEdit(plan)} size="xs" variant="light" radius="md" styles={{ root: { height: 28 } }}>{"Editar"}</Button>
                 <ActionIcon color="blue" variant="light" radius="md" size="sm" onClick={() => onView(plan.id)}><IconEye size={14} /></ActionIcon>
                 <ActionIcon color="gray" loading={createPending} onClick={() => onDuplicate(plan)} variant="light" radius="md" size="sm"><IconCopy size={14} /></ActionIcon>
                 <ActionIcon color="red" loading={deletePending} onClick={() => onDelete(plan.id, plan.name)} variant="light" radius="md" size="sm"><IconTrash size={14} /></ActionIcon>
@@ -106,11 +106,11 @@ export function ClientPlansTab({
 
   return (
     <EmptyState
-      actionLabel="Crear Plan"
-      description="Crea un plan nutricional personalizado para un cliente."
+      actionLabel={"Crear Plan"}
+      description={"Crea un plan nutricional personalizado para un cliente."}
       icon={<IconUsers size={36} />}
       onAction={onCreate}
-      title="No hay planes de clientes"
+      title={"No hay planes de clientes"}
     />
   );
 }

@@ -133,16 +133,16 @@ export function ClientReportsTab({ clientId }: Props) {
     <Stack gap="md">
       <Group justify="space-between">
         <Text fw={700} size="lg">
-          Reportes de Revisión
+          {"Reportes de Revisión"}
         </Text>
         <Button leftSection={<IconPlus size={16} />} size="sm" onClick={handleNew}>
-          Nueva revisión
+          {"Nueva revisión"}
         </Button>
       </Group>
 
       {(!reports || reports.length === 0) ? (
         <Text c="dimmed" ta="center" py="xl">
-          No hay reportes de revisión para este cliente todavía.
+          {"No hay reportes de revisión para este cliente todavía."}
         </Text>
       ) : (
         reports.map((report) => (
@@ -184,7 +184,7 @@ export function ClientReportsTab({ clientId }: Props) {
             {report.client_feedback && (
               <Box mt="sm" p="sm" style={{ background: "var(--mantine-color-blue-light)", borderRadius: 8 }}>
                 <Text size="xs" fw={600} c="blue" mb={4}>
-                  Feedback del cliente:
+                  {"Feedback del cliente:"}
                 </Text>
                 <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
                   {report.client_feedback}
@@ -204,28 +204,28 @@ export function ClientReportsTab({ clientId }: Props) {
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
             <TextInput
-              label="Título (opcional)"
-              placeholder="Ej: Revisión mensual - Marzo"
+              label={"Título (opcional)"}
+              placeholder={"Ej: Revisión mensual - Marzo"}
               {...form.getInputProps("title")}
             />
             <Textarea
-              label="Notas de la revisión"
-              placeholder="Has adelgazado 1.2kg, buen trabajo. Voy a subir el cardio 10 minutos más. El plan nutricional sigue igual porque estás respondiendo bien..."
+              label={"Notas de la revisión"}
+              placeholder={"Has adelgazado 1.2kg, buen trabajo. Voy a subir el cardio 10 minutos más. El plan nutricional sigue igual porque estás respondiendo bien..."}
               minRows={6}
               autosize
               required
               {...form.getInputProps("body")}
             />
             <Textarea
-              label="Feedback del cliente (opcional)"
-              placeholder="Lo que el cliente ha comentado sobre cómo se siente, adherencia, etc."
+              label={"Feedback del cliente (opcional)"}
+              placeholder={"Lo que el cliente ha comentado sobre cómo se siente, adherencia, etc."}
               minRows={3}
               autosize
               {...form.getInputProps("client_feedback")}
             />
             <Group justify="flex-end">
               <Button variant="subtle" onClick={close}>
-                Cancelar
+                {"Cancelar"}
               </Button>
               <Button
                 type="submit"

@@ -37,6 +37,7 @@ import {
   useDeleteCampaignTemplate,
   useUpdateCampaignTemplate,
 } from "../../hooks/useClientSegments";
+import { useTranslation } from "react-i18next";
 
 const SEGMENT_OPTIONS = [
   { value: "abandoned_cart", label: "Carrito abandonado" },
@@ -75,6 +76,7 @@ const INITIAL_VALUES: FormValues = {
 const PLACEHOLDER_BODY = `Hola {{name}}, \n\nTe escribimos para recordarte que… \n\nUn saludo,\nEl equipo`;
 
 export function EmailTemplatesPage() {
+  const { t } = useTranslation();
   const [segmentFilter, setSegmentFilter] = useState<string>("");
   const { data, isLoading } = useCampaignTemplates(segmentFilter || undefined);
   const createMutation = useCreateCampaignTemplate();
@@ -129,10 +131,10 @@ export function EmailTemplatesPage() {
     try {
       if (editingId) {
         await updateMutation.mutateAsync({ id: editingId, data: payload });
-        notifications.show({ title: "Plantilla actualizada", message: values.name, color: "green" });
+        notifications.show({ title: t("emailTemplates.plantillaActualizada"), message: values.name, color: "green" });
       } else {
         await createMutation.mutateAsync(payload as Omit<CampaignTemplate, "id" | "created_at">);
-        notifications.show({ title: "Plantilla creada", message: values.name, color: "green" });
+        notifications.show({ title: t("emailTemplates.plantillaCreada"), message: values.name, color: "green" });
       }
       closeModal();
       form.reset();
@@ -140,7 +142,7 @@ export function EmailTemplatesPage() {
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       notifications.show({
-        title: "Error al guardar",
+        title: t("emailTemplates.errorAlGuardar"),
         message: detail || "No se pudo guardar la plantilla.",
         color: "red",
       });
@@ -151,7 +153,7 @@ export function EmailTemplatesPage() {
     if (!confirm(`¿Eliminar plantilla "${tpl.name}"?`)) return;
     try {
       await deleteMutation.mutateAsync(tpl.id);
-      notifications.show({ title: "Plantilla eliminada", message: tpl.name, color: "green" });
+      notifications.show({ title: t("emailTemplates.plantillaEliminada"), message: tpl.name, color: "green" });
     } catch {
       // Error handled by mutation
     }
@@ -169,11 +171,11 @@ export function EmailTemplatesPage() {
   return (
     <Container size="xl" py="md">
       <PageHeader
-        title="Plantillas de email"
-        description="Crea plantillas personalizadas para campañas de carrito abandonado y reactivación de clientes inactivos."
+        title={t("emailTemplates.plantillasDeEmail")}
+        description={t("emailTemplates.creaPlantillasPersonalizadasParaCampanas")}
         action={
           <Button leftSection={<IconPlus size={16} />} radius="xl" onClick={handleNew}>
-            Nueva plantilla
+            {t("emailTemplates.nuevaPlantilla")}
           </Button>
         }
       />
@@ -182,16 +184,16 @@ export function EmailTemplatesPage() {
         <Group justify="space-between">
           <Group gap="xs">
             <IconTag size={16} />
-            <Text size="sm" fw={500}>Filtrar por segmento</Text>
+            <Text size="sm" fw={500}>{t("emailTemplates.filtrarPorSegmento")}</Text>
           </Group>
           <Select
             data={[
-              { value: "", label: "Todos" },
+              { value: "", label: t("emailTemplates.todos") },
               ...SEGMENT_OPTIONS,
             ]}
             value={segmentFilter}
             onChange={(v) => setSegmentFilter(v || "")}
-            placeholder="Todos"
+            placeholder={t("emailTemplates.todos")}
             radius="md"
             clearable={false}
             w={220}
@@ -206,9 +208,9 @@ export function EmailTemplatesPage() {
       ) : (data?.length ?? 0) === 0 ? (
         <EmptyState
           icon={<IconMailFast size={48} />}
-          title="Sin plantillas"
-          description="Crea tu primera plantilla para empezar a enviar campañas a tus clientes."
-          actionLabel="Nueva plantilla"
+          title={t("emailTemplates.sinPlantillas")}
+          description={t("emailTemplates.creaTuPrimeraPlantillaPara")}
+          actionLabel={t("emailTemplates.nuevaPlantilla")}
           onAction={handleNew}
         />
       ) : (
@@ -216,12 +218,12 @@ export function EmailTemplatesPage() {
           <Table verticalSpacing="md" highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Nombre</Table.Th>
-                <Table.Th>Segmento</Table.Th>
-                <Table.Th>Asunto</Table.Th>
-                <Table.Th>Descuento</Table.Th>
-                <Table.Th>Código</Table.Th>
-                <Table.Th>Estado</Table.Th>
+                <Table.Th>{t("emailTemplates.nombre")}</Table.Th>
+                <Table.Th>{t("emailTemplates.segmento")}</Table.Th>
+                <Table.Th>{t("emailTemplates.asunto")}</Table.Th>
+                <Table.Th>{t("emailTemplates.descuento")}</Table.Th>
+                <Table.Th>{t("emailTemplates.codigo")}</Table.Th>
+                <Table.Th>{t("emailTemplates.estado")}</Table.Th>
                 <Table.Th></Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -247,19 +249,19 @@ export function EmailTemplatesPage() {
                   </Table.Td>
                   <Table.Td>
                     {tpl.is_active ? (
-                      <Badge color="green" variant="light">Activa</Badge>
+                      <Badge color="green" variant="light">{t("emailTemplates.activa")}</Badge>
                     ) : (
-                      <Badge color="gray" variant="light">Inactiva</Badge>
+                      <Badge color="gray" variant="light">{t("emailTemplates.inactiva")}</Badge>
                     )}
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs" justify="flex-end">
-                      <Tooltip label="Editar">
+                      <Tooltip label={t("emailTemplates.editar")}>
                         <ActionIcon variant="subtle" onClick={() => handleEdit(tpl)}>
                           <IconEdit size={16} />
                         </ActionIcon>
                       </Tooltip>
-                      <Tooltip label="Eliminar">
+                      <Tooltip label={t("emailTemplates.eliminar")}>
                         <ActionIcon
                           variant="subtle"
                           color="red"
@@ -292,28 +294,28 @@ export function EmailTemplatesPage() {
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
             <TextInput
-              label="Nombre interno"
-              placeholder="Ej: Recordatorio carrito 24h"
+              label={t("emailTemplates.nombreInterno")}
+              placeholder={t("emailTemplates.ejRecordatorioCarrito24h")}
               required
               radius="md"
               {...form.getInputProps("name")}
             />
             <Select
-              label="Segmento objetivo"
+              label={t("emailTemplates.segmentoObjetivo")}
               data={SEGMENT_OPTIONS}
               required
               radius="md"
               {...form.getInputProps("target_segment")}
             />
             <TextInput
-              label="Asunto del email"
-              placeholder="Ej: ¡Vuelve y disfruta de un 20%!"
+              label={t("emailTemplates.asuntoDelEmail")}
+              placeholder={t("emailTemplates.ejVuelveYDisfrutaDe")}
               required
               radius="md"
               {...form.getInputProps("subject")}
             />
             <Textarea
-              label="Cuerpo (HTML soportado)"
+              label={t("emailTemplates.cuerpoHtmlSoportado")}
               placeholder={PLACEHOLDER_BODY}
               autosize
               minRows={6}
@@ -325,13 +327,13 @@ export function EmailTemplatesPage() {
             />
             <Group grow>
               <Select
-                label="Tipo de descuento"
+                label={t("emailTemplates.tipoDeDescuento")}
                 data={DISCOUNT_TYPE_OPTIONS}
                 radius="md"
                 {...form.getInputProps("discount_type")}
               />
               <NumberInput
-                label="Valor"
+                label={t("emailTemplates.valor")}
                 placeholder="0"
                 min={0}
                 radius="md"
@@ -339,7 +341,7 @@ export function EmailTemplatesPage() {
                 {...form.getInputProps("discount_value")}
               />
               <TextInput
-                label="Código de cupón"
+                label={t("emailTemplates.codigoDeCupon")}
                 placeholder="VUELVE20"
                 radius="md"
                 disabled={!form.values.discount_type}
@@ -347,7 +349,7 @@ export function EmailTemplatesPage() {
               />
             </Group>
             <Switch
-              label="Plantilla activa"
+              label={t("emailTemplates.plantillaActiva")}
               {...form.getInputProps("is_active", { type: "checkbox" })}
             />
             <Group justify="flex-end" mt="md">
@@ -360,7 +362,7 @@ export function EmailTemplatesPage() {
                 }}
                 radius="xl"
               >
-                Cancelar
+                {t("emailTemplates.cancelar")}
               </Button>
               <Button
                 type="submit"

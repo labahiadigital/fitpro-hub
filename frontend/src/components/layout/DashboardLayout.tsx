@@ -112,76 +112,76 @@ const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number, t: (key: string) => string
   { icon: <IconLayoutDashboard size={20} />, label: t("nav.dashboard"), to: "/dashboard" },
   {
     icon: <IconCalendarEvent size={20} />,
-    label: t("nav.calendarAndTasks"),
+    label: "Calendario y Tareas",
     children: [
-      { icon: <IconCalendarEvent size={18} />, label: t("nav.calendar"), to: "/calendar", requiredResource: "calendar" },
-      { icon: <IconChecklist size={18} />, label: t("nav.tasks"), to: "/tasks", requiredResource: "tasks" },
+      { icon: <IconCalendarEvent size={18} />, label: "Calendario", to: "/calendar", requiredResource: "calendar" },
+      { icon: <IconChecklist size={18} />, label: "Tareas", to: "/tasks", requiredResource: "tasks" },
     ],
   },
-  { icon: <IconUsers size={20} />, label: t("nav.clients"), to: "/clients", requiredResource: "clients" },
+  { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients", requiredResource: "clients" },
   {
     icon: <IconReceipt size={20} />,
-    label: t("nav.billingAndReports"),
+    label: "Facturación y Reportes",
     children: [
-      { icon: <IconReceipt size={18} />, label: t("nav.billing"), to: "/billing", requiredResource: "billing" },
-      { icon: <IconChartBar size={18} />, label: t("nav.reports"), to: "/reports", requiredResource: "reports" },
-      { icon: <IconBuildingStore size={18} />, label: t("nav.suppliers"), to: "/suppliers", requiredResource: "billing" },
+      { icon: <IconReceipt size={18} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
+      { icon: <IconChartBar size={18} />, label: "Reportes", to: "/reports", requiredResource: "reports" },
+      { icon: <IconBuildingStore size={18} />, label: "Proveedores", to: "/suppliers", requiredResource: "billing" },
     ],
   },
   {
     icon: <IconMessages size={20} />,
-    label: t("nav.communication"),
+    label: "Comunicación",
     children: [
-      { icon: <IconMessage size={18} />, label: t("nav.chat"), to: "/chat", badge: unreadCount, requiredResource: "chat" },
-      { icon: <IconMail size={18} />, label: t("nav.emailTemplates"), to: "/email-templates", requiredResource: "chat" },
+      { icon: <IconMessage size={18} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
+      { icon: <IconMail size={18} />, label: "Email", to: "/email-templates", requiredResource: "chat" },
     ],
   },
-  { icon: <IconBarbell size={20} />, label: t("nav.workouts"), to: "/workouts", requiredResource: "workouts" },
-  { icon: <IconSalad size={20} />, label: t("nav.nutrition"), to: "/nutrition", requiredResource: "nutrition" },
+  { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
+  { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
   {
     icon: <IconPackage size={20} />,
-    label: t("nav.catalogAndStock"),
+    label: "Catálogo y Stock",
     children: [
-      { icon: <IconPackage size={18} />, label: t("nav.catalog"), to: "/catalog", requiredResource: "catalog" },
-      { icon: <IconBox size={18} />, label: t("nav.stock"), to: "/stock", requiredResource: "catalog" },
+      { icon: <IconPackage size={18} />, label: "Catálogo", to: "/catalog", requiredResource: "catalog" },
+      { icon: <IconBox size={18} />, label: "Stock", to: "/stock", requiredResource: "catalog" },
     ],
   },
   {
     icon: <IconBuilding size={20} />,
-    label: t("nav.boxesAndMachinery"),
+    label: "Boxes y Maquinaria",
     children: [
-      { icon: <IconBuilding size={18} />, label: t("nav.boxes"), to: "/boxes", requiredResource: "catalog" },
-      { icon: <IconTool size={18} />, label: t("nav.machinery"), to: "/machines", requiredResource: "catalog" },
+      { icon: <IconBuilding size={18} />, label: "Boxes", to: "/boxes", requiredResource: "catalog" },
+      { icon: <IconTool size={18} />, label: "Maquinaria", to: "/machines", requiredResource: "catalog" },
     ],
   },
   {
     icon: <IconForms size={20} />,
-    label: t("nav.formsAndDocs"),
+    label: "Formularios y Docs",
     children: [
-      { icon: <IconForms size={18} />, label: t("nav.forms"), to: "/forms", requiredResource: "forms" },
-      { icon: <IconFileText size={18} />, label: t("nav.documents"), to: "/documents", requiredResource: "documents" },
+      { icon: <IconForms size={18} />, label: "Formularios", to: "/forms", requiredResource: "forms" },
+      { icon: <IconFileText size={18} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
     ],
   },
   {
     icon: <IconUsersGroup size={20} />,
-    label: t("nav.membersAndTeam"),
+    label: "Miembros y equipo",
     children: [
-      { icon: <IconUsers size={18} />, label: t("nav.members"), to: "/team/members", requiredResource: "team" },
-      { icon: <IconUsersGroup size={18} />, label: t("nav.groups"), to: "/team/groups", requiredResource: "team" },
-      { icon: <IconShield size={18} />, label: t("nav.roles"), to: "/team/roles", requiredResource: "team" },
-      { icon: <IconClock size={18} />, label: t("nav.timeClock"), to: "/time-clock", requiredResource: "team" },
+      { icon: <IconUsers size={18} />, label: "Miembros", to: "/team/members", requiredResource: "team" },
+      { icon: <IconUsersGroup size={18} />, label: "Grupos", to: "/team/groups", requiredResource: "team" },
+      { icon: <IconShield size={18} />, label: "Roles", to: "/team/roles", requiredResource: "team" },
+      { icon: <IconClock size={18} />, label: "Control Horario", to: "/time-clock", requiredResource: "team" },
     ],
   },
   {
     icon: <IconTrophy size={20} />,
-    label: t("nav.community"),
+    label: "Comunidad",
     children: [
-      { icon: <IconGift size={18} />, label: t("nav.benefits"), to: "/community/benefits", requiredResource: "community" },
-      { icon: <IconTrophy size={18} />, label: t("nav.gamification"), to: "/community", requiredResource: "community" },
+      { icon: <IconGift size={18} />, label: "Beneficios", to: "/community/benefits", requiredResource: "community" },
+      { icon: <IconTrophy size={18} />, label: "Gamificación", to: "/community", requiredResource: "community" },
     ],
   },
-  { icon: <IconBook size={20} />, label: t("nav.academy"), to: "/lms", requiredResource: "lms" },
-  { icon: <IconVideo size={20} />, label: t("nav.liveClasses"), to: "/live-classes", requiredResource: "live_classes" },
+  { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
+  { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
 ];
 
 function hasPermission(requiredResource: string | undefined, permissions?: Record<string, string[]>): boolean {
@@ -222,11 +222,11 @@ const getClientNavItems = (
   { icon: <IconFileText size={20} />, label: t("nav.myDocuments"), to: "/my-documents" },
   {
     icon: <IconForms size={20} />,
-    label: t("nav.myForms"),
+    label: t("nav.forms"),
     to: "/my-forms",
     badge: pendingFormsTotal,
   },
-  { icon: <IconGift size={20} />, label: t("nav.myBenefits"), to: "/my-community" },
+  { icon: <IconGift size={20} />, label: t("nav.benefits"), to: "/my-community" },
   { icon: <IconBook size={20} />, label: t("nav.academy"), to: "/lms" },
 ];
 
@@ -483,7 +483,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
         {/* Workspace section */}
         <Box px="xs" py="xs">
           <Text c="dimmed" size="10px" fw={700} tt="uppercase" px="xs" pb={4} style={{ letterSpacing: "0.1em" }}>
-            {workspaces.length > 1 ? t("workspace.yourSpaces") : t("workspace.currentSpace")}
+            {workspaces.length > 1 ? "Tus espacios" : "Espacio actual"}
           </Text>
 
           <Stack gap={2}>
@@ -590,7 +590,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
             <Group gap="sm">
               <IconLogout size={16} color="rgba(255,255,255,0.4)" />
               <Text c="rgba(255,255,255,0.5)" size="sm" fw={500}>
-                {t("auth.logout")}
+                {"Cerrar sesión"}
               </Text>
             </Group>
           </UnstyledButton>
@@ -639,7 +639,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   const navEntries = isClient
     ? getClientNavItems(unreadCount, pendingTotal, t)
     : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount, t), user?.permissions);
-  const menuTitle = isClient ? t("nav.mySpace") : t("nav.mainMenu");
+  const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
 
   return (
     <Box
@@ -951,12 +951,12 @@ export function DashboardLayout() {
           <Group gap="md">
             {canInstall && (
               <Tooltip label={t("common.installApp")} withArrow>
-                <UnstyledButton aria-label="Instalar aplicación" onClick={installPWA}>
+                <UnstyledButton aria-label={t("layout.instalarAplicacion")} onClick={installPWA}>
                   <IconDownload size={22} color="var(--nv-text-secondary)" stroke={1.5} />
                 </UnstyledButton>
               </Tooltip>
             )}
-            <UnstyledButton style={{ position: "relative" }} aria-label="Notificaciones" onClick={openNotif}>
+            <UnstyledButton style={{ position: "relative" }} aria-label={t("layout.notificaciones")} onClick={openNotif}>
               <IconBell size={22} color="var(--nv-text-secondary)" stroke={1.5} />
               {(unreadNotifCount > 0 || hasPersistentAlert) && (
                 <Box
@@ -997,13 +997,13 @@ export function DashboardLayout() {
       <Modal
         opened={showIOSGuide}
         onClose={dismissIOSGuide}
-        title="Instalar Trackfiz"
+        title={t("layout.instalarTrackfiz")}
         centered
         radius="lg"
         size="sm"
       >
         <Stack gap="md">
-          <Text size="sm">Para instalar la app en tu iPhone/iPad:</Text>
+          <Text size="sm">{t("layout.paraInstalarLaAppEn")}</Text>
           <Group gap="sm" align="flex-start">
             <Box
               style={{
@@ -1020,7 +1020,7 @@ export function DashboardLayout() {
               <IconShare size={16} color="var(--mantine-color-blue-6)" />
             </Box>
             <Text size="sm" style={{ flex: 1 }}>
-              Pulsa el botón <b>Compartir</b> en la barra inferior de Safari
+              {t("layout.pulsaElBoton")} <b>{t("layout.compartir")}</b> en la barra inferior de Safari
             </Text>
           </Group>
           <Group gap="sm" align="flex-start">
@@ -1039,11 +1039,11 @@ export function DashboardLayout() {
               <IconSquarePlus size={16} color="var(--mantine-color-blue-6)" />
             </Box>
             <Text size="sm" style={{ flex: 1 }}>
-              Selecciona <b>"Añadir a pantalla de inicio"</b>
+              {t("layout.selecciona")} <b>"Añadir a pantalla de inicio"</b>
             </Text>
           </Group>
           <Button onClick={dismissIOSGuide} variant="light" fullWidth radius="md">
-            Entendido
+            {t("layout.entendido")}
           </Button>
         </Stack>
       </Modal>

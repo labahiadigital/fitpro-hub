@@ -63,11 +63,11 @@ function ExerciseAlternativesSection({
         <Text fw={600} size="sm">Ejercicios alternativos para "{exerciseName}"</Text>
       </Group>
       <Text size="xs" c="dimmed" mb="sm">
-        Define qué ejercicios puede usar el cliente como sustituto si la máquina no está disponible o tiene alguna lesión.
+        {"Define qué ejercicios puede usar el cliente como sustituto si la máquina no está disponible o tiene alguna lesión."}
       </Text>
 
       {isLoading ? (
-        <Text size="sm" c="dimmed">Cargando...</Text>
+        <Text size="sm" c="dimmed">{"Cargando..."}</Text>
       ) : (alternatives || []).length > 0 ? (
         <Stack gap={4} mb="sm">
           {(alternatives || []).map((alt) => (
@@ -92,13 +92,13 @@ function ExerciseAlternativesSection({
         </Stack>
       ) : (
         <Text size="xs" c="dimmed" mb="sm" ta="center" py="xs">
-          Sin alternativas definidas. Añade ejercicios equivalentes para que el cliente pueda sustituir.
+          {"Sin alternativas definidas. Añade ejercicios equivalentes para que el cliente pueda sustituir."}
         </Text>
       )}
 
       <TextInput
         size="xs"
-        placeholder="Buscar ejercicio para añadir como alternativa..."
+        placeholder={"Buscar ejercicio para añadir como alternativa..."}
         leftSection={<IconSearch size={12} />}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -138,7 +138,7 @@ function ExerciseAlternativesSection({
               </Group>
             ))}
             {filtered.length === 0 && (
-              <Text size="xs" c="dimmed" ta="center" py="xs">No se encontraron ejercicios</Text>
+              <Text size="xs" c="dimmed" ta="center" py="xs">{"No se encontraron ejercicios"}</Text>
             )}
           </Stack>
         </ScrollArea>
@@ -257,7 +257,7 @@ export function ExerciseFormModal({
       )}
       {editingExercise?.is_global && (
         <Group gap="sm" mb="sm">
-          <Badge color="gray" variant="light" size="sm">Dato del sistema — solo lectura</Badge>
+          <Badge color="gray" variant="light" size="sm">{"Dato del sistema — solo lectura"}</Badge>
           {onCloneAsOwn && (
             <Button
               size="xs"
@@ -266,7 +266,7 @@ export function ExerciseFormModal({
               leftSection={<IconCopy size={14} />}
               onClick={() => onCloneAsOwn(editingExercise)}
             >
-              Crear copia propia
+              {"Crear copia propia"}
             </Button>
           )}
         </Group>
@@ -274,32 +274,32 @@ export function ExerciseFormModal({
       <form onSubmit={exerciseForm.onSubmit(onSubmit)}>
         <Stack>
           <TextInput
-            label="Nombre"
-            placeholder="Press de Banca"
+            label={"Nombre"}
+            placeholder={"Press de Banca"}
             required
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("name")}
           />
 
           <TextInput
-            label="Alias"
-            placeholder="Nombre alternativo (ej: Bench Press)"
+            label={"Alias"}
+            placeholder={"Nombre alternativo (ej: Bench Press)"}
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("alias")}
           />
 
           <Textarea
-            label="Descripción"
+            label={"Descripción"}
             minRows={2}
-            placeholder="Breve descripción del ejercicio..."
+            placeholder={"Breve descripción del ejercicio..."}
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("description")}
           />
 
           <Textarea
-            label="Instrucciones"
+            label={"Instrucciones"}
             minRows={3}
-            placeholder="Pasos para realizar el ejercicio correctamente..."
+            placeholder={"Pasos para realizar el ejercicio correctamente..."}
             disabled={editingExercise?.is_global}
             {...exerciseForm.getInputProps("instructions")}
           />
@@ -307,15 +307,15 @@ export function ExerciseFormModal({
           <Group grow>
             <MultiSelect
               data={muscleGroups}
-              label="Grupos musculares"
-              placeholder="Selecciona"
+              label={"Grupos musculares"}
+              placeholder={"Selecciona"}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("muscle_groups")}
             />
             <MultiSelect
               data={equipmentOptions}
-              label="Equipamiento"
-              placeholder="Selecciona"
+              label={"Equipamiento"}
+              placeholder={"Selecciona"}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("equipment")}
             />
@@ -328,7 +328,7 @@ export function ExerciseFormModal({
                 { value: "intermediate", label: "Intermedio" },
                 { value: "advanced", label: "Avanzado" },
               ]}
-              label="Dificultad"
+              label={"Dificultad"}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("difficulty")}
             />
@@ -341,17 +341,17 @@ export function ExerciseFormModal({
                 { value: "calentamiento", label: "Calentamiento" },
                 { value: "estiramiento", label: "Estiramiento" },
               ]}
-              label="Categoría"
+              label={"Categoría"}
               disabled={editingExercise?.is_global}
               {...exerciseForm.getInputProps("category")}
             />
           </Group>
 
           <Stack gap={4}>
-            <Text size="sm" fw={500}>Imagen</Text>
+            <Text size="sm" fw={500}>{"Imagen"}</Text>
             <Group gap="xs" align="flex-end" wrap="nowrap">
               <TextInput
-                placeholder="URL de la imagen o súbela con el botón"
+                placeholder={"URL de la imagen o súbela con el botón"}
                 leftSection={<IconPhoto size={14} />}
                 style={{ flex: 1 }}
                 disabled={isReadOnly}
@@ -364,7 +364,7 @@ export function ExerciseFormModal({
                 disabled={isReadOnly}
                 onClick={() => imageInputRef.current?.click()}
               >
-                Subir
+                {"Subir"}
               </Button>
               <input
                 ref={imageInputRef}
@@ -378,12 +378,12 @@ export function ExerciseFormModal({
               />
             </Group>
             <Text size="xs" c="dimmed">
-              La imagen se guarda en el almacenamiento privado de tu workspace (máx. 8 MB).
+              {"La imagen se guarda en el almacenamiento privado de tu workspace (máx. 8 MB)."}
             </Text>
           </Stack>
 
           <TextInput
-            label="Vídeo (URL)"
+            label={"Vídeo (URL)"}
             placeholder="https://youtube.com/... o enlace directo a un .mp4"
             leftSection={<IconVideo size={14} />}
             disabled={isReadOnly}
@@ -402,12 +402,12 @@ export function ExerciseFormModal({
                   }}
                   loading={deletePending}
                 >
-                  Eliminar
+                  {"Eliminar"}
                 </Button>
               )}
               <Box style={{ flex: 1 }} />
               <Button onClick={onClose} variant="default">
-                Cancelar
+                {"Cancelar"}
               </Button>
               <Button loading={createPending || updatePending} type="submit">
                 {editingExercise ? "Guardar Cambios" : "Crear Ejercicio"}
@@ -417,7 +417,7 @@ export function ExerciseFormModal({
           {editingExercise?.is_global && (
             <Group justify="flex-end" mt="md">
               <Button onClick={onClose} variant="default">
-                Cerrar
+                {"Cerrar"}
               </Button>
             </Group>
           )}

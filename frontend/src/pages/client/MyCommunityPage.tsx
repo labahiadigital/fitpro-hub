@@ -33,8 +33,10 @@ import {
   communityBenefitsApi,
   type CommunityBenefit,
 } from "../../services/api";
+import { useTranslation } from "react-i18next";
 
 export function MyCommunityPage() {
+  const { t } = useTranslation();
   const { data: benefits = [], isLoading } = useQuery({
     queryKey: ["my-community-benefits"],
     queryFn: async () => {
@@ -46,8 +48,8 @@ export function MyCommunityPage() {
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Beneficios"
-        subtitle="Códigos y descuentos compartidos por tu entrenador"
+        title={t("myCommunity.beneficios")}
+        subtitle={t("myCommunity.codigosYDescuentosCompartidosPor")}
       />
 
       {isLoading ? (
@@ -58,10 +60,9 @@ export function MyCommunityPage() {
         <Paper p="xl" withBorder radius="md">
           <Stack align="center" gap="sm">
             <IconGift size={36} color="var(--mantine-color-gray-5)" />
-            <Text fw={600}>Aún no hay beneficios disponibles</Text>
+            <Text fw={600}>{t("myCommunity.aunNoHayBeneficiosDisponibles")}</Text>
             <Text size="sm" c="dimmed" ta="center" maw={420}>
-              Cuando tu entrenador comparta códigos de descuento o enlaces
-              recomendados aparecerán aquí.
+              {t("myCommunity.cuandoTuEntrenadorCompartaCodigos")}
             </Text>
           </Stack>
         </Paper>
@@ -110,7 +111,7 @@ export function MyCommunityPage() {
                             onClick={copy}
                             size="lg"
                             radius="md"
-                            aria-label="Copiar código"
+                            aria-label={t("myCommunity.copiarCodigo")}
                           >
                             {copied ? (
                               <IconCheck size={16} />
@@ -132,7 +133,7 @@ export function MyCommunityPage() {
                     color="yellow"
                     rightSection={<IconExternalLink size={16} />}
                   >
-                    Comprar aquí
+                    {t("myCommunity.comprarAqui")}
                   </Button>
                 )}
               </Stack>
@@ -143,8 +144,7 @@ export function MyCommunityPage() {
 
       <Box mt="xl">
         <Text size="xs" c="dimmed" ta="center">
-          Estos beneficios están disponibles gracias a tu entrenador. Los
-          descuentos pueden tener fecha de caducidad.
+          {t("myCommunity.estosBeneficiosEstanDisponiblesGracias")}
         </Text>
       </Box>
     </Container>

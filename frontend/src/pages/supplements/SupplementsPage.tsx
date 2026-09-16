@@ -4,16 +4,18 @@ import { IconPill, IconUsers } from "@tabler/icons-react";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { SupplementLibrary } from "../../components/supplements/SupplementLibrary";
+import { useTranslation } from "react-i18next";
 
 export function SupplementsPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("library");
 
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Suplementación"
-        description="Gestiona tu biblioteca de suplementos y recomendaciones"
+        title={t("supplements.suplementacion")}
+        description={t("supplements.gestionaTuBibliotecaDeSuplementos")}
       />
 
       {isMobile && (
@@ -21,8 +23,8 @@ export function SupplementsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "library", label: "Biblioteca de Suplementos" },
-            { value: "recommendations", label: "Recomendaciones (Próximamente)" },
+            { value: "library", label: t("supplements.bibliotecaDeSuplementos") },
+            { value: "recommendations", label: t("supplements.recomendacionesProximamente") },
           ]}
           size="sm"
           radius="md"
@@ -33,12 +35,12 @@ export function SupplementsPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="library" leftSection={<IconPill size={14} />}>
-            Biblioteca de Suplementos
+            {t("supplements.bibliotecaDeSuplementos")}
           </Tabs.Tab>
           <Tabs.Tab value="recommendations" leftSection={<IconUsers size={14} />}>
-            Recomendaciones
+            {t("supplements.recomendaciones")}
             <Badge ml="xs" size="xs" color="blue">
-              Próximamente
+              {t("supplements.proximamente")}
             </Badge>
           </Tabs.Tab>
         </Tabs.List>
@@ -50,7 +52,7 @@ export function SupplementsPage() {
 
         <Tabs.Panel value="recommendations">
           <Box p="xl" ta="center">
-            <Text c="dimmed">Próximamente: Gestión de recomendaciones de suplementos por cliente</Text>
+            <Text c="dimmed">{t("supplements.proximamenteGestionDeRecomendacionesDe")}</Text>
           </Box>
         </Tabs.Panel>
       </Tabs>

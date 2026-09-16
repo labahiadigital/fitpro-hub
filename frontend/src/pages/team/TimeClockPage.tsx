@@ -60,6 +60,7 @@ import {
   useCreateHoliday,
   useDeleteHoliday,
 } from "../../hooks/useTimeClock";
+import { useTranslation } from "react-i18next";
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
   vacaciones: "Vacaciones",
@@ -123,6 +124,7 @@ function LiveClock({ size = "xl" }: { size?: string }) {
 // ─── Tab: Fichar ────────────────────────────────────────────────────────────
 
 function ClockTab() {
+  const { t } = useTranslation();
   const { data: status, isLoading } = useClockStatus();
   const { user } = useAuthStore();
   const clockIn = useClockIn();
@@ -257,9 +259,9 @@ function ClockTab() {
               <ThemeIcon variant="light" color="gray" size={60} radius="xl">
                 <IconClock size={32} />
               </ThemeIcon>
-              <Text fw={600} size="lg">Sin fichar</Text>
+              <Text fw={600} size="lg">{t("team.sinFichar")}</Text>
               <TextInput
-                placeholder="Justificación (opcional)"
+                placeholder={t("team.justificacionOpcional")}
                 size="sm"
                 radius="md"
                 w="100%"
@@ -274,7 +276,7 @@ function ClockTab() {
                 loading={clockIn.isPending}
                 onClick={() => handleClockAction("in")}
               >
-                Entrada jornada
+                {t("team.entradaJornada")}
               </Button>
             </>
           ) : (
@@ -290,16 +292,16 @@ function ClockTab() {
               </Text>
               <Group gap="lg" justify="center">
                 <Box ta="center">
-                  <Text size="xs" c="dimmed">Neto trabajado</Text>
+                  <Text size="xs" c="dimmed">{t("team.netoTrabajado")}</Text>
                   <Text fw={600} size="sm">{formatMinutes(status?.net_minutes_today ?? 0)}</Text>
                 </Box>
                 <Box ta="center">
-                  <Text size="xs" c="dimmed">Restante jornada</Text>
+                  <Text size="xs" c="dimmed">{t("team.restanteJornada")}</Text>
                   <Text fw={600} size="sm">{remaining}</Text>
                 </Box>
               </Group>
               <TextInput
-                placeholder="Justificación (opcional)"
+                placeholder={t("team.justificacionOpcional")}
                 size="sm"
                 radius="md"
                 w="100%"
@@ -322,7 +324,7 @@ function ClockTab() {
                   loading={clockOut.isPending}
                   onClick={() => handleClockAction("out")}
                 >
-                  Salida jornada
+                  {t("team.salidaJornada")}
                 </Button>
               </SimpleGrid>
             </>
@@ -332,7 +334,7 @@ function ClockTab() {
 
       {myRecordsToday.length > 0 && (
         <Paper shadow="xs" radius="lg" p="md" w="100%" maw={440} withBorder>
-          <Text fw={600} size="sm" mb="xs">Fichajes de hoy</Text>
+          <Text fw={600} size="sm" mb="xs">{t("team.fichajesDeHoy")}</Text>
           <Stack gap={4}>
             {myRecordsToday.map((r: any) => (
               <Group key={r.id} gap="xs" justify="space-between">
@@ -353,6 +355,7 @@ function ClockTab() {
 // ─── Tab: Registros ─────────────────────────────────────────────────────────
 
 function RecordsTab() {
+  const { t } = useTranslation();
   const { data: members = [] } = useTeamMembers();
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
@@ -403,16 +406,16 @@ function RecordsTab() {
             const now = new Date();
             setStartDate(new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
             setEndDate(now.toISOString());
-          }}>Este mes</Button>
+          }}>{t("team.esteMes")}</Button>
         </Group>
         <Button size="xs" variant="light" color="green" leftSection={<IconDownload size={14} />} onClick={handleExport}>
-          Exportar CSV
+          {t("team.exportarCsv")}
         </Button>
       </Group>
 
       <Group>
         <DatePickerInput
-          placeholder="Desde"
+          placeholder={t("team.desde")}
           value={startDate}
           onChange={setStartDate}
           clearable
@@ -420,7 +423,7 @@ function RecordsTab() {
           w={150}
         />
         <DatePickerInput
-          placeholder="Hasta"
+          placeholder={t("team.hasta")}
           value={endDate}
           onChange={setEndDate}
           clearable
@@ -428,7 +431,7 @@ function RecordsTab() {
           w={150}
         />
         <Select
-          placeholder="Todos los usuarios"
+          placeholder={t("team.todosLosUsuarios")}
           data={memberOptions}
           value={userId}
           onChange={setUserId}
@@ -443,22 +446,22 @@ function RecordsTab() {
       {isLoading ? (
         <Loader mx="auto" mt="xl" />
       ) : records.length === 0 ? (
-        <Text c="dimmed" ta="center" py="xl">No hay registros para el filtro seleccionado</Text>
+        <Text c="dimmed" ta="center" py="xl">{t("team.noHayRegistrosParaEl")}</Text>
       ) : (
         <Table.ScrollContainer minWidth={800}>
           <Table striped highlightOnHover withTableBorder withColumnBorders>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Usuario</Table.Th>
-                <Table.Th>Fecha Entrada</Table.Th>
-                <Table.Th>Entrada</Table.Th>
-                <Table.Th>Fecha Salida</Table.Th>
-                <Table.Th>Salida</Table.Th>
-                <Table.Th>Pausas</Table.Th>
-                <Table.Th>Tiempo Neto</Table.Th>
-                <Table.Th>Estado</Table.Th>
-                <Table.Th>Notas</Table.Th>
-                <Table.Th>Acciones</Table.Th>
+                <Table.Th>{t("team.usuario")}</Table.Th>
+                <Table.Th>{t("team.fechaEntrada")}</Table.Th>
+                <Table.Th>{t("team.entrada")}</Table.Th>
+                <Table.Th>{t("team.fechaSalida")}</Table.Th>
+                <Table.Th>{t("team.salida")}</Table.Th>
+                <Table.Th>{t("team.pausas")}</Table.Th>
+                <Table.Th>{t("team.tiempoNeto")}</Table.Th>
+                <Table.Th>{t("team.estado")}</Table.Th>
+                <Table.Th>{t("team.notas")}</Table.Th>
+                <Table.Th>{t("team.acciones")}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -478,7 +481,7 @@ function RecordsTab() {
                   </Table.Td>
                   <Table.Td maw={150}><Text size="xs" lineClamp={1}>{r.notes || "-"}</Text></Table.Td>
                   <Table.Td>
-                    <Tooltip label="Eliminar">
+                    <Tooltip label={t("team.eliminar")}>
                       <ActionIcon variant="light" color="red" size="sm" onClick={() => deleteRecord.mutate(r.id)}>
                         <IconTrash size={14} />
                       </ActionIcon>
@@ -497,6 +500,7 @@ function RecordsTab() {
 // ─── Tab: Solicitudes ───────────────────────────────────────────────────────
 
 function LeaveRequestsTab() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const { data: members = [] } = useTeamMembers();
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -579,39 +583,39 @@ function LeaveRequestsTab() {
     <Stack gap="md">
       <SimpleGrid cols={{ base: 2, sm: 4 }}>
         <Card shadow="xs" radius="md" p="md" withBorder>
-          <Text size="xs" c="dimmed">Total</Text>
+          <Text size="xs" c="dimmed">{t("team.total")}</Text>
           <Text fw={700} size="xl">{kpi.total}</Text>
         </Card>
         <Card shadow="xs" radius="md" p="md" withBorder>
-          <Text size="xs" c="dimmed">Pendientes</Text>
+          <Text size="xs" c="dimmed">{t("team.pendientes")}</Text>
           <Text fw={700} size="xl" c="yellow">{kpi.pending}</Text>
         </Card>
         <Card shadow="xs" radius="md" p="md" withBorder>
-          <Text size="xs" c="dimmed">Aprobadas</Text>
+          <Text size="xs" c="dimmed">{t("team.aprobadas")}</Text>
           <Text fw={700} size="xl" c="green">{kpi.approved}</Text>
         </Card>
         <Card shadow="xs" radius="md" p="md" withBorder>
-          <Text size="xs" c="dimmed">Rechazadas</Text>
+          <Text size="xs" c="dimmed">{t("team.rechazadas")}</Text>
           <Text fw={700} size="xl" c="red">{kpi.rejected}</Text>
         </Card>
       </SimpleGrid>
 
       <Group justify="space-between">
         <Group gap="xs">
-          <Select size="xs" placeholder="Estado" data={[
-            { value: "pendiente", label: "Pendiente" },
-            { value: "aprobada", label: "Aprobada" },
-            { value: "rechazada", label: "Rechazada" },
+          <Select size="xs" placeholder={t("team.estado")} data={[
+            { value: "pendiente", label: t("team.pendiente") },
+            { value: "aprobada", label: t("team.aprobada") },
+            { value: "rechazada", label: t("team.rechazada") },
           ]} value={statusFilter} onChange={setStatusFilter} clearable w={140} />
-          <Select size="xs" placeholder="Tipo" data={Object.entries(LEAVE_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} value={typeFilter} onChange={setTypeFilter} clearable w={180} />
-          <Select size="xs" placeholder="Usuario" data={memberOptions} value={userFilter} onChange={setUserFilter} clearable searchable w={200} />
+          <Select size="xs" placeholder={t("team.tipo")} data={Object.entries(LEAVE_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} value={typeFilter} onChange={setTypeFilter} clearable w={180} />
+          <Select size="xs" placeholder={t("team.usuario")} data={memberOptions} value={userFilter} onChange={setUserFilter} clearable searchable w={200} />
         </Group>
         <Group gap="xs">
           <Button size="xs" variant="light" leftSection={<IconSunHigh size={14} />} onClick={openHoliday}>
-            Solicitud Festivos
+            {t("team.solicitudFestivos")}
           </Button>
           <Button size="xs" leftSection={<IconPlus size={14} />} onClick={open}>
-            Añadir Solicitud
+            {t("team.anadirSolicitud")}
           </Button>
         </Group>
       </Group>
@@ -619,7 +623,7 @@ function LeaveRequestsTab() {
       {isLoading ? (
         <Loader mx="auto" mt="xl" />
       ) : leaves.length === 0 ? (
-        <Text c="dimmed" ta="center" py="xl">No hay solicitudes</Text>
+        <Text c="dimmed" ta="center" py="xl">{t("team.noHaySolicitudes")}</Text>
       ) : (
         <Stack gap="sm">
           {leaves.map((l) => (
@@ -638,12 +642,12 @@ function LeaveRequestsTab() {
                   <Text size="xs" c="dimmed">{formatDateShort(l.start_date)} → {formatDateShort(l.end_date)}</Text>
                   {l.status === "pendiente" && user?.role === "owner" && (
                     <>
-                      <Tooltip label="Aprobar">
+                      <Tooltip label={t("team.aprobar")}>
                         <ActionIcon variant="light" color="green" size="sm" onClick={() => approveLeave.mutate(l.id)}>
                           <IconCheck size={14} />
                         </ActionIcon>
                       </Tooltip>
-                      <Tooltip label="Rechazar">
+                      <Tooltip label={t("team.rechazar")}>
                         <ActionIcon variant="light" color="red" size="sm" onClick={() => rejectLeave.mutate(l.id)}>
                           <IconX size={14} />
                         </ActionIcon>
@@ -661,7 +665,7 @@ function LeaveRequestsTab() {
       {/* Holidays list */}
       {holidays.length > 0 && (
         <>
-          <Divider label="Festivos configurados" />
+          <Divider label={t("team.festivosConfigurados")} />
           <Stack gap="xs">
             {holidays.map((h) => (
               <Group key={h.id} justify="space-between">
@@ -679,30 +683,30 @@ function LeaveRequestsTab() {
       )}
 
       {/* New Leave Modal */}
-      <Modal opened={opened} onClose={close} title="Nueva Solicitud de Ausencia" centered>
+      <Modal opened={opened} onClose={close} title={t("team.nuevaSolicitudDeAusencia")} centered>
         <Stack>
           <Select
-            label="Tipo de ausencia"
+            label={t("team.tipoDeAusencia")}
             data={Object.entries(LEAVE_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))}
             value={leaveType}
             onChange={(v) => setLeaveType(v || "vacaciones")}
           />
-          <DatePickerInput label="Fecha inicio" value={leaveStart} onChange={setLeaveStart} />
-          <DatePickerInput label="Fecha fin" value={leaveEnd} onChange={setLeaveEnd} />
-          <Textarea label="Notas (opcional)" value={leaveNotes} onChange={(e) => setLeaveNotes(e.currentTarget.value)} />
+          <DatePickerInput label={t("team.fechaInicio")} value={leaveStart} onChange={setLeaveStart} />
+          <DatePickerInput label={t("team.fechaFin")} value={leaveEnd} onChange={setLeaveEnd} />
+          <Textarea label={t("team.notasOpcional")} value={leaveNotes} onChange={(e) => setLeaveNotes(e.currentTarget.value)} />
           <Button onClick={handleCreateLeave} loading={createLeave.isPending} disabled={!leaveStart || !leaveEnd}>
-            Crear Solicitud
+            {t("team.crearSolicitud")}
           </Button>
         </Stack>
       </Modal>
 
       {/* New Holiday Modal */}
-      <Modal opened={holidayOpened} onClose={closeHoliday} title="Añadir Festivo" centered>
+      <Modal opened={holidayOpened} onClose={closeHoliday} title={t("team.anadirFestivo")} centered>
         <Stack>
-          <DatePickerInput label="Fecha" value={holidayDate} onChange={setHolidayDate} />
-          <TextInput label="Nombre del festivo" value={holidayName} onChange={(e) => setHolidayName(e.currentTarget.value)} />
+          <DatePickerInput label={t("team.fecha")} value={holidayDate} onChange={setHolidayDate} />
+          <TextInput label={t("team.nombreDelFestivo")} value={holidayName} onChange={(e) => setHolidayName(e.currentTarget.value)} />
           <Button onClick={handleCreateHoliday} loading={createHoliday.isPending} disabled={!holidayDate || !holidayName.trim()}>
-            Añadir Festivo
+            {t("team.anadirFestivo")}
           </Button>
         </Stack>
       </Modal>
@@ -713,6 +717,7 @@ function LeaveRequestsTab() {
 // ─── Tab: Calendario ────────────────────────────────────────────────────────
 
 function CalendarTab() {
+  const { t } = useTranslation();
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
@@ -785,11 +790,11 @@ function CalendarTab() {
               <Button size="xs" variant="light" onClick={goPrev}>←</Button>
               <Text fw={600}>{monthNames[month.month]} {month.year}</Text>
               <Button size="xs" variant="light" onClick={goNext}>→</Button>
-              <Button size="xs" variant="subtle" onClick={goToday}>Hoy</Button>
+              <Button size="xs" variant="subtle" onClick={goToday}>{t("team.hoy")}</Button>
             </Group>
             <Group gap="xs">
-              <Select size="xs" placeholder="Tipo" data={Object.entries(LEAVE_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} value={typeFilter} onChange={setTypeFilter} clearable w={160} />
-              <Select size="xs" placeholder="Usuario" data={memberOptions} value={userFilter} onChange={setUserFilter} clearable searchable w={180} />
+              <Select size="xs" placeholder={t("team.tipo")} data={Object.entries(LEAVE_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} value={typeFilter} onChange={setTypeFilter} clearable w={160} />
+              <Select size="xs" placeholder={t("team.usuario")} data={memberOptions} value={userFilter} onChange={setUserFilter} clearable searchable w={180} />
             </Group>
           </Group>
 
@@ -843,7 +848,7 @@ function CalendarTab() {
       <Grid.Col span={{ base: 12, md: 3 }}>
         <Stack gap="md">
           <Paper shadow="xs" radius="md" p="sm" withBorder>
-            <Text size="sm" fw={600} mb="xs">Estadísticas del mes</Text>
+            <Text size="sm" fw={600} mb="xs">{t("team.estadisticasDelMes")}</Text>
             <Text size="xs" c="dimmed">Total solicitudes: {monthStats.total}</Text>
             {Object.entries(monthStats.byType).map(([type, count]) => (
               <Group key={type} gap={4} mt={2}>
@@ -854,7 +859,7 @@ function CalendarTab() {
           </Paper>
 
           <Paper shadow="xs" radius="md" p="sm" withBorder>
-            <Text size="sm" fw={600} mb="xs">Leyenda</Text>
+            <Text size="sm" fw={600} mb="xs">{t("team.leyenda")}</Text>
             <Stack gap={4}>
               {Object.entries(LEAVE_TYPE_LABELS).map(([key, label]) => (
                 <Group key={key} gap={6}>
@@ -864,15 +869,15 @@ function CalendarTab() {
               ))}
               <Group gap={6}>
                 <Badge size="xs" color="orange" variant="filled" w={14} h={14} p={0} style={{ borderRadius: 4 }} />
-                <Text size="xs">Festivo</Text>
+                <Text size="xs">{t("team.festivo")}</Text>
               </Group>
             </Stack>
           </Paper>
 
           <Paper shadow="xs" radius="md" p="sm" withBorder>
-            <Text size="sm" fw={600} mb="xs">Próximas ausencias</Text>
+            <Text size="sm" fw={600} mb="xs">{t("team.proximasAusencias")}</Text>
             {upcomingLeaves.length === 0 ? (
-              <Text size="xs" c="dimmed">Sin ausencias próximas</Text>
+              <Text size="xs" c="dimmed">{t("team.sinAusenciasProximas")}</Text>
             ) : (
               <Stack gap={4}>
                 {upcomingLeaves.map((l) => (
@@ -895,21 +900,22 @@ function CalendarTab() {
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function TimeClockPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("clock");
 
   return (
     <Container size="xl" py="md">
       <PageHeader
-        title="Control Horario"
-        description="Gestiona fichajes, solicitudes de ausencia y calendario del equipo"
+        title={t("team.controlHorario")}
+        description={t("team.gestionaFichajesSolicitudesDeAusencia")}
       />
 
       <Tabs value={activeTab} onChange={(v) => setActiveTab(v || "clock")} mb="xl">
         <Tabs.List mb="lg">
-          <Tabs.Tab value="clock" leftSection={<IconClock size={16} />}>Fichar</Tabs.Tab>
-          <Tabs.Tab value="records" leftSection={<IconListDetails size={16} />}>Registros</Tabs.Tab>
-          <Tabs.Tab value="requests" leftSection={<IconUmbrellaFilled size={16} />}>Solicitudes</Tabs.Tab>
-          <Tabs.Tab value="calendar" leftSection={<IconCalendar size={16} />}>Calendario</Tabs.Tab>
+          <Tabs.Tab value="clock" leftSection={<IconClock size={16} />}>{t("team.fichar")}</Tabs.Tab>
+          <Tabs.Tab value="records" leftSection={<IconListDetails size={16} />}>{t("team.registros")}</Tabs.Tab>
+          <Tabs.Tab value="requests" leftSection={<IconUmbrellaFilled size={16} />}>{t("team.solicitudes")}</Tabs.Tab>
+          <Tabs.Tab value="calendar" leftSection={<IconCalendar size={16} />}>{t("team.calendario")}</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="clock"><ClockTab /></Tabs.Panel>

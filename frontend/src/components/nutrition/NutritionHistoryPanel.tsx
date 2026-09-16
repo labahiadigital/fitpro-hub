@@ -63,7 +63,7 @@ export function NutritionHistoryPanel({
   history,
   onClear,
   isClearing,
-}: NutritionHistoryPanelProps) {
+}: NutritionHistoryPanelProps) {
   const [open, setOpen] = useState(false);
 
   // Ordenar de más reciente a más antigua
@@ -116,7 +116,7 @@ export function NutritionHistoryPanel({
         >
           {sorted.length === 0 ? (
             <Text size="sm" c="dimmed" ta="center" py="xl">
-              Aún no hay objetivos nutricionales guardados en el histórico.
+              {"Aún no hay objetivos nutricionales guardados en el histórico."}
             </Text>
           ) : (
             <Stack gap="sm">
@@ -132,18 +132,18 @@ export function NutritionHistoryPanel({
                 >
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Fecha</Table.Th>
-                      <Table.Th>Peso</Table.Th>
+                      <Table.Th>{"Fecha"}</Table.Th>
+                      <Table.Th>{"Peso"}</Table.Th>
                       <Table.Th>% Grasa</Table.Th>
-                      <Table.Th>Actividad</Table.Th>
-                      <Table.Th>Objetivo</Table.Th>
-                      <Table.Th>Fórmula</Table.Th>
+                      <Table.Th>{"Actividad"}</Table.Th>
+                      <Table.Th>{"Objetivo"}</Table.Th>
+                      <Table.Th>{"Fórmula"}</Table.Th>
                       <Table.Th>BMR</Table.Th>
                       <Table.Th>TDEE</Table.Th>
-                      <Table.Th>Calorías</Table.Th>
-                      <Table.Th>Proteínas</Table.Th>
-                      <Table.Th>Carbos</Table.Th>
-                      <Table.Th>Grasas</Table.Th>
+                      <Table.Th>{"Calorías"}</Table.Th>
+                      <Table.Th>{"Proteínas"}</Table.Th>
+                      <Table.Th>{"Carbos"}</Table.Th>
+                      <Table.Th>{"Grasas %"}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -216,7 +216,7 @@ export function NutritionHistoryPanel({
                   loading={isClearing}
                   onClick={onClear}
                 >
-                  Vaciar histórico
+                  {"Vaciar histórico"}
                 </Button>
                 <Button
                   size="xs"
@@ -225,7 +225,7 @@ export function NutritionHistoryPanel({
                   leftSection={<IconChevronUp size={14} />}
                   onClick={() => setOpen(false)}
                 >
-                  Ocultar histórico
+                  {"Ocultar histórico"}
                 </Button>
               </Group>
             </Stack>

@@ -126,7 +126,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
               <IconInbox size={14} />
             </ThemeIcon>
             <Text fw={600} size="sm">
-              Bandeja de Entrada
+              {"Bandeja de Entrada"}
             </Text>
             {unreadCount > 0 && (
               <Badge color="red" size="sm" circle>
@@ -135,7 +135,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
             )}
           </Group>
           <Group gap="xs">
-            <Tooltip label="Actualizar">
+            <Tooltip label={"Actualizar"}>
               <ActionIcon
                 color="gray"
                 variant="subtle"
@@ -193,7 +193,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
                         </Text>
                         {message.isImportant && (
                           <Badge color="red" size="xs" variant="light">
-                            Importante
+                            {"Importante"}
                           </Badge>
                         )}
                       </Group>
@@ -245,7 +245,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
                       )}
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label="Eliminar">
+                  <Tooltip label={"Eliminar"}>
                     <ActionIcon
                       color="red"
                       variant="subtle"
@@ -267,7 +267,7 @@ export function InboxPanel({ maxHeight = 300, onMessageClick }: InboxPanelProps)
                 <IconInbox size={20} />
               </ThemeIcon>
               <Text c="dimmed" size="sm">
-                No hay mensajes en la bandeja
+                {"No hay mensajes en la bandeja"}
               </Text>
             </Box>
           )}

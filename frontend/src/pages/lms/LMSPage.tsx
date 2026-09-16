@@ -45,6 +45,7 @@ import {
   useSupabaseInstructors,
 } from "../../hooks/useSupabaseData";
 import { formatDecimal } from "../../utils/format";
+import { useTranslation } from "react-i18next";
 
 interface Course {
   id: string;
@@ -127,12 +128,12 @@ function CourseCard({ course }: { course: Course }) {
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item leftSection={<IconEye size={14} />}>Ver curso</Menu.Item>
-            <Menu.Item leftSection={<IconEdit size={14} />}>Editar</Menu.Item>
-            <Menu.Item leftSection={<IconChartBar size={14} />}>Estadísticas</Menu.Item>
+            <Menu.Item leftSection={<IconEye size={14} />}>{"Ver curso"}</Menu.Item>
+            <Menu.Item leftSection={<IconEdit size={14} />}>{"Editar"}</Menu.Item>
+            <Menu.Item leftSection={<IconChartBar size={14} />}>{"Estadísticas"}</Menu.Item>
             <Menu.Divider />
             <Menu.Item color="red" leftSection={<IconTrash size={14} />}>
-              Eliminar
+              {"Eliminar"}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
@@ -144,7 +145,7 @@ function CourseCard({ course }: { course: Course }) {
         </Badge>
         {course.is_free ? (
           <Badge color="teal" size="sm">
-            Gratis
+            {"Gratis"}
           </Badge>
         ) : (
           <Badge color="blue" size="sm">
@@ -153,12 +154,12 @@ function CourseCard({ course }: { course: Course }) {
         )}
         {course.is_featured && (
           <Badge color="orange" size="sm">
-            Destacado
+            {"Destacado"}
           </Badge>
         )}
         {!course.is_published && (
           <Badge color="gray" size="sm">
-            Borrador
+            {"Borrador"}
           </Badge>
         )}
       </Group>
@@ -243,12 +244,12 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item leftSection={<IconEye size={14} />}>Ver reto</Menu.Item>
-            <Menu.Item leftSection={<IconEdit size={14} />}>Editar</Menu.Item>
-            <Menu.Item leftSection={<IconTrophy size={14} />}>Leaderboard</Menu.Item>
+            <Menu.Item leftSection={<IconEye size={14} />}>{"Ver reto"}</Menu.Item>
+            <Menu.Item leftSection={<IconEdit size={14} />}>{"Editar"}</Menu.Item>
+            <Menu.Item leftSection={<IconTrophy size={14} />}>{"Leaderboard"}</Menu.Item>
             <Menu.Divider />
             <Menu.Item color="red" leftSection={<IconTrash size={14} />}>
-              Eliminar
+              {"Eliminar"}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
@@ -263,17 +264,17 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
         </Badge>
         {isActive && (
           <Badge color="green" size="sm">
-            En curso
+            {"En curso"}
           </Badge>
         )}
         {isUpcoming && (
           <Badge color="blue" size="sm">
-            Próximamente
+            {"Próximamente"}
           </Badge>
         )}
         {challenge.is_free ? (
           <Badge color="teal" size="sm">
-            Gratis
+            {"Gratis"}
           </Badge>
         ) : (
           <Badge color="blue" size="sm">
@@ -297,7 +298,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
           <Group gap={4}>
             <IconTrophy size={14} color="orange" />
             <Text size="xs" c="dimmed">
-              Leaderboard
+              {"Leaderboard"}
             </Text>
           </Group>
         )}
@@ -313,6 +314,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
 }
 
 export function LMSPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("courses");
   const [searchQuery, setSearchQuery] = useState("");
@@ -352,14 +354,14 @@ export function LMSPage() {
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Academia / LMS"
-        description="Gestiona tus cursos, formaciones y retos"
+        title={t("lms.academiaLms")}
+        description={t("lms.gestionaTusCursosFormacionesY")}
         action={
           <Group>
             <Button leftSection={<IconFlame size={16} />} variant="light" color="orange">
-              Nuevo Reto
+              {t("lms.nuevoReto")}
             </Button>
-            <Button leftSection={<IconPlus size={16} />}>Nuevo Curso</Button>
+            <Button leftSection={<IconPlus size={16} />}>{t("lms.nuevoCurso")}</Button>
           </Group>
         }
       />
@@ -374,7 +376,7 @@ export function LMSPage() {
                 {stats.totalCourses}
               </Text>
               <Text size="xs" c="dimmed">
-                Cursos
+                {t("lms.cursos")}
               </Text>
             </div>
           </Group>
@@ -387,7 +389,7 @@ export function LMSPage() {
                 {stats.totalChallenges}
               </Text>
               <Text size="xs" c="dimmed">
-                Retos
+                {t("lms.retos")}
               </Text>
             </div>
           </Group>
@@ -400,7 +402,7 @@ export function LMSPage() {
                 {stats.totalEnrollments}
               </Text>
               <Text size="xs" c="dimmed">
-                Inscripciones
+                {t("lms.inscripciones")}
               </Text>
             </div>
           </Group>
@@ -413,7 +415,7 @@ export function LMSPage() {
                 {stats.totalCertificates}
               </Text>
               <Text size="xs" c="dimmed">
-                Certificados
+                {t("lms.certificados")}
               </Text>
             </div>
           </Group>
@@ -426,7 +428,7 @@ export function LMSPage() {
                 {instructors?.length || 0}
               </Text>
               <Text size="xs" c="dimmed">
-                Instructores
+                {t("lms.instructores")}
               </Text>
             </div>
           </Group>
@@ -439,7 +441,7 @@ export function LMSPage() {
                 {stats.publishedCourses}
               </Text>
               <Text size="xs" c="dimmed">
-                Publicados
+                {t("lms.publicados")}
               </Text>
             </div>
           </Group>
@@ -449,7 +451,7 @@ export function LMSPage() {
       {/* Búsqueda y filtros */}
       <Group mb="xl">
         <TextInput
-          placeholder="Buscar cursos o retos..."
+          placeholder={t("lms.buscarCursosORetos")}
           leftSection={<IconSearch size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -465,8 +467,8 @@ export function LMSPage() {
           data={[
             { value: "courses", label: `Cursos (${courses.length})` },
             { value: "challenges", label: `Retos (${challenges.length})` },
-            { value: "enrollments", label: "Inscripciones" },
-            { value: "certificates", label: "Certificados" },
+            { value: "enrollments", label: t("lms.inscripciones") },
+            { value: "certificates", label: t("lms.certificados") },
           ]}
           size="sm"
           radius="md"
@@ -483,10 +485,10 @@ export function LMSPage() {
             Retos ({challenges.length})
           </Tabs.Tab>
           <Tabs.Tab value="enrollments" leftSection={<IconUsers size={16} />}>
-            Inscripciones
+            {t("lms.inscripciones")}
           </Tabs.Tab>
           <Tabs.Tab value="certificates" leftSection={<IconAward size={16} />}>
-            Certificados
+            {t("lms.certificados")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -500,8 +502,8 @@ export function LMSPage() {
             <Center py="xl">
               <Stack align="center" gap="md">
                 <IconBook size={48} color="gray" />
-                <Text c="dimmed">No hay cursos disponibles</Text>
-                <Button leftSection={<IconPlus size={16} />}>Crear primer curso</Button>
+                <Text c="dimmed">{t("lms.noHayCursosDisponibles")}</Text>
+                <Button leftSection={<IconPlus size={16} />}>{t("lms.crearPrimerCurso")}</Button>
               </Stack>
             </Center>
           ) : (
@@ -522,9 +524,9 @@ export function LMSPage() {
             <Center py="xl">
               <Stack align="center" gap="md">
                 <IconFlame size={48} color="gray" />
-                <Text c="dimmed">No hay retos disponibles</Text>
+                <Text c="dimmed">{t("lms.noHayRetosDisponibles")}</Text>
                 <Button leftSection={<IconPlus size={16} />} color="orange">
-                  Crear primer reto
+                  {t("lms.crearPrimerReto")}
                 </Button>
               </Stack>
             </Center>
@@ -546,7 +548,7 @@ export function LMSPage() {
                   {enrollments?.length || 0} inscripciones totales
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Gestiona las inscripciones de tus alumnos en cursos y retos
+                  {t("lms.gestionaLasInscripcionesDeTus")}
                 </Text>
               </Stack>
             </Center>
@@ -562,7 +564,7 @@ export function LMSPage() {
                   {certificates?.length || 0} certificados emitidos
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Gestiona y verifica los certificados de tus alumnos
+                  {t("lms.gestionaYVerificaLosCertificados")}
                 </Text>
               </Stack>
             </Center>

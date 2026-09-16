@@ -84,7 +84,7 @@ export const MUSCLE_GROUPS = [
   { value: "abdominales", label: "Abdominales" },
   { value: "oblicuos", label: "Oblicuos" },
   { value: "cardio", label: "Cardio" },
-  { value: "cuerpo completo", label: "Cuerpo completo" },
+  { value: "cuerpo completo", label: "Cuerpo Completo" },
 ];
 
 export const EQUIPMENT_TYPES = [
@@ -253,7 +253,7 @@ export function WorkoutBuilder({
   onToggleExerciseFavorite,
   onCreateExercise,
   alternativesCounts,
-}: WorkoutBuilderProps) {
+}: WorkoutBuilderProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [enlargedImage, setEnlargedImage] = useState<{url: string, name: string} | null>(null);
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(
@@ -673,7 +673,7 @@ export function WorkoutBuilder({
                             <Group gap="md" mb="md">
                               {block.type === "circuit" && (
                                 <NumberInput
-                                  label="Rondas"
+                                  label={"Rondas"}
                                   max={10}
                                   min={1}
                                   onChange={(v) =>
@@ -685,7 +685,7 @@ export function WorkoutBuilder({
                                 />
                               )}
                               <NumberInput
-                                label="Descanso entre series (seg)"
+                                label={"Descanso entre series (seg)"}
                                 max={300}
                                 min={0}
                                 onChange={(v) =>
@@ -824,7 +824,7 @@ export function WorkoutBuilder({
                                               return (
                                                 <SimpleGrid cols={isMobile ? 2 : 6} spacing="xs" verticalSpacing="xs">
                                                   <NumberInput
-                                                    label="Bloques"
+                                                    label={"Bloques"}
                                                     leftSection={<IconRepeat size={12} />}
                                                     max={20}
                                                     min={1}
@@ -840,7 +840,7 @@ export function WorkoutBuilder({
                                                     styles={{ input: { minHeight: 32 } }}
                                                   />
                                                   <NumberInput
-                                                    label="Min"
+                                                    label={"Min"}
                                                     leftSection={<IconClock size={12} />}
                                                     min={0}
                                                     max={300}
@@ -858,7 +858,7 @@ export function WorkoutBuilder({
                                                     styles={{ input: { minHeight: 32 } }}
                                                   />
                                                   <NumberInput
-                                                    label="Km"
+                                                    label={"Km"}
                                                     min={0}
                                                     max={500}
                                                     step={0.1}
@@ -876,7 +876,7 @@ export function WorkoutBuilder({
                                                     styles={{ input: { minHeight: 32 } }}
                                                   />
                                                   <NumberInput
-                                                    label="Km/h"
+                                                    label={"Km/h"}
                                                     min={0}
                                                     max={60}
                                                     step={0.1}
@@ -894,7 +894,7 @@ export function WorkoutBuilder({
                                                     styles={{ input: { minHeight: 32 } }}
                                                   />
                                                   <NumberInput
-                                                    label="Descanso"
+                                                    label={"Descanso"}
                                                     leftSection={<IconClock size={12} />}
                                                     max={600}
                                                     min={0}
@@ -949,7 +949,7 @@ export function WorkoutBuilder({
                                             return (
                                               <SimpleGrid cols={isMobile ? 2 : 6} spacing="xs" verticalSpacing="xs">
                                                 <NumberInput
-                                                  label="Series"
+                                                  label={"Series"}
                                                   leftSection={<IconRepeat size={12} />}
                                                   max={20}
                                                   min={1}
@@ -965,7 +965,7 @@ export function WorkoutBuilder({
                                                   styles={{ input: { minHeight: 32 } }}
                                                 />
                                                 <Select
-                                                  label="Tipo"
+                                                  label={"Tipo"}
                                                   data={DURATION_TYPE_OPTIONS}
                                                   value={currentType}
                                                   onChange={(v) =>
@@ -996,7 +996,7 @@ export function WorkoutBuilder({
                                                   styles={{ input: { minHeight: 32 } }}
                                                 />
                                                 <NumberInput
-                                                  label="Descanso"
+                                                  label={"Descanso"}
                                                   leftSection={<IconClock size={12} />}
                                                   max={300}
                                                   min={0}
@@ -1014,7 +1014,7 @@ export function WorkoutBuilder({
                                                   styles={{ input: { minHeight: 32 } }}
                                                 />
                                                 <NumberInput
-                                                  label="Peso obj."
+                                                  label={"Peso obj."}
                                                   leftSection={<IconWeight size={12} />}
                                                   min={0}
                                                   max={500}
@@ -1051,7 +1051,7 @@ export function WorkoutBuilder({
                                           })()}
                                           <SimpleGrid cols={isMobile ? 1 : 2} spacing="xs" mt={4}>
                                             <TextInput
-                                              label="URL Vídeo"
+                                              label={"URL Vídeo"}
                                               placeholder="https://youtube.com/..."
                                               leftSection={<IconPlayerPlay size={12} />}
                                               size="xs"
@@ -1066,8 +1066,8 @@ export function WorkoutBuilder({
                                               styles={{ input: { minHeight: 32 } }}
                                             />
                                             <TextInput
-                                              label="Notas / Instrucciones"
-                                              placeholder="Ej: Mantener core activado..."
+                                              label={"Notas / Instrucciones"}
+                                              placeholder={"Ej: Mantener core activado..."}
                                               leftSection={<IconInfoCircle size={12} />}
                                               size="xs"
                                               value={exercise.notes || ""}
@@ -1103,7 +1103,7 @@ export function WorkoutBuilder({
                             onClick={() => openAddExercise(block.id)}
                             variant="light"
                           >
-                            Añadir Ejercicio
+                            {"Añadir Ejercicio"}
                           </Button>
                         </Box>
                       </Collapse>
@@ -1118,7 +1118,7 @@ export function WorkoutBuilder({
       </DragDropContext>
 
       {/* Add Block Buttons */}
-      <Divider label="Añadir bloque" labelPosition="center" my="lg" />
+      <Divider label={"Añadir bloque"} labelPosition="center" my="lg" />
       <SimpleGrid cols={{ base: 2, sm: 5 }} spacing="sm">
         <Button
           color="orange"
@@ -1126,7 +1126,7 @@ export function WorkoutBuilder({
           onClick={() => addBlock("warmup")}
           variant="light"
         >
-          Calentamiento
+          {"Calentamiento"}
         </Button>
         <Button
           color="blue"
@@ -1134,7 +1134,7 @@ export function WorkoutBuilder({
           onClick={() => addBlock("main")}
           variant="light"
         >
-          Principal
+          {"Principal"}
         </Button>
         <Button
           color="grape"
@@ -1142,7 +1142,7 @@ export function WorkoutBuilder({
           onClick={() => addBlock("superset")}
           variant="light"
         >
-          Superserie
+          {"Superserie"}
         </Button>
         <Button
           color="pink"
@@ -1150,7 +1150,7 @@ export function WorkoutBuilder({
           onClick={() => addBlock("circuit")}
           variant="light"
         >
-          Circuito
+          {"Circuito"}
         </Button>
         <Button
           color="teal"
@@ -1158,7 +1158,7 @@ export function WorkoutBuilder({
           onClick={() => addBlock("cooldown")}
           variant="light"
         >
-          Vuelta Calma
+          {"Vuelta Calma"}
         </Button>
       </SimpleGrid>
 
@@ -1198,7 +1198,7 @@ export function WorkoutBuilder({
           <Group gap="sm">
             <MultiSelect
               data={MUSCLE_GROUPS}
-              placeholder="Grupo muscular"
+              placeholder={"Grupo muscular"}
               searchable
               clearable
               value={exerciseMuscleGroups}
@@ -1207,7 +1207,7 @@ export function WorkoutBuilder({
             />
             <MultiSelect
               data={EQUIPMENT_TYPES}
-              placeholder="Equipo"
+              placeholder={"Equipo"}
               searchable
               clearable
               value={exerciseEquipment}
@@ -1219,21 +1219,21 @@ export function WorkoutBuilder({
           <Tabs value={exerciseFilter} onChange={(v) => setExerciseFilter(v || "all")}>
             <Tabs.List style={{ flexWrap: "wrap" }}>
               <Tabs.Tab value="all" leftSection={<IconBarbell size={14} />}>
-                Todos
+                {"Todos"}
               </Tabs.Tab>
               <Tabs.Tab value="favorites" leftSection={<IconStarFilled size={14} />}>
-                Favoritos
+                {"Favoritos"}
               </Tabs.Tab>
               <Tabs.Tab value="calentamiento" leftSection={<IconFlame size={14} />}>
-                Calentamiento
+                {"Calentamiento"}
               </Tabs.Tab>
               <Tabs.Tab value="estiramiento" leftSection={<IconStretching size={14} />}>
-                Estiramiento
+                {"Estiramiento"}
               </Tabs.Tab>
-              <Tabs.Tab value="fuerza">Fuerza</Tabs.Tab>
-              <Tabs.Tab value="cardio">Cardio</Tabs.Tab>
-              <Tabs.Tab value="core">Core</Tabs.Tab>
-              <Tabs.Tab value="flexibilidad">Flexibilidad</Tabs.Tab>
+              <Tabs.Tab value="fuerza">{"Fuerza"}</Tabs.Tab>
+              <Tabs.Tab value="cardio">{"Cardio"}</Tabs.Tab>
+              <Tabs.Tab value="core">{"Core"}</Tabs.Tab>
+              <Tabs.Tab value="flexibilidad">{"Flexibilidad"}</Tabs.Tab>
             </Tabs.List>
           </Tabs>
         </Stack>
@@ -1338,7 +1338,7 @@ export function WorkoutBuilder({
             leftSection={<IconPlus size={16} />}
             onClick={() => openCreateExerciseModal()}
           >
-            Crear ejercicio nuevo
+            {"Crear ejercicio nuevo"}
           </Button>
         )}
       </BottomSheet>
@@ -1518,7 +1518,7 @@ export function WorkoutBuilderWithDays({
         <Paper p="sm" radius="lg" mb="md" withBorder>
           <Group justify="space-between">
             <Group gap="sm" align="center">
-              <Text size="sm" fw={600}>Semana</Text>
+              <Text size="sm" fw={600}>{"Semana"}</Text>
               <Select
                 size="xs"
                 w={120}
@@ -1534,7 +1534,7 @@ export function WorkoutBuilderWithDays({
             <Group gap="xs">
               <Popover position="bottom-end" opened={copyWeekPopoverOpened} onChange={setCopyWeekPopoverOpened}>
                 <Popover.Target>
-                  <Button variant="light" size="xs" color="violet" leftSection={<IconCopy size={14} />} onClick={() => setCopyWeekPopoverOpened((o) => !o)}>Copiar a semanas</Button>
+                  <Button variant="light" size="xs" color="violet" leftSection={<IconCopy size={14} />} onClick={() => setCopyWeekPopoverOpened((o) => !o)}>{"Copiar a semanas"}</Button>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
@@ -1557,7 +1557,7 @@ export function WorkoutBuilderWithDays({
       {/* Resumen de la semana */}
       <Paper p="md" radius="lg" mb="md" withBorder>
         <Group justify="space-between" mb="md">
-          <Text fw={600}>Programa de entrenamiento</Text>
+          <Text fw={600}>{"Programa de entrenamiento"}</Text>
           <Popover
             opened={copyDaysPopoverOpened}
             onChange={setCopyDaysPopoverOpened}
@@ -1574,12 +1574,12 @@ export function WorkoutBuilderWithDays({
                   setCopyToDayIds(days.filter((d) => d.id !== activeDay).map((d) => d.id));
                 }}
               >
-                Copiar a días
+                {"Copiar a días"}
               </Button>
             </Popover.Target>
             <Popover.Dropdown>
               <Stack gap="sm">
-                <Text size="sm" fw={500}>Copiar a días:</Text>
+                <Text size="sm" fw={500}>{"Copiar a días"}</Text>
                 <Checkbox.Group value={copyToDayIds} onChange={setCopyToDayIds}>
                   <Stack gap="xs">
                     {WEEK_DAYS.filter((wd) => wd.id !== activeDay).map((wd) => (
@@ -1588,7 +1588,7 @@ export function WorkoutBuilderWithDays({
                   </Stack>
                 </Checkbox.Group>
                 <Button size="xs" leftSection={<IconCopy size={12} />} onClick={copyToSelectedDays} disabled={copyToDayIds.length === 0}>
-                  Copiar
+                  {"Copiar"}
                 </Button>
               </Stack>
             </Popover.Dropdown>
@@ -1668,7 +1668,7 @@ export function WorkoutBuilderWithDays({
               <Paper p="xl" ta="center" radius="lg" withBorder>
                 <Text c="dimmed" size="lg">🛌 Día de descanso</Text>
                 <Text c="dimmed" size="sm" mt="xs">
-                  Este día está marcado como descanso. Haz clic en el botón para añadir entrenamiento.
+                  {"Este día está marcado como descanso. Haz clic en el botón para añadir entrenamiento."}
                 </Text>
               </Paper>
             ) : (

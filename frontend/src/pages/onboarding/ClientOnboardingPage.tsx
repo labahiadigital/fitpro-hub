@@ -58,6 +58,7 @@ import {
   PasswordRulesIndicator,
   isStrongPassword,
 } from "../../components/common/PasswordRulesIndicator";
+import { useTranslation } from "react-i18next";
 
 interface OnboardingFormData {
   // Personal Info
@@ -138,6 +139,7 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 export function ClientOnboardingPage() {
+  const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [searchParams] = useSearchParams();
   const productId = searchParams.get("product");
@@ -187,7 +189,7 @@ export function ClientOnboardingPage() {
       }, { params: { workspace_id: workspaceInfo.id } });
       setCouponResult(res.data);
     } catch {
-      setCouponResult({ is_valid: false, message: "Error al validar el cupón" });
+      setCouponResult({ is_valid: false, message: t("onboarding.errorAlValidarElCupon") });
     } finally {
       setCouponValidating(false);
     }
@@ -215,8 +217,8 @@ export function ClientOnboardingPage() {
         
         if (!data) {
           notifications.show({
-            title: "Error",
-            message: "El enlace de registro no es válido",
+            title: t("onboarding.error"),
+            message: t("onboarding.elEnlaceDeRegistroNo"),
             color: "red",
           });
           navigate("/");
@@ -266,16 +268,16 @@ export function ClientOnboardingPage() {
             }
           } catch {
             notifications.show({
-              title: "Producto no disponible",
-              message: "El producto al que intentas acceder no está disponible",
+              title: t("onboarding.productoNoDisponible"),
+              message: t("onboarding.elProductoAlQueIntentas"),
               color: "orange",
             });
           }
         }
       } catch {
         notifications.show({
-          title: "Error",
-          message: "El enlace de registro no es válido",
+          title: t("onboarding.error"),
+          message: t("onboarding.elEnlaceDeRegistroNo"),
           color: "red",
         });
         navigate("/");
@@ -302,8 +304,8 @@ export function ClientOnboardingPage() {
     const errors = form.validate();
     if (errors.hasErrors) {
       notifications.show({
-        title: "Faltan datos",
-        message: "Completa todos los campos obligatorios para continuar",
+        title: t("onboarding.faltanDatos"),
+        message: t("onboarding.completaTodosLosCamposObligatorios"),
         color: "red",
       });
       return;
@@ -312,8 +314,8 @@ export function ClientOnboardingPage() {
     const v = form.values;
     if (!v.acceptTerms || !v.acceptPrivacy) {
       notifications.show({
-        title: "Faltan consentimientos",
-        message: "Debes aceptar los términos y la política de privacidad",
+        title: t("onboarding.faltanConsentimientos"),
+        message: t("onboarding.debesAceptarLosTerminosY"),
         color: "red",
       });
       return;
@@ -348,7 +350,7 @@ export function ClientOnboardingPage() {
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } } };
       notifications.show({
-        title: "Error",
+        title: t("onboarding.error"),
         message: err?.response?.data?.detail || "Error al iniciar el registro",
         color: "red",
       });
@@ -580,15 +582,15 @@ export function ClientOnboardingPage() {
       setCompleted(true);
       
       notifications.show({
-        title: "¡Registro completado!",
-        message: "Tu perfil ha sido creado correctamente",
+        title: t("onboarding.registroCompletado"),
+        message: t("onboarding.tuPerfilHaSidoCreado"),
         color: "green",
       });
       
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
-        title: "Error",
+        title: t("onboarding.error"),
         message: err.response?.data?.detail || err.message || "Error al completar el registro",
         color: "red",
       });
@@ -602,7 +604,7 @@ export function ClientOnboardingPage() {
       <Container py="xl" size="sm">
         <Paper p="xl" radius="lg" ta="center" withBorder>
           <Loader size="lg" />
-          <Text c="dimmed" mt="md">Verificando enlace de registro...</Text>
+          <Text c="dimmed" mt="md">{t("onboarding.verificandoEnlaceDeRegistro")}</Text>
         </Paper>
       </Container>
     );
@@ -623,13 +625,12 @@ export function ClientOnboardingPage() {
             <IconAlertCircle size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            Enlace no válido
+            {t("onboarding.enlaceNoValido")}
           </Title>
           <Text c="dimmed" mb="xl">
-            El enlace de registro no es válido o ha expirado.
-            Contacta con tu entrenador para obtener un nuevo enlace.
+            {t("onboarding.elEnlaceDeRegistroNo")}
           </Text>
-          <Button size="lg" onClick={() => navigate("/")}>Ir al inicio</Button>
+          <Button size="lg" onClick={() => navigate("/")}>{t("onboarding.irAlInicio")}</Button>
         </Paper>
       </Container>
     );
@@ -650,16 +651,16 @@ export function ClientOnboardingPage() {
             <IconCheck size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            ¡Te has registrado con ÉXITO!
+            {t("onboarding.teHasRegistradoConExito")}
           </Title>
           <Text c="dimmed" mb="md">
-            Tu onboarding se ha realizado con éxito.
+            {t("onboarding.tuOnboardingSeHaRealizado")}
           </Text>
           <Text c="dimmed" mb="xl">
             Gracias por completar tu registro en {workspaceInfo.name}. Tu entrenador revisará tu
             información y se pondrá en contacto contigo pronto.
           </Text>
-          <Button size="lg" onClick={() => navigate("/dashboard")}>Ir al Dashboard</Button>
+          <Button size="lg" onClick={() => navigate("/dashboard")}>{t("onboarding.irAlDashboard")}</Button>
         </Paper>
       </Container>
     );
@@ -680,13 +681,12 @@ export function ClientOnboardingPage() {
             <IconAlertCircle size={40} />
           </ThemeIcon>
           <Title mb="sm" order={2}>
-            Producto no disponible
+            {t("onboarding.productoNoDisponible")}
           </Title>
           <Text c="dimmed" mb="xl">
-            El plan al que intentas acceder no está disponible en este momento.
-            Contacta con tu entrenador para más información.
+            {t("onboarding.elPlanAlQueIntentas")}
           </Text>
-          <Button size="lg" onClick={() => navigate("/")}>Ir al inicio</Button>
+          <Button size="lg" onClick={() => navigate("/")}>{t("onboarding.irAlInicio")}</Button>
         </Paper>
       </Container>
     );
@@ -696,7 +696,7 @@ export function ClientOnboardingPage() {
     if (!productId || !workspaceSlug) return;
     const email = waitlistData.email.trim();
     if (!/^\S+@\S+$/.test(email)) {
-      notifications.show({ title: "Email no válido", message: "Introduce un email correcto", color: "red" });
+      notifications.show({ title: t("onboarding.emailNoValido"), message: t("onboarding.introduceUnEmailCorrecto"), color: "red" });
       return;
     }
     setWaitlistSubmitting(true);
@@ -709,7 +709,7 @@ export function ClientOnboardingPage() {
       });
       setWaitlistSubmitted(true);
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo registrar en la waitlist", color: "red" });
+      notifications.show({ title: t("onboarding.error"), message: t("onboarding.noSePudoRegistrarEn"), color: "red" });
     } finally {
       setWaitlistSubmitting(false);
     }
@@ -788,31 +788,31 @@ export function ClientOnboardingPage() {
             {soldOutState.action === "waitlist" && !waitlistSubmitted && (
               <Stack gap="sm">
                 <TextInput
-                  label="Email"
+                  label={t("onboarding.email")}
                   required
                   leftSection={<IconMail size={16} />}
                   value={waitlistData.email}
                   onChange={(e) => setWaitlistData((s) => ({ ...s, email: e.currentTarget.value }))}
                 />
                 <TextInput
-                  label="Nombre"
+                  label={t("onboarding.nombre")}
                   value={waitlistData.name}
                   onChange={(e) => setWaitlistData((s) => ({ ...s, name: e.currentTarget.value }))}
                 />
                 <TextInput
-                  label="Teléfono (opcional)"
+                  label={t("onboarding.telefonoOpcional")}
                   value={waitlistData.phone}
                   onChange={(e) => setWaitlistData((s) => ({ ...s, phone: e.currentTarget.value }))}
                 />
                 <Textarea
-                  label="Comentario (opcional)"
+                  label={t("onboarding.comentarioOpcional")}
                   autosize
                   minRows={2}
                   value={waitlistData.message}
                   onChange={(e) => setWaitlistData((s) => ({ ...s, message: e.currentTarget.value }))}
                 />
                 <Button size="lg" fullWidth mt="xs" loading={waitlistSubmitting} onClick={handleWaitlistSubmit}>
-                  Apuntarme a la lista de espera
+                  {t("onboarding.apuntarmeALaListaDe")}
                 </Button>
               </Stack>
             )}
@@ -826,16 +826,16 @@ export function ClientOnboardingPage() {
 
             {soldOutState.action === "redirect" && soldOutState.redirect_url && (
               <Stack gap="sm" align="center">
-                <Text size="sm" c="dimmed">Te redirigimos al sitio configurado por el entrenador.</Text>
+                <Text size="sm" c="dimmed">{t("onboarding.teRedirigimosAlSitioConfigurado")}</Text>
                 <Button size="lg" onClick={() => { window.location.href = soldOutState.redirect_url || "/"; }}>
-                  Continuar
+                  {t("onboarding.continuar")}
                 </Button>
               </Stack>
             )}
 
             {!soldOutState.action && (
               <Stack gap="sm" align="center">
-                <Text size="sm" c="dimmed">Vuelve a intentarlo más tarde o contacta con tu entrenador.</Text>
+                <Text size="sm" c="dimmed">{t("onboarding.vuelveAIntentarloMasTarde")}</Text>
               </Stack>
             )}
           </Paper>
@@ -855,7 +855,7 @@ export function ClientOnboardingPage() {
             {workspaceInfo.name}
           </Title>
           <Text c="dimmed">
-            Regístrate para acceder a tu plan
+            {t("onboarding.registrateParaAccederATu")}
           </Text>
         </Box>
 
@@ -885,28 +885,28 @@ export function ClientOnboardingPage() {
           <Stack gap="md">
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
               <TextInput
-                label="Nombre"
-                placeholder="Tu nombre"
+                label={t("onboarding.nombre")}
+                placeholder={t("onboarding.tuNombre")}
                 required
                 {...form.getInputProps("firstName")}
               />
               <TextInput
-                label="Apellidos"
-                placeholder="Tus apellidos"
+                label={t("onboarding.apellidos")}
+                placeholder={t("onboarding.tusApellidos")}
                 required
                 {...form.getInputProps("lastName")}
               />
             </SimpleGrid>
             <TextInput
-              label="Email"
-              placeholder="tu@email.com"
+              label={t("onboarding.email")}
+              placeholder={t("onboarding.tuEmailCom")}
               required
               leftSection={<IconMail size={16} />}
               {...form.getInputProps("email")}
             />
             <TextInput
-              label="Confirma tu email"
-              placeholder="Repite tu email"
+              label={t("onboarding.confirmaTuEmail")}
+              placeholder={t("onboarding.repiteTuEmail")}
               required
               leftSection={<IconMail size={16} />}
               {...form.getInputProps("confirmEmail")}
@@ -918,71 +918,70 @@ export function ClientOnboardingPage() {
               }
             />
             <PasswordInput
-              label="Contraseña"
-              placeholder="Mínimo 8 caracteres"
+              label={t("onboarding.contrasena")}
+              placeholder={t("onboarding.minimo8Caracteres")}
               required
               leftSection={<IconLock size={16} />}
               {...form.getInputProps("password")}
             />
             <PasswordRulesIndicator value={form.values.password} />
             <TextInput
-              label="Móvil"
+              label={t("onboarding.movil")}
               placeholder="+34 600 000 000"
               required
               leftSection={<IconPhone size={16} />}
-              description="Lo necesitamos para contactarte por WhatsApp"
+              description={t("onboarding.loNecesitamosParaContactartePor")}
               {...form.getInputProps("phone")}
             />
 
-            <Divider my="xs" label="Datos de facturación" labelPosition="center" />
+            <Divider my="xs" label={t("onboarding.datosDeFacturacion")} labelPosition="center" />
             <Text size="sm" fw={500}>
-              Para realizar tu factura, necesitamos los siguientes datos
+              {t("onboarding.paraRealizarTuFacturaNecesitamos")}
             </Text>
             <Radio.Group
-              label="Tipo de cliente"
+              label={t("onboarding.tipoDeCliente")}
               required
               {...form.getInputProps("fiscalType")}
             >
               <Group mt="xs">
-                <Radio value="individual" label="Persona Física" />
-                <Radio value="company" label="Persona Jurídica" />
+                <Radio value="individual" label={t("onboarding.personaFisica")} />
+                <Radio value="company" label={t("onboarding.personaJuridica")} />
               </Group>
             </Radio.Group>
 
             {form.values.fiscalType === "individual" ? (
               <>
                 <Text size="xs" c="dimmed">
-                  Tu nombre y apellidos del apartado anterior se usarán como
-                  nombre fiscal en la factura.
+                  {t("onboarding.tuNombreYApellidosDel")}
                 </Text>
                 <TextInput
-                  label="NIF (DNI, NIE, etc.)"
+                  label={t("onboarding.nifDniNieEtc")}
                   placeholder="12345678A"
                   required
                   {...form.getInputProps("taxId")}
                 />
                 <TextInput
-                  label="Dirección (calle, número, etc.)"
-                  placeholder="Calle Mayor 12, 3ºB"
+                  label={t("onboarding.direccionCalleNumeroEtc")}
+                  placeholder={t("onboarding.calleMayor123B")}
                   required
                   {...form.getInputProps("billingAddress")}
                 />
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
                   <TextInput
-                    label="Población"
-                    placeholder="Madrid"
+                    label={t("onboarding.poblacion")}
+                    placeholder={t("onboarding.madrid")}
                     required
                     {...form.getInputProps("billingCity")}
                   />
                   <TextInput
-                    label="País"
-                    placeholder="España"
+                    label={t("onboarding.pais")}
+                    placeholder={t("onboarding.espana")}
                     required
                     {...form.getInputProps("billingCountry")}
                   />
                 </SimpleGrid>
                 <TextInput
-                  label="CP (Código postal, Zip Code, etc.)"
+                  label={t("onboarding.cpCodigoPostalZipCode")}
                   placeholder="28001"
                   required
                   {...form.getInputProps("billingPostalCode")}
@@ -991,39 +990,39 @@ export function ClientOnboardingPage() {
             ) : (
               <>
                 <TextInput
-                  label="Razón Social"
-                  placeholder="Mi Empresa S.L."
+                  label={t("onboarding.razonSocial")}
+                  placeholder={t("onboarding.miEmpresaSL")}
                   required
                   {...form.getInputProps("legalName")}
                 />
                 <TextInput
-                  label="NIF (CIF, NRT, etc.)"
+                  label={t("onboarding.nifCifNrtEtc")}
                   placeholder="B12345678"
                   required
                   {...form.getInputProps("taxId")}
                 />
                 <TextInput
-                  label="Dirección (calle, número, etc.)"
-                  placeholder="Calle Mayor 12, 3ºB"
+                  label={t("onboarding.direccionCalleNumeroEtc")}
+                  placeholder={t("onboarding.calleMayor123B")}
                   required
                   {...form.getInputProps("billingAddress")}
                 />
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
                   <TextInput
-                    label="Ciudad o Población"
-                    placeholder="Madrid"
+                    label={t("onboarding.ciudadOPoblacion")}
+                    placeholder={t("onboarding.madrid")}
                     required
                     {...form.getInputProps("billingCity")}
                   />
                   <TextInput
-                    label="País"
-                    placeholder="España"
+                    label={t("onboarding.pais")}
+                    placeholder={t("onboarding.espana")}
                     required
                     {...form.getInputProps("billingCountry")}
                   />
                 </SimpleGrid>
                 <TextInput
-                  label="CP (Código postal, Zip Code, etc.)"
+                  label={t("onboarding.cpCodigoPostalZipCode")}
                   placeholder="28001"
                   required
                   {...form.getInputProps("billingPostalCode")}
@@ -1034,11 +1033,11 @@ export function ClientOnboardingPage() {
             {/* Coupon Code */}
             {productInfo && productInfo.price > 0 && (
               <>
-                <Divider my="xs" label="¿Tienes un cupón de descuento?" labelPosition="center" />
+                <Divider my="xs" label={t("onboarding.tienesUnCuponDeDescuento")} labelPosition="center" />
                 <Group align="flex-end" gap="xs">
                   <TextInput
-                    label="Código de cupón"
-                    placeholder="Ej: DESCUENTO20"
+                    label={t("onboarding.codigoDeCupon")}
+                    placeholder={t("onboarding.ejDescuento20")}
                     value={couponCode}
                     onChange={(e) => {
                       setCouponCode(e.currentTarget.value.toUpperCase());
@@ -1053,7 +1052,7 @@ export function ClientOnboardingPage() {
                     loading={couponValidating}
                     disabled={!couponCode.trim()}
                   >
-                    Aplicar
+                    {t("onboarding.aplicar")}
                   </Button>
                 </Group>
                 {couponResult && (
@@ -1086,14 +1085,14 @@ export function ClientOnboardingPage() {
               </>
             )}
 
-            <Divider my="xs" label="Consentimientos" labelPosition="center" />
+            <Divider my="xs" label={t("onboarding.consentimientos")} labelPosition="center" />
 
             <Checkbox
               label={
                 <Text size="sm">
                   Acepto los{" "}
                   <Anchor href="#" size="sm">
-                    Términos y Condiciones
+                    {t("onboarding.terminosYCondiciones")}
                   </Anchor>{" "}
                   del servicio *
                 </Text>
@@ -1106,7 +1105,7 @@ export function ClientOnboardingPage() {
                 <Text size="sm">
                   Acepto la{" "}
                   <Anchor href="#" size="sm">
-                    Política de Privacidad
+                    {t("onboarding.politicaDePrivacidad")}
                   </Anchor>{" "}
                   y el tratamiento de mis datos *
                 </Text>
@@ -1115,7 +1114,7 @@ export function ClientOnboardingPage() {
               error={form.errors.acceptPrivacy}
             />
             <Checkbox
-              label="Deseo recibir comunicaciones comerciales y novedades (opcional)"
+              label={t("onboarding.deseoRecibirComunicacionesComercialesY")}
               {...form.getInputProps("acceptMarketing", { type: "checkbox" })}
             />
 
@@ -1130,7 +1129,7 @@ export function ClientOnboardingPage() {
                 form.values.confirmEmail !== form.values.email
               }
             >
-              Continuar al pago
+              {t("onboarding.continuarAlPago")}
             </Button>
           </Stack>
         </Paper>
@@ -1150,7 +1149,7 @@ export function ClientOnboardingPage() {
           {workspaceInfo.name}
         </Title>
         <Text c="dimmed">
-          Completa tu perfil para empezar tu transformación
+          {t("onboarding.completaTuPerfilParaEmpezar")}
         </Text>
       </Box>
 
@@ -1182,39 +1181,39 @@ export function ClientOnboardingPage() {
       >
         {/* Step 1: Personal Info */}
         <Stepper.Step
-          description="Tu información básica"
+          description={t("onboarding.tuInformacionBasica")}
           icon={<IconUser size={18} />}
-          label="Datos Personales"
+          label={t("onboarding.datosPersonales")}
         >
           <Paper mt="xl" p="xl" radius="md" withBorder>
             <Title mb="lg" order={4}>
-              Información Personal
+              {t("onboarding.informacionPersonal")}
             </Title>
             <Stack gap="md">
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <TextInput
-                  label="Nombre"
-                  placeholder="Tu nombre"
+                  label={t("onboarding.nombre")}
+                  placeholder={t("onboarding.tuNombre")}
                   required
                   {...form.getInputProps("firstName")}
                 />
                 <TextInput
-                  label="Apellidos"
-                  placeholder="Tus apellidos"
+                  label={t("onboarding.apellidos")}
+                  placeholder={t("onboarding.tusApellidos")}
                   required
                   {...form.getInputProps("lastName")}
                 />
               </SimpleGrid>
               <TextInput
-                label="Email"
-                placeholder="tu@email.com"
+                label={t("onboarding.email")}
+                placeholder={t("onboarding.tuEmailCom")}
                 required
                 leftSection={<IconMail size={16} />}
                 {...form.getInputProps("email")}
               />
               <TextInput
-                label="Confirma tu email"
-                placeholder="Repite tu email"
+                label={t("onboarding.confirmaTuEmail")}
+                placeholder={t("onboarding.repiteTuEmail")}
                 required
                 leftSection={<IconMail size={16} />}
                 {...form.getInputProps("confirmEmail")}
@@ -1227,8 +1226,8 @@ export function ClientOnboardingPage() {
               />
               <Box>
                 <PasswordInput
-                  label="Contraseña"
-                  placeholder="Mínimo 8 caracteres"
+                  label={t("onboarding.contrasena")}
+                  placeholder={t("onboarding.minimo8Caracteres")}
                   required
                   leftSection={<IconLock size={16} />}
                   {...form.getInputProps("password")}
@@ -1237,37 +1236,37 @@ export function ClientOnboardingPage() {
               </Box>
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <TextInput
-                  label="Teléfono"
+                  label={t("onboarding.telefono")}
                   placeholder="+34 600 000 000"
                   {...form.getInputProps("phone")}
                 />
                 <DatePickerInput
-                  label="Fecha de Nacimiento"
-                  placeholder="Selecciona fecha"
+                  label={t("onboarding.fechaDeNacimiento")}
+                  placeholder={t("onboarding.seleccionaFecha")}
                   {...form.getInputProps("birthDate")}
                 />
               </SimpleGrid>
               <Select
                 data={[
-                  { value: "male", label: "Masculino" },
-                  { value: "female", label: "Femenino" },
-                  { value: "other", label: "Otro" },
-                  { value: "prefer_not", label: "Prefiero no decir" },
+                  { value: "male", label: t("onboarding.masculino") },
+                  { value: "female", label: t("onboarding.femenino") },
+                  { value: "other", label: t("onboarding.otro") },
+                  { value: "prefer_not", label: t("onboarding.prefieroNoDecir") },
                 ]}
-                label="Género"
-                placeholder="Selecciona"
+                label={t("onboarding.genero")}
+                placeholder={t("onboarding.selecciona")}
                 {...form.getInputProps("gender")}
               />
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <NumberInput
-                  label="Altura (cm)"
+                  label={t("onboarding.alturaCm")}
                   placeholder="170"
                   min={100}
                   max={250}
                   {...form.getInputProps("height")}
                 />
                 <NumberInput
-                  label="Peso actual (kg)"
+                  label={t("onboarding.pesoActualKg")}
                   placeholder="70"
                   min={30}
                   max={300}
@@ -1281,55 +1280,55 @@ export function ClientOnboardingPage() {
 
         {/* Step 2: Goals */}
         <Stepper.Step
-          description="¿Qué quieres lograr?"
+          description={t("onboarding.queQuieresLograr")}
           icon={<IconTarget size={18} />}
-          label="Objetivos"
+          label={t("onboarding.objetivos")}
         >
           <Paper mt="xl" p="xl" radius="md" withBorder>
             <Title mb="lg" order={4}>
-              Tus Objetivos
+              {t("onboarding.tusObjetivos")}
             </Title>
             <Stack gap="md">
               <Select
                 data={[
-                  { value: "lose_weight", label: "Perder peso" },
-                  { value: "gain_muscle", label: "Ganar masa muscular" },
+                  { value: "lose_weight", label: t("onboarding.perderPeso") },
+                  { value: "gain_muscle", label: t("onboarding.ganarMasaMuscular") },
                   {
                     value: "improve_fitness",
-                    label: "Mejorar condición física",
+                    label: t("onboarding.mejorarCondicionFisica"),
                   },
-                  { value: "maintain", label: "Mantener peso actual" },
-                  { value: "improve_health", label: "Mejorar salud general" },
+                  { value: "maintain", label: t("onboarding.mantenerPesoActual") },
+                  { value: "improve_health", label: t("onboarding.mejorarSaludGeneral") },
                   {
                     value: "sports_performance",
-                    label: "Rendimiento deportivo",
+                    label: t("onboarding.rendimientoDeportivo"),
                   },
-                  { value: "rehabilitation", label: "Rehabilitación" },
+                  { value: "rehabilitation", label: t("onboarding.rehabilitacion") },
                 ]}
-                label="Objetivo Principal"
-                placeholder="Selecciona tu objetivo"
+                label={t("onboarding.objetivoPrincipal")}
+                placeholder={t("onboarding.seleccionaTuObjetivo")}
                 required
                 {...form.getInputProps("primaryGoal")}
               />
               <MultiSelect
                 data={[
-                  { value: "flexibility", label: "Mejorar flexibilidad" },
-                  { value: "strength", label: "Aumentar fuerza" },
-                  { value: "endurance", label: "Mejorar resistencia" },
-                  { value: "posture", label: "Corregir postura" },
-                  { value: "stress", label: "Reducir estrés" },
-                  { value: "energy", label: "Aumentar energía" },
-                  { value: "sleep", label: "Mejorar sueño" },
+                  { value: "flexibility", label: t("onboarding.mejorarFlexibilidad") },
+                  { value: "strength", label: t("onboarding.aumentarFuerza") },
+                  { value: "endurance", label: t("onboarding.mejorarResistencia") },
+                  { value: "posture", label: t("onboarding.corregirPostura") },
+                  { value: "stress", label: t("onboarding.reducirEstres") },
+                  { value: "energy", label: t("onboarding.aumentarEnergia") },
+                  { value: "sleep", label: t("onboarding.mejorarSueno") },
                 ]}
-                label="Objetivos Secundarios"
-                placeholder="Selecciona todos los que apliquen"
+                label={t("onboarding.objetivosSecundarios")}
+                placeholder={t("onboarding.seleccionaTodosLosQueApliquen")}
                 {...form.getInputProps("secondaryGoals")}
               />
               {(form.values.primaryGoal === "lose_weight" ||
                 form.values.primaryGoal === "gain_muscle") && (
                 <NumberInput
-                  label="Peso Objetivo (kg)"
-                  placeholder="Ej: 70"
+                  label={t("onboarding.pesoObjetivoKg")}
+                  placeholder={t("onboarding.ej70")}
                   {...form.getInputProps("targetWeight")}
                 />
               )}
@@ -1337,31 +1336,31 @@ export function ClientOnboardingPage() {
                 data={[
                   {
                     value: "sedentary",
-                    label: "Sedentario (poco o nada de ejercicio)",
+                    label: t("onboarding.sedentarioPocoONadaDe"),
                   },
-                  { value: "light", label: "Ligero (1-2 días/semana)" },
-                  { value: "moderate", label: "Moderado (3-4 días/semana)" },
-                  { value: "active", label: "Activo (5-6 días/semana)" },
+                  { value: "light", label: t("onboarding.ligero12DiasSemana") },
+                  { value: "moderate", label: t("onboarding.moderado34DiasSemana") },
+                  { value: "active", label: t("onboarding.activo56DiasSemana") },
                   {
                     value: "very_active",
-                    label: "Muy activo (ejercicio intenso diario)",
+                    label: t("onboarding.muyActivoEjercicioIntensoDiario"),
                   },
                 ]}
-                label="Nivel de Actividad Actual"
-                placeholder="Selecciona"
+                label={t("onboarding.nivelDeActividadActual")}
+                placeholder={t("onboarding.selecciona")}
                 required
                 {...form.getInputProps("activityLevel")}
               />
               <NumberInput
-                label="¿Cuántos días a la semana puedes entrenar?"
+                label={t("onboarding.cuantosDiasALaSemana")}
                 placeholder="3"
                 min={1}
                 max={7}
                 {...form.getInputProps("trainingDaysPerWeek")}
               />
               <Textarea
-                label="Cuéntanos más sobre tus objetivos"
-                placeholder="Por ejemplo: Quiero perder 5kg en 3 meses, mejorar mi resistencia..."
+                label={t("onboarding.cuentanosMasSobreTusObjetivos")}
+                placeholder={t("onboarding.porEjemploQuieroPerder5kg")}
                 minRows={3}
                 {...form.getInputProps("goalsDescription")}
               />
@@ -1371,26 +1370,26 @@ export function ClientOnboardingPage() {
 
         {/* Step 3: Health */}
         <Stepper.Step
-          description="Información médica"
+          description={t("onboarding.informacionMedica")}
           icon={<IconHeartbeat size={18} />}
-          label="Salud"
+          label={t("onboarding.salud")}
         >
           <Paper mt="xl" p="xl" radius="md" withBorder>
             <Title mb="lg" order={4}>
-              Historial de Salud
+              {t("onboarding.historialDeSalud")}
             </Title>
             <Stack gap="md">
               <MultiSelect
-                label="¿Tienes alguna alergia alimentaria?"
-                placeholder="Selecciona si aplica"
+                label={t("onboarding.tienesAlgunaAlergiaAlimentaria")}
+                placeholder={t("onboarding.seleccionaSiAplica")}
                 data={ALLERGENS}
                 searchable
                 clearable
                 {...form.getInputProps("allergies")}
               />
               <MultiSelect
-                label="¿Tienes alguna intolerancia alimentaria?"
-                placeholder="Selecciona si aplica"
+                label={t("onboarding.tienesAlgunaIntoleranciaAlimentaria")}
+                placeholder={t("onboarding.seleccionaSiAplica")}
                 data={INTOLERANCES}
                 searchable
                 clearable
@@ -1398,40 +1397,40 @@ export function ClientOnboardingPage() {
               />
               <Divider my="sm" />
               <Checkbox
-                label="¿Tienes alguna lesión actual o pasada?"
+                label={t("onboarding.tienesAlgunaLesionActualO")}
                 {...form.getInputProps("hasInjuries", { type: "checkbox" })}
               />
               {form.values.hasInjuries && (
                 <Textarea
-                  label="Describe tus lesiones"
-                  placeholder="Ej: Lesión de rodilla hace 2 años..."
+                  label={t("onboarding.describeTusLesiones")}
+                  placeholder={t("onboarding.ejLesionDeRodillaHace")}
                   {...form.getInputProps("injuries")}
                 />
               )}
               <Checkbox
-                label="¿Tienes alguna condición médica?"
+                label={t("onboarding.tienesAlgunaCondicionMedica")}
                 {...form.getInputProps("hasMedicalConditions", {
                   type: "checkbox",
                 })}
               />
               {form.values.hasMedicalConditions && (
                 <Textarea
-                  label="Describe tus condiciones médicas"
-                  placeholder="Ej: Diabetes tipo 2, hipertensión..."
+                  label={t("onboarding.describeTusCondicionesMedicas")}
+                  placeholder={t("onboarding.ejDiabetesTipo2Hipertension")}
                   {...form.getInputProps("medicalConditions")}
                 />
               )}
               <Textarea
-                label="Medicamentos actuales"
-                placeholder="Lista los medicamentos que tomas actualmente (si aplica)"
+                label={t("onboarding.medicamentosActuales")}
+                placeholder={t("onboarding.listaLosMedicamentosQueTomas")}
                 {...form.getInputProps("medications")}
               />
               <Paper p="md" radius="md" withBorder>
                 <Group justify="space-between" align="center">
                   <Box>
-                    <Text fw={600} size="sm">Foto inicial de progreso</Text>
+                    <Text fw={600} size="sm">{t("onboarding.fotoInicialDeProgreso")}</Text>
                     <Text c="dimmed" size="xs">
-                      Opcional. Puedes subir una foto frontal para que tu entrenador tenga un primer punto de referencia.
+                      {t("onboarding.opcionalPuedesSubirUnaFoto")}
                     </Text>
                   </Box>
                   <FileButton
@@ -1458,129 +1457,127 @@ export function ClientOnboardingPage() {
 
         {/* Step 4: PAR-Q */}
         <Stepper.Step
-          description="Cuestionario de aptitud"
+          description={t("onboarding.cuestionarioDeAptitud")}
           icon={<IconFileText size={18} />}
           label="PAR-Q"
         >
           <Paper mt="xl" p="xl" radius="md" withBorder>
             <Title mb="xs" order={4}>
-              Cuestionario PAR-Q
+              {t("onboarding.cuestionarioParQ")}
             </Title>
             <Text c="dimmed" mb="lg" size="sm">
-              Por favor responde estas preguntas con honestidad. Si respondes
-              "Sí" a alguna, te recomendamos consultar con un médico antes de
-              comenzar un programa de ejercicio.
+              {t("onboarding.porFavorRespondeEstasPreguntas")}
             </Text>
             <Stack gap="md">
               <Radio.Group
-                label="1. ¿Alguna vez un médico te ha dicho que tienes una condición cardíaca y que solo debes hacer actividad física recomendada por un médico?"
+                label={t("onboarding.1AlgunaVezUnMedico")}
                 {...form.getInputProps("parqResponses.heartCondition")}
               >
                 <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
+                  <Radio label={t("onboarding.si")} value="true" />
+                  <Radio label={t("onboarding.no")} value="false" />
                 </Group>
               </Radio.Group>
 
               {form.values.parqResponses.heartCondition === "true" && (
                 <Textarea
-                  label="Describe la condición cardíaca"
-                  placeholder="Ej: Arritmia, insuficiencia cardíaca, marcapasos..."
+                  label={t("onboarding.describeLaCondicionCardiaca")}
+                  placeholder={t("onboarding.ejArritmiaInsuficienciaCardiacaMarcapasos")}
                   minRows={2}
                   {...form.getInputProps("parqResponses.heartConditionDetails")}
                 />
               )}
 
               <Radio.Group
-                label="2. ¿Sientes dolor en el pecho cuando realizas actividad física?"
+                label={t("onboarding.2SientesDolorEnEl")}
                 {...form.getInputProps("parqResponses.chestPain")}
               >
                 <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
+                  <Radio label={t("onboarding.si")} value="true" />
+                  <Radio label={t("onboarding.no")} value="false" />
                 </Group>
               </Radio.Group>
 
               {form.values.parqResponses.chestPain === "true" && (
                 <Textarea
-                  label="Describe el tipo de dolor y cuándo ocurre"
-                  placeholder="Ej: Dolor punzante al correr, presión en el pecho al subir escaleras..."
+                  label={t("onboarding.describeElTipoDeDolor")}
+                  placeholder={t("onboarding.ejDolorPunzanteAlCorrer")}
                   minRows={2}
                   {...form.getInputProps("parqResponses.chestPainDetails")}
                 />
               )}
 
               <Radio.Group
-                label="3. ¿Has experimentado mareos o pérdida de conocimiento en el último mes?"
+                label={t("onboarding.3HasExperimentadoMareosO")}
                 {...form.getInputProps("parqResponses.dizziness")}
               >
                 <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
+                  <Radio label={t("onboarding.si")} value="true" />
+                  <Radio label={t("onboarding.no")} value="false" />
                 </Group>
               </Radio.Group>
 
               {form.values.parqResponses.dizziness === "true" && (
                 <Textarea
-                  label="Describe la frecuencia y circunstancias"
-                  placeholder="Ej: Me mareo al levantarme rápido, he perdido el conocimiento 2 veces..."
+                  label={t("onboarding.describeLaFrecuenciaYCircunstancias")}
+                  placeholder={t("onboarding.ejMeMareoAlLevantarme")}
                   minRows={2}
                   {...form.getInputProps("parqResponses.dizzinessDetails")}
                 />
               )}
 
               <Radio.Group
-                label="4. ¿Tienes algún problema óseo o articular que pueda empeorar con el ejercicio?"
+                label={t("onboarding.4TienesAlgunProblemaOseo")}
                 {...form.getInputProps("parqResponses.boneJoint")}
               >
                 <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
+                  <Radio label={t("onboarding.si")} value="true" />
+                  <Radio label={t("onboarding.no")} value="false" />
                 </Group>
               </Radio.Group>
 
               {form.values.parqResponses.boneJoint === "true" && (
                 <Textarea
-                  label="Describe tus limitaciones físicas"
-                  placeholder="Ej: No puedo doblar la rodilla derecha completamente, tengo dolor lumbar al agacharme..."
+                  label={t("onboarding.describeTusLimitacionesFisicas")}
+                  placeholder={t("onboarding.ejNoPuedoDoblarLa")}
                   minRows={2}
                   {...form.getInputProps("parqResponses.boneJointDetails")}
                 />
               )}
 
               <Radio.Group
-                label="5. ¿Tomas actualmente medicamentos para la presión arterial o el corazón?"
+                label={t("onboarding.5TomasActualmenteMedicamentosPara")}
                 {...form.getInputProps("parqResponses.bloodPressure")}
               >
                 <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
+                  <Radio label={t("onboarding.si")} value="true" />
+                  <Radio label={t("onboarding.no")} value="false" />
                 </Group>
               </Radio.Group>
 
               {form.values.parqResponses.bloodPressure === "true" && (
                 <Textarea
-                  label="Lista los medicamentos que tomas"
-                  placeholder="Ej: Enalapril 10mg, Losartán 50mg..."
+                  label={t("onboarding.listaLosMedicamentosQueTomas")}
+                  placeholder={t("onboarding.ejEnalapril10mgLosartan50mg")}
                   minRows={2}
                   {...form.getInputProps("parqResponses.bloodPressureDetails")}
                 />
               )}
 
               <Radio.Group
-                label="6. ¿Conoces alguna otra razón por la que no deberías hacer ejercicio?"
+                label={t("onboarding.6ConocesAlgunaOtraRazon")}
                 {...form.getInputProps("parqResponses.otherReason")}
               >
                 <Group mt="xs">
-                  <Radio label="Sí" value="true" />
-                  <Radio label="No" value="false" />
+                  <Radio label={t("onboarding.si")} value="true" />
+                  <Radio label={t("onboarding.no")} value="false" />
                 </Group>
               </Radio.Group>
 
               {form.values.parqResponses.otherReason === "true" && (
                 <Textarea
-                  label="Explica el motivo"
-                  placeholder="Describe la razón por la que crees que no deberías hacer ejercicio..."
+                  label={t("onboarding.explicaElMotivo")}
+                  placeholder={t("onboarding.describeLaRazonPorLa")}
                   minRows={2}
                   {...form.getInputProps("parqResponses.otherReasonDetails")}
                 />
@@ -1588,9 +1585,7 @@ export function ClientOnboardingPage() {
 
               {hasParqRisk && (
                 <Alert color="yellow" icon={<IconAlertCircle size={16} />}>
-                  Has respondido "Sí" a una o más preguntas. Te recomendamos
-                  consultar con un médico antes de comenzar cualquier programa
-                  de ejercicio.
+                  {t("onboarding.hasRespondidoSiAUna")}
                 </Alert>
               )}
             </Stack>
@@ -1599,13 +1594,13 @@ export function ClientOnboardingPage() {
 
         {/* Step 5: Consent */}
         <Stepper.Step
-          description="Términos y privacidad"
+          description={t("onboarding.terminosYPrivacidad")}
           icon={<IconCheck size={18} />}
-          label="Consentimiento"
+          label={t("onboarding.consentimiento")}
         >
           <Paper mt="xl" p="xl" radius="md" withBorder>
             <Title mb="lg" order={4}>
-              Consentimientos
+              {t("onboarding.consentimientos")}
             </Title>
             <Stack gap="md">
               <Checkbox
@@ -1613,7 +1608,7 @@ export function ClientOnboardingPage() {
                   <Text size="sm">
                     Acepto los{" "}
                     <Text c="blue" component="a" href="#" inherit>
-                      Términos y Condiciones
+                      {t("onboarding.terminosYCondiciones")}
                     </Text>{" "}
                     del servicio *
                   </Text>
@@ -1626,7 +1621,7 @@ export function ClientOnboardingPage() {
                   <Text size="sm">
                     Acepto la{" "}
                     <Text c="blue" component="a" href="#" inherit>
-                      Política de Privacidad
+                      {t("onboarding.politicaDePrivacidad")}
                     </Text>{" "}
                     y el tratamiento de mis datos *
                   </Text>
@@ -1636,7 +1631,7 @@ export function ClientOnboardingPage() {
               />
               <Divider />
               <Checkbox
-                label="Deseo recibir comunicaciones comerciales y novedades (opcional)"
+                label={t("onboarding.deseoRecibirComunicacionesComercialesY")}
                 {...form.getInputProps("acceptMarketing", { type: "checkbox" })}
               />
             </Stack>
@@ -1646,7 +1641,7 @@ export function ClientOnboardingPage() {
 
       <Group justify="space-between" mt="xl">
         <Button disabled={active === 0 || loading} onClick={prevStep} variant="default">
-          Anterior
+          {t("onboarding.anterior")}
         </Button>
         <Button onClick={nextStep} loading={loading}>
           {active === 4 ? "Completar Registro" : "Siguiente"}

@@ -57,7 +57,7 @@ export function ViewProgramModal({
             )}
           </Group>
 
-          <Divider my="sm" label="Ejercicios" labelPosition="center" />
+          <Divider my="sm" label={"Ejercicios"} labelPosition="center" />
 
           {(() => {
             const tmpl = program.template as any;
@@ -70,7 +70,7 @@ export function ViewProgramModal({
                 : [];
 
             if (allWeeks.length === 0) {
-              return <Text c="dimmed" ta="center" py="md">No hay ejercicios definidos</Text>;
+              return <Text c="dimmed" ta="center" py="md">{"No hay ejercicios definidos"}</Text>;
             }
 
             return allWeeks.map((wk) => (
@@ -83,7 +83,7 @@ export function ViewProgramModal({
                     <Box key={dayIdx} p="sm" style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
                       <Group gap="xs" mb="xs">
                         <Text fw={600} size="sm">{day.dayName || `Día ${dayIdx + 1}`}</Text>
-                        {day.isRestDay && <Badge variant="light" color="orange" size="xs">Descanso</Badge>}
+                        {day.isRestDay && <Badge variant="light" color="orange" size="xs">{"Descanso"}</Badge>}
                       </Group>
                       {!day.isRestDay && day.blocks?.map((block, bi) => (
                         <Box key={bi} ml="sm" mb="xs">
@@ -107,7 +107,7 @@ export function ViewProgramModal({
           })()}
 
           <Group justify="flex-end" mt="md">
-            <Button variant="light" onClick={onClose}>Cerrar</Button>
+            <Button variant="light" onClick={onClose}>{"Cerrar"}</Button>
             <Button
               leftSection={<IconEdit size={16} />}
               onClick={() => {
@@ -115,7 +115,7 @@ export function ViewProgramModal({
                 onEdit(program);
               }}
             >
-              Editar programa
+              {"Editar programa"}
             </Button>
           </Group>
         </Stack>

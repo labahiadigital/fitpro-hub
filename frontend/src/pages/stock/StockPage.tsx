@@ -61,6 +61,7 @@ import {
 } from "../../hooks/useStock";
 import { useBoxes } from "../../hooks/useBoxes";
 import { useSuppliers } from "../../hooks/useSuppliers";
+import { useTranslation } from "react-i18next";
 
 const UNITS = [
   { value: "ud", label: "Unidades" },
@@ -77,12 +78,14 @@ const UNITS = [
 ];
 
 function getStatusBadge(item: StockItem) {
-  if (item.current_stock <= item.min_stock) return <Badge color="red" variant="light" size="sm">Stock bajo</Badge>;
-  if (item.max_stock > 0 && item.current_stock >= item.max_stock) return <Badge color="blue" variant="light" size="sm">Stock alto</Badge>;
-  return <Badge color="green" variant="light" size="sm">Normal</Badge>;
+  const { t } = useTranslation();
+  if (item.current_stock <= item.min_stock) return <Badge color="red" variant="light" size="sm">{t("stock.stockBajo")}</Badge>;
+  if (item.max_stock > 0 && item.current_stock >= item.max_stock) return <Badge color="blue" variant="light" size="sm">{t("stock.stockAlto")}</Badge>;
+  return <Badge color="green" variant="light" size="sm">{t("stock.normal")}</Badge>;
 }
 
 export function StockPage() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebouncedValue(search, 300);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -219,7 +222,7 @@ export function StockPage() {
 
   const handleDelete = (item: StockItem) => {
     modals.openConfirmModal({
-      title: "Eliminar elemento",
+      title: t("stock.eliminarElemento"),
       children: <Text size="sm">¿Estás seguro de que deseas eliminar "{item.name}"?</Text>,
       labels: { confirm: "Eliminar", cancel: "Cancelar" },
       confirmProps: { color: "red" },
@@ -277,7 +280,7 @@ export function StockPage() {
 
   return (
     <Container size="xl" px={{ base: "sm", sm: "md" }}>
-      <PageHeader title="Gestión de Stock" subtitle="Inventario y movimientos" />
+      <PageHeader title={t("stock.gestionDeStock")} subtitle={t("stock.inventarioYMovimientos")} />
 
       {/* KPI Cards */}
       <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg">
@@ -285,7 +288,7 @@ export function StockPage() {
           <Group gap="sm">
             <ThemeIcon size="lg" color="blue" variant="light" radius="md"><IconPackage size={20} /></ThemeIcon>
             <Box>
-              <Text size="xs" c="dimmed">Total Elementos</Text>
+              <Text size="xs" c="dimmed">{t("stock.totalElementos")}</Text>
               <Text size="xl" fw={700}>{summary?.total_items ?? 0}</Text>
             </Box>
           </Group>
@@ -294,7 +297,7 @@ export function StockPage() {
           <Group gap="sm">
             <ThemeIcon size="lg" color="orange" variant="light" radius="md"><IconArrowDown size={20} /></ThemeIcon>
             <Box>
-              <Text size="xs" c="dimmed">Stock Bajo</Text>
+              <Text size="xs" c="dimmed">{t("stock.stockBajo")}</Text>
               <Text size="xl" fw={700} c="orange">{summary?.low_stock_count ?? 0}</Text>
             </Box>
           </Group>
@@ -303,7 +306,7 @@ export function StockPage() {
           <Group gap="sm">
             <ThemeIcon size="lg" color="green" variant="light" radius="md"><IconTrendingUp size={20} /></ThemeIcon>
             <Box>
-              <Text size="xs" c="dimmed">Valor Total</Text>
+              <Text size="xs" c="dimmed">{t("stock.valorTotal")}</Text>
               <Text size="xl" fw={700}>{(summary?.total_value ?? 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</Text>
             </Box>
           </Group>
@@ -312,7 +315,7 @@ export function StockPage() {
           <Group gap="sm">
             <ThemeIcon size="lg" color="violet" variant="light" radius="md"><IconSwitch size={20} /></ThemeIcon>
             <Box>
-              <Text size="xs" c="dimmed">Movimientos Hoy</Text>
+              <Text size="xs" c="dimmed">{t("stock.movimientosHoy")}</Text>
               <Text size="xl" fw={700}>{summary?.movements_today ?? 0}</Text>
             </Box>
           </Group>
@@ -323,7 +326,7 @@ export function StockPage() {
       <Group mb="md" gap="sm">
         <TextInput
           leftSection={<IconSearch size={14} />}
-          placeholder="Buscar elementos..."
+          placeholder={t("stock.buscarElementos")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ flex: 1 }}
@@ -331,7 +334,7 @@ export function StockPage() {
           size="sm"
         />
         <Select
-          placeholder="Categoría"
+          placeholder={t("stock.categoria")}
           data={categoryOptions}
           value={categoryFilter}
           onChange={setCategoryFilter}
@@ -341,17 +344,17 @@ export function StockPage() {
           w={180}
         />
         <Switch
-          label="Solo stock bajo"
+          label={t("stock.soloStockBajo")}
           checked={lowStockOnly}
           onChange={(e) => setLowStockOnly(e.currentTarget.checked)}
           size="sm"
         />
         <Button leftSection={<IconPlus size={14} />} onClick={handleOpenCreate} radius="md" size="sm">
-          Añadir Elemento
+          {t("stock.anadirElemento")}
         </Button>
-        <Tooltip label="Exportar a Excel">
+        <Tooltip label={t("stock.exportarAExcel")}>
           <Button leftSection={<IconDownload size={14} />} variant="light" color="green" radius="md" size="sm" onClick={exportToExcel}>
-            Exportar
+            {t("stock.exportar")}
           </Button>
         </Tooltip>
       </Group>
@@ -364,13 +367,13 @@ export function StockPage() {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Elemento</Table.Th>
-                <Table.Th>Categoría</Table.Th>
-                <Table.Th style={{ textAlign: "right" }}>Stock</Table.Th>
-                <Table.Th style={{ textAlign: "right" }}>Precio</Table.Th>
-                <Table.Th>Ubicación</Table.Th>
-                <Table.Th>Estado</Table.Th>
-                <Table.Th>Acciones</Table.Th>
+                <Table.Th>{t("stock.elemento")}</Table.Th>
+                <Table.Th>{t("stock.categoria")}</Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>{t("stock.stock")}</Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>{t("stock.precio")}</Table.Th>
+                <Table.Th>{t("stock.ubicacion")}</Table.Th>
+                <Table.Th>{t("stock.estado")}</Table.Th>
+                <Table.Th>{t("stock.acciones")}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -406,17 +409,17 @@ export function StockPage() {
                   <Table.Td>{getStatusBadge(item)}</Table.Td>
                   <Table.Td>
                     <Group gap={4}>
-                      <Tooltip label="Registrar movimiento">
+                      <Tooltip label={t("stock.registrarMovimiento")}>
                         <ActionIcon color="blue" variant="subtle" size="sm" onClick={() => handleOpenMovement(item)}>
                           <IconArrowUp size={14} />
                         </ActionIcon>
                       </Tooltip>
-                      <Tooltip label="Editar">
+                      <Tooltip label={t("stock.editar")}>
                         <ActionIcon color="gray" variant="subtle" size="sm" onClick={() => handleOpenEdit(item)}>
                           <IconEdit size={14} />
                         </ActionIcon>
                       </Tooltip>
-                      <Tooltip label="Eliminar">
+                      <Tooltip label={t("stock.eliminar")}>
                         <ActionIcon color="red" variant="subtle" size="sm" onClick={() => handleDelete(item)}>
                           <IconTrash size={14} />
                         </ActionIcon>
@@ -432,9 +435,9 @@ export function StockPage() {
         <Center py="xl">
           <Stack align="center" gap="sm">
             <ThemeIcon size={48} color="gray" variant="light" radius="xl"><IconBox size={28} /></ThemeIcon>
-            <Title order={4}>Sin elementos</Title>
-            <Text c="dimmed" size="sm">Añade elementos a tu inventario para comenzar</Text>
-            <Button leftSection={<IconPlus size={14} />} onClick={handleOpenCreate}>Añadir Elemento</Button>
+            <Title order={4}>{t("stock.sinElementos")}</Title>
+            <Text c="dimmed" size="sm">{t("stock.anadeElementosATuInventario")}</Text>
+            <Button leftSection={<IconPlus size={14} />} onClick={handleOpenCreate}>{t("stock.anadirElemento")}</Button>
           </Stack>
         </Center>
       )}
@@ -449,22 +452,22 @@ export function StockPage() {
       >
         <form onSubmit={handleItemSubmit}>
           <Stack>
-            <TextInput label="Nombre" placeholder="Nombre del elemento" required {...itemForm.getInputProps("name")} />
+            <TextInput label={t("stock.nombre")} placeholder={t("stock.nombreDelElemento")} required {...itemForm.getInputProps("name")} />
             <Group grow>
               <Select
-                label="Categoría"
-                placeholder="Seleccionar"
+                label={t("stock.categoria")}
+                placeholder={t("stock.seleccionar")}
                 data={categoryOptions}
                 clearable
                 searchable
                 {...itemForm.getInputProps("category_id")}
               />
-              <Select label="Unidad" data={UNITS} {...itemForm.getInputProps("unit")} />
+              <Select label={t("stock.unidad")} data={UNITS} {...itemForm.getInputProps("unit")} />
             </Group>
             <Group>
               <TextInput
-                label="Nueva categoría"
-                placeholder="Nombre"
+                label={t("stock.nuevaCategoria")}
+                placeholder={t("stock.nombre")}
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
                 style={{ flex: 1 }}
@@ -480,28 +483,28 @@ export function StockPage() {
                   });
                 }}
               >
-                Crear
+                {t("stock.crear")}
               </Button>
             </Group>
-            <Textarea label="Descripción" placeholder="Descripción opcional" autosize minRows={2} {...itemForm.getInputProps("description")} />
+            <Textarea label={t("stock.descripcion")} placeholder={t("stock.descripcionOpcional")} autosize minRows={2} {...itemForm.getInputProps("description")} />
             <Group grow>
-              <NumberInput label="Stock Actual" min={0} {...itemForm.getInputProps("current_stock")} />
-              <NumberInput label="Stock Mínimo" min={0} {...itemForm.getInputProps("min_stock")} />
-              <NumberInput label="Stock Máximo" min={0} {...itemForm.getInputProps("max_stock")} />
+              <NumberInput label={t("stock.stockActual")} min={0} {...itemForm.getInputProps("current_stock")} />
+              <NumberInput label={t("stock.stockMinimo")} min={0} {...itemForm.getInputProps("min_stock")} />
+              <NumberInput label={t("stock.stockMaximo")} min={0} {...itemForm.getInputProps("max_stock")} />
             </Group>
             <Group grow>
-              <NumberInput label="Precio unitario (€)" min={0} decimalScale={2} {...itemForm.getInputProps("price")} />
+              <NumberInput label={t("stock.precioUnitario")} min={0} decimalScale={2} {...itemForm.getInputProps("price")} />
               <NumberInput label="IVA (%)" min={0} max={100} {...itemForm.getInputProps("tax_rate")} />
               <NumberInput label="IRPF (%)" min={0} max={100} {...itemForm.getInputProps("irpf_rate")} />
             </Group>
-            <TextInput label="Ubicación" placeholder="Almacén, estantería..." {...itemForm.getInputProps("location")} />
+            <TextInput label={t("stock.ubicacion")} placeholder={t("stock.almacenEstanteria")} {...itemForm.getInputProps("location")} />
             <Paper p="sm" radius="md" withBorder>
               <Stack gap="xs">
                 <Group justify="space-between" align="center">
                   <div>
-                    <Text fw={600} size="sm">Distribución por boxes</Text>
+                    <Text fw={600} size="sm">{t("stock.distribucionPorBoxes")}</Text>
                     <Text size="xs" c="dimmed">
-                      Asigna unidades a uno o varios boxes. Si no asignas ninguno se usará el stock global del item.
+                      {t("stock.asignaUnidadesAUnoO")}
                     </Text>
                   </div>
                   <Button
@@ -524,13 +527,13 @@ export function StockPage() {
                       ]);
                     }}
                   >
-                    Añadir box
+                    {t("stock.anadirBox")}
                   </Button>
                 </Group>
 
                 {boxAllocations.length === 0 ? (
                   <Text size="xs" c="dimmed" ta="center" py="xs">
-                    Sin distribución por boxes (modo legacy con stock único).
+                    {t("stock.sinDistribucionPorBoxesModo")}
                   </Text>
                 ) : (
                   <Stack gap="xs">
@@ -538,7 +541,7 @@ export function StockPage() {
                       <Group key={idx} gap="xs" align="flex-end" wrap="nowrap">
                         <Select
                           label={idx === 0 ? "Box" : undefined}
-                          placeholder="Box"
+                          placeholder={t("stock.box")}
                           data={boxOptions}
                           searchable
                           value={alloc.box_id || null}
@@ -608,7 +611,7 @@ export function StockPage() {
                           onClick={() =>
                             setBoxAllocations((prev) => prev.filter((_, i) => i !== idx))
                           }
-                          title="Eliminar"
+                          title={t("stock.eliminar")}
                         >
                           <IconX size={14} />
                         </ActionIcon>
@@ -616,7 +619,7 @@ export function StockPage() {
                     ))}
                     <Group justify="space-between" pt="xs">
                       <Text size="xs" c="dimmed">
-                        Total asignado a boxes
+                        {t("stock.totalAsignadoABoxes")}
                       </Text>
                       <Badge variant="light" color="blue">
                         {totalAllocatedStock.toFixed(0)} {itemForm.values.unit}
@@ -627,9 +630,9 @@ export function StockPage() {
               </Stack>
             </Paper>
             <Select
-              label="Proveedor"
-              placeholder="Selecciona un proveedor"
-              description="Asocia este artículo al proveedor que lo suministra"
+              label={t("stock.proveedor")}
+              placeholder={t("stock.seleccionaUnProveedor")}
+              description={t("stock.asociaEsteArticuloAlProveedor")}
               data={supplierOptions}
               searchable
               clearable
@@ -638,7 +641,7 @@ export function StockPage() {
               onChange={(val) => itemForm.setFieldValue("supplier_id", val)}
             />
             <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeItemModal}>Cancelar</Button>
+              <Button variant="default" onClick={closeItemModal}>{t("stock.cancelar")}</Button>
               <Button type="submit" loading={createItem.isPending || updateItem.isPending}>
                 {editMode ? "Guardar cambios" : "Crear Elemento"}
               </Button>
@@ -668,22 +671,22 @@ export function StockPage() {
 
             <Group grow>
               <Paper p="xs" radius="md" withBorder>
-                <Text size="xs" c="dimmed">Precio unitario</Text>
+                <Text size="xs" c="dimmed">{t("stock.precioUnitario")}</Text>
                 <Text fw={600}>{detailItem.price.toFixed(2)} €</Text>
               </Paper>
               <Paper p="xs" radius="md" withBorder>
-                <Text size="xs" c="dimmed">Valor total</Text>
+                <Text size="xs" c="dimmed">{t("stock.valorTotal")}</Text>
                 <Text fw={600}>{(detailItem.current_stock * detailItem.price).toFixed(2)} €</Text>
               </Paper>
               <Paper p="xs" radius="md" withBorder>
-                <Text size="xs" c="dimmed">Ubicación</Text>
+                <Text size="xs" c="dimmed">{t("stock.ubicacion")}</Text>
                 <Text fw={600}>{detailItem.location || "—"}</Text>
               </Paper>
             </Group>
 
             {detailItem.box_allocations && detailItem.box_allocations.length > 0 && (
               <>
-                <Divider label="Distribución por boxes" labelPosition="center" />
+                <Divider label={t("stock.distribucionPorBoxes")} labelPosition="center" />
                 <Stack gap={4}>
                   {detailItem.box_allocations.map((a) => (
                     <Group key={a.box_id} justify="space-between">
@@ -697,20 +700,20 @@ export function StockPage() {
               </>
             )}
 
-            <Divider label="Productos / Servicios vinculados" labelPosition="center" />
+            <Divider label={t("stock.productosServiciosVinculados")} labelPosition="center" />
 
             {linkedProducts.length === 0 ? (
               <Text size="sm" c="dimmed" ta="center" py="md">
-                Este elemento de stock no está vinculado a ningún producto o servicio.
+                {t("stock.esteElementoDeStockNo")}
               </Text>
             ) : (
               <Table striped withTableBorder style={{ fontSize: 13 }}>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Tipo</Table.Th>
-                    <Table.Th>Nombre</Table.Th>
-                    <Table.Th style={{ textAlign: "right" }}>Uds. por venta</Table.Th>
-                    <Table.Th>Impacto</Table.Th>
+                    <Table.Th>{t("stock.tipo")}</Table.Th>
+                    <Table.Th>{t("stock.nombre")}</Table.Th>
+                    <Table.Th style={{ textAlign: "right" }}>{t("stock.udsPorVenta")}</Table.Th>
+                    <Table.Th>{t("stock.impacto")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -727,7 +730,7 @@ export function StockPage() {
                       </Table.Td>
                       <Table.Td>
                         <Badge size="xs" color="orange" variant="light">
-                          <IconLink size={10} /> Reduce stock
+                          <IconLink size={10} /> {t("stock.reduceStock")}
                         </Badge>
                       </Table.Td>
                     </Table.Tr>
@@ -737,7 +740,7 @@ export function StockPage() {
             )}
 
             <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeDetailModal}>Cerrar</Button>
+              <Button variant="default" onClick={closeDetailModal}>{t("stock.cerrar")}</Button>
             </Group>
           </Stack>
         )}
@@ -747,7 +750,7 @@ export function StockPage() {
       <Modal
         opened={movementModalOpened}
         onClose={closeMovementModal}
-        title="Registrar Movimiento"
+        title={t("stock.registrarMovimiento")}
         size="md"
         radius="lg"
       >
@@ -762,19 +765,19 @@ export function StockPage() {
               </Paper>
 
               <Select
-                label="Tipo de movimiento"
+                label={t("stock.tipoDeMovimiento")}
                 data={[
-                  { value: "entry", label: "📥 Entrada - Agregar stock" },
-                  { value: "exit", label: "📤 Salida - Reducir stock" },
-                  { value: "adjustment", label: "🔄 Ajuste - Cambiar stock" },
+                  { value: "entry", label: t("stock.entradaAgregarStock") },
+                  { value: "exit", label: t("stock.salidaReducirStock") },
+                  { value: "adjustment", label: t("stock.ajusteCambiarStock") },
                 ]}
                 {...movementForm.getInputProps("movement_type")}
               />
               {movementItem.box_allocations && movementItem.box_allocations.length > 0 && (
                 <Select
-                  label="Box (opcional)"
-                  description="Si seleccionas un box, el movimiento se aplica sólo a ese box."
-                  placeholder="Aplicar al stock global"
+                  label={t("stock.boxOpcional")}
+                  description={t("stock.siSeleccionasUnBoxEl")}
+                  placeholder={t("stock.aplicarAlStockGlobal")}
                   data={movementItem.box_allocations.map((a) => ({
                     value: a.box_id,
                     label: `${a.box_name || "Box"} · ${a.current_stock} ${movementItem.unit}`,
@@ -784,13 +787,13 @@ export function StockPage() {
                 />
               )}
               <NumberInput
-                label="Cantidad"
+                label={t("stock.cantidad")}
                 min={0}
                 {...movementForm.getInputProps("quantity")}
               />
               <Textarea
-                label="Motivo"
-                placeholder="Motivo del movimiento (obligatorio para auditoría)"
+                label={t("stock.motivo")}
+                placeholder={t("stock.motivoDelMovimientoObligatorioPara")}
                 required
                 autosize
                 minRows={2}
@@ -799,15 +802,15 @@ export function StockPage() {
 
               {movements.length > 0 && (
                 <>
-                  <Divider label="Últimos movimientos" labelPosition="center" />
+                  <Divider label={t("stock.ultimosMovimientos")} labelPosition="center" />
                   <Box style={{ maxHeight: 150, overflow: "auto" }}>
                     <Table striped withTableBorder style={{ fontSize: 12 }}>
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th>Tipo</Table.Th>
-                          <Table.Th>Cant.</Table.Th>
-                          <Table.Th>Stock</Table.Th>
-                          <Table.Th>Motivo</Table.Th>
+                          <Table.Th>{t("stock.tipo")}</Table.Th>
+                          <Table.Th>{t("stock.cant")}</Table.Th>
+                          <Table.Th>{t("stock.stock")}</Table.Th>
+                          <Table.Th>{t("stock.motivo")}</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -830,8 +833,8 @@ export function StockPage() {
               )}
 
               <Group justify="flex-end" mt="md">
-                <Button variant="default" onClick={closeMovementModal}>Cancelar</Button>
-                <Button type="submit" loading={registerMovement.isPending}>Registrar</Button>
+                <Button variant="default" onClick={closeMovementModal}>{t("stock.cancelar")}</Button>
+                <Button type="submit" loading={registerMovement.isPending}>{t("stock.registrar")}</Button>
               </Group>
             </Stack>
           </form>

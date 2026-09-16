@@ -82,7 +82,7 @@ export function ResetPasswordPage() {
     input: {
       background: "rgba(255, 255, 255, 0.03)",
       border: "1px solid rgba(255, 255, 255, 0.1)",
-      color: "white",
+      color: t("auth.white"),
       borderRadius: 12,
       padding: "12px 16px",
       paddingLeft: 44,
@@ -141,7 +141,7 @@ export function ResetPasswordPage() {
                 fontWeight: 700,
               }}
             >
-              Trackfiz
+              {t("auth.trackfiz")}
             </Title>
 
             <Text c="white" size="lg" fw={500} ta="center">
@@ -200,7 +200,7 @@ export function ResetPasswordPage() {
                 fontWeight: 700,
               }}
             >
-              Trackfiz
+              {t("auth.trackfiz")}
             </Title>
 
             <ThemeIcon
@@ -226,7 +226,7 @@ export function ResetPasswordPage() {
               onClick={() => navigate("/login")}
               style={{
                 background: "var(--nv-accent)",
-                color: "#1a1a2e",
+                color: t("auth.1a1a2e"),
                 fontWeight: 600,
                 height: 48,
                 borderRadius: 12,
@@ -276,7 +276,7 @@ export function ResetPasswordPage() {
                   marginBottom: 16,
                 }}
               >
-                Trackfiz
+                {t("auth.trackfiz")}
               </Title>
               <Title order={2} c="white" fw={700}>
                 {t("auth.newPassword")}
@@ -314,7 +314,7 @@ export function ResetPasswordPage() {
               size="lg"
               style={{
                 background: "var(--nv-accent)",
-                color: "#1a1a2e",
+                color: t("auth.1a1a2e"),
                 fontWeight: 600,
                 height: 48,
                 borderRadius: 12,

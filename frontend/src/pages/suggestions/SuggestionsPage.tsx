@@ -176,18 +176,18 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
               leftSection={<IconPlus size={16} />}
               onClick={() => setShowForm(!showForm)}
             >
-              Nueva Sugerencia
+              {"Nueva Sugerencia"}
             </Button>
           }
-          description="Propón ideas y vota las sugerencias de la comunidad"
-          title="Buzón de Sugerencias"
+          description={"Propón ideas y vota las sugerencias de la comunidad"}
+          title={"Buzón de Sugerencias"}
         />
       )}
       {embedded && (
         <Group justify="space-between" mb="lg">
-          <Text fw={700} size="lg">Buzón de Sugerencias</Text>
+          <Text fw={700} size="lg">{"Buzón de Sugerencias"}</Text>
           <Button leftSection={<IconPlus size={14} />} size="xs" radius="xl" onClick={() => setShowForm(!showForm)}>
-            Nueva Sugerencia
+            {"Nueva Sugerencia"}
           </Button>
         </Group>
       )}
@@ -197,7 +197,7 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Total Sugerencias</Text>
+              <Text className="text-label" mb="xs">{"Total Sugerencias"}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-primary)" }}>
                 {totalSuggestions}
               </Text>
@@ -210,7 +210,7 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Sugerencias Públicas</Text>
+              <Text className="text-label" mb="xs">{"Sugerencias Públicas"}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-brand)" }}>
                 {publicSuggestions}
               </Text>
@@ -223,7 +223,7 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Planificadas / Completadas</Text>
+              <Text className="text-label" mb="xs">{"Planificadas / Completadas"}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
                 {plannedOrDone}
               </Text>
@@ -243,35 +243,35 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
               <IconBulb size={20} />
             </ThemeIcon>
             <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>
-              Enviar nueva sugerencia
+              {"Enviar nueva sugerencia"}
             </Text>
           </Group>
 
           <form onSubmit={form.onSubmit(handleSubmit)}>
             <Stack gap="md">
               <TextInput
-                label="Título"
-                placeholder="¿Qué te gustaría proponer?"
+                label={"Título"}
+                placeholder={"¿Qué te gustaría proponer?"}
                 {...form.getInputProps("title")}
               />
               <Textarea
-                label="Descripción"
-                placeholder="Describe tu idea con detalle para que podamos entenderla mejor..."
+                label={"Descripción"}
+                placeholder={"Describe tu idea con detalle para que podamos entenderla mejor..."}
                 minRows={3}
                 {...form.getInputProps("description")}
               />
               <Group justify="space-between">
                 <Switch
-                  label="Hacer pública"
-                  description="Las sugerencias públicas pueden ser votadas por otros usuarios"
+                  label={"Hacer pública"}
+                  description={"Las sugerencias públicas pueden ser votadas por otros usuarios"}
                   {...form.getInputProps("isPublic", { type: "checkbox" })}
                 />
                 <Group gap="sm">
                   <Button variant="default" onClick={() => { setShowForm(false); form.reset(); }}>
-                    Cancelar
+                    {"Cancelar"}
                   </Button>
                   <Button type="submit" leftSection={<IconSend size={16} />}>
-                    Enviar
+                    {"Enviar"}
                   </Button>
                 </Group>
               </Group>
@@ -338,7 +338,7 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
 
                   <Group gap="md">
                     <Text size="xs" c="dimmed">
-                      Por <Text span fw={500} size="xs" style={{ color: "var(--nv-text-secondary)" }}>{suggestion.author}</Text>
+                      {"Por"} <Text span fw={500} size="xs" style={{ color: "var(--nv-text-secondary)" }}>{suggestion.author}</Text>
                     </Text>
                     <Text size="xs" c="dimmed">
                       {new Date(suggestion.createdAt).toLocaleDateString("es-ES", {
@@ -360,13 +360,13 @@ export function SuggestionsPage({ embedded }: { embedded?: boolean } = {}) {
               <IconBulb size={32} />
             </ThemeIcon>
             <Text fw={600} size="lg" mb="xs" style={{ color: "var(--nv-text-primary)" }}>
-              Sin sugerencias todavía
+              {"Sin sugerencias todavía"}
             </Text>
             <Text c="dimmed" size="sm" mb="lg">
-              Sé el primero en proponer una idea para mejorar la plataforma
+              {"Sé el primero en proponer una idea para mejorar la plataforma"}
             </Text>
             <Button leftSection={<IconPlus size={16} />} onClick={() => setShowForm(true)}>
-              Nueva Sugerencia
+              {"Nueva Sugerencia"}
             </Button>
           </Box>
         )}

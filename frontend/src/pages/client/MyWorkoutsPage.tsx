@@ -55,6 +55,7 @@ import { FullPageDetail } from "../../components/common/FullPageDetail";
 import { NativeBottomSheet } from "../../components/common/NativeBottomSheet";
 import { DayCardMenu } from "../../components/common/DayCardMenu";
 import { MasterDetailLayout } from "../../components/common/MasterDetailLayout";
+import { useTranslation } from "react-i18next";
 
 function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
   const { data: allExercises } = useClientExercises({ limit: 500 });
@@ -150,7 +151,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
     <Stack gap="md">
       <Group gap="sm">
         <TextInput
-          placeholder="Buscar ejercicio..."
+          placeholder={"Buscar ejercicio..."}
           leftSection={<IconSearch size={14} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -160,7 +161,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
         />
         {equipmentOptions.length > 0 && (
           <Select
-            placeholder="Filtrar por equipo"
+            placeholder={"Filtrar por equipo"}
             data={equipmentOptions}
             value={equipFilter}
             onChange={setEquipFilter}
@@ -232,7 +233,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
                               leftSection={<IconPlayerPlay size={10} />}
                               style={{ cursor: "pointer" }}
                             >
-                              Ver vídeo
+                              {"Ver vídeo"}
                             </Badge>
                           )}
                         </Group>
@@ -246,7 +247,7 @@ function AllMyExercisesTab({ templateDays }: { templateDays: ProgramDay[] }) {
         ))
       ) : (
         <Paper p="lg" radius="md" ta="center">
-          <Text c="dimmed">No hay ejercicios asignados</Text>
+          <Text c="dimmed">{"No hay ejercicios asignados"}</Text>
         </Paper>
       )}
     </Stack>
@@ -519,18 +520,18 @@ function ExerciseLogRow({
       {/* Header row */}
       {!cardio && setData.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 36px", gap: 8, padding: "0 4px", marginBottom: 4 }}>
-          <Text size="xs" c="dimmed" ta="center">Serie</Text>
-          <Text size="xs" c="dimmed" ta="center">Peso (kg)</Text>
-          <Text size="xs" c="dimmed" ta="center">Reps</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Serie"}</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Peso (kg)"}</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Reps"}</Text>
           <span />
         </div>
       )}
       {cardio && setData.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr 1fr 36px", gap: 6, padding: "0 4px", marginBottom: 4 }}>
           <Text size="xs" c="dimmed" ta="center">#</Text>
-          <Text size="xs" c="dimmed" ta="center">Min</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Min"}</Text>
           <Text size="xs" c="dimmed" ta="center">Km</Text>
-          <Text size="xs" c="dimmed" ta="center">Km/h</Text>
+          <Text size="xs" c="dimmed" ta="center">{"Km/h"}</Text>
           <span />
         </div>
       )}
@@ -619,7 +620,7 @@ function WorkoutSatisfactionSelector({
   ];
   return (
     <Box>
-      <Text size="sm" fw={500} mb={4}>¿Cómo te ha ido el entrenamiento?</Text>
+      <Text size="sm" fw={500} mb={4}>{"¿Cómo te ha ido el entrenamiento?"}</Text>
       <Group gap="xs">
         {options.map((opt) => {
           const Icon = opt.icon;
@@ -866,7 +867,7 @@ function LogWorkoutModal({
     <Box px="md">
       <SimpleGrid cols={2} spacing="sm">
         <NumberInput
-          label="Duración (min)"
+          label={"Duración (min)"}
           {...form.getInputProps("duration_minutes")}
           min={1}
           max={300}
@@ -875,7 +876,7 @@ function LogWorkoutModal({
           styles={{ input: { height: 44, borderRadius: 10 } }}
         />
         <NumberInput
-          label="Esfuerzo (1-10)"
+          label={"Esfuerzo (1-10)"}
           {...form.getInputProps("perceived_effort")}
           min={1}
           max={10}
@@ -886,8 +887,8 @@ function LogWorkoutModal({
       </SimpleGrid>
 
       <Textarea
-        label="Notas (opcional)"
-        placeholder="¿Cómo te sentiste?"
+        label={"Notas (opcional)"}
+        placeholder={"¿Cómo te sentiste?"}
         {...form.getInputProps("notes")}
         minRows={2}
         mt="sm"
@@ -912,7 +913,7 @@ function LogWorkoutModal({
       radius="xl"
       styles={{ root: { height: 48, fontWeight: 700 } }}
     >
-      Registrar Entrenamiento
+      {"Registrar entrenamiento"}
     </Button>
   );
 
@@ -1079,7 +1080,7 @@ function SwapExerciseModal({
     <NativeBottomSheet
       opened={opened}
       onClose={() => { onClose(); setShowAllExercises(false); setSelectedExerciseId(null); }}
-      title="Sustituir ejercicio"
+      title={"Sustituir ejercicio"}
       subtitle={currentExerciseName}
       footer={
         <Button
@@ -1093,7 +1094,7 @@ function SwapExerciseModal({
           radius="xl"
           styles={{ root: { height: 48, fontWeight: 700 } }}
         >
-          Sustituir
+          {"Sustituir"}
         </Button>
       }
     >
@@ -1106,7 +1107,7 @@ function SwapExerciseModal({
           <Box>
             <Group gap="xs" mb="xs">
               <IconExchange size={14} color="var(--mantine-color-green-6)" />
-              <Text fw={600} size="sm" c="green.7">Alternativas recomendadas por tu entrenador</Text>
+              <Text fw={600} size="sm" c="green.7">{"Alternativas recomendadas por tu entrenador"}</Text>
             </Group>
             <Stack gap="xs">
               {(alternatives || []).map((alt) => (
@@ -1161,16 +1162,16 @@ function SwapExerciseModal({
         {(!hasAlternatives || showAllExercises) && (
           <>
             {hasAlternatives && (
-              <Divider label="Todos los ejercicios" labelPosition="center" />
+              <Divider label={"Todos los ejercicios"} labelPosition="center" />
             )}
             <TextInput
-              placeholder="Buscar ejercicio..."
+              placeholder={"Buscar ejercicio..."}
               leftSection={<IconSearch size={16} />}
               value={search}
               onChange={(e) => setSearch(e.currentTarget.value)}
             />
 
-            <Text fw={500} size="sm">Elige el nuevo ejercicio:</Text>
+            <Text fw={500} size="sm">{"Elige el nuevo ejercicio:"}</Text>
             <ScrollArea h={220}>
               {isLoadingExercises ? (
                 <Center py="xl">
@@ -1201,7 +1202,7 @@ function SwapExerciseModal({
                     </Paper>
                   ))}
                   {exercises?.length === 0 && (
-                    <Text size="sm" c="dimmed" ta="center" py="md">No se encontraron ejercicios</Text>
+                    <Text size="sm" c="dimmed" ta="center" py="md">{"No se encontraron ejercicios"}</Text>
                   )}
                 </Stack>
               )}
@@ -1210,8 +1211,8 @@ function SwapExerciseModal({
         )}
 
         <Textarea
-          label="Motivo del cambio (opcional)"
-          placeholder="Ej: Lesión, máquina no disponible..."
+          label={"Motivo del cambio (opcional)"}
+          placeholder={"Ej: Lesión, máquina no disponible..."}
           {...form.getInputProps("reason")}
           minRows={2}
         />
@@ -1379,7 +1380,7 @@ function WeekDayDetail({
           </Box>
           {isExecutedView && onSwapDay && (
             <Button variant="light" size="xs" leftSection={<IconArrowsExchange size={14} />} radius="md" color="teal" onClick={onSwapDay}>
-              Intercambiar día
+              {"Intercambiar día"}
             </Button>
           )}
         </Group>
@@ -1473,6 +1474,7 @@ function WeekDayDetail({
 }
 
 export function MyWorkoutsPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isMdUp = useMediaQuery("(min-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("today");
@@ -1867,8 +1869,8 @@ export function MyWorkoutsPage() {
       <Box mb="xl">
         <Group justify="space-between" align="flex-start">
           <Box>
-            <Title order={2}>Mis Entrenamientos</Title>
-            <Text c="dimmed">Tu programa personalizado y progreso</Text>
+            <Title order={2}>{t("myWorkouts.misEntrenamientos")}</Title>
+            <Text c="dimmed">{t("myWorkouts.tuProgramaPersonalizadoYProgreso")}</Text>
           </Box>
           {data.assignedProgram?.id && (
             <Button
@@ -1892,7 +1894,7 @@ export function MyWorkoutsPage() {
                 });
               }}
             >
-              Descargar entrenamiento
+              {t("myWorkouts.descargarEntrenamiento")}
             </Button>
           )}
         </Group>
@@ -1905,10 +1907,10 @@ export function MyWorkoutsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "today", label: "Registrar entrenamiento" },
-            { value: "week", label: "Tu programa" },
-            { value: "history", label: "Historial" },
-            { value: "exercises", label: "Todos mis ejercicios" },
+            { value: "today", label: t("myWorkouts.registrarEntrenamiento") },
+            { value: "week", label: t("myWorkouts.tuPrograma") },
+            { value: "history", label: t("myWorkouts.historial") },
+            { value: "exercises", label: t("myWorkouts.todosMisEjercicios") },
           ]}
           size="sm"
           radius="md"
@@ -1919,16 +1921,16 @@ export function MyWorkoutsPage() {
         {!isMobile && (
         <Tabs.List mb="lg">
           <Tabs.Tab value="today" leftSection={<IconBarbell size={16} />}>
-            Registrar entrenamiento
+            {t("myWorkouts.registrarEntrenamiento")}
           </Tabs.Tab>
           <Tabs.Tab value="week" leftSection={<IconCalendarEvent size={16} />}>
-            Tu programa
+            {t("myWorkouts.tuPrograma")}
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<IconClock size={16} />}>
-            Historial
+            {t("myWorkouts.historial")}
           </Tabs.Tab>
           <Tabs.Tab value="exercises" leftSection={<IconList size={16} />}>
-            Todos mis ejercicios
+            {t("myWorkouts.todosMisEjercicios")}
           </Tabs.Tab>
         </Tabs.List>
         )}
@@ -1937,7 +1939,7 @@ export function MyWorkoutsPage() {
           <Card shadow="sm" padding="md" radius="lg" withBorder mb="lg">
             <Group gap="md" align="flex-end">
               <DateInput
-                label="Fecha de registro"
+                label={t("myWorkouts.fechaDeRegistro")}
                 value={selectedDate}
                 onChange={(d) => d && setSelectedDate(new Date(d))}
                 minDate={programDateRange?.start || undefined}
@@ -1948,7 +1950,7 @@ export function MyWorkoutsPage() {
               />
               {!isToday && (
                 <Button variant="subtle" size="sm" onClick={() => setSelectedDate(new Date())}>
-                  Volver a hoy
+                  {t("myWorkouts.volverAHoy")}
                 </Button>
               )}
               <Text size="sm" c="dimmed">
@@ -1960,15 +1962,15 @@ export function MyWorkoutsPage() {
           {!activeProgram && (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">📋</Text>
-              <Text fw={600} size="lg">No tienes ningún programa de entrenamiento activo</Text>
-              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un programa cuando esté listo.</Text>
+              <Text fw={600} size="lg">{t("myWorkouts.noTienesNingunProgramaDe")}</Text>
+              <Text c="dimmed" size="sm" mt="xs">{t("myWorkouts.tuEntrenadorTeAsignaraUn")}</Text>
             </Box>
           )}
 
           {!isSelectedDateInRange && data.assignedProgram?.id && (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">📅</Text>
-              <Text fw={700} size="lg">Fecha fuera del programa</Text>
+              <Text fw={700} size="lg">{t("myWorkouts.fechaFueraDelPrograma")}</Text>
               <Text c="dimmed" size="sm" mt="xs">
                 Tu programa va del {programDateRange?.startStr} al {programDateRange?.endStr || "—"}.
                 Selecciona una fecha dentro de ese rango.
@@ -1979,9 +1981,9 @@ export function MyWorkoutsPage() {
           {isSelectedDateInRange && data.isTodayRestDay && (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">🛌</Text>
-              <Text fw={700} size="lg">Hoy es día de descanso</Text>
+              <Text fw={700} size="lg">{t("myWorkouts.hoyEsDiaDeDescanso")}</Text>
               <Text c="dimmed" size="sm" mt="xs">
-                Tu cuerpo necesita recuperarse. ¡Aprovecha para descansar!
+                {t("myWorkouts.tuCuerpoNecesitaRecuperarseAprovecha")}
               </Text>
             </Box>
           )}
@@ -2002,7 +2004,7 @@ export function MyWorkoutsPage() {
                       disabled
                       styles={{ root: { height: 48, flex: 1 } }}
                     >
-                      Entrenamiento Completado
+                      {t("myWorkouts.entrenamientoCompletado")}
                     </Button>
                     <Menu shadow="md" width={180} position="bottom-end" withinPortal>
                       <Menu.Target>
@@ -2012,7 +2014,7 @@ export function MyWorkoutsPage() {
                       </Menu.Target>
                       <Menu.Dropdown>
                         <Menu.Item leftSection={<IconPlayerPlay size={14} />} onClick={openModal}>
-                          Editar registro
+                          {t("myWorkouts.editarRegistro")}
                         </Menu.Item>
                       </Menu.Dropdown>
                     </Menu>
@@ -2028,7 +2030,7 @@ export function MyWorkoutsPage() {
                     radius="xl"
                     styles={{ root: { height: 48, fontWeight: 700 } }}
                   >
-                    Iniciar Entrenamiento
+                    {t("myWorkouts.iniciarEntrenamiento")}
                   </Button>
                 )}
               </Box>
@@ -2039,7 +2041,7 @@ export function MyWorkoutsPage() {
                   <Text fw={700} size="lg">{data.todayWorkout.name}</Text>
                   {data.isTodayCompleted && (
                     <Badge color="green" variant="filled" size="sm" leftSection={<IconCheck size={10} />}>
-                      Completado
+                      {t("myWorkouts.completado")}
                     </Badge>
                   )}
                 </Group>
@@ -2132,7 +2134,7 @@ export function MyWorkoutsPage() {
                               const totalSets = logEx.sets?.length || 0;
                               if (completedSets === 0) return null;
                               return completedSets >= totalSets ? (
-                                <Badge color="green" variant="filled" size="xs" leftSection={<IconCheck size={8} />}>Completado</Badge>
+                                <Badge color="green" variant="filled" size="xs" leftSection={<IconCheck size={8} />}>{t("myWorkouts.completado")}</Badge>
                               ) : (
                                 <Badge color="yellow" variant="light" size="xs">{completedSets}/{totalSets} series</Badge>
                               );
@@ -2183,7 +2185,7 @@ export function MyWorkoutsPage() {
                                   exercise.exercise?.id || exercise.exercise_id
                                 )}
                               >
-                                Sustituir
+                                {t("myWorkouts.sustituir")}
                               </Button>
                             </Group>
                           </Stack>
@@ -2249,9 +2251,9 @@ export function MyWorkoutsPage() {
           {isSelectedDateInRange && !data.isTodayRestDay && !data.todayWorkout && data.assignedProgram?.id && (
             <Stack align="center" gap="sm" py="xl">
               <Text size="2xl">🛌</Text>
-              <Text fw={600} size="lg">No hay entrenamiento asignado para hoy</Text>
+              <Text fw={600} size="lg">{t("myWorkouts.noHayEntrenamientoAsignadoPara")}</Text>
               <Text c="dimmed" size="sm" ta="center" maw={420}>
-                Aprovecha para descansar o revisar tu semana. Si aún tienes energía, puedes registrar un entrenamiento libre.
+                {t("myWorkouts.aprovechaParaDescansarORevisar")}
               </Text>
               <Group gap="xs" mt="xs">
                 <Button
@@ -2260,7 +2262,7 @@ export function MyWorkoutsPage() {
                   radius="xl"
                   onClick={() => setActiveTab("week")}
                 >
-                  Ver programa semanal
+                  {t("myWorkouts.verProgramaSemanal")}
                 </Button>
                 <Button
                   size="xs"
@@ -2269,7 +2271,7 @@ export function MyWorkoutsPage() {
                   radius="xl"
                   onClick={() => navigate("/my-progress")}
                 >
-                  Registrar progreso
+                  {t("myWorkouts.registrarProgreso")}
                 </Button>
               </Group>
             </Stack>
@@ -2280,8 +2282,8 @@ export function MyWorkoutsPage() {
           {!activeProgram ? (
             <Box ta="center" py="xl">
               <Text size="xl" mb="sm">📋</Text>
-              <Text fw={600} size="lg">No tienes ningún programa de entrenamiento activo</Text>
-              <Text c="dimmed" size="sm" mt="xs">Tu entrenador te asignará un programa cuando esté listo.</Text>
+              <Text fw={600} size="lg">{t("myWorkouts.noTienesNingunProgramaDe")}</Text>
+              <Text c="dimmed" size="sm" mt="xs">{t("myWorkouts.tuEntrenadorTeAsignaraUn")}</Text>
             </Box>
           ) : (
           <>
@@ -2291,8 +2293,8 @@ export function MyWorkoutsPage() {
                 value={programViewMode}
                 onChange={(v) => setProgramViewMode(v || "executed")}
                 data={[
-                  { value: "executed", label: "Programa ejecutado" },
-                  { value: "original", label: "Programa asignado" },
+                  { value: "executed", label: t("myWorkouts.programaEjecutado") },
+                  { value: "original", label: t("myWorkouts.programaAsignado") },
                 ]}
                 size="xs"
                 radius="md"
@@ -2346,12 +2348,12 @@ export function MyWorkoutsPage() {
                         <>
                           {!inRange && (
                             <Badge color="gray" variant="light" size="xs">
-                              Fuera del programa
+                              {t("myWorkouts.fueraDelPrograma")}
                             </Badge>
                           )}
                           {inRange && day.completed && (
                             <Badge color="green" variant="light" size="xs" leftSection={<IconCheck size={10} />}>
-                              Completado
+                              {t("myWorkouts.completado")}
                             </Badge>
                           )}
                           {inRange && programViewMode !== "original" && !day.isRestDay && activeProgram && (
@@ -2362,7 +2364,7 @@ export function MyWorkoutsPage() {
                                 </ActionIcon>
                               </Menu.Target>
                               <Menu.Dropdown>
-                                <Menu.Label>Intercambiar día con</Menu.Label>
+                                <Menu.Label>{t("myWorkouts.intercambiarDiaCon")}</Menu.Label>
                                 {weekDays.map((label, idx) => {
                                   if (!isDayInProgramRange(idx)) return null;
                                   const targetDayNum = idx + 1;
@@ -2551,7 +2553,7 @@ export function MyWorkoutsPage() {
               })
             ) : (
               <Paper p="lg" radius="md" ta="center">
-                <Text c="dimmed">No hay entrenamientos registrados aún</Text>
+                <Text c="dimmed">{t("myWorkouts.noHayEntrenamientosRegistradosAun")}</Text>
               </Paper>
             )}
           </Stack>
@@ -2645,7 +2647,7 @@ export function MyWorkoutsPage() {
       <Modal
         opened={exerciseSwapState?.step === "exercise" && exerciseSwapState?.targetDay != null}
         onClose={() => setExerciseSwapState(null)}
-        title="Selecciona el ejercicio a intercambiar"
+        title={t("myWorkouts.seleccionaElEjercicioAIntercambiar")}
         size="sm"
       >
         {(() => {
@@ -2679,7 +2681,7 @@ export function MyWorkoutsPage() {
                   setExerciseSwapState(null);
                 }}
               >
-                Mover sin intercambiar
+                {t("myWorkouts.moverSinIntercambiar")}
               </Button>
               {targetExercises.length > 0 ? (
                 <>
@@ -2720,7 +2722,7 @@ export function MyWorkoutsPage() {
       <Modal
         opened={daySwapSourceDay != null}
         onClose={() => setDaySwapSourceDay(null)}
-        title="Intercambiar día con"
+        title={t("myWorkouts.intercambiarDiaCon")}
         size="sm"
       >
         <Stack gap="xs">
@@ -2764,7 +2766,7 @@ export function MyWorkoutsPage() {
               {/* Celebration */}
               <Box style={{ fontSize: 64 }}>🎉</Box>
               <Title order={2} ta="center" style={{ color: "var(--nv-accent)" }}>
-                ¡Enhorabuena!
+                {t("myWorkouts.enhorabuena")}
               </Title>
               <Text ta="center" c="dimmed">
                 Has alcanzado {achievements.length} objetivo
@@ -2809,7 +2811,7 @@ export function MyWorkoutsPage() {
                         </Text>
                         {a.exceeded && (
                           <Badge size="xs" color="green" variant="light">
-                            Superado
+                            {t("myWorkouts.superado")}
                           </Badge>
                         )}
                       </Box>
@@ -2822,10 +2824,10 @@ export function MyWorkoutsPage() {
             <>
               <Box style={{ fontSize: 48 }}>💪</Box>
               <Title order={3} ta="center">
-                ¡Buen trabajo!
+                {t("myWorkouts.buenTrabajo")}
               </Title>
               <Text ta="center" c="dimmed">
-                Has completado tu entrenamiento. ¡Sigue así!
+                {t("myWorkouts.hasCompletadoTuEntrenamientoSigue")}
               </Text>
             </>
           )}
@@ -2842,7 +2844,7 @@ export function MyWorkoutsPage() {
               },
             }}
           >
-            Continuar
+            {t("myWorkouts.continuar")}
           </Button>
         </Stack>
       </Modal>

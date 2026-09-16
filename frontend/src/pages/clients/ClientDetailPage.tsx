@@ -121,6 +121,7 @@ import {
   ALLERGENS_SELECT_DATA,
   INTOLERANCES_SELECT_DATA,
 } from "../../constants/allergens";
+import { useTranslation } from "react-i18next";
 
 const COMMON_ALLERGENS = ALLERGENS_SELECT_DATA;
 
@@ -288,7 +289,7 @@ function ClientPaymentsTab({
       <Box className="nv-card" p="xl">
         <Group justify="space-between" mb="lg">
           <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Suscripciones
+            {"Suscripciones"}
           </Text>
           {activeSubs.length > 0 && (
             <Badge size="lg" variant="light" radius="xl" color="green">
@@ -306,9 +307,9 @@ function ClientPaymentsTab({
                 <IconCreditCard size={18} />
               </ThemeIcon>
               <Box>
-                <Text size="sm" fw={600}>Sin plan asignado</Text>
+                <Text size="sm" fw={600}>{"Sin plan asignado"}</Text>
                 <Text size="xs" c="dimmed">
-                  Este cliente no tiene ninguna suscripción registrada todavía.
+                  {"Este cliente no tiene ninguna suscripción registrada todavía."}
                 </Text>
               </Box>
             </Group>
@@ -342,13 +343,13 @@ function ClientPaymentsTab({
                         </Badge>
                         {s.cancel_at_period_end && (
                           <Badge color="orange" size="sm" variant="light" radius="xl">
-                            Se cancelará al finalizar
+                            {"Se cancelará al finalizar"}
                           </Badge>
                         )}
                       </Group>
                       <Group gap="lg" mt={4}>
                         <Box>
-                          <Text size="xs" c="dimmed">Precio</Text>
+                          <Text size="xs" c="dimmed">{"Precio"}</Text>
                           <Text fw={700} size="sm">
                             €{formatDecimal(Number(s.amount || 0), 2)}
                             <Text span size="xs" c="dimmed" fw={400}>
@@ -357,13 +358,13 @@ function ClientPaymentsTab({
                           </Text>
                         </Box>
                         <Box>
-                          <Text size="xs" c="dimmed">Periodo actual</Text>
+                          <Text size="xs" c="dimmed">{"Periodo actual"}</Text>
                           <Text size="sm" fw={600}>
                             {formatDate(s.current_period_start)} — {formatDate(s.current_period_end)}
                           </Text>
                         </Box>
                         <Box>
-                          <Text size="xs" c="dimmed">Alta</Text>
+                          <Text size="xs" c="dimmed">{"Alta"}</Text>
                           <Text size="sm" fw={600}>{formatDate(s.created_at)}</Text>
                         </Box>
                       </Group>
@@ -376,7 +377,7 @@ function ClientPaymentsTab({
             {inactiveSubs.length > 0 && (
               <>
                 <Text size="xs" fw={700} c="dimmed" tt="uppercase" mt="md" style={{ letterSpacing: 0.6 }}>
-                  Históricas
+                  {"Históricas"}
                 </Text>
                 {inactiveSubs.map((s: any) => {
                   const st = subStatusMap[s.status] || { label: s.status, color: "gray" };
@@ -404,23 +405,23 @@ function ClientPaymentsTab({
       <Box className="nv-card" p="xl">
         <Group justify="space-between" mb="lg">
           <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Historial de Pagos
+            {"Historial de Pagos"}
           </Text>
         </Group>
 
         {loadingPayments ? (
           <Center py="xl"><Loader size="sm" /></Center>
         ) : paymentsData.length === 0 ? (
-          <Text c="dimmed" ta="center" py="xl">No hay pagos registrados para este cliente.</Text>
+          <Text c="dimmed" ta="center" py="xl">{"No hay pagos registrados para este cliente."}</Text>
         ) : (
           <ScrollArea type="auto">
             <Table verticalSpacing="md" style={{ minWidth: 600 }}>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Concepto</Table.Th>
-                  <Table.Th ta="right">Importe</Table.Th>
-                  <Table.Th ta="center">Estado</Table.Th>
+                  <Table.Th>{"Fecha"}</Table.Th>
+                  <Table.Th>{"Concepto"}</Table.Th>
+                  <Table.Th ta="right">{"Importe"}</Table.Th>
+                  <Table.Th ta="center">{"Estado"}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -549,7 +550,7 @@ function ClientBillingCompact({
             <IconReceipt size={18} />
           </ThemeIcon>
           <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Datos de facturación
+            {"Datos de facturación"}
           </Text>
         </Group>
         {!editing && (
@@ -559,7 +560,7 @@ function ClientBillingCompact({
             leftSection={<IconEdit size={14} />}
             onClick={() => setEditing(true)}
           >
-            Editar
+            {"Editar"}
           </Button>
         )}
       </Group>
@@ -567,7 +568,7 @@ function ClientBillingCompact({
       {editing ? (
         <Stack gap="sm">
           <Radio.Group
-            label="Tipo de cliente"
+            label={"Tipo de cliente"}
             value={form.fiscal_type}
             onChange={(v) =>
               setForm((s) => ({
@@ -577,16 +578,16 @@ function ClientBillingCompact({
             }
           >
             <Group mt={4}>
-              <Radio value="individual" label="Persona Física" />
-              <Radio value="company" label="Persona Jurídica" />
+              <Radio value="individual" label={"Persona Física"} />
+              <Radio value="company" label={"Persona Jurídica"} />
             </Group>
           </Radio.Group>
 
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             {isCompany && (
               <TextInput
-                label="Razón Social"
-                placeholder="Empresa S.L."
+                label={"Razón Social"}
+                placeholder={"Empresa S.L."}
                 value={form.legal_name}
                 onChange={(e) =>
                   setForm((s) => ({ ...s, legal_name: e.currentTarget.value }))
@@ -604,8 +605,8 @@ function ClientBillingCompact({
           </SimpleGrid>
 
           <TextInput
-            label="Dirección"
-            placeholder="Calle Mayor 12, 3ºB"
+            label={"Dirección"}
+            placeholder={"Calle Mayor 12, 3ºB"}
             value={form.billing_address}
             onChange={(e) =>
               setForm((s) => ({ ...s, billing_address: e.currentTarget.value }))
@@ -613,14 +614,14 @@ function ClientBillingCompact({
           />
           <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
             <TextInput
-              label="Población"
+              label={"Población"}
               value={form.billing_city}
               onChange={(e) =>
                 setForm((s) => ({ ...s, billing_city: e.currentTarget.value }))
               }
             />
             <TextInput
-              label="Código postal"
+              label={"Código postal"}
               value={form.billing_postal_code}
               onChange={(e) =>
                 setForm((s) => ({
@@ -630,7 +631,7 @@ function ClientBillingCompact({
               }
             />
             <TextInput
-              label="País"
+              label={"País"}
               value={form.billing_country}
               onChange={(e) =>
                 setForm((s) => ({ ...s, billing_country: e.currentTarget.value }))
@@ -639,21 +640,21 @@ function ClientBillingCompact({
           </SimpleGrid>
           <Group justify="flex-end" mt="xs">
             <Button variant="subtle" size="xs" onClick={() => setEditing(false)}>
-              Cancelar
+              {"Cancelar"}
             </Button>
             <Button size="xs" onClick={handleSave} loading={updateClient.isPending}>
-              Guardar
+              {"Guardar"}
             </Button>
           </Group>
         </Stack>
       ) : !hasAnyData ? (
         <Text size="sm" c="dimmed">
-          Este cliente todavía no tiene datos de facturación registrados.
+          {"Este cliente todavía no tiene datos de facturación registrados."}
         </Text>
       ) : (
         <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md" verticalSpacing="sm">
           <Field
-            label="Tipo"
+            label={"Tipo"}
             value={isCompany ? "Persona Jurídica" : "Persona Física"}
           />
           <Field
@@ -664,12 +665,12 @@ function ClientBillingCompact({
             label={isCompany ? "CIF / NRT" : "NIF / DNI / NIE"}
             value={client.tax_id}
           />
-          <Field label="País" value={client.billing_country} />
+          <Field label={"País"} value={client.billing_country} />
           <Box style={{ gridColumn: "span 2" }}>
-            <Field label="Dirección" value={client.billing_address} />
+            <Field label={"Dirección"} value={client.billing_address} />
           </Box>
-          <Field label="Población" value={client.billing_city} />
-          <Field label="Código postal" value={client.billing_postal_code} />
+          <Field label={"Población"} value={client.billing_city} />
+          <Field label={"Código postal"} value={client.billing_postal_code} />
         </SimpleGrid>
       )}
     </Box>
@@ -811,7 +812,7 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                 {dProt !== 0 && <Badge size="xs" variant="light" color={diffColor(dProt)}>{fmtDiff(dProt)}g P</Badge>}
                 {dCarbs !== 0 && <Badge size="xs" variant="light" color={diffColor(dCarbs)}>{fmtDiff(dCarbs)}g C</Badge>}
                 {dFat !== 0 && <Badge size="xs" variant="light" color={diffColor(dFat)}>{fmtDiff(dFat)}g G</Badge>}
-                {day?.has_modifications && <Badge size="xs" variant="light" color="yellow">Modificado</Badge>}
+                {day?.has_modifications && <Badge size="xs" variant="light" color="yellow">{"Modificado"}</Badge>}
               </Group>
             )}
           </Box>
@@ -883,10 +884,10 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
                 {ref && (
                   <Box p="xs" mt={4} style={{ background: "var(--mantine-color-gray-0)", borderRadius: 8 }}>
                     {addedFoods.length === 0 && removedFoods.length === 0 && Math.abs(mealDiffCal) < 5 && Math.abs(mealDiffProt) < 1 && Math.abs(mealDiffCarbs) < 1 && Math.abs(mealDiffFat) < 1 ? (
-                      <Badge size="sm" variant="light" color="green">Sin variaciones</Badge>
+                      <Badge size="sm" variant="light" color="green">{"Sin variaciones"}</Badge>
                     ) : (
                       <>
-                        <Text size="xs" fw={600} mb={4}>Variación vs plan:</Text>
+                        <Text size="xs" fw={600} mb={4}>{"Variación vs plan:"}</Text>
                         <Group gap={4} wrap="wrap" mb={4}>
                           <Badge size="xs" variant="light" color={diffColor(mealDiffCal)}>{fmtDiff(mealDiffCal)} kcal</Badge>
                           <Badge size="xs" variant="light" color={diffColor(mealDiffProt)}>{fmtDiff(mealDiffProt)}g prot</Badge>
@@ -933,6 +934,7 @@ function NutritionDayCard({ day, percentage }: { day: any; percentage: number })
 }
 
 export function ClientDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1436,7 +1438,7 @@ export function ClientDetailPage() {
       items.push({
         id: `nutrition-${day.date}`,
         type: "form",
-        title: "Comidas registradas",
+        title: t("clientDetail.comidasRegistradas"),
         description: `${cals} kcal${meals ? ` · ${meals} comida${meals === 1 ? "" : "s"}` : ""}`,
         date: day.date,
       });
@@ -1452,7 +1454,7 @@ export function ClientDetailPage() {
       items.push({
         id: `measurement-${m.id}`,
         type: "form",
-        title: "Nueva medida registrada",
+        title: t("clientDetail.nuevaMedidaRegistrada"),
         description: parts.join(" · ") || "Progreso actualizado",
         date,
       });
@@ -1464,7 +1466,7 @@ export function ClientDetailPage() {
       items.push({
         id: `photo-${p.url}`,
         type: "session",
-        title: "Nueva foto de progreso",
+        title: t("clientDetail.nuevaFotoDeProgreso"),
         description:
           p.type === "front" ? "Frontal"
           : p.type === "back" ? "Espalda"
@@ -1502,7 +1504,7 @@ export function ClientDetailPage() {
                 : "Error al cargar el cliente"}
             </Text>
             <Button variant="light" onClick={() => refetch()}>
-              Reintentar
+              {t("clientDetail.reintentar")}
             </Button>
           </Stack>
         </Center>
@@ -1513,7 +1515,7 @@ export function ClientDetailPage() {
   if (!fetchedClient) {
     return (
       <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
-        <Text c="dimmed" ta="center">Cliente no encontrado</Text>
+        <Text c="dimmed" ta="center">{t("clientDetail.clienteNoEncontrado")}</Text>
       </Container>
     );
   }
@@ -1524,8 +1526,8 @@ export function ClientDetailPage() {
     
     if (isDemoClient) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, los cambios no se guardan permanentemente",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoLosCambios"),
         color: "yellow",
       });
       closeEditClientModal();
@@ -1535,8 +1537,8 @@ export function ClientDetailPage() {
     try {
       await updateClient.mutateAsync({ id, data: values });
       notifications.show({
-        title: "Cliente actualizado",
-        message: "Los datos del cliente se han actualizado correctamente",
+        title: t("clientDetail.clienteActualizado"),
+        message: t("clientDetail.losDatosDelClienteSe"),
         color: "green",
       });
       closeEditClientModal();
@@ -1551,8 +1553,8 @@ export function ClientDetailPage() {
     
     if (isDemoClient) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, los cambios no se guardan permanentemente",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoLosCambios"),
         color: "yellow",
       });
       closeEditInfoModal();
@@ -1619,16 +1621,16 @@ export function ClientDetailPage() {
 
       await updateClient.mutateAsync({ id, data });
       notifications.show({
-        title: "Información actualizada",
-        message: "La información personal se ha actualizado correctamente",
+        title: t("clientDetail.informacionActualizada"),
+        message: t("clientDetail.laInformacionPersonalSeHa"),
         color: "green",
       });
       closeEditInfoModal();
     } catch (error) {
       console.error("Error updating info:", error);
       notifications.show({
-        title: "Error",
-        message: "No se pudo actualizar la información personal",
+        title: t("clientDetail.error"),
+        message: t("clientDetail.noSePudoActualizarLa"),
         color: "red",
       });
     }
@@ -1640,8 +1642,8 @@ export function ClientDetailPage() {
     
     if (isDemoClient) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, no se pueden eliminar clientes",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoNoSe"),
         color: "yellow",
       });
       closeDeleteModal();
@@ -1651,8 +1653,8 @@ export function ClientDetailPage() {
     try {
       await deleteClient.mutateAsync(id);
       notifications.show({
-        title: "Cliente eliminado",
-        message: "El cliente ha sido eliminado correctamente",
+        title: t("clientDetail.clienteEliminado"),
+        message: t("clientDetail.elClienteHaSidoEliminado"),
         color: "green",
       });
       navigate("/clients");
@@ -1667,8 +1669,8 @@ export function ClientDetailPage() {
     
     if (isDemoClient) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, los cambios no se guardan permanentemente",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoLosCambios"),
         color: "yellow",
       });
       return;
@@ -1680,7 +1682,7 @@ export function ClientDetailPage() {
         data: { chat_enabled: !client.chat_enabled } 
       });
       notifications.show({
-        title: "Chat actualizado",
+        title: t("clientDetail.chatActualizado"),
         message: client.chat_enabled ? "Chat deshabilitado" : "Chat habilitado",
         color: "green",
       });
@@ -1735,14 +1737,14 @@ export function ClientDetailPage() {
     try {
       await api.post(`/clients/${id}/send-password-reset`);
       notifications.show({
-        title: "Email enviado",
-        message: "Se ha enviado al cliente un email para restablecer su contraseña.",
+        title: t("clientDetail.emailEnviado"),
+        message: t("clientDetail.seHaEnviadoAlCliente"),
         color: "green",
       });
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
-        title: "Error",
+        title: t("clientDetail.error"),
         message:
           e.response?.data?.detail ||
           e.message ||
@@ -1778,8 +1780,8 @@ export function ClientDetailPage() {
   const handleConfirmAssignProgram = async () => {
     if (!id || !selectedProgram || !assignStartDate) {
       notifications.show({
-        title: "Error",
-        message: "Selecciona un programa y fecha de inicio",
+        title: t("clientDetail.error"),
+        message: t("clientDetail.seleccionaUnProgramaYFecha"),
         color: "red",
       });
       return;
@@ -1787,8 +1789,8 @@ export function ClientDetailPage() {
     
     if (isDemoClient) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, las asignaciones no se guardan permanentemente",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoLasAsignaciones"),
         color: "yellow",
       });
       closeAssignProgramModal();
@@ -1805,16 +1807,16 @@ export function ClientDetailPage() {
         reviewIntervalDays: assignReviewInterval ? Number(assignReviewInterval) : undefined,
       });
       notifications.show({
-        title: "Programa asignado",
-        message: "El programa de entrenamiento ha sido asignado correctamente",
+        title: t("clientDetail.programaAsignado"),
+        message: t("clientDetail.elProgramaDeEntrenamientoHa"),
         color: "green",
       });
       closeAssignProgramModal();
     } catch (error) {
       console.error("Error assigning program:", error);
       notifications.show({
-        title: "Error",
-        message: "No se pudo asignar el programa",
+        title: t("clientDetail.error"),
+        message: t("clientDetail.noSePudoAsignarEl"),
         color: "red",
       });
     }
@@ -1824,8 +1826,8 @@ export function ClientDetailPage() {
   const handleConfirmAssignMealPlan = async () => {
     if (!id || !selectedMealPlanForAssign || !assignStartDate) {
       notifications.show({
-        title: "Error",
-        message: "Selecciona un plan nutricional y fecha de inicio",
+        title: t("clientDetail.error"),
+        message: t("clientDetail.seleccionaUnPlanNutricionalY"),
         color: "red",
       });
       return;
@@ -1833,8 +1835,8 @@ export function ClientDetailPage() {
     
     if (isDemoClient) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, las asignaciones no se guardan permanentemente",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoLasAsignaciones"),
         color: "yellow",
       });
       closeAssignMealPlanModal();
@@ -1868,16 +1870,16 @@ export function ClientDetailPage() {
         reviewIntervalDays: assignReviewInterval ? Number(assignReviewInterval) : undefined,
       });
       notifications.show({
-        title: "Plan asignado",
-        message: "El plan nutricional ha sido asignado con los objetivos actuales del cliente.",
+        title: t("clientDetail.planAsignado"),
+        message: t("clientDetail.elPlanNutricionalHaSido"),
         color: "green",
       });
       closeAssignMealPlanModal();
     } catch (error) {
       console.error("Error assigning meal plan:", error);
       notifications.show({
-        title: "Error",
-        message: "No se pudo asignar el plan nutricional",
+        title: t("clientDetail.error"),
+        message: t("clientDetail.noSePudoAsignarEl"),
         color: "red",
       });
     }
@@ -1908,8 +1910,8 @@ export function ClientDetailPage() {
           clientId: id,
         });
         notifications.show({
-          title: "Programa eliminado",
-          message: "El programa de entrenamiento ha sido eliminado correctamente",
+          title: t("clientDetail.programaEliminado"),
+          message: t("clientDetail.elProgramaDeEntrenamientoHa"),
           color: "green",
         });
       } else if (deletingMealPlanId) {
@@ -1918,8 +1920,8 @@ export function ClientDetailPage() {
           clientId: id,
         });
         notifications.show({
-          title: "Plan eliminado",
-          message: "El plan nutricional ha sido eliminado correctamente",
+          title: t("clientDetail.planEliminado"),
+          message: t("clientDetail.elPlanNutricionalHaSido"),
           color: "green",
         });
       }
@@ -1929,7 +1931,7 @@ export function ClientDetailPage() {
     } catch (error) {
       console.error("Error deleting:", error);
       notifications.show({
-        title: "Error",
+        title: t("clientDetail.error"),
         message: deletingProgramId 
           ? "No se pudo eliminar el programa" 
           : "No se pudo eliminar el plan nutricional",
@@ -2012,8 +2014,8 @@ export function ClientDetailPage() {
     if (id.startsWith("demo-client-")) {
       // Simulamos el guardado actualizando el cliente mock
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo, los cambios no se guardan permanentemente",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoLosCambios"),
         color: "yellow",
       });
       closeAllergyModal();
@@ -2032,16 +2034,16 @@ export function ClientDetailPage() {
         },
       });
       notifications.show({
-        title: "Guardado",
-        message: "Alergias e intolerancias actualizadas correctamente",
+        title: t("clientDetail.guardado"),
+        message: t("clientDetail.alergiasEIntoleranciasActualizadasCorrectamente"),
         color: "green",
       });
       closeAllergyModal();
     } catch (error) {
       console.error("Error saving allergies:", error);
       notifications.show({
-        title: "Error",
-        message: "No se pudieron guardar las alergias",
+        title: t("clientDetail.error"),
+        message: t("clientDetail.noSePudieronGuardarLas"),
         color: "red",
       });
     }
@@ -2075,10 +2077,10 @@ export function ClientDetailPage() {
           },
         },
       });
-      notifications.show({ title: "Guardado", message: "Lesiones actualizadas correctamente", color: "green" });
+      notifications.show({ title: t("clientDetail.guardado"), message: t("clientDetail.lesionesActualizadasCorrectamente"), color: "green" });
       closeInjuriesModal();
     } catch {
-      notifications.show({ title: "Error", message: "No se pudieron guardar las lesiones", color: "red" });
+      notifications.show({ title: t("clientDetail.error"), message: t("clientDetail.noSePudieronGuardarLas"), color: "red" });
     }
   };
 
@@ -2123,10 +2125,10 @@ export function ClientDetailPage() {
           },
         },
       });
-      notifications.show({ title: "Guardado", message: "Nivel de actividad y objetivos actualizados", color: "green" });
+      notifications.show({ title: t("clientDetail.guardado"), message: t("clientDetail.nivelDeActividadYObjetivos"), color: "green" });
       closeActivityModal();
     } catch {
-      notifications.show({ title: "Error", message: "No se pudieron guardar los datos", color: "red" });
+      notifications.show({ title: t("clientDetail.error"), message: t("clientDetail.noSePudieronGuardarLos"), color: "red" });
     }
   };
 
@@ -2151,10 +2153,10 @@ export function ClientDetailPage() {
           },
         },
       });
-      notifications.show({ title: "Guardado", message: "Información médica actualizada", color: "green" });
+      notifications.show({ title: t("clientDetail.guardado"), message: t("clientDetail.informacionMedicaActualizada"), color: "green" });
       closeMedicalModal();
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo guardar la información médica", color: "red" });
+      notifications.show({ title: t("clientDetail.error"), message: t("clientDetail.noSePudoGuardarLa"), color: "red" });
     }
   };
 
@@ -2196,10 +2198,10 @@ export function ClientDetailPage() {
           },
         },
       });
-      notifications.show({ title: "Guardado", message: "Cuestionario PAR-Q actualizado", color: "green" });
+      notifications.show({ title: t("clientDetail.guardado"), message: t("clientDetail.cuestionarioParQActualizado"), color: "green" });
       closeParqModal();
     } catch {
-      notifications.show({ title: "Error", message: "No se pudo guardar el cuestionario PAR-Q", color: "red" });
+      notifications.show({ title: t("clientDetail.error"), message: t("clientDetail.noSePudoGuardarEl"), color: "red" });
     }
   };
 
@@ -2207,8 +2209,8 @@ export function ClientDetailPage() {
   const handleSaveNutritionCalculation = async (entry: NutritionCalculationEntry) => {
     if (!id || isDemoClient) {
       notifications.show({
-        title: "Modo Demo",
-        message: "En modo demo los cálculos no se guardan permanentemente",
+        title: t("clientDetail.modoDemo"),
+        message: t("clientDetail.enModoDemoLosCalculos"),
         color: "yellow",
       });
       return;
@@ -2294,7 +2296,7 @@ export function ClientDetailPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         breadcrumbs={[
-          { label: "Clientes", href: "/clients" },
+          { label: t("clientDetail.clientes"), href: "/clients" },
           { label: `${client.first_name} ${client.last_name}` },
         ]}
         title=""
@@ -2390,7 +2392,7 @@ export function ClientDetailPage() {
                   }
                 }}
               >
-                Mensaje
+                {t("clientDetail.mensaje")}
               </Button>
               <Button 
                 leftSection={<IconCalendarEvent size={18} />}
@@ -2408,7 +2410,7 @@ export function ClientDetailPage() {
                   }
                 }}
               >
-                Nueva Sesión
+                {t("clientDetail.nuevaSesion")}
               </Button>
               <Menu position="bottom-end" withArrow shadow="lg">
                 <Menu.Target>
@@ -2453,15 +2455,15 @@ export function ClientDetailPage() {
                         },
                       }
                     );
-                  }}>General</Menu.Item>
+                  }}>{t("clientDetail.general")}</Menu.Item>
                   <Menu.Item leftSection={<IconSalad size={16} />} onClick={async () => {
                     const mp = clientMealPlans && clientMealPlans.length > 0 ? clientMealPlans.find((p: any) => p.is_active) || clientMealPlans[0] : null;
                     if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any }); }
-                  }}>Nutrición</Menu.Item>
+                  }}>{t("clientDetail.nutricion")}</Menu.Item>
                   <Menu.Item leftSection={<IconBarbell size={16} />} onClick={async () => {
                     const prog = clientWorkoutPrograms && clientWorkoutPrograms.length > 0 ? clientWorkoutPrograms[0] : null;
                     if (prog) { await generateWorkoutProgramPDF(prog as any, { workspaceName: currentWorkspace?.name || "Trackfiz", trainerName: user?.full_name || "Entrenador", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any }); }
-                  }}>Entrenamiento</Menu.Item>
+                  }}>{t("clientDetail.entrenamiento")}</Menu.Item>
                 </Menu.Dropdown>
               </Menu>
               <Menu position="bottom-end" withArrow shadow="lg">
@@ -2472,27 +2474,27 @@ export function ClientDetailPage() {
                 </Menu.Target>
                 <Menu.Dropdown>
                   <Menu.Item leftSection={<IconMessage size={16} />} onClick={handleSendMessage} hiddenFrom="sm">
-                    Enviar mensaje
+                    {t("clientDetail.enviarMensaje")}
                   </Menu.Item>
                   <Menu.Item leftSection={<IconCalendarEvent size={16} />} onClick={handleNewSession} hiddenFrom="sm">
-                    Nueva sesión
+                    {t("clientDetail.nuevaSesion")}
                   </Menu.Item>
                   <Menu.Divider hiddenFrom="sm" />
                   <Menu.Item leftSection={<IconEdit size={16} />} onClick={handleOpenEditClientModal}>
-                    Editar cliente
+                    {t("clientDetail.editarCliente")}
                   </Menu.Item>
                   <Menu.Item leftSection={<IconBarbell size={16} />} onClick={() => navigate(`/workouts?action=new&clientId=${id}&returnTo=/clients/${id}?tab=programs`)}>
-                    Crear programa
+                    {t("clientDetail.crearPrograma")}
                   </Menu.Item>
                   <Menu.Item leftSection={<IconSalad size={16} />} onClick={() => navigate(`/nutrition?edit=new&clientId=${id}&returnTo=/clients/${id}?tab=nutrition`)}>
-                    Crear plan nutricional
+                    {t("clientDetail.crearPlanNutricional")}
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item leftSection={<IconBarbell size={16} />} onClick={handleAssignProgram}>
-                    Asignar programa
+                    {t("clientDetail.asignarPrograma")}
                   </Menu.Item>
                   <Menu.Item leftSection={<IconSalad size={16} />} onClick={handleAssignNutritionPlan}>
-                    Asignar plan nutricional
+                    {t("clientDetail.asignarPlanNutricional")}
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item
@@ -2500,11 +2502,11 @@ export function ClientDetailPage() {
                     onClick={handleSendPasswordReset}
                     disabled={sendingPasswordReset || !client.email}
                   >
-                    Enviar email para restablecer contraseña
+                    {t("clientDetail.enviarEmailParaRestablecerContrasena")}
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={openDeleteModal}>
-                    Eliminar cliente
+                    {t("clientDetail.eliminarCliente")}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
@@ -2537,7 +2539,7 @@ export function ClientDetailPage() {
       <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 6, xl: 8 }} mb="xl" spacing="md" className="stagger">
         <StatCard
           icon={<IconCalendarEvent size={24} />}
-          label="Sesiones Totales"
+          label={t("clientDetail.sesionesTotales")}
           value={stats.total_sessions || "-"}
           color="var(--nv-primary)"
           hint="Agenda la primera"
@@ -2545,7 +2547,7 @@ export function ClientDetailPage() {
         />
         <StatCard
           icon={<IconActivity size={24} />}
-          label="Este Mes"
+          label={t("clientDetail.esteMes")}
           value={stats.sessions_this_month || "-"}
           color="var(--nv-success)"
           hint="Sin sesiones este mes"
@@ -2553,7 +2555,7 @@ export function ClientDetailPage() {
         />
         <StatCard
           icon={<IconTarget size={24} />}
-          label="Adherencia"
+          label={t("clientDetail.adherencia")}
           value={stats.adherence > 0 ? `${stats.adherence}%` : "-"}
           color="var(--nv-success)"
           hint="Se calcula tras 7 días"
@@ -2576,7 +2578,7 @@ export function ClientDetailPage() {
         />
         <StatCard
           icon={<IconHistory size={24} />}
-          label="Días como cliente"
+          label={t("clientDetail.diasComoCliente")}
           value={stats.days_as_client}
           color="var(--nv-slate)"
         />
@@ -2596,20 +2598,20 @@ export function ClientDetailPage() {
         )}
         {!isMobile && (
           <Tabs.List mb="xl">
-            <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">Resumen</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconBarbell size={16} />} value="programs">Programas</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">Nutrición</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">Salud</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">Progreso</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">Sesiones</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconChecklist size={16} />} value="tasks">Tareas</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconHistory size={16} />} value="history">Historial</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCalendar size={16} />} value="client-calendar">Calendario</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">Fotos</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">Documentos</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconForms size={16} />} value="forms">Formularios</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconFileText size={16} />} value="reports">Reportes</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">Pagos y suscripciones</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUser size={16} />} value="overview">{t("clientDetail.resumen")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBarbell size={16} />} value="programs">{t("clientDetail.programas")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconSalad size={16} />} value="nutrition">{t("clientDetail.nutricion")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconHeart size={16} />} value="health">{t("clientDetail.salud")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconTrendingUp size={16} />} value="progress">{t("clientDetail.progreso")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCalendarEvent size={16} />} value="sessions">{t("clientDetail.sesiones")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconChecklist size={16} />} value="tasks">{t("clientDetail.tareas")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconHistory size={16} />} value="history">{t("clientDetail.historial")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCalendar size={16} />} value="client-calendar">{t("clientDetail.calendario")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPhoto size={16} />} value="photos">{t("clientDetail.fotos")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFileText size={16} />} value="documents">{t("clientDetail.documentos")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconForms size={16} />} value="forms">{t("clientDetail.formularios")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconFileText size={16} />} value="reports">{t("clientDetail.reportes")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="payments">{t("clientDetail.pagosYSuscripciones")}</Tabs.Tab>
           </Tabs.List>
         )}
 
@@ -2619,7 +2621,7 @@ export function ClientDetailPage() {
             <Box className="nv-card" p="xl">
               <Group justify="space-between" mb="lg">
                 <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Información Personal
+                  {t("clientDetail.informacionPersonal")}
                 </Text>
                 <ActionIcon variant="subtle" color="gray" radius="xl" onClick={handleOpenEditInfoModal}>
                   <IconEdit size={18} />
@@ -2627,16 +2629,16 @@ export function ClientDetailPage() {
               </Group>
 
               <Stack gap={0}>
-                <InfoRow label="Fecha de nacimiento" value={client.birth_date ? new Date(client.birth_date).toLocaleDateString("es-ES") : "—"} />
-                <InfoRow label="Género" value={client.gender === "female" ? "Femenino" : client.gender === "male" ? "Masculino" : client.gender === "other" ? "Otro" : "—"} />
-                <InfoRow label="Altura" value={client.height_cm ? `${client.height_cm} cm` : "—"} icon={<IconScale size={14} />} />
-                <InfoRow label="Peso actual" value={client.weight_kg ? `${client.weight_kg} kg` : "—"} icon={<IconScale size={14} />} />
+                <InfoRow label={t("clientDetail.fechaDeNacimiento")} value={client.birth_date ? new Date(client.birth_date).toLocaleDateString("es-ES") : "—"} />
+                <InfoRow label={t("clientDetail.genero")} value={client.gender === "female" ? "Femenino" : client.gender === "male" ? "Masculino" : client.gender === "other" ? "Otro" : "—"} />
+                <InfoRow label={t("clientDetail.altura")} value={client.height_cm ? `${client.height_cm} cm` : "—"} icon={<IconScale size={14} />} />
+                <InfoRow label={t("clientDetail.pesoActual")} value={client.weight_kg ? `${client.weight_kg} kg` : "—"} icon={<IconScale size={14} />} />
               </Stack>
 
               <Divider my="lg" />
 
               <Box>
-                <Text size="sm" c="dimmed" mb="xs">Objetivos</Text>
+                <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.objetivos")}</Text>
                 <Text size="sm" fw={500}>{client.goals}</Text>
               </Box>
 
@@ -2644,7 +2646,7 @@ export function ClientDetailPage() {
                 <Box mt="md" p="md" style={{ backgroundColor: "var(--nv-warning-bg)", borderRadius: "var(--radius-md)" }}>
                   <Group gap="xs" mb="xs">
                     <IconAlertTriangle size={16} color="var(--nv-warning)" />
-                    <Text size="sm" fw={600} style={{ color: "var(--nv-warning)" }}>Notas internas</Text>
+                    <Text size="sm" fw={600} style={{ color: "var(--nv-warning)" }}>{t("clientDetail.notasInternas")}</Text>
                   </Group>
                   <Text size="sm">{client.internal_notes}</Text>
                 </Box>
@@ -2654,7 +2656,7 @@ export function ClientDetailPage() {
             {/* Actividad reciente */}
             <Box className="nv-card" p="xl">
               <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Actividad Reciente
+                {t("clientDetail.actividadReciente")}
               </Text>
 
               {activities.length > 0 ? (
@@ -2692,7 +2694,7 @@ export function ClientDetailPage() {
                     <IconActivity size={24} />
                   </ThemeIcon>
                   <Text size="sm" c="dimmed" ta="center">
-                    Sin actividad registrada todavía.
+                    {t("clientDetail.sinActividadRegistradaTodavia")}
                   </Text>
                   <Group gap="xs">
                     <Button
@@ -2702,7 +2704,7 @@ export function ClientDetailPage() {
                       leftSection={<IconBarbell size={14} />}
                       onClick={() => setActiveTab("programs")}
                     >
-                      Asignar programa
+                      {t("clientDetail.asignarPrograma")}
                     </Button>
                     <Button
                       size="xs"
@@ -2712,7 +2714,7 @@ export function ClientDetailPage() {
                       leftSection={<IconCalendarEvent size={14} />}
                       onClick={() => setActiveTab("sessions")}
                     >
-                      Agendar sesión
+                      {t("clientDetail.agendarSesion")}
                     </Button>
                   </Group>
                 </Stack>
@@ -2725,7 +2727,7 @@ export function ClientDetailPage() {
                 <Group gap="xs">
                   <IconAlertTriangle size={20} color="var(--nv-error)" />
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Alergias e Intolerancias
+                    {t("clientDetail.alergiasEIntolerancias")}
                   </Text>
                 </Group>
                 <ActionIcon 
@@ -2749,14 +2751,14 @@ export function ClientDetailPage() {
                 const hasData = allAllergies.length > 0 || intolerances.length > 0 || injuries.length > 0;
                 
                 if (!hasData) {
-                  return <Text c="dimmed" size="sm">Sin alergias ni intolerancias registradas</Text>;
+                  return <Text c="dimmed" size="sm">{t("clientDetail.sinAlergiasNiIntoleranciasRegistradas")}</Text>;
                 }
                 
                 return (
                   <Stack gap="md">
                     {allAllergies.length > 0 && (
                       <Box>
-                        <Text size="sm" c="dimmed" mb="xs">Alergias</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.alergias")}</Text>
                         <Group gap="xs">
                           {allAllergies.map((allergy: string, idx: number) => (
                             <Badge key={idx} color="red" variant="light" size="md">
@@ -2768,7 +2770,7 @@ export function ClientDetailPage() {
                     )}
                     {intolerances.length > 0 && (
                       <Box>
-                        <Text size="sm" c="dimmed" mb="xs">Intolerancias</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.intolerancias")}</Text>
                         <Group gap="xs">
                           {intolerances.map((intolerance: string, idx: number) => (
                             <Badge key={idx} color="orange" variant="light" size="md">
@@ -2781,7 +2783,7 @@ export function ClientDetailPage() {
                     {injuries.length > 0 && (
                       <Box>
                         <Divider my="md" />
-                        <Text size="sm" c="dimmed" mb="xs">Lesiones</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.lesiones")}</Text>
                         <Group gap="xs">
                           {injuries.map((injury: any, idx: number) => (
                             <Badge 
@@ -2805,7 +2807,7 @@ export function ClientDetailPage() {
             {/* Configuración de Chat */}
             <Box className="nv-card" p="xl">
               <Text fw={700} size="lg" mb="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Configuración de Chat
+                {t("clientDetail.configuracionDeChat")}
               </Text>
 
               <Group justify="space-between">
@@ -2820,7 +2822,7 @@ export function ClientDetailPage() {
                     </ThemeIcon>
                   )}
                   <Box>
-                    <Text size="sm" fw={600}>Chat habilitado</Text>
+                    <Text size="sm" fw={600}>{t("clientDetail.chatHabilitado")}</Text>
                     <Text c="dimmed" size="xs">
                       {client.chat_enabled 
                         ? "El cliente puede enviar y recibir mensajes"
@@ -2860,10 +2862,10 @@ export function ClientDetailPage() {
                 })()}
                 <div>
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Consentimientos del registro (RGPD)
+                    {t("clientDetail.consentimientosDelRegistroRgpd")}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    Checkboxes que el cliente marcó al completar el alta.
+                    {t("clientDetail.checkboxesQueElClienteMarco")}
                   </Text>
                 </div>
               </Group>
@@ -2873,9 +2875,7 @@ export function ClientDetailPage() {
                 if (!consents) {
                   return (
                     <Text size="sm" c="dimmed" fs="italic">
-                      Este cliente fue creado manualmente o se registró antes
-                      de que existiera el flujo de consentimientos. No hay
-                      registro de los checkboxes de RGPD.
+                      {t("clientDetail.esteClienteFueCreadoManualmente")}
                     </Text>
                   );
                 }
@@ -2888,21 +2888,21 @@ export function ClientDetailPage() {
                 }> = [
                   {
                     key: "data_processing",
-                    label: "Términos y Condiciones del servicio",
+                    label: t("clientDetail.terminosYCondicionesDelServicio"),
                     hint: "Obligatorio. Aceptación del contrato de prestación.",
                     required: true,
                     value: !!consents.data_processing,
                   },
                   {
                     key: "health_data",
-                    label: "Política de Privacidad y tratamiento de datos de salud",
+                    label: t("clientDetail.politicaDePrivacidadYTratamiento"),
                     hint: "Obligatorio. Permite al entrenador tratar datos sensibles (dieta, lesiones…).",
                     required: true,
                     value: !!consents.health_data,
                   },
                   {
                     key: "marketing",
-                    label: "Comunicaciones comerciales y novedades",
+                    label: t("clientDetail.comunicacionesComercialesYNovedades"),
                     hint: "Opcional. Permite enviarle campañas y descuentos por email.",
                     required: false,
                     value: !!consents.marketing,
@@ -2955,7 +2955,7 @@ export function ClientDetailPage() {
                                 </Text>
                                 {it.required && (
                                   <Badge color="red" size="xs" variant="light">
-                                    Obligatorio
+                                    {t("clientDetail.obligatorio")}
                                   </Badge>
                                 )}
                               </Group>
@@ -2999,7 +2999,7 @@ export function ClientDetailPage() {
                 <Group gap="xs">
                   <IconAlertTriangle size={20} color="var(--nv-error)" />
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Alergias e Intolerancias
+                    {t("clientDetail.alergiasEIntolerancias")}
                   </Text>
                 </Group>
                 <ActionIcon 
@@ -3021,14 +3021,14 @@ export function ClientDetailPage() {
                 const hasData = allAllergies.length > 0 || intolerances.length > 0;
                 
                 if (!hasData) {
-                  return <Text c="dimmed" size="sm">Sin alergias ni intolerancias registradas</Text>;
+                  return <Text c="dimmed" size="sm">{t("clientDetail.sinAlergiasNiIntoleranciasRegistradas")}</Text>;
                 }
                 
                 return (
                   <Stack gap="md">
                     {allAllergies.length > 0 && (
                       <Box>
-                        <Text size="sm" c="dimmed" mb="xs">Alergias</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.alergias")}</Text>
                         <Group gap="xs">
                           {allAllergies.map((allergy: string, idx: number) => (
                             <Badge key={idx} color="red" variant="light" size="lg">
@@ -3040,7 +3040,7 @@ export function ClientDetailPage() {
                     )}
                     {intolerances.length > 0 && (
                       <Box>
-                        <Text size="sm" c="dimmed" mb="xs">Intolerancias</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.intolerancias")}</Text>
                         <Group gap="xs">
                           {intolerances.map((intolerance: string, idx: number) => (
                             <Badge key={idx} color="orange" variant="light" size="lg">
@@ -3061,7 +3061,7 @@ export function ClientDetailPage() {
                 <Group gap="xs">
                   <IconAlertTriangle size={20} color="var(--nv-warning)" />
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Lesiones
+                    {t("clientDetail.lesiones")}
                   </Text>
                 </Group>
                 <ActionIcon variant="subtle" color="gray" onClick={handleOpenInjuriesModal}>
@@ -3073,7 +3073,7 @@ export function ClientDetailPage() {
                 const injuries = client.health_data?.injuries || client.injuries || [];
                 
                 if (injuries.length === 0) {
-                  return <Text c="dimmed" size="sm">Sin lesiones registradas</Text>;
+                  return <Text c="dimmed" size="sm">{t("clientDetail.sinLesionesRegistradas")}</Text>;
                 }
                 
                 const statusColors: Record<string, string> = {
@@ -3108,12 +3108,12 @@ export function ClientDetailPage() {
                             <Group gap="md" mt="xs">
                               {startDate && (
                                 <Text size="xs" c="dimmed">
-                                  <Text span fw={500}>Inicio:</Text> {startDate}
+                                  <Text span fw={500}>{t("clientDetail.inicio")}</Text> {startDate}
                                 </Text>
                               )}
                               {endDate && (
                                 <Text size="xs" c="dimmed">
-                                  <Text span fw={500}>Fin:</Text> {endDate}
+                                  <Text span fw={500}>{t("clientDetail.fin")}</Text> {endDate}
                                 </Text>
                               )}
                             </Group>
@@ -3135,7 +3135,7 @@ export function ClientDetailPage() {
                 <Group gap="xs">
                   <IconActivity size={20} color="var(--nv-primary)" />
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Nivel de Actividad y Objetivos
+                    {t("clientDetail.nivelDeActividadYObjetivos")}
                   </Text>
                 </Group>
                 <ActionIcon variant="subtle" color="gray" onClick={handleOpenActivityModal}>
@@ -3186,7 +3186,7 @@ export function ClientDetailPage() {
                                healthData.secondary_goals?.length > 0;
                 
                 if (!hasData) {
-                  return <Text c="dimmed" size="sm">Sin información de actividad registrada</Text>;
+                  return <Text c="dimmed" size="sm">{t("clientDetail.sinInformacionDeActividadRegistrada")}</Text>;
                 }
                 
                 return (
@@ -3194,7 +3194,7 @@ export function ClientDetailPage() {
                     <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                       {healthData.activity_level && (
                         <Box>
-                          <Text size="xs" c="dimmed">Nivel de actividad</Text>
+                          <Text size="xs" c="dimmed">{t("clientDetail.nivelDeActividad")}</Text>
                           <Badge color="blue" variant="light" size="lg">
                             {activityLevelMap[healthData.activity_level] || healthData.activity_level}
                           </Badge>
@@ -3202,7 +3202,7 @@ export function ClientDetailPage() {
                       )}
                       {healthData.fitness_goal && (
                         <Box>
-                          <Text size="xs" c="dimmed">Objetivo principal</Text>
+                          <Text size="xs" c="dimmed">{t("clientDetail.objetivoPrincipal")}</Text>
                           <Badge color="green" variant="light" size="lg">
                             {fitnessGoalMap[healthData.fitness_goal] || healthData.fitness_goal}
                           </Badge>
@@ -3210,7 +3210,7 @@ export function ClientDetailPage() {
                       )}
                       {healthData.training_days_per_week && (
                         <Box>
-                          <Text size="xs" c="dimmed">Días de entrenamiento/semana</Text>
+                          <Text size="xs" c="dimmed">{t("clientDetail.diasDeEntrenamientoSemana")}</Text>
                           <Badge color="yellow" variant="light" size="lg">
                             {healthData.training_days_per_week} días
                           </Badge>
@@ -3218,7 +3218,7 @@ export function ClientDetailPage() {
                       )}
                       {healthData.target_weight && (
                         <Box>
-                          <Text size="xs" c="dimmed">Peso objetivo</Text>
+                          <Text size="xs" c="dimmed">{t("clientDetail.pesoObjetivo")}</Text>
                           <Badge color="cyan" variant="light" size="lg">
                             {healthData.target_weight} kg
                           </Badge>
@@ -3228,7 +3228,7 @@ export function ClientDetailPage() {
                     
                     {healthData.secondary_goals?.length > 0 && (
                       <Box>
-                        <Text size="sm" c="dimmed" mb="xs">Objetivos secundarios</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.objetivosSecundarios")}</Text>
                         <Group gap="xs">
                           {healthData.secondary_goals.map((goal: string, idx: number) => (
                             <Badge key={idx} color="teal" variant="light" size="md">
@@ -3249,7 +3249,7 @@ export function ClientDetailPage() {
                 <Group gap="xs">
                   <IconClipboard size={20} color="var(--nv-primary)" />
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Cuestionario PAR-Q
+                    {t("clientDetail.cuestionarioParQ")}
                   </Text>
                   {client.health_data?.parq_risk && (
                     <Badge color="red" variant="filled" size="sm">⚠ Riesgo identificado</Badge>
@@ -3264,7 +3264,7 @@ export function ClientDetailPage() {
                 const parqResponses = client.health_data?.parq_responses;
 
                 if (!parqResponses) {
-                  return <Text c="dimmed" size="sm">Sin cuestionario PAR-Q completado</Text>;
+                  return <Text c="dimmed" size="sm">{t("clientDetail.sinCuestionarioParQCompletado")}</Text>;
                 }
 
                 const isYes = (val: unknown) => val === true || val === "true";
@@ -3321,7 +3321,7 @@ export function ClientDetailPage() {
                 <Group gap="xs">
                   <IconPill size={20} color="var(--mantine-color-grape-5)" />
                   <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                    Información Médica
+                    {t("clientDetail.informacionMedica")}
                   </Text>
                 </Group>
                 <ActionIcon variant="subtle" color="gray" onClick={handleOpenMedicalModal}>
@@ -3334,20 +3334,20 @@ export function ClientDetailPage() {
                 const hasData = healthData.medical_conditions || healthData.medications;
                 
                 if (!hasData) {
-                  return <Text c="dimmed" size="sm">Sin información médica registrada</Text>;
+                  return <Text c="dimmed" size="sm">{t("clientDetail.sinInformacionMedicaRegistrada")}</Text>;
                 }
                 
                 return (
                   <Stack gap="md">
                     {healthData.medical_conditions && (
                       <Box>
-                        <Text size="sm" c="dimmed" mb="xs">Condiciones médicas</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.condicionesMedicas")}</Text>
                         <Text size="sm">{healthData.medical_conditions}</Text>
                       </Box>
                     )}
                     {healthData.medications && (
                       <Box>
-                        <Text size="sm" c="dimmed" mb="xs">Medicaciones actuales</Text>
+                        <Text size="sm" c="dimmed" mb="xs">{t("clientDetail.medicacionesActuales")}</Text>
                         <Text size="sm">{healthData.medications}</Text>
                       </Box>
                     )}
@@ -3371,7 +3371,7 @@ export function ClientDetailPage() {
                 mb="lg"
                 radius="xl"
               >
-                Volver a la lista
+                {t("clientDetail.volverALaLista")}
               </Button>
               
               {/* Vista detallada del plan nutricional */}
@@ -3409,8 +3409,8 @@ export function ClientDetailPage() {
                   if (viewingMealPlan) {
                     notifications.show({
                       id: "pdf-export",
-                      title: "Generando PDF",
-                      message: "Por favor espera mientras se genera el documento...",
+                      title: t("clientDetail.generandoPdf"),
+                      message: t("clientDetail.porFavorEsperaMientrasSe"),
                       loading: true,
                       autoClose: false,
                     });
@@ -3515,8 +3515,8 @@ export function ClientDetailPage() {
                       );
                       notifications.update({
                         id: "pdf-export",
-                        title: "PDF Generado",
-                        message: "El documento se ha descargado correctamente",
+                        title: t("clientDetail.pdfGenerado"),
+                        message: t("clientDetail.elDocumentoSeHaDescargado"),
                         color: "green",
                         loading: false,
                         autoClose: 3000,
@@ -3525,8 +3525,8 @@ export function ClientDetailPage() {
                       console.error("Error generating PDF:", error);
                       notifications.update({
                         id: "pdf-export",
-                        title: "Error",
-                        message: "No se pudo generar el PDF",
+                        title: t("clientDetail.error"),
+                        message: t("clientDetail.noSePudoGenerarEl"),
                         color: "red",
                         loading: false,
                         autoClose: 5000,
@@ -3543,7 +3543,7 @@ export function ClientDetailPage() {
                 <Group justify="space-between" align="flex-start" mb="lg" wrap="wrap">
                   <Box style={{ flex: 1, minWidth: 200 }}>
                     <Text size="xs" tt="uppercase" fw={700} style={{ letterSpacing: "0.1em", color: "rgba(0,0,0,0.6)" }}>
-                      Objetivos Nutricionales Calculados
+                      {t("clientDetail.objetivosNutricionalesCalculados")}
                     </Text>
                     <Text fw={700} size="xl" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "var(--nv-dark)" }}>
                       {client.first_name} {client.last_name}
@@ -3565,7 +3565,7 @@ export function ClientDetailPage() {
                         }}
                         onClick={openNutritionCalculator}
                       >
-                        Calculadora Nutricional
+                        {t("clientDetail.calculadoraNutricional")}
                       </Button>
                     )}
                     <Badge
@@ -3573,7 +3573,7 @@ export function ClientDetailPage() {
                       radius="xl"
                       style={{
                         background: goalType === "fat_loss" ? "#EF4444" : goalType === "muscle_gain" ? "#22C55E" : "#3B82F6",
-                        color: "white",
+                        color: t("clientDetail.white"),
                         fontWeight: 700
                       }}
                     >
@@ -3583,14 +3583,14 @@ export function ClientDetailPage() {
                 </Group>
 
                 <Group mb="md" gap="sm">
-                  <Text size="sm" c="dimmed">Fórmula BMR:</Text>
+                  <Text size="sm" c="dimmed">{t("clientDetail.formulaBmr")}</Text>
                   <SegmentedControl
                     value={selectedFormula}
                     onChange={(v) => setSelectedFormula(v as FormulaType)}
                     data={[
-                      { label: "Mifflin-St Jeor", value: "mifflin" },
-                      { label: "Harris-Benedict", value: "harris" },
-                      { label: "Katch-McArdle", value: "katch", disabled: !client?.body_fat_pct },
+                      { label: t("clientDetail.mifflinStJeor"), value: "mifflin" },
+                      { label: t("clientDetail.harrisBenedict"), value: "harris" },
+                      { label: t("clientDetail.katchMcardle"), value: "katch", disabled: !client?.body_fat_pct },
                     ]}
                     size="xs"
                     radius="md"
@@ -3599,19 +3599,19 @@ export function ClientDetailPage() {
 
                 <SimpleGrid cols={{ base: 2, sm: 3, md: 6 }} spacing="md" mb="lg">
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
-                    <Text size="xs" c="dimmed" mb={4}>Peso</Text>
+                    <Text size="xs" c="dimmed" mb={4}>{t("clientDetail.peso")}</Text>
                     <Text fw={700} size="lg">{hasClientWeight ? `${client.weight_kg} kg` : "—"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
-                    <Text size="xs" c="dimmed" mb={4}>Altura</Text>
+                    <Text size="xs" c="dimmed" mb={4}>{t("clientDetail.altura")}</Text>
                     <Text fw={700} size="lg">{hasClientHeight ? `${client.height_cm} cm` : "—"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
-                    <Text size="xs" c="dimmed" mb={4}>Edad</Text>
+                    <Text size="xs" c="dimmed" mb={4}>{t("clientDetail.edad")}</Text>
                     <Text fw={700} size="lg">{hasClientAge ? `${clientAge} años` : "—"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
-                    <Text size="xs" c="dimmed" mb={4}>Actividad</Text>
+                    <Text size="xs" c="dimmed" mb={4}>{t("clientDetail.actividad")}</Text>
                     <Text fw={700} size="sm">{ACTIVITY_LABELS[activityLevel] || "Activo"}</Text>
                   </Box>
                   <Box ta="center" p="md" style={{ background: "rgba(255,255,255,0.9)", borderRadius: "var(--radius-md)" }}>
@@ -3635,7 +3635,7 @@ export function ClientDetailPage() {
                     }}
                   >
                     <Text size="sm" fw={700} c="red.7" mb={4}>
-                      Faltan datos para calcular la dieta
+                      {t("clientDetail.faltanDatosParaCalcularLa")}
                     </Text>
                     <Text size="xs" c="red.7">
                       Para que el cálculo sea realista necesitamos {[
@@ -3676,8 +3676,8 @@ export function ClientDetailPage() {
                         },
                       });
                       notifications.show({
-                        title: "Datos guardados",
-                        message: "BMR, TDEE y objetivos guardados en la ficha del cliente",
+                        title: t("clientDetail.datosGuardados"),
+                        message: t("clientDetail.bmrTdeeYObjetivosGuardados"),
                         color: "green",
                       });
                     } catch {
@@ -3685,7 +3685,7 @@ export function ClientDetailPage() {
                     }
                   }}
                 >
-                  Guardar en ficha
+                  {t("clientDetail.guardarEnFicha")}
                 </Button>
                 )}
 
@@ -3702,7 +3702,7 @@ export function ClientDetailPage() {
                       <Text size="2rem" fw={700} style={{ color: "#3B82F6", fontFamily: "'Space Grotesk', sans-serif" }}>
                         {nutritionalTargets.calories > 0 ? nutritionalTargets.calories : "—"}
                       </Text>
-                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Calorías</Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>{t("clientDetail.calorias")}</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_calories && mealPlans[0].target_calories !== nutritionalTargets.calories && (
                         <Text size="xs" c="gray.5" mt={2}>
                           (Plan: {mealPlans[0].target_calories})
@@ -3713,7 +3713,7 @@ export function ClientDetailPage() {
                       <Text size="2rem" fw={700} style={{ color: "#22C55E", fontFamily: "'Space Grotesk', sans-serif" }}>
                         {nutritionalTargets.protein > 0 ? `${nutritionalTargets.protein}g` : "—"}
                       </Text>
-                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Proteínas</Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>{t("clientDetail.proteinas")}</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_protein && mealPlans[0].target_protein !== nutritionalTargets.protein && (
                         <Text size="xs" c="gray.5" mt={2}>
                           (Plan: {mealPlans[0].target_protein}g)
@@ -3724,7 +3724,7 @@ export function ClientDetailPage() {
                       <Text size="2rem" fw={700} style={{ color: "#F59E0B", fontFamily: "'Space Grotesk', sans-serif" }}>
                         {nutritionalTargets.carbs > 0 ? `${nutritionalTargets.carbs}g` : "—"}
                       </Text>
-                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Carbohidratos</Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>{t("clientDetail.carbohidratos")}</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_carbs && mealPlans[0].target_carbs !== nutritionalTargets.carbs && (
                         <Text size="xs" c="gray.5" mt={2}>
                           (Plan: {mealPlans[0].target_carbs}g)
@@ -3735,7 +3735,7 @@ export function ClientDetailPage() {
                       <Text size="2rem" fw={700} style={{ color: "#8B5CF6", fontFamily: "'Space Grotesk', sans-serif" }}>
                         {nutritionalTargets.fat > 0 ? `${nutritionalTargets.fat}g` : "—"}
                       </Text>
-                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Grasas</Text>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>{t("clientDetail.grasas")}</Text>
                       {mealPlans.length > 0 && mealPlans[0].target_fat && mealPlans[0].target_fat !== nutritionalTargets.fat && (
                         <Text size="xs" c="gray.5" mt={2}>
                           (Plan: {mealPlans[0].target_fat}g)
@@ -3750,7 +3750,7 @@ export function ClientDetailPage() {
                   <Box mt="md" p="md" style={{ background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
                     <Group gap="xs" mb="xs">
                       <IconAlertTriangle size={16} color="#EF4444" />
-                      <Text size="sm" fw={600} style={{ color: "#EF4444" }}>Alergias e Intolerancias</Text>
+                      <Text size="sm" fw={600} style={{ color: "#EF4444" }}>{t("clientDetail.alergiasEIntolerancias")}</Text>
                     </Group>
                     <Group gap="xs">
                       {[
@@ -3778,7 +3778,7 @@ export function ClientDetailPage() {
                 <Box className="nv-card" p="xl">
                   <Group justify="space-between" mb="lg">
                     <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                      Planes Nutricionales
+                      {t("clientDetail.planesNutricionales")}
                     </Text>
                     <Menu shadow="md" width={240} position="bottom-end">
                       <Menu.Target>
@@ -3800,12 +3800,12 @@ export function ClientDetailPage() {
                         </Button>
                       </Menu.Target>
                       <Menu.Dropdown>
-                        <Menu.Label>Plan nutricional</Menu.Label>
+                        <Menu.Label>{t("clientDetail.planNutricional")}</Menu.Label>
                         <Menu.Item
                           leftSection={<IconClipboard size={16} />}
                           onClick={handleAssignNutritionPlan}
                         >
-                          Asignar plantilla existente
+                          {t("clientDetail.asignarPlantillaExistente")}
                         </Menu.Item>
                         <Menu.Item
                           leftSection={<IconBolt size={16} />}
@@ -3814,7 +3814,7 @@ export function ClientDetailPage() {
                             navigate(`/nutrition?clientId=${id}&returnTo=${encodeURIComponent(`/clients/${id}`)}`);
                           }}
                         >
-                          Crear plan personalizado
+                          {t("clientDetail.crearPlanPersonalizado")}
                         </Menu.Item>
                       </Menu.Dropdown>
                     </Menu>
@@ -3870,7 +3870,7 @@ export function ClientDetailPage() {
                                 leftSection={<IconEye size={16} />}
                                 onClick={() => setViewingMealPlanId(plan.id)}
                               >
-                                Ver detalles
+                                {t("clientDetail.verDetalles")}
                               </Menu.Item>
                               {plan.status !== "active" ? (
                                 <Menu.Item 
@@ -3878,11 +3878,11 @@ export function ClientDetailPage() {
                                   color="green"
                                   onClick={async () => {
                                     await activateMealPlan.mutateAsync(plan.id);
-                                    notifications.show({ title: "Plan activado", message: `"${plan.name}" es ahora el plan activo`, color: "green" });
+                                    notifications.show({ title: t("clientDetail.planActivado"), message: `"${plan.name}" es ahora el plan activo`, color: "green" });
                                     refetch();
                                   }}
                                 >
-                                  Activar plan
+                                  {t("clientDetail.activarPlan")}
                                 </Menu.Item>
                               ) : (
                                 <Menu.Item 
@@ -3890,18 +3890,18 @@ export function ClientDetailPage() {
                                   color="orange"
                                   onClick={async () => {
                                     await deactivateMealPlan.mutateAsync(plan.id);
-                                    notifications.show({ title: "Plan desactivado", message: `"${plan.name}" ha sido desactivado`, color: "orange" });
+                                    notifications.show({ title: t("clientDetail.planDesactivado"), message: `"${plan.name}" ha sido desactivado`, color: "orange" });
                                     refetch();
                                   }}
                                 >
-                                  Desactivar plan
+                                  {t("clientDetail.desactivarPlan")}
                                 </Menu.Item>
                               )}
                               <Menu.Item 
                                 leftSection={<IconEdit size={16} />}
                                 onClick={() => navigate(`/nutrition?edit=${plan.id}&clientId=${id}&returnTo=/clients/${id}?tab=nutrition`)}
                               >
-                                Editar plan
+                                {t("clientDetail.editarPlan")}
                               </Menu.Item>
                               <Menu.Item 
                                 leftSection={<IconDownload size={16} />}
@@ -3910,7 +3910,7 @@ export function ClientDetailPage() {
                                   if (mp) { await generateMealPlanPDF(mp as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any }); }
                                 }}
                               >
-                                Descargar PDF
+                                {t("clientDetail.descargarPdf")}
                               </Menu.Item>
                               <Menu.Divider />
                               <Menu.Item 
@@ -3918,7 +3918,7 @@ export function ClientDetailPage() {
                                 leftSection={<IconTrash size={16} />}
                                 onClick={() => handleDeleteMealPlan(plan.id)}
                               >
-                                Eliminar asignación
+                                {t("clientDetail.eliminarAsignacion")}
                               </Menu.Item>
                             </Menu.Dropdown>
                           </Menu>
@@ -3928,9 +3928,9 @@ export function ClientDetailPage() {
                     
                     {mealPlans.length === 0 && (
                       <Text size="sm" c="dimmed" ta="center" py="xl">
-                        No hay planes nutricionales asignados.
+                        {t("clientDetail.noHayPlanesNutricionalesAsignados")}
                         <br />
-                        Haz clic en "Asignar Plan" para añadir uno.
+                        {t("clientDetail.hazClicEnAsignarPlan")}
                       </Text>
                     )}
                   </Stack>
@@ -3941,7 +3941,7 @@ export function ClientDetailPage() {
                     <Group gap="xs">
                       <IconPill size={20} color="var(--nv-success)" />
                       <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                        Suplementos
+                        {t("clientDetail.suplementos")}
                       </Text>
                     </Group>
                     <Button
@@ -3959,15 +3959,14 @@ export function ClientDetailPage() {
                         openAssignSupplementModal();
                       }}
                     >
-                      Añadir
+                      {t("clientDetail.anadir")}
                     </Button>
                   </Group>
 
                   <Stack gap="sm">
                     {supplements.length === 0 && (
                       <Text c="dimmed" size="sm">
-                        No hay suplementos asignados todavía. Pulsa "Añadir" para
-                        elegir uno de tu catálogo.
+                        {t("clientDetail.noHaySuplementosAsignadosTodavia")}
                       </Text>
                     )}
                     {supplements.map((supp) => (
@@ -4014,15 +4013,15 @@ export function ClientDetailPage() {
                                     supp.id,
                                   );
                                   notifications.show({
-                                    title: "Suplemento eliminado",
+                                    title: t("clientDetail.suplementoEliminado"),
                                     message:
-                                      "Se ha quitado el suplemento del cliente",
+                                      t("clientDetail.seHaQuitadoElSuplemento"),
                                     color: "green",
                                   });
                                   refetchClientSupplements();
                                 } catch (err: any) {
                                   notifications.show({
-                                    title: "Error",
+                                    title: t("clientDetail.error"),
                                     message:
                                       err?.response?.data?.detail ||
                                       "No se pudo eliminar",
@@ -4050,7 +4049,7 @@ export function ClientDetailPage() {
           <Box className="nv-card" p="xl">
             <Group justify="space-between" mb="lg">
               <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Documentos
+                {t("clientDetail.documentos")}
               </Text>
               <FileButton onChange={() => {}} accept="application/pdf,image/*">
                 {(props) => (
@@ -4068,7 +4067,7 @@ export function ClientDetailPage() {
                       }
                     }}
                   >
-                    Subir Documento
+                    {t("clientDetail.subirDocumento")}
                   </Button>
                 )}
               </FileButton>
@@ -4090,11 +4089,11 @@ export function ClientDetailPage() {
               >
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Documento</Table.Th>
-                    <Table.Th>Tipo</Table.Th>
-                    <Table.Th>Dirección</Table.Th>
-                    <Table.Th>Fecha</Table.Th>
-                    <Table.Th>Estado</Table.Th>
+                    <Table.Th>{t("clientDetail.documento")}</Table.Th>
+                    <Table.Th>{t("clientDetail.tipo")}</Table.Th>
+                    <Table.Th>{t("clientDetail.direccion")}</Table.Th>
+                    <Table.Th>{t("clientDetail.fecha")}</Table.Th>
+                    <Table.Th>{t("clientDetail.estado")}</Table.Th>
                     <Table.Th></Table.Th>
                   </Table.Tr>
                 </Table.Thead>
@@ -4163,7 +4162,7 @@ export function ClientDetailPage() {
           <Box className="nv-card" p="xl">
             <Group justify="space-between" mb="lg">
               <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                Fotos de Evolución
+                {t("clientDetail.fotosDeEvolucion")}
               </Text>
               <FileButton onChange={() => {}} accept="image/*" multiple>
                 {(props: Record<string, unknown>) => (
@@ -4181,7 +4180,7 @@ export function ClientDetailPage() {
                       }
                     }}
                   >
-                    Subir Fotos
+                    {t("clientDetail.subirFotos")}
                   </Button>
                 )}
               </FileButton>
@@ -4191,10 +4190,10 @@ export function ClientDetailPage() {
               value={trainerPhotoFilter}
               onChange={setTrainerPhotoFilter}
               data={[
-                { value: "all", label: "Todas" },
-                { value: "front", label: "Frontal" },
-                { value: "back", label: "Espalda" },
-                { value: "side", label: "Lateral" },
+                { value: "all", label: t("clientDetail.todas") },
+                { value: "front", label: t("clientDetail.frontal") },
+                { value: "back", label: t("clientDetail.espalda") },
+                { value: "side", label: t("clientDetail.lateral") },
               ]}
               mb="md"
               size="sm"
@@ -4257,11 +4256,11 @@ export function ClientDetailPage() {
               <Table verticalSpacing="md" horizontalSpacing="lg" style={{ minWidth: 600 }}>
                 <Table.Thead style={{ backgroundColor: "var(--nv-surface-subtle)" }}>
                   <Table.Tr>
-                    <Table.Th>Fecha</Table.Th>
-                    <Table.Th>Hora</Table.Th>
-                    <Table.Th>Tipo</Table.Th>
-                    <Table.Th>Estado</Table.Th>
-                    <Table.Th>Notas</Table.Th>
+                    <Table.Th>{t("clientDetail.fecha")}</Table.Th>
+                    <Table.Th>{t("clientDetail.hora")}</Table.Th>
+                    <Table.Th>{t("clientDetail.tipo")}</Table.Th>
+                    <Table.Th>{t("clientDetail.estado")}</Table.Th>
+                    <Table.Th>{t("clientDetail.notas")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -4305,7 +4304,7 @@ export function ClientDetailPage() {
               <SimpleGrid cols={{ base: 1, sm: 3 }} mb="md">
                 <Box className="nv-card" p="lg">
                   <Group justify="space-between" mb="xs">
-                    <Text size="sm" c="dimmed">Peso Actual</Text>
+                    <Text size="sm" c="dimmed">{t("clientDetail.pesoActual")}</Text>
                     <ThemeIcon size="sm" variant="light" color="blue">
                       <IconScale size={14} />
                     </ThemeIcon>
@@ -4334,7 +4333,7 @@ export function ClientDetailPage() {
                 </Box>
                 <Box className="nv-card" p="lg">
                   <Group justify="space-between" mb="xs">
-                    <Text size="sm" c="dimmed">Masa Muscular</Text>
+                    <Text size="sm" c="dimmed">{t("clientDetail.masaMuscular")}</Text>
                     <ThemeIcon size="sm" variant="light" color="green">
                       <IconBarbell size={14} />
                     </ThemeIcon>
@@ -4430,19 +4429,19 @@ export function ClientDetailPage() {
               </Text>
               {measurements.length === 0 ? (
                 <Text c="dimmed" ta="center" py="xl">
-                  El cliente no ha registrado medidas aún
+                  {t("clientDetail.elClienteNoHaRegistrado")}
                 </Text>
               ) : (
                 <ScrollArea type="auto">
                   <Table verticalSpacing="md" style={{ minWidth: 600 }}>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Fecha</Table.Th>
-                        <Table.Th>Peso (kg)</Table.Th>
+                        <Table.Th>{t("clientDetail.fecha")}</Table.Th>
+                        <Table.Th>{t("clientDetail.pesoKg")}</Table.Th>
                         <Table.Th>% Grasa</Table.Th>
-                        <Table.Th>Masa Muscular (kg)</Table.Th>
-                        <Table.Th>Medidas</Table.Th>
-                        <Table.Th>Variación</Table.Th>
+                        <Table.Th>{t("clientDetail.masaMuscularKg")}</Table.Th>
+                        <Table.Th>{t("clientDetail.medidas")}</Table.Th>
+                        <Table.Th>{t("clientDetail.variacion")}</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -4533,7 +4532,7 @@ export function ClientDetailPage() {
               </Text>
               {clientWorkoutLogs.length === 0 ? (
                 <Text c="dimmed" ta="center" py="xl">
-                  El cliente no ha registrado entrenamientos aún
+                  {t("clientDetail.elClienteNoHaRegistrado")}
                 </Text>
               ) : (
                 <Stack gap="sm">
@@ -4563,7 +4562,7 @@ export function ClientDetailPage() {
               </Text>
               {!clientNutritionLogs?.logs?.length ? (
                 <Text c="dimmed" ta="center" py="xl">
-                  El cliente no ha registrado comidas aún
+                  {t("clientDetail.elClienteNoHaRegistrado")}
                 </Text>
               ) : (
                 <>
@@ -4571,19 +4570,19 @@ export function ClientDetailPage() {
                   <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg">
                     <Box ta="center" p="md" style={{ background: "var(--mantine-color-yellow-light)", borderRadius: "var(--mantine-radius-md)" }}>
                       <Text size="xl" fw={700}>{clientNutritionLogs.summary.avg_calories}</Text>
-                      <Text size="xs" c="dimmed">Promedio kcal/día</Text>
+                      <Text size="xs" c="dimmed">{t("clientDetail.promedioKcalDia")}</Text>
                     </Box>
                     <Box ta="center" p="md" style={{ background: "var(--mantine-color-blue-light)", borderRadius: "var(--mantine-radius-md)" }}>
                       <Text size="xl" fw={700}>{clientNutritionLogs.targets.calories}</Text>
-                      <Text size="xs" c="dimmed">Objetivo kcal/día</Text>
+                      <Text size="xs" c="dimmed">{t("clientDetail.objetivoKcalDia")}</Text>
                     </Box>
                     <Box ta="center" p="md" style={{ background: "var(--mantine-color-green-light)", borderRadius: "var(--mantine-radius-md)" }}>
                       <Text size="xl" fw={700}>{clientNutritionLogs.targets.protein}g</Text>
-                      <Text size="xs" c="dimmed">Objetivo proteína</Text>
+                      <Text size="xs" c="dimmed">{t("clientDetail.objetivoProteina")}</Text>
                     </Box>
                     <Box ta="center" p="md" style={{ background: "var(--mantine-color-grape-light)", borderRadius: "var(--mantine-radius-md)" }}>
                       <Text size="xl" fw={700}>{clientNutritionLogs.summary.total_days}</Text>
-                      <Text size="xs" c="dimmed">Días registrados</Text>
+                      <Text size="xs" c="dimmed">{t("clientDetail.diasRegistrados")}</Text>
                     </Box>
                   </SimpleGrid>
                   
@@ -4614,7 +4613,7 @@ export function ClientDetailPage() {
               </Text>
               {clientPhotos.length === 0 ? (
                 <Text c="dimmed" ta="center" py="xl">
-                  El cliente no ha subido fotos de progreso aún
+                  {t("clientDetail.elClienteNoHaSubido")}
                 </Text>
               ) : (
                 <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
@@ -4656,7 +4655,7 @@ export function ClientDetailPage() {
             <Box className="nv-card" p="xl">
               <Group justify="space-between" mb="lg">
                 <Text fw={700} size="lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Programas de Entrenamiento
+                  {t("clientDetail.programasDeEntrenamiento")}
                 </Text>
                 <Menu shadow="md" width={260} position="bottom-end">
                   <Menu.Target>
@@ -4679,9 +4678,9 @@ export function ClientDetailPage() {
                     </Button>
                   </Menu.Target>
                   <Menu.Dropdown>
-                    <Menu.Label>Programa de entrenamiento</Menu.Label>
+                    <Menu.Label>{t("clientDetail.programaDeEntrenamiento")}</Menu.Label>
                     <Menu.Item leftSection={<IconClipboard size={16} />} onClick={handleAssignProgram}>
-                      Asignar plantilla existente
+                      {t("clientDetail.asignarPlantillaExistente")}
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconBolt size={16} />}
@@ -4690,7 +4689,7 @@ export function ClientDetailPage() {
                         navigate(`/workouts?clientId=${id}&returnTo=${encodeURIComponent(`/clients/${id}?tab=programs`)}`);
                       }}
                     >
-                      Crear programa personalizado
+                      {t("clientDetail.crearProgramaPersonalizado")}
                     </Menu.Item>
                   </Menu.Dropdown>
                 </Menu>
@@ -4759,7 +4758,7 @@ export function ClientDetailPage() {
                               openViewProgramModal();
                             }}
                           >
-                            Ver detalles
+                            {t("clientDetail.verDetalles")}
                           </Menu.Item>
                           {!showActive ? (
                             <Menu.Item
@@ -4767,11 +4766,11 @@ export function ClientDetailPage() {
                               color="green"
                               onClick={async () => {
                                 await activateWorkoutProgram.mutateAsync(program.id);
-                                notifications.show({ title: "Programa activado", message: `"${program.name}" es ahora el programa activo`, color: "green" });
+                                notifications.show({ title: t("clientDetail.programaActivado"), message: `"${program.name}" es ahora el programa activo`, color: "green" });
                                 refetch();
                               }}
                             >
-                              Activar programa
+                              {t("clientDetail.activarPrograma")}
                             </Menu.Item>
                           ) : (
                             <Menu.Item
@@ -4779,11 +4778,11 @@ export function ClientDetailPage() {
                               color="orange"
                               onClick={async () => {
                                 await deactivateWorkoutProgram.mutateAsync(program.id);
-                                notifications.show({ title: "Programa desactivado", message: `"${program.name}" ha sido desactivado`, color: "orange" });
+                                notifications.show({ title: t("clientDetail.programaDesactivado"), message: `"${program.name}" ha sido desactivado`, color: "orange" });
                                 refetch();
                               }}
                             >
-                              Desactivar programa
+                              {t("clientDetail.desactivarPrograma")}
                             </Menu.Item>
                           )}
                           <Menu.Item 
@@ -4792,7 +4791,7 @@ export function ClientDetailPage() {
                               navigate(`/workouts?edit=${program.id}&clientId=${id}&returnTo=/clients/${id}?tab=programs`);
                             }}
                           >
-                            Editar programa
+                            {t("clientDetail.editarPrograma")}
                           </Menu.Item>
                           <Menu.Item 
                             leftSection={<IconDownload size={16} />}
@@ -4800,7 +4799,7 @@ export function ClientDetailPage() {
                               await generateWorkoutProgramPDF(program as any, { workspaceName: currentWorkspace?.name || "Trackfiz", branding: currentWorkspace?.branding, workspaceLogo: currentWorkspace?.logo_url, client: client as any });
                             }}
                           >
-                            Descargar PDF
+                            {t("clientDetail.descargarPdf")}
                           </Menu.Item>
                           <Menu.Divider />
                           <Menu.Item 
@@ -4808,7 +4807,7 @@ export function ClientDetailPage() {
                             leftSection={<IconTrash size={16} />}
                             onClick={() => handleDeleteProgram(program.id)}
                           >
-                            Eliminar asignación
+                            {t("clientDetail.eliminarAsignacion")}
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
@@ -4823,9 +4822,9 @@ export function ClientDetailPage() {
               <ThemeIcon size={80} radius="xl" variant="light" color="gray" mb="lg">
                 <IconBarbell size={40} />
               </ThemeIcon>
-              <Text fw={700} size="lg" mb="xs">Sin programas asignados</Text>
+              <Text fw={700} size="lg" mb="xs">{t("clientDetail.sinProgramasAsignados")}</Text>
               <Text c="dimmed" mb="lg" maw={400} mx="auto">
-                Asigna un programa de entrenamiento para este cliente
+                {t("clientDetail.asignaUnProgramaDeEntrenamiento")}
               </Text>
               <Menu shadow="md" width={260} position="bottom">
                 <Menu.Target>
@@ -4842,13 +4841,13 @@ export function ClientDetailPage() {
                       },
                     }}
                   >
-                    Asignar Programa
+                    {t("clientDetail.asignarPrograma")}
                   </Button>
                 </Menu.Target>
                 <Menu.Dropdown>
-                  <Menu.Label>Programa de entrenamiento</Menu.Label>
+                  <Menu.Label>{t("clientDetail.programaDeEntrenamiento")}</Menu.Label>
                   <Menu.Item leftSection={<IconClipboard size={16} />} onClick={handleAssignProgram}>
-                    Asignar plantilla existente
+                    {t("clientDetail.asignarPlantillaExistente")}
                   </Menu.Item>
                   <Menu.Item
                     leftSection={<IconBolt size={16} />}
@@ -4857,7 +4856,7 @@ export function ClientDetailPage() {
                       navigate(`/workouts?clientId=${id}&returnTo=${encodeURIComponent(`/clients/${id}?tab=programs`)}`);
                     }}
                   >
-                    Crear programa personalizado
+                    {t("clientDetail.crearProgramaPersonalizado")}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
@@ -4891,25 +4890,25 @@ export function ClientDetailPage() {
         <Tabs.Panel value="tasks">
           <Stack gap="md">
             <Group justify="space-between" mb="sm">
-              <Text fw={600} size="lg">Tareas vinculadas</Text>
+              <Text fw={600} size="lg">{t("clientDetail.tareasVinculadas")}</Text>
               <Button size="xs" leftSection={<IconPlus size={14} />} onClick={() => navigate(`/tasks`)} radius="xl" variant="light">
-                Ir a Tareas
+                {t("clientDetail.irATareas")}
               </Button>
             </Group>
             {clientTasks.length === 0 ? (
               <Paper p="xl" withBorder radius="md" ta="center">
-                <Text c="dimmed" size="sm">No hay tareas vinculadas a este cliente</Text>
+                <Text c="dimmed" size="sm">{t("clientDetail.noHayTareasVinculadasA")}</Text>
               </Paper>
             ) : (
               <Table striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Título</Table.Th>
-                    <Table.Th>Fecha</Table.Th>
-                    <Table.Th>Estado</Table.Th>
-                    <Table.Th>Asignado a</Table.Th>
-                    <Table.Th>Prioridad</Table.Th>
-                    <Table.Th w={80}>Acciones</Table.Th>
+                    <Table.Th>{t("clientDetail.titulo")}</Table.Th>
+                    <Table.Th>{t("clientDetail.fecha")}</Table.Th>
+                    <Table.Th>{t("clientDetail.estado")}</Table.Th>
+                    <Table.Th>{t("clientDetail.asignadoA")}</Table.Th>
+                    <Table.Th>{t("clientDetail.prioridad")}</Table.Th>
+                    <Table.Th w={80}>{t("clientDetail.acciones")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -4961,27 +4960,27 @@ export function ClientDetailPage() {
         {/* History Tab */}
         <Tabs.Panel value="history">
           <Stack gap="md">
-            <Text fw={600} size="lg">Historial del cliente</Text>
+            <Text fw={600} size="lg">{t("clientDetail.historialDelCliente")}</Text>
             <Timeline active={-1} bulletSize={24} lineWidth={2}>
               {[
                 ...clientWorkoutLogs.map((log: any) => ({
                   date: log.created_at || log.date,
                   type: "workout" as const,
-                  title: "Entrenamiento registrado",
+                  title: t("clientDetail.entrenamientoRegistrado"),
                   desc: log.program_name || "Sesión de entrenamiento",
                 })),
                 ...(clientNutritionLogs?.logs || []).flatMap((day: any) =>
                   (day.meals || []).map((meal: any) => ({
                     date: day.date || meal.logged_at,
                     type: "nutrition" as const,
-                    title: "Registro nutricional",
+                    title: t("clientDetail.registroNutricional"),
                     desc: meal.meal_name || "Comida registrada",
                   }))
                 ),
                 ...clientMeasurements.map((m: any) => ({
                   date: m.created_at || m.date,
                   type: "measurement" as const,
-                  title: "Medición registrada",
+                  title: t("clientDetail.medicionRegistrada"),
                   desc: m.weight_kg ? `Peso: ${m.weight_kg} kg` : "Medición corporal",
                 })),
               ]
@@ -5006,7 +5005,7 @@ export function ClientDetailPage() {
                 ))}
               {clientWorkoutLogs.length === 0 && (clientNutritionLogs?.logs || []).length === 0 && clientMeasurements.length === 0 && (
                 <Paper p="xl" withBorder radius="md" ta="center">
-                  <Text c="dimmed" size="sm">No hay actividad registrada para este cliente</Text>
+                  <Text c="dimmed" size="sm">{t("clientDetail.noHayActividadRegistradaPara")}</Text>
                 </Paper>
               )}
             </Timeline>
@@ -5016,7 +5015,7 @@ export function ClientDetailPage() {
         {/* Calendar Tab */}
         <Tabs.Panel value="client-calendar">
           <Stack gap="md">
-            <Text fw={600} size="lg">Calendario del cliente</Text>
+            <Text fw={600} size="lg">{t("clientDetail.calendarioDelCliente")}</Text>
             <Paper p="md" withBorder radius="md">
               <Stack gap="xs">
                 {[
@@ -5051,7 +5050,7 @@ export function ClientDetailPage() {
                     </Group>
                   ))}
                 {(clientWorkoutPrograms || []).length === 0 && (clientMealPlans || []).length === 0 && clientTasks.length === 0 && (
-                  <Text c="dimmed" size="sm" ta="center" py="xl">No hay eventos en el calendario</Text>
+                  <Text c="dimmed" size="sm" ta="center" py="xl">{t("clientDetail.noHayEventosEnEl")}</Text>
                 )}
               </Stack>
             </Paper>
@@ -5071,15 +5070,15 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={allergyModalOpened}
         onClose={closeAllergyModal}
-        title="Editar Alergias e Intolerancias"
+        title={t("clientDetail.editarAlergiasEIntolerancias")}
         size="lg"
         radius="lg"
         centered
       >
         <Stack gap="lg">
           <MultiSelect
-            label="Alergias"
-            placeholder="Selecciona las alergias del cliente"
+            label={t("clientDetail.alergias")}
+            placeholder={t("clientDetail.seleccionaLasAlergiasDelCliente")}
             data={COMMON_ALLERGENS}
             value={selectedAllergies}
             onChange={setSelectedAllergies}
@@ -5089,8 +5088,8 @@ export function ClientDetailPage() {
           />
           
           <MultiSelect
-            label="Intolerancias"
-            placeholder="Selecciona las intolerancias del cliente"
+            label={t("clientDetail.intolerancias")}
+            placeholder={t("clientDetail.seleccionaLasIntoleranciasDelCliente")}
             data={COMMON_INTOLERANCES}
             value={selectedIntolerances}
             onChange={setSelectedIntolerances}
@@ -5105,7 +5104,7 @@ export function ClientDetailPage() {
               onClick={closeAllergyModal}
               radius="xl"
             >
-              Cancelar
+              {t("clientDetail.cancelar")}
             </Button>
             <Button
               onClick={handleSaveAllergies}
@@ -5120,7 +5119,7 @@ export function ClientDetailPage() {
                 }
               }}
             >
-              Guardar Cambios
+              {t("clientDetail.guardarCambios")}
             </Button>
           </Group>
         </Stack>
@@ -5130,7 +5129,7 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={editClientModalOpened}
         onClose={closeEditClientModal}
-        title="Editar Cliente"
+        title={t("clientDetail.editarCliente")}
         size="lg"
         radius="lg"
         centered
@@ -5139,42 +5138,42 @@ export function ClientDetailPage() {
           <Stack gap="md">
             <Group grow>
               <TextInput
-                label="Nombre"
-                placeholder="Juan"
+                label={t("clientDetail.nombre")}
+                placeholder={t("clientDetail.juan")}
                 required
                 radius="md"
                 {...editClientForm.getInputProps("first_name")}
               />
               <TextInput
-                label="Apellido"
-                placeholder="García"
+                label={t("clientDetail.apellido")}
+                placeholder={t("clientDetail.garcia")}
                 required
                 radius="md"
                 {...editClientForm.getInputProps("last_name")}
               />
             </Group>
             <TextInput
-              label="Email"
-              placeholder="juan@email.com"
+              label={t("clientDetail.email")}
+              placeholder={t("clientDetail.juanEmailCom")}
               required
               radius="md"
               {...editClientForm.getInputProps("email")}
             />
             <TextInput
-              label="Teléfono"
+              label={t("clientDetail.telefono")}
               placeholder="+34 600 000 000"
               radius="md"
               {...editClientForm.getInputProps("phone")}
             />
             <Textarea
-              label="Objetivos"
-              placeholder="Describe los objetivos del cliente..."
+              label={t("clientDetail.objetivos")}
+              placeholder={t("clientDetail.describeLosObjetivosDelCliente")}
               minRows={3}
               radius="md"
               {...editClientForm.getInputProps("goals")}
             />
 
-            <Divider label="Datos de facturación" labelPosition="center" my="xs" />
+            <Divider label={t("clientDetail.datosDeFacturacion")} labelPosition="center" my="xs" />
 
             <TextInput
               label="NIF / CIF / NIE"
@@ -5183,51 +5182,51 @@ export function ClientDetailPage() {
               {...editClientForm.getInputProps("tax_id")}
             />
             <TextInput
-              label="Dirección fiscal"
-              placeholder="Calle Ejemplo 1, 2º B"
+              label={t("clientDetail.direccionFiscal")}
+              placeholder={t("clientDetail.calleEjemplo12B")}
               radius="md"
               {...editClientForm.getInputProps("billing_address")}
             />
             <Group grow>
               <TextInput
-                label="Ciudad"
-                placeholder="Madrid"
+                label={t("clientDetail.ciudad")}
+                placeholder={t("clientDetail.madrid")}
                 radius="md"
                 {...editClientForm.getInputProps("billing_city")}
               />
               <TextInput
-                label="Código postal"
+                label={t("clientDetail.codigoPostal")}
                 placeholder="28001"
                 radius="md"
                 {...editClientForm.getInputProps("billing_postal_code")}
               />
             </Group>
             <Select
-              label="País"
-              placeholder="Selecciona el país del cliente"
+              label={t("clientDetail.pais")}
+              placeholder={t("clientDetail.seleccionaElPaisDelCliente")}
               radius="md"
               searchable
               data={[
-                { value: "Andorra", label: "Andorra" },
-                { value: "España", label: "España" },
-                { value: "Portugal", label: "Portugal" },
-                { value: "Francia", label: "Francia" },
-                { value: "Italia", label: "Italia" },
-                { value: "Alemania", label: "Alemania" },
-                { value: "Reino Unido", label: "Reino Unido" },
-                { value: "Estados Unidos", label: "Estados Unidos" },
-                { value: "México", label: "México" },
-                { value: "Argentina", label: "Argentina" },
-                { value: "Chile", label: "Chile" },
-                { value: "Colombia", label: "Colombia" },
+                { value: "Andorra", label: t("clientDetail.andorra") },
+                { value: "España", label: t("clientDetail.espana") },
+                { value: "Portugal", label: t("clientDetail.portugal") },
+                { value: "Francia", label: t("clientDetail.francia") },
+                { value: "Italia", label: t("clientDetail.italia") },
+                { value: "Alemania", label: t("clientDetail.alemania") },
+                { value: "Reino Unido", label: t("clientDetail.reinoUnido") },
+                { value: "Estados Unidos", label: t("clientDetail.estadosUnidos") },
+                { value: "México", label: t("clientDetail.mexico") },
+                { value: "Argentina", label: t("clientDetail.argentina") },
+                { value: "Chile", label: t("clientDetail.chile") },
+                { value: "Colombia", label: t("clientDetail.colombia") },
               ]}
-              description="Determina la fiscalidad de las facturas (IGI 4,5% sólo en Andorra)"
+              description={t("clientDetail.determinaLaFiscalidadDeLas")}
               {...editClientForm.getInputProps("billing_country")}
             />
 
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeEditClientModal} radius="xl">
-                Cancelar
+                {t("clientDetail.cancelar")}
               </Button>
               <Button
                 type="submit"
@@ -5242,7 +5241,7 @@ export function ClientDetailPage() {
                   }
                 }}
               >
-                Guardar Cambios
+                {t("clientDetail.guardarCambios")}
               </Button>
             </Group>
           </Stack>
@@ -5253,7 +5252,7 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={editInfoModalOpened}
         onClose={closeEditInfoModal}
-        title="Editar Información Personal"
+        title={t("clientDetail.editarInformacionPersonal")}
         size="lg"
         radius="lg"
         centered
@@ -5261,25 +5260,25 @@ export function ClientDetailPage() {
         <form onSubmit={editInfoForm.onSubmit(handleEditInfo)}>
           <Stack gap="md">
             <TextInput
-              label="Fecha de nacimiento"
+              label={t("clientDetail.fechaDeNacimiento")}
               type="date"
               radius="md"
               {...editInfoForm.getInputProps("birth_date")}
             />
             <Select
-              label="Género"
-              placeholder="Selecciona el género"
+              label={t("clientDetail.genero")}
+              placeholder={t("clientDetail.seleccionaElGenero")}
               data={[
-                { value: "male", label: "Masculino" },
-                { value: "female", label: "Femenino" },
-                { value: "other", label: "Otro" },
+                { value: "male", label: t("clientDetail.masculino") },
+                { value: "female", label: t("clientDetail.femenino") },
+                { value: "other", label: t("clientDetail.otro") },
               ]}
               radius="md"
               {...editInfoForm.getInputProps("gender")}
             />
             <Group grow>
               <NumberInput
-                label="Altura (cm)"
+                label={t("clientDetail.alturaCm")}
                 placeholder="165"
                 min={100}
                 max={250}
@@ -5287,7 +5286,7 @@ export function ClientDetailPage() {
                 {...editInfoForm.getInputProps("height_cm")}
               />
               <NumberInput
-                label="Peso (kg)"
+                label={t("clientDetail.pesoKg")}
                 placeholder="65"
                 min={30}
                 max={300}
@@ -5297,15 +5296,15 @@ export function ClientDetailPage() {
               />
             </Group>
             <Textarea
-              label="Notas internas"
-              placeholder="Notas visibles solo para el entrenador..."
+              label={t("clientDetail.notasInternas")}
+              placeholder={t("clientDetail.notasVisiblesSoloParaEl")}
               minRows={3}
               radius="md"
               {...editInfoForm.getInputProps("internal_notes")}
             />
             <Group justify="flex-end" mt="md">
               <Button variant="default" onClick={closeEditInfoModal} radius="xl">
-                Cancelar
+                {t("clientDetail.cancelar")}
               </Button>
               <Button
                 type="submit"
@@ -5320,7 +5319,7 @@ export function ClientDetailPage() {
                   }
                 }}
               >
-                Guardar Cambios
+                {t("clientDetail.guardarCambios")}
               </Button>
             </Group>
           </Stack>
@@ -5331,15 +5330,15 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={assignSupplementModalOpened}
         onClose={closeAssignSupplementModal}
-        title="Añadir suplemento al cliente"
+        title={t("clientDetail.anadirSuplementoAlCliente")}
         size="md"
         radius="lg"
         centered
       >
         <Stack gap="md">
           <Select
-            label="Suplemento del catálogo"
-            placeholder="Elige un suplemento de tu sección Suplementos"
+            label={t("clientDetail.suplementoDelCatalogo")}
+            placeholder={t("clientDetail.eligeUnSuplementoDeTu")}
             searchable
             required
             value={supplementForm.supplement_id || null}
@@ -5358,8 +5357,8 @@ export function ClientDetailPage() {
           />
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
-              label="Dosis"
-              placeholder="Ej: 1 cápsula / 5 g"
+              label={t("clientDetail.dosis")}
+              placeholder={t("clientDetail.ej1Capsula5G")}
               value={supplementForm.dosage}
               onChange={(e) =>
                 setSupplementForm((s) => ({
@@ -5369,8 +5368,8 @@ export function ClientDetailPage() {
               }
             />
             <TextInput
-              label="Frecuencia"
-              placeholder="Ej: Mañana, post-entreno"
+              label={t("clientDetail.frecuencia")}
+              placeholder={t("clientDetail.ejMananaPostEntreno")}
               value={supplementForm.frequency}
               onChange={(e) =>
                 setSupplementForm((s) => ({
@@ -5381,8 +5380,8 @@ export function ClientDetailPage() {
             />
           </SimpleGrid>
           <Textarea
-            label="Notas"
-            placeholder="Indicaciones específicas para el cliente"
+            label={t("clientDetail.notas")}
+            placeholder={t("clientDetail.indicacionesEspecificasParaElCliente")}
             minRows={2}
             value={supplementForm.notes}
             onChange={(e) =>
@@ -5394,7 +5393,7 @@ export function ClientDetailPage() {
           />
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={closeAssignSupplementModal} radius="xl">
-              Cancelar
+              {t("clientDetail.cancelar")}
             </Button>
             <Button
               radius="xl"
@@ -5408,15 +5407,15 @@ export function ClientDetailPage() {
                     notes: supplementForm.notes || null,
                   });
                   notifications.show({
-                    title: "Suplemento añadido",
-                    message: "Se ha asignado el suplemento al cliente",
+                    title: t("clientDetail.suplementoAnadido"),
+                    message: t("clientDetail.seHaAsignadoElSuplemento"),
                     color: "green",
                   });
                   refetchClientSupplements();
                   closeAssignSupplementModal();
                 } catch (err: any) {
                   notifications.show({
-                    title: "Error",
+                    title: t("clientDetail.error"),
                     message:
                       err?.response?.data?.detail ||
                       "No se pudo añadir el suplemento",
@@ -5425,7 +5424,7 @@ export function ClientDetailPage() {
                 }
               }}
             >
-              Añadir
+              {t("clientDetail.anadir")}
             </Button>
           </Group>
         </Stack>
@@ -5435,19 +5434,19 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={deleteModalOpened}
         onClose={closeDeleteModal}
-        title="Eliminar Cliente"
+        title={t("clientDetail.eliminarCliente")}
         size="sm"
         radius="lg"
         centered
       >
         <Stack gap="md">
           <Text size="sm">
-            ¿Estás seguro de que quieres eliminar a <strong>{client.first_name} {client.last_name}</strong>? 
+            {t("clientDetail.estasSeguroDeQueQuieres")} <strong>{client.first_name} {client.last_name}</strong>? 
             Esta acción no se puede deshacer.
           </Text>
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={closeDeleteModal} radius="xl">
-              Cancelar
+              {t("clientDetail.cancelar")}
             </Button>
             <Button
               color="red"
@@ -5455,7 +5454,7 @@ export function ClientDetailPage() {
               loading={deleteClient.isPending}
               radius="xl"
             >
-              Eliminar
+              {t("clientDetail.eliminar")}
             </Button>
           </Group>
         </Stack>
@@ -5465,14 +5464,14 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={assignProgramModalOpened}
         onClose={closeAssignProgramModal}
-        title="Asignar Programa de Entrenamiento"
+        title={t("clientDetail.asignarProgramaDeEntrenamiento")}
         size="md"
         radius="lg"
       >
         <Stack gap="md">
           <Select
-            label="Programa de entrenamiento"
-            placeholder="Selecciona un programa"
+            label={t("clientDetail.programaDeEntrenamiento")}
+            placeholder={t("clientDetail.seleccionaUnPrograma")}
             data={workoutTemplates.map((p: { id: string; name: string; duration_weeks?: number; difficulty?: string }) => ({
               value: p.id,
               label: `${p.name} (${p.duration_weeks || 0} semanas - ${p.difficulty || 'N/A'})`,
@@ -5484,7 +5483,7 @@ export function ClientDetailPage() {
           />
           
           <TextInput
-            label="Fecha de inicio"
+            label={t("clientDetail.fechaDeInicio")}
             type="date"
             value={assignStartDate}
             onChange={(e) => setAssignStartDate(e.currentTarget.value)}
@@ -5492,23 +5491,23 @@ export function ClientDetailPage() {
           />
           
           <TextInput
-            label="Fecha de fin (opcional)"
+            label={t("clientDetail.fechaDeFinOpcional")}
             type="date"
             value={assignEndDate}
             onChange={(e) => setAssignEndDate(e.currentTarget.value)}
           />
           
           <Textarea
-            label="Notas (opcional)"
-            placeholder="Notas adicionales para esta asignación..."
+            label={t("clientDetail.notasOpcional")}
+            placeholder={t("clientDetail.notasAdicionalesParaEstaAsignacion")}
             value={assignNotes}
             onChange={(e) => setAssignNotes(e.currentTarget.value)}
             rows={3}
           />
           <NumberInput
-            label="Intervalo de revisión (días)"
-            description="Genera recordatorios automáticos para revisar el programa"
-            placeholder="Ej: 15"
+            label={t("clientDetail.intervaloDeRevisionDias")}
+            description={t("clientDetail.generaRecordatoriosAutomaticosParaRevisar")}
+            placeholder={t("clientDetail.ej15")}
             min={1}
             max={365}
             value={assignReviewInterval}
@@ -5517,15 +5516,15 @@ export function ClientDetailPage() {
           
           {workoutTemplates.length === 0 && (
             <Text size="sm" c="dimmed" ta="center">
-              No hay programas de entrenamiento disponibles.
+              {t("clientDetail.noHayProgramasDeEntrenamiento")}
               <br />
-              Crea uno desde la sección de Entrenamiento.
+              {t("clientDetail.creaUnoDesdeLaSeccion")}
             </Text>
           )}
           
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={closeAssignProgramModal} radius="xl">
-              Cancelar
+              {t("clientDetail.cancelar")}
             </Button>
             <Button
               onClick={handleConfirmAssignProgram}
@@ -5534,7 +5533,7 @@ export function ClientDetailPage() {
               radius="xl"
               leftSection={<IconBarbell size={16} />}
             >
-              Asignar Programa
+              {t("clientDetail.asignarPrograma")}
             </Button>
           </Group>
         </Stack>
@@ -5552,13 +5551,13 @@ export function ClientDetailPage() {
           {mealPlans.filter((p: { status: string }) => p.status === "active").length > 0 && (
             <Paper p="sm" radius="md" style={{ background: "var(--mantine-color-yellow-light)" }}>
               <Text size="sm" c="dimmed">
-                El plan actual será desactivado al asignar uno nuevo. Solo puede haber un plan activo a la vez.
+                {t("clientDetail.elPlanActualSeraDesactivado")}
               </Text>
             </Paper>
           )}
           <Select
-            label="Plan nutricional"
-            placeholder="Selecciona un plan"
+            label={t("clientDetail.planNutricional")}
+            placeholder={t("clientDetail.seleccionaUnPlan")}
             data={mealPlanTemplates.map((p: { id: string; name: string; duration_days?: number; target_calories?: number }) => ({
               value: p.id,
               label: `${p.name} (${p.duration_days || 7} días - ${p.target_calories || 0} kcal)`,
@@ -5570,7 +5569,7 @@ export function ClientDetailPage() {
           />
           
           <TextInput
-            label="Fecha de inicio"
+            label={t("clientDetail.fechaDeInicio")}
             type="date"
             value={assignStartDate}
             onChange={(e) => setAssignStartDate(e.currentTarget.value)}
@@ -5578,24 +5577,24 @@ export function ClientDetailPage() {
           />
           
           <TextInput
-            label="Fecha de fin (opcional)"
+            label={t("clientDetail.fechaDeFinOpcional")}
             type="date"
             value={assignEndDate}
             onChange={(e) => setAssignEndDate(e.currentTarget.value)}
           />
           
           <Textarea
-            label="Notas (opcional)"
-            placeholder="Notas adicionales para esta asignación..."
+            label={t("clientDetail.notasOpcional")}
+            placeholder={t("clientDetail.notasAdicionalesParaEstaAsignacion")}
             value={assignNotes}
             onChange={(e) => setAssignNotes(e.currentTarget.value)}
             rows={3}
           />
 
           <NumberInput
-            label="Intervalo de revisión (días)"
-            description="Genera recordatorios automáticos para revisar el plan"
-            placeholder="Ej: 15"
+            label={t("clientDetail.intervaloDeRevisionDias")}
+            description={t("clientDetail.generaRecordatoriosAutomaticosParaRevisar")}
+            placeholder={t("clientDetail.ej15")}
             min={1}
             max={365}
             value={assignReviewInterval}
@@ -5604,15 +5603,15 @@ export function ClientDetailPage() {
           
           {mealPlanTemplates.length === 0 && (
             <Text size="sm" c="dimmed" ta="center">
-              No hay planes nutricionales disponibles.
+              {t("clientDetail.noHayPlanesNutricionalesDisponibles")}
               <br />
-              Crea uno desde la sección de Nutrición.
+              {t("clientDetail.creaUnoDesdeLaSeccion")}
             </Text>
           )}
           
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={closeAssignMealPlanModal} radius="xl">
-              Cancelar
+              {t("clientDetail.cancelar")}
             </Button>
             <Button
               onClick={handleConfirmAssignMealPlan}
@@ -5621,7 +5620,7 @@ export function ClientDetailPage() {
               radius="xl"
               leftSection={<IconSalad size={16} />}
             >
-              Asignar Plan
+              {t("clientDetail.asignarPlan")}
             </Button>
           </Group>
         </Stack>
@@ -5649,7 +5648,7 @@ export function ClientDetailPage() {
               radius="xl"
               onClick={closeDeleteConfirmModal}
             >
-              Cancelar
+              {t("clientDetail.cancelar")}
             </Button>
             <Button 
               color="red"
@@ -5658,7 +5657,7 @@ export function ClientDetailPage() {
               onClick={handleConfirmDelete}
               loading={deleteAssignedProgram.isPending || deleteAssignedMealPlan.isPending}
             >
-              Eliminar
+              {t("clientDetail.eliminar")}
             </Button>
           </Group>
         </Stack>
@@ -5690,7 +5689,7 @@ export function ClientDetailPage() {
               )}
             </Group>
             
-            <Divider my="sm" label="Ejercicios" labelPosition="center" />
+            <Divider my="sm" label={t("clientDetail.ejercicios")} labelPosition="center" />
 
             {(() => {
               const tmpl = selectedProgramForView.template as any;
@@ -5777,14 +5776,14 @@ export function ClientDetailPage() {
 
               return (
                 <Text c="dimmed" ta="center" py="xl">
-                  Este programa no tiene ejercicios configurados
+                  {t("clientDetail.esteProgramaNoTieneEjercicios")}
                 </Text>
               );
             })()}
             
             <Group justify="flex-end" mt="md">
               <Button variant="light" onClick={closeViewProgramModal}>
-                Cerrar
+                {t("clientDetail.cerrar")}
               </Button>
               <Button 
                 variant="light"
@@ -5794,8 +5793,8 @@ export function ClientDetailPage() {
                   try {
                     notifications.show({
                       id: "pdf-workout-export",
-                      title: "Generando PDF",
-                      message: "Por favor espera mientras se genera el documento...",
+                      title: t("clientDetail.generandoPdf"),
+                      message: t("clientDetail.porFavorEsperaMientrasSe"),
                       loading: true,
                       autoClose: false,
                     });
@@ -5898,8 +5897,8 @@ export function ClientDetailPage() {
                     
                     notifications.update({
                       id: "pdf-workout-export",
-                      title: "PDF Generado",
-                      message: "El documento se ha descargado correctamente",
+                      title: t("clientDetail.pdfGenerado"),
+                      message: t("clientDetail.elDocumentoSeHaDescargado"),
                       color: "green",
                       loading: false,
                       autoClose: 3000,
@@ -5908,8 +5907,8 @@ export function ClientDetailPage() {
                     console.error("Error generating PDF:", error);
                     notifications.update({
                       id: "pdf-workout-export",
-                      title: "Error",
-                      message: "No se pudo generar el PDF",
+                      title: t("clientDetail.error"),
+                      message: t("clientDetail.noSePudoGenerarEl"),
                       color: "red",
                       loading: false,
                       autoClose: 5000,
@@ -5917,7 +5916,7 @@ export function ClientDetailPage() {
                   }
                 }}
               >
-                Exportar PDF
+                {t("clientDetail.exportarPdf")}
               </Button>
               <Button 
                 leftSection={<IconEdit size={16} />}
@@ -5926,7 +5925,7 @@ export function ClientDetailPage() {
                   navigate(`/workouts?edit=${selectedProgramForView.id}&clientId=${id}&returnTo=/clients/${id}?tab=programs`);
                 }}
               >
-                Editar programa
+                {t("clientDetail.editarPrograma")}
               </Button>
             </Group>
           </Stack>
@@ -5937,7 +5936,7 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={injuriesModalOpened}
         onClose={closeInjuriesModal}
-        title="Editar Lesiones"
+        title={t("clientDetail.editarLesiones")}
         size="lg"
         radius="lg"
         centered
@@ -5953,15 +5952,15 @@ export function ClientDetailPage() {
               </Group>
               <Stack gap="sm">
                 <TextInput
-                  label="Nombre de la lesión"
-                  placeholder="Ej: Tendinitis rotuliana"
+                  label={t("clientDetail.nombreDeLaLesion")}
+                  placeholder={t("clientDetail.ejTendinitisRotuliana")}
                   value={injury.name}
                   onChange={(e) => updateInjury(idx, 'name', e.target.value)}
                   radius="md"
                 />
                 <Group grow>
                   <Select
-                    label="Estado"
+                    label={t("clientDetail.estado")}
                     data={[
                       { value: 'active', label: 'Activa' },
                       { value: 'recovered', label: 'Recuperada' },
@@ -5972,14 +5971,14 @@ export function ClientDetailPage() {
                     radius="md"
                   />
                   <TextInput
-                    label="Fecha inicio"
+                    label={t("clientDetail.fechaInicio")}
                     type="date"
                     value={injury.start_date || ''}
                     onChange={(e) => updateInjury(idx, 'start_date', e.target.value)}
                     radius="md"
                   />
                   <TextInput
-                    label="Fecha fin"
+                    label={t("clientDetail.fechaFin")}
                     type="date"
                     value={injury.end_date || ''}
                     onChange={(e) => updateInjury(idx, 'end_date', e.target.value)}
@@ -5987,8 +5986,8 @@ export function ClientDetailPage() {
                   />
                 </Group>
                 <Textarea
-                  label="Notas"
-                  placeholder="Observaciones adicionales..."
+                  label={t("clientDetail.notas")}
+                  placeholder={t("clientDetail.observacionesAdicionales")}
                   value={injury.notes || ''}
                   onChange={(e) => updateInjury(idx, 'notes', e.target.value)}
                   radius="md"
@@ -5998,13 +5997,13 @@ export function ClientDetailPage() {
             </Box>
           ))}
           <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addInjury}>
-            Añadir lesión
+            {t("clientDetail.anadirLesion")}
           </Button>
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeInjuriesModal} radius="xl">Cancelar</Button>
+            <Button variant="default" onClick={closeInjuriesModal} radius="xl">{t("clientDetail.cancelar")}</Button>
             <Button onClick={handleSaveInjuries} loading={updateClient.isPending} radius="xl"
               styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
-              Guardar Cambios
+              {t("clientDetail.guardarCambios")}
             </Button>
           </Group>
         </Stack>
@@ -6014,15 +6013,15 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={activityModalOpened}
         onClose={closeActivityModal}
-        title="Editar Nivel de Actividad y Objetivos"
+        title={t("clientDetail.editarNivelDeActividadY")}
         size="lg"
         radius="lg"
         centered
       >
         <Stack gap="md">
           <Select
-            label="Nivel de actividad"
-            placeholder="Selecciona el nivel"
+            label={t("clientDetail.nivelDeActividad")}
+            placeholder={t("clientDetail.seleccionaElNivel")}
             data={[
               { value: 'sedentary', label: 'Sedentario' },
               { value: 'light', label: 'Ligero' },
@@ -6036,8 +6035,8 @@ export function ClientDetailPage() {
             clearable
           />
           <Select
-            label="Objetivo principal"
-            placeholder="Selecciona el objetivo"
+            label={t("clientDetail.objetivoPrincipal")}
+            placeholder={t("clientDetail.seleccionaElObjetivo")}
             data={[
               { value: 'lose_weight', label: 'Perder peso' },
               { value: 'gain_muscle', label: 'Ganar masa muscular' },
@@ -6058,7 +6057,7 @@ export function ClientDetailPage() {
           />
           <Group grow>
             <NumberInput
-              label="Días de entrenamiento/semana"
+              label={t("clientDetail.diasDeEntrenamientoSemana")}
               placeholder="3"
               min={1}
               max={7}
@@ -6067,7 +6066,7 @@ export function ClientDetailPage() {
               radius="md"
             />
             <NumberInput
-              label="Peso objetivo (kg)"
+              label={t("clientDetail.pesoObjetivoKg")}
               placeholder="70"
               value={editingTargetWeight}
               onChange={(value) => setEditingTargetWeight(typeof value === 'number' ? value : '')}
@@ -6075,8 +6074,8 @@ export function ClientDetailPage() {
             />
           </Group>
           <MultiSelect
-            label="Objetivos secundarios"
-            placeholder="Selecciona uno o más"
+            label={t("clientDetail.objetivosSecundarios")}
+            placeholder={t("clientDetail.seleccionaUnoOMas")}
             data={[
               { value: 'strength', label: 'Fuerza' },
               { value: 'endurance', label: 'Resistencia' },
@@ -6093,10 +6092,10 @@ export function ClientDetailPage() {
             clearable
           />
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeActivityModal} radius="xl">Cancelar</Button>
+            <Button variant="default" onClick={closeActivityModal} radius="xl">{t("clientDetail.cancelar")}</Button>
             <Button onClick={handleSaveActivity} loading={updateClient.isPending} radius="xl"
               styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
-              Guardar Cambios
+              {t("clientDetail.guardarCambios")}
             </Button>
           </Group>
         </Stack>
@@ -6106,33 +6105,33 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={medicalModalOpened}
         onClose={closeMedicalModal}
-        title="Editar Información Médica"
+        title={t("clientDetail.editarInformacionMedica")}
         size="md"
         radius="lg"
         centered
       >
         <Stack gap="md">
           <Textarea
-            label="Condiciones médicas"
-            placeholder="Ej: Diabetes tipo 2, hipertensión..."
+            label={t("clientDetail.condicionesMedicas")}
+            placeholder={t("clientDetail.ejDiabetesTipo2Hipertension")}
             value={editingMedicalConditions}
             onChange={(e) => setEditingMedicalConditions(e.target.value)}
             radius="md"
             minRows={3}
           />
           <Textarea
-            label="Medicamentos actuales"
-            placeholder="Lista los medicamentos que toma actualmente..."
+            label={t("clientDetail.medicamentosActuales")}
+            placeholder={t("clientDetail.listaLosMedicamentosQueToma")}
             value={editingMedications}
             onChange={(e) => setEditingMedications(e.target.value)}
             radius="md"
             minRows={3}
           />
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeMedicalModal} radius="xl">Cancelar</Button>
+            <Button variant="default" onClick={closeMedicalModal} radius="xl">{t("clientDetail.cancelar")}</Button>
             <Button onClick={handleSaveMedical} loading={updateClient.isPending} radius="xl"
               styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
-              Guardar Cambios
+              {t("clientDetail.guardarCambios")}
             </Button>
           </Group>
         </Stack>
@@ -6142,26 +6141,26 @@ export function ClientDetailPage() {
       <BottomSheet
         opened={parqModalOpened}
         onClose={closeParqModal}
-        title="Editar Cuestionario PAR-Q"
+        title={t("clientDetail.editarCuestionarioParQ")}
         size="lg"
         radius="lg"
         centered
       >
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Responde las siguientes preguntas sobre la aptitud física del cliente.
+            {t("clientDetail.respondeLasSiguientesPreguntasSobre")}
           </Text>
           
           <Box>
             <Switch
-              label="1. ¿Alguna vez un médico le ha dicho que tiene una condición cardíaca?"
+              label={t("clientDetail.1AlgunaVezUnMedico")}
               checked={editingParq.heartCondition}
               onChange={(e) => setEditingParq({ ...editingParq, heartCondition: e.currentTarget.checked })}
             />
             {editingParq.heartCondition && (
               <Textarea
                 mt="xs"
-                placeholder="Describe la condición cardíaca..."
+                placeholder={t("clientDetail.describeLaCondicionCardiaca")}
                 value={editingParq.heartConditionDetails}
                 onChange={(e) => setEditingParq({ ...editingParq, heartConditionDetails: e.target.value })}
                 radius="md"
@@ -6172,14 +6171,14 @@ export function ClientDetailPage() {
           
           <Box>
             <Switch
-              label="2. ¿Siente dolor en el pecho cuando realiza actividad física?"
+              label={t("clientDetail.2SienteDolorEnEl")}
               checked={editingParq.chestPain}
               onChange={(e) => setEditingParq({ ...editingParq, chestPain: e.currentTarget.checked })}
             />
             {editingParq.chestPain && (
               <Textarea
                 mt="xs"
-                placeholder="Describe el tipo de dolor y cuándo ocurre..."
+                placeholder={t("clientDetail.describeElTipoDeDolor")}
                 value={editingParq.chestPainDetails}
                 onChange={(e) => setEditingParq({ ...editingParq, chestPainDetails: e.target.value })}
                 radius="md"
@@ -6190,14 +6189,14 @@ export function ClientDetailPage() {
           
           <Box>
             <Switch
-              label="3. ¿Ha experimentado mareos o pérdida de conocimiento?"
+              label={t("clientDetail.3HaExperimentadoMareosO")}
               checked={editingParq.dizziness}
               onChange={(e) => setEditingParq({ ...editingParq, dizziness: e.currentTarget.checked })}
             />
             {editingParq.dizziness && (
               <Textarea
                 mt="xs"
-                placeholder="Describe la frecuencia y circunstancias..."
+                placeholder={t("clientDetail.describeLaFrecuenciaYCircunstancias")}
                 value={editingParq.dizzinessDetails}
                 onChange={(e) => setEditingParq({ ...editingParq, dizzinessDetails: e.target.value })}
                 radius="md"
@@ -6208,14 +6207,14 @@ export function ClientDetailPage() {
           
           <Box>
             <Switch
-              label="4. ¿Tiene algún problema óseo o articular?"
+              label={t("clientDetail.4TieneAlgunProblemaOseo")}
               checked={editingParq.boneJoint}
               onChange={(e) => setEditingParq({ ...editingParq, boneJoint: e.currentTarget.checked })}
             />
             {editingParq.boneJoint && (
               <Textarea
                 mt="xs"
-                placeholder="Describe las limitaciones físicas..."
+                placeholder={t("clientDetail.describeLasLimitacionesFisicas")}
                 value={editingParq.boneJointDetails}
                 onChange={(e) => setEditingParq({ ...editingParq, boneJointDetails: e.target.value })}
                 radius="md"
@@ -6226,14 +6225,14 @@ export function ClientDetailPage() {
           
           <Box>
             <Switch
-              label="5. ¿Toma medicamentos para la presión arterial o el corazón?"
+              label={t("clientDetail.5TomaMedicamentosParaLa")}
               checked={editingParq.bloodPressure}
               onChange={(e) => setEditingParq({ ...editingParq, bloodPressure: e.currentTarget.checked })}
             />
             {editingParq.bloodPressure && (
               <Textarea
                 mt="xs"
-                placeholder="Lista los medicamentos que toma..."
+                placeholder={t("clientDetail.listaLosMedicamentosQueToma")}
                 value={editingParq.bloodPressureDetails}
                 onChange={(e) => setEditingParq({ ...editingParq, bloodPressureDetails: e.target.value })}
                 radius="md"
@@ -6244,14 +6243,14 @@ export function ClientDetailPage() {
           
           <Box>
             <Switch
-              label="6. ¿Conoce otra razón por la que no debería hacer ejercicio?"
+              label={t("clientDetail.6ConoceOtraRazonPor")}
               checked={editingParq.otherReason}
               onChange={(e) => setEditingParq({ ...editingParq, otherReason: e.currentTarget.checked })}
             />
             {editingParq.otherReason && (
               <Textarea
                 mt="xs"
-                placeholder="Explica el motivo..."
+                placeholder={t("clientDetail.explicaElMotivo")}
                 value={editingParq.otherReasonDetails}
                 onChange={(e) => setEditingParq({ ...editingParq, otherReasonDetails: e.target.value })}
                 radius="md"
@@ -6261,10 +6260,10 @@ export function ClientDetailPage() {
           </Box>
 
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeParqModal} radius="xl">Cancelar</Button>
+            <Button variant="default" onClick={closeParqModal} radius="xl">{t("clientDetail.cancelar")}</Button>
             <Button onClick={handleSaveParq} loading={updateClient.isPending} radius="xl"
               styles={{ root: { background: "var(--nv-accent)", color: "var(--nv-dark)", fontWeight: 700 } }}>
-              Guardar Cambios
+              {t("clientDetail.guardarCambios")}
             </Button>
           </Group>
         </Stack>
@@ -6279,7 +6278,7 @@ export function ClientDetailPage() {
         title={
           <Group gap={8}>
             <IconBolt size={18} color="#F59E0B" />
-            <Text fw={700}>Calculadora Nutricional</Text>
+            <Text fw={700}>{t("clientDetail.calculadoraNutricional")}</Text>
           </Group>
         }
         centered

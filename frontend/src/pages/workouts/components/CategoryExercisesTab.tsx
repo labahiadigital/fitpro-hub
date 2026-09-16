@@ -110,7 +110,7 @@ export function CategoryExercisesTab({
             value={muscleGroupFilter || null}
             onChange={onMuscleGroupFilterChange}
             data={muscleGroups}
-            placeholder="Grupo muscular"
+            placeholder={"Grupo muscular"}
             size="xs"
             radius="md"
             w={160}
@@ -122,7 +122,7 @@ export function CategoryExercisesTab({
             value={equipmentFilter || null}
             onChange={onEquipmentFilterChange}
             data={equipmentOptions}
-            placeholder="Equipamiento"
+            placeholder={"Equipamiento"}
             size="xs"
             radius="md"
             w={160}
@@ -137,9 +137,9 @@ export function CategoryExercisesTab({
           <Table striped highlightOnHover withTableBorder style={{ borderRadius: 8, overflow: "hidden" }}>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Nombre</Table.Th>
-                <Table.Th>Músculos</Table.Th>
-                <Table.Th>Acciones</Table.Th>
+                <Table.Th>{"Nombre"}</Table.Th>
+                <Table.Th>{"Músculos"}</Table.Th>
+                <Table.Th>{"Acciones"}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>

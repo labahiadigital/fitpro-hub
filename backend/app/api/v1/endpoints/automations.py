@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
@@ -178,6 +178,40 @@ async def update_automation(
     automation.conditions = [c.model_dump() for c in data.conditions]
     automation.is_active = data.is_active
     
+    await db.commit()
+    await db.refresh(automation)
+    return automation
+
+
+@router.patch("/{automation_id}", response_model=AutomationResponse)
+async def patch_automation(
+    automation_id: UUID,
+    data: dict = Body(...),
+    current_user: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Actualizar parcialmente una automatización (ej: toggle is_active).
+    """
+    result = await db.execute(
+        select(Automation).where(
+            Automation.id == automation_id,
+            Automation.workspace_id == current_user.workspace_id
+        )
+    )
+    automation = result.scalar_one_or_none()
+
+    if not automation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Automatización no encontrada"
+        )
+
+    allowed_fields = {"name", "description", "trigger_type", "trigger_config", "actions", "conditions", "is_active"}
+    for field, value in data.items():
+        if field in allowed_fields:
+            setattr(automation, field, value)
+
     await db.commit()
     await db.refresh(automation)
     return automation

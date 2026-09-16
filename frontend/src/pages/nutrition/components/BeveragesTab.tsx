@@ -26,6 +26,7 @@ import { RectificationButton } from "../../../components/common/RectificationBut
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
+import { useTranslation } from "react-i18next";
 
 const BEVERAGE_CATEGORIES = [
   { value: "", label: "Todas las categorías" },
@@ -49,6 +50,7 @@ const BEVERAGE_CATEGORIES = [
 ];
 
 export function BeveragesTab() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const { data: beverages = [], isLoading } = useBeverages(search || undefined, categoryFilter || undefined);
@@ -84,7 +86,7 @@ export function BeveragesTab() {
 
   const handleDelete = (id: string, name: string) => {
     modals.openConfirmModal({
-      title: "Eliminar bebida",
+      title: t("nutrition.eliminarBebida"),
       children: <Text size="sm">¿Estás seguro de que quieres eliminar "{name}"?</Text>,
       labels: { confirm: "Eliminar", cancel: "Cancelar" },
       confirmProps: { color: "red" },
@@ -96,11 +98,11 @@ export function BeveragesTab() {
     <Stack gap="md">
       <Group gap="sm" wrap="wrap">
         <Button leftSection={<IconPlus size={14} />} size="xs" variant="light" onClick={openCreateModal}>
-          Nueva Bebida
+          {t("nutrition.nuevaBebida")}
         </Button>
         <TextInput
           leftSection={<IconSearch size={16} />}
-          placeholder="Buscar bebidas..."
+          placeholder={t("nutrition.buscarBebidas")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           size="xs"
@@ -111,7 +113,7 @@ export function BeveragesTab() {
           data={BEVERAGE_CATEGORIES}
           value={categoryFilter}
           onChange={(v) => setCategoryFilter(v || "")}
-          placeholder="Categoría"
+          placeholder={t("nutrition.categoria")}
           size="xs"
           radius="md"
           w={200}
@@ -120,7 +122,7 @@ export function BeveragesTab() {
       </Group>
 
       {isLoading ? (
-        <Center py="xl"><Text c="dimmed">Cargando bebidas...</Text></Center>
+        <Center py="xl"><Text c="dimmed">{t("nutrition.cargandoBebidas")}</Text></Center>
       ) : beverages.length > 0 ? (
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} spacing="md">
           {beverages.map((bev: any) => (
@@ -134,7 +136,7 @@ export function BeveragesTab() {
               }}
             >
               <Text fw={600} size="sm" lineClamp={2} style={{ wordBreak: "break-word" }} title={bev.name} mb={2}>{bev.name}</Text>
-              {bev.is_global && <Badge color="gray" variant="light" size="xs" mb={4}>Sistema</Badge>}
+              {bev.is_global && <Badge color="gray" variant="light" size="xs" mb={4}>{t("nutrition.sistema")}</Badge>}
               <Group gap={4} mb={6}>
                 {bev.category && <Badge size="xs" variant="light" color="cyan">{bev.category}</Badge>}
                 {bev.serving_size_ml && Number(bev.serving_size_ml) !== 100 && (
@@ -149,7 +151,7 @@ export function BeveragesTab() {
                 <Badge size="xs" variant="light" color="grape">G:{Math.round(Number(bev.fat || 0))}g</Badge>
               </Group>
               <Group justify="flex-end" gap={4}>
-                <Tooltip label="Ver detalle">
+                <Tooltip label={t("nutrition.verDetalle")}>
                   <ActionIcon
                     color="gray"
                     size="sm"
@@ -161,7 +163,7 @@ export function BeveragesTab() {
                   </ActionIcon>
                 </Tooltip>
                 {!bev.is_global && (
-                  <Tooltip label="Eliminar">
+                  <Tooltip label={t("nutrition.eliminar")}>
                     <ActionIcon color="red" size="sm" variant="subtle" radius="md" onClick={() => handleDelete(bev.id, bev.name)}>
                       <IconTrash size={16} />
                     </ActionIcon>
@@ -173,30 +175,30 @@ export function BeveragesTab() {
           ))}
         </SimpleGrid>
       ) : (
-        <Center py="xl"><Text c="dimmed">No se encontraron bebidas</Text></Center>
+        <Center py="xl"><Text c="dimmed">{t("nutrition.noSeEncontraronBebidas")}</Text></Center>
       )}
 
-      <BottomSheet opened={createModalOpened} onClose={closeCreateModal} title="Nueva Bebida" size="md">
+      <BottomSheet opened={createModalOpened} onClose={closeCreateModal} title={t("nutrition.nuevaBebida")} size="md">
         <form onSubmit={form.onSubmit(handleCreate)}>
           <Stack>
-            <TextInput label="Nombre" placeholder="Agua mineral, Café con leche..." required {...form.getInputProps("name")} />
+            <TextInput label={t("nutrition.nombre")} placeholder={t("nutrition.aguaMineralCafeConLeche")} required {...form.getInputProps("name")} />
             <Select
               data={BEVERAGE_CATEGORIES.filter((c) => c.value !== "")}
-              label="Categoría"
-              placeholder="Selecciona"
+              label={t("nutrition.categoria")}
+              placeholder={t("nutrition.selecciona")}
               {...form.getInputProps("category")}
             />
-            <NumberInput label="Ración sugerida (ml)" min={0} placeholder="250" {...form.getInputProps("serving_size_ml")} />
-            <Text size="xs" c="dimmed" fw={500}>Los valores nutricionales se introducen por cada 100 ml</Text>
-            <NumberInput label="Calorías (por 100ml)" min={0} placeholder="0" {...form.getInputProps("calories")} />
+            <NumberInput label={t("nutrition.racionSugeridaMl")} min={0} placeholder="250" {...form.getInputProps("serving_size_ml")} />
+            <Text size="xs" c="dimmed" fw={500}>{t("nutrition.losValoresNutricionalesSeIntroducen")}</Text>
+            <NumberInput label={t("nutrition.caloriasPor100ml")} min={0} placeholder="0" {...form.getInputProps("calories")} />
             <Group grow>
-              <NumberInput label="Proteína (g)" min={0} decimalScale={1} placeholder="0" {...form.getInputProps("protein")} />
-              <NumberInput label="Carbohidratos (g)" min={0} decimalScale={1} placeholder="0" {...form.getInputProps("carbs")} />
-              <NumberInput label="Grasas (g)" min={0} decimalScale={1} placeholder="0" {...form.getInputProps("fat")} />
+              <NumberInput label={t("nutrition.proteinaG")} min={0} decimalScale={1} placeholder="0" {...form.getInputProps("protein")} />
+              <NumberInput label={t("nutrition.carbohidratosG")} min={0} decimalScale={1} placeholder="0" {...form.getInputProps("carbs")} />
+              <NumberInput label={t("nutrition.grasasG")} min={0} decimalScale={1} placeholder="0" {...form.getInputProps("fat")} />
             </Group>
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeCreateModal} variant="default">Cancelar</Button>
-              <Button type="submit" loading={createBeverage.isPending}>Crear Bebida</Button>
+              <Button onClick={closeCreateModal} variant="default">{t("nutrition.cancelar")}</Button>
+              <Button type="submit" loading={createBeverage.isPending}>{t("nutrition.crearBebida")}</Button>
             </Group>
           </Stack>
         </form>
@@ -209,9 +211,9 @@ export function BeveragesTab() {
               <Badge variant="light" color="cyan" size="md">{viewingBeverage.category}</Badge>
             )}
             <Text size="sm">
-              Ración sugerida: <strong>{Math.round(Number(viewingBeverage.serving_size_ml || 250))} ml</strong>
+              {t("nutrition.racionSugerida")} <strong>{Math.round(Number(viewingBeverage.serving_size_ml || 250))} ml</strong>
             </Text>
-            <Text size="sm" fw={500}>Valores nutricionales por 100 ml:</Text>
+            <Text size="sm" fw={500}>{t("nutrition.valoresNutricionalesPor100Ml")}</Text>
             <Group gap="sm">
               <Badge color="blue" variant="light">
                 {Math.round(Number(viewingBeverage.calories || 0))} kcal

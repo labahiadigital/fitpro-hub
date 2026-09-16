@@ -106,8 +106,10 @@ import { useClients } from "../../hooks/useClients";
 import { useAuthStore } from "../../stores/auth";
 import { formatDecimal } from "../../utils/format";
 import { BottomSheet } from "../../components/common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 export function PaymentsPage() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [
@@ -380,7 +382,7 @@ export function PaymentsPage() {
 
   const handleFinalizeInvoice = useCallback((inv: Invoice) => {
     openConfirm({
-      title: "Finalizar factura",
+      title: t("payments.finalizarFactura"),
       message: `¿Finalizar la factura ${inv.invoice_number}? Una vez emitida no se podrá editar.`,
       confirmLabel: "Finalizar",
       color: "blue",
@@ -390,7 +392,7 @@ export function PaymentsPage() {
 
   const handleMarkInvoicePaid = useCallback((inv: Invoice) => {
     openConfirm({
-      title: "Marcar como pagada",
+      title: t("payments.marcarComoPagada"),
       message: `¿Marcar como pagada la factura ${inv.invoice_number} (${formatDecimal(Number(inv.total), 2)} €)?`,
       confirmLabel: "Marcar pagada",
       color: "green",
@@ -400,7 +402,7 @@ export function PaymentsPage() {
 
   const handleDeleteInvoice = useCallback((inv: Invoice) => {
     openDangerConfirm({
-      title: "Eliminar factura",
+      title: t("payments.eliminarFactura"),
       message: `¿Eliminar la factura en borrador ${inv.invoice_number}?`,
       onConfirm: async () => { try { await deleteInvoice.mutateAsync(inv.id); } catch { /* handled */ } },
     });
@@ -412,7 +414,7 @@ export function PaymentsPage() {
 
   const handleRectifyInvoice = useCallback((inv: Invoice) => {
     openConfirm({
-      title: "Factura rectificativa",
+      title: t("payments.facturaRectificativa"),
       message: `¿Crear una factura rectificativa para ${inv.invoice_number}?`,
       confirmLabel: "Crear rectificativa",
       color: "orange",
@@ -422,11 +424,11 @@ export function PaymentsPage() {
 
   const handleSendInvoiceEmail = useCallback((inv: Invoice) => {
     if (!inv.client_email) {
-      notifications.show({ title: "Sin email", message: "El cliente no tiene email configurado", color: "orange" });
+      notifications.show({ title: t("payments.sinEmail"), message: t("payments.elClienteNoTieneEmail"), color: "orange" });
       return;
     }
     openConfirm({
-      title: "Enviar factura",
+      title: t("payments.enviarFactura"),
       message: `¿Enviar factura ${inv.invoice_number} a ${inv.client_email}?`,
       confirmLabel: "Enviar",
       color: "blue",
@@ -583,7 +585,7 @@ export function PaymentsPage() {
 
   const handleDeleteProduct = useCallback((product: Product) => {
     openDangerConfirm({
-      title: "Eliminar producto",
+      title: t("payments.eliminarProducto"),
       message: `¿Estás seguro de que quieres eliminar "${product.name}"?`,
       onConfirm: async () => { try { await deleteProduct.mutateAsync(product.id); } catch { /* handled */ } },
     });
@@ -600,7 +602,7 @@ export function PaymentsPage() {
 
   const handleMarkPaid = useCallback((payment: Payment) => {
     openConfirm({
-      title: "Marcar como pagado",
+      title: t("payments.marcarComoPagado"),
       message: `¿Marcar el cobro de €${formatDecimal(Number(payment.amount), 2)} como pagado?`,
       confirmLabel: "Marcar pagado",
       color: "green",
@@ -610,7 +612,7 @@ export function PaymentsPage() {
 
   const handleDeletePaymentAction = useCallback((payment: Payment) => {
     openDangerConfirm({
-      title: "Eliminar cobro",
+      title: t("payments.eliminarCobro"),
       message: `¿Eliminar este cobro de €${formatDecimal(Number(payment.amount), 2)}?`,
       onConfirm: async () => { try { await deletePayment.mutateAsync(payment.id); } catch { /* handled */ } },
     });
@@ -618,7 +620,7 @@ export function PaymentsPage() {
 
   const handleCancelSubscription = useCallback((sub: Subscription) => {
     openDangerConfirm({
-      title: "Cancelar suscripción",
+      title: t("payments.cancelarSuscripcion"),
       message: `¿Cancelar la suscripción "${sub.plan_name || sub.name}" de ${sub.client_name || "este cliente"}?`,
       confirmLabel: "Cancelar suscripción",
       onConfirm: async () => { try { await cancelSubscription.mutateAsync(sub.id); } catch { /* handled */ } },
@@ -730,17 +732,17 @@ export function PaymentsPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={{
-          label: "Nuevo Cobro",
+          label: t("payments.nuevoCobro"),
           onClick: openChargeModal,
         }}
-        description="Gestiona ingresos, suscripciones y productos"
+        description={t("payments.gestionaIngresosSuscripcionesYProductos")}
         secondaryAction={{
-          label: "Nuevo Producto",
+          label: t("payments.nuevoProducto"),
           icon: <IconPlus size={16} />,
           onClick: handleOpenNewProduct,
           variant: "default",
         }}
-        title="Pagos y Suscripciones"
+        title={t("payments.pagosYSuscripciones")}
       />
 
       {/* KPI Cards */}
@@ -767,7 +769,7 @@ export function PaymentsPage() {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Ingresos del Mes</Text>
+              <Text className="text-label" mb="xs">{t("payments.ingresosDelMes")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-primary)" }}>
                 €{kpis.thisMonthRevenue.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
               </Text>
@@ -786,7 +788,7 @@ export function PaymentsPage() {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Suscripciones Activas</Text>
+              <Text className="text-label" mb="xs">{t("payments.suscripcionesActivas")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-brand)" }}>
                 {kpis.activeSubscriptions}
               </Text>
@@ -802,7 +804,7 @@ export function PaymentsPage() {
         <Box className="nv-card" p="lg">
           <Group align="flex-start" justify="space-between">
             <Box>
-              <Text className="text-label" mb="xs">Pagos Pendientes</Text>
+              <Text className="text-label" mb="xs">{t("payments.pagosPendientes")}</Text>
               <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-warning)" }}>
                 {kpis.pendingPayments}
               </Text>
@@ -822,11 +824,11 @@ export function PaymentsPage() {
           value={activeTab}
           onChange={setActiveTab}
           data={[
-            { value: "overview", label: "Resumen" },
-            { value: "payments", label: "Historial" },
-            { value: "invoices", label: "Facturas" },
-            { value: "subscriptions", label: "Suscripciones" },
-            { value: "products", label: "Productos" },
+            { value: "overview", label: t("payments.resumen") },
+            { value: "payments", label: t("payments.historial") },
+            { value: "invoices", label: t("payments.facturas") },
+            { value: "subscriptions", label: t("payments.suscripciones") },
+            { value: "products", label: t("payments.productos") },
           ]}
           size="sm"
           radius="md"
@@ -837,19 +839,19 @@ export function PaymentsPage() {
         {!isMobile && (
           <Tabs.List mb="lg" style={{ borderBottom: "1px solid var(--nv-border)" }}>
             <Tabs.Tab leftSection={<IconCreditCard size={14} />} value="overview" style={{ fontWeight: 500 }}>
-              Resumen
+              {t("payments.resumen")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconReceipt size={14} />} value="payments" style={{ fontWeight: 500 }}>
-              Historial
+              {t("payments.historial")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconFileInvoice size={14} />} value="invoices" style={{ fontWeight: 500 }}>
-              Facturas
+              {t("payments.facturas")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconRefresh size={14} />} value="subscriptions" style={{ fontWeight: 500 }}>
-              Suscripciones
+              {t("payments.suscripciones")}
             </Tabs.Tab>
             <Tabs.Tab leftSection={<IconPackage size={14} />} value="products" style={{ fontWeight: 500 }}>
-              Productos
+              {t("payments.productos")}
             </Tabs.Tab>
           </Tabs.List>
         )}
@@ -859,7 +861,7 @@ export function PaymentsPage() {
             {/* Revenue Distribution */}
             <Box className="nv-card" p="lg">
               <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>
-                Distribución de Ingresos
+                {t("payments.distribucionDeIngresos")}
               </Text>
               {(() => {
                 const subRevenue = payments.filter(p => p.payment_type === "subscription" && p.status === "completed").reduce((s, p) => s + p.amount, 0);
@@ -876,7 +878,7 @@ export function PaymentsPage() {
                             <Text fw={700} size="lg" style={{ color: "var(--nv-text-primary)" }}>
                               €{kpis.thisMonthRevenue.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
                             </Text>
-                            <Text c="dimmed" size="xs">Este mes</Text>
+                            <Text c="dimmed" size="xs">{t("payments.esteMes")}</Text>
                           </Box>
                         }
                         roundCaps
@@ -906,7 +908,7 @@ export function PaymentsPage() {
             {/* Recent Payments */}
             <Box className="nv-card" p="lg">
               <Group justify="space-between" mb="lg">
-                <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Pagos Recientes</Text>
+                <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{t("payments.pagosRecientes")}</Text>
                 <Button
                   rightSection={<IconArrowUpRight size={14} />}
                   size="xs"
@@ -914,12 +916,12 @@ export function PaymentsPage() {
                   style={{ color: "var(--nv-primary)" }}
                   onClick={() => setActiveTab("payments")}
                 >
-                  Ver todos
+                  {t("payments.verTodos")}
                 </Button>
               </Group>
               <Stack gap="sm">
                 {payments.length === 0 && (
-                  <Text c="dimmed" ta="center" py="lg" size="sm">No hay pagos registrados</Text>
+                  <Text c="dimmed" ta="center" py="lg" size="sm">{t("payments.noHayPagosRegistrados")}</Text>
                 )}
                 {payments.slice(0, 5).map((payment) => {
                   const PaymentIcon = getPaymentTypeIcon(payment.payment_type);
@@ -975,11 +977,11 @@ export function PaymentsPage() {
             {/* Upcoming Renewals */}
             <Box className="nv-card" p="lg">
               <Text fw={600} mb="lg" style={{ color: "var(--nv-text-primary)" }}>
-                Próximas Renovaciones
+                {t("payments.proximasRenovaciones")}
               </Text>
               <Stack gap="sm">
                 {subscriptions.filter((s) => s.status === "active").length === 0 && (
-                  <Text c="dimmed" ta="center" py="lg" size="sm">No hay renovaciones pendientes</Text>
+                  <Text c="dimmed" ta="center" py="lg" size="sm">{t("payments.noHayRenovacionesPendientes")}</Text>
                 )}
                 {subscriptions
                   .filter((s) => s.status === "active")
@@ -1025,27 +1027,27 @@ export function PaymentsPage() {
                     <IconCreditCard size={20} />
                   </ThemeIcon>
                   <Box>
-                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>Redsys TPV</Text>
+                    <Text fw={600} style={{ color: "var(--nv-text-primary)" }}>{t("payments.redsysTpv")}</Text>
                     <Text c="dimmed" size="xs">
-                      Pasarela de pago configurada
+                      {t("payments.pasarelaDePagoConfigurada")}
                     </Text>
                   </Box>
                 </Group>
                 <Badge color="green" variant="light" radius="xl">
-                  Activo
+                  {t("payments.activo")}
                 </Badge>
               </Group>
               <Stack gap="sm">
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Ingresos este mes</Text>
+                  <Text c="dimmed" size="sm">{t("payments.ingresosEsteMes")}</Text>
                   <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{formatDecimal(kpis.thisMonthRevenue, 2)}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Suscripciones activas</Text>
+                  <Text c="dimmed" size="sm">{t("payments.suscripcionesActivas")}</Text>
                   <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>{kpis.activeSubscriptions}</Text>
                 </Group>
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Cobros pendientes</Text>
+                  <Text c="dimmed" size="sm">{t("payments.cobrosPendientes")}</Text>
                   <Text fw={600} size="sm" style={{ color: "var(--nv-text-primary)" }}>€{formatDecimal(kpis.pendingAmount, 2)}</Text>
                 </Group>
               </Stack>
@@ -1059,20 +1061,20 @@ export function PaymentsPage() {
               <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Descripción</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Tipo</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Fecha</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Importe</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.cliente")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.descripcion")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.tipo")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.estado")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.fecha")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("payments.importe")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("payments.acciones")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {payments.length === 0 && (
                   <Table.Tr>
                     <Table.Td colSpan={7}>
-                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay pagos registrados</Text>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">{t("payments.noHayPagosRegistrados")}</Text>
                     </Table.Td>
                   </Table.Tr>
                 )}
@@ -1117,13 +1119,13 @@ export function PaymentsPage() {
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs" justify="flex-end">
-                          <Tooltip label="Ver detalle">
+                          <Tooltip label={t("payments.verDetalle")}>
                             <ActionIcon color="blue" variant="subtle" radius="xl" onClick={() => handleViewPayment(payment)}>
                               <IconEye size={16} />
                             </ActionIcon>
                           </Tooltip>
                           {payment.status === "pending" && (
-                            <Tooltip label="Marcar como pagado">
+                            <Tooltip label={t("payments.marcarComoPagado")}>
                               <ActionIcon
                                 color="green"
                                 variant="subtle"
@@ -1136,7 +1138,7 @@ export function PaymentsPage() {
                             </Tooltip>
                           )}
                           {payment.status === "pending" && (
-                            <Tooltip label="Eliminar cobro">
+                            <Tooltip label={t("payments.eliminarCobro")}>
                               <ActionIcon
                                 color="red"
                                 variant="subtle"
@@ -1166,7 +1168,7 @@ export function PaymentsPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Total Facturado</Text>
+                  <Text className="text-label" mb="xs">{t("payments.totalFacturado")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-primary)" }}>
                     {(invoiceStatsData?.total_invoiced || 0).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €
                   </Text>
@@ -1179,7 +1181,7 @@ export function PaymentsPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Pendiente de Cobro</Text>
+                  <Text className="text-label" mb="xs">{t("payments.pendienteDeCobro")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-warning)" }}>
                     {(invoiceStatsData?.total_pending || 0).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €
                   </Text>
@@ -1192,7 +1194,7 @@ export function PaymentsPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Vencidas</Text>
+                  <Text className="text-label" mb="xs">{t("payments.vencidas")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-error)" }}>
                     {(invoiceStatsData?.total_overdue || 0).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €
                   </Text>
@@ -1205,7 +1207,7 @@ export function PaymentsPage() {
             <Box className="nv-card" p="lg">
               <Group align="flex-start" justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Facturas este Mes</Text>
+                  <Text className="text-label" mb="xs">{t("payments.facturasEsteMes")}</Text>
                   <Text className="text-display" style={{ fontSize: "1.75rem", color: "var(--nv-success)" }}>
                     {invoiceStatsData?.invoices_this_month || 0}
                   </Text>
@@ -1221,15 +1223,15 @@ export function PaymentsPage() {
           <Group justify="space-between" mb="md">
             <Group gap="sm">
               <Select
-                placeholder="Todos los estados"
+                placeholder={t("payments.todosLosEstados")}
                 data={[
-                  { value: "", label: "Todos" },
-                  { value: "draft", label: "Borrador" },
-                  { value: "finalized", label: "Emitida" },
-                  { value: "sent", label: "Enviada" },
-                  { value: "paid", label: "Pagada" },
-                  { value: "overdue", label: "Vencida" },
-                  { value: "rectified", label: "Rectificada" },
+                  { value: "", label: t("payments.todos") },
+                  { value: "draft", label: t("payments.borrador") },
+                  { value: "finalized", label: t("payments.emitida") },
+                  { value: "sent", label: t("payments.enviada") },
+                  { value: "paid", label: t("payments.pagada") },
+                  { value: "overdue", label: t("payments.vencida") },
+                  { value: "rectified", label: t("payments.rectificada") },
                 ]}
                 value={invoiceStatusFilter || ""}
                 onChange={(v) => setInvoiceStatusFilter(v || null)}
@@ -1240,13 +1242,13 @@ export function PaymentsPage() {
               />
             </Group>
             <Group gap="sm">
-              <Tooltip label="Configuración de facturación">
+              <Tooltip label={t("payments.configuracionDeFacturacion")}>
                 <ActionIcon variant="default" radius="md" size="lg" onClick={handleOpenSettings}>
                   <IconSettings size={18} />
                 </ActionIcon>
               </Tooltip>
               <Button leftSection={<IconPlus size={16} />} size="sm" onClick={handleOpenNewInvoice}>
-                Nueva Factura
+                {t("payments.nuevaFactura")}
               </Button>
             </Group>
           </Group>
@@ -1258,19 +1260,19 @@ export function PaymentsPage() {
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>N.º</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Fecha</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Vencimiento</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Total</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.cliente")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.fecha")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.vencimiento")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.estado")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("payments.total")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("payments.acciones")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {invoices.length === 0 && (
                   <Table.Tr>
                     <Table.Td colSpan={7}>
-                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay facturas. Crea tu primera factura.</Text>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">{t("payments.noHayFacturasCreaTu")}</Text>
                     </Table.Td>
                   </Table.Tr>
                 )}
@@ -1280,7 +1282,7 @@ export function PaymentsPage() {
                       <Group gap={6}>
                         <Text fw={600} size="sm" style={{ color: "var(--nv-primary)" }}>{inv.invoice_number}</Text>
                         {inv.verifactu_hash && (
-                          <Tooltip label="VeriFactu verificada">
+                          <Tooltip label={t("payments.verifactuVerificada")}>
                             <ThemeIcon size={16} radius="xl" variant="light" color="green"><IconShieldCheck size={10} /></ThemeIcon>
                           </Tooltip>
                         )}
@@ -1308,28 +1310,28 @@ export function PaymentsPage() {
                             <ActionIcon variant="subtle" radius="xl" color="gray"><IconDotsVertical size={16} /></ActionIcon>
                           </Menu.Target>
                           <Menu.Dropdown>
-                            <Menu.Item leftSection={<IconEye size={14} />} onClick={() => handleViewInvoice(inv)}>Ver detalle</Menu.Item>
+                            <Menu.Item leftSection={<IconEye size={14} />} onClick={() => handleViewInvoice(inv)}>{t("payments.verDetalle")}</Menu.Item>
                             {inv.status === "draft" && (
-                              <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleOpenEditInvoice(inv)}>Editar</Menu.Item>
+                              <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleOpenEditInvoice(inv)}>{t("payments.editar")}</Menu.Item>
                             )}
                             {inv.status === "draft" && (
-                              <Menu.Item leftSection={<IconLock size={14} />} color="blue" onClick={() => handleFinalizeInvoice(inv)}>Emitir factura</Menu.Item>
+                              <Menu.Item leftSection={<IconLock size={14} />} color="blue" onClick={() => handleFinalizeInvoice(inv)}>{t("payments.emitirFactura")}</Menu.Item>
                             )}
                             {["finalized", "sent", "overdue"].includes(inv.status) && (
-                              <Menu.Item leftSection={<IconCheck size={14} />} color="green" onClick={() => handleMarkInvoicePaid(inv)}>Marcar pagada</Menu.Item>
+                              <Menu.Item leftSection={<IconCheck size={14} />} color="green" onClick={() => handleMarkInvoicePaid(inv)}>{t("payments.marcarPagada")}</Menu.Item>
                             )}
-                            <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => handleDownloadPdf(inv)}>Descargar PDF</Menu.Item>
+                            <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => handleDownloadPdf(inv)}>{t("payments.descargarPdf")}</Menu.Item>
                             {inv.status !== "draft" && (
-                              <Menu.Item leftSection={<IconMail size={14} />} onClick={() => handleSendInvoiceEmail(inv)}>Enviar por email</Menu.Item>
+                              <Menu.Item leftSection={<IconMail size={14} />} onClick={() => handleSendInvoiceEmail(inv)}>{t("payments.enviarPorEmail")}</Menu.Item>
                             )}
-                            <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => handleDuplicateInvoice(inv)}>Duplicar</Menu.Item>
+                            <Menu.Item leftSection={<IconCopy size={14} />} onClick={() => handleDuplicateInvoice(inv)}>{t("payments.duplicar")}</Menu.Item>
                             {inv.status !== "draft" && inv.status !== "rectified" && inv.status !== "cancelled" && (
-                              <Menu.Item leftSection={<IconRefresh size={14} />} color="orange" onClick={() => handleRectifyInvoice(inv)}>Rectificar</Menu.Item>
+                              <Menu.Item leftSection={<IconRefresh size={14} />} color="orange" onClick={() => handleRectifyInvoice(inv)}>{t("payments.rectificar")}</Menu.Item>
                             )}
                             {inv.status === "draft" && (
                               <>
                                 <Menu.Divider />
-                                <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={() => handleDeleteInvoice(inv)}>Eliminar</Menu.Item>
+                                <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={() => handleDeleteInvoice(inv)}>{t("payments.eliminar")}</Menu.Item>
                               </>
                             )}
                           </Menu.Dropdown>
@@ -1350,19 +1352,19 @@ export function PaymentsPage() {
               <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Cliente</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Plan</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Estado</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>Próxima renovación</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Importe</Table.Th>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>Acciones</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.cliente")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.plan")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.estado")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.proximaRenovacion")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("payments.importe")}</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" ta="right" style={{ fontSize: "10px" }}>{t("payments.acciones")}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {subscriptions.length === 0 && (
                   <Table.Tr>
                     <Table.Td colSpan={6}>
-                      <Text c="dimmed" ta="center" py="xl" size="sm">No hay suscripciones</Text>
+                      <Text c="dimmed" ta="center" py="xl" size="sm">{t("payments.noHaySuscripciones")}</Text>
                     </Table.Td>
                   </Table.Tr>
                 )}
@@ -1384,7 +1386,7 @@ export function PaymentsPage() {
                     <Table.Td>
                       <Text c="dimmed" size="sm">{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("es-ES") : "—"}</Text>
                       {sub.cancel_at_period_end && (
-                        <Text c="red" size="xs">Cancela al finalizar</Text>
+                        <Text c="red" size="xs">{t("payments.cancelaAlFinalizar")}</Text>
                       )}
                     </Table.Td>
                     <Table.Td ta="right">
@@ -1402,7 +1404,7 @@ export function PaymentsPage() {
                     <Table.Td>
                       <Group gap="xs" justify="flex-end">
                         {sub.status === "active" && (
-                          <Tooltip label="Cancelar suscripción">
+                          <Tooltip label={t("payments.cancelarSuscripcion")}>
                             <ActionIcon
                               color="red"
                               variant="subtle"
@@ -1427,7 +1429,7 @@ export function PaymentsPage() {
         <Tabs.Panel value="products">
           {products.length === 0 && (
             <Box className="nv-card" p="xl">
-              <Text c="dimmed" ta="center">No hay productos creados. Usa "Nuevo Producto" para crear uno.</Text>
+              <Text c="dimmed" ta="center">{t("payments.noHayProductosCreadosUsa")}</Text>
             </Box>
           )}
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg" className="stagger">
@@ -1501,12 +1503,12 @@ export function PaymentsPage() {
                     </Text>
                   </Box>
                   <Group gap="xs">
-                    <Tooltip label="Editar producto">
+                    <Tooltip label={t("payments.editarProducto")}>
                       <ActionIcon color="blue" variant="light" radius="xl" onClick={() => handleOpenEditProduct(product)}>
                         <IconEdit size={16} />
                       </ActionIcon>
                     </Tooltip>
-                    <Tooltip label="Eliminar producto">
+                    <Tooltip label={t("payments.eliminarProducto")}>
                       <ActionIcon
                         color="red"
                         variant="light"
@@ -1537,22 +1539,22 @@ export function PaymentsPage() {
         <form onSubmit={productForm.onSubmit(handleSaveProduct)}>
           <Stack>
             <TextInput
-              label="Nombre"
-              placeholder="Plan Premium"
+              label={t("payments.nombre")}
+              placeholder={t("payments.planPremium")}
               required
               {...productForm.getInputProps("name")}
             />
 
             <Textarea
-              label="Descripción"
+              label={t("payments.descripcion")}
               minRows={2}
-              placeholder="Describe el producto..."
+              placeholder={t("payments.describeElProducto")}
               {...productForm.getInputProps("description")}
             />
 
             <Group grow>
               <NumberInput
-                label="Precio (€)"
+                label={t("payments.precio")}
                 min={0}
                 placeholder="0"
                 required
@@ -1561,11 +1563,11 @@ export function PaymentsPage() {
               />
               <Select
                 data={[
-                  { value: "subscription", label: "Suscripción" },
-                  { value: "package", label: "Bono/Paquete" },
-                  { value: "one_time", label: "Pago único" },
+                  { value: "subscription", label: t("payments.suscripcion") },
+                  { value: "package", label: t("payments.bonoPaquete") },
+                  { value: "one_time", label: t("payments.pagoUnico") },
                 ]}
-                label="Tipo"
+                label={t("payments.tipo")}
                 {...productForm.getInputProps("type")}
               />
             </Group>
@@ -1573,18 +1575,18 @@ export function PaymentsPage() {
             {productForm.values.type === "subscription" && (
               <Select
                 data={[
-                  { value: "month", label: "Mensual" },
-                  { value: "year", label: "Anual" },
-                  { value: "week", label: "Semanal" },
+                  { value: "month", label: t("payments.mensual") },
+                  { value: "year", label: t("payments.anual") },
+                  { value: "week", label: t("payments.semanal") },
                 ]}
-                label="Intervalo de cobro"
+                label={t("payments.intervaloDeCobro")}
                 {...productForm.getInputProps("interval")}
               />
             )}
 
             {productForm.values.type === "package" && (
               <NumberInput
-                label="Sesiones incluidas"
+                label={t("payments.sesionesIncluidas")}
                 min={1}
                 placeholder="0"
                 {...productForm.getInputProps("sessions_included")}
@@ -1593,7 +1595,7 @@ export function PaymentsPage() {
 
             <Group justify="flex-end" mt="md">
               <Button onClick={() => { closeProductModal(); setEditingProduct(null); productForm.reset(); }} variant="default">
-                Cancelar
+                {t("payments.cancelar")}
               </Button>
               <Button type="submit" loading={createProduct.isPending || updateProduct.isPending}>
                 {editingProduct ? "Guardar Cambios" : "Crear Producto"}
@@ -1608,7 +1610,7 @@ export function PaymentsPage() {
         onClose={closeChargeModal}
         opened={chargeModalOpened}
         size="md"
-        title="Nuevo Cobro"
+        title={t("payments.nuevoCobro")}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
@@ -1616,8 +1618,8 @@ export function PaymentsPage() {
           <Stack>
             <Select
               data={clientOptions}
-              label="Cliente"
-              placeholder="Selecciona un cliente"
+              label={t("payments.cliente")}
+              placeholder={t("payments.seleccionaUnCliente")}
               searchable
               clearable
               {...chargeForm.getInputProps("client_id")}
@@ -1628,8 +1630,8 @@ export function PaymentsPage() {
                 value: p.id,
                 label: `${p.name} - €${p.price}`,
               }))}
-              label="Producto"
-              placeholder="Selecciona un producto (opcional)"
+              label={t("payments.producto")}
+              placeholder={t("payments.seleccionaUnProductoOpcional")}
               clearable
               onChange={(val) => {
                 chargeForm.setFieldValue("product_id", val || "");
@@ -1645,7 +1647,7 @@ export function PaymentsPage() {
             />
 
             <NumberInput
-              label="Importe (€)"
+              label={t("payments.importe")}
               min={0.01}
               placeholder="0"
               decimalScale={2}
@@ -1654,17 +1656,17 @@ export function PaymentsPage() {
             />
 
             <Textarea
-              label="Descripción"
-              placeholder="Descripción del cobro..."
+              label={t("payments.descripcion")}
+              placeholder={t("payments.descripcionDelCobro")}
               {...chargeForm.getInputProps("description")}
             />
 
             <Group justify="flex-end" mt="md">
               <Button onClick={closeChargeModal} variant="default">
-                Cancelar
+                {t("payments.cancelar")}
               </Button>
               <Button leftSection={<IconCreditCard size={16} />} type="submit" loading={createPayment.isPending}>
-                Crear Cobro
+                {t("payments.crearCobro")}
               </Button>
             </Group>
           </Stack>
@@ -1676,48 +1678,48 @@ export function PaymentsPage() {
         onClose={closePaymentDetail}
         opened={paymentDetailOpened}
         size="md"
-        title="Detalle del Pago"
+        title={t("payments.detalleDelPago")}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         {selectedPayment && (
           <Stack>
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Cliente</Text>
+              <Text c="dimmed" size="sm">{t("payments.cliente")}</Text>
               <Text fw={500} size="sm">{selectedPayment.client_name || "—"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Descripción</Text>
+              <Text c="dimmed" size="sm">{t("payments.descripcion")}</Text>
               <Text fw={500} size="sm">{selectedPayment.description || "—"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Importe</Text>
+              <Text c="dimmed" size="sm">{t("payments.importe")}</Text>
               <Text fw={700} size="lg" style={{ color: "var(--nv-primary)" }}>€{formatDecimal(Number(selectedPayment.amount), 2)}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Estado</Text>
+              <Text c="dimmed" size="sm">{t("payments.estado")}</Text>
               <Badge color={getStatusColor(selectedPayment.status)} variant="light" radius="xl">
                 {getStatusLabel(selectedPayment.status)}
               </Badge>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Tipo</Text>
+              <Text c="dimmed" size="sm">{t("payments.tipo")}</Text>
               <Text size="sm">{selectedPayment.payment_type === "subscription" ? "Suscripción" : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Fecha de creación</Text>
+              <Text c="dimmed" size="sm">{t("payments.fechaDeCreacion")}</Text>
               <Text size="sm">{selectedPayment.created_at ? new Date(selectedPayment.created_at).toLocaleString("es-ES") : "—"}</Text>
             </Group>
             {selectedPayment.paid_at && (
               <>
                 <Divider style={{ borderColor: "var(--nv-border)" }} />
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">Fecha de pago</Text>
+                  <Text c="dimmed" size="sm">{t("payments.fechaDePago")}</Text>
                   <Text size="sm">{new Date(selectedPayment.paid_at).toLocaleString("es-ES")}</Text>
                 </Group>
               </>
@@ -1731,7 +1733,7 @@ export function PaymentsPage() {
                     leftSection={<IconCheck size={16} />}
                     onClick={() => { handleMarkPaid(selectedPayment); closePaymentDetail(); }}
                   >
-                    Marcar como pagado
+                    {t("payments.marcarComoPagado")}
                   </Button>
                   <Button
                     color="red"
@@ -1739,12 +1741,12 @@ export function PaymentsPage() {
                     leftSection={<IconTrash size={16} />}
                     onClick={() => { handleDeletePaymentAction(selectedPayment); closePaymentDetail(); }}
                   >
-                    Eliminar
+                    {t("payments.eliminar")}
                   </Button>
                 </>
               )}
               <Button onClick={closePaymentDetail} variant="default">
-                Cerrar
+                {t("payments.cerrar")}
               </Button>
             </Group>
           </Stack>
@@ -1766,23 +1768,23 @@ export function PaymentsPage() {
               {/* Series + Number preview */}
               <Group grow>
                 <Select
-                  label="Serie"
-                  data={[{ value: "F", label: "F - Ordinaria" }, { value: "R", label: "R - Rectificativa" }]}
+                  label={t("payments.serie")}
+                  data={[{ value: "F", label: t("payments.fOrdinaria") }, { value: "R", label: t("payments.rRectificativa") }]}
                   {...invoiceForm.getInputProps("invoice_series")}
                 />
                 <TextInput
-                  label="Número (auto)"
+                  label={t("payments.numeroAuto")}
                   value={nextNumberData?.next_number || "—"}
                   disabled
                   styles={{ input: { fontFamily: "monospace", fontWeight: 600 } }}
                 />
               </Group>
 
-              <Divider label="Datos del cliente" labelPosition="left" />
+              <Divider label={t("payments.datosDelCliente")} labelPosition="left" />
 
               <Select
-                label="Seleccionar cliente"
-                placeholder="Buscar cliente..."
+                label={t("payments.seleccionarCliente")}
+                placeholder={t("payments.buscarCliente")}
                 data={clientOptions}
                 searchable
                 clearable
@@ -1790,41 +1792,41 @@ export function PaymentsPage() {
                 onChange={handleClientSelectForInvoice}
               />
               <Group grow>
-                <TextInput label="Nombre / Razón social" required {...invoiceForm.getInputProps("client_name")} />
+                <TextInput label={t("payments.nombreRazonSocial")} required {...invoiceForm.getInputProps("client_name")} />
                 <TextInput label="NIF/CIF" placeholder="99999999R" {...invoiceForm.getInputProps("client_tax_id")} />
               </Group>
               <Group grow>
-                <TextInput label="Dirección" {...invoiceForm.getInputProps("client_address")} />
-                <TextInput label="Ciudad" {...invoiceForm.getInputProps("client_city")} />
+                <TextInput label={t("payments.direccion")} {...invoiceForm.getInputProps("client_address")} />
+                <TextInput label={t("payments.ciudad")} {...invoiceForm.getInputProps("client_city")} />
                 <TextInput label="C.P." {...invoiceForm.getInputProps("client_postal_code")} />
               </Group>
-              <TextInput label="Email del cliente" {...invoiceForm.getInputProps("client_email")} />
+              <TextInput label={t("payments.emailDelCliente")} {...invoiceForm.getInputProps("client_email")} />
 
-              <Divider label="Fechas" labelPosition="left" />
+              <Divider label={t("payments.fechas")} labelPosition="left" />
               <Group grow>
-                <DateInput label="Fecha emisión" locale="es" valueFormat="DD/MM/YYYY" {...invoiceForm.getInputProps("issue_date")} />
-                <DateInput label="Fecha vencimiento" locale="es" valueFormat="DD/MM/YYYY" clearable {...invoiceForm.getInputProps("due_date")} />
+                <DateInput label={t("payments.fechaEmision")} locale="es" valueFormat="DD/MM/YYYY" {...invoiceForm.getInputProps("issue_date")} />
+                <DateInput label={t("payments.fechaVencimiento")} locale="es" valueFormat="DD/MM/YYYY" clearable {...invoiceForm.getInputProps("due_date")} />
                 <Select
-                  label="Método de pago"
+                  label={t("payments.metodoDePago")}
                   data={[
-                    { value: "transferencia", label: "Transferencia" },
-                    { value: "tarjeta", label: "Tarjeta" },
-                    { value: "efectivo", label: "Efectivo" },
-                    { value: "domiciliacion", label: "Domiciliación" },
-                    { value: "otro", label: "Otro" },
+                    { value: "transferencia", label: t("payments.transferencia") },
+                    { value: "tarjeta", label: t("payments.tarjeta") },
+                    { value: "efectivo", label: t("payments.efectivo") },
+                    { value: "domiciliacion", label: t("payments.domiciliacion") },
+                    { value: "otro", label: t("payments.otro") },
                   ]}
                   {...invoiceForm.getInputProps("payment_method")}
                 />
               </Group>
 
-              <Divider label="Líneas de factura" labelPosition="left" />
+              <Divider label={t("payments.lineasDeFactura")} labelPosition="left" />
 
               {invoiceForm.values.items.map((item, idx) => (
                 <Box key={idx} className="nv-card-compact" p="sm" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)" }}>
                   <Group align="flex-start" gap="sm" wrap="wrap">
                     <TextInput
                       label={idx === 0 ? "Descripción" : undefined}
-                      placeholder="Servicio de entrenamiento personal"
+                      placeholder={t("payments.servicioDeEntrenamientoPersonal")}
                       style={{ flex: 3, minWidth: 200 }}
                       {...invoiceForm.getInputProps(`items.${idx}.description`)}
                     />
@@ -1849,7 +1851,7 @@ export function PaymentsPage() {
                         { value: "21", label: "21%" },
                         { value: "10", label: "10%" },
                         { value: "4", label: "4%" },
-                        { value: "0", label: "Exento" },
+                        { value: "0", label: t("payments.exento") },
                       ]}
                       style={{ flex: 0.7, minWidth: 80 }}
                       value={String(item.tax_rate ?? 21)}
@@ -1895,15 +1897,15 @@ export function PaymentsPage() {
                 size="xs"
                 onClick={() => invoiceForm.insertListItem("items", { description: "", quantity: 1, unit_price: 0, tax_rate: 21, tax_name: "IVA", discount_type: "percentage", discount_value: 0 })}
               >
-                Añadir línea
+                {t("payments.anadirLinea")}
               </Button>
 
               {/* Totals summary */}
               <Box className="nv-card-compact" p="md" style={{ borderRadius: "var(--radius-sm)", backgroundColor: "var(--nv-surface-subtle)" }}>
                 <Group grow mb="sm">
                   <Select
-                    label="Descuento global"
-                    data={[{ value: "percentage", label: "Porcentaje (%)" }, { value: "fixed", label: "Importe fijo (€)" }]}
+                    label={t("payments.descuentoGlobal")}
+                    data={[{ value: "percentage", label: t("payments.porcentaje") }, { value: "fixed", label: t("payments.importeFijo") }]}
                     size="xs"
                     {...invoiceForm.getInputProps("discount_type")}
                   />
@@ -1916,26 +1918,26 @@ export function PaymentsPage() {
                   />
                 </Group>
                 <Stack gap={4}>
-                  <Group justify="space-between"><Text size="sm" c="dimmed">Subtotal</Text><Text size="sm" fw={500}>{invoiceLineTotals.subtotal.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                  <Group justify="space-between"><Text size="sm" c="dimmed">{t("payments.subtotal")}</Text><Text size="sm" fw={500}>{invoiceLineTotals.subtotal.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                   {Object.entries(invoiceLineTotals.taxBreakdown).map(([rate, vals]) => (
                     <Group justify="space-between" key={rate}><Text size="sm" c="dimmed">IVA {rate}</Text><Text size="sm">{vals.tax.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                   ))}
                   {invoiceLineTotals.globalDisc > 0 && (
-                    <Group justify="space-between"><Text size="sm" c="dimmed">Descuento</Text><Text size="sm" c="red">-{invoiceLineTotals.globalDisc.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                    <Group justify="space-between"><Text size="sm" c="dimmed">{t("payments.descuento")}</Text><Text size="sm" c="red">-{invoiceLineTotals.globalDisc.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                   )}
                   <Divider my={4} />
                   <Group justify="space-between"><Text fw={700}>TOTAL</Text><Text fw={700} size="lg" style={{ color: "var(--nv-primary)" }}>{invoiceLineTotals.total.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 </Stack>
               </Box>
 
-              <Divider label="Notas" labelPosition="left" />
-              <Textarea label="Notas para el cliente" minRows={2} {...invoiceForm.getInputProps("notes")} />
-              <Textarea label="Notas internas" minRows={2} {...invoiceForm.getInputProps("internal_notes")} />
+              <Divider label={t("payments.notas")} labelPosition="left" />
+              <Textarea label={t("payments.notasParaElCliente")} minRows={2} {...invoiceForm.getInputProps("notes")} />
+              <Textarea label={t("payments.notasInternas")} minRows={2} {...invoiceForm.getInputProps("internal_notes")} />
             </Stack>
           </ScrollArea.Autosize>
 
           <Group justify="flex-end" mt="lg">
-            <Button onClick={() => { closeInvoiceModal(); setEditingInvoice(null); invoiceForm.reset(); }} variant="default">Cancelar</Button>
+            <Button onClick={() => { closeInvoiceModal(); setEditingInvoice(null); invoiceForm.reset(); }} variant="default">{t("payments.cancelar")}</Button>
             <Button type="submit" loading={createInvoice.isPending || updateInvoice.isPending}>
               {editingInvoice ? "Guardar Cambios" : "Crear Factura"}
             </Button>
@@ -1963,7 +1965,7 @@ export function PaymentsPage() {
                 <Group gap="xs">
                   {previewInvoice.verifactu_hash && (
                     <Badge leftSection={<IconShieldCheck size={12} />} variant="light" color="green" radius="xl" size="sm">
-                      VeriFactu
+                      {t("payments.verifactu")}
                     </Badge>
                   )}
                   <Badge variant="outline" radius="xl" size="sm">{previewInvoice.invoice_type}</Badge>
@@ -1972,17 +1974,17 @@ export function PaymentsPage() {
 
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <Box>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Cliente</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>{t("payments.cliente")}</Text>
                   <Text fw={600}>{previewInvoice.client_name}</Text>
                   {previewInvoice.client_tax_id && <Text size="sm" c="dimmed">NIF: {previewInvoice.client_tax_id}</Text>}
                   {previewInvoice.client_address && <Text size="sm" c="dimmed">{previewInvoice.client_address}</Text>}
                   {previewInvoice.client_email && <Text size="sm" c="dimmed">{previewInvoice.client_email}</Text>}
                 </Box>
                 <Box>
-                  <Group justify="space-between"><Text size="xs" c="dimmed">Fecha emisión</Text><Text size="sm">{previewInvoice.issue_date ? new Date(previewInvoice.issue_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
-                  <Group justify="space-between"><Text size="xs" c="dimmed">Vencimiento</Text><Text size="sm">{previewInvoice.due_date ? new Date(previewInvoice.due_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
-                  <Group justify="space-between"><Text size="xs" c="dimmed">Método de pago</Text><Text size="sm">{previewInvoice.payment_method || "—"}</Text></Group>
-                  {previewInvoice.paid_date && <Group justify="space-between"><Text size="xs" c="dimmed">Fecha pago</Text><Text size="sm" c="green">{new Date(previewInvoice.paid_date).toLocaleDateString("es-ES")}</Text></Group>}
+                  <Group justify="space-between"><Text size="xs" c="dimmed">{t("payments.fechaEmision")}</Text><Text size="sm">{previewInvoice.issue_date ? new Date(previewInvoice.issue_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
+                  <Group justify="space-between"><Text size="xs" c="dimmed">{t("payments.vencimiento")}</Text><Text size="sm">{previewInvoice.due_date ? new Date(previewInvoice.due_date).toLocaleDateString("es-ES") : "—"}</Text></Group>
+                  <Group justify="space-between"><Text size="xs" c="dimmed">{t("payments.metodoDePago")}</Text><Text size="sm">{previewInvoice.payment_method || "—"}</Text></Group>
+                  {previewInvoice.paid_date && <Group justify="space-between"><Text size="xs" c="dimmed">{t("payments.fechaPago")}</Text><Text size="sm" c="green">{new Date(previewInvoice.paid_date).toLocaleDateString("es-ES")}</Text></Group>}
                 </Box>
               </SimpleGrid>
 
@@ -1992,11 +1994,11 @@ export function PaymentsPage() {
               <Table>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th style={{ fontSize: "10px" }}>Concepto</Table.Th>
-                    <Table.Th style={{ fontSize: "10px" }} ta="center">Ud.</Table.Th>
-                    <Table.Th style={{ fontSize: "10px" }} ta="right">Precio</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }}>{t("payments.concepto")}</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }} ta="center">{t("payments.ud")}</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }} ta="right">{t("payments.precio")}</Table.Th>
                     <Table.Th style={{ fontSize: "10px" }} ta="center">IVA</Table.Th>
-                    <Table.Th style={{ fontSize: "10px" }} ta="right">Total</Table.Th>
+                    <Table.Th style={{ fontSize: "10px" }} ta="right">{t("payments.total")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -2014,9 +2016,9 @@ export function PaymentsPage() {
 
               {/* Totals */}
               <Box style={{ borderTop: "2px solid var(--nv-border)", paddingTop: 12 }}>
-                <Group justify="space-between"><Text c="dimmed">Subtotal</Text><Text>{Number(previewInvoice.subtotal).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                <Group justify="space-between"><Text c="dimmed">{t("payments.subtotal")}</Text><Text>{Number(previewInvoice.subtotal).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 {Number(previewInvoice.discount_amount) > 0 && (
-                  <Group justify="space-between"><Text c="dimmed">Descuento</Text><Text c="red">-{Number(previewInvoice.discount_amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
+                  <Group justify="space-between"><Text c="dimmed">{t("payments.descuento")}</Text><Text c="red">-{Number(previewInvoice.discount_amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 )}
                 <Group justify="space-between"><Text c="dimmed">IVA</Text><Text>{Number(previewInvoice.tax_amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</Text></Group>
                 <Divider my="xs" />
@@ -2025,7 +2027,7 @@ export function PaymentsPage() {
 
               {previewInvoice.notes && (
                 <Box>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>Notas</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>{t("payments.notas")}</Text>
                   <Text size="sm">{previewInvoice.notes}</Text>
                 </Box>
               )}
@@ -2035,7 +2037,7 @@ export function PaymentsPage() {
                 <Box className="nv-card-compact" p="sm" style={{ borderRadius: "var(--radius-sm)", backgroundColor: "var(--nv-success-bg)" }}>
                   <Group gap="xs" mb={4}>
                     <IconShieldCheck size={16} color="var(--nv-success)" />
-                    <Text size="sm" fw={600} style={{ color: "var(--nv-success)" }}>VeriFactu</Text>
+                    <Text size="sm" fw={600} style={{ color: "var(--nv-success)" }}>{t("payments.verifactu")}</Text>
                   </Group>
                   <Text size="xs" c="dimmed">UUID: {previewInvoice.verifactu_uuid}</Text>
                   <Text size="xs" c="dimmed" style={{ wordBreak: "break-all" }}>Hash: {previewInvoice.verifactu_hash}</Text>
@@ -2045,7 +2047,7 @@ export function PaymentsPage() {
               {/* Audit log */}
               {auditLog.length > 0 && (
                 <Box>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">Historial de actividad</Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">{t("payments.historialDeActividad")}</Text>
                   <Stack gap={4}>
                     {auditLog.map((entry) => (
                       <Group key={entry.id} gap="sm" style={{ borderBottom: "1px solid var(--nv-border)", paddingBottom: 4 }}>
@@ -2064,12 +2066,12 @@ export function PaymentsPage() {
               <Group justify="flex-end" mt="md" gap="sm">
                 {previewInvoice.status === "draft" && (
                   <Button variant="light" color="blue" leftSection={<IconLock size={14} />} onClick={() => { handleFinalizeInvoice(previewInvoice); closeInvoicePreview(); }}>
-                    Emitir
+                    {t("payments.emitir")}
                   </Button>
                 )}
                 {["finalized", "sent", "overdue"].includes(previewInvoice.status) && (
                   <Button variant="light" color="green" leftSection={<IconCheck size={14} />} onClick={() => { handleMarkInvoicePaid(previewInvoice); closeInvoicePreview(); }}>
-                    Marcar pagada
+                    {t("payments.marcarPagada")}
                   </Button>
                 )}
                 <Button variant="light" leftSection={<IconDownload size={14} />} onClick={() => handleDownloadPdf(previewInvoice)}>
@@ -2077,10 +2079,10 @@ export function PaymentsPage() {
                 </Button>
                 {previewInvoice.status !== "draft" && (
                   <Button variant="light" leftSection={<IconMail size={14} />} onClick={() => { handleSendInvoiceEmail(previewInvoice); closeInvoicePreview(); }}>
-                    Email
+                    {t("payments.email")}
                   </Button>
                 )}
-                <Button onClick={() => { closeInvoicePreview(); setPreviewInvoice(null); }} variant="default">Cerrar</Button>
+                <Button onClick={() => { closeInvoicePreview(); setPreviewInvoice(null); }} variant="default">{t("payments.cerrar")}</Button>
               </Group>
             </Stack>
           </ScrollArea.Autosize>
@@ -2092,67 +2094,67 @@ export function PaymentsPage() {
         onClose={closeSettingsModal}
         opened={settingsModalOpened}
         size="lg"
-        title="Configuración de Facturación"
+        title={t("payments.configuracionDeFacturacion")}
         radius="lg"
         styles={{ content: { backgroundColor: "var(--nv-paper-bg)" }, header: { backgroundColor: "var(--nv-paper-bg)" } }}
       >
         <form onSubmit={settingsForm.onSubmit(handleSaveSettings)}>
           <ScrollArea.Autosize mah="75vh">
             <Stack gap="md" pr="xs">
-              <Divider label="Datos fiscales" labelPosition="left" />
+              <Divider label={t("payments.datosFiscales")} labelPosition="left" />
               <Group grow>
-                <TextInput label="Nombre / Razón social" required {...settingsForm.getInputProps("business_name")} />
+                <TextInput label={t("payments.nombreRazonSocial")} required {...settingsForm.getInputProps("business_name")} />
                 <TextInput label="NIF/CIF" {...settingsForm.getInputProps("tax_id")} />
-                <Select label="Tipo" data={["NIF", "NIE", "CIF"]} {...settingsForm.getInputProps("nif_type")} />
+                <Select label={t("payments.tipo")} data={["NIF", "NIE", "CIF"]} {...settingsForm.getInputProps("nif_type")} />
               </Group>
               <Group grow>
-                <TextInput label="Dirección" {...settingsForm.getInputProps("address")} />
-                <TextInput label="Ciudad" {...settingsForm.getInputProps("city")} />
+                <TextInput label={t("payments.direccion")} {...settingsForm.getInputProps("address")} />
+                <TextInput label={t("payments.ciudad")} {...settingsForm.getInputProps("city")} />
               </Group>
               <Group grow>
                 <TextInput label="C.P." {...settingsForm.getInputProps("postal_code")} />
-                <TextInput label="Provincia" {...settingsForm.getInputProps("province")} />
-                <TextInput label="País" {...settingsForm.getInputProps("country")} />
+                <TextInput label={t("payments.provincia")} {...settingsForm.getInputProps("province")} />
+                <TextInput label={t("payments.pais")} {...settingsForm.getInputProps("country")} />
               </Group>
               <Group grow>
-                <TextInput label="Teléfono" {...settingsForm.getInputProps("phone")} />
-                <TextInput label="Email" {...settingsForm.getInputProps("email")} />
-              </Group>
-
-              <Divider label="Numeración" labelPosition="left" />
-              <Group grow>
-                <TextInput label="Prefijo facturas" {...settingsForm.getInputProps("invoice_prefix")} />
-                <TextInput label="Prefijo rectificativas" {...settingsForm.getInputProps("rectificative_prefix")} />
+                <TextInput label={t("payments.telefono")} {...settingsForm.getInputProps("phone")} />
+                <TextInput label={t("payments.email")} {...settingsForm.getInputProps("email")} />
               </Group>
 
-              <Divider label="Impuestos y pagos" labelPosition="left" />
+              <Divider label={t("payments.numeracion")} labelPosition="left" />
               <Group grow>
-                <NumberInput label="IVA por defecto (%)" min={0} max={100} {...settingsForm.getInputProps("default_tax_rate")} />
-                <NumberInput label="Plazo de pago (días)" min={0} {...settingsForm.getInputProps("payment_terms_days")} />
+                <TextInput label={t("payments.prefijoFacturas")} {...settingsForm.getInputProps("invoice_prefix")} />
+                <TextInput label={t("payments.prefijoRectificativas")} {...settingsForm.getInputProps("rectificative_prefix")} />
+              </Group>
+
+              <Divider label={t("payments.impuestosYPagos")} labelPosition="left" />
+              <Group grow>
+                <NumberInput label={t("payments.ivaPorDefecto")} min={0} max={100} {...settingsForm.getInputProps("default_tax_rate")} />
+                <NumberInput label={t("payments.plazoDePagoDias")} min={0} {...settingsForm.getInputProps("payment_terms_days")} />
                 <Select
-                  label="Método de pago"
+                  label={t("payments.metodoDePago")}
                   data={["transferencia", "tarjeta", "efectivo", "domiciliacion", "otro"]}
                   {...settingsForm.getInputProps("default_payment_method")}
                 />
               </Group>
 
-              <Divider label="Datos bancarios" labelPosition="left" />
+              <Divider label={t("payments.datosBancarios")} labelPosition="left" />
               <Group grow>
-                <TextInput label="Banco" {...settingsForm.getInputProps("bank_name")} />
+                <TextInput label={t("payments.banco")} {...settingsForm.getInputProps("bank_name")} />
                 <TextInput label="IBAN" placeholder="ES00 0000 0000 00 0000000000" {...settingsForm.getInputProps("bank_account")} />
               </Group>
 
-              <Divider label="Pie de factura" labelPosition="left" />
-              <Textarea label="Texto de pie de factura" minRows={2} {...settingsForm.getInputProps("footer_text")} />
-              <Textarea label="Condiciones generales" minRows={2} {...settingsForm.getInputProps("terms_and_conditions")} />
+              <Divider label={t("payments.pieDeFactura")} labelPosition="left" />
+              <Textarea label={t("payments.textoDePieDeFactura")} minRows={2} {...settingsForm.getInputProps("footer_text")} />
+              <Textarea label={t("payments.condicionesGenerales")} minRows={2} {...settingsForm.getInputProps("terms_and_conditions")} />
 
-              <Divider label={<Group gap="xs"><IconShieldCheck size={14} /><span>VeriFactu</span></Group>} labelPosition="left" />
+              <Divider label={<Group gap="xs"><IconShieldCheck size={14} /><span>{t("payments.verifactu")}</span></Group>} labelPosition="left" />
 
               <Box className="nv-card-compact" p="md" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)" }}>
                 <Group justify="space-between" mb="sm">
                   <Box>
-                    <Text fw={600} size="sm">Activar VeriFactu</Text>
-                    <Text size="xs" c="dimmed">Envío directo a AEAT con certificado digital FNMT</Text>
+                    <Text fw={600} size="sm">{t("payments.activarVerifactu")}</Text>
+                    <Text size="xs" c="dimmed">{t("payments.envioDirectoAAeatCon")}</Text>
                   </Box>
                   <Switch
                     size="md"
@@ -2164,18 +2166,18 @@ export function PaymentsPage() {
                 {settingsForm.values.verifactu_enabled && (
                   <Stack gap="sm">
                     <Select
-                      label="Entorno de envío"
+                      label={t("payments.entornoDeEnvio")}
                       data={[
-                        { value: "none", label: "Solo hash local (sin envío a AEAT)" },
-                        { value: "direct_aeat_test", label: "Preproducción AEAT (pruebas)" },
-                        { value: "direct_aeat_prod", label: "Producción AEAT (real)" },
+                        { value: "none", label: t("payments.soloHashLocalSinEnvio") },
+                        { value: "direct_aeat_test", label: t("payments.preproduccionAeatPruebas") },
+                        { value: "direct_aeat_prod", label: t("payments.produccionAeatReal") },
                       ]}
                       {...settingsForm.getInputProps("verifactu_mode")}
                     />
 
                     {(settingsForm.values.verifactu_mode === "direct_aeat_test" || settingsForm.values.verifactu_mode === "direct_aeat_prod") && (
                       <>
-                        <Divider label="Certificado digital (FNMT)" labelPosition="left" variant="dashed" />
+                        <Divider label={t("payments.certificadoDigitalFnmt")} labelPosition="left" variant="dashed" />
 
                         {certStatus?.has_certificate ? (
                           <Box p="md" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)", background: "var(--nv-bg)" }}>
@@ -2185,7 +2187,7 @@ export function PaymentsPage() {
                                   <IconShieldCheck size={16} />
                                 </ThemeIcon>
                                 <Box>
-                                  <Text size="sm" fw={600}>Certificado configurado</Text>
+                                  <Text size="sm" fw={600}>{t("payments.certificadoConfigurado")}</Text>
                                   <Text size="xs" c="dimmed">{certStatus.subject}</Text>
                                 </Box>
                               </Group>
@@ -2201,18 +2203,18 @@ export function PaymentsPage() {
                                 </Box>
                               )}
                               <Box>
-                                <Text size="xs" c="dimmed">N.º Serie</Text>
+                                <Text size="xs" c="dimmed">{t("payments.nSerie")}</Text>
                                 <Text size="sm" fw={500} style={{ fontFamily: "monospace", fontSize: 11 }}>{certStatus.serial_number?.slice(0, 20)}...</Text>
                               </Box>
                               {certStatus.expires_at && (
                                 <Box>
-                                  <Text size="xs" c="dimmed">Caduca</Text>
+                                  <Text size="xs" c="dimmed">{t("payments.caduca")}</Text>
                                   <Text size="sm" fw={500}>{new Date(certStatus.expires_at).toLocaleDateString("es-ES")}</Text>
                                 </Box>
                               )}
                               {certStatus.uploaded_at && (
                                 <Box>
-                                  <Text size="xs" c="dimmed">Subido</Text>
+                                  <Text size="xs" c="dimmed">{t("payments.subido")}</Text>
                                   <Text size="sm" fw={500}>{new Date(certStatus.uploaded_at).toLocaleDateString("es-ES")}</Text>
                                 </Box>
                               )}
@@ -2227,11 +2229,11 @@ export function PaymentsPage() {
                                 leftSection={<IconTrash size={14} />}
                                 onClick={() => setShowRevokeConfirm(true)}
                               >
-                                Revocar certificado
+                                {t("payments.revocarCertificado")}
                               </Button>
                             ) : (
-                              <Alert color="red" mt="md" title="¿Revocar certificado?" icon={<IconTrash size={16} />}>
-                                <Text size="xs" mb="sm">Se eliminará de forma segura el certificado y la clave privada. Necesitarás subir uno nuevo para enviar a AEAT.</Text>
+                              <Alert color="red" mt="md" title={t("payments.revocarCertificado")} icon={<IconTrash size={16} />}>
+                                <Text size="xs" mb="sm">{t("payments.seEliminaraDeFormaSegura")}</Text>
                                 <Group gap="xs">
                                   <Button
                                     size="xs"
@@ -2242,10 +2244,10 @@ export function PaymentsPage() {
                                       setShowRevokeConfirm(false);
                                     }}
                                   >
-                                    Sí, revocar
+                                    {t("payments.siRevocar")}
                                   </Button>
                                   <Button size="xs" variant="subtle" onClick={() => setShowRevokeConfirm(false)}>
-                                    Cancelar
+                                    {t("payments.cancelar")}
                                   </Button>
                                 </Group>
                               </Alert>
@@ -2284,11 +2286,11 @@ export function PaymentsPage() {
                             {certFile && (
                               <Stack gap="xs" mt="sm">
                                 <PasswordInput
-                                  label="Contraseña del certificado"
-                                  placeholder="Introduce la contraseña de tu .p12/.pfx"
+                                  label={t("payments.contrasenaDelCertificado")}
+                                  placeholder={t("payments.introduceLaContrasenaDeTu")}
                                   value={certPassword}
                                   onChange={(e) => setCertPassword(e.currentTarget.value)}
-                                  description="Solo se usa para la extracción. No se almacena."
+                                  description={t("payments.soloSeUsaParaLa")}
                                 />
                                 <Button
                                   leftSection={<IconUpload size={16} />}
@@ -2302,25 +2304,25 @@ export function PaymentsPage() {
                                     } catch { /* handled by hook */ }
                                   }}
                                 >
-                                  Subir certificado
+                                  {t("payments.subirCertificado")}
                                 </Button>
                               </Stack>
                             )}
                           </Box>
                         )}
 
-                        <Divider label="Sistema informático (obligatorio AEAT)" labelPosition="left" variant="dashed" />
+                        <Divider label={t("payments.sistemaInformaticoObligatorioAeat")} labelPosition="left" variant="dashed" />
                         <Group grow>
-                          <TextInput label="Razón social desarrollador" placeholder={settingsForm.values.business_name || "Tu empresa"} {...settingsForm.getInputProps("software_company_name")} />
-                          <TextInput label="NIF desarrollador" placeholder={settingsForm.values.tax_id || "B12345678"} {...settingsForm.getInputProps("software_company_nif")} />
+                          <TextInput label={t("payments.razonSocialDesarrollador")} placeholder={settingsForm.values.business_name || "Tu empresa"} {...settingsForm.getInputProps("software_company_name")} />
+                          <TextInput label={t("payments.nifDesarrollador")} placeholder={settingsForm.values.tax_id || "B12345678"} {...settingsForm.getInputProps("software_company_nif")} />
                         </Group>
                         <Group grow>
-                          <TextInput label="Nombre programa" {...settingsForm.getInputProps("software_name")} />
-                          <TextInput label="ID (2 chars)" maxLength={2} {...settingsForm.getInputProps("software_id")} />
+                          <TextInput label={t("payments.nombrePrograma")} {...settingsForm.getInputProps("software_name")} />
+                          <TextInput label={t("payments.id2Chars")} maxLength={2} {...settingsForm.getInputProps("software_id")} />
                         </Group>
                         <Group grow>
-                          <TextInput label="Versión" {...settingsForm.getInputProps("software_version")} />
-                          <TextInput label="N.º instalación" {...settingsForm.getInputProps("software_install_number")} />
+                          <TextInput label={t("payments.version")} {...settingsForm.getInputProps("software_version")} />
+                          <TextInput label={t("payments.nInstalacion")} {...settingsForm.getInputProps("software_install_number")} />
                         </Group>
                       </>
                     )}
@@ -2328,11 +2330,10 @@ export function PaymentsPage() {
                 )}
               </Box>
 
-              <Divider label="Diagnóstico VeriFactu" labelPosition="left" />
+              <Divider label={t("payments.diagnosticoVerifactu")} labelPosition="left" />
               <Box className="nv-card-compact" p="md" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)" }}>
                 <Text size="sm" c="dimmed" mb="sm">
-                  Ejecuta un test para verificar hash, cadena de registros, QR y estructura XML.
-                  Con la opción de envío real, se envía al entorno de pruebas de AEAT (preproducción).
+                  {t("payments.ejecutaUnTestParaVerificar")}
                 </Text>
                 <Group>
                   <Button
@@ -2346,7 +2347,7 @@ export function PaymentsPage() {
                       } catch { /* handled by hook */ }
                     }}
                   >
-                    Test Local
+                    {t("payments.testLocal")}
                   </Button>
                   <Button
                     variant="filled"
@@ -2361,7 +2362,7 @@ export function PaymentsPage() {
                       } catch { /* handled by hook */ }
                     }}
                   >
-                    Enviar a AEAT Pruebas
+                    {t("payments.enviarAAeatPruebas")}
                   </Button>
                 </Group>
 
@@ -2391,7 +2392,7 @@ export function PaymentsPage() {
 
                     {verifactuTestResult.verifactu_hash && (
                       <Box mt="xs" p="xs" style={{ background: "var(--nv-bg)", borderRadius: 8, fontFamily: "monospace", fontSize: 11, wordBreak: "break-all" }}>
-                        <Text size="xs" fw={600} mb={4}>Hash SHA-256:</Text>
+                        <Text size="xs" fw={600} mb={4}>{t("payments.hashSha256")}</Text>
                         {verifactuTestResult.verifactu_hash}
                       </Box>
                     )}
@@ -2403,7 +2404,7 @@ export function PaymentsPage() {
                     )}
                     {(verifactuTestResult as any).aeat_response && (
                       <Box p="xs" style={{ background: "var(--nv-bg)", borderRadius: 8, fontFamily: "monospace", fontSize: 11, wordBreak: "break-all" }}>
-                        <Text size="xs" fw={600} mb={4}>Respuesta AEAT:</Text>
+                        <Text size="xs" fw={600} mb={4}>{t("payments.respuestaAeat")}</Text>
                         <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                           {JSON.stringify((verifactuTestResult as any).aeat_response, null, 2)}
                         </pre>
@@ -2416,8 +2417,8 @@ export function PaymentsPage() {
           </ScrollArea.Autosize>
 
           <Group justify="flex-end" mt="lg">
-            <Button onClick={closeSettingsModal} variant="default">Cancelar</Button>
-            <Button type="submit" loading={updateInvoiceSettings.isPending}>Guardar Configuración</Button>
+            <Button onClick={closeSettingsModal} variant="default">{t("payments.cancelar")}</Button>
+            <Button type="submit" loading={updateInvoiceSettings.isPending}>{t("payments.guardarConfiguracion")}</Button>
           </Group>
         </form>
       </BottomSheet>

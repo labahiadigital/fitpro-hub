@@ -50,6 +50,7 @@ import {
   type CommunityBenefit,
   type CommunityBenefitInput,
 } from "../../services/api";
+import { useTranslation } from "react-i18next";
 
 type FormValues = {
   title: string;
@@ -70,6 +71,7 @@ const EMPTY: FormValues = {
 };
 
 export function CommunityBenefitsPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [editing, setEditing] = useState<CommunityBenefit | null>(null);
@@ -135,7 +137,7 @@ export function CommunityBenefitsPage() {
       qc.invalidateQueries({ queryKey: ["community-benefits"] });
       notifications.show({
         title: editing ? "Beneficio actualizado" : "Beneficio creado",
-        message: "Ya está disponible para tus clientes",
+        message: t("community.yaEstaDisponibleParaTus"),
         color: "green",
       });
       setEditing(null);
@@ -143,7 +145,7 @@ export function CommunityBenefitsPage() {
     },
     onError: (err: any) => {
       notifications.show({
-        title: "No se pudo guardar",
+        title: t("community.noSePudoGuardar"),
         message: err?.response?.data?.detail || "Inténtalo de nuevo.",
         color: "red",
       });
@@ -157,8 +159,8 @@ export function CommunityBenefitsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["community-benefits"] });
       notifications.show({
-        title: "Beneficio eliminado",
-        message: "Ya no aparece a tus clientes.",
+        title: t("community.beneficioEliminado"),
+        message: t("community.yaNoApareceATus"),
         color: "green",
       });
     },
@@ -170,33 +172,33 @@ export function CommunityBenefitsPage() {
     <form onSubmit={handleSubmit}>
       <Stack gap="sm">
         <TextInput
-          label="Título"
-          placeholder="Ej. 10% en MyProtein"
+          label={t("community.titulo")}
+          placeholder={t("community.ej10EnMyprotein")}
           required
           {...form.getInputProps("title")}
         />
         <TextInput
-          label="Marca / Tienda"
-          placeholder="Ej. MyProtein"
+          label={t("community.marcaTienda")}
+          placeholder={t("community.ejMyprotein")}
           {...form.getInputProps("brand")}
         />
         <Textarea
-          label="Descripción (opcional)"
+          label={t("community.descripcionOpcional")}
           minRows={2}
           {...form.getInputProps("description")}
         />
         <TextInput
-          label="URL de compra"
+          label={t("community.urlDeCompra")}
           placeholder="https://..."
           {...form.getInputProps("url")}
         />
         <TextInput
-          label="Código de descuento"
+          label={t("community.codigoDeDescuento")}
           placeholder="TRACKFIZ10"
           {...form.getInputProps("discount_code")}
         />
         <Switch
-          label="Visible para mis clientes"
+          label={t("community.visibleParaMisClientes")}
           checked={form.values.is_active}
           onChange={(e) =>
             form.setFieldValue("is_active", e.currentTarget.checked)
@@ -210,7 +212,7 @@ export function CommunityBenefitsPage() {
               close();
             }}
           >
-            Cancelar
+            {t("community.cancelar")}
           </Button>
           <Button type="submit" loading={upsert.isPending}>
             {editing ? "Guardar cambios" : "Crear beneficio"}
@@ -223,10 +225,10 @@ export function CommunityBenefitsPage() {
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        title="Beneficios"
-        subtitle="Comparte códigos de descuento y URLs con tus clientes"
+        title={t("community.beneficios")}
+        subtitle={t("community.comparteCodigosDeDescuentoY")}
         action={{
-          label: "Nuevo beneficio",
+          label: t("community.nuevoBeneficio"),
           icon: <IconPlus size={16} />,
           onClick: () => {
             setEditing(null);
@@ -243,12 +245,9 @@ export function CommunityBenefitsPage() {
         <Paper p="xl" withBorder radius="md">
           <Stack align="center" gap="sm">
             <IconGift size={32} color="var(--mantine-color-gray-5)" />
-            <Text fw={600}>Aún no has creado ningún beneficio</Text>
+            <Text fw={600}>{t("community.aunNoHasCreadoNingun")}</Text>
             <Text size="sm" c="dimmed" ta="center" maw={420}>
-              Comparte códigos de descuento de marcas con las que colaboras o
-              URLs útiles para tus clientes. Cada beneficio aparecerá en su
-              sección "Beneficios" con un botón para copiar el código y otro
-              para ir a la URL.
+              {t("community.comparteCodigosDeDescuentoDe")}
             </Text>
             <Button
               leftSection={<IconPlus size={16} />}
@@ -257,7 +256,7 @@ export function CommunityBenefitsPage() {
                 open();
               }}
             >
-              Crear el primero
+              {t("community.crearElPrimero")}
             </Button>
           </Stack>
         </Paper>
@@ -283,7 +282,7 @@ export function CommunityBenefitsPage() {
                   </Text>
                 </Stack>
                 <Group gap={4} wrap="nowrap">
-                  <Tooltip label="Editar" withArrow>
+                  <Tooltip label={t("community.editar")} withArrow>
                     <ActionIcon
                       variant="subtle"
                       onClick={() => {
@@ -294,7 +293,7 @@ export function CommunityBenefitsPage() {
                       <IconEdit size={16} />
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label="Eliminar" withArrow>
+                  <Tooltip label={t("community.eliminar")} withArrow>
                     <ActionIcon
                       variant="subtle"
                       color="red"
@@ -356,12 +355,12 @@ export function CommunityBenefitsPage() {
                     rightSection={<IconExternalLink size={14} />}
                     fullWidth
                   >
-                    Abrir URL
+                    {t("community.abrirUrl")}
                   </Button>
                 )}
                 {!b.is_active && (
                   <Badge variant="outline" color="gray" size="xs" mt={4}>
-                    Inactivo
+                    {t("community.inactivo")}
                   </Badge>
                 )}
               </Stack>

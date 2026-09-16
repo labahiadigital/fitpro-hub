@@ -1,5 +1,6 @@
 import { Box, Group, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Detección "positiva" del entorno DEV. Si NINGUNA señal positiva coincide,
@@ -34,12 +35,13 @@ const IS_DEV_ENV = detectDevMode();
  * Se monta en DashboardLayout y AuthLayout, encima del header.
  */
 export function DevModeBanner() {
+  const { t } = useTranslation();
   if (!IS_DEV_ENV) return null;
 
   return (
     <Box
       role="status"
-      aria-label="Entorno de desarrollo"
+      aria-label={t("common.entornoDeDesarrollo")}
       style={{
         position: "sticky",
         top: 0,
@@ -47,7 +49,7 @@ export function DevModeBanner() {
         width: "100%",
         background:
           "repeating-linear-gradient(135deg, #f59e0b 0 14px, #fbbf24 14px 28px)",
-        color: "#1a1a1a",
+        color: t("common.1a1a1a"),
         padding: "6px 16px",
         borderBottom: "2px solid rgba(0, 0, 0, 0.18)",
         boxShadow: "0 2px 8px rgba(245, 158, 11, 0.25)",

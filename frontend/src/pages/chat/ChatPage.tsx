@@ -69,6 +69,7 @@ import { useWhatsAppStatus } from "../../hooks/useWhatsApp";
 import { useAuthStore } from "../../stores/auth";
 import "dayjs/locale/es";
 import { BottomSheet } from "../../components/common/BottomSheet";
+import { useTranslation } from "react-i18next";
 
 dayjs.extend(relativeTime);
 dayjs.locale("es");
@@ -313,6 +314,7 @@ function MessageBubble({
 }
 
 export function ChatPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
@@ -488,7 +490,7 @@ export function ChatPage() {
               ? "Comunícate con tu entrenador"
               : "Comunícate con tus clientes y equipo"
           }
-          title="Chat"
+          title={t("chat.chat")}
         />
       )}
 
@@ -500,8 +502,8 @@ export function ChatPage() {
             setSelectedConversationId(null);
           }}
           data={[
-            { value: "client", label: "Clientes" },
-            { value: "internal", label: "Equipo" },
+            { value: "client", label: t("chat.clientes") },
+            { value: "internal", label: t("chat.equipo") },
           ]}
           mb="md"
           size="sm"
@@ -537,8 +539,8 @@ export function ChatPage() {
                     setSelectedConversationId(null);
                   }}
                   data={[
-                    { value: "client", label: "Clientes" },
-                    { value: "internal", label: "Equipo" },
+                    { value: "client", label: t("chat.clientes") },
+                    { value: "internal", label: t("chat.equipo") },
                   ]}
                   fullWidth
                   mb="xs"
@@ -550,7 +552,7 @@ export function ChatPage() {
                   flex={1}
                   leftSection={<IconSearch size={16} />}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar conversaciones..."
+                  placeholder={t("chat.buscarConversaciones")}
                   radius="xl"
                   styles={{
                     input: {
@@ -584,7 +586,7 @@ export function ChatPage() {
               ) : filteredConversations.length === 0 ? (
                 <Box p="xl" ta="center">
                   <Text c="dimmed" size="sm">
-                    No hay conversaciones
+                    {t("chat.noHayConversaciones")}
                   </Text>
                 </Box>
               ) : (
@@ -666,32 +668,32 @@ export function ChatPage() {
                     <Group gap="xs">
                       {!isMobile && (
                         <>
-                          <Tooltip label="Llamar">
+                          <Tooltip label={t("chat.llamar")}>
                             <ActionIcon
                               color="gray"
                               size="lg"
                               variant="subtle"
-                              onClick={() => notifications.show({ title: "Llamar", message: "Función en desarrollo", color: "blue" })}
+                              onClick={() => notifications.show({ title: t("chat.llamar"), message: t("chat.funcionEnDesarrollo"), color: "blue" })}
                             >
                               <IconPhone size={18} />
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label="Videollamada">
+                          <Tooltip label={t("chat.videollamada")}>
                             <ActionIcon
                               color="gray"
                               size="lg"
                               variant="subtle"
-                              onClick={() => notifications.show({ title: "Videollamada", message: "Función en desarrollo", color: "blue" })}
+                              onClick={() => notifications.show({ title: t("chat.videollamada"), message: t("chat.funcionEnDesarrollo"), color: "blue" })}
                             >
                               <IconVideo size={18} />
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label="Información">
+                          <Tooltip label={t("chat.informacion")}>
                             <ActionIcon
                               color="gray"
                               size="lg"
                               variant="subtle"
-                              onClick={() => notifications.show({ title: "Información", message: "Función en desarrollo", color: "blue" })}
+                              onClick={() => notifications.show({ title: t("chat.informacion"), message: t("chat.funcionEnDesarrollo"), color: "blue" })}
                             >
                               <IconInfoCircle size={18} />
                             </ActionIcon>
@@ -712,19 +714,19 @@ export function ChatPage() {
                               }
                             }}
                           >
-                            Ver perfil del cliente
+                            {t("chat.verPerfilDelCliente")}
                           </Menu.Item>
                           <Menu.Item
-                            onClick={() => notifications.show({ title: "Archivar", message: "Función en desarrollo", color: "blue" })}
+                            onClick={() => notifications.show({ title: t("chat.archivar"), message: t("chat.funcionEnDesarrollo"), color: "blue" })}
                           >
-                            Archivar conversación
+                            {t("chat.archivarConversacion")}
                           </Menu.Item>
                           <Menu.Divider />
                           <Menu.Item
                             color="red"
-                            onClick={() => notifications.show({ title: "Eliminar", message: "Función en desarrollo", color: "red" })}
+                            onClick={() => notifications.show({ title: t("chat.eliminar"), message: t("chat.funcionEnDesarrollo"), color: "red" })}
                           >
-                            Eliminar conversación
+                            {t("chat.eliminarConversacion")}
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
@@ -746,10 +748,10 @@ export function ChatPage() {
                   ) : messages.length === 0 ? (
                     <Box py="xl" ta="center">
                       <Text c="dimmed" size="sm">
-                        No hay mensajes aún
+                        {t("chat.noHayMensajesAun")}
                       </Text>
                       <Text c="dimmed" size="xs">
-                        Envía el primer mensaje para iniciar la conversación
+                        {t("chat.enviaElPrimerMensajePara")}
                       </Text>
                     </Box>
                   ) : (
@@ -800,7 +802,7 @@ export function ChatPage() {
                                   label: (
                                     <Group gap={4}>
                                       <IconMessage size={14} />
-                                      <span>Plataforma</span>
+                                      <span>{t("chat.plataforma")}</span>
                                     </Group>
                                   ),
                                 },
@@ -809,7 +811,7 @@ export function ChatPage() {
                                   label: (
                                     <Group gap={4}>
                                       <IconBrandWhatsapp size={14} />
-                                      <span>WhatsApp</span>
+                                      <span>{t("chat.whatsapp")}</span>
                                     </Group>
                                   ),
                                   disabled: waDisabled,
@@ -837,7 +839,7 @@ export function ChatPage() {
                             variant="subtle"
                             leftSection={<IconSettings size={12} />}
                           >
-                            Conectar WhatsApp
+                            {t("chat.conectarWhatsapp")}
                           </Button>
                         )}
                       </Group>
@@ -867,7 +869,7 @@ export function ChatPage() {
                             size="xs"
                             to="/settings?tab=whatsapp"
                           >
-                            Más info
+                            {t("chat.masInfo")}
                           </Anchor>
                         </Text>
                       </Group>
@@ -904,7 +906,7 @@ export function ChatPage() {
                                 size="sm"
                                 {...props}
                               >
-                                Imagen
+                                {t("chat.imagen")}
                               </Button>
                             )}
                           </FileButton>
@@ -947,7 +949,7 @@ export function ChatPage() {
                               justify="flex-start"
                               size="sm"
                               onClick={() => {
-                                notifications.show({ title: item, message: "Próximamente: compartir alimentos desde el chat", color: "yellow" });
+                                notifications.show({ title: item, message: t("chat.proximamenteCompartirAlimentosDesdeEl"), color: "yellow" });
                                 setAttachMenuOpened(false);
                               }}
                             >
@@ -1017,10 +1019,10 @@ export function ChatPage() {
                   <IconMessages size={40} />
                 </ThemeIcon>
                 <Text c="dimmed" fw={500} size="lg">
-                  Selecciona una conversación
+                  {t("chat.seleccionaUnaConversacion")}
                 </Text>
                 <Text c="dimmed" size="sm">
-                  Elige un chat de la lista para empezar a conversar
+                  {t("chat.eligeUnChatDeLa")}
                 </Text>
                 {!isClientView && (
                   <Text c="dimmed" mt="md" size="xs">
@@ -1033,12 +1035,12 @@ export function ChatPage() {
         )}
       </Box>
 
-      <BottomSheet opened={newChatOpened} onClose={closeNewChat} title="Nueva conversación" radius="lg">
+      <BottomSheet opened={newChatOpened} onClose={closeNewChat} title={t("chat.nuevaConversacion")} radius="lg">
         <Stack>
           <Select
             data={clientOptions}
-            label="Selecciona un cliente"
-            placeholder="Buscar cliente..."
+            label={t("chat.seleccionaUnCliente")}
+            placeholder={t("chat.buscarCliente")}
             searchable
             value={newChatClientId}
             onChange={setNewChatClientId}
@@ -1049,7 +1051,7 @@ export function ChatPage() {
             onClick={handleCreateConversation}
             fullWidth
           >
-            Iniciar conversación
+            {t("chat.iniciarConversacion")}
           </Button>
         </Stack>
       </BottomSheet>
@@ -1058,7 +1060,7 @@ export function ChatPage() {
       <BottomSheet
         opened={internalNewChatOpened}
         onClose={closeInternalNewChat}
-        title="Nueva conversación interna"
+        title={t("chat.nuevaConversacionInterna")}
         radius="lg"
       >
         <Stack>
@@ -1069,8 +1071,8 @@ export function ChatPage() {
               setInternalChatTarget(null);
             }}
             data={[
-              { value: "member", label: "Miembro" },
-              { value: "group", label: "Grupo" },
+              { value: "member", label: t("chat.miembro") },
+              { value: "group", label: t("chat.grupo") },
             ]}
             fullWidth
           />
@@ -1082,8 +1084,8 @@ export function ChatPage() {
                   value: m.user_id || m.id,
                   label: m.full_name || m.name || m.email,
                 }))}
-              label="Selecciona un miembro"
-              placeholder="Buscar miembro..."
+              label={t("chat.seleccionaUnMiembro")}
+              placeholder={t("chat.buscarMiembro")}
               searchable
               value={internalChatTarget}
               onChange={setInternalChatTarget}
@@ -1094,8 +1096,8 @@ export function ChatPage() {
                 value: g.id,
                 label: g.name,
               }))}
-              label="Selecciona un grupo"
-              placeholder="Buscar grupo..."
+              label={t("chat.seleccionaUnGrupo")}
+              placeholder={t("chat.buscarGrupo")}
               searchable
               value={internalChatTarget}
               onChange={setInternalChatTarget}
@@ -1142,7 +1144,7 @@ export function ChatPage() {
             }}
             fullWidth
           >
-            Iniciar conversación
+            {t("chat.iniciarConversacion")}
           </Button>
         </Stack>
       </BottomSheet>

@@ -74,6 +74,7 @@ import {
   useDeleteCustomRole,
   type CustomRole,
 } from "../../hooks/useCustomRoles";
+import { useTranslation } from "react-i18next";
 
 interface PermissionDef {
   resource: string;
@@ -184,7 +185,7 @@ function PermissionsMatrix({
       <Table striped highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th style={{ minWidth: 160 }}>Recurso</Table.Th>
+            <Table.Th style={{ minWidth: 160 }}>{"Recurso"}</Table.Th>
             {["create", "read", "update", "delete", "send"].map((a) => (
               <Table.Th key={a} ta="center" style={{ minWidth: 70 }}>
                 {ACTION_LABELS[a]}
@@ -235,6 +236,7 @@ const GROUP_COLORS = [
 ];
 
 export function TeamPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const tabFromUrl = location.pathname.split("/").pop();
@@ -431,15 +433,15 @@ export function TeamPage() {
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
         action={activeTab === "members" ? {
-          label: "Invitar Miembro",
+          label: t("team.invitarMiembro"),
           icon: <IconUserPlus size={16} />,
           onClick: openInviteModal,
         } : activeTab === "groups" ? {
-          label: "Nuevo Grupo",
+          label: t("team.nuevoGrupo"),
           icon: <IconPlus size={16} />,
           onClick: openGroupModal,
         } : {
-          label: "Nuevo Rol",
+          label: t("team.nuevoRol"),
           icon: <IconPlus size={16} />,
           onClick: () => {
             roleForm.reset();
@@ -447,20 +449,20 @@ export function TeamPage() {
             openRoleModal();
           },
         }}
-        description="Gestiona los miembros de tu equipo, grupos y permisos"
-        title="Miembros y equipo"
+        description={t("team.gestionaLosMiembrosDeTu")}
+        title={t("team.miembrosYEquipo")}
       />
 
       <Tabs value={activeTab} onChange={handleTabChange} mb="xl">
         <Tabs.List mb="lg">
           <Tabs.Tab value="members" leftSection={<IconUsers size={16} />}>
-            Miembros
+            {t("team.miembros")}
           </Tabs.Tab>
           <Tabs.Tab value="groups" leftSection={<IconUsersGroup size={16} />}>
-            Grupos
+            {t("team.grupos")}
           </Tabs.Tab>
           <Tabs.Tab value="roles" leftSection={<IconShield size={16} />}>
-            Roles
+            {t("team.roles")}
           </Tabs.Tab>
         </Tabs.List>
 
@@ -470,7 +472,7 @@ export function TeamPage() {
             <Box className="nv-card" p="lg">
               <Group justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Miembros del Equipo</Text>
+                  <Text className="text-label" mb="xs">{t("team.miembrosDelEquipo")}</Text>
                   <Text className="text-display" style={{ fontSize: "2rem" }}>{totalMembers}</Text>
                   <Text c="dimmed" mt="xs" size="xs">{activeMembers} activos, {totalMembers - activeMembers} pendientes</Text>
                 </Box>
@@ -482,7 +484,7 @@ export function TeamPage() {
             <Box className="nv-card" p="lg">
               <Group justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Sesiones Este Mes</Text>
+                  <Text className="text-label" mb="xs">{t("team.sesionesEsteMes")}</Text>
                   <Text className="text-display" style={{ fontSize: "2rem", color: "var(--nv-success)" }}>
                     {teamMembers.reduce((sum, m) => sum + m.stats.sessionsThisMonth, 0)}
                   </Text>
@@ -495,10 +497,10 @@ export function TeamPage() {
             <Box className="nv-card" p="lg">
               <Group justify="space-between">
                 <Box>
-                  <Text className="text-label" mb="xs">Ingresos del Equipo</Text>
+                  <Text className="text-label" mb="xs">{t("team.ingresosDelEquipo")}</Text>
                   <Text className="text-display" style={{ fontSize: "2rem" }}>€{totalRevenue.toLocaleString()}</Text>
                 </Box>
-                <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" }}>
+                <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: t("team.8b5cf6") }}>
                   <IconCurrencyEuro size={24} />
                 </ThemeIcon>
               </Group>
@@ -536,7 +538,7 @@ export function TeamPage() {
                             {roleLabels[member.role]}
                           </Badge>
                           {member.status === "pending" && (
-                            <Badge color="yellow" size="sm" variant="light">Pendiente</Badge>
+                            <Badge color="yellow" size="sm" variant="light">{t("team.pendiente")}</Badge>
                           )}
                           {member.assigned_clients.length > 0 && (
                             <Badge color="orange" size="sm" variant="light">
@@ -565,15 +567,15 @@ export function TeamPage() {
                       <Group gap="lg" visibleFrom="md">
                         <div style={{ textAlign: "center" }}>
                           <Text fw={700} size="lg">{member.stats.clients}</Text>
-                          <Text c="dimmed" size="xs">Clientes</Text>
+                          <Text c="dimmed" size="xs">{t("team.clientes")}</Text>
                         </div>
                         <div style={{ textAlign: "center" }}>
                           <Text fw={700} size="lg">{member.stats.sessionsThisMonth}</Text>
-                          <Text c="dimmed" size="xs">Sesiones</Text>
+                          <Text c="dimmed" size="xs">{t("team.sesiones")}</Text>
                         </div>
                         <div style={{ textAlign: "center" }}>
                           <Text fw={700} size="lg">€{member.stats.revenue}</Text>
-                          <Text c="dimmed" size="xs">Ingresos</Text>
+                          <Text c="dimmed" size="xs">{t("team.ingresos")}</Text>
                         </div>
                       </Group>
 
@@ -585,11 +587,11 @@ export function TeamPage() {
                         </Menu.Target>
                         <Menu.Dropdown>
                           <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleEditMember(member)}>
-                            Editar Permisos
+                            {t("team.editarPermisos")}
                           </Menu.Item>
                           {member.status === "pending" && (
                             <Menu.Item leftSection={<IconMail size={14} />} onClick={() => resendMutation.mutate({ email: member.email, role: member.role })}>
-                              Reenviar Invitación
+                              {t("team.reenviarInvitacion")}
                             </Menu.Item>
                           )}
                           {member.role !== "owner" && (
@@ -604,7 +606,7 @@ export function TeamPage() {
                                   }
                                 }}
                               >
-                                Eliminar del Equipo
+                                {t("team.eliminarDelEquipo")}
                               </Menu.Item>
                             </>
                           )}
@@ -625,9 +627,9 @@ export function TeamPage() {
           ) : groups.length === 0 ? (
             <Box ta="center" py="xl">
               <IconUsersGroup size={48} style={{ opacity: 0.3 }} />
-              <Text c="dimmed" mt="md">No hay grupos creados todavía</Text>
+              <Text c="dimmed" mt="md">{t("team.noHayGruposCreadosTodavia")}</Text>
               <Button mt="md" className="nv-button" leftSection={<IconPlus size={14} />} onClick={openGroupModal}>
-                Crear Primer Grupo
+                {t("team.crearPrimerGrupo")}
               </Button>
             </Box>
           ) : (
@@ -646,7 +648,7 @@ export function TeamPage() {
                         <Badge variant="light" color="gray" size="sm">{group.members.length} miembros</Badge>
                       </Group>
                       <Group gap="xs">
-                        <Tooltip label="Gestionar miembros">
+                        <Tooltip label={t("team.gestionarMiembros")}>
                           <ActionIcon
                             variant="subtle"
                             color="blue"
@@ -659,7 +661,7 @@ export function TeamPage() {
                             <IconUsers size={16} />
                           </ActionIcon>
                         </Tooltip>
-                        <Tooltip label="Permisos del grupo">
+                        <Tooltip label={t("team.permisosDelGrupo")}>
                           <ActionIcon
                             variant="subtle"
                             color="violet"
@@ -691,7 +693,7 @@ export function TeamPage() {
                                 openEditGroup();
                               }}
                             >
-                              Editar
+                              {t("team.editar")}
                             </Menu.Item>
                             <Menu.Divider />
                             <Menu.Item
@@ -699,7 +701,7 @@ export function TeamPage() {
                               leftSection={<IconTrash size={14} />}
                               onClick={() => deleteGroupMutation.mutate(group.id)}
                             >
-                              Eliminar
+                              {t("team.eliminar")}
                             </Menu.Item>
                           </Menu.Dropdown>
                         </Menu>
@@ -721,7 +723,7 @@ export function TeamPage() {
                         ))}
                       </Group>
                     ) : (
-                      <Text size="xs" c="dimmed">Sin miembros asignados</Text>
+                      <Text size="xs" c="dimmed">{t("team.sinMiembrosAsignados")}</Text>
                     )}
                   </Box>
                 );
@@ -739,10 +741,10 @@ export function TeamPage() {
               <ThemeIcon size="xl" radius="xl" variant="light" color="gray" mb="md">
                 <IconShield size={24} />
               </ThemeIcon>
-              <Text fw={600} size="lg">No hay roles personalizados</Text>
-              <Text c="dimmed" size="sm" mt="xs" mb="md">Crea roles con permisos específicos para asignar a miembros y grupos</Text>
+              <Text fw={600} size="lg">{t("team.noHayRolesPersonalizados")}</Text>
+              <Text c="dimmed" size="sm" mt="xs" mb="md">{t("team.creaRolesConPermisosEspecificos")}</Text>
               <Button leftSection={<IconPlus size={14} />} onClick={() => { roleForm.reset(); setRolePermissions({ ...DEFAULT_COLLABORATOR_PERMISSIONS }); openRoleModal(); }}>
-                Crear primer rol
+                {t("team.crearPrimerRol")}
               </Button>
             </Box>
           ) : (
@@ -755,7 +757,7 @@ export function TeamPage() {
                       <Box>
                         <Group gap="xs" mb={4}>
                           <Text fw={600}>{role.name}</Text>
-                          {role.is_system && <Badge size="xs" variant="light" color="gray">Sistema</Badge>}
+                          {role.is_system && <Badge size="xs" variant="light" color="gray">{t("team.sistema")}</Badge>}
                           <Badge size="xs" variant="light" color={role.color || "blue"}>{permCount} permisos</Badge>
                         </Group>
                         {role.description && <Text size="sm" c="dimmed">{role.description}</Text>}
@@ -777,13 +779,13 @@ export function TeamPage() {
                             editRoleForm.setValues({ name: role.name, description: role.description || "", color: role.color || "blue" });
                             setEditRolePermissions({ ...role.permissions });
                             openEditRole();
-                          }}>Editar</Menu.Item>
+                          }}>{t("team.editar")}</Menu.Item>
                           {!role.is_system && (
                             <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={() => {
                               if (window.confirm(`¿Eliminar el rol "${role.name}"?`)) {
                                 deleteRoleMutation.mutate(role.id);
                               }
-                            }}>Eliminar</Menu.Item>
+                            }}>{t("team.eliminar")}</Menu.Item>
                           )}
                         </Menu.Dropdown>
                       </Menu>
@@ -801,7 +803,7 @@ export function TeamPage() {
         centered
         onClose={closeInviteModal}
         opened={inviteModalOpened}
-        title="Invitar Miembro"
+        title={t("team.invitarMiembro")}
         size="xl"
         styles={{
           header: { borderBottom: "1px solid var(--nv-border)" },
@@ -829,23 +831,23 @@ export function TeamPage() {
         >
           <Stack>
             <TextInput
-              label="Email"
+              label={t("team.email")}
               leftSection={<IconMail size={14} />}
-              placeholder="email@ejemplo.com"
+              placeholder={t("team.emailEjemploCom")}
               required
               {...inviteForm.getInputProps("email")}
             />
             <Select
               data={[
-                { value: "collaborator", label: "Colaborador (acceso estándar)" },
+                { value: "collaborator", label: t("team.colaboradorAccesoEstandar") },
               ]}
-              label="Rol base"
-              description="Los permisos específicos se configuran abajo"
+              label={t("team.rolBase")}
+              description={t("team.losPermisosEspecificosSeConfiguran")}
               {...inviteForm.getInputProps("role")}
             />
             <Select
-              label="Aplicar rol predefinido"
-              placeholder="Seleccionar rol para cargar permisos"
+              label={t("team.aplicarRolPredefinido")}
+              placeholder={t("team.seleccionarRolParaCargarPermisos")}
               data={roleOptions}
               clearable
               onChange={(roleId) => {
@@ -855,25 +857,25 @@ export function TeamPage() {
                 }
               }}
             />
-            <Divider label="Permisos detallados" labelPosition="center" />
+            <Divider label={t("team.permisosDetallados")} labelPosition="center" />
             <PermissionsMatrix
               permissions={inviteForm.values.permissions}
               onChange={(p) => inviteForm.setFieldValue("permissions", p)}
             />
-            <Divider label="Visibilidad de Clientes" labelPosition="center" />
+            <Divider label={t("team.visibilidadDeClientes")} labelPosition="center" />
             <MultiSelect
               data={clientOptions}
-              label="Clientes asignados"
-              description="Selecciona qué clientes podrá ver este miembro. Vacío = todos."
-              placeholder="Todos los clientes"
+              label={t("team.clientesAsignados")}
+              description={t("team.seleccionaQueClientesPodraVer")}
+              placeholder={t("team.todosLosClientes")}
               searchable
               clearable
               {...inviteForm.getInputProps("assigned_clients")}
             />
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeInviteModal} variant="default">Cancelar</Button>
+              <Button onClick={closeInviteModal} variant="default">{t("team.cancelar")}</Button>
               <Button leftSection={<IconMail size={14} />} type="submit" className="nv-button" loading={inviteMutation.isPending}>
-                Enviar Invitación
+                {t("team.enviarInvitacion")}
               </Button>
             </Group>
           </Stack>
@@ -900,22 +902,22 @@ export function TeamPage() {
             {selectedMember.role === "owner" ? (
               <Paper p="md" radius="md" bg="var(--mantine-color-violet-light)">
                 <Text size="sm" c="violet">
-                  El propietario tiene acceso completo a todos los recursos. No se pueden modificar sus permisos.
+                  {t("team.elPropietarioTieneAccesoCompleto")}
                 </Text>
               </Paper>
             ) : (
               <>
-                <Divider label="Permisos detallados" labelPosition="center" />
+                <Divider label={t("team.permisosDetallados")} labelPosition="center" />
                 <PermissionsMatrix
                   permissions={editPermissions}
                   onChange={setEditPermissions}
                 />
-                <Divider label="Visibilidad de Clientes" labelPosition="center" />
+                <Divider label={t("team.visibilidadDeClientes")} labelPosition="center" />
                 <MultiSelect
                   data={clientOptions}
-                  label="Clientes asignados"
-                  description="Selecciona qué clientes podrá ver este miembro. Vacío = todos."
-                  placeholder="Todos los clientes"
+                  label={t("team.clientesAsignados")}
+                  description={t("team.seleccionaQueClientesPodraVer")}
+                  placeholder={t("team.todosLosClientes")}
                   searchable
                   clearable
                   value={editAssignedClients}
@@ -923,13 +925,13 @@ export function TeamPage() {
                 />
               </>
             )}
-            <Divider label="Horario semanal" labelPosition="center" />
+            <Divider label={t("team.horarioSemanal")} labelPosition="center" />
             <WeeklyScheduleGrid
               slots={editScheduleSlots}
               onChange={setEditScheduleSlots}
             />
             <Group justify="flex-end" mt="md">
-              <Button onClick={closeEditModal} variant="default">Cancelar</Button>
+              <Button onClick={closeEditModal} variant="default">{t("team.cancelar")}</Button>
               <Button
                 className="nv-button"
                 loading={updatePermissionsMutation.isPending || updateStaffSchedule.isPending}
@@ -951,7 +953,7 @@ export function TeamPage() {
                   }
                 }}
               >
-                Guardar Cambios
+                {t("team.guardarCambios")}
               </Button>
             </Group>
           </Stack>
@@ -963,7 +965,7 @@ export function TeamPage() {
         centered
         onClose={closeGroupModal}
         opened={groupModalOpened}
-        title="Nuevo Grupo"
+        title={t("team.nuevoGrupo")}
         size="md"
         styles={{
           header: { borderBottom: "1px solid var(--nv-border)" },
@@ -987,14 +989,14 @@ export function TeamPage() {
           })}
         >
           <Stack>
-            <TextInput label="Nombre" placeholder="Ej: Equipo de Nutrición" required {...groupForm.getInputProps("name")} />
-            <Textarea label="Descripción" placeholder="Descripción del grupo (opcional)" autosize minRows={2} {...groupForm.getInputProps("description")} />
-            <Select label="Color" data={GROUP_COLORS} {...groupForm.getInputProps("color")} />
-            <Select label="Rol asignado" placeholder="Seleccionar rol (opcional)" data={roleOptions} clearable {...groupForm.getInputProps("custom_role_id")} />
-            <MultiSelect label="Clientes asignados" placeholder="Seleccionar clientes" data={clientOptions} searchable clearable {...groupForm.getInputProps("assigned_clients")} />
+            <TextInput label={t("team.nombre")} placeholder={t("team.ejEquipoDeNutricion")} required {...groupForm.getInputProps("name")} />
+            <Textarea label={t("team.descripcion")} placeholder={t("team.descripcionDelGrupoOpcional")} autosize minRows={2} {...groupForm.getInputProps("description")} />
+            <Select label={t("team.color")} data={GROUP_COLORS} {...groupForm.getInputProps("color")} />
+            <Select label={t("team.rolAsignado")} placeholder={t("team.seleccionarRolOpcional")} data={roleOptions} clearable {...groupForm.getInputProps("custom_role_id")} />
+            <MultiSelect label={t("team.clientesAsignados")} placeholder={t("team.seleccionarClientes")} data={clientOptions} searchable clearable {...groupForm.getInputProps("assigned_clients")} />
             <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeGroupModal}>Cancelar</Button>
-              <Button type="submit" className="nv-button" loading={createGroupMutation.isPending}>Crear Grupo</Button>
+              <Button variant="default" onClick={closeGroupModal}>{t("team.cancelar")}</Button>
+              <Button type="submit" className="nv-button" loading={createGroupMutation.isPending}>{t("team.crearGrupo")}</Button>
             </Group>
           </Stack>
         </form>
@@ -1024,12 +1026,12 @@ export function TeamPage() {
           })}
         >
           <Stack>
-            <TextInput label="Nombre" required {...editGroupForm.getInputProps("name")} />
-            <Textarea label="Descripción" autosize minRows={2} {...editGroupForm.getInputProps("description")} />
-            <Select label="Color" data={GROUP_COLORS} {...editGroupForm.getInputProps("color")} />
+            <TextInput label={t("team.nombre")} required {...editGroupForm.getInputProps("name")} />
+            <Textarea label={t("team.descripcion")} autosize minRows={2} {...editGroupForm.getInputProps("description")} />
+            <Select label={t("team.color")} data={GROUP_COLORS} {...editGroupForm.getInputProps("color")} />
             <Group justify="flex-end" mt="md">
-              <Button variant="default" onClick={closeEditGroup}>Cancelar</Button>
-              <Button type="submit" className="nv-button" loading={updateGroupMutation.isPending}>Guardar</Button>
+              <Button variant="default" onClick={closeEditGroup}>{t("team.cancelar")}</Button>
+              <Button type="submit" className="nv-button" loading={updateGroupMutation.isPending}>{t("team.guardar")}</Button>
             </Group>
           </Stack>
         </form>
@@ -1049,8 +1051,8 @@ export function TeamPage() {
       >
         <Stack>
           <MultiSelect
-            label="Miembros del grupo"
-            description="Selecciona los miembros que formarán parte de este grupo"
+            label={t("team.miembrosDelGrupo")}
+            description={t("team.seleccionaLosMiembrosQueFormaran")}
             data={memberOptions}
             value={selectedMemberIds}
             onChange={setSelectedMemberIds}
@@ -1058,7 +1060,7 @@ export function TeamPage() {
             clearable
           />
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeGroupMembers}>Cancelar</Button>
+            <Button variant="default" onClick={closeGroupMembers}>{t("team.cancelar")}</Button>
             <Button
               className="nv-button"
               loading={addMembersMutation.isPending}
@@ -1081,7 +1083,7 @@ export function TeamPage() {
                 });
               }}
             >
-              Guardar Miembros
+              {t("team.guardarMiembros")}
             </Button>
           </Group>
         </Stack>
@@ -1101,14 +1103,14 @@ export function TeamPage() {
       >
         <Stack>
           <Text size="sm" c="dimmed">
-            Los permisos del grupo se aplican a todos sus miembros de forma adicional a sus permisos individuales.
+            {t("team.losPermisosDelGrupoSe")}
           </Text>
           <PermissionsMatrix
             permissions={groupPermissions}
             onChange={setGroupPermissions}
           />
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeGroupPerms}>Cancelar</Button>
+            <Button variant="default" onClick={closeGroupPerms}>{t("team.cancelar")}</Button>
             <Button
               className="nv-button"
               loading={updateGroupPermsMutation.isPending}
@@ -1125,7 +1127,7 @@ export function TeamPage() {
                 );
               }}
             >
-              Guardar Permisos
+              {t("team.guardarPermisos")}
             </Button>
           </Group>
         </Stack>
@@ -1135,7 +1137,7 @@ export function TeamPage() {
         centered
         onClose={closeRoleModal}
         opened={roleModalOpened}
-        title="Nuevo Rol"
+        title={t("team.nuevoRol")}
         size="xl"
         styles={{
           header: { borderBottom: "1px solid var(--nv-border)" },
@@ -1149,14 +1151,14 @@ export function TeamPage() {
           );
         })}>
           <Stack>
-            <TextInput label="Nombre del rol" placeholder="Ej: Entrenador Senior" required {...roleForm.getInputProps("name")} />
-            <Textarea label="Descripción" placeholder="Descripción opcional" {...roleForm.getInputProps("description")} />
-            <Select label="Color" data={GROUP_COLORS} {...roleForm.getInputProps("color")} />
-            <Divider label="Permisos" labelPosition="left" />
+            <TextInput label={t("team.nombreDelRol")} placeholder={t("team.ejEntrenadorSenior")} required {...roleForm.getInputProps("name")} />
+            <Textarea label={t("team.descripcion")} placeholder={t("team.descripcionOpcional")} {...roleForm.getInputProps("description")} />
+            <Select label={t("team.color")} data={GROUP_COLORS} {...roleForm.getInputProps("color")} />
+            <Divider label={t("team.permisos")} labelPosition="left" />
             <PermissionsMatrix permissions={rolePermissions} onChange={setRolePermissions} />
             <Group justify="flex-end">
-              <Button variant="default" onClick={closeRoleModal}>Cancelar</Button>
-              <Button type="submit" loading={createRoleMutation.isPending}>Crear Rol</Button>
+              <Button variant="default" onClick={closeRoleModal}>{t("team.cancelar")}</Button>
+              <Button type="submit" loading={createRoleMutation.isPending}>{t("team.crearRol")}</Button>
             </Group>
           </Stack>
         </form>
@@ -1182,14 +1184,14 @@ export function TeamPage() {
           );
         })}>
           <Stack>
-            <TextInput label="Nombre del rol" placeholder="Ej: Entrenador Senior" required {...editRoleForm.getInputProps("name")} />
-            <Textarea label="Descripción" placeholder="Descripción opcional" {...editRoleForm.getInputProps("description")} />
-            <Select label="Color" data={GROUP_COLORS} {...editRoleForm.getInputProps("color")} />
-            <Divider label="Permisos" labelPosition="left" />
+            <TextInput label={t("team.nombreDelRol")} placeholder={t("team.ejEntrenadorSenior")} required {...editRoleForm.getInputProps("name")} />
+            <Textarea label={t("team.descripcion")} placeholder={t("team.descripcionOpcional")} {...editRoleForm.getInputProps("description")} />
+            <Select label={t("team.color")} data={GROUP_COLORS} {...editRoleForm.getInputProps("color")} />
+            <Divider label={t("team.permisos")} labelPosition="left" />
             <PermissionsMatrix permissions={editRolePermissions} onChange={setEditRolePermissions} />
             <Group justify="flex-end">
-              <Button variant="default" onClick={closeEditRole}>Cancelar</Button>
-              <Button type="submit" loading={updateRoleMutation.isPending}>Guardar Cambios</Button>
+              <Button variant="default" onClick={closeEditRole}>{t("team.cancelar")}</Button>
+              <Button type="submit" loading={updateRoleMutation.isPending}>{t("team.guardarCambios")}</Button>
             </Group>
           </Stack>
         </form>
