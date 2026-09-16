@@ -18,6 +18,7 @@ import {
   IconMail,
   IconUser,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import {
@@ -28,17 +29,17 @@ import {
 const REGISTRATION_ENABLED = false;
 
 export function RegisterPage() {
+  const { t } = useTranslation();
   const { register, loading } = useAuth();
 
   if (!REGISTRATION_ENABLED) {
     return (
       <Stack gap="lg" ta="center">
         <Title order={2} c="white" fw={700} style={{ letterSpacing: "-0.02em" }}>
-          Registro temporalmente deshabilitado
+          {t("auth.registrationDisabled")}
         </Title>
         <Text c="gray.5" size="sm">
-          El registro de nuevas cuentas de entrenador estÃ¡ temporalmente deshabilitado.
-          Si ya tienes cuenta, inicia sesiÃ³n.
+          {t("auth.registrationDisabledDesc")}
         </Text>
         <Button
           component={Link}
@@ -52,7 +53,7 @@ export function RegisterPage() {
             borderRadius: 12,
           }}
         >
-          Ir a Iniciar SesiÃ³n
+          {t("auth.goToLogin")}
         </Button>
       </Stack>
     );
@@ -68,14 +69,14 @@ export function RegisterPage() {
       terms: false,
     },
     validate: {
-      full_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email invÃ¡lido"),
+      full_name: (value) => (value.length < 2 ? t("auth.nameRequired") : null),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
       confirm_email: (value, values) =>
-        value !== values.email ? "Los emails no coinciden" : null,
+        value !== values.email ? t("auth.emailsDoNotMatch") : null,
       password: passwordValidator,
       workspace_name: (value) =>
-        value.length < 2 ? "Nombre de tu gimnasio virtual requerido" : null,
-      terms: (value) => (value ? null : "Debes aceptar los tÃ©rminos"),
+        value.length < 2 ? t("auth.workspaceNameRequired") : null,
+      terms: (value) => (value ? null : t("auth.mustAcceptTerms")),
     },
   });
 
@@ -132,36 +133,36 @@ export function RegisterPage() {
             fw={700}
             style={{ letterSpacing: "-0.02em" }}
           >
-            Crea tu cuenta
+            {t("auth.createAccount")}
           </Title>
           <Text c="gray.5" size="sm" mt={4}>
-            Empieza a gestionar tu negocio fitness
+            {t("auth.registerSubtitle")}
           </Text>
         </Box>
 
         <Stack gap="md">
           <TextInput
-            label="Nombre completo"
+            label={t("auth.fullName")}
             leftSection={<IconUser size={18} />}
-            placeholder="Juan GarcÃ­a"
+            placeholder={t("auth.fullNamePlaceholder")}
             required
             styles={inputStyles}
             {...form.getInputProps("full_name")}
           />
 
           <TextInput
-            label="Email"
+            label={t("auth.email")}
             leftSection={<IconMail size={18} />}
-            placeholder="tu@email.com"
+            placeholder={t("auth.emailPlaceholder")}
             required
             styles={inputStyles}
             {...form.getInputProps("email")}
           />
 
           <TextInput
-            label="Confirmar Email"
+            label={t("auth.confirmEmail")}
             leftSection={<IconMail size={18} />}
-            placeholder="Repite tu email"
+            placeholder={t("auth.confirmEmailPlaceholder")}
             required
             styles={inputStyles}
             {...form.getInputProps("confirm_email")}
@@ -169,9 +170,9 @@ export function RegisterPage() {
 
           <Box>
             <PasswordInput
-              label="ContraseÃ±a"
+              label={t("auth.password")}
               leftSection={<IconLock size={18} />}
-              placeholder="MÃ­nimo 8 caracteres"
+              placeholder={t("auth.passwordMinPlaceholder")}
               required
               styles={inputStyles}
               {...form.getInputProps("password")}
@@ -180,9 +181,9 @@ export function RegisterPage() {
           </Box>
 
           <TextInput
-            label="Nombre de tu gimnasio virtual"
+            label={t("auth.workspaceName")}
             leftSection={<IconBuilding size={18} />}
-            placeholder="Mi espacio virtual"
+            placeholder={t("auth.workspaceNamePlaceholder")}
             required
             styles={inputStyles}
             {...form.getInputProps("workspace_name")}
@@ -191,13 +192,13 @@ export function RegisterPage() {
           <Checkbox
             label={
               <Text size="xs" c="gray.5">
-                Acepto los{" "}
+                {t("auth.acceptThe")}{" "}
                 <Anchor size="xs" href="https://trackfiz.com/terms" target="_blank" c="var(--nv-accent)">
-                  tÃ©rminos y condiciones
+                  {t("auth.termsAndConditions")}
                 </Anchor>{" "}
-                y la{" "}
+                {t("auth.andThe")}{" "}
                 <Anchor size="xs" href="https://trackfiz.com/privacy" target="_blank" c="var(--nv-accent)">
-                  polÃ­tica de privacidad
+                  {t("auth.privacyPolicy")}
                 </Anchor>
               </Text>
             }
@@ -231,16 +232,16 @@ export function RegisterPage() {
               marginTop: 8,
             }}
           >
-            Crear Cuenta
+            {t("auth.createAccountButton")}
           </Button>
         </Stack>
 
         <Divider label="o" labelPosition="center" color="rgba(255, 255, 255, 0.1)" />
 
         <Text size="sm" ta="center" c="gray.5">
-          Â¿Ya tienes cuenta?{" "}
+          {t("auth.haveAccount")}{" "}
           <Anchor component={Link} fw={600} to="/login" c="var(--nv-accent)">
-            Inicia sesiÃ³n
+            {t("auth.loginLink")}
           </Anchor>
         </Text>
       </Stack>

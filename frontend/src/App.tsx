@@ -13,11 +13,15 @@ import { useAuthStore, waitForHydration } from "./stores/auth";
 import { authApi, scheduleProactiveRefresh, trySilentRefresh } from "./services/api";
 import { getApiErrorMessage } from "./utils/getApiErrorMessage";
 
+import { useTranslation } from "react-i18next";
+
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
 import "@mantine/charts/styles.css";
 import "dayjs/locale/es";
+import "dayjs/locale/en";
+import "dayjs/locale/it";
 
 function lazyRetry<T extends ComponentType<unknown>>(
   factory: () => Promise<{ default: T }>,
@@ -299,11 +303,17 @@ function TrainerRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function DatesProviderWithI18n({ children }: { children: React.ReactNode }) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language?.substring(0, 2) || "es";
+  return <DatesProvider settings={{ locale }}>{children}</DatesProvider>;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WorkspaceThemeProvider>
-        <DatesProvider settings={{ locale: "es" }}>
+        <DatesProviderWithI18n>
           <ModalsProvider>
           <Notifications position="top-right" />
           <ErrorBoundary>
@@ -429,7 +439,7 @@ export default function App() {
           </BrowserRouter>
           </ErrorBoundary>
           </ModalsProvider>
-        </DatesProvider>
+        </DatesProviderWithI18n>
       </WorkspaceThemeProvider>
     </QueryClientProvider>
   );

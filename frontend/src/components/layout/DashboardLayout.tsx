@@ -61,6 +61,7 @@ import {
   IconSquarePlus,
 } from "@tabler/icons-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore, type WorkspaceWithRole } from "../../stores/auth";
 import { clientPortalApi, messagesApi } from "../../services/api";
@@ -107,80 +108,80 @@ function isNavGroup(entry: NavEntry): entry is NavGroupDef {
   return "children" in entry;
 }
 
-const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number): NavEntry[] => [
-  { icon: <IconLayoutDashboard size={20} />, label: "Panel Principal", to: "/dashboard" },
+const ALL_TRAINER_NAV_ENTRIES = (unreadCount: number, t: (key: string) => string): NavEntry[] => [
+  { icon: <IconLayoutDashboard size={20} />, label: t("nav.dashboard"), to: "/dashboard" },
   {
     icon: <IconCalendarEvent size={20} />,
-    label: "Calendario y Tareas",
+    label: t("nav.calendarAndTasks"),
     children: [
-      { icon: <IconCalendarEvent size={18} />, label: "Calendario", to: "/calendar", requiredResource: "calendar" },
-      { icon: <IconChecklist size={18} />, label: "Tareas", to: "/tasks", requiredResource: "tasks" },
+      { icon: <IconCalendarEvent size={18} />, label: t("nav.calendar"), to: "/calendar", requiredResource: "calendar" },
+      { icon: <IconChecklist size={18} />, label: t("nav.tasks"), to: "/tasks", requiredResource: "tasks" },
     ],
   },
-  { icon: <IconUsers size={20} />, label: "Clientes", to: "/clients", requiredResource: "clients" },
+  { icon: <IconUsers size={20} />, label: t("nav.clients"), to: "/clients", requiredResource: "clients" },
   {
     icon: <IconReceipt size={20} />,
-    label: "Facturación y Reportes",
+    label: t("nav.billingAndReports"),
     children: [
-      { icon: <IconReceipt size={18} />, label: "Facturación", to: "/billing", requiredResource: "billing" },
-      { icon: <IconChartBar size={18} />, label: "Reportes", to: "/reports", requiredResource: "reports" },
-      { icon: <IconBuildingStore size={18} />, label: "Proveedores", to: "/suppliers", requiredResource: "billing" },
+      { icon: <IconReceipt size={18} />, label: t("nav.billing"), to: "/billing", requiredResource: "billing" },
+      { icon: <IconChartBar size={18} />, label: t("nav.reports"), to: "/reports", requiredResource: "reports" },
+      { icon: <IconBuildingStore size={18} />, label: t("nav.suppliers"), to: "/suppliers", requiredResource: "billing" },
     ],
   },
   {
     icon: <IconMessages size={20} />,
-    label: "Comunicación",
+    label: t("nav.communication"),
     children: [
-      { icon: <IconMessage size={18} />, label: "Chat", to: "/chat", badge: unreadCount, requiredResource: "chat" },
-      { icon: <IconMail size={18} />, label: "Email", to: "/email-templates", requiredResource: "chat" },
+      { icon: <IconMessage size={18} />, label: t("nav.chat"), to: "/chat", badge: unreadCount, requiredResource: "chat" },
+      { icon: <IconMail size={18} />, label: t("nav.emailTemplates"), to: "/email-templates", requiredResource: "chat" },
     ],
   },
-  { icon: <IconBarbell size={20} />, label: "Entrenamientos", to: "/workouts", requiredResource: "workouts" },
-  { icon: <IconSalad size={20} />, label: "Nutrición", to: "/nutrition", requiredResource: "nutrition" },
+  { icon: <IconBarbell size={20} />, label: t("nav.workouts"), to: "/workouts", requiredResource: "workouts" },
+  { icon: <IconSalad size={20} />, label: t("nav.nutrition"), to: "/nutrition", requiredResource: "nutrition" },
   {
     icon: <IconPackage size={20} />,
-    label: "Catálogo y Stock",
+    label: t("nav.catalogAndStock"),
     children: [
-      { icon: <IconPackage size={18} />, label: "Catálogo", to: "/catalog", requiredResource: "catalog" },
-      { icon: <IconBox size={18} />, label: "Stock", to: "/stock", requiredResource: "catalog" },
+      { icon: <IconPackage size={18} />, label: t("nav.catalog"), to: "/catalog", requiredResource: "catalog" },
+      { icon: <IconBox size={18} />, label: t("nav.stock"), to: "/stock", requiredResource: "catalog" },
     ],
   },
   {
     icon: <IconBuilding size={20} />,
-    label: "Boxes y Maquinaria",
+    label: t("nav.boxesAndMachinery"),
     children: [
-      { icon: <IconBuilding size={18} />, label: "Boxes", to: "/boxes", requiredResource: "catalog" },
-      { icon: <IconTool size={18} />, label: "Maquinaria", to: "/machines", requiredResource: "catalog" },
+      { icon: <IconBuilding size={18} />, label: t("nav.boxes"), to: "/boxes", requiredResource: "catalog" },
+      { icon: <IconTool size={18} />, label: t("nav.machinery"), to: "/machines", requiredResource: "catalog" },
     ],
   },
   {
     icon: <IconForms size={20} />,
-    label: "Formularios y Docs",
+    label: t("nav.formsAndDocs"),
     children: [
-      { icon: <IconForms size={18} />, label: "Formularios", to: "/forms", requiredResource: "forms" },
-      { icon: <IconFileText size={18} />, label: "Documentos", to: "/documents", requiredResource: "documents" },
+      { icon: <IconForms size={18} />, label: t("nav.forms"), to: "/forms", requiredResource: "forms" },
+      { icon: <IconFileText size={18} />, label: t("nav.documents"), to: "/documents", requiredResource: "documents" },
     ],
   },
   {
     icon: <IconUsersGroup size={20} />,
-    label: "Miembros y equipo",
+    label: t("nav.membersAndTeam"),
     children: [
-      { icon: <IconUsers size={18} />, label: "Miembros", to: "/team/members", requiredResource: "team" },
-      { icon: <IconUsersGroup size={18} />, label: "Grupos", to: "/team/groups", requiredResource: "team" },
-      { icon: <IconShield size={18} />, label: "Roles", to: "/team/roles", requiredResource: "team" },
-      { icon: <IconClock size={18} />, label: "Control Horario", to: "/time-clock", requiredResource: "team" },
+      { icon: <IconUsers size={18} />, label: t("nav.members"), to: "/team/members", requiredResource: "team" },
+      { icon: <IconUsersGroup size={18} />, label: t("nav.groups"), to: "/team/groups", requiredResource: "team" },
+      { icon: <IconShield size={18} />, label: t("nav.roles"), to: "/team/roles", requiredResource: "team" },
+      { icon: <IconClock size={18} />, label: t("nav.timeClock"), to: "/time-clock", requiredResource: "team" },
     ],
   },
   {
     icon: <IconTrophy size={20} />,
-    label: "Comunidad",
+    label: t("nav.community"),
     children: [
-      { icon: <IconGift size={18} />, label: "Beneficios", to: "/community/benefits", requiredResource: "community" },
-      { icon: <IconTrophy size={18} />, label: "Gamificación", to: "/community", requiredResource: "community" },
+      { icon: <IconGift size={18} />, label: t("nav.benefits"), to: "/community/benefits", requiredResource: "community" },
+      { icon: <IconTrophy size={18} />, label: t("nav.gamification"), to: "/community", requiredResource: "community" },
     ],
   },
-  { icon: <IconBook size={20} />, label: "Academia / LMS", to: "/lms", requiredResource: "lms" },
-  { icon: <IconVideo size={20} />, label: "Clases en Vivo", to: "/live-classes", requiredResource: "live_classes" },
+  { icon: <IconBook size={20} />, label: t("nav.academy"), to: "/lms", requiredResource: "lms" },
+  { icon: <IconVideo size={20} />, label: t("nav.liveClasses"), to: "/live-classes", requiredResource: "live_classes" },
 ];
 
 function hasPermission(requiredResource: string | undefined, permissions?: Record<string, string[]>): boolean {
@@ -209,32 +210,30 @@ function filterNavEntries(entries: NavEntry[], permissions?: Record<string, stri
 
 const getClientNavItems = (
   unreadCount: number,
-  // Antes era ``pendingRequiredForms`` y solo contábamos los obligatorios.
-  // Ahora pintamos TODOS los pendientes, porque si el entrenador envía un
-  // cuestionario opcional el cliente también tiene que verlo en el badge.
-  pendingFormsTotal = 0
+  pendingFormsTotal = 0,
+  t: (key: string) => string,
 ): NavItemProps[] => [
-  { icon: <IconLayoutDashboard size={20} />, label: "Mi Panel", to: "/dashboard" },
-  { icon: <IconBarbell size={20} />, label: "Mis Entrenamientos", to: "/my-workouts" },
-  { icon: <IconSalad size={20} />, label: "Mi Nutrición", to: "/my-nutrition" },
-  { icon: <IconChartLine size={20} />, label: "Mi Progreso", to: "/my-progress" },
-  { icon: <IconCalendarEvent size={20} />, label: "Mis Citas", to: "/my-calendar" },
-  { icon: <IconMessage size={20} />, label: "Mensajes", to: "/my-messages", badge: unreadCount },
-  { icon: <IconFileText size={20} />, label: "Mis Documentos", to: "/my-documents" },
+  { icon: <IconLayoutDashboard size={20} />, label: t("nav.myPanel"), to: "/dashboard" },
+  { icon: <IconBarbell size={20} />, label: t("nav.myWorkouts"), to: "/my-workouts" },
+  { icon: <IconSalad size={20} />, label: t("nav.myNutrition"), to: "/my-nutrition" },
+  { icon: <IconChartLine size={20} />, label: t("nav.myProgress"), to: "/my-progress" },
+  { icon: <IconCalendarEvent size={20} />, label: t("nav.myAppointments"), to: "/my-calendar" },
+  { icon: <IconMessage size={20} />, label: t("nav.myMessages"), to: "/my-messages", badge: unreadCount },
+  { icon: <IconFileText size={20} />, label: t("nav.myDocuments"), to: "/my-documents" },
   {
     icon: <IconForms size={20} />,
-    label: "Formularios",
+    label: t("nav.myForms"),
     to: "/my-forms",
     badge: pendingFormsTotal,
   },
-  { icon: <IconGift size={20} />, label: "Beneficios", to: "/my-community" },
-  { icon: <IconBook size={20} />, label: "Academia", to: "/lms" },
+  { icon: <IconGift size={20} />, label: t("nav.myBenefits"), to: "/my-community" },
+  { icon: <IconBook size={20} />, label: t("nav.academy"), to: "/lms" },
 ];
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Propietario",
-  collaborator: "Colaborador",
-  client: "Cliente",
+const ROLE_LABEL_KEYS: Record<string, string> = {
+  owner: "roles.owner",
+  collaborator: "roles.collaborator",
+  client: "roles.client",
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -376,6 +375,7 @@ function NavGroupItem({ icon, label, children, onNavigate, isOpen, onToggle }: N
 }
 
 function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation();
   const { user, currentWorkspace } = useAuthStore();
   const { logout, switchWorkspace, loading } = useAuth();
   const [opened, { toggle, close }] = useDisclosure(false);
@@ -483,7 +483,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
         {/* Workspace section */}
         <Box px="xs" py="xs">
           <Text c="dimmed" size="10px" fw={700} tt="uppercase" px="xs" pb={4} style={{ letterSpacing: "0.1em" }}>
-            {workspaces.length > 1 ? "Tus espacios" : "Espacio actual"}
+            {workspaces.length > 1 ? t("workspace.yourSpaces") : t("workspace.currentSpace")}
           </Text>
 
           <Stack gap={2}>
@@ -546,7 +546,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
                         radius="sm"
                         style={{ textTransform: "capitalize" }}
                       >
-                        {ROLE_LABELS[ws.role] || ws.role}
+                        {t(ROLE_LABEL_KEYS[ws.role] || ws.role)}
                       </Badge>
                     </Box>
                     {isActive && !loading && (
@@ -590,7 +590,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
             <Group gap="sm">
               <IconLogout size={16} color="rgba(255,255,255,0.4)" />
               <Text c="rgba(255,255,255,0.5)" size="sm" fw={500}>
-                Cerrar sesión
+                {t("auth.logout")}
               </Text>
             </Group>
           </UnstyledButton>
@@ -602,6 +602,7 @@ function WorkspaceSwitcher({ onNavigate }: { onNavigate?: () => void }) {
 
 // Sidebar Component
 function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
+  const { t } = useTranslation();
   const { user, currentWorkspace } = useAuthStore();
   const location = useLocation();
   const isClient = user?.role === 'client';
@@ -636,9 +637,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
     : 0;
 
   const navEntries = isClient
-    ? getClientNavItems(unreadCount, pendingTotal)
-    : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount), user?.permissions);
-  const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
+    ? getClientNavItems(unreadCount, pendingTotal, t)
+    : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount, t), user?.permissions);
+  const menuTitle = isClient ? t("nav.mySpace") : t("nav.mainMenu");
 
   return (
     <Box
@@ -746,53 +747,56 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   );
 }
 
-const ROUTE_LABELS: Record<string, string> = {
-  "/dashboard": "Panel Principal",
-  "/clients": "Clientes",
-  "/calendar": "Calendario",
-  "/workouts": "Entrenamientos",
-  "/nutrition": "Nutrición",
-  "/supplements": "Suplementos",
-  "/forms": "Formularios",
-  "/catalog": "Catálogo",
-  "/stock": "Stock",
-  "/suppliers": "Proveedores",
-  "/boxes": "Boxes",
-  "/machines": "Maquinaria",
-  "/billing": "Facturación",
-  "/community": "Gamificación",
-  "/community/benefits": "Beneficios",
-  "/my-community": "Beneficios",
-  "/documents": "Documentos",
-  "/team": "Equipo",
-  "/team/members": "Miembros",
-  "/team/groups": "Grupos",
-  "/team/roles": "Roles",
-  "/time-clock": "Control Horario",
-  "/reports": "Reportes",
-  "/settings": "Configuración",
-  "/live-classes": "Clases en Vivo",
-  "/chat": "Chat",
-  "/email-templates": "Email",
-  "/lms": "Academia",
-  "/tasks": "Tareas",
-  "/my-workouts": "Mis Entrenamientos",
-  "/my-nutrition": "Mi Nutrición",
-  "/my-progress": "Mi Progreso",
-  "/my-calendar": "Mis Citas",
-  "/my-documents": "Mis Documentos",
-  "/my-profile": "Mi Perfil",
-  "/my-messages": "Mensajes",
-  "/my-forms": "Formularios",
+const ROUTE_LABEL_KEYS: Record<string, string> = {
+  "/dashboard": "nav.dashboard",
+  "/clients": "nav.clients",
+  "/calendar": "nav.calendar",
+  "/workouts": "nav.workouts",
+  "/nutrition": "nav.nutrition",
+  "/supplements": "nav.supplements",
+  "/forms": "nav.forms",
+  "/catalog": "nav.catalog",
+  "/stock": "nav.stock",
+  "/suppliers": "nav.suppliers",
+  "/boxes": "nav.boxes",
+  "/machines": "nav.machinery",
+  "/billing": "nav.billing",
+  "/community": "nav.gamification",
+  "/community/benefits": "nav.benefits",
+  "/my-community": "nav.myBenefits",
+  "/documents": "nav.documents",
+  "/team": "nav.members",
+  "/team/members": "nav.members",
+  "/team/groups": "nav.groups",
+  "/team/roles": "nav.roles",
+  "/time-clock": "nav.timeClock",
+  "/reports": "nav.reports",
+  "/settings": "nav.settings",
+  "/live-classes": "nav.liveClasses",
+  "/chat": "nav.chat",
+  "/email-templates": "nav.emailTemplates",
+  "/lms": "nav.academy",
+  "/tasks": "nav.tasks",
+  "/my-workouts": "nav.myWorkouts",
+  "/my-nutrition": "nav.myNutrition",
+  "/my-progress": "nav.myProgress",
+  "/my-calendar": "nav.myAppointments",
+  "/my-documents": "nav.myDocuments",
+  "/my-profile": "nav.myProfile",
+  "/my-messages": "nav.myMessages",
+  "/my-forms": "nav.myForms",
 };
 
 function useBreadcrumb(): string {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const base = "/" + pathname.split("/").filter(Boolean)[0];
-  return ROUTE_LABELS[base] || "App";
+  const key = ROUTE_LABEL_KEYS[base];
+  return key ? t(key) : t("common.app");
 }
 
 export function DashboardLayout() {
+  const { t } = useTranslation();
   const [opened, { toggle, close }] = useDisclosure();
   const [paletteOpen, { open: openPalette, close: closePalette }] = useDisclosure(false);
   const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false);
@@ -905,10 +909,10 @@ export function DashboardLayout() {
         >
           {/* Mobile Menu Toggle & Search */}
           <Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Abrir menú de navegación" />
+            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label={t("common.openNavMenu")} />
             
             <Group gap="xs" visibleFrom="xs">
-              <Text c="dimmed" size="sm" fw={500}>App</Text>
+              <Text c="dimmed" size="sm" fw={500}>{t("common.app")}</Text>
               <Text c="dimmed" size="sm">/</Text>
               <Text size="sm" fw={600}>{breadcrumbLabel}</Text>
             </Group>
@@ -919,7 +923,7 @@ export function DashboardLayout() {
             mx="auto"
             visibleFrom="sm"
             onClick={openPalette}
-            aria-label="Abrir paleta de comandos (⌘K)"
+            aria-label={t("common.openCommandPalette")}
             style={{
               background: "white",
               padding: "8px 16px",
@@ -934,7 +938,7 @@ export function DashboardLayout() {
             }}
           >
             <IconSearch size={16} color="var(--nv-text-tertiary)" />
-            <Text c="dimmed" size="sm" style={{ flex: 1 }}>Buscar...</Text>
+            <Text c="dimmed" size="sm" style={{ flex: 1 }}>{t("common.search")}</Text>
             <Box style={{ background: "#F8F9FA", padding: "2px 6px", borderRadius: "6px", border: "1px solid #E9ECEF" }}>
               <Group gap={2}>
                 <IconCommand size={10} color="gray" />
@@ -946,7 +950,7 @@ export function DashboardLayout() {
           {/* Actions */}
           <Group gap="md">
             {canInstall && (
-              <Tooltip label="Instalar app" withArrow>
+              <Tooltip label={t("common.installApp")} withArrow>
                 <UnstyledButton aria-label="Instalar aplicación" onClick={installPWA}>
                   <IconDownload size={22} color="var(--nv-text-secondary)" stroke={1.5} />
                 </UnstyledButton>

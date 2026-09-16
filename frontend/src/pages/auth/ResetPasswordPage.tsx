@@ -17,6 +17,7 @@ import {
   IconLock,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { authApi } from "../../services/api";
 import {
@@ -25,6 +26,7 @@ import {
 } from "../../components/common/PasswordRulesIndicator";
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -40,15 +42,15 @@ export function ResetPasswordPage() {
     validate: {
       password: passwordValidator,
       confirmPassword: (value, values) =>
-        value === values.password ? null : "Las contraseÃ±as no coinciden",
+        value === values.password ? null : t("auth.passwordsDoNotMatch"),
     },
   });
 
   const handleSubmit = async (values: typeof form.values) => {
     if (!token) {
       notifications.show({
-        title: "Error",
-        message: "Token de recuperaciÃ³n no vÃ¡lido",
+        title: t("common.error"),
+        message: t("auth.invalidToken"),
         color: "red",
       });
       return;
@@ -59,15 +61,15 @@ export function ResetPasswordPage() {
       await authApi.resetPassword(token, values.password);
       setSuccess(true);
       notifications.show({
-        title: "Â¡ContraseÃ±a actualizada!",
-        message: "Ya puedes iniciar sesiÃ³n con tu nueva contraseÃ±a.",
+        title: t("auth.passwordUpdated"),
+        message: t("auth.passwordUpdatedDesc"),
         color: "green",
       });
     } catch (error) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
-      const message = err.response?.data?.detail || "Error al restablecer la contraseÃ±a";
+      const message = err.response?.data?.detail || t("auth.resetPasswordError");
       notifications.show({
-        title: "Error",
+        title: t("common.error"),
         message,
         color: "red",
       });
@@ -143,12 +145,11 @@ export function ResetPasswordPage() {
             </Title>
 
             <Text c="white" size="lg" fw={500} ta="center">
-              Enlace no vÃ¡lido
+              {t("auth.invalidLink")}
             </Text>
 
             <Text c="gray.5" size="sm" ta="center">
-              El enlace de recuperaciÃ³n no es vÃ¡lido o ha expirado.
-              Solicita uno nuevo.
+              {t("auth.invalidLinkDesc")}
             </Text>
 
             <Anchor
@@ -157,7 +158,7 @@ export function ResetPasswordPage() {
               c="var(--nv-accent)"
               size="sm"
             >
-              Solicitar nuevo enlace
+              {t("auth.requestNewLink")}
             </Anchor>
           </Stack>
         </Paper>
@@ -212,12 +213,11 @@ export function ResetPasswordPage() {
             </ThemeIcon>
 
             <Text c="white" size="lg" fw={500} ta="center">
-              Â¡ContraseÃ±a actualizada!
+              {t("auth.passwordUpdated")}
             </Text>
 
             <Text c="gray.5" size="sm" ta="center">
-              Tu contraseÃ±a ha sido actualizada correctamente.
-              Ya puedes iniciar sesiÃ³n con tu nueva contraseÃ±a.
+              {t("auth.passwordUpdatedFullDesc")}
             </Text>
 
             <Button
@@ -232,7 +232,7 @@ export function ResetPasswordPage() {
                 borderRadius: 12,
               }}
             >
-              Ir a Iniciar SesiÃ³n
+              {t("auth.goToLogin")}
             </Button>
           </Stack>
         </Paper>
@@ -279,17 +279,17 @@ export function ResetPasswordPage() {
                 Trackfiz
               </Title>
               <Title order={2} c="white" fw={700}>
-                Nueva contraseÃ±a
+                {t("auth.newPassword")}
               </Title>
               <Text c="gray.5" size="sm" mt={8}>
-                Introduce tu nueva contraseÃ±a
+                {t("auth.enterNewPassword")}
               </Text>
             </Box>
 
             <Box>
               <PasswordInput
-                label="Nueva contraseÃ±a"
-                placeholder="MÃ­nimo 8 caracteres"
+                label={t("auth.newPassword")}
+                placeholder={t("auth.passwordMinPlaceholder")}
                 required
                 leftSection={<IconLock size={18} />}
                 styles={inputStyles}
@@ -299,8 +299,8 @@ export function ResetPasswordPage() {
             </Box>
 
             <PasswordInput
-              label="Confirmar contraseÃ±a"
-              placeholder="Repite tu contraseÃ±a"
+              label={t("auth.confirmPassword")}
+              placeholder={t("auth.confirmPasswordPlaceholder")}
               required
               leftSection={<IconLock size={18} />}
               styles={inputStyles}
@@ -322,7 +322,7 @@ export function ResetPasswordPage() {
                 boxShadow: "0 4px 16px rgba(212, 175, 55, 0.25)",
               }}
             >
-              Actualizar contraseÃ±a
+              {t("auth.updatePassword")}
             </Button>
 
             <Anchor
@@ -334,7 +334,7 @@ export function ResetPasswordPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
             >
               <IconArrowLeft size={16} />
-              Volver al inicio de sesiÃ³n
+              {t("auth.backToLogin")}
             </Anchor>
           </Stack>
         </form>

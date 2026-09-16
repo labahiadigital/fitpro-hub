@@ -23,6 +23,7 @@ import {
 } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Column<T> {
   key: string;
@@ -74,7 +75,7 @@ export function DataTable<T extends { id: string }>({
   loading = false,
   selectable = false,
   searchable = false,
-  searchPlaceholder = "Buscar...",
+  searchPlaceholder,
   onSearch,
   onRowClick,
   onEdit,
@@ -84,8 +85,9 @@ export function DataTable<T extends { id: string }>({
   getDeleteIcon,
   extraActions,
   pagination,
-  emptyMessage = "No hay datos disponibles",
+  emptyMessage,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 48em)");
   const columns = isMobile
     ? allColumns.filter((c) => !c.hideOnMobile)
@@ -148,7 +150,7 @@ export function DataTable<T extends { id: string }>({
             <TextInput
               leftSection={<IconSearch size={16} color="var(--nv-slate)" />}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={searchPlaceholder || t("common.search")}
               value={searchQuery}
               radius="md"
               size="sm"
@@ -161,12 +163,12 @@ export function DataTable<T extends { id: string }>({
                 },
               }}
             />
-            <Tooltip label="Filtros avanzados">
+            <Tooltip label={t("common.advancedFilters")}>
               <ActionIcon 
                 variant="default" 
                 size="md" 
                 radius="md"
-                aria-label="Filtros avanzados"
+                aria-label={t("common.advancedFilters")}
                 style={{ 
                   borderColor: "var(--border-subtle)",
                   color: "var(--nv-slate)"
@@ -255,7 +257,7 @@ export function DataTable<T extends { id: string }>({
                 >
                   <Box py="xl" ta="center">
                     <Text c="dimmed" size="sm" fw={500}>
-                      {emptyMessage}
+                      {emptyMessage || t("common.noDataAvailable")}
                     </Text>
                   </Box>
                 </Table.Td>
@@ -312,7 +314,7 @@ export function DataTable<T extends { id: string }>({
                             color="gray" 
                             variant="subtle"
                             radius="xl"
-                            aria-label="Acciones"
+                            aria-label={t("common.actions")}
                           >
                             <IconDotsVertical size={18} />
                           </ActionIcon>
@@ -323,7 +325,7 @@ export function DataTable<T extends { id: string }>({
                               leftSection={<IconEye size={16} />}
                               onClick={() => onView(item)}
                             >
-                              Ver detalles
+                              {t("common.viewDetails")}
                             </Menu.Item>
                           )}
                           {onEdit && (
@@ -331,7 +333,7 @@ export function DataTable<T extends { id: string }>({
                               leftSection={<IconEdit size={16} />}
                               onClick={() => onEdit(item)}
                             >
-                              Editar
+                              {t("common.edit")}
                             </Menu.Item>
                           )}
                           {extraActions
@@ -354,7 +356,7 @@ export function DataTable<T extends { id: string }>({
                                 leftSection={getDeleteIcon ? getDeleteIcon(item) : <IconTrash size={16} />}
                                 onClick={() => onDelete(item)}
                               >
-                                {getDeleteLabel ? getDeleteLabel(item) : "Eliminar"}
+                                {getDeleteLabel ? getDeleteLabel(item) : t("common.delete")}
                               </Menu.Item>
                             </>
                           )}
@@ -381,7 +383,7 @@ export function DataTable<T extends { id: string }>({
           }}
         >
           <Text size="xs" c="dimmed" className="hide-mobile">
-            {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} de {pagination.total}
+            {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} {t("common.of")} {pagination.total}
           </Text>
           <Pagination
             onChange={pagination.onChange}
@@ -446,17 +448,28 @@ export function ClientCell({
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { color: string; bg: string; label: string }> = {
-    active: { color: "var(--nv-success)", bg: "var(--nv-success-bg)", label: "Activo" },
-    inactive: { color: "var(--nv-slate)", bg: "rgba(100, 116, 139, 0.1)", label: "Inactivo" },
-    pending: { color: "var(--nv-warning)", bg: "var(--nv-warning-bg)", label: "Pendiente" },
-    confirmed: { color: "var(--nv-primary)", bg: "var(--nv-primary-glow)", label: "Confirmado" },
-    cancelled: { color: "var(--nv-error)", bg: "var(--nv-error-bg)", label: "Cancelado" },
-    completed: { color: "var(--nv-success)", bg: "var(--nv-success-bg)", label: "Completado" },
-    no_show: { color: "var(--nv-warning)", bg: "var(--nv-warning-bg)", label: "No asistió" },
+  const { t } = useTranslation();
+  const STATUS_KEY_MAP: Record<string, string> = {
+    active: "status.active",
+    inactive: "status.inactive",
+    pending: "status.pending",
+    confirmed: "status.confirmed",
+    cancelled: "status.cancelled",
+    completed: "status.completed",
+    no_show: "status.noShow",
+  };
+  const config: Record<string, { color: string; bg: string }> = {
+    active: { color: "var(--nv-success)", bg: "var(--nv-success-bg)" },
+    inactive: { color: "var(--nv-slate)", bg: "rgba(100, 116, 139, 0.1)" },
+    pending: { color: "var(--nv-warning)", bg: "var(--nv-warning-bg)" },
+    confirmed: { color: "var(--nv-primary)", bg: "var(--nv-primary-glow)" },
+    cancelled: { color: "var(--nv-error)", bg: "var(--nv-error-bg)" },
+    completed: { color: "var(--nv-success)", bg: "var(--nv-success-bg)" },
+    no_show: { color: "var(--nv-warning)", bg: "var(--nv-warning-bg)" },
   };
 
-  const cfg = config[status] || { color: "var(--nv-slate)", bg: "rgba(100, 116, 139, 0.1)", label: status };
+  const cfgStyle = config[status] || { color: "var(--nv-slate)", bg: "rgba(100, 116, 139, 0.1)" };
+  const label = STATUS_KEY_MAP[status] ? t(STATUS_KEY_MAP[status]) : status;
 
   return (
     <Badge 
@@ -465,8 +478,8 @@ export function StatusBadge({ status }: { status: string }) {
       radius="md"
       styles={{
         root: {
-          backgroundColor: cfg.bg,
-          color: cfg.color,
+          backgroundColor: cfgStyle.bg,
+          color: cfgStyle.color,
           fontWeight: 600,
           textTransform: "capitalize",
           padding: "3px 8px",
@@ -479,7 +492,7 @@ export function StatusBadge({ status }: { status: string }) {
         },
       }}
     >
-      {cfg.label}
+      {label}
     </Badge>
   );
 }

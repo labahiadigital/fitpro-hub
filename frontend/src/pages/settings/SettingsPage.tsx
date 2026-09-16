@@ -62,8 +62,10 @@ import {
   IconWorld,
 } from "@tabler/icons-react";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { openDangerConfirm } from "../../utils/confirmModal";
 import { useSearchParams } from "react-router-dom";
+import { changeLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from "../../i18n";
 
 const AutomationsPage = lazy(() => import("../automations/AutomationsPage").then(m => ({ default: m.AutomationsPage })));
 const SuggestionsPage = lazy(() => import("../suggestions/SuggestionsPage").then(m => ({ default: m.SuggestionsPage })));
@@ -109,28 +111,19 @@ import {
   workspacesApi,
 } from "../../services/api";
 
-const SETTINGS_TAB_SELECT_DATA = [
-  { value: "workspace", label: "Workspace" },
-  { value: "profile", label: "Mi Perfil" },
-  { value: "team", label: "Equipo" },
-  { value: "branding", label: "Marca" },
-  { value: "notifications", label: "Notificaciones" },
-  { value: "booking", label: "Reservas" },
-  { value: "integrations", label: "Integraciones" },
-  { value: "billing", label: "Facturación" },
-  { value: "security", label: "Seguridad" },
-  { value: "automations", label: "Automatizaciones" },
-  { value: "suggestions", label: "Sugerencias" },
-];
+const TAB_KEYS = [
+  "workspace", "profile", "team", "branding", "notifications",
+  "booking", "integrations", "billing", "security", "automations", "suggestions",
+] as const;
 
-const DAY_LABELS: Record<string, string> = {
-  monday: "Lunes",
-  tuesday: "Martes",
-  wednesday: "Miércoles",
-  thursday: "Jueves",
-  friday: "Viernes",
-  saturday: "Sábado",
-  sunday: "Domingo",
+const DAY_KEYS_I18N: Record<string, string> = {
+  monday: "days.monday",
+  tuesday: "days.tuesday",
+  wednesday: "days.wednesday",
+  thursday: "days.thursday",
+  friday: "days.friday",
+  saturday: "days.saturday",
+  sunday: "days.sunday",
 };
 
 const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -147,6 +140,7 @@ function WeeklyScheduleSection({
   workspaceId?: string;
   setWorkspace: (ws: any) => void;
 }) {
+  const { t } = useTranslation();
   const initialSchedule = (wsSettings.weekly_schedule || {}) as WeeklySchedule;
   const [schedule, setSchedule] = useState<WeeklySchedule>(() => {
     const s: WeeklySchedule = {};
@@ -165,10 +159,10 @@ function WeeklyScheduleSection({
     },
     onSuccess: (res) => {
       setWorkspace(res.data);
-      notifications.show({ title: "Horario guardado", message: "Tu disponibilidad semanal ha sido actualizada", color: "green" });
+      notifications.show({ title: t("settings.booking.schedule.saved"), message: t("settings.booking.schedule.savedMsg"), color: "green" });
     },
     onError: () => {
-      notifications.show({ title: "Error", message: "No se pudo guardar el horario", color: "red" });
+      notifications.show({ title: t("common.error"), message: t("common.errorSaving"), color: "red" });
     },
   });
 
@@ -197,23 +191,23 @@ function WeeklyScheduleSection({
   return (
     <Box className="nv-card" p="lg" mt="lg">
       <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-        Horario de Disponibilidad
+        {t("settings.booking.schedule.title")}
       </Text>
       <Text c="dimmed" size="sm" mb="md">
-        Configura los horarios en los que tus clientes pueden solicitar citas.
+        {t("settings.booking.schedule.description")}
       </Text>
       <Stack gap="sm">
         {DAY_KEYS.map((day) => (
           <Paper key={day} p="sm" withBorder radius="md">
             <Group justify="space-between" mb={schedule[day]?.length ? "xs" : 0}>
-              <Text fw={500} size="sm" w={100}>{DAY_LABELS[day]}</Text>
+              <Text fw={500} size="sm" w={100}>{t(DAY_KEYS_I18N[day])}</Text>
               {(schedule[day] || []).length === 0 ? (
                 <Group gap="xs">
-                  <Badge variant="light" color="gray" size="sm">No disponible</Badge>
-                  <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>Añadir</Button>
+                  <Badge variant="light" color="gray" size="sm">{t("common.notAvailable")}</Badge>
+                  <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>{t("common.add")}</Button>
                 </Group>
               ) : (
-                <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>+ Rango</Button>
+                <Button variant="subtle" size="xs" onClick={() => addSlot(day)}>{t("common.addRange")}</Button>
               )}
             </Group>
             {(schedule[day] || []).map((slot, idx) => (
@@ -225,7 +219,7 @@ function WeeklyScheduleSection({
                   placeholder="09:00"
                   w={80}
                 />
-                <Text size="xs">a</Text>
+                <Text size="xs">{t("common.to")}</Text>
                 <TextInput
                   size="xs"
                   value={slot.end}
@@ -248,7 +242,7 @@ function WeeklyScheduleSection({
           style={{ backgroundColor: "var(--nv-primary)" }}
           radius="xl"
         >
-          Guardar Horario
+          {t("settings.booking.schedule.saveBtn")}
         </Button>
       </Group>
     </Box>
@@ -256,6 +250,7 @@ function WeeklyScheduleSection({
 }
 
 export function SettingsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -477,7 +472,7 @@ export function SettingsPage() {
     onSuccess: (res) => {
       const ws = res.data;
       setWorkspace(ws);
-      notifications.show({ title: "Workspace actualizado", message: "Cambios guardados", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("settings.workspace.updated"), message: t("common.savedSuccessfully"), color: "green", icon: <IconCheck size={16} /> });
     },
     onError: (error: unknown) => {
       const detail =
@@ -500,6 +495,15 @@ export function SettingsPage() {
     },
   });
 
+  // Sync language from user preferences on mount
+  useEffect(() => {
+    const userLang = userPrefs.language as string | undefined;
+    if (userLang && ["es", "en", "it"].includes(userLang)) {
+      changeLanguage(userLang as SupportedLanguage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userPrefs.language]);
+
   const profileUpdateMutation = useMutation({
     mutationFn: (values: typeof profileForm.values) => {
       if (!user?.id) throw new Error("No user");
@@ -515,7 +519,7 @@ export function SettingsPage() {
     },
     onSuccess: (res) => {
       setUser(res.data);
-      notifications.show({ title: "Perfil actualizado", message: "Cambios guardados", color: "green", icon: <IconCheck size={16} /> });
+      notifications.show({ title: t("settings.profile.updated"), message: t("common.savedSuccessfully"), color: "green", icon: <IconCheck size={16} /> });
     },
     onError: () => {
       notifications.show({ title: "Error", message: "No se pudo guardar", color: "red" });
@@ -769,14 +773,14 @@ export function SettingsPage() {
   return (
     <Container py="xl" fluid px={{ base: "md", sm: "lg", lg: "xl", xl: 48 }}>
       <PageHeader
-        description="Gestiona tu workspace, perfil y preferencias"
-        title="Configuración"
+        description={t("settings.description")}
+        title={t("settings.title")}
       />
 
       {isMobile && (
         <Select
-          data={SETTINGS_TAB_SELECT_DATA}
-          label="Sección"
+          data={TAB_KEYS.map(k => ({ value: k, label: t(`settings.tabs.${k}`) }))}
+          label={t("settings.section")}
           mb="md"
           onChange={(v) => setActiveTab(v)}
           value={activeTab ?? undefined}
@@ -790,12 +794,12 @@ export function SettingsPage() {
       >
         {!isMobile && (
           <Tabs.List mr="xl" w={220} style={{ borderRight: "1px solid var(--nv-border)" }}>
-            <Tabs.Tab leftSection={<IconBuilding size={16} />} value="workspace" style={{ fontWeight: 500 }}>Workspace</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconUser size={16} />} value="profile" style={{ fontWeight: 500 }}>Mi Perfil</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconUsers size={16} />} value="team" style={{ fontWeight: 500 }}>Equipo</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconPalette size={16} />} value="branding" style={{ fontWeight: 500 }}>Marca</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications" style={{ fontWeight: 500 }}>Notificaciones</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCalendar size={16} />} value="booking" style={{ fontWeight: 500 }}>Reservas</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBuilding size={16} />} value="workspace" style={{ fontWeight: 500 }}>{t("settings.tabs.workspace")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUser size={16} />} value="profile" style={{ fontWeight: 500 }}>{t("settings.tabs.profile")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconUsers size={16} />} value="team" style={{ fontWeight: 500 }}>{t("settings.tabs.team")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconPalette size={16} />} value="branding" style={{ fontWeight: 500 }}>{t("settings.tabs.branding")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBell size={16} />} value="notifications" style={{ fontWeight: 500 }}>{t("settings.tabs.notifications")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCalendar size={16} />} value="booking" style={{ fontWeight: 500 }}>{t("settings.tabs.booking")}</Tabs.Tab>
             <Tabs.Tab
               leftSection={<IconLink size={16} />}
               value="integrations"
@@ -806,13 +810,13 @@ export function SettingsPage() {
                 ) : null
               }
             >
-              Integraciones
+              {t("settings.tabs.integrations")}
             </Tabs.Tab>
-            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing" style={{ fontWeight: 500 }}>Facturación</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconShield size={16} />} value="security" style={{ fontWeight: 500 }}>Seguridad</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconCreditCard size={16} />} value="billing" style={{ fontWeight: 500 }}>{t("settings.tabs.billing")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconShield size={16} />} value="security" style={{ fontWeight: 500 }}>{t("settings.tabs.security")}</Tabs.Tab>
             <Divider my="xs" color="var(--nv-border)" />
-            <Tabs.Tab leftSection={<IconRobot size={16} />} value="automations" style={{ fontWeight: 500 }}>Automatizaciones</Tabs.Tab>
-            <Tabs.Tab leftSection={<IconBulb size={16} />} value="suggestions" style={{ fontWeight: 500 }}>Sugerencias</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconRobot size={16} />} value="automations" style={{ fontWeight: 500 }}>{t("settings.tabs.automations")}</Tabs.Tab>
+            <Tabs.Tab leftSection={<IconBulb size={16} />} value="suggestions" style={{ fontWeight: 500 }}>{t("settings.tabs.suggestions")}</Tabs.Tab>
           </Tabs.List>
         )}
 
@@ -821,7 +825,7 @@ export function SettingsPage() {
           <Tabs.Panel value="workspace">
             <Box className="nv-card" p="lg">
               <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>
-                Información del Workspace
+                {t("settings.workspace.title")}
               </Text>
 
               <Group mb="xl">
@@ -830,7 +834,7 @@ export function SettingsPage() {
                 </Avatar>
                 <Box>
                   <Text fw={500}>{currentWorkspace?.name || "Workspace"}</Text>
-                  <Text c="dimmed" size="sm">Foto del workspace (aparecerá en PDFs)</Text>
+                  <Text c="dimmed" size="sm">{t("settings.workspace.photo")}</Text>
                   <FileButton
                     accept="image/jpeg,image/png,image/webp"
                     onChange={async (file) => {
@@ -846,7 +850,7 @@ export function SettingsPage() {
                   >
                     {(props) => (
                       <Button {...props} leftSection={<IconUpload size={14} />} mt="xs" size="xs" variant="light">
-                        Cambiar foto
+                        {t("common.changePhoto")}
                       </Button>
                     )}
                   </FileButton>
@@ -858,7 +862,7 @@ export function SettingsPage() {
               <form onSubmit={workspaceForm.onSubmit((v) => workspaceUpdateMutation.mutate(v))}>
                 <Stack gap="md">
                   <Group grow>
-                    <TextInput label="Nombre del negocio" placeholder="Mi Centro Fitness" {...workspaceForm.getInputProps("name")} />
+                    <TextInput label={t("settings.workspace.businessName")} placeholder={t("settings.workspace.businessNamePlaceholder")} {...workspaceForm.getInputProps("name")} />
                     <TextInput
                       label="Slug (URL pública)"
                       description={`Alta de clientes: ${getPublicAppBaseUrl({ domain: currentWorkspace?.domain, slug: workspaceForm.values.slug })}/onboarding/${workspaceForm.values.slug || "tu-slug"}`}
@@ -946,7 +950,7 @@ export function SettingsPage() {
 
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" loading={workspaceUpdateMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
-                      Guardar Cambios
+                      {t("common.saveChanges")}
                     </Button>
                   </Group>
                 </Stack>
@@ -957,7 +961,7 @@ export function SettingsPage() {
           {/* ==================== PROFILE ==================== */}
           <Tabs.Panel value="profile">
             <Box className="nv-card" p="lg">
-              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>Mi Perfil</Text>
+              <Text fw={600} mb="lg" size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.profile.title")}</Text>
               <Group mb="xl">
                 <Avatar color="primary" radius="xl" size={80} src={user?.avatar_url}>
                   {user?.full_name?.charAt(0) || "U"}
@@ -984,31 +988,34 @@ export function SettingsPage() {
 
               <form onSubmit={profileForm.onSubmit((v) => profileUpdateMutation.mutate(v))}>
                 <Stack gap="md">
-                  <TextInput label="Nombre completo" placeholder="Tu nombre" {...profileForm.getInputProps("full_name")} />
-                  <TextInput disabled label="Email" {...profileForm.getInputProps("email")} />
-                  <TextInput label="Teléfono" placeholder="+34 600 000 000" {...profileForm.getInputProps("phone")} />
+                  <TextInput label={t("settings.profile.fullName")} placeholder={t("settings.profile.fullNamePlaceholder")} {...profileForm.getInputProps("full_name")} />
+                  <TextInput disabled label={t("settings.profile.emailLabel")} {...profileForm.getInputProps("email")} />
+                  <TextInput label={t("common.phone")} placeholder={t("settings.profile.phonePlaceholder")} {...profileForm.getInputProps("phone")} />
                   <Group grow>
                     <Select
                       data={[
-                        { value: "Europe/Madrid", label: "Madrid (GMT+1)" },
-                        { value: "Europe/London", label: "Londres (GMT)" },
-                        { value: "America/New_York", label: "Nueva York (GMT-5)" },
+                        { value: "Europe/Madrid", label: t("settings.profile.timezones.madrid") },
+                        { value: "Europe/London", label: t("settings.profile.timezones.london") },
+                        { value: "America/New_York", label: t("settings.profile.timezones.newYork") },
                       ]}
-                      label="Zona horaria"
+                      label={t("settings.profile.timezone")}
                       {...profileForm.getInputProps("timezone")}
                     />
                     <Select
-                      data={[
-                        { value: "es", label: "Español" },
-                        { value: "en", label: "English" },
-                      ]}
-                      label="Idioma"
+                      data={SUPPORTED_LANGUAGES.map(l => ({ value: l.value, label: l.label }))}
+                      label={t("settings.profile.language")}
                       {...profileForm.getInputProps("language")}
+                      onChange={(value) => {
+                        profileForm.setFieldValue("language", value || "es");
+                        if (value) {
+                          changeLanguage(value as SupportedLanguage);
+                        }
+                      }}
                     />
                   </Group>
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" loading={profileUpdateMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
-                      Guardar Cambios
+                      {t("common.saveChanges")}
                     </Button>
                   </Group>
                 </Stack>
@@ -1037,11 +1044,11 @@ export function SettingsPage() {
             <Box className="nv-card" p="lg">
               <Group justify="space-between" mb="lg">
                 <Box>
-                  <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>Equipo</Text>
-                  <Text c="dimmed" size="sm">Gestiona los miembros de tu equipo</Text>
+                  <Text fw={600} size="lg" style={{ color: "var(--nv-text-primary)" }}>{t("settings.team.title")}</Text>
+                  <Text c="dimmed" size="sm">{t("settings.team.description")}</Text>
                 </Box>
                 <Button leftSection={<IconPlus size={16} />} radius="xl" onClick={openInviteModal} style={{ backgroundColor: "var(--nv-primary)" }}>
-                  Invitar Miembro
+                  {t("settings.team.inviteMember")}
                 </Button>
               </Group>
 
@@ -1049,9 +1056,9 @@ export function SettingsPage() {
                 <Table style={{ minWidth: 500 }}>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Miembro</Table.Th>
-                      <Table.Th>Rol</Table.Th>
-                      <Table.Th>Estado</Table.Th>
+                      <Table.Th>{t("common.member")}</Table.Th>
+                      <Table.Th>{t("common.role")}</Table.Th>
+                      <Table.Th>{t("common.status")}</Table.Th>
                       <Table.Th style={{ width: 60 }} />
                     </Table.Tr>
                   </Table.Thead>
@@ -1069,12 +1076,12 @@ export function SettingsPage() {
                         </Table.Td>
                         <Table.Td>
                           <Badge color={member.role === "owner" ? "primary" : "blue"} variant="light">
-                            {member.role === "owner" ? "Propietario" : "Colaborador"}
+                            {t(`settings.team.roles.${member.role}`)}
                           </Badge>
                         </Table.Td>
                         <Table.Td>
                           <Badge color={member.status === "active" ? "green" : "gray"} variant="light">
-                            {member.status === "active" ? "Activo" : "Inactivo"}
+                            {member.status === "active" ? t("common.active") : t("common.inactive")}
                           </Badge>
                         </Table.Td>
                         <Table.Td>
@@ -1084,9 +1091,9 @@ export function SettingsPage() {
                                 <ActionIcon color="gray" variant="subtle"><IconDotsVertical size={16} /></ActionIcon>
                               </Menu.Target>
                               <Menu.Dropdown>
-                                <Menu.Item leftSection={<IconEdit size={14} />}>Editar permisos</Menu.Item>
+                                <Menu.Item leftSection={<IconEdit size={14} />}>{t("settings.team.editPermissions")}</Menu.Item>
                                 <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={() => setDeleteConfirmMember(member.id)}>
-                                  Eliminar
+                                  {t("common.delete")}
                                 </Menu.Item>
                               </Menu.Dropdown>
                             </Menu>
@@ -1221,7 +1228,7 @@ export function SettingsPage() {
 
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" loading={brandingUpdateMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
-                      Guardar Cambios
+                      {t("common.saveChanges")}
                     </Button>
                   </Group>
                 </form>
@@ -1440,7 +1447,7 @@ export function SettingsPage() {
 
                   <Group justify="flex-end">
                     <Button type="submit" radius="xl" loading={bookingUpdateMutation.isPending} style={{ backgroundColor: "var(--nv-primary)" }}>
-                      Guardar Cambios
+                      {t("common.saveChanges")}
                     </Button>
                   </Group>
                 </Stack>
@@ -1789,34 +1796,34 @@ export function SettingsPage() {
       {/* ==================== MODALS ==================== */}
 
       {/* Invite team member */}
-      <BottomSheet opened={inviteModalOpen} onClose={closeInviteModal} title="Invitar Miembro" radius="lg">
+      <BottomSheet opened={inviteModalOpen} onClose={closeInviteModal} title={t("settings.team.inviteMember")} radius="lg">
         <form onSubmit={inviteForm.onSubmit((v) => inviteMutation.mutate(v))}>
           <Stack gap="md">
-            <TextInput label="Email" placeholder="email@ejemplo.com" {...inviteForm.getInputProps("email")} />
+            <TextInput label={t("common.email")} placeholder={t("settings.team.emailPlaceholder")} {...inviteForm.getInputProps("email")} />
             <Select
-              label="Rol"
+              label={t("settings.team.roleLabel")}
               data={[
-                { value: "collaborator", label: "Colaborador" },
-                { value: "client", label: "Cliente" },
+                { value: "collaborator", label: t("settings.team.roles.collaborator") },
+                { value: "client", label: t("settings.team.roles.client") },
               ]}
               {...inviteForm.getInputProps("role")}
             />
             <Group justify="flex-end">
-              <Button variant="default" onClick={closeInviteModal} radius="xl">Cancelar</Button>
-              <Button type="submit" loading={inviteMutation.isPending} radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>Enviar Invitación</Button>
+              <Button variant="default" onClick={closeInviteModal} radius="xl">{t("common.cancel")}</Button>
+              <Button type="submit" loading={inviteMutation.isPending} radius="xl" style={{ backgroundColor: "var(--nv-primary)" }}>{t("common.sendInvitation")}</Button>
             </Group>
           </Stack>
         </form>
       </BottomSheet>
 
       {/* Remove team member confirmation */}
-      <BottomSheet opened={!!deleteConfirmMember} onClose={() => setDeleteConfirmMember(null)} title="Eliminar Miembro" size="sm" radius="lg" centered>
+      <BottomSheet opened={!!deleteConfirmMember} onClose={() => setDeleteConfirmMember(null)} title={t("settings.team.removeMember")} size="sm" radius="lg" centered>
         <Stack gap="md">
-          <Text size="sm">¿Estás seguro de que quieres eliminar este miembro del equipo?</Text>
+          <Text size="sm">{t("settings.team.removeConfirm")}</Text>
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setDeleteConfirmMember(null)} radius="xl">Cancelar</Button>
+            <Button variant="default" onClick={() => setDeleteConfirmMember(null)} radius="xl">{t("common.cancel")}</Button>
             <Button color="red" loading={removeMemberMutation.isPending} onClick={() => deleteConfirmMember && removeMemberMutation.mutate(deleteConfirmMember)} radius="xl">
-              Eliminar
+              {t("common.delete")}
             </Button>
           </Group>
         </Stack>

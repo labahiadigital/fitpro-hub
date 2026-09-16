@@ -20,6 +20,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure, useLocalStorage, useMediaQuery } from "@mantine/hooks";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   IconArrowRight,
   IconCalendarEvent,
@@ -79,15 +80,25 @@ const DEFAULT_CONFIG: DashboardConfig = {
   ],
 };
 
-const WIDGET_DEFINITIONS = [
-  { id: "alerts", label: "Avisos / Alertas", icon: IconMessage },
-  { id: "quick-actions", label: "Acciones Rápidas", icon: IconPlus },
-  { id: "upcoming-sessions", label: "Próximas sesiones", icon: IconCalendarEvent },
-  { id: "recent-clients", label: "Clientes recientes", icon: IconUsers },
-  { id: "client-progress", label: "Progreso de clientes", icon: IconTarget },
-  { id: "weekly-activity", label: "Actividad semanal", icon: IconChartLine },
-  { id: "client-metrics", label: "Métricas financieras", icon: IconTrendingUp },
-];
+const WIDGET_LABEL_KEYS: Record<string, string> = {
+  alerts: "dashboard.widgets.alerts",
+  "quick-actions": "dashboard.widgets.quickActions",
+  "upcoming-sessions": "dashboard.widgets.upcomingSessions",
+  "recent-clients": "dashboard.widgets.recentClients",
+  "client-progress": "dashboard.widgets.clientProgress",
+  "weekly-activity": "dashboard.widgets.weeklyActivity",
+  "client-metrics": "dashboard.widgets.financialMetrics",
+};
+
+const WIDGET_ICONS: Record<string, React.ElementType> = {
+  alerts: IconMessage,
+  "quick-actions": IconPlus,
+  "upcoming-sessions": IconCalendarEvent,
+  "recent-clients": IconUsers,
+  "client-progress": IconTarget,
+  "weekly-activity": IconChartLine,
+  "client-metrics": IconTrendingUp,
+};
 
 // --- KPI Card orientado a clientes ---
 function ClientKPI({
@@ -160,7 +171,7 @@ function ClientKPI({
           mt="sm"
         >
           {trend >= 0 ? "+" : ""}
-          {trend}% vs mes anterior
+          {trend}%
         </Badge>
       )}
     </Box>
@@ -169,6 +180,7 @@ function ClientKPI({
 
 // --- Lista de clientes recientes ---
 function RecentClientsWidget() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: clients, isLoading } = useRecentClients(5);
 
@@ -179,7 +191,7 @@ function RecentClientsWidget() {
           <Group gap="xs">
             <IconUsers size={18} color="var(--nv-primary)" />
             <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-              Clientes Activos
+              {t("dashboard.activeClients")}
             </Text>
           </Group>
         </Group>
@@ -205,9 +217,9 @@ function RecentClientsWidget() {
     name: client.full_name || `${client.first_name} ${client.last_name}`,
     lastSession: client.updated_at
       ? new Date(client.updated_at).toLocaleDateString()
-      : "Sin actividad",
+      : t("dashboard.noActivity"),
     progress: client.progress ?? null,
-    goal: client.goals || "Sin objetivo definido",
+    goal: client.goals || t("dashboard.noGoalDefined"),
     avatar: (client.first_name || "?")[0].toUpperCase(),
   }));
 
@@ -217,7 +229,7 @@ function RecentClientsWidget() {
         <Group gap="xs">
           <IconUsers size={18} color="var(--nv-primary)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            Clientes Activos
+            {t("dashboard.activeClients")}
           </Text>
         </Group>
         <UnstyledButton
@@ -226,7 +238,7 @@ function RecentClientsWidget() {
         >
           <Group gap={4}>
             <Text size="xs" fw={600}>
-              Ver todos
+              {t("common.viewAll")}
             </Text>
             <IconArrowRight size={14} />
           </Group>
@@ -235,7 +247,7 @@ function RecentClientsWidget() {
 
       {recentClients.length === 0 ? (
         <Text c="dimmed" ta="center" py="xl">
-          No hay clientes registrados aún
+          {t("dashboard.noClientsYet")}
         </Text>
       ) : (
         <Stack gap="sm">
@@ -320,6 +332,7 @@ function RecentClientsWidget() {
 
 // --- Resumen de progreso de clientes ---
 function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; total_clients: number } }) {
+  const { t } = useTranslation();
   const activeClients = kpis?.active_clients || 0;
   const totalClients = kpis?.total_clients || 1;
   const activePercentage = Math.round((activeClients / totalClients) * 100) || 0;
@@ -330,7 +343,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group gap="xs">
           <IconTarget size={18} color="var(--nv-accent)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            Progreso General
+            {t("dashboard.overallProgress")}
           </Text>
         </Group>
       </Group>
@@ -347,7 +360,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
                 {activePercentage}%
               </Text>
               <Text size="xs" c="dimmed">
-                Activos
+                {t("dashboard.active")}
               </Text>
             </Box>
           }
@@ -358,7 +371,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group justify="space-between">
           <Group gap="xs">
             <Box w={10} h={10} bg="green" style={{ borderRadius: "50%" }} />
-            <Text size="xs">Clientes activos</Text>
+            <Text size="xs">{t("dashboard.activeClients")}</Text>
           </Group>
           <Text size="xs" fw={600}>
             {activeClients}
@@ -367,7 +380,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
         <Group justify="space-between">
           <Group gap="xs">
             <Box w={10} h={10} bg="gray" style={{ borderRadius: "50%" }} />
-            <Text size="xs">Clientes inactivos</Text>
+            <Text size="xs">{t("dashboard.inactiveClients")}</Text>
           </Group>
           <Text size="xs" fw={600}>
             {totalClients - activeClients}
@@ -382,7 +395,7 @@ function ClientProgressSummary({ kpis }: { kpis?: { active_clients: number; tota
 function TrainingStats({
   kpis,
   loading,
-}: {
+}: { 
   kpis?: {
     upcoming_sessions: number;
     completed_sessions_month: number;
@@ -391,15 +404,16 @@ function TrainingStats({
   };
   loading?: boolean;
 }) {
+  const { t } = useTranslation();
   const stats = [
     {
-      label: "Sesiones pendientes",
+      label: t("dashboard.pendingSessions"),
       value: kpis?.upcoming_sessions?.toString() || "0",
       icon: IconCalendarEvent,
       color: "blue",
     },
     {
-      label: "Sesiones este mes",
+      label: t("dashboard.sessionsThisMonth"),
       value: kpis?.completed_sessions_month?.toString() || "0",
       icon: IconClock,
       color: "grape",
@@ -411,7 +425,7 @@ function TrainingStats({
       color: "orange",
     },
     {
-      label: "Ingresos mes",
+      label: t("dashboard.monthRevenue"),
       value: `€${formatDecimal(kpis?.revenue_this_month || 0, 0)}`,
       icon: IconTarget,
       color: "green",
@@ -463,7 +477,7 @@ function TrainingStats({
 
 // --- Widget de actividad semanal ---
 function WeeklyActivityWidget() {
-  // TODO: Implementar endpoint para actividad semanal
+  const { t } = useTranslation();
   const days = ["L", "M", "X", "J", "V", "S", "D"];
   const activity = [0, 0, 0, 0, 0, 0, 0]; // Sin datos hardcodeados
 
@@ -495,11 +509,11 @@ function WeeklyActivityWidget() {
         <Group gap="xs">
           <IconChartLine size={18} color="var(--nv-primary)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            Actividad Semanal
+            {t("dashboard.weeklyActivity")}
           </Text>
         </Group>
         <Badge variant="light" color="blue" size="sm">
-          Esta semana
+          {t("dashboard.thisWeek")}
         </Badge>
       </Group>
 
@@ -540,7 +554,7 @@ function WeeklyActivityWidget() {
       >
         <Box>
           <Text size="xs" c="dimmed">
-            Total sesiones
+            {t("dashboard.totalSessions")}
           </Text>
           <Text fw={700} style={{ color: "var(--nv-dark)" }}>
             {totalSessions}
@@ -548,7 +562,7 @@ function WeeklyActivityWidget() {
         </Box>
         <Box ta="right">
           <Text size="xs" c="dimmed">
-            Promedio diario
+            {t("dashboard.dailyAverage")}
           </Text>
           <Text fw={700} style={{ color: "var(--nv-dark)" }}>
             {formatDecimal(avgPerDay, 1)}
@@ -562,7 +576,7 @@ function WeeklyActivityWidget() {
 // --- Widget de métricas de clientes ---
 function ClientMetricsWidget({
   kpis,
-}: {
+}: { 
   kpis?: {
     mrr: number;
     arpa: number;
@@ -571,6 +585,7 @@ function ClientMetricsWidget({
     revenue_last_month: number;
   };
 }) {
+  const { t } = useTranslation();
   const revenueChange = kpis?.revenue_last_month
     ? (
         ((kpis.revenue_this_month - kpis.revenue_last_month) /
@@ -581,22 +596,22 @@ function ClientMetricsWidget({
 
   const metrics = [
     {
-      label: "Ingresos recurrentes (MRR)",
+      label: t("dashboard.mrrLabel"),
       value: `€${formatDecimal(kpis?.mrr || 0, 2)}`,
       icon: IconWeight,
       trend: `${Number(revenueChange) >= 0 ? "+" : ""}${revenueChange}%`,
     },
     {
-      label: "Ingreso por cliente (ARPA)",
+      label: t("dashboard.arpaLabel"),
       value: `€${formatDecimal(kpis?.arpa || 0, 2)}`,
       icon: IconRun,
       trend: "N/A",
     },
     {
-      label: "Tasa de abandono",
+      label: t("dashboard.churnRate"),
       value: `${formatDecimal(kpis?.churn_rate || 0, 1)}%`,
       icon: IconHeartbeat,
-      trend: `${(kpis?.churn_rate || 0) <= 5 ? "Excelente" : "Mejorar"}`,
+      trend: `${(kpis?.churn_rate || 0) <= 5 ? t("dashboard.excellent") : t("dashboard.needsImprovement")}`,
     },
   ];
 
@@ -606,11 +621,11 @@ function ClientMetricsWidget({
         <Group gap="xs">
           <IconChartLine size={18} color="var(--nv-success)" />
           <Text fw={700} size="sm" style={{ color: "var(--nv-dark)" }}>
-            Métricas Financieras
+            {t("dashboard.financialMetrics")}
           </Text>
         </Group>
         <Text size="xs" c="dimmed">
-          Este mes
+          {t("dashboard.thisMonth")}
         </Text>
       </Group>
 
@@ -660,6 +675,7 @@ function ClientMetricsWidget({
 
 // --- Clock Widget for Dashboard ---
 function ClockWidget() {
+  const { t, i18n } = useTranslation();
   const { data: status } = useClockStatus();
   const clockIn = useClockIn();
   const clockOut = useClockOut();
@@ -683,12 +699,12 @@ function ClockWidget() {
           </ThemeIcon>
           <Box style={{ minWidth: 0 }}>
             <Text ff="monospace" fw={700} size="md" lh={1}>
-              {now.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              {now.toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </Text>
             <Text size="xs" c="dimmed" lh={1.2} mt={2} truncate>
               {isClockedIn
-                ? `Fichado ${new Date(status!.clock_in!).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
-                : "Sin fichar"}
+                ? `${t("dashboard.clockedIn")} ${new Date(status!.clock_in!).toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" })}`
+                : t("dashboard.notClockedIn")}
             </Text>
           </Box>
         </Group>
@@ -702,13 +718,13 @@ function ClockWidget() {
                 radius="xl"
                 loading={clockIn.isPending}
                 onClick={() => clockIn.mutate({})}
-                aria-label="Fichar entrada"
+                aria-label={t("dashboard.clockInLabel")}
               >
                 <IconClockPlay size={16} />
               </ActionIcon>
             ) : (
               <Button size="xs" color="green" leftSection={<IconClockPlay size={14} />} loading={clockIn.isPending} onClick={() => clockIn.mutate({})} radius="xl">
-                Entrada
+                {t("dashboard.clockIn")}
               </Button>
             )
           ) : (
@@ -720,20 +736,20 @@ function ClockWidget() {
                 radius="xl"
                 loading={clockOut.isPending}
                 onClick={() => clockOut.mutate({})}
-                aria-label="Fichar salida"
+                aria-label={t("dashboard.clockOutLabel")}
               >
                 <IconClockStop size={16} />
               </ActionIcon>
             ) : (
               <Button size="xs" color="red" leftSection={<IconClockStop size={14} />} loading={clockOut.isPending} onClick={() => clockOut.mutate({})} radius="xl">
-                Salida
+                {t("dashboard.clockOut")}
               </Button>
             )
           )}
           {!isMobile && (
             <UnstyledButton onClick={() => navigate("/time-clock")}>
               <Text size="xs" c="blue" fw={500} style={{ whiteSpace: "nowrap" }}>
-                Ver control horario →
+                {t("dashboard.viewTimeClock")} →
               </Text>
             </UnstyledButton>
           )}
@@ -745,6 +761,7 @@ function ClockWidget() {
 
 // --- MAIN PAGE ---
 export function DashboardPage() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [configOpened, { open: openConfig, close: closeConfig }] = useDisclosure(false);
@@ -768,10 +785,9 @@ export function DashboardPage() {
   const { data: todaySessions, isLoading: sessionsLoading } = useTodaySessions();
   const { data: alerts, isLoading: alertsLoading } = useDashboardAlerts();
 
-  // Obtener hora del día para saludo
   const hour = new Date().getHours();
   const greeting =
-    hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
+    hour < 12 ? t("dashboard.goodMorning") : hour < 20 ? t("dashboard.goodAfternoon") : t("dashboard.goodEvening");
 
   const sessions = useMemo(() => (todaySessions || []).map((session: {
     id: string;
@@ -786,7 +802,7 @@ export function DashboardPage() {
   }) => ({
     id: session.id,
     title: session.title,
-    clientName: session.client_name || "Cliente",
+    clientName: session.client_name || t("common.client"),
     startTime: session.start_time,
     endTime: session.end_time,
     type: (session.session_type || "individual") as "individual" | "group",
@@ -815,28 +831,31 @@ export function DashboardPage() {
       <Drawer
         opened={configOpened}
         onClose={closeConfig}
-        title="Configurar Dashboard"
+        title={t("dashboard.configureDashboard")}
         position="right"
         size="sm"
       >
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Selecciona los widgets que quieres mostrar en tu dashboard
+            {t("dashboard.selectWidgets")}
           </Text>
-          {WIDGET_DEFINITIONS.map((widget) => (
-            <Group key={widget.id} justify="space-between">
+          {Object.keys(WIDGET_LABEL_KEYS).map((widgetId) => {
+            const WidgetIcon = WIDGET_ICONS[widgetId];
+            return (
+            <Group key={widgetId} justify="space-between">
               <Group gap="sm">
-                <widget.icon size={18} />
+                <WidgetIcon size={18} />
                 <Text size="sm" fw={500}>
-                  {widget.label}
+                  {t(WIDGET_LABEL_KEYS[widgetId])}
                 </Text>
               </Group>
               <Switch
-                checked={config.visibleWidgets.includes(widget.id)}
-                onChange={() => toggleWidget(widget.id)}
+                checked={config.visibleWidgets.includes(widgetId)}
+                onChange={() => toggleWidget(widgetId)}
               />
             </Group>
-          ))}
+            );
+          })}
         </Stack>
       </Drawer>
 
@@ -849,15 +868,15 @@ export function DashboardPage() {
       >
         <Box>
           <Text className="page-title" mb="xs">
-            {greeting}, {user?.full_name?.split(" ")[0] || "Usuario"} 👋
+            {greeting}, {user?.full_name?.split(" ")[0] || t("common.user")} 👋
           </Text>
           <Text className="page-subtitle">
             {kpisLoading ? (
               <Loader size="xs" />
             ) : (
               <>
-                Tienes <strong>{kpis?.upcoming_sessions || 0} sesiones</strong>{" "}
-                pendientes. ¡A por ello!
+                {t("dashboard.youHave")} <strong>{kpis?.upcoming_sessions || 0} {t("dashboard.sessionsPending")}</strong>.{" "}
+                {t("dashboard.letsGo")}
               </>
             )}
           </Text>
@@ -869,8 +888,8 @@ export function DashboardPage() {
             size="lg"
             radius="xl"
             onClick={openConfig}
-            title="Configurar Dashboard"
-            aria-label="Configurar Dashboard"
+            title={t("dashboard.configureDashboard")}
+            aria-label={t("dashboard.configureDashboard")}
           >
             <IconSettings size={20} />
           </ActionIcon>
@@ -880,7 +899,7 @@ export function DashboardPage() {
             onClick={() => navigate("/chat")}
             radius="xl"
           >
-            Mensajes
+            {t("dashboard.messages")}
           </Button>
           <Button
             leftSection={<IconPlus size={16} />}
@@ -888,7 +907,7 @@ export function DashboardPage() {
             radius="xl"
             style={{ background: "var(--nv-accent)", color: "var(--nv-dark)" }}
           >
-            Nueva Sesión
+            {t("dashboard.newSession")}
           </Button>
         </Group>
       </Group>
@@ -901,7 +920,7 @@ export function DashboardPage() {
         className="stagger"
       >
         <ClientKPI
-          title="Clientes Activos"
+          title={t("dashboard.activeClients")}
           value={kpis?.active_clients || 0}
           subtitle={`${kpis?.total_clients || 0} total`}
           icon={IconUsers}
@@ -909,25 +928,25 @@ export function DashboardPage() {
           loading={kpisLoading}
         />
         <ClientKPI
-          title="Sesiones Pendientes"
+          title={t("dashboard.pendingSessions")}
           value={kpis?.upcoming_sessions || 0}
-          subtitle="Próximas sesiones"
+          subtitle={t("dashboard.upcomingSessions")}
           icon={IconCalendarEvent}
           color="grape"
           loading={kpisLoading}
         />
         <ClientKPI
-          title="Completadas (mes)"
+          title={t("dashboard.completedMonth")}
           value={kpis?.completed_sessions_month || 0}
-          subtitle="Este mes"
+          subtitle={t("dashboard.thisMonth")}
           icon={IconTarget}
           color="green"
           loading={kpisLoading}
         />
         <ClientKPI
-          title="Tasa Abandono"
+          title={t("dashboard.churnRate")}
           value={`${formatDecimal(kpis?.churn_rate || 0, 1)}%`}
-          subtitle={kpis?.churn_rate && kpis.churn_rate <= 5 ? "Excelente" : "Revisar"}
+          subtitle={kpis?.churn_rate && kpis.churn_rate <= 5 ? t("dashboard.excellent") : t("dashboard.needsImprovement")}
           icon={IconTrendingUp}
           color="orange"
           loading={kpisLoading}

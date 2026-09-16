@@ -15,6 +15,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { IconLockOff, IconRefresh } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
@@ -36,26 +37,17 @@ interface RenewalOptions {
   products: RenewalProduct[];
 }
 
-const intervalLabel = (interval: string | null): string => {
-  switch (interval) {
-    case "week":
-      return "/semana";
-    case "biweekly":
-      return "/quincenal";
-    case "month":
-      return "/mes";
-    case "quarter":
-      return "/trimestre";
-    case "semester":
-      return "/semestre";
-    case "year":
-      return "/año";
-    default:
-      return "";
-  }
+const INTERVAL_KEYS: Record<string, string> = {
+  week: "subscription.perWeek",
+  biweekly: "subscription.perBiweekly",
+  month: "subscription.perMonth",
+  quarter: "subscription.perQuarter",
+  semester: "subscription.perSemester",
+  year: "subscription.perYear",
 };
 
 export default function SubscriptionExpiredPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
   const [renewingProductId, setRenewingProductId] = useState<string | null>(null);
@@ -79,8 +71,8 @@ export default function SubscriptionExpiredPage() {
         window.location.href = `/onboarding/invite/${invitation_token}`;
       } catch {
         notifications.show({
-          title: "Error",
-          message: "No se pudo iniciar la renovación. Inténtalo de nuevo.",
+          title: t("common.error"),
+          message: t("subscription.renewError"),
           color: "red",
         });
         setRenewingProductId(null);
@@ -105,15 +97,14 @@ export default function SubscriptionExpiredPage() {
           </ThemeIcon>
 
           <Text fw={700} size="xl" ta="center">
-            Tu suscripción ha expirado
+            {t("subscription.expired")}
           </Text>
 
           <Text c="dimmed" ta="center" size="md" maw={500}>
-            Tu acceso a la plataforma ha sido suspendido porque tu suscripción
-            ha finalizado.
+            {t("subscription.expiredDesc")}
             {hasProducts
-              ? " Elige un plan a continuación para renovar tu acceso."
-              : " Contacta con tu entrenador para renovarla."}
+              ? ` ${t("subscription.choosePlan")}`
+              : ` ${t("subscription.contactTrainer")}`}
           </Text>
 
           {isLoading && (
@@ -124,14 +115,13 @@ export default function SubscriptionExpiredPage() {
 
           {isError && (
             <Text c="dimmed" ta="center" size="sm">
-              No se pudieron cargar las opciones de renovación. Contacta con tu
-              entrenador.
+              {t("subscription.loadError")}
             </Text>
           )}
 
           {hasProducts && (
             <>
-              <Divider w="100%" label="Planes disponibles" labelPosition="center" />
+              <Divider w="100%" label={t("subscription.availablePlans")} labelPosition="center" />
               <SimpleGrid cols={{ base: 1, sm: options.products.length === 1 ? 1 : 2 }} spacing="lg" w="100%">
                 {options.products.map((product) => (
                   <Card key={product.id} padding="lg" radius="md" withBorder>
@@ -141,7 +131,7 @@ export default function SubscriptionExpiredPage() {
                           {product.name}
                         </Text>
                         <Badge color="blue" variant="light" radius="xl">
-                          Suscripción
+                          {t("subscription.subscription")}
                         </Badge>
                       </Group>
 
@@ -154,11 +144,11 @@ export default function SubscriptionExpiredPage() {
                       <Group gap="xs" align="baseline">
                         <Text fw={700} size="xl" c="teal">
                           {product.price === 0
-                            ? "Gratuito"
+                            ? t("subscription.free")
                             : `${product.price.toFixed(2)} €`}
                         </Text>
                         <Text c="dimmed" size="sm">
-                          {intervalLabel(product.interval)}
+                          {product.interval && INTERVAL_KEYS[product.interval] ? t(INTERVAL_KEYS[product.interval]) : ""}
                         </Text>
                       </Group>
 
@@ -170,7 +160,7 @@ export default function SubscriptionExpiredPage() {
                         onClick={() => handleRenew(product)}
                         mt="xs"
                       >
-                        Renovar suscripción
+                        {t("subscription.renew")}
                       </Button>
                     </Stack>
                   </Card>
@@ -182,7 +172,7 @@ export default function SubscriptionExpiredPage() {
           <Divider w="100%" />
 
           <Button variant="outline" color="gray" onClick={handleLogout}>
-            Cerrar sesión
+            {t("auth.logout")}
           </Button>
         </Stack>
       </Center>

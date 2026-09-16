@@ -17,10 +17,12 @@ import {
   IconMail,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { authApi } from "../../services/api";
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -29,7 +31,7 @@ export function ForgotPasswordPage() {
       email: "",
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email invÃ¡lido"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
     },
   });
 
@@ -39,15 +41,15 @@ export function ForgotPasswordPage() {
       await authApi.forgotPassword(values.email);
       setSubmitted(true);
       notifications.show({
-        title: "Email enviado",
-        message: "Si el email estÃ¡ registrado, recibirÃ¡s instrucciones para restablecer tu contraseÃ±a.",
+        title: t("auth.emailSent"),
+        message: t("auth.resetEmailSentDesc"),
         color: "green",
       });
     } catch (error) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
-        title: "Error",
-        message: err.response?.data?.detail || "Error al procesar la solicitud",
+        title: t("common.error"),
+        message: err.response?.data?.detail || t("auth.processError"),
         color: "red",
       });
     } finally {
@@ -131,12 +133,11 @@ export function ForgotPasswordPage() {
             </ThemeIcon>
 
             <Text c="white" size="lg" fw={500} ta="center">
-              Â¡Email enviado!
+              {t("auth.emailSentTitle")}
             </Text>
 
             <Text c="gray.5" size="sm" ta="center">
-              Si el email estÃ¡ registrado, recibirÃ¡s instrucciones para restablecer tu contraseÃ±a.
-              Revisa tu bandeja de entrada y la carpeta de spam.
+              {t("auth.resetEmailSentFullDesc")}
             </Text>
 
             <Anchor
@@ -147,7 +148,7 @@ export function ForgotPasswordPage() {
               style={{ display: "flex", alignItems: "center", gap: 4 }}
             >
               <IconArrowLeft size={16} />
-              Volver al inicio de sesiÃ³n
+              {t("auth.backToLogin")}
             </Anchor>
           </Stack>
         </Paper>
@@ -194,16 +195,16 @@ export function ForgotPasswordPage() {
                 Trackfiz
               </Title>
               <Title order={2} c="white" fw={700}>
-                Â¿Olvidaste tu contraseÃ±a?
+                {t("auth.forgotPasswordTitle")}
               </Title>
               <Text c="gray.5" size="sm" mt={8}>
-                Introduce tu email y te enviaremos instrucciones para restablecerla.
+                {t("auth.forgotPasswordDesc")}
               </Text>
             </Box>
 
             <TextInput
-              label="Email"
-              placeholder="tu@email.com"
+              label={t("auth.email")}
+              placeholder={t("auth.emailPlaceholder")}
               required
               leftSection={<IconMail size={18} />}
               styles={inputStyles}
@@ -225,7 +226,7 @@ export function ForgotPasswordPage() {
                 boxShadow: "0 4px 16px rgba(212, 175, 55, 0.25)",
               }}
             >
-              Enviar instrucciones
+              {t("auth.sendInstructions")}
             </Button>
 
             <Anchor
@@ -237,7 +238,7 @@ export function ForgotPasswordPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
             >
               <IconArrowLeft size={16} />
-              Volver al inicio de sesiÃ³n
+              {t("auth.backToLogin")}
             </Anchor>
           </Stack>
         </form>

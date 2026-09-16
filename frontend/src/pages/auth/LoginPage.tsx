@@ -19,10 +19,12 @@ import {
   IconLock,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { login, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
@@ -37,8 +39,8 @@ export function LoginPage() {
       remember: true,
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
-      password: (value) => (value.length >= 6 ? null : "Mínimo 6 caracteres"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
+      password: (value) => (value.length >= 6 ? null : t("auth.minChars", { count: 6 })),
     },
   });
 
@@ -48,7 +50,7 @@ export function LoginPage() {
       await login(values.email, values.password, nextPath);
     } catch (err: unknown) {
       const errObj = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError(errObj.response?.data?.detail || errObj.message || "Error al iniciar sesión");
+      setError(errObj.response?.data?.detail || errObj.message || t("auth.loginError"));
     }
   };
 
@@ -91,10 +93,10 @@ export function LoginPage() {
           fw={700}
           style={{ letterSpacing: "-0.02em" }}
         >
-          Inicia sesiÃ³n
+          {t("auth.loginTitle")}
         </Title>
         <Text c="gray.5" size="sm" mt={4}>
-          Accede a tu cuenta de Trackfiz
+          {t("auth.loginSubtitle")}
         </Text>
       </Box>
 
@@ -133,8 +135,8 @@ export function LoginPage() {
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           <TextInput
-            label="Email"
-            placeholder="tu@email.com"
+            label={t("auth.email")}
+            placeholder={t("auth.emailPlaceholder")}
             required
             leftSection={<IconMail size={18} />}
             styles={inputStyles}
@@ -142,8 +144,8 @@ export function LoginPage() {
           />
 
           <PasswordInput
-            label="ContraseÃ±a"
-            placeholder="Tu contraseÃ±a"
+            label={t("auth.password")}
+            placeholder={t("auth.passwordPlaceholder")}
             required
             leftSection={<IconLock size={18} />}
             styles={inputStyles}
@@ -152,7 +154,7 @@ export function LoginPage() {
 
           <Group justify="space-between">
             <Checkbox
-              label="Recordarme"
+              label={t("auth.rememberMe")}
               styles={{
                 label: { color: "rgba(255, 255, 255, 0.6)", fontSize: 13 },
                 input: {
@@ -173,7 +175,7 @@ export function LoginPage() {
               c="var(--nv-accent)"
               style={{ fontSize: 13 }}
             >
-              Â¿Olvidaste tu contraseÃ±a?
+              {t("auth.forgotPassword")}
             </Anchor>
           </Group>
 
@@ -193,18 +195,18 @@ export function LoginPage() {
               boxShadow: "0 4px 16px rgba(212, 175, 55, 0.25)",
             }}
           >
-            Iniciar SesiÃ³n
+            {t("auth.loginButton")}
           </Button>
 
           <Text c="gray.5" size="sm" ta="center" mt="md">
-            Â¿No tienes cuenta?{" "}
+            {t("auth.noAccount")}{" "}
             <Anchor
               component={Link}
               fw={600}
               to="/register"
               c="var(--nv-accent)"
             >
-              RegÃ­strate
+              {t("auth.registerLink")}
             </Anchor>
           </Text>
         </Stack>
