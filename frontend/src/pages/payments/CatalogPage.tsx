@@ -264,8 +264,8 @@ export function CatalogPage() {
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      totalSessions: (value) => (value < 1 ? "Mínimo 1 sesión" : null),
-      price: (value) => (value < 0 ? "Precio inválido" : null),
+      totalSessions: (value) => (value < 1 ? t("packagesPage.mínimo1Sesión") : null),
+      price: (value) => (value < 0 ? t("packagesPage.precioInválido") : null),
     },
   });
 
@@ -376,7 +376,7 @@ export function CatalogPage() {
     openDangerConfirm({
       title: t("catalog.cancelarSuscripcion"),
       message: `¿Cancelar la suscripción "${sub.plan_name || sub.name}" de ${sub.client_name || "este cliente"}?`,
-      confirmLabel: "Cancelar suscripción",
+      confirmLabel: t("payments.cancelarSuscripcion"),
       onConfirm: async () => { try { await cancelSubscription.mutateAsync(sub.id); } catch { /* handled */ } },
     });
   }, [cancelSubscription]);
@@ -478,7 +478,7 @@ export function CatalogPage() {
       is_active: true,
     },
     validate: {
-      code: (value) => (value.length < 1 ? "Código requerido" : null),
+      code: (value) => (value.length < 1 ? t("catalogPage.códigoRequerido") : null),
       discount_value: (value) => (value <= 0 ? "El descuento debe ser mayor a 0" : null),
     },
   });
@@ -592,7 +592,7 @@ export function CatalogPage() {
             radius="xl"
           >
             {product.type === "subscription"
-              ? "Suscripción"
+              ? t("payments.suscripcion")
               : product.type === "package"
                 ? "Bono"
                 : "Puntual"}
@@ -610,7 +610,7 @@ export function CatalogPage() {
           />
           <CopyButton value={getPublicLink(product)}>
             {({ copied, copy }) => (
-              <Tooltip label={copied ? "¡Copiado!" : "Copiar enlace público"}>
+              <Tooltip label={copied ? t("common.copiado") : t("common.copiarEnlace")}>
                 <ActionIcon
                   color={copied ? "green" : "gray"}
                   variant="light"
@@ -664,7 +664,7 @@ export function CatalogPage() {
               product.interval === "biweekly" ? "quincenal" :
               product.interval === "quarter" ? "trimestre" :
               product.interval === "semester" ? "semestre" :
-              product.interval === "year" ? "año" : "mes"
+              product.interval === "year" ? t("clientOnboardingPage.año") : "mes"
             }` : ""}
           </Text>
         </Box>
@@ -821,7 +821,7 @@ export function CatalogPage() {
                           sub.interval === "month" ? "mes" :
                           sub.interval === "quarter" ? "trimestre" :
                           sub.interval === "semester" ? "semestre" :
-                          sub.interval === "year" ? "año" : sub.interval || "mes"
+                          sub.interval === "year" ? t("clientOnboardingPage.año") : sub.interval || "mes"
                         }
                       </Text>
                     </Table.Td>
@@ -1097,7 +1097,7 @@ export function CatalogPage() {
                           <Text fw={700} size="lg" ff="monospace">{coupon.code}</Text>
                           <CopyButton value={coupon.code}>
                             {({ copied, copy }) => (
-                              <Tooltip label={copied ? "¡Copiado!" : "Copiar código"}>
+                              <Tooltip label={copied ? t("common.copiado") : t("common.copiarCodigo")}>
                                 <ActionIcon
                                   color={copied ? "green" : "gray"}
                                   variant="subtle"
@@ -1187,7 +1187,7 @@ export function CatalogPage() {
           <Stack>
             <Select
               label={t("catalog.catalogo")}
-              description={isPhysicalKind ? "Producto físico: no se puede vincular a boxes, máquinas ni miembros del equipo." : "Servicio: puede vincularse a boxes, máquinas y miembros del equipo."}
+              description={isPhysicalKind ? t("catalogPage.productoFísicoNoSePuedeVincularA") : t("catalogPage.servicioPuedeVincularseABoxesMáqu")}
               data={[
                 { value: "service", label: t("catalog.servicio") },
                 { value: "product", label: t("catalog.producto") },
@@ -1497,7 +1497,7 @@ export function CatalogPage() {
         onClose={() => { closeCouponModal(); setEditingCoupon(null); couponForm.reset(); }}
         opened={couponModalOpened}
         size="md"
-        title={editingCoupon ? "Editar Cupón" : "Nuevo Cupón"}
+        title={editingCoupon ? t("catalogPage.editarCupón") : t("catalog.nuevoCupon")}
       >
         <form onSubmit={couponForm.onSubmit(handleSaveCoupon)}>
           <Stack gap="md">
@@ -1561,7 +1561,7 @@ export function CatalogPage() {
             <Group justify="flex-end" mt="md">
               <Button onClick={() => { closeCouponModal(); setEditingCoupon(null); couponForm.reset(); }} variant="subtle">{t("catalog.cancelar")}</Button>
               <Button type="submit" loading={createCoupon.isPending || updateCoupon.isPending}>
-                {editingCoupon ? "Guardar Cambios" : "Crear Cupón"}
+                {editingCoupon ? "Guardar Cambios" : t("catalogPage.crearCupón")}
               </Button>
             </Group>
           </Stack>

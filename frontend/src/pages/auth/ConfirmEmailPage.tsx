@@ -39,7 +39,7 @@ export function ConfirmEmailPage() {
     const confirmEmail = async () => {
       if (!token) {
         setStatus("error");
-        setErrorMessage("Token de confirmaciÃ³n no vÃ¡lido o faltante.");
+        setErrorMessage(t("auth.tokenInvalido"));
         return;
       }
 
@@ -56,7 +56,7 @@ export function ConfirmEmailPage() {
             icon: <IconCheck size={18} />,
           });
         } else {
-          throw new Error(response.data.message || "Error al verificar el email");
+          throw new Error(response.data.message || t("auth.errorVerificarEmail"));
         }
       } catch (error) {
         console.error("Error confirming email:", error);
@@ -64,11 +64,11 @@ export function ConfirmEmailPage() {
         
         // Extract error message from response
         const err = error as { response?: { data?: { detail?: string } }; message?: string };
-        const message = err.response?.data?.detail || err.message || "Ha ocurrido un error al verificar tu email.";
+        const message = err.response?.data?.detail || err.message || t("auth.errorVerificarEmail");
         
         // Check if it's an expired token
         if (message.includes("expirado")) {
-          setErrorMessage("El enlace de verificaciÃ³n ha expirado. Solicita uno nuevo.");
+          setErrorMessage(t("auth.enlaceExpirado"));
         } else {
           setErrorMessage(message);
         }
@@ -94,7 +94,7 @@ export function ConfirmEmailPage() {
       
       notifications.show({
         title: t("auth.emailEnviado"),
-        message: response.data.message || "Si el email estÃ¡ registrado, recibirÃ¡s un enlace de verificaciÃ³n.",
+        message: response.data.message || t("auth.siEmailRegistrado"),
         color: "green",
       });
       
@@ -103,7 +103,7 @@ export function ConfirmEmailPage() {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
       notifications.show({
         title: t("auth.error"),
-        message: err.response?.data?.detail || "Error al enviar el email de verificaciÃ³n",
+        message: err.response?.data?.detail || t("auth.errorEnviarVerificacion"),
         color: "red",
       });
     } finally {
@@ -114,15 +114,15 @@ export function ConfirmEmailPage() {
   const getTitle = () => {
     switch (type) {
       case "signup":
-        return "ConfirmaciÃ³n de cuenta";
+        return t("auth.confirmacionCuenta");
       case "recovery":
-        return "Restablecer contraseÃ±a";
+        return t("auth.restablecerContrasena");
       case "magiclink":
-        return "Acceso a tu cuenta";
+        return t("auth.accesoTuCuenta");
       case "email_change":
-        return "Cambio de email";
+        return t("auth.cambioDeEmail");
       default:
-        return "VerificaciÃ³n";
+        return t("auth.verificacion");
     }
   };
 
@@ -188,15 +188,15 @@ export function ConfirmEmailPage() {
               </ThemeIcon>
 
               <Text c="white" size="lg" fw={500} ta="center">
-                Â¡Tu email ha sido verificado!
+                {t("auth.emailVerificado")}
               </Text>
 
               <Text c="gray.5" size="sm" ta="center">
                 {type === "signup" 
-                  ? "Tu cuenta estÃ¡ lista. Ya puedes iniciar sesiÃ³n y comenzar a usar Trackfiz."
+                  ? t("auth.cuentaListaIniciarSesion")
                   : type === "recovery"
-                  ? "Ahora puedes crear una nueva contraseÃ±a."
-                  : "La verificaciÃ³n se ha completado correctamente."
+                  ? t("auth.ahoraPuedesCrearContrasena")
+                  : t("auth.verificacionCompletada")
                 }
               </Text>
 
@@ -236,7 +236,7 @@ export function ConfirmEmailPage() {
 
               <Stack w="100%" gap="sm" mt="md">
                 <Text c="gray.5" size="sm" ta="center">
-                  Â¿Necesitas un nuevo enlace de verificaciÃ³n?
+                  {t("auth.necesitasNuevoEnlace")}
                 </Text>
                 
                 <TextInput
@@ -248,7 +248,7 @@ export function ConfirmEmailPage() {
                     input: {
                       background: "rgba(255, 255, 255, 0.05)",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
-                      color: t("auth.white"),
+                      color: "white",
                       "&::placeholder": {
                         color: "rgba(255, 255, 255, 0.4)",
                       },
@@ -274,7 +274,7 @@ export function ConfirmEmailPage() {
                   onClick={() => navigate("/login")}
                   style={{
                     borderColor: "rgba(255, 255, 255, 0.2)",
-                    color: t("auth.white"),
+                    color: "white",
                   }}
                 >
                   {t("auth.volverAlInicioDeSesi")}
@@ -295,7 +295,7 @@ export function ConfirmEmailPage() {
               </ThemeIcon>
 
               <Text c="white" size="lg" fw={500} ta="center">
-                Â¡Email enviado!
+                {t("auth.emailEnviadoExcl")}
               </Text>
 
               <Text c="gray.5" size="sm" ta="center">
@@ -309,7 +309,7 @@ export function ConfirmEmailPage() {
                 onClick={() => navigate("/login")}
                 style={{
                   borderColor: "rgba(255, 255, 255, 0.2)",
-                  color: t("auth.white"),
+                  color: "white",
                   marginTop: 10,
                 }}
               >

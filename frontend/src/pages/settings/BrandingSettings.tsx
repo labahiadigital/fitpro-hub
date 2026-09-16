@@ -98,7 +98,7 @@ export function BrandingSettings({
             <TextInput
               label={"Eslogan"}
               onChange={(e) => updateConfig("tagline", e.target.value)}
-              placeholder={"Tu mejor versión comienza aquí"}
+              placeholder={t("settings.tuMejorVersionComienzaAqui")}
               value={config.tagline}
             />
           </SimpleGrid>
@@ -195,7 +195,7 @@ export function BrandingSettings({
             />
             <Switch
               checked={config.hideFooterBranding}
-              description={"Elimina 'Powered by Trackfiz' del pie de página"}
+              description={t("settings.eliminaPoweredByTrackfizDel")}
               disabled={!config.enableWhiteLabel}
               label={"Ocultar branding en footer"}
               onChange={(e) =>

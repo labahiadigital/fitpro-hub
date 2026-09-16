@@ -116,7 +116,7 @@ export function AuthLayout() {
         <Text c="gray.6" mt="xl" size="xs" ta="center">
           {isWhiteLabel
             ? `© ${new Date().getFullYear()} ${brandName}`
-            : "© 2026 Trackfiz. Todos los derechos reservados."}
+            : t("auth.copyright")}
         </Text>
       </Container>
     </Box>

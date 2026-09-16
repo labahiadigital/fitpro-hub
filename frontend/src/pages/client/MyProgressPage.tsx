@@ -673,7 +673,7 @@ export function MyProgressPage() {
             variant="light"
             radius="md"
             mb="lg"
-            title={isOverdue ? "Tienes una revisión pendiente" : "Próxima revisión"}
+            title={isOverdue ? t("clientDashboardPage.tienesUnaRevisiónPendiente") : t("clientDashboardPage.próximaRevisión")}
           >
             <Stack gap="xs">
               <Text size="sm">

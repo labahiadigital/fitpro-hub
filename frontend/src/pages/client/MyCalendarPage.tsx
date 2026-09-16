@@ -459,7 +459,7 @@ export function MyCalendarPage() {
         {filteredUpcoming.length === 0 && (
           <Card shadow="sm" padding="lg" radius="lg" withBorder>
             <Text c="dimmed" ta="center">
-              {selectedDayDate ? "No hay sesiones para este día" : "No tienes sesiones próximas programadas"}
+              {selectedDayDate ? t("myCalendarPage.noHaySesionesParaEsteDía") : t("myCalendarPage.noTienesSesionesPróximasProgramadas")}
             </Text>
           </Card>
         )}
@@ -532,7 +532,7 @@ export function MyCalendarPage() {
         {filteredPast.length === 0 && (
           <Card shadow="sm" padding="md" radius="md" withBorder style={{ opacity: 0.8 }}>
             <Text c="dimmed" ta="center">
-              {selectedDayDate ? "No hay sesiones anteriores este día" : "No hay sesiones anteriores"}
+              {selectedDayDate ? t("myCalendarPage.noHaySesionesAnterioresEsteDía") : "No hay sesiones anteriores"}
             </Text>
           </Card>
         )}

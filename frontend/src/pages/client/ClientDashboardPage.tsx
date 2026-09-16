@@ -144,7 +144,7 @@ export function ClientDashboardPage() {
     if (!profileData) return [] as string[];
     const missing: string[] = [];
     if (!profileData.birth_date) missing.push("fecha de nacimiento");
-    if (!profileData.gender) missing.push("género");
+    if (!profileData.gender) missing.push(t("clientDashboardPage.género"));
     const h = Number(profileData.height_cm);
     if (!Number.isFinite(h) || h <= 0) missing.push("altura");
     const w = Number(profileData.weight_kg);
@@ -188,12 +188,12 @@ export function ClientDashboardPage() {
         <Group justify="space-between" align="flex-start">
           <Box>
             <Title order={2} mb={4}>
-              {firstName ? `¡Hola, ${firstName}! 👋` : "¡Hola! 👋"}
+              {firstName ? `${t("clientDashboard.hola")}, ${firstName}! 👋` : `${t("clientDashboard.hola")}! 👋`}
             </Title>
             <Text c="dimmed" size="lg">
               {data.weekProgress.workouts_completed > 0 
-                ? "Tu progreso esta semana va genial. ¡Sigue así!"
-                : "¡Comienza tu semana con energía!"}
+                ? t("clientDashboard.tuProgresoVaGenial")
+                : t("clientDashboard.comienzaTuSemana")}
             </Text>
           </Box>
           <Button
@@ -232,7 +232,7 @@ export function ClientDashboardPage() {
               <b>{nextPendingForm.form_name}</b>
               {nextPendingForm.is_required
                 ? " — es obligatorio para que tu entrenador pueda prepararte el plan."
-                : " — complétalo cuando puedas."}
+                : t("clientDashboardPage.ComplétaloCuandoPuedas")}
             </Text>
             <Group>
               <Button
@@ -294,7 +294,7 @@ export function ClientDashboardPage() {
             variant="light"
             radius="md"
             mb="xl"
-            title={isOverdue ? "Tienes una revisión pendiente" : "Próxima revisión"}
+            title={isOverdue ? t("clientDashboardPage.tienesUnaRevisiónPendiente") : t("clientDashboardPage.próximaRevisión")}
           >
             <Stack gap="xs">
               <Text size="sm">
@@ -483,7 +483,7 @@ export function ClientDashboardPage() {
                       mb="xs"
                     />
                     <Text size="xs" c="dimmed" ta="center">
-                      {data.goals.progress}% completado · {data.goals.progress >= 80 ? "¡Casi lo tienes!" : "¡Vas muy bien!"}
+                      {data.goals.progress}% {t("clientDashboard.completado")} · {data.goals.progress >= 80 ? t("clientDashboard.casiLoTienes") : t("clientDashboard.vasMuyBien")}
                     </Text>
                   </>
                 ) : (

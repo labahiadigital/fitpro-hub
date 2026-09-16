@@ -364,10 +364,10 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
       {!embedded && (
         <PageHeader
           action={{
-            label: "Nueva Automatización",
+            label: t("automations.nuevaAutomatizacion"),
             onClick: () => openAutomationBuilder(),
           }}
-          description={"Configura workflows automáticos para tu negocio"}
+          description={t("automations.configuraWorkflowsAutomaticosParaTu")}
           title={"Automatizaciones"}
         />
       )}
@@ -487,8 +487,8 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
         </SimpleGrid>
       ) : (
         <EmptyState
-          actionLabel={"Crear Automatización"}
-          description={"Crea tu primera automatización para optimizar tu negocio."}
+          actionLabel={t("automations.crearAutomatizacion")}
+          description={t("automations.creaTuPrimeraAutomatizacionPara")}
           icon={<IconRobot size={40} />}
           onAction={() => openAutomationBuilder()}
           title={"No hay automatizaciones"}
@@ -502,32 +502,32 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
         position="right"
         size="xl"
         title={
-          editingAutomation ? "Editar Automatización" : "Nueva Automatización"
+          editingAutomation ? t("automationsPage.editarAutomatización") : t("automations.nuevaAutomatizacion")
         }
       >
         <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
           <Stepper active={activeStep} mb="xl" onStepClick={setActiveStep}>
             <Stepper.Step
-              description={"Nombre y descripción"}
-              label={"Información"}
+              description={t("automations.nombreYDescripcion")}
+              label={t("chat.informacion")}
             >
               <Stack mt="md">
                 <TextInput
-                  label={"Nombre de la automatización"}
+                  label={t("automations.nombreDeLaAutomatizacion")}
                   placeholder={"Ej: Onboarding de nuevos clientes"}
                   required
                   {...form.getInputProps("name")}
                 />
                 <Textarea
-                  label={"Descripción"}
+                  label={t("teamComp.descripcion")}
                   minRows={2}
-                  placeholder={"Describe qué hace esta automatización..."}
+                  placeholder={t("automations.describeQueHaceEstaAutomatizacion")}
                   {...form.getInputProps("description")}
                 />
               </Stack>
             </Stepper.Step>
 
-            <Stepper.Step description={"Cuándo se activa"} label={"Disparador"}>
+            <Stepper.Step description={t("automations.cuandoSeActiva")} label={"Disparador"}>
               <Stack mt="md">
                 <Text fw={500} mb="xs" size="sm">
                   {"¿Cuándo debe activarse esta automatización?"}
@@ -582,7 +582,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                       { value: "24", label: "24 horas antes" },
                       { value: "48", label: "48 horas antes" },
                     ]}
-                    label={"¿Cuánto tiempo antes?"}
+                    label={t("automations.cuantoTiempoAntes")}
                     mt="md"
                   />
                 )}
@@ -590,19 +590,19 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                 {selectedTrigger === "client_inactive" && (
                   <Select
                     data={[
-                      { value: "7", label: "7 días" },
-                      { value: "14", label: "14 días" },
-                      { value: "30", label: "30 días" },
-                      { value: "60", label: "60 días" },
+                      { value: "7", label: t("timeClock.7_dias") },
+                      { value: "14", label: t("automations.14Dias") },
+                      { value: "30", label: t("timeClock.30_dias") },
+                      { value: "60", label: t("automations.60Dias") },
                     ]}
-                    label={"¿Después de cuántos días?"}
+                    label={t("automations.despuesDeCuantosDias")}
                     mt="md"
                   />
                 )}
               </Stack>
             </Stepper.Step>
 
-            <Stepper.Step description={"Qué hacer"} label={"Acciones"}>
+            <Stepper.Step description={t("automations.queHacer")} label={"Acciones"}>
               <Stack mt="md">
                 <Text fw={500} size="sm">
                   {"Acciones a ejecutar"}
@@ -660,7 +660,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                                   },
                                   {
                                     value: "reactivation",
-                                    label: "Reactivación",
+                                    label: t("automations.reactivacion"),
                                   },
                                 ]}
                                 onChange={(v) =>
@@ -716,7 +716,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                                   data={[
                                     { value: "minutes", label: "minutos" },
                                     { value: "hours", label: "horas" },
-                                    { value: "days", label: "días" },
+                                    { value: "days", label: t("automations.dias") },
                                   ]}
                                   onChange={(v) =>
                                     updateAction(action.id, {
@@ -736,7 +736,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                   </Timeline>
                 )}
 
-                <Divider label={"Añadir acción"} labelPosition="center" />
+                <Divider label={t("automations.anadirAccion")} labelPosition="center" />
 
                 <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
                   {actionTypes.map((action) => {
@@ -763,7 +763,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
                 color="green"
                 icon={<IconCheck />}
                 mt="md"
-                title={"¡Automatización lista!"}
+                title={t("automations.automatizacionLista")}
               >
 {t("automations.automationReadyDesc")}
               </Alert>
@@ -825,7 +825,7 @@ export function AutomationsPage({ embedded }: { embedded?: boolean } = {}) {
               </Button>
             ) : (
               <Button color="green" onClick={handleSaveAutomation}>
-                {editingAutomation ? "Guardar Cambios" : "Crear Automatización"}
+                {editingAutomation ? "Guardar Cambios" : t("automations.crearAutomatizacion")}
               </Button>
             )}
           </Group>

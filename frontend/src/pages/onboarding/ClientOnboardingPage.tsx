@@ -403,7 +403,7 @@ export function ClientOnboardingPage() {
       taxId: "",
       billingAddress: "",
       billingCity: "",
-      billingCountry: "España",
+      billingCountry: t("suppliers.espana"),
       billingPostalCode: "",
       acceptTerms: false,
       acceptPrivacy: false,
@@ -421,55 +421,55 @@ export function ClientOnboardingPage() {
         return {
           firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
           lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
-          email: /^\S+@\S+$/.test(values.email) ? null : "Email inválido",
+          email: /^\S+@\S+$/.test(values.email) ? null : t("auth.invalidEmail"),
           confirmEmail:
             values.confirmEmail !== values.email
               ? "Los emails no coinciden"
               : null,
           password: isStrongPassword(values.password)
             ? null
-            : "Mínimo 8 caracteres con mayúscula, minúscula y número",
-          phone: phoneOk ? null : "Móvil obligatorio",
+            : t("clientOnboardingPage.mínimo8CaracteresConMayúsculaMinús"),
+          phone: phoneOk ? null : t("clientOnboardingPage.móvilObligatorio"),
           // Datos fiscales: todos obligatorios. Para Persona Jurídica
           // exigimos además ``legalName`` (Razón Social); en Persona
           // Física usamos ``firstName + lastName`` como nombre fiscal,
           // así que no se valida ``legalName``.
           legalName: isCompany && values.legalName.trim().length < 2
-            ? "Razón social obligatoria"
+            ? t("clientOnboardingPage.razónSocialObligatoria")
             : null,
           taxId: values.taxId.trim().length < 5
             ? (isCompany ? "NIF/CIF obligatorio" : "NIF/DNI obligatorio")
             : null,
           billingAddress: values.billingAddress.trim().length < 4
-            ? "Dirección obligatoria"
+            ? t("clientOnboardingPage.direcciónObligatoria")
             : null,
           billingCity: values.billingCity.trim().length < 2
-            ? (isCompany ? "Ciudad o población obligatoria" : "Población obligatoria")
+            ? (isCompany ? t("clientOnboardingPage.ciudadOPoblaciónObligatoria") : t("clientOnboardingPage.poblaciónObligatoria"))
             : null,
           billingCountry: values.billingCountry.trim().length < 2
-            ? "País obligatorio"
+            ? t("clientOnboardingPage.paísObligatorio")
             : null,
           billingPostalCode: values.billingPostalCode.trim().length < 3
-            ? "Código postal obligatorio"
+            ? t("clientOnboardingPage.códigoPostalObligatorio")
             : null,
-          acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
+          acceptTerms: values.acceptTerms ? null : t("auth.mustAcceptTerms"),
           acceptPrivacy: values.acceptPrivacy
             ? null
-            : "Debes aceptar la política de privacidad",
+            : t("clientOnboardingPage.debesAceptarLaPolíticaDePrivacidad"),
         };
       }
       if (active === 0) {
         return {
           firstName: values.firstName.length < 2 ? "Nombre requerido" : null,
           lastName: values.lastName.length < 2 ? "Apellido requerido" : null,
-          email: /^\S+@\S+$/.test(values.email) ? null : "Email inválido",
+          email: /^\S+@\S+$/.test(values.email) ? null : t("auth.invalidEmail"),
           confirmEmail:
             values.confirmEmail !== values.email
               ? "Los emails no coinciden"
               : null,
           password: isStrongPassword(values.password)
             ? null
-            : "Mínimo 8 caracteres con mayúscula, minúscula y número",
+            : t("clientOnboardingPage.mínimo8CaracteresConMayúsculaMinús"),
         };
       }
       if (active === 1) {
@@ -482,10 +482,10 @@ export function ClientOnboardingPage() {
       }
       if (active === 4) {
         return {
-          acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
+          acceptTerms: values.acceptTerms ? null : t("auth.mustAcceptTerms"),
           acceptPrivacy: values.acceptPrivacy
             ? null
-            : "Debes aceptar la política de privacidad",
+            : t("clientOnboardingPage.debesAceptarLaPolíticaDePrivacidad"),
         };
       }
       return {};
@@ -756,7 +756,7 @@ export function ClientOnboardingPage() {
                   productInfo.interval === "biweekly" ? "quincenal" :
                   productInfo.interval === "quarter" ? "trimestre" :
                   productInfo.interval === "semester" ? "semestre" :
-                  productInfo.interval === "year" ? "año" : "mes"
+                  productInfo.interval === "year" ? t("clientOnboardingPage.año") : "mes"
                 }</Text>}
               </Text>
             </Box>
@@ -768,7 +768,7 @@ export function ClientOnboardingPage() {
               title={soldOutState.action === "waitlist" ? "Plazas agotadas" : "Producto agotado"}
             >
               {soldOutState.action === "waitlist"
-                ? "Este producto está completo. Apúntate a la lista de espera y te avisaremos cuando haya una plaza disponible."
+                ? t("clientOnboardingPage.esteProductoEstáCompletoApúntateA")
                 : "Este producto no tiene plazas disponibles en este momento."}
             </Alert>
 
@@ -820,7 +820,7 @@ export function ClientOnboardingPage() {
             {soldOutState.action === "waitlist" && waitlistSubmitted && (
               <Alert color="green" icon={<IconCheck size={16} />}>
                 {soldOutState.waitlist_success_message ||
-                  "¡Listo! Te hemos añadido a la lista de espera. Te avisaremos cuando haya una plaza disponible."}
+                  t("onboarding.listoListaDeEspera")}
               </Alert>
             )}
 
@@ -877,7 +877,7 @@ export function ClientOnboardingPage() {
                 productInfo.interval === "biweekly" ? "quincenal" :
                 productInfo.interval === "quarter" ? "trimestre" :
                 productInfo.interval === "semester" ? "semestre" :
-                productInfo.interval === "year" ? "año" : "mes"
+                productInfo.interval === "year" ? t("clientOnboardingPage.año") : "mes"
               }</Text>}
             </Text>
           </Box>

@@ -404,7 +404,7 @@ export function InvitationOnboardingPage() {
         setSequraFormHtml(form_html);
         setShowSequraForm(true);
       } else {
-        setPaymentError("No se pudo cargar el formulario de SeQura. Inténtalo de nuevo.");
+        setPaymentError(t("invitationOnboardingPage.noSePudoCargarElFormularioDeSeQur"));
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string } }; message?: string };
@@ -572,16 +572,16 @@ export function InvitationOnboardingPage() {
       return {
         firstName: values.firstName.trim().length < 2 ? "Nombre requerido" : null,
         lastName: values.lastName.trim().length < 2 ? "Apellido requerido" : null,
-        email: /^\S+@\S+\.\S+$/.test(values.email) ? null : "Email inválido",
+        email: /^\S+@\S+\.\S+$/.test(values.email) ? null : t("auth.invalidEmail"),
         confirmEmail: emailPrefilled
           ? null
           : values.confirmEmail !== values.email
             ? "Los emails no coinciden"
             : null,
-        password: values.password.length < 8 ? "Mínimo 8 caracteres" : null,
-        phone: PHONE_REGEX.test(values.phone.trim()) ? null : "Teléfono móvil obligatorio",
-        acceptTerms: values.acceptTerms ? null : "Debes aceptar los términos",
-        acceptPrivacy: values.acceptPrivacy ? null : "Debes aceptar la política de privacidad",
+        password: values.password.length < 8 ? t("onboarding.minimo8Caracteres") : null,
+        phone: PHONE_REGEX.test(values.phone.trim()) ? null : t("invitationOnboardingPage.teléfonoMóvilObligatorio"),
+        acceptTerms: values.acceptTerms ? null : t("auth.mustAcceptTerms"),
+        acceptPrivacy: values.acceptPrivacy ? null : t("clientOnboardingPage.debesAceptarLaPolíticaDePrivacidad"),
       };
     },
   });
@@ -797,8 +797,8 @@ export function InvitationOnboardingPage() {
           </Text>
           <Text c="dimmed" mb="xl">
             {systemFormSubmissionId
-              ? "Tu entrenador lo necesita para diseñar tu plan a medida."
-              : "Ábrelo y sigue desde ahí para continuar con tu primer cuestionario."}
+              ? t("invitationOnboardingPage.tuEntrenadorLoNecesitaParaDiseñarT")
+              : t("invitationOnboardingPage.ábreloYSigueDesdeAhíParaContinuar")}
           </Text>
 
           {(supportPhone || supportEmail) && (
@@ -855,7 +855,7 @@ export function InvitationOnboardingPage() {
       product.interval === "month" ? "/mes" :
       product.interval === "quarter" ? "/trimestre" :
       product.interval === "semester" ? "/semestre" :
-      product.interval === "year" ? "/año" : "";
+      product.interval === "year" ? t("subscription.perYear") : "";
 
     if (showSequraForm) {
       return (
@@ -936,7 +936,7 @@ export function InvitationOnboardingPage() {
                     )}
                   </Group>
                   <Text c="dimmed" size="sm" ta="center" mt="xs">
-                    {product.product_type === "subscription" ? "Suscripción recurrente" : "Pago único"}
+                    {product.product_type === "subscription" ? t("invitationOnboardingPage.suscripciónRecurrente") : "Pago único"}
                   </Text>
                 </Paper>
               </Stack>

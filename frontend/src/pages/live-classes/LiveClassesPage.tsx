@@ -394,14 +394,14 @@ function CreateClassModal({
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           <TextInput
-            label={"Título de la clase"}
+            label={t("liveClasses.tituloDeLaClase")}
             placeholder={"Ej: HIIT Intensivo"}
             required
             {...form.getInputProps("title")}
           />
 
           <Textarea
-            label={"Descripción"}
+            label={t("teamComp.descripcion")}
             placeholder={"Describe el contenido de la clase..."}
             rows={3}
             {...form.getInputProps("description")}
@@ -420,14 +420,14 @@ function CreateClassModal({
             />
 
             <Select
-              label={"Categoría"}
+              label={t("supplementsComp.categoria")}
               data={[
                 { value: "fitness", label: "Fitness" },
                 { value: "yoga", label: "Yoga" },
                 { value: "pilates", label: "Pilates" },
                 { value: "strength", label: "Fuerza" },
                 { value: "cardio", label: "Cardio" },
-                { value: "nutrition", label: "Nutrición" },
+                { value: "nutrition", label: t("team.nutricion") },
               ]}
               {...form.getInputProps("category")}
             />
@@ -442,7 +442,7 @@ function CreateClassModal({
             />
 
             <NumberInput
-              label={"Duración (minutos)"}
+              label={t("liveClasses.duracionMinutos")}
               min={15}
               max={180}
               step={15}
@@ -452,7 +452,7 @@ function CreateClassModal({
 
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <NumberInput
-              label={"Máximo de participantes"}
+              label={t("liveClasses.maximoDeParticipantes")}
               min={1}
               max={500}
               {...form.getInputProps("max_participants")}
@@ -492,8 +492,8 @@ function CreateClassModal({
           <Divider label={"Opciones"} labelPosition="center" />
 
           <Switch
-            label={"Grabar clase automáticamente"}
-            description={"La grabación estará disponible para los participantes"}
+            label={t("liveClasses.grabarClaseAutomaticamente")}
+            description={t("liveClasses.laGrabacionEstaraDisponiblePara")}
             {...form.getInputProps("is_recorded", { type: "checkbox" })}
           />
 
@@ -592,7 +592,7 @@ export function LiveClassesPage() {
                 {stats?.total_revenue || 450}€
               </Text>
             </Box>
-            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: t("liveClasses.8b5cf6") }}>
+            <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" }}>
               <IconCalendar size={24} />
             </ThemeIcon>
           </Group>

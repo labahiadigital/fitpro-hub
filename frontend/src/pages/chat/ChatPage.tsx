@@ -487,8 +487,8 @@ export function ChatPage() {
         <PageHeader
           description={
             isClientView
-              ? "Comunícate con tu entrenador"
-              : "Comunícate con tus clientes y equipo"
+              ? t("chatPage.comunícateConTuEntrenador")
+              : t("chatPage.comunícateConTusClientesYEquipo")
           }
           title={t("chat.chat")}
         />
@@ -563,7 +563,7 @@ export function ChatPage() {
                   value={searchQuery}
                 />
                 {!isClientView && (
-                  <Tooltip label={chatScope === "internal" ? "Nueva conversación interna" : "Nueva conversación"}>
+                  <Tooltip label={chatScope === "internal" ? t("chat.nuevaConversacionInterna") : t("chat.nuevaConversacion")}>
                     <ActionIcon
                       color="primary"
                       onClick={chatScope === "internal" ? openInternalNewChat : openNewChat}
@@ -782,9 +782,9 @@ export function ChatPage() {
                     const hasPhone = !!selectedConversation.whatsapp_phone;
                     const waDisabled = !isWhatsAppEnabled || !hasPhone;
                     const waDisabledReason = !isWhatsAppEnabled
-                      ? "WhatsApp no está conectado en este workspace"
+                      ? t("chatPage.whatsAppNoEstáConectadoEnEsteWorks")
                       : !hasPhone
-                        ? "Este cliente no tiene número de teléfono"
+                        ? t("chatPage.esteClienteNoTieneNúmeroDeTeléfono")
                         : "";
 
                     return (

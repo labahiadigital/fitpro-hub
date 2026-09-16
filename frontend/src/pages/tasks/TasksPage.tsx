@@ -284,7 +284,7 @@ export function TasksPage() {
       due_time: "" as string,
     },
     validate: {
-      title: (v) => (v.trim() ? null : "El título es obligatorio"),
+      title: (v) => (v.trim() ? null : t("communityBenefitsPage.elTítuloEsObligatorio")),
     },
   });
 
@@ -300,7 +300,7 @@ export function TasksPage() {
       due_time: "" as string,
     },
     validate: {
-      title: (v) => (v.trim() ? null : "El título es obligatorio"),
+      title: (v) => (v.trim() ? null : t("communityBenefitsPage.elTítuloEsObligatorio")),
     },
   });
 

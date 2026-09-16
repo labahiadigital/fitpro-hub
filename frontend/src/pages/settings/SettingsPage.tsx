@@ -556,7 +556,7 @@ export function SettingsPage() {
   const changeEmailForm = useForm({
     initialValues: { new_email: "", password: "" },
     validate: {
-      new_email: (v) => !v ? "Requerido" : !/^\S+@\S+\.\S+$/.test(v) ? "Email inválido" : v === user?.email ? "Debe ser diferente" : null,
+      new_email: (v) => !v ? "Requerido" : !/^\S+@\S+\.\S+$/.test(v) ? t("auth.invalidEmail") : v === user?.email ? "Debe ser diferente" : null,
       password: (v) => (!v ? "Requerida" : null),
     },
   });
@@ -596,7 +596,7 @@ export function SettingsPage() {
 
   const inviteForm = useForm({
     initialValues: { email: "", role: "collaborator" },
-    validate: { email: (v) => (!v || !/^\S+@\S+\.\S+$/.test(v) ? "Email inválido" : null) },
+    validate: { email: (v) => (!v || !/^\S+@\S+\.\S+$/.test(v) ? t("auth.invalidEmail") : null) },
   });
 
   const inviteMutation = useMutation({
@@ -942,7 +942,7 @@ export function SettingsPage() {
                   <Textarea
                     label={t("settings.pieDeEmail")}
                     description={t("settings.textoQueApareceraAlFinal")}
-                    placeholder={"Vamos a darle GAS 💪🏽\nBorja Sanfélix"}
+                    placeholder={t("settingsPage.vamosADarleGASNBorjaSanfélix")}
                     minRows={3}
                     autosize
                     {...workspaceForm.getInputProps("email_footer")}
@@ -1287,7 +1287,7 @@ export function SettingsPage() {
               <Text fw={600} size="xs" tt="uppercase" c="dimmed" mb="xs" style={{ letterSpacing: "0.05em" }}>{t("settings.clientesYComunicacion")}</Text>
               <Stack gap="sm" mb="lg">
                 {[
-                  { key: "new_message", label: t("settings.nuevosMensajes"), desc: "Cuando un cliente te envía un mensaje" },
+                  { key: "new_message", label: t("settings.nuevosMensajes"), desc: t("settingsPage.cuandoUnClienteTeEnvíaUnMensaje") },
                   { key: "new_client", label: t("settings.nuevosClientes"), desc: "Cuando se registra un nuevo cliente" },
                   { key: "form_submitted", label: t("settings.formulariosCompletados"), desc: "Cuando un cliente completa un formulario" },
                   { key: "progress_milestone", label: t("settings.hitosDeProgreso"), desc: "Cuando un cliente alcanza un hito" },
@@ -1316,9 +1316,9 @@ export function SettingsPage() {
               <Stack gap="sm" mb="lg">
                 {[
                   { key: "task_assigned", label: t("settings.tareasAsignadas"), desc: "Cuando se te asigna una nueva tarea" },
-                  { key: "task_due", label: t("settings.tareasPorVencer"), desc: "Recordatorio de tareas próximas a su fecha límite" },
+                  { key: "task_due", label: t("settings.tareasPorVencer"), desc: t("settingsPage.recordatorioDeTareasPróximasASuFec") },
                   { key: "low_stock", label: t("settings.stockBajo"), desc: "Cuando un producto tiene cantidades bajas en inventario" },
-                  { key: "automation_completed", label: t("settings.automatizacionesCompletadas"), desc: "Cuando una automatización finaliza su ejecución" },
+                  { key: "automation_completed", label: t("settings.automatizacionesCompletadas"), desc: t("settingsPage.cuandoUnaAutomatizaciónFinalizaSuEj") },
                 ].map((item) => {
                   const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
                   const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
@@ -1344,8 +1344,8 @@ export function SettingsPage() {
               <Stack gap="sm" mb="lg">
                 {[
                   { key: "clock_in_reminder", label: t("settings.recordatorioDeFichaje"), desc: "Aviso para recordarte que debes fichar tu entrada" },
-                  { key: "clock_event", label: t("settings.eventoDeFichaje"), desc: "Notificación cuando se realiza un fichaje (dentro/fuera de horario)" },
-                  { key: "clock_missed", label: t("settings.fichajeNoRealizado"), desc: "Aviso cuando no se ha fichado y debería haberse hecho" },
+                  { key: "clock_event", label: t("settings.eventoDeFichaje"), desc: t("settingsPage.notificaciónCuandoSeRealizaUnFichaj") },
+                  { key: "clock_missed", label: t("settings.fichajeNoRealizado"), desc: t("settingsPage.avisoCuandoNoSeHaFichadoYDebería") },
                 ].map((item) => {
                   const prefs = notifPrefs?.[item.key as keyof typeof notifPrefs];
                   const emailOn = typeof prefs === "object" && prefs !== null ? (prefs as { email?: boolean }).email ?? true : true;
@@ -1595,7 +1595,7 @@ export function SettingsPage() {
                       <Text fw={600} size="lg" mb="xs">{t("settings.conectaTuWhatsappBusiness")}</Text>
                       <Text c="dimmed" size="sm" mb="lg" maw={400} mx="auto">{t("settings.integraTuCuentaDeWhatsapp")}</Text>
                       <Button color="green" size="md" radius="xl" leftSection={<IconPlugConnected size={18} />} onClick={handleConnectWhatsApp} loading={connectWhatsApp.isPending || isConnecting}>
-                        {isConnecting ? "Esperando conexión..." : "Conectar WhatsApp"}
+                        {isConnecting ? t("settingsPage.esperandoConexión") : "Conectar WhatsApp"}
                       </Button>
                       {isConnecting && <Text c="dimmed" size="xs" mt="sm">{t("settings.completaElProcesoEnLa")}</Text>}
                     </Paper>
@@ -1636,7 +1636,7 @@ export function SettingsPage() {
                     <Text c="dimmed" size="sm">
                       {billingData?.renewal_date
                         ? `Renovación: ${new Date(billingData.renewal_date).toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })}`
-                        : "Renovación: información no disponible"}
+                        : t("settingsPage.renovaciónInformaciónNoDisponible")}
                     </Text>
                   </Box>
                   <Box ta="right">

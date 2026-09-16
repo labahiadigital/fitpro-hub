@@ -140,8 +140,8 @@ export function PackagesPage() {
     },
     validate: {
       name: (value) => (value.length < 2 ? "Nombre requerido" : null),
-      totalSessions: (value) => (value < 1 ? "Mínimo 1 sesión" : null),
-      price: (value) => (value < 0 ? "Precio inválido" : null),
+      totalSessions: (value) => (value < 1 ? t("packagesPage.mínimo1Sesión") : null),
+      price: (value) => (value < 0 ? t("packagesPage.precioInválido") : null),
     },
   });
 

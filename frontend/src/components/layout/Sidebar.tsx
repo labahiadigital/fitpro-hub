@@ -13,6 +13,7 @@ import {
   IconLogout,
   IconSettings,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useAuthStore } from "../../stores/auth";
@@ -140,6 +141,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
+  const { t } = useTranslation();
   const { user, currentWorkspace } = useAuthStore();
   const { logout } = useAuth();
 
@@ -295,13 +297,13 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
               color: "white",
             }}
           >
-            <Menu.Label c="dimmed">{"Mi Cuenta"}</Menu.Label>
+            <Menu.Label c="dimmed">{t("layout.miCuenta")}</Menu.Label>
             <Menu.Item
               leftSection={<IconSettings size={14} />}
               style={{ color: "white" }}
               className="menu-item-hover"
             >
-              {"ConfiguraciÃ³n"}
+              {t("layout.configuracion")}
             </Menu.Item>
             <Menu.Divider style={{ borderColor: "rgba(255,255,255,0.1)" }} />
             <Menu.Item
@@ -310,7 +312,7 @@ export function Sidebar({ navItems, collapsed, onToggle }: SidebarProps) {
               onClick={logout}
               className="menu-item-hover"
             >
-              {"Cerrar sesiÃ³n"}
+              {t("layout.cerrarSesion")}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>

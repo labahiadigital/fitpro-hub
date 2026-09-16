@@ -446,7 +446,7 @@ export function StockPage() {
       <Modal
         opened={itemModalOpened}
         onClose={closeItemModal}
-        title={editMode ? "Editar Elemento" : "Añadir Elemento"}
+        title={editMode ? "Editar Elemento" : t("stock.anadirElemento")}
         size="lg"
         radius="lg"
       >
@@ -577,7 +577,7 @@ export function StockPage() {
                           w={110}
                         />
                         <NumberInput
-                          label={idx === 0 ? "Mín" : undefined}
+                          label={idx === 0 ? t("stockPage.mín") : undefined}
                           min={0}
                           value={alloc.min_stock}
                           onChange={(val) =>
@@ -591,7 +591,7 @@ export function StockPage() {
                           w={80}
                         />
                         <NumberInput
-                          label={idx === 0 ? "Máx" : undefined}
+                          label={idx === 0 ? t("stockPage.máx") : undefined}
                           min={0}
                           value={alloc.max_stock}
                           onChange={(val) =>

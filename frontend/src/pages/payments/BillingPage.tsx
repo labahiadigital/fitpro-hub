@@ -217,7 +217,7 @@ export function BillingPage() {
     validate: {
       client_name: (v) => (!v ? "Nombre del cliente requerido" : null),
       items: {
-        description: (v) => (!v ? "Descripción requerida" : null),
+        description: (v) => (!v ? t("billingPage.descripciónRequerida") : null),
         unit_price: (v) => (v <= 0 ? "Precio requerido" : null),
       },
     },
@@ -237,7 +237,7 @@ export function BillingPage() {
       city: "",
       postal_code: "",
       province: "",
-      country: "España",
+      country: t("suppliers.espana"),
       phone: "",
       email: "",
       invoice_prefix: "F",
@@ -1079,7 +1079,7 @@ export function BillingPage() {
                         <Group gap="xs">
                           <ThemeIcon color="gray" size="sm" variant="light" radius="xl"><PaymentIcon size={12} /></ThemeIcon>
                           <Text size="xs">
-                            {payment.payment_type === "subscription" ? "Suscripción" : payment.payment_type === "package" ? "Bono" : "Puntual"}
+                            {payment.payment_type === "subscription" ? t("payments.suscripcion") : payment.payment_type === "package" ? "Bono" : "Puntual"}
                           </Text>
                         </Group>
                       </Table.Td>
@@ -1254,7 +1254,7 @@ export function BillingPage() {
               <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>N.º</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.numero")}</Table.Th>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.cliente")}</Table.Th>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.fecha")}</Table.Th>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("billing.vencimiento")}</Table.Th>
@@ -1458,7 +1458,7 @@ export function BillingPage() {
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
               <Text c="dimmed" size="sm">{t("billing.tipo")}</Text>
-              <Text size="sm">{selectedPayment.payment_type === "subscription" ? "Suscripción" : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
+              <Text size="sm">{selectedPayment.payment_type === "subscription" ? t("payments.suscripcion") : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
@@ -1912,7 +1912,7 @@ export function BillingPage() {
                                 <Dropzone.Reject><IconX size={40} stroke={1.5} color="var(--mantine-color-red-6)" /></Dropzone.Reject>
                                 <Dropzone.Idle><IconLock size={40} stroke={1.5} color="var(--nv-text-secondary)" /></Dropzone.Idle>
                                 <Box>
-                                  <Text size="sm" fw={500}>{certFile ? certFile.name : "Arrastra tu certificado .p12 / .pfx aquí"}</Text>
+                                  <Text size="sm" fw={500}>{certFile ? certFile.name : t("billingPage.arrastraTuCertificadoP12PfxAquí")}</Text>
                                   <Text size="xs" c="dimmed">{certFile ? `${formatDecimal(certFile.size / 1024, 1)} KB` : "Máximo 50 KB. El archivo solo se usa para extracción server-side."}</Text>
                                 </Box>
                               </Group>

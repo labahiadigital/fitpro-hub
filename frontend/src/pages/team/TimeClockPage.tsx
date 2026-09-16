@@ -177,8 +177,8 @@ function ClockTab() {
               justification: justification || undefined,
             } as Record<string, unknown>, {
               onSuccess: () => {
-                const name = user?.full_name || user?.email?.split("@")[0] || "usuario";
-                setSuccessMessage(`¡Fichaje realizado, ${name}!`);
+                const name = user?.full_name || user?.email?.split("@")[0] || t("team.usuario");
+                setSuccessMessage(`${t("team.fichajeRealizado")}, ${name}!`);
                 setShowSuccess(true);
                 setJustification("");
                 setTimeout(() => setShowSuccess(false), 4000);
@@ -188,8 +188,8 @@ function ClockTab() {
           () => {
             clockIn.mutate({ justification: justification || undefined } as Record<string, unknown>, {
               onSuccess: () => {
-                const name = user?.full_name || user?.email?.split("@")[0] || "usuario";
-                setSuccessMessage(`¡Fichaje realizado, ${name}!`);
+                const name = user?.full_name || user?.email?.split("@")[0] || t("team.usuario");
+                setSuccessMessage(`${t("team.fichajeRealizado")}, ${name}!`);
                 setShowSuccess(true);
                 setJustification("");
                 setTimeout(() => setShowSuccess(false), 4000);
@@ -201,7 +201,7 @@ function ClockTab() {
       } else if (action === "out") {
         clockOut.mutate({ justification: justification || undefined } as Record<string, unknown>, {
           onSuccess: () => {
-            setSuccessMessage("¡Salida registrada correctamente!");
+            setSuccessMessage(t("team.salidaRegistrada"));
             setShowSuccess(true);
             setJustification("");
             setTimeout(() => setShowSuccess(false), 4000);
@@ -799,7 +799,7 @@ function CalendarTab() {
           </Group>
 
           <Box style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
+            {["Lun", "Mar", t("calendarPage.mié"), "Jue", "Vie", t("calendarPage.sáb"), "Dom"].map((d) => (
               <Text key={d} size="xs" fw={600} ta="center" c="dimmed" py={4}>{d}</Text>
             ))}
             {Array.from({ length: firstDayOfWeek }, (_, i) => (

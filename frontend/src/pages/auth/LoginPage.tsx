@@ -1,4 +1,4 @@
-﻿import {
+import {
   Alert,
   Anchor,
   Box,
@@ -58,7 +58,7 @@ export function LoginPage() {
     input: {
       background: "rgba(255, 255, 255, 0.03)",
       border: "1px solid rgba(255, 255, 255, 0.1)",
-      color: t("auth.white"),
+      color: "white",
       borderRadius: 12,
       padding: "12px 16px",
       paddingLeft: 44,
@@ -111,8 +111,8 @@ export function LoginPage() {
           }}
         >
           <Text size="sm" c="teal.4">
-            {t("auth.hasSidoInvitadoA")} <Text span fw={700}>{invitedWorkspace || "un equipo"}</Text>.
-            Inicia sesiÃ³n para acceder.
+            {t("auth.hasSidoInvitadoA")} <Text span fw={700}>{invitedWorkspace || t("auth.unEquipo")}</Text>.
+            {t("auth.iniciaSesionParaAcceder")}
           </Text>
         </Alert>
       )}
@@ -187,7 +187,7 @@ export function LoginPage() {
             rightSection={<IconChevronRight size={18} />}
             style={{
               background: "var(--nv-accent)",
-              color: t("auth.1a1a2e"),
+              color: "#1a1a2e",
               fontWeight: 600,
               height: 48,
               borderRadius: 12,

@@ -529,7 +529,7 @@ export function NutritionPage() {
     const isFav = isFoodFavorite(foodId);
     try {
       await toggleFoodFavorite.mutateAsync({ foodId, isFavorite: isFav });
-      notifications.show({ title: isFav ? "Eliminado de favoritos" : "Añadido a favoritos", message: isFav ? "El alimento se ha eliminado de tus favoritos" : "El alimento se ha añadido a tus favoritos", color: isFav ? "gray" : "yellow" });
+      notifications.show({ title: isFav ? "Eliminado de favoritos" : t("nutritionPage.añadidoAFavoritos"), message: isFav ? "El alimento se ha eliminado de tus favoritos" : t("nutritionPage.elAlimentoSeHaAñadidoATusFavorito"), color: isFav ? "gray" : "yellow" });
     } catch {
       notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" });
     }
@@ -540,7 +540,7 @@ export function NutritionPage() {
     const isFav = isSupplementFavorite(supplementId);
     try {
       await toggleSupplementFavorite.mutateAsync({ supplementId, isFavorite: isFav });
-      notifications.show({ title: isFav ? "Eliminado de favoritos" : "Añadido a favoritos", message: isFav ? "El suplemento se ha eliminado de tus favoritos" : "El suplemento se ha añadido a tus favoritos", color: isFav ? "gray" : "yellow" });
+      notifications.show({ title: isFav ? "Eliminado de favoritos" : t("nutritionPage.añadidoAFavoritos"), message: isFav ? "El suplemento se ha eliminado de tus favoritos" : t("nutritionPage.elSuplementoSeHaAñadidoATusFavori"), color: isFav ? "gray" : "yellow" });
     } catch {
       notifications.show({ title: t("nutrition.error"), message: t("nutrition.noSePudoActualizarEl"), color: "red" });
     }
@@ -885,7 +885,7 @@ export function NutritionPage() {
               : activeTab === "templates"
               ? "Nueva Plantilla"
               : activeTab === "supplements"
-              ? "Añadir Suplemento"
+              ? t("supplementsComp.anadirSuplemento")
               : "Nuevo Plan",
           onClick:
             activeTab === "foods"
@@ -999,7 +999,7 @@ export function NutritionPage() {
           <Stack>
             <TextInput label={t("nutrition.nombre")} placeholder={t("nutrition.pechugaDePollo")} required {...foodForm.getInputProps("name")} />
             <Group grow>
-              <Select data={[{ value: "Proteínas", label: t("nutrition.proteinas") }, { value: "Carbohidratos", label: t("nutrition.carbohidratos") }, { value: "Verduras", label: t("nutrition.verduras") }, { value: "Frutas", label: t("nutrition.frutas") }, { value: "Lácteos", label: t("nutrition.lacteos") }, { value: "Grasas", label: t("nutrition.grasas") }, { value: "Frutos Secos", label: t("nutrition.frutosSecos") }]} label={t("nutrition.categoria")} placeholder={t("nutrition.selecciona")} {...foodForm.getInputProps("category")} />
+              <Select data={[{ value: t("nutritionComp.proteinas"), label: t("nutrition.proteinas") }, { value: "Carbohidratos", label: t("nutrition.carbohidratos") }, { value: "Verduras", label: t("nutrition.verduras") }, { value: "Frutas", label: t("nutrition.frutas") }, { value: t("nutrition.lacteos"), label: t("nutrition.lacteos") }, { value: "Grasas", label: t("nutrition.grasas") }, { value: "Frutos Secos", label: t("nutrition.frutosSecos") }]} label={t("nutrition.categoria")} placeholder={t("nutrition.selecciona")} {...foodForm.getInputProps("category")} />
               <TextInput label={t("nutrition.racionAproximadaGramos")} placeholder={t("nutrition.ej100g250g")} description={t("nutrition.aproxUnaRacionDeEste")} {...foodForm.getInputProps("serving_size")} />
             </Group>
             <Text size="xs" c="dimmed" fw={500} mt="xs">{t("nutrition.losValoresNutricionalesSeIntroducen")}</Text>
@@ -1037,9 +1037,9 @@ export function NutritionPage() {
                   <Stack gap="sm">
                     <TextInput label={t("nutrition.nombre")} name="name" placeholder={t("nutrition.pechugaDePollo")} required defaultValue={editingFood.name} />
                     <TextInput label={t("nutrition.nombreGenerico")} name="generic_name" placeholder={t("nutrition.pollo")} defaultValue={editingFood.generic_name || ""} />
-                    <Group grow><TextInput label={t("nutrition.marca")} name="brand" placeholder={t("nutrition.marcaDelProducto")} defaultValue={editingFood.brand || ""} /><Select name="category" data={[{ value: "Proteínas", label: t("nutrition.proteinas") }, { value: "Carbohidratos", label: t("nutrition.carbohidratos") }, { value: "Verduras", label: t("nutrition.verduras") }, { value: "Frutas", label: t("nutrition.frutas") }, { value: "Lácteos", label: t("nutrition.lacteos") }, { value: "Grasas", label: t("nutrition.grasas") }, { value: "Frutos Secos", label: t("nutrition.frutosSecos") }, { value: "Otros", label: t("nutrition.otros") }]} label={t("nutrition.categoria")} placeholder={t("nutrition.selecciona")} defaultValue={mapCategory(editingFood.category)} /></Group>
+                    <Group grow><TextInput label={t("nutrition.marca")} name="brand" placeholder={t("nutrition.marcaDelProducto")} defaultValue={editingFood.brand || ""} /><Select name="category" data={[{ value: t("nutritionComp.proteinas"), label: t("nutrition.proteinas") }, { value: "Carbohidratos", label: t("nutrition.carbohidratos") }, { value: "Verduras", label: t("nutrition.verduras") }, { value: "Frutas", label: t("nutrition.frutas") }, { value: t("nutrition.lacteos"), label: t("nutrition.lacteos") }, { value: "Grasas", label: t("nutrition.grasas") }, { value: "Frutos Secos", label: t("nutrition.frutosSecos") }, { value: "Otros", label: t("nutrition.otros") }]} label={t("nutrition.categoria")} placeholder={t("nutrition.selecciona")} defaultValue={mapCategory(editingFood.category)} /></Group>
                     <Group grow><TextInput label={t("nutrition.codigoDeBarras")} name="barcode" placeholder="8400000000000" defaultValue={editingFood.barcode || ""} /><TextInput label={t("nutrition.cantidadEnvase")} name="quantity" placeholder={t("nutrition.500g1lEtc")} defaultValue={editingFood.quantity || ""} /></Group>
-                    <Group grow><NumberInput label={t("nutrition.tamanoPorcion")} name="serving_size_num" min={0} defaultValue={editingFood.serving_size || 100} /><Select name="serving_unit" data={[{ value: "g", label: t("nutrition.gramosG") }, { value: "ml", label: t("nutrition.mililitrosMl") }, { value: "unidad", label: t("nutrition.unidad") }, { value: "porción", label: t("nutrition.porcion") }]} label={t("nutrition.unidad")} defaultValue={editingFood.serving_unit || "g"} /></Group>
+                    <Group grow><NumberInput label={t("nutrition.tamanoPorcion")} name="serving_size_num" min={0} defaultValue={editingFood.serving_size || 100} /><Select name="serving_unit" data={[{ value: "g", label: t("nutrition.gramosG") }, { value: "ml", label: t("nutrition.mililitrosMl") }, { value: "unidad", label: t("nutrition.unidad") }, { value: t("nutritionPage.porción"), label: t("nutrition.porcion") }]} label={t("nutrition.unidad")} defaultValue={editingFood.serving_unit || "g"} /></Group>
                   </Stack>
                 </Tabs.Panel>
                 <Tabs.Panel value="nutrition">
@@ -1265,7 +1265,7 @@ export function NutritionPage() {
                 {t("nutrition.crearComoPlantilla")}
               </Button>
             ) : (
-              <Switch label={t("nutrition.crearComoPlantilla")} description={selectedClientId || clientId ? "Guarda una copia reutilizable además del plan del cliente" : "Guarda como plantilla reutilizable"} checked={isTemplateModeOn} onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)} size="sm" color="teal" />
+              <Switch label={t("nutrition.crearComoPlantilla")} description={selectedClientId || clientId ? t("nutritionPage.guardaUnaCopiaReutilizableAdemásDel") : "Guarda como plantilla reutilizable"} checked={isTemplateModeOn} onChange={(e) => setIsTemplateModeOn(e.currentTarget.checked)} size="sm" color="teal" />
             ))}
             {!canSavePlan && !isEditingClientPlan && !isEditingPlanTemplate && <Text size="xs" c="red">{t("nutrition.asignaUnClienteOMarca")}</Text>}
             <TextInput label={t("nutrition.nombreDelPlan")} placeholder={t("nutrition.planDePerdidaDePeso")} required radius="md" size="sm" {...planForm.getInputProps("name")} />

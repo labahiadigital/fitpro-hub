@@ -49,7 +49,7 @@ export function DevModeBanner() {
         width: "100%",
         background:
           "repeating-linear-gradient(135deg, #f59e0b 0 14px, #fbbf24 14px 28px)",
-        color: t("common.1a1a1a"),
+        color: "#1a1a1a",
         padding: "6px 16px",
         borderBottom: "2px solid rgba(0, 0, 0, 0.18)",
         boxShadow: "0 2px 8px rgba(245, 158, 11, 0.25)",

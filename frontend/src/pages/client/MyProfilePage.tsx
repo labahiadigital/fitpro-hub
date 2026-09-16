@@ -328,7 +328,7 @@ function SubscriptionSection() {
           <Paper p="sm" radius="md" withBorder>
             <Group gap="xs" mb={4}>
               <IconCalendar size={14} color="var(--mantine-color-dimmed)" />
-              <Text size="xs" c="dimmed">{isPeriodExpired ? "Expiró el" : "Próximo cobro"}</Text>
+              <Text size="xs" c="dimmed">{isPeriodExpired ? t("myProfilePage.expiróEl") : t("myProfilePage.próximoCobro")}</Text>
             </Group>
             <Text size="sm" fw={500} c={isPeriodExpired ? "red" : undefined}>{formatDate(sub.current_period_end)}</Text>
           </Paper>
@@ -783,7 +783,7 @@ export function MyProfilePage() {
     billing_address: "",
     billing_city: "",
     billing_postal_code: "",
-    billing_country: "España",
+    billing_country: t("suppliers.espana"),
   });
 
   // Datos físicos: fecha de nacimiento, género, altura y peso. Son
@@ -966,10 +966,10 @@ export function MyProfilePage() {
       confirm_password: "",
     },
     validate: {
-      current_password: (v) => (!v ? "Introduce tu contraseña actual" : null),
+      current_password: (v) => (!v ? t("myProfilePage.introduceTuContraseñaActual") : null),
       new_password: passwordValidator,
       confirm_password: (v, values) =>
-        v !== values.new_password ? "Las contraseñas no coinciden" : null,
+        v !== values.new_password ? t("auth.contrasenasNoCoinciden") : null,
     },
   });
 
@@ -989,7 +989,7 @@ export function MyProfilePage() {
       const detail =
         typeof error.response?.data?.detail === "string"
           ? error.response.data.detail
-          : "No se pudo cambiar la contraseña.";
+          : t("myProfilePage.noSePudoCambiarLaContraseña");
       notifications.show({ title: t("myProfile.error"), message: detail, color: "red" });
     },
   });
@@ -1001,11 +1001,11 @@ export function MyProfilePage() {
         !value
           ? "El nuevo email es obligatorio"
           : !/^\S+@\S+\.\S+$/.test(value)
-            ? "Introduce un email válido"
+            ? t("myProfilePage.introduceUnEmailVálido")
             : value === user?.email
               ? "El nuevo email debe ser distinto al actual"
               : null,
-      password: (value) => (!value ? "La contraseña es obligatoria" : null),
+      password: (value) => (!value ? t("myProfilePage.laContraseñaEsObligatoria") : null),
     },
   });
 
@@ -1029,7 +1029,7 @@ export function MyProfilePage() {
       const detail =
         typeof error.response?.data?.detail === "string"
           ? error.response.data.detail
-          : "No se pudo cambiar el email. Inténtalo de nuevo.";
+          : t("myProfilePage.noSePudoCambiarElEmailInténtaloD");
       notifications.show({ title: t("myProfile.error"), message: detail, color: "red" });
     },
   });

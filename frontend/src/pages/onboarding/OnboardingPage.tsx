@@ -304,12 +304,12 @@ export function OnboardingPage() {
                 "&[data-progress]": {
                   borderColor: "var(--nv-accent)",
                   backgroundColor: "var(--nv-accent)",
-                  color: t("onboarding.1a1a2e"),
+                  color: "#1a1a2e",
                 },
                 "&[data-completed]": {
                   borderColor: "var(--nv-accent)",
                   backgroundColor: "var(--nv-accent)",
-                  color: t("onboarding.1a1a2e"),
+                  color: "#1a1a2e",
                 },
               },
               stepLabel: { color: "rgba(255, 255, 255, 0.7)", fontSize: 12 },
@@ -345,7 +345,7 @@ export function OnboardingPage() {
                 onClick={nextStep}
                 style={{
                   background: "var(--nv-accent)",
-                  color: t("onboarding.1a1a2e"),
+                  color: "#1a1a2e",
                 }}
               >
                 {t("onboarding.siguiente")}
@@ -357,7 +357,7 @@ export function OnboardingPage() {
                 loading={loading}
                 style={{
                   background: "var(--nv-accent)",
-                  color: t("onboarding.1a1a2e"),
+                  color: "#1a1a2e",
                 }}
               >
                 {t("onboarding.completarPerfil")}

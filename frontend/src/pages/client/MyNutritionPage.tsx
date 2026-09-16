@@ -1235,7 +1235,7 @@ function ClientRecipesTab() {
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
           {recipes.map((recipe: Recipe) => {
             const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
-            const diffLabel = recipe.difficulty === "easy" ? "Fácil" : recipe.difficulty === "medium" ? "Media" : recipe.difficulty === "hard" ? "Difícil" : null;
+            const diffLabel = recipe.difficulty === "easy" ? t("recipes.facil") : recipe.difficulty === "medium" ? "Media" : recipe.difficulty === "hard" ? t("recipes.dificil") : null;
             const diffColor = recipe.difficulty === "easy" ? "green" : recipe.difficulty === "medium" ? "yellow" : recipe.difficulty === "hard" ? "red" : "gray";
             const perServing = recipe.servings > 0 ? Math.round((recipe.total_calories || 0) / recipe.servings) : Math.round(recipe.total_calories || 0);
 
@@ -1299,7 +1299,7 @@ function ClientRecipesTab() {
           <IconToolsKitchen2 size={36} style={{ color: "var(--mantine-color-dimmed)", marginBottom: 8 }} />
           <Text fw={600} size="md" mb={4}>{t("myNutrition.noHayRecetasDisponibles")}</Text>
           <Text size="sm" c="dimmed">
-            {recipeSearch ? "No se encontraron recetas con esa búsqueda." : "Tu entrenador aún no ha compartido recetas contigo."}
+            {recipeSearch ? t("myNutritionPage.noSeEncontraronRecetasConEsaBúsque") : t("myNutritionPage.tuEntrenadorAúnNoHaCompartidoRecet")}
           </Text>
         </Paper>
       )}
@@ -2024,7 +2024,7 @@ export function MyNutritionPage() {
   // Calcular datos de la semana desde el historial real
   const weekData = useMemo(() => {
     const days = ["L", "M", "X", "J", "V", "S", "D"];
-    const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const dayNames = ["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"];
     const dayMappingToPlan = [1, 2, 3, 4, 5, 6, 7];
     const todayDate = new Date();
     const todayJsDay = todayDate.getDay();
@@ -2084,7 +2084,7 @@ export function MyNutritionPage() {
 
   const weekDataOriginal = useMemo(() => {
     const days = ["L", "M", "X", "J", "V", "S", "D"];
-    const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const dayNames = ["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"];
     const dayMappingToPlan = [1, 2, 3, 4, 5, 6, 7];
     const todayDate = new Date();
 
@@ -2265,7 +2265,7 @@ export function MyNutritionPage() {
     : 0;
 
   // Obtener los nombres de días de la semana para el plan
-  const weekDayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  const weekDayNames = ["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"];
   const todayDayName = weekDayNames[selectedPlanDay - 1] || "Día";
 
   return (
@@ -2878,7 +2878,7 @@ export function MyNutritionPage() {
         size="sm"
       >
         <Stack gap="xs">
-          {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, i) => {
+          {["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"].map((label, i) => {
             const targetDayNum = i + 1;
             if (targetDayNum === selectedPlanDay) return null;
             return (
@@ -3055,7 +3055,7 @@ export function MyNutritionPage() {
           </Card>
           <MasterDetailLayout
             hasSelection={selectedWeekDayIndex !== null}
-            emptyMessage="Selecciona un día para ver el detalle nutricional"
+            emptyMessage={t("myNutritionPage.seleccionaUnDíaParaVerElDetalleNu")}
             master={
               <>
                 {activeWeekData.map((day, index) => {
@@ -3141,7 +3141,7 @@ export function MyNutritionPage() {
                           </Menu.Target>
                           <Menu.Dropdown>
                             <Menu.Label>{t("myNutrition.intercambiarComidasCon")}</Menu.Label>
-                            {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, idx) => {
+                            {["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"].map((label, idx) => {
                               const targetDayNum = idx + 1;
                               if (targetDayNum === activeWeekData[selectedWeekDayIndex].planDayNum) return null;
                               return (
@@ -3362,7 +3362,7 @@ export function MyNutritionPage() {
             size="sm"
           >
             <Stack gap="xs">
-              {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((label, idx) => {
+              {["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"].map((label, idx) => {
                 const targetDayNum = idx + 1;
                 if (targetDayNum === planSwapState?.sourceDayNum) return null;
                 return (
@@ -3399,7 +3399,7 @@ export function MyNutritionPage() {
                 seenKeys.add(key);
                 return true;
               });
-              const dayLabels = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+              const dayLabels = ["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"];
               const targetDayLabel = dayLabels[(planSwapState.targetDay - 1) % 7] || `Día ${planSwapState.targetDay}`;
               if (targetMeals.length === 0) {
                 return <Text c="dimmed" ta="center" py="md">No hay comidas en {targetDayLabel}</Text>;
@@ -3941,7 +3941,7 @@ function SupplementCartPanel() {
                 <CopyButton value={s.discount_code}>
                   {({ copied, copy }) => (
                     <Tooltip
-                      label={copied ? "Copiado" : "Copiar código"}
+                      label={copied ? "Copiado" : t("myNutrition.copiarCodigo")}
                       withArrow
                     >
                       <ActionIcon

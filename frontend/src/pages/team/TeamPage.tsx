@@ -500,7 +500,7 @@ export function TeamPage() {
                   <Text className="text-label" mb="xs">{t("team.ingresosDelEquipo")}</Text>
                   <Text className="text-display" style={{ fontSize: "2rem" }}>€{totalRevenue.toLocaleString()}</Text>
                 </Box>
-                <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: t("team.8b5cf6") }}>
+                <ThemeIcon size={48} radius="xl" variant="light" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" }}>
                   <IconCurrencyEuro size={24} />
                 </ThemeIcon>
               </Group>

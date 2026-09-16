@@ -1671,7 +1671,7 @@ export function MyWorkoutsPage() {
     }))
   );
   
-  const weekDays = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  const weekDays = ["Lunes", "Martes", t("days.wednesday"), "Jueves", "Viernes", t("days.saturday"), "Domingo"];
 
   const buildScheduleFromDays = (days: ProgramDay[], fallbackBlocks: ProgramDay["blocks"]) => {
     return weekDays.map((dayName, index) => {
@@ -2327,7 +2327,7 @@ export function MyWorkoutsPage() {
           </Stack>
           <MasterDetailLayout
             hasSelection={selectedDayIndex !== null && !displaySchedule[selectedDayIndex]?.isRestDay}
-            emptyMessage="Selecciona un día de entrenamiento para ver los ejercicios"
+            emptyMessage={t("myWorkoutsPage.seleccionaUnDíaDeEntrenamientoPara")}
             master={
               <>
                 {displaySchedule.map((day, index) => {
@@ -2774,7 +2774,7 @@ export function MyWorkoutsPage() {
               </Text>
               {achievements.some((a) => a.exceeded) && (
                 <Text size="lg" ta="center">
-                  🏆 ¡Nuevo récord personal!
+                  🏆 {t("myWorkouts.nuevoRecordPersonal")}
                 </Text>
               )}
               <Stack gap="sm" w="100%">

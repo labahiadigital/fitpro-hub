@@ -42,16 +42,16 @@ export function AcceptStaffInvitePage() {
   const form = useForm({
     initialValues: { full_name: "", password: "", password_confirm: "" },
     validate: {
-      full_name: (v) => (v.trim().length < 2 ? "Nombre demasiado corto" : null),
+      full_name: (v) => (v.trim().length < 2 ? t("auth.nombreDemasiadoCorto") : null),
       password: passwordValidator,
       password_confirm: (v, values) =>
-        v !== values.password ? "Las contraseÃ±as no coinciden" : null,
+        v !== values.password ? t("auth.contrasenasNoCoinciden") : null,
     },
   });
 
   useEffect(() => {
     if (!token) {
-      setErrorMessage("Enlace de invitaciÃ³n invÃ¡lido.");
+      setErrorMessage(t("auth.enlaceInvitacionInvalido"));
       setPageState("error");
       return;
     }
@@ -64,7 +64,7 @@ export function AcceptStaffInvitePage() {
       })
       .catch((err) => {
         setErrorMessage(
-          err.response?.data?.detail || "InvitaciÃ³n no encontrada o expirada."
+          err.response?.data?.detail || t("auth.invitacionNoEncontrada")
         );
         setPageState("error");
       });
@@ -83,7 +83,7 @@ export function AcceptStaffInvitePage() {
       notifications.show({
         title: t("auth.error"),
         message:
-          err.response?.data?.detail || "No se pudo completar el registro",
+          err.response?.data?.detail || t("auth.noSePudoCompletarRegistro"),
         color: "red",
       });
     } finally {
@@ -93,11 +93,11 @@ export function AcceptStaffInvitePage() {
 
   const roleLabel = (r?: string) => {
     const map: Record<string, string> = {
-      owner: "Propietario",
-      collaborator: "Colaborador",
-      client: "Cliente",
+      owner: t("team.propietario"),
+      collaborator: t("team.colaborador"),
+      client: t("common.cliente"),
     };
-    return map[r || ""] || r || "Miembro";
+    return map[r || ""] || r || t("team.miembro");
   };
 
   return (
@@ -159,11 +159,11 @@ export function AcceptStaffInvitePage() {
                 </ThemeIcon>
                 <Title order={3}>{t("acceptStaffInvite.asnete_al_equipo")}</Title>
                 <Text c="dimmed" size="sm" mt={4}>
-                  Has sido invitado a{" "}
+                  {t("auth.hasSidoInvitadoA")}{" "}
                   <Text span fw={600} c="teal">
                     {inviteInfo.workspace_name}
                   </Text>{" "}
-                  como{" "}
+                  {t("auth.como")}{" "}
                   <Text span fw={600}>
                     {roleLabel(inviteInfo.role)}
                   </Text>
@@ -220,7 +220,7 @@ export function AcceptStaffInvitePage() {
               <IconCheck size={30} />
             </ThemeIcon>
             <Title order={3} ta="center">
-              Â¡Cuenta activada!
+              {t("auth.cuentaActivada")}
             </Title>
             <Text c="dimmed" ta="center" size="sm">
               {t("auth.tuCuentaHaSidoCreada")}

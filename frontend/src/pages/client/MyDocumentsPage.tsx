@@ -159,7 +159,7 @@ export function MyDocumentsPage() {
             <Text size="sm" c="dimmed">
               {selectedCategory !== "Todos"
                 ? `No hay documentos en la categoría "${selectedCategory}".`
-                : "Aún no tienes documentos. Sube uno o espera a que tu entrenador comparta archivos contigo."}
+                : t("myDocumentsPage.aúnNoTienesDocumentosSubeUnoOEsp")}
             </Text>
           </Stack>
         </Card>

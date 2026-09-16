@@ -79,7 +79,7 @@ export function RecipesTab({
           styles={{ input: { backgroundColor: "var(--nv-surface)", border: "1px solid var(--border-subtle)" } }}
         />
         <Select
-          placeholder={"Categoría"}
+          placeholder={t("supplementsComp.categoria")}
           data={RECIPE_CATEGORIES}
           value={recipeCategoryFilter}
           onChange={(v) => onCategoryChange(v || "")}
@@ -107,7 +107,7 @@ export function RecipesTab({
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="md" className="stagger">
           {recipes.map((recipe: Recipe) => {
             const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
-            const diffLabel = recipe.difficulty === "easy" ? "Fácil" : recipe.difficulty === "medium" ? "Media" : recipe.difficulty === "hard" ? "Difícil" : null;
+            const diffLabel = recipe.difficulty === "easy" ? t("recipes.facil") : recipe.difficulty === "medium" ? "Media" : recipe.difficulty === "hard" ? t("recipes.dificil") : null;
             const diffColor = recipe.difficulty === "easy" ? "green" : recipe.difficulty === "medium" ? "yellow" : recipe.difficulty === "hard" ? "red" : "gray";
             const perServing = recipe.servings > 0 ? Math.round((recipe.total_calories || 0) / recipe.servings) : Math.round(recipe.total_calories || 0);
             return (

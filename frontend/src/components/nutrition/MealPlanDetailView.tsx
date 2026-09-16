@@ -38,6 +38,7 @@ import {
 } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GlossaryTooltip } from "../common/GlossaryTooltip";
 import {
   type FormulaType,
@@ -219,6 +220,7 @@ export function MealPlanDetailView({
   onPrint,
   onEdit,
 }: MealPlanDetailViewProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string | null>("overview");
   const [editingClient, setEditingClient] = useState(false);
   const [selectedFormula, setSelectedFormula] = useState<FormulaType>("mifflin");
@@ -351,8 +353,8 @@ export function MealPlanDetailView({
         weeksNeeded,
         monthsNeeded,
         note: gender === "female" 
-          ? "Individuos con obesidad pueden bajar más rápido" 
-          : "Individuos con obesidad pueden bajar más rápido",
+          ? t("mealPlanDetailView.individuosConObesidadPuedenBajarMás") 
+          : t("mealPlanDetailView.individuosConObesidadPuedenBajarMás"),
       };
     } else if (goal_type === "muscle_gain") {
       // Muscle gain: 0.25-0.5kg per week for men, half for women
@@ -476,7 +478,7 @@ export function MealPlanDetailView({
     } else {
       notifications.show({
         title: "Exportando PDF",
-        message: "El PDF se está generando...",
+        message: t("mealPlanDetailView.el_pdf_se_esta_generando"),
         color: "blue",
       });
       // TODO: Implement PDF export
@@ -522,7 +524,7 @@ export function MealPlanDetailView({
             <Group gap="xs" mb="sm">
               <IconAlertTriangle size={20} color="var(--mantine-color-red-6)" />
               <Text fw={600} c="red">
-                {"¡ADVERTENCIA! Alimentos con alérgenos detectados"}
+                {t("nutritionComp.advertenciaAlergenos")}
               </Text>
             </Group>
             <Stack gap="xs">
@@ -571,7 +573,7 @@ export function MealPlanDetailView({
                   clientForm.values.goal_type === "fat_loss" ? "red" : 
                   clientForm.values.goal_type === "muscle_gain" ? "green" : "blue"
                 }>
-                  {clientForm.values.goal_type === "fat_loss" ? "Pérdida Grasa" : 
+                  {clientForm.values.goal_type === "fat_loss" ? t("mealPlanDetailView.pérdidaGrasa") : 
                    clientForm.values.goal_type === "muscle_gain" ? "Ganancia Muscular" : "Mantenimiento"}
                 </Badge>
               </Box>
@@ -599,8 +601,8 @@ export function MealPlanDetailView({
           data={[
             { value: "overview", label: "Resumen Nutricional" },
             { value: "meals", label: "Plan de Comidas" },
-            { value: "calculator", label: "Calculadora Energética" },
-            { value: "supplements", label: "Suplementación" },
+            { value: "calculator", label: t("nutritionComp.calculadoraEnergetica") },
+            { value: "supplements", label: t("nutritionComp.suplementacion") },
           ]}
           size="sm"
           radius="md"
@@ -661,7 +663,7 @@ export function MealPlanDetailView({
                     {macroPercentages.protein}%
                   </Badge>
                   <Text size="sm" mt="xs">
-                    <GlossaryTooltip term="Proteína">{"Proteína %"}</GlossaryTooltip>
+                    <GlossaryTooltip term={t("supplementsComp.proteina")}>{"Proteína %"}</GlossaryTooltip>
                   </Text>
                   <Text fw={600}>{actualMacros.protein}g</Text>
                   <Text size="xs" c="dimmed">
@@ -791,7 +793,7 @@ export function MealPlanDetailView({
                           <ThemeIcon color="green" variant="light" size="sm">
                             <IconMeat size={14} />
                           </ThemeIcon>
-                          <GlossaryTooltip term="Proteína">{"Proteína %"}</GlossaryTooltip>
+                          <GlossaryTooltip term={t("supplementsComp.proteina")}>{"Proteína %"}</GlossaryTooltip>
                         </Group>
                       </Table.Td>
                       <Table.Td ta="right">{actualMacros.protein}g</Table.Td>
@@ -925,7 +927,7 @@ export function MealPlanDetailView({
                   />
                   <NumberInput
                     label={"Edad"}
-                    suffix=" años"
+                    suffix={t("mealPlanDetailView.años")}
                     min={10}
                     max={100}
                     disabled={!editingClient}
@@ -1195,6 +1197,7 @@ interface MealPlanDaysViewProps {
 }
 
 function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
+  const { t } = useTranslation();
   const [selectedDay, setSelectedDay] = useState(0);
 
   if (!days || days.length === 0) {
@@ -1353,7 +1356,7 @@ function MealPlanDaysView({ days, clientAllergens }: MealPlanDaysViewProps) {
                       >
                         {food.quantity}{food.unit || "g"} {food.name}
                         {isAllergen(food.name, food.allergens) && (
-                          <Tooltip label={"¡Contiene alérgeno!"}>
+                          <Tooltip label={t("nutritionComp.contieneAlergeno")}>
                             <IconAlertTriangle size={14} style={{ marginLeft: 4, verticalAlign: "middle" }} color="red" />
                           </Tooltip>
                         )}

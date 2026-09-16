@@ -98,7 +98,13 @@
     "describeLaRectificacion": "Describe la rectificación",
     "indicaQueInformacionEsIncorrecta": "Indica qué información es incorrecta y cuál sería la correcta...",
     "solicitaLaCorreccionDe": "Solicita la corrección de",
-    "enviarSolicitud": "Enviar solicitud"
+    "enviarSolicitud": "Enviar solicitud",
+    "alertaAlergeno": "¡ALERTA! El cliente es alérgico/intolerante a este ingrediente",
+    "alertaAlergenos": "ALERTA DE ALÉRGENOS",
+    "esteAlimentoContiene": "Este alimento contiene:",
+    "copiado": "¡Copiado!",
+    "copiarEnlace": "Copiar enlace público",
+    "copiarCodigo": "Copiar código"
   },
   "nav": {
     "mainMenu": "Menú Principal",
@@ -256,7 +262,36 @@
     "volverAlInicioDeSesi": "Volver al inicio de sesión",
     "hemosEnviadoUnNuevoEnlace": "Hemos enviado un nuevo enlace de verificación a tu email. \r\n                Revisa tu bandeja de entrada (y la carpeta de spam).",
     "1a1a2e": "#1a1a2e",
-    "hasSidoInvitadoA": "Has sido invitado a"
+    "hasSidoInvitadoA": "Has sido invitado a",
+    "copyright": "© 2026 Trackfiz. Todos los derechos reservados.",
+    "tokenInvalido": "Token de confirmación no válido o faltante.",
+    "errorVerificarEmail": "Error al verificar el email.",
+    "enlaceExpirado": "El enlace de verificación ha expirado. Solicita uno nuevo.",
+    "siEmailRegistrado": "Si el email está registrado, recibirás un enlace de verificación.",
+    "errorEnviarVerificacion": "Error al enviar el email de verificación.",
+    "confirmacionCuenta": "Confirmación de cuenta",
+    "restablecerContrasena": "Restablecer contraseña",
+    "accesoTuCuenta": "Acceso a tu cuenta",
+    "cambioDeEmail": "Cambio de email",
+    "verificacion": "Verificación",
+    "emailVerificado": "¡Tu email ha sido verificado!",
+    "cuentaListaIniciarSesion": "Tu cuenta está lista. Ya puedes iniciar sesión y comenzar a usar Trackfiz.",
+    "ahoraPuedesCrearContrasena": "Ahora puedes crear una nueva contraseña.",
+    "verificacionCompletada": "La verificación se ha completado correctamente.",
+    "necesitasNuevoEnlace": "¿Necesitas un nuevo enlace de verificación?",
+    "emailEnviadoExcl": "¡Email enviado!",
+    "enlaceInvitacionInvalido": "Enlace de invitación inválido.",
+    "invitacionNoEncontrada": "Invitación no encontrada o expirada.",
+    "noSePudoCompletarRegistro": "No se pudo completar el registro.",
+    "nombreDemasiadoCorto": "Nombre demasiado corto",
+    "contrasenasNoCoinciden": "Las contraseñas no coinciden",
+    "cuentaActivada": "¡Cuenta activada!",
+    "como": "como",
+    "unEquipo": "un equipo",
+    "iniciaSesionParaAcceder": "Inicia sesión para acceder.",
+    "conectandoGoogleCalendar": "Conectando con Google Calendar...",
+    "verificandoAutorizacion": "Verificando autorización...",
+    "conectadoCorrectamente": "¡Conectado correctamente!"
   },
   "dashboard": {
     "title": "Panel Principal",
@@ -1363,7 +1398,13 @@
     "verMiEntrenamientoDeHoy": "Ver mi entrenamiento de hoy",
     "registrarComida": "Registrar comida",
     "mensajeAMiEntrenador": "Mensaje a mi entrenador",
-    "registrarProgreso": "Registrar progreso"
+    "registrarProgreso": "Registrar progreso",
+    "hola": "¡Hola",
+    "tuProgresoVaGenial": "Tu progreso esta semana va genial. ¡Sigue así!",
+    "comienzaTuSemana": "¡Comienza tu semana con energía!",
+    "completado": "completado",
+    "casiLoTienes": "¡Casi lo tienes!",
+    "vasMuyBien": "¡Vas muy bien!"
   },
   "myCalendar": {
     "solicitarCita": "Solicitar cita",
@@ -1785,7 +1826,8 @@
     "superado": "Superado",
     "buenTrabajo": "¡Buen trabajo!",
     "hasCompletadoTuEntrenamientoSigue": "Has completado tu entrenamiento. ¡Sigue así!",
-    "continuar": "Continuar"
+    "continuar": "Continuar",
+    "nuevoRecordPersonal": "¡Nuevo récord personal!"
   },
   "clientDetail": {
     "tipoDeCliente": "Tipo de cliente",
@@ -3099,7 +3141,8 @@
     "listo": "¡Listo!",
     "tuCuestionarioSeHaEnviado": "Tu cuestionario se ha enviado. Te hemos mandado un segundo email con\r\n            los próximos pasos para acceder a tu plataforma.",
     "irAMiPanel": "Ir a mi panel",
-    "enviarCuestionario": "Enviar cuestionario"
+    "enviarCuestionario": "Enviar cuestionario",
+    "listoListaDeEspera": "¡Listo! Te hemos añadido a la lista de espera. Te avisaremos cuando haya una plaza disponible."
   },
   "packages": {
     "nombreDelPaquete": "Nombre del paquete",
@@ -3324,7 +3367,8 @@
     "hashSha256": "Hash SHA-256:",
     "respuestaAeat": "Respuesta AEAT:",
     "guardarConfiguracion": "Guardar Configuración",
-    "vs_mes_anterior": "vs mes anterior"
+    "vs_mes_anterior": "vs mes anterior",
+    "numero": "N.º"
   },
   "catalog": {
     "editar": "Editar",
@@ -3654,7 +3698,8 @@
     "hashSha256": "Hash SHA-256:",
     "respuestaAeat": "Respuesta AEAT:",
     "guardarConfiguracion": "Guardar Configuración",
-    "vs_mes_anterior": "vs mes anterior"
+    "vs_mes_anterior": "vs mes anterior",
+    "numero": "N.º"
   },
   "reports": {
     "reportesYAnalytics": "Reportes y Analytics",
@@ -4107,7 +4152,12 @@
     "sinAusenciasProximas": "Sin ausencias próximas",
     "fichar": "Fichar",
     "registros": "Registros",
-    "solicitudes": "Solicitudes"
+    "solicitudes": "Solicitudes",
+    "fichajeRealizado": "¡Fichaje realizado",
+    "salidaRegistrada": "¡Salida registrada correctamente!",
+    "miembro": "Miembro",
+    "propietario": "Propietario",
+    "colaborador": "Colaborador"
   },
   "workouts": {
     "grupoMuscular": "Grupo muscular",
@@ -4306,7 +4356,9 @@
     "menuPrincipal": "Menu Principal",
     "miCuenta": "Mi Cuenta",
     "configuraciN": "Configuración",
-    "cerrarSesiN": "Cerrar sesión"
+    "cerrarSesiN": "Cerrar sesión",
+    "configuracion": "Configuración",
+    "cerrarSesion": "Cerrar sesión"
   },
   "notifications": {
     "nuevo": "Nuevo",
@@ -4513,7 +4565,8 @@
     "fecha": "Fecha",
     "formula": "Fórmula",
     "vaciarHistorico": "Vaciar histórico",
-    "ocultarHistorico": "Ocultar histórico"
+    "ocultarHistorico": "Ocultar histórico",
+    "advertenciaAlergenos": "¡ADVERTENCIA! Alimentos con alérgenos detectados"
   },
   "recipes": {
     "grape": "grape",
@@ -4793,13 +4846,17 @@
   "mealPlanBuilder": {
     "alimento_creado": "Alimento creado",
     "el_alimento_ha_sido_creado_correctamente": "El alimento ha sido creado correctamente",
-    "receta_anadida": "Receta añadida"
+    "receta_anadida": "Receta añadida",
+    "nombreRequeridoMín2Caracteres": "Nombre requerido (mín. 2 caracteres)"
   },
   "mealPlanDetailView": {
     "el_pdf_se_esta_generando": "El PDF se está generando...",
     "1_multivitaminico": "1 Multivitamínico",
     "comida": "COMIDA",
-    "sin_alimentos": "(sin alimentos)"
+    "sin_alimentos": "(sin alimentos)",
+    "individuosConObesidadPuedenBajarMás": "Individuos con obesidad pueden bajar más rápido",
+    "pérdidaGrasa": "Pérdida Grasa",
+    "años": " años"
   },
   "nutritionHistory": {
     "grasa": "% Grasa"
@@ -4817,5 +4874,139 @@
   "exerciseForm": {
     "alternativa_anadida": "Alternativa añadida",
     "la_imagen_no_puede_superar_los_8_mb": "La imagen no puede superar los 8 MB"
+  },
+  "clientReportsTab": {
+    "eliminarEsteReporte": "¿Eliminar este reporte?",
+    "nuevoReporteDeRevisión": "Nuevo reporte de revisión"
+  },
+  "automationsPage": {
+    "editarAutomatización": "Editar Automatización"
+  },
+  "calendarPage": {
+    "títuloRequerido": "Título requerido",
+    "mié": "Mié",
+    "sáb": "Sáb",
+    "sesión": "Sesión",
+    "modificarSesiónCita": "Modificar Sesión/Cita",
+    "detalleDeSesiónCita": "Detalle de Sesión/Cita"
+  },
+  "chatPage": {
+    "comunícateConTuEntrenador": "Comunícate con tu entrenador",
+    "comunícateConTusClientesYEquipo": "Comunícate con tus clientes y equipo",
+    "whatsAppNoEstáConectadoEnEsteWorks": "WhatsApp no está conectado en este workspace",
+    "esteClienteNoTieneNúmeroDeTeléfono": "Este cliente no tiene número de teléfono"
+  },
+  "clientDashboardPage": {
+    "género": "género",
+    "ComplétaloCuandoPuedas": " — complétalo cuando puedas.",
+    "tienesUnaRevisiónPendiente": "Tienes una revisión pendiente",
+    "próximaRevisión": "Próxima revisión"
+  },
+  "myCalendarPage": {
+    "noHaySesionesParaEsteDía": "No hay sesiones para este día",
+    "noTienesSesionesPróximasProgramadas": "No tienes sesiones próximas programadas",
+    "noHaySesionesAnterioresEsteDía": "No hay sesiones anteriores este día"
+  },
+  "myDocumentsPage": {
+    "aúnNoTienesDocumentosSubeUnoOEsp": "Aún no tienes documentos. Sube uno o espera a que tu entrenador comparta archivos contigo."
+  },
+  "myNutritionPage": {
+    "noSeEncontraronRecetasConEsaBúsque": "No se encontraron recetas con esa búsqueda.",
+    "tuEntrenadorAúnNoHaCompartidoRecet": "Tu entrenador aún no ha compartido recetas contigo.",
+    "seleccionaUnDíaParaVerElDetalleNu": "Selecciona un día para ver el detalle nutricional"
+  },
+  "myProfilePage": {
+    "expiróEl": "Expiró el",
+    "próximoCobro": "Próximo cobro",
+    "introduceTuContraseñaActual": "Introduce tu contraseña actual",
+    "noSePudoCambiarLaContraseña": "No se pudo cambiar la contraseña.",
+    "introduceUnEmailVálido": "Introduce un email válido",
+    "laContraseñaEsObligatoria": "La contraseña es obligatoria",
+    "noSePudoCambiarElEmailInténtaloD": "No se pudo cambiar el email. Inténtalo de nuevo."
+  },
+  "myWorkoutsPage": {
+    "seleccionaUnDíaDeEntrenamientoPara": "Selecciona un día de entrenamiento para ver los ejercicios"
+  },
+  "clientDetailPage": {
+    "pérdidaDeGrasa": "Pérdida de Grasa",
+    "seCalculaTras7Días": "Se calcula tras 7 días",
+    "sinSuscripciónActiva": "Sin suscripción activa",
+    "elChatEstáDeshabilitado": "El chat está deshabilitado",
+    "obligatorioAceptaciónDelContratoDe": "Obligatorio. Aceptación del contrato de prestación.",
+    "opcionalPermiteEnviarleCampañasYDe": "Opcional. Permite enviarle campañas y descuentos por email.",
+    "noLeído": "No leído",
+    "tuCatálogoEstáVacíoCreaSuplementos": "Tu catálogo está vacío. Crea suplementos en la sección Suplementos.",
+    "estásSeguroDeQueQuieresEliminarEs": "¿Estás seguro de que quieres eliminar este programa de entrenamiento asignado? Esta acción no se puede deshacer."
+  },
+  "clientsPage": {
+    "añadirCliente": "Añadir Cliente",
+    "empiezaAñadiendoTuPrimerClientePara": "Empieza añadiendo tu primer cliente para gestionar sus entrenamientos, nutrición y progreso.",
+    "emailDescuentoReactivación": "Email descuento reactivación",
+    "confirmarEliminaciónDefinitiva": "Confirmar eliminación definitiva"
+  },
+  "communityBenefitsPage": {
+    "elTítuloEsObligatorio": "El título es obligatorio",
+    "eliminarEsteBeneficio": "¿Eliminar este beneficio?"
+  },
+  "formsPage": {
+    "discriminación": "Discriminación",
+    "elFormularioEstáActivo": "El formulario está activo.",
+    "losClientesVeránUnaNotificaciónPers": "Los clientes verán una notificación persistente hasta completarlo."
+  },
+  "nutritionPage": {
+    "añadidoAFavoritos": "Añadido a favoritos",
+    "elAlimentoSeHaAñadidoATusFavorito": "El alimento se ha añadido a tus favoritos",
+    "elSuplementoSeHaAñadidoATusFavori": "El suplemento se ha añadido a tus favoritos",
+    "porción": "porción",
+    "guardaUnaCopiaReutilizableAdemásDel": "Guarda una copia reutilizable además del plan del cliente"
+  },
+  "clientOnboardingPage": {
+    "mínimo8CaracteresConMayúsculaMinús": "Mínimo 8 caracteres con mayúscula, minúscula y número",
+    "móvilObligatorio": "Móvil obligatorio",
+    "razónSocialObligatoria": "Razón social obligatoria",
+    "direcciónObligatoria": "Dirección obligatoria",
+    "ciudadOPoblaciónObligatoria": "Ciudad o población obligatoria",
+    "poblaciónObligatoria": "Población obligatoria",
+    "paísObligatorio": "País obligatorio",
+    "códigoPostalObligatorio": "Código postal obligatorio",
+    "debesAceptarLaPolíticaDePrivacidad": "Debes aceptar la política de privacidad",
+    "año": "año",
+    "esteProductoEstáCompletoApúntateA": "Este producto está completo. Apúntate a la lista de espera y te avisaremos cuando haya una plaza disponible."
+  },
+  "invitationOnboardingPage": {
+    "noSePudoCargarElFormularioDeSeQur": "No se pudo cargar el formulario de SeQura. Inténtalo de nuevo.",
+    "teléfonoMóvilObligatorio": "Teléfono móvil obligatorio",
+    "tuEntrenadorLoNecesitaParaDiseñarT": "Tu entrenador lo necesita para diseñar tu plan a medida.",
+    "ábreloYSigueDesdeAhíParaContinuar": "Ábrelo y sigue desde ahí para continuar con tu primer cuestionario.",
+    "suscripciónRecurrente": "Suscripción recurrente"
+  },
+  "packagesPage": {
+    "mínimo1Sesión": "Mínimo 1 sesión",
+    "precioInválido": "Precio inválido"
+  },
+  "billingPage": {
+    "descripciónRequerida": "Descripción requerida",
+    "arrastraTuCertificadoP12PfxAquí": "Arrastra tu certificado .p12 / .pfx aquí"
+  },
+  "catalogPage": {
+    "códigoRequerido": "Código requerido",
+    "productoFísicoNoSePuedeVincularA": "Producto físico: no se puede vincular a boxes, máquinas ni miembros del equipo.",
+    "servicioPuedeVincularseABoxesMáqu": "Servicio: puede vincularse a boxes, máquinas y miembros del equipo.",
+    "editarCupón": "Editar Cupón",
+    "crearCupón": "Crear Cupón"
+  },
+  "settingsPage": {
+    "vamosADarleGASNBorjaSanfélix": "Vamos a darle GAS 💪🏽\\nBorja Sanfélix",
+    "cuandoUnClienteTeEnvíaUnMensaje": "Cuando un cliente te envía un mensaje",
+    "recordatorioDeTareasPróximasASuFec": "Recordatorio de tareas próximas a su fecha límite",
+    "cuandoUnaAutomatizaciónFinalizaSuEj": "Cuando una automatización finaliza su ejecución",
+    "notificaciónCuandoSeRealizaUnFichaj": "Notificación cuando se realiza un fichaje (dentro/fuera de horario)",
+    "avisoCuandoNoSeHaFichadoYDebería": "Aviso cuando no se ha fichado y debería haberse hecho",
+    "esperandoConexión": "Esperando conexión...",
+    "renovaciónInformaciónNoDisponible": "Renovación: información no disponible"
+  },
+  "stockPage": {
+    "mín": "Mín",
+    "máx": "Máx"
   }
 }

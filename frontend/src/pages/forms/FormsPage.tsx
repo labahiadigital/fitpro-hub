@@ -375,7 +375,7 @@ export function FormsPage() {
         type: "select",
         label: t("forms.tipoDeDenuncia"),
         required: true,
-        options: ["Acoso", "Discriminación", "Seguridad", "Otro"],
+        options: ["Acoso", t("formsPage.discriminación"), "Seguridad", "Otro"],
         order: 0,
       },
       {
@@ -505,7 +505,7 @@ export function FormsPage() {
       notifications.show({
         title: t("forms.estadoActualizado"),
         message: !currentStatus
-          ? "El formulario está activo."
+          ? t("formsPage.elFormularioEstáActivo")
           : "El formulario se ha desactivado.",
         color: "green",
       });
@@ -527,7 +527,7 @@ export function FormsPage() {
       notifications.show({
         title: !currentValue ? "Formulario obligatorio" : "Formulario opcional",
         message: !currentValue
-          ? "Los clientes verán una notificación persistente hasta completarlo."
+          ? t("formsPage.losClientesVeránUnaNotificaciónPers")
           : "El formulario ya no es obligatorio.",
         color: !currentValue ? "orange" : "gray",
       });
@@ -1147,7 +1147,7 @@ export function FormsPage() {
                             : submission.status === "submitted"
                               ? "Nueva"
                               : submission.status === "read"
-                                ? "Leído"
+                                ? t("clients.leido")
                                 : "Pendiente"}
                         </Badge>
                       </Table.Td>
@@ -1364,7 +1364,7 @@ export function FormsPage() {
                         : viewingSubmission.status === "submitted"
                           ? "Nueva"
                           : viewingSubmission.status === "read"
-                            ? "Leído"
+                            ? t("clients.leido")
                             : "Pendiente"}
                     </Badge>
                   </Group>

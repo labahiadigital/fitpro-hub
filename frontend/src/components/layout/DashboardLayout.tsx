@@ -639,7 +639,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void } = {}) {
   const navEntries = isClient
     ? getClientNavItems(unreadCount, pendingTotal, t)
     : filterNavEntries(ALL_TRAINER_NAV_ENTRIES(unreadCount, t), user?.permissions);
-  const menuTitle = isClient ? "Mi Espacio" : "Menú Principal";
+  const menuTitle = isClient ? "Mi Espacio" : t("nav.mainMenu");
 
   return (
     <Box

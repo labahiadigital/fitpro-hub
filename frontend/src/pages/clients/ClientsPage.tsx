@@ -416,7 +416,7 @@ function AbandonedCartList({
       <EmptyState
         icon={<IconShoppingCartX size={48} />}
         title={"No hay carritos abandonados"}
-        description={"Aquí aparecerán las invitaciones con producto asignado pero sin pago completado."}
+        description={t("clients.aquiApareceranLasInvitacionesCon")}
       />
     );
   }
@@ -554,7 +554,7 @@ function AbandonedCartList({
                           </Badge>
                         </Tooltip>
                         {i.email_read ? (
-                          <Tooltip label={"Leído por el destinatario"} withArrow>
+                          <Tooltip label={t("clients.leidoPorElDestinatario")} withArrow>
                             <Badge
                               size="xs"
                               color="teal"
@@ -565,7 +565,7 @@ function AbandonedCartList({
                             </Badge>
                           </Tooltip>
                         ) : i.last_email_status === "delivered" ? (
-                          <Tooltip label={"Entregado, sin abrir aún"} withArrow>
+                          <Tooltip label={t("clients.entregadoSinAbrirAun")} withArrow>
                             <Badge size="xs" color="gray" variant="light">{"Sin leer"}</Badge>
                           </Tooltip>
                         ) : i.last_email_status && i.last_email_status.includes("bounce") ? (
@@ -583,7 +583,7 @@ function AbandonedCartList({
                       )}
                     </Stack>
                   ) : (
-                    <Tooltip label={"Aún no se ha enviado ningún email"} withArrow>
+                    <Tooltip label={t("clients.aunNoSeHaEnviado")} withArrow>
                       <Badge size="xs" color="gray" variant="light">{"Sin enviar"}</Badge>
                     </Tooltip>
                   )}
@@ -1043,7 +1043,7 @@ export function ClientsPage() {
     validate: {
       first_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
       last_name: (value) => (value.length < 2 ? "Apellido requerido" : null),
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
     },
   });
 
@@ -1056,7 +1056,7 @@ export function ClientsPage() {
       product_id: "" as string,
     },
     validate: {
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
     },
   });
 
@@ -1081,7 +1081,7 @@ export function ClientsPage() {
     validate: {
       first_name: (value) => (value.length < 2 ? "Nombre requerido" : null),
       last_name: (value) => (value.length < 2 ? "Apellido requerido" : null),
-      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Email inválido"),
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : t("auth.invalidEmail")),
     },
   });
 
@@ -1839,10 +1839,10 @@ export function ClientsPage() {
         />
       ) : showLegacyTable && isLoading ? null : showLegacyTable ? (
         <EmptyState
-          actionLabel={activeTab === "all" ? "Añadir Cliente" : undefined}
+          actionLabel={activeTab === "all" ? t("clientsPage.añadirCliente") : undefined}
           description={
             activeTab === "active" ? "No hay clientes activos con cuenta creada."
-            : "Empieza añadiendo tu primer cliente para gestionar sus entrenamientos, nutrición y progreso."
+            : t("clientsPage.empiezaAñadiendoTuPrimerClientePara")
           }
           icon={<IconUsers size={48} />}
           onAction={activeTab === "all" ? openClientModal : undefined}
@@ -1858,7 +1858,7 @@ export function ClientsPage() {
         opened={!!campaignModalOpen}
         onClose={() => { setCampaignModalOpen(false); setSelectedTemplateId(null); }}
         size="md"
-        title={campaignModalOpen === "abandoned_cart" ? "Email recordatorio de pago" : "Email descuento reactivación"}
+        title={campaignModalOpen === "abandoned_cart" ? "Email recordatorio de pago" : t("clientsPage.emailDescuentoReactivación")}
         radius="lg"
       >
         <Stack gap="md">
@@ -2275,7 +2275,7 @@ export function ClientsPage() {
         onClose={() => { closeDeleteConfirm(); setClientToDelete(null); }}
         title={
           clientToDelete?.deleted_at
-            ? "Confirmar eliminación definitiva"
+            ? t("clientsPage.confirmarEliminaciónDefinitiva")
             : "Mover a Eliminados"
         }
         radius="lg"

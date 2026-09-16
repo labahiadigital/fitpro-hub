@@ -1,5 +1,6 @@
 import { Badge, Group, Tooltip, ThemeIcon, Text, Box } from "@mantine/core";
 import { IconAlertTriangle, IconCheck } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { DIETARY_RESTRICTIONS } from "../../constants/allergens";
 
 // Listado común (alergias + intolerancias) que comparte toda la app.
@@ -24,6 +25,7 @@ export function AllergenBadge({
   isClientAllergen = false,
   size = "sm",
 }: AllergenBadgeProps) {
+  const { t } = useTranslation();
   const allergenInfo = COMMON_ALLERGENS.find(
     (a) => a.id.toLowerCase() === allergen.toLowerCase()
   );
@@ -34,7 +36,7 @@ export function AllergenBadge({
   if (isClientAllergen) {
     return (
       <Tooltip
-        label={"¡ALERTA! El cliente es alérgico/intolerante a este ingrediente"}
+        label={t("common.alertaAlergeno")}
         withArrow
         color="red"
       >
@@ -116,6 +118,7 @@ export function FoodAllergenWarning({
   clientAllergens,
   clientIntolerances,
 }: FoodAllergenWarningProps) {
+  const { t } = useTranslation();
   const clientRestrictions = [
     ...clientAllergens.map((a) => a.toLowerCase()),
     ...clientIntolerances.map((a) => a.toLowerCase()),
@@ -144,10 +147,10 @@ export function FoodAllergenWarning({
         </ThemeIcon>
         <Box>
           <Text c="red" fw={600} size="sm">
-            ⚠️ ALERTA DE ALÉRGENOS
+            ⚠️ {t("common.alertaAlergenos")}
           </Text>
           <Text c="red.7" size="xs">
-            Este alimento contiene:{" "}
+            {t("common.esteAlimentoContiene")}{" "}
             {matchingAllergens
               .map((a) => {
                 const info = COMMON_ALLERGENS.find(

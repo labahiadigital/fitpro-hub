@@ -363,7 +363,7 @@ export function MealPlanBuilder({
       fiber_g: 0,
     },
     validate: {
-      name: (v) => (v.trim().length < 2 ? "Nombre requerido (mín. 2 caracteres)" : null),
+      name: (v) => (v.trim().length < 2 ? t("mealPlanBuilder.nombreRequeridoMín2Caracteres") : null),
     },
   });
 
@@ -1202,7 +1202,7 @@ export function MealPlanBuilder({
           <Box key={currentDay.id}>
             <Group justify="flex-end" mb="sm">
               <Switch
-                label={"Día Libre"}
+                label={t("nutritionComp.diaLibre")}
                 checked={currentDay.is_free_day || false}
                 onChange={(e) => {
                   onChange(
@@ -1705,7 +1705,7 @@ export function MealPlanBuilder({
               })}
 
               <Divider
-                label={"Añadir comida"}
+                label={t("nutritionComp.anadirComida")}
                 labelPosition="center"
                 style={{ borderColor: "var(--nv-border)" }}
               />
@@ -1841,7 +1841,7 @@ export function MealPlanBuilder({
             <Group mb="xs">
               <Select
                 data={FOOD_CATEGORIES}
-                placeholder={"Filtrar por categoría"}
+                placeholder={t("nutritionComp.filtrarPorCategoria")}
                 clearable
                 size="xs"
                 radius="md"
@@ -2203,7 +2203,7 @@ export function MealPlanBuilder({
                               {recipe.category && <Badge size="xs" variant="light" color="blue">{recipe.category}</Badge>}
                               {recipe.difficulty && (
                                 <Badge size="xs" variant="light" color={recipe.difficulty === "easy" ? "green" : recipe.difficulty === "medium" ? "yellow" : "red"}>
-                                  {recipe.difficulty === "easy" ? "Fácil" : recipe.difficulty === "medium" ? "Media" : "Difícil"}
+                                  {recipe.difficulty === "easy" ? t("recipes.facil") : recipe.difficulty === "medium" ? "Media" : t("recipes.dificil")}
                                 </Badge>
                               )}
                               {totalTime > 0 && <Badge size="xs" variant="light" color="orange">{totalTime} min</Badge>}
@@ -2306,12 +2306,12 @@ export function MealPlanBuilder({
             />
             <Select
               data={FOOD_CATEGORIES}
-              label={"Categoría"}
+              label={t("supplementsComp.categoria")}
               {...createFoodForm.getInputProps("category")}
             />
             <Group grow>
               <NumberInput
-                label={"Porción (cantidad)"}
+                label={t("nutritionComp.porcionCantidad")}
                 min={1}
                 {...createFoodForm.getInputProps("serving_size")}
               />
@@ -2322,8 +2322,8 @@ export function MealPlanBuilder({
               />
             </Group>
             <Group grow>
-              <NumberInput label={"Calorías"} min={0} {...createFoodForm.getInputProps("calories")} />
-              <NumberInput label={"Proteínas (g)"} min={0} {...createFoodForm.getInputProps("protein_g")} />
+              <NumberInput label={t("supplementsComp.calorias")} min={0} {...createFoodForm.getInputProps("calories")} />
+              <NumberInput label={t("nutritionComp.proteinasG")} min={0} {...createFoodForm.getInputProps("protein_g")} />
             </Group>
             <Group grow>
               <NumberInput label={"Carbohidratos (g)"} min={0} {...createFoodForm.getInputProps("carbs_g")} />
@@ -2383,7 +2383,7 @@ export function MealPlanBuilder({
       <Modal
         opened={moveMealsModalOpen}
         onClose={() => setMoveMealsModalOpen(false)}
-        title={"Mover comidas a otro día"}
+        title={t("nutritionComp.moverComidasAOtroDia")}
         centered
         radius="lg"
       >
@@ -2405,7 +2405,7 @@ export function MealPlanBuilder({
           <Divider />
           <Text size="sm" fw={500}>{"Día destino:"}</Text>
           <Select
-            placeholder={"Selecciona día"}
+            placeholder={t("nutritionComp.seleccionaDia")}
             data={DAY_PLAN_OPTIONS.filter((d) => d.id !== activeDay).map((d) => ({
               value: d.id,
               label: d.dayName,

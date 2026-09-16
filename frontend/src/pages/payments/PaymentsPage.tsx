@@ -233,7 +233,7 @@ export function PaymentsPage() {
     validate: {
       client_name: (v) => (!v ? "Nombre del cliente requerido" : null),
       items: {
-        description: (v) => (!v ? "Descripción requerida" : null),
+        description: (v) => (!v ? t("billingPage.descripciónRequerida") : null),
         unit_price: (v) => (v <= 0 ? "Precio requerido" : null),
       },
     },
@@ -250,7 +250,7 @@ export function PaymentsPage() {
       city: "",
       postal_code: "",
       province: "",
-      country: "España",
+      country: t("suppliers.espana"),
       phone: "",
       email: "",
       invoice_prefix: "F",
@@ -622,7 +622,7 @@ export function PaymentsPage() {
     openDangerConfirm({
       title: t("payments.cancelarSuscripcion"),
       message: `¿Cancelar la suscripción "${sub.plan_name || sub.name}" de ${sub.client_name || "este cliente"}?`,
-      confirmLabel: "Cancelar suscripción",
+      confirmLabel: t("payments.cancelarSuscripcion"),
       onConfirm: async () => { try { await cancelSubscription.mutateAsync(sub.id); } catch { /* handled */ } },
     });
   }, [cancelSubscription]);
@@ -1097,7 +1097,7 @@ export function PaymentsPage() {
                           </ThemeIcon>
                           <Text size="xs">
                             {payment.payment_type === "subscription"
-                              ? "Suscripción"
+                              ? t("payments.suscripcion")
                               : payment.payment_type === "package"
                                 ? "Bono"
                                 : "Puntual"}
@@ -1259,7 +1259,7 @@ export function PaymentsPage() {
               <Table style={{ minWidth: 700 }}>
               <Table.Thead style={{ backgroundColor: "var(--nv-surface)" }}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>N.º</Table.Th>
+                  <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.numero")}</Table.Th>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.cliente")}</Table.Th>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.fecha")}</Table.Th>
                   <Table.Th c="dimmed" fw={600} tt="uppercase" style={{ fontSize: "10px" }}>{t("payments.vencimiento")}</Table.Th>
@@ -1397,7 +1397,7 @@ export function PaymentsPage() {
                           sub.interval === "month" ? "mes" :
                           sub.interval === "quarter" ? "trimestre" :
                           sub.interval === "semester" ? "semestre" :
-                          sub.interval === "year" ? "año" : sub.interval || "mes"
+                          sub.interval === "year" ? t("clientOnboardingPage.año") : sub.interval || "mes"
                         }
                       </Text>
                     </Table.Td>
@@ -1448,7 +1448,7 @@ export function PaymentsPage() {
                     radius="xl"
                   >
                     {product.type === "subscription"
-                      ? "Suscripción"
+                      ? t("payments.suscripcion")
                       : product.type === "package"
                         ? "Bono"
                         : "Puntual"}
@@ -1462,7 +1462,7 @@ export function PaymentsPage() {
                     />
                     <CopyButton value={getPublicLink(product)}>
                       {({ copied, copy }) => (
-                        <Tooltip label={copied ? "¡Copiado!" : "Copiar enlace público"}>
+                        <Tooltip label={copied ? t("common.copiado") : t("common.copiarEnlace")}>
                           <ActionIcon
                             color={copied ? "green" : "gray"}
                             variant="light"
@@ -1708,7 +1708,7 @@ export function PaymentsPage() {
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
               <Text c="dimmed" size="sm">{t("payments.tipo")}</Text>
-              <Text size="sm">{selectedPayment.payment_type === "subscription" ? "Suscripción" : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
+              <Text size="sm">{selectedPayment.payment_type === "subscription" ? t("payments.suscripcion") : selectedPayment.payment_type === "package" ? "Bono" : "Puntual"}</Text>
             </Group>
             <Divider style={{ borderColor: "var(--nv-border)" }} />
             <Group justify="space-between">
@@ -1825,7 +1825,7 @@ export function PaymentsPage() {
                 <Box key={idx} className="nv-card-compact" p="sm" style={{ borderRadius: "var(--radius-sm)", border: "1px solid var(--nv-border)" }}>
                   <Group align="flex-start" gap="sm" wrap="wrap">
                     <TextInput
-                      label={idx === 0 ? "Descripción" : undefined}
+                      label={idx === 0 ? t("teamComp.descripcion") : undefined}
                       placeholder={t("payments.servicioDeEntrenamientoPersonal")}
                       style={{ flex: 3, minWidth: 200 }}
                       {...invoiceForm.getInputProps(`items.${idx}.description`)}
@@ -2274,7 +2274,7 @@ export function PaymentsPage() {
                                 </Dropzone.Idle>
                                 <Box>
                                   <Text size="sm" fw={500}>
-                                    {certFile ? certFile.name : "Arrastra tu certificado .p12 / .pfx aquí"}
+                                    {certFile ? certFile.name : t("billingPage.arrastraTuCertificadoP12PfxAquí")}
                                   </Text>
                                   <Text size="xs" c="dimmed">
                                     {certFile ? `${formatDecimal(certFile.size / 1024, 1)} KB` : "Máximo 50 KB. El archivo solo se usa para extracción server-side."}

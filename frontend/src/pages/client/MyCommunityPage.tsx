@@ -102,7 +102,7 @@ export function MyCommunityPage() {
                     <CopyButton value={b.discount_code}>
                       {({ copied, copy }) => (
                         <Tooltip
-                          label={copied ? "Copiado" : "Copiar código"}
+                          label={copied ? "Copiado" : t("myNutrition.copiarCodigo")}
                           withArrow
                         >
                           <ActionIcon

@@ -468,6 +468,7 @@ function ClientBillingCompact({
   client: any;
   onSaved?: () => void;
 }) {
+  const { t } = useTranslation();
   const updateClient = useUpdateClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -578,15 +579,15 @@ function ClientBillingCompact({
             }
           >
             <Group mt={4}>
-              <Radio value="individual" label={"Persona Física"} />
-              <Radio value="company" label={"Persona Jurídica"} />
+              <Radio value="individual" label={t("onboarding.personaFisica")} />
+              <Radio value="company" label={t("onboarding.personaJuridica")} />
             </Group>
           </Radio.Group>
 
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             {isCompany && (
               <TextInput
-                label={"Razón Social"}
+                label={t("onboarding.razonSocial")}
                 placeholder={"Empresa S.L."}
                 value={form.legal_name}
                 onChange={(e) =>
@@ -605,8 +606,8 @@ function ClientBillingCompact({
           </SimpleGrid>
 
           <TextInput
-            label={"Dirección"}
-            placeholder={"Calle Mayor 12, 3ºB"}
+            label={t("clientDetail.direccion")}
+            placeholder={t("clientDetail.calleMayor123B")}
             value={form.billing_address}
             onChange={(e) =>
               setForm((s) => ({ ...s, billing_address: e.currentTarget.value }))
@@ -614,14 +615,14 @@ function ClientBillingCompact({
           />
           <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
             <TextInput
-              label={"Población"}
+              label={t("suppliers.poblacion")}
               value={form.billing_city}
               onChange={(e) =>
                 setForm((s) => ({ ...s, billing_city: e.currentTarget.value }))
               }
             />
             <TextInput
-              label={"Código postal"}
+              label={t("suppliers.codigoPostal")}
               value={form.billing_postal_code}
               onChange={(e) =>
                 setForm((s) => ({
@@ -631,7 +632,7 @@ function ClientBillingCompact({
               }
             />
             <TextInput
-              label={"País"}
+              label={t("suppliers.pais")}
               value={form.billing_country}
               onChange={(e) =>
                 setForm((s) => ({ ...s, billing_country: e.currentTarget.value }))
@@ -655,22 +656,22 @@ function ClientBillingCompact({
         <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md" verticalSpacing="sm">
           <Field
             label={"Tipo"}
-            value={isCompany ? "Persona Jurídica" : "Persona Física"}
+            value={isCompany ? t("onboarding.personaJuridica") : t("onboarding.personaFisica")}
           />
           <Field
-            label={isCompany ? "Razón Social" : "Nombre fiscal"}
+            label={isCompany ? t("onboarding.razonSocial") : "Nombre fiscal"}
             value={displayName}
           />
           <Field
             label={isCompany ? "CIF / NRT" : "NIF / DNI / NIE"}
             value={client.tax_id}
           />
-          <Field label={"País"} value={client.billing_country} />
+          <Field label={t("suppliers.pais")} value={client.billing_country} />
           <Box style={{ gridColumn: "span 2" }}>
-            <Field label={"Dirección"} value={client.billing_address} />
+            <Field label={t("suppliers.direccion")} value={client.billing_address} />
           </Box>
-          <Field label={"Población"} value={client.billing_city} />
-          <Field label={"Código postal"} value={client.billing_postal_code} />
+          <Field label={t("suppliers.poblacion")} value={client.billing_city} />
+          <Field label={t("suppliers.codigoPostal")} value={client.billing_postal_code} />
         </SimpleGrid>
       )}
     </Box>
@@ -1223,7 +1224,7 @@ export function ClientDetailPage() {
   };
 
   const GOAL_LABELS: Record<string, string> = {
-    fat_loss: "Pérdida de Grasa",
+    fat_loss: t("clientDetailPage.pérdidaDeGrasa"),
     maintenance: "Mantenimiento",
     muscle_gain: "Ganancia Muscular",
   };
@@ -2558,14 +2559,14 @@ export function ClientDetailPage() {
           label={t("clientDetail.adherencia")}
           value={stats.adherence > 0 ? `${stats.adherence}%` : "-"}
           color="var(--nv-success)"
-          hint="Se calcula tras 7 días"
+          hint={t("clientDetailPage.seCalculaTras7Días")}
         />
         <StatCard
           icon={<IconCreditCard size={24} />}
           label="MRR"
           value={stats.mrr > 0 ? `€${stats.mrr}` : "-"}
           color="var(--nv-warning)"
-          hint="Sin suscripción activa"
+          hint={t("clientDetailPage.sinSuscripciónActiva")}
           onClick={() => setActiveTab("payments")}
         />
         <StatCard
@@ -2826,7 +2827,7 @@ export function ClientDetailPage() {
                     <Text c="dimmed" size="xs">
                       {client.chat_enabled 
                         ? "El cliente puede enviar y recibir mensajes"
-                        : "El chat está deshabilitado"}
+                        : t("clientDetailPage.elChatEstáDeshabilitado")}
                     </Text>
                   </Box>
                 </Group>
@@ -2889,7 +2890,7 @@ export function ClientDetailPage() {
                   {
                     key: "data_processing",
                     label: t("clientDetail.terminosYCondicionesDelServicio"),
-                    hint: "Obligatorio. Aceptación del contrato de prestación.",
+                    hint: t("clientDetailPage.obligatorioAceptaciónDelContratoDe"),
                     required: true,
                     value: !!consents.data_processing,
                   },
@@ -2903,7 +2904,7 @@ export function ClientDetailPage() {
                   {
                     key: "marketing",
                     label: t("clientDetail.comunicacionesComercialesYNovedades"),
-                    hint: "Opcional. Permite enviarle campañas y descuentos por email.",
+                    hint: t("clientDetailPage.opcionalPermiteEnviarleCampañasYDe"),
                     required: false,
                     value: !!consents.marketing,
                   },
@@ -3573,7 +3574,7 @@ export function ClientDetailPage() {
                       radius="xl"
                       style={{
                         background: goalType === "fat_loss" ? "#EF4444" : goalType === "muscle_gain" ? "#22C55E" : "#3B82F6",
-                        color: t("clientDetail.white"),
+                        color: "white",
                         fontWeight: 700
                       }}
                     >
@@ -4136,7 +4137,7 @@ export function ClientDetailPage() {
                           radius="xl"
                           color={doc.is_read ? "green" : "orange"}
                         >
-                          {doc.is_read ? "Leído" : "No leído"}
+                          {doc.is_read ? t("clients.leido") : t("clientDetailPage.noLeído")}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
@@ -5208,14 +5209,14 @@ export function ClientDetailPage() {
               searchable
               data={[
                 { value: "Andorra", label: t("clientDetail.andorra") },
-                { value: "España", label: t("clientDetail.espana") },
+                { value: t("suppliers.espana"), label: t("clientDetail.espana") },
                 { value: "Portugal", label: t("clientDetail.portugal") },
                 { value: "Francia", label: t("clientDetail.francia") },
                 { value: "Italia", label: t("clientDetail.italia") },
                 { value: "Alemania", label: t("clientDetail.alemania") },
                 { value: "Reino Unido", label: t("clientDetail.reinoUnido") },
                 { value: "Estados Unidos", label: t("clientDetail.estadosUnidos") },
-                { value: "México", label: t("clientDetail.mexico") },
+                { value: t("suppliers.mexico"), label: t("clientDetail.mexico") },
                 { value: "Argentina", label: t("clientDetail.argentina") },
                 { value: "Chile", label: t("clientDetail.chile") },
                 { value: "Colombia", label: t("clientDetail.colombia") },
@@ -5351,7 +5352,7 @@ export function ClientDetailPage() {
             }))}
             nothingFoundMessage={
               catalogSupplements.length === 0
-                ? "Tu catálogo está vacío. Crea suplementos en la sección Suplementos."
+                ? t("clientDetailPage.tuCatálogoEstáVacíoCreaSuplementos")
                 : "Sin coincidencias"
             }
           />
@@ -5638,8 +5639,8 @@ export function ClientDetailPage() {
         <Stack gap="lg">
           <Text size="sm" c="dimmed">
             {deletingProgramId 
-              ? "¿Estás seguro de que quieres eliminar este programa de entrenamiento asignado? Esta acción no se puede deshacer."
-              : "¿Estás seguro de que quieres eliminar este plan nutricional asignado? Esta acción no se puede deshacer."
+              ? t("clientDetailPage.estásSeguroDeQueQuieresEliminarEs")
+              : t("clientDetailPage.estásSeguroDeQueQuieresEliminarEs")
             }
           </Text>
           <Group justify="flex-end" gap="sm">

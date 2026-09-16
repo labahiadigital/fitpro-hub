@@ -88,7 +88,7 @@ export function CommunityBenefitsPage() {
   const form = useForm<FormValues>({
     initialValues: EMPTY,
     validate: {
-      title: (v) => (v.trim() ? null : "El título es obligatorio"),
+      title: (v) => (v.trim() ? null : t("communityBenefitsPage.elTítuloEsObligatorio")),
       url: (v, vals) => {
         if (!v && !vals.discount_code) {
           return "Indica al menos una URL o un código";
@@ -298,7 +298,7 @@ export function CommunityBenefitsPage() {
                       variant="subtle"
                       color="red"
                       onClick={() => {
-                        if (window.confirm("¿Eliminar este beneficio?")) {
+                        if (window.confirm(t("communityBenefitsPage.eliminarEsteBeneficio"))) {
                           remove.mutate(b.id);
                         }
                       }}
@@ -324,7 +324,7 @@ export function CommunityBenefitsPage() {
                     <CopyButton value={b.discount_code}>
                       {({ copied, copy }) => (
                         <Tooltip
-                          label={copied ? "Copiado" : "Copiar código"}
+                          label={copied ? "Copiado" : t("myNutrition.copiarCodigo")}
                           withArrow
                         >
                           <ActionIcon

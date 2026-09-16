@@ -229,7 +229,7 @@ export function CalendarPage() {
       start_time: e.start,
       end_time: e.end,
       type: "google",
-      color: t("calendar.grape"),
+      color: "grape",
       googleEvent: e,
     })) : []),
     // Citas (appointments) como subcalendarios
@@ -305,7 +305,7 @@ export function CalendarPage() {
       max_participants: 1,
     },
     validate: {
-      title: (value) => (value.length < 2 ? "Título requerido" : null),
+      title: (value) => (value.length < 2 ? t("calendarPage.títuloRequerido") : null),
       start_time: (value) => (!value ? "Fecha de inicio requerida" : null),
       end_time: (value) => (!value ? "Fecha de fin requerida" : null),
     },
@@ -358,7 +358,7 @@ export function CalendarPage() {
     openDangerConfirm({
       title: t("calendar.cancelarSesion"),
       message: t("calendar.estasSeguroDeQueQuieres"),
-      confirmLabel: "Cancelar sesión",
+      confirmLabel: t("calendar.cancelarSesion"),
       onConfirm: async () => {
         try {
           await cancelBooking.mutateAsync(bookingId);
@@ -868,7 +868,7 @@ export function CalendarPage() {
               backgroundColor: "var(--mantine-color-gray-0)",
             }}
           >
-            {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
+            {["Dom", "Lun", "Mar", t("calendarPage.mié"), "Jue", "Vie", t("calendarPage.sáb")].map((day) => (
               <Box key={day} p="sm" ta="center">
                 <Text c="dimmed" fw={600} size="xs" tt="uppercase">
                   {day}
@@ -1051,7 +1051,7 @@ export function CalendarPage() {
                     const resourceLabel = ev.appointment
                       ? ev.appointment.staff_name || ev.appointment.box_name || ""
                       : ev.booking?.client_name || "";
-                    const typeLabel = ev.type === "booking" ? "Sesión" : ev.type === "appointment" ? "Cita" : ev.type === "task" ? "Tarea" : "Google";
+                    const typeLabel = ev.type === "booking" ? t("calendarPage.sesión") : ev.type === "appointment" ? "Cita" : ev.type === "task" ? "Tarea" : "Google";
                     const statusLabel = ev.booking ? (STATUS_LABELS[ev.booking.status]?.label || ev.booking.status) : ev.type === "task" ? "Tarea" : "";
                     return (
                       <Table.Tr
@@ -1597,7 +1597,7 @@ export function CalendarPage() {
             <TextInput
               label={
                 form.values.modality === "in_person"
-                  ? "Ubicación"
+                  ? t("stock.ubicacion")
                   : "Enlace de videollamada"
               }
               leftSection={
@@ -1657,7 +1657,7 @@ export function CalendarPage() {
         onClose={() => { setSelectedBooking(null); setIsEditing(false); }}
         opened={!!selectedBooking}
         size="md"
-        title={isEditing ? "Modificar Sesión/Cita" : "Detalle de Sesión/Cita"}
+        title={isEditing ? t("calendarPage.modificarSesiónCita") : t("calendarPage.detalleDeSesiónCita")}
       >
         {selectedBooking && !isEditing && (
           <Stack>
@@ -1717,7 +1717,7 @@ export function CalendarPage() {
               </ThemeIcon>
               <Box>
                 <Text c="dimmed" size="xs">
-                  {selectedBooking.modality === "in_person" ? "Ubicación" : "Online"}
+                  {selectedBooking.modality === "in_person" ? t("stock.ubicacion") : "Online"}
                 </Text>
                 <Text fw={500} size="sm">
                   {selectedBooking.location?.address ||

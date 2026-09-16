@@ -1,6 +1,7 @@
 ﻿import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Box, Loader, Text } from "@mantine/core";
+import { useTranslation } from "react-i18next";
 import { api } from "../../services/api";
 
 /**
@@ -8,9 +9,10 @@ import { api } from "../../services/api";
  * Recibe el cÃ³digo de autorizaciÃ³n y lo intercambia por tokens.
  */
 export function GoogleCallbackPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [message, setMessage] = useState("Conectando con Google Calendar...");
+  const [message, setMessage] = useState(t("auth.conectandoGoogleCalendar"));
   
   // Ref para evitar doble ejecuciÃ³n en StrictMode
   const hasProcessed = useRef(false);
@@ -30,12 +32,12 @@ export function GoogleCallbackPage() {
     }
 
     if (code) {
-      setMessage("Verificando autorizaciÃ³n...");
+      setMessage(t("auth.verificandoAutorizacion"));
       
       // Llamar directamente a la API sin usar el hook
       api.post("/google-calendar/callback", { code })
         .then(() => {
-          setMessage("Â¡Conectado correctamente!");
+          setMessage(t("auth.conectadoCorrectamente"));
           setTimeout(() => {
             navigate("/settings?tab=integrations&google=success", { replace: true });
           }, 500);

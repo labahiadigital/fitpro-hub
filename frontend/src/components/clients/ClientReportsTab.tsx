@@ -169,7 +169,7 @@ export function ClientReportsTab({ clientId }: Props) {
                   size="sm"
                   color="red"
                   onClick={() => {
-                    if (window.confirm("¿Eliminar este reporte?")) {
+                    if (window.confirm(t("clientReportsTab.eliminarEsteReporte"))) {
                       deleteMutation.mutate(report.id);
                     }
                   }}
@@ -200,19 +200,19 @@ export function ClientReportsTab({ clientId }: Props) {
       <Modal
         opened={opened}
         onClose={close}
-        title={editId ? "Editar reporte" : "Nuevo reporte de revisión"}
+        title={editId ? "Editar reporte" : t("clientReportsTab.nuevoReporteDeRevisión")}
         size="lg"
       >
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
             <TextInput
-              label={"Título (opcional)"}
-              placeholder={"Ej: Revisión mensual - Marzo"}
+              label={t("clientsComp.tituloOpcional")}
+              placeholder={t("clientsComp.ejRevisionMensualMarzo")}
               {...form.getInputProps("title")}
             />
             <Textarea
-              label={"Notas de la revisión"}
-              placeholder={"Has adelgazado 1.2kg, buen trabajo. Voy a subir el cardio 10 minutos más. El plan nutricional sigue igual porque estás respondiendo bien..."}
+              label={t("clientsComp.notasDeLaRevision")}
+              placeholder={t("clientsComp.hasAdelgazado12kgBuen")}
               minRows={6}
               autosize
               required
@@ -220,7 +220,7 @@ export function ClientReportsTab({ clientId }: Props) {
             />
             <Textarea
               label={"Feedback del cliente (opcional)"}
-              placeholder={"Lo que el cliente ha comentado sobre cómo se siente, adherencia, etc."}
+              placeholder={t("clientsComp.loQueElClienteHa")}
               minRows={3}
               autosize
               {...form.getInputProps("client_feedback")}

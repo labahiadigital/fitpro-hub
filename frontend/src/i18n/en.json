@@ -98,7 +98,14 @@
     "describeLaRectificacion": "[EN] Describe la rectificación",
     "indicaQueInformacionEsIncorrecta": "Indica qué Information es incorrecta y cuál sería la correcta...",
     "solicitaLaCorreccionDe": "[EN] Solicita la corrección de",
-    "enviarSolicitud": "Send solicitud"
+    "enviarSolicitud": "Send solicitud",
+    "alertaAlergeno": "WARNING! Client is allergic/intolerant to this ingredient",
+    "alertaAlergenos": "ALLERGEN ALERT",
+    "esteAlimentoContiene": "This food contains:",
+    "copiado": "Copied!",
+    "copiarEnlace": "Copy public link",
+    "copiarCodigo": "Copy code",
+    "cliente": "Client"
   },
   "nav": {
     "mainMenu": "Main Menu",
@@ -256,7 +263,36 @@
     "volverAlInicioDeSesi": "Back al inicio de sesión",
     "hemosEnviadoUnNuevoEnlace": "Hemos enviado un New enlace de Viewificación a tu Email. \r\n                Revisa tu bandeja de entrada (y la carpeta de spam).",
     "1a1a2e": "#1a1a2e",
-    "hasSidoInvitadoA": "You have been invited to"
+    "hasSidoInvitadoA": "You have been invited to",
+    "copyright": "© 2026 Trackfiz. All rights reserved.",
+    "tokenInvalido": "Invalid or missing confirmation token.",
+    "errorVerificarEmail": "Error verifying email.",
+    "enlaceExpirado": "The verification link has expired. Request a new one.",
+    "siEmailRegistrado": "If the email is registered, you will receive a verification link.",
+    "errorEnviarVerificacion": "Error sending verification email.",
+    "confirmacionCuenta": "Account confirmation",
+    "restablecerContrasena": "Reset password",
+    "accesoTuCuenta": "Access your account",
+    "cambioDeEmail": "Email change",
+    "verificacion": "Verification",
+    "emailVerificado": "Your email has been verified!",
+    "cuentaListaIniciarSesion": "Your account is ready. You can now log in and start using Trackfiz.",
+    "ahoraPuedesCrearContrasena": "You can now create a new password.",
+    "verificacionCompletada": "Verification completed successfully.",
+    "necesitasNuevoEnlace": "Need a new verification link?",
+    "emailEnviadoExcl": "Email sent!",
+    "enlaceInvitacionInvalido": "Invalid invitation link.",
+    "invitacionNoEncontrada": "Invitation not found or expired.",
+    "noSePudoCompletarRegistro": "Could not complete registration.",
+    "nombreDemasiadoCorto": "Name too short",
+    "contrasenasNoCoinciden": "Passwords do not match",
+    "cuentaActivada": "Account activated!",
+    "como": "as",
+    "unEquipo": "a team",
+    "iniciaSesionParaAcceder": "Log in to access.",
+    "conectandoGoogleCalendar": "Connecting with Google Calendar...",
+    "verificandoAutorizacion": "Verifying authorization...",
+    "conectadoCorrectamente": "Connected successfully!"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1115,7 +1151,7 @@
     "anadirAccion": "Add acción",
     "automatizaciones": "Automations",
     "noHayAutomatizaciones": "No hay Automations",
-    "automatizacionLista": "¡Automation lista!",
+    "automatizacionLista": "Automation ready!",
     "ejOnboardingDeNuevosClientes": "Ej: Onboarding de News Clients",
     "describeQueHaceEstaAutomatizacion": "Describe qué hace esta Automation...",
     "seleccionaPlantilla": "Selecciona Template",
@@ -1363,7 +1399,13 @@
     "verMiEntrenamientoDeHoy": "View mi Workout de Today",
     "registrarComida": "Registrar meal",
     "mensajeAMiEntrenador": "Message a mi Trainer",
-    "registrarProgreso": "Registrar Progress"
+    "registrarProgreso": "Registrar Progress",
+    "hola": "Hello",
+    "tuProgresoVaGenial": "Your progress this week is great. Keep it up!",
+    "comienzaTuSemana": "Start your week with energy!",
+    "completado": "completed",
+    "casiLoTienes": "Almost there!",
+    "vasMuyBien": "You're doing great!"
   },
   "myCalendar": {
     "solicitarCita": "Request appointment",
@@ -1785,7 +1827,8 @@
     "superado": "Exceeded",
     "buenTrabajo": "[EN] ¡Buen trabajo!",
     "hasCompletadoTuEntrenamientoSigue": "Has Completed tu Workout. ¡Sigue aYes!",
-    "continuar": "Continue"
+    "continuar": "Continue",
+    "nuevoRecordPersonal": "New personal record!"
   },
   "clientDetail": {
     "tipoDeCliente": "Type de Client",
@@ -3099,7 +3142,8 @@
     "listo": "[EN] ¡Listo!",
     "tuCuestionarioSeHaEnviado": "Tu cuestionario se ha enviado. Te hemos mandado un segundo Email con\r\n            los próximos pasos para acceder a tu plataforma.",
     "irAMiPanel": "Go to my panel",
-    "enviarCuestionario": "Send cuestionario"
+    "enviarCuestionario": "Send cuestionario",
+    "listoListaDeEspera": "Done! We've added you to the waiting list. We'll let you know when a spot is available."
   },
   "packages": {
     "nombreDelPaquete": "Name del paquete",
@@ -3324,7 +3368,8 @@
     "hashSha256": "Hash SHA-256:",
     "respuestaAeat": "AEAT Response:",
     "guardarConfiguracion": "Save Settings",
-    "vs_mes_anterior": "vs previous month"
+    "vs_mes_anterior": "vs previous month",
+    "numero": "No."
   },
   "catalog": {
     "editar": "Edit",
@@ -3654,7 +3699,8 @@
     "hashSha256": "Hash SHA-256:",
     "respuestaAeat": "AEAT Response:",
     "guardarConfiguracion": "Save Settings",
-    "vs_mes_anterior": "vs previous month"
+    "vs_mes_anterior": "vs previous month",
+    "numero": "No."
   },
   "reports": {
     "reportesYAnalytics": "Reports y Analytics",
@@ -4070,7 +4116,7 @@
     "todosLosUsuarios": "All los usuarios",
     "estado": "Status",
     "tipo": "Type",
-    "usuario": "User",
+    "usuario": "user",
     "gestionaFichajesSolicitudesDeAusencia": "Gestiona fichajes, solicitudes de ausencia y Calendar del Team",
     "aprobada": "Approved",
     "rechazada": "Rejected",
@@ -4107,7 +4153,12 @@
     "sinAusenciasProximas": "[EN] Sin ausencias próximas",
     "fichar": "Clock in",
     "registros": "Records",
-    "solicitudes": "Requests"
+    "solicitudes": "Requests",
+    "fichajeRealizado": "Clock-in done",
+    "salidaRegistrada": "Clock-out recorded successfully!",
+    "miembro": "Member",
+    "propietario": "Owner",
+    "colaborador": "Collaborator"
   },
   "workouts": {
     "grupoMuscular": "Muscle group",
@@ -4306,7 +4357,9 @@
     "menuPrincipal": "Main Menu",
     "miCuenta": "My Account",
     "configuraciN": "Settings",
-    "cerrarSesiN": "Close sesión"
+    "cerrarSesiN": "Close sesión",
+    "configuracion": "Settings",
+    "cerrarSesion": "Log out"
   },
   "notifications": {
     "nuevo": "New",
@@ -4435,7 +4488,7 @@
     "actividad": "Activity",
     "tendenciaCorporal": "Body Trend",
     "recomendacionesDeEjemplo": "Recomendaciones of ejemplo",
-    "contieneAlergeno": "¡Contiene alérgeNo!",
+    "contieneAlergeno": "Contains allergen!",
     "exportandoPdf": "Exporting PDF",
     "elPdfSeEstaGenerando": "[EN] El PDF se está generando...",
     "grape": "grape",
@@ -4513,7 +4566,8 @@
     "fecha": "Date",
     "formula": "[EN] Fórmula",
     "vaciarHistorico": "[EN] Vaciar histórico",
-    "ocultarHistorico": "[EN] Ocultar histórico"
+    "ocultarHistorico": "[EN] Ocultar histórico",
+    "advertenciaAlergenos": "WARNING! Foods with detected allergens"
   },
   "recipes": {
     "grape": "grape",
@@ -4793,13 +4847,17 @@
   "mealPlanBuilder": {
     "alimento_creado": "Food created",
     "el_alimento_ha_sido_creado_correctamente": "The food has been created successfully",
-    "receta_anadida": "Recipe added"
+    "receta_anadida": "Recipe added",
+    "nombreRequeridoMín2Caracteres": "Name required (min. 2 characters)"
   },
   "mealPlanDetailView": {
     "el_pdf_se_esta_generando": "The PDF is being generated...",
     "1_multivitaminico": "1 Multivitamin",
     "comida": "MEAL",
-    "sin_alimentos": "(no foods)"
+    "sin_alimentos": "(no foods)",
+    "individuosConObesidadPuedenBajarMás": "Individuals with obesity can lose weight faster",
+    "pérdidaGrasa": "Fat Loss",
+    "años": " years"
   },
   "nutritionHistory": {
     "grasa": "% Fat"
@@ -4817,5 +4875,139 @@
   "exerciseForm": {
     "alternativa_anadida": "Alternative added",
     "la_imagen_no_puede_superar_los_8_mb": "The image no can superar the 8 MB"
+  },
+  "clientReportsTab": {
+    "eliminarEsteReporte": "Delete this report?",
+    "nuevoReporteDeRevisión": "New review report"
+  },
+  "automationsPage": {
+    "editarAutomatización": "Edit Automation"
+  },
+  "calendarPage": {
+    "títuloRequerido": "Title required",
+    "mié": "Wed",
+    "sáb": "Sat",
+    "sesión": "Session",
+    "modificarSesiónCita": "Modify Session/Appointment",
+    "detalleDeSesiónCita": "Session/Appointment Detail"
+  },
+  "chatPage": {
+    "comunícateConTuEntrenador": "Communicate with your trainer",
+    "comunícateConTusClientesYEquipo": "Communicate with your clients and team",
+    "whatsAppNoEstáConectadoEnEsteWorks": "WhatsApp is not connected in this workspace",
+    "esteClienteNoTieneNúmeroDeTeléfono": "This client has no phone number"
+  },
+  "clientDashboardPage": {
+    "género": "gender",
+    "ComplétaloCuandoPuedas": " — complete it when you can.",
+    "tienesUnaRevisiónPendiente": "You have a pending review",
+    "próximaRevisión": "Next review"
+  },
+  "myCalendarPage": {
+    "noHaySesionesParaEsteDía": "No sessions for this day",
+    "noTienesSesionesPróximasProgramadas": "You have no upcoming sessions scheduled",
+    "noHaySesionesAnterioresEsteDía": "No previous sessions this day"
+  },
+  "myDocumentsPage": {
+    "aúnNoTienesDocumentosSubeUnoOEsp": "You don't have any documents yet. Upload one or wait for your trainer to share files with you."
+  },
+  "myNutritionPage": {
+    "noSeEncontraronRecetasConEsaBúsque": "No recipes found with that search.",
+    "tuEntrenadorAúnNoHaCompartidoRecet": "Your trainer hasn't shared any recipes with you yet.",
+    "seleccionaUnDíaParaVerElDetalleNu": "Select a day to see the nutritional detail"
+  },
+  "myProfilePage": {
+    "expiróEl": "Expired on",
+    "próximoCobro": "Next charge",
+    "introduceTuContraseñaActual": "Enter your current password",
+    "noSePudoCambiarLaContraseña": "Could not change the password.",
+    "introduceUnEmailVálido": "Enter a valid email",
+    "laContraseñaEsObligatoria": "Password is required",
+    "noSePudoCambiarElEmailInténtaloD": "Could not change the email. Please try again."
+  },
+  "myWorkoutsPage": {
+    "seleccionaUnDíaDeEntrenamientoPara": "Select a training day to see the exercises"
+  },
+  "clientDetailPage": {
+    "pérdidaDeGrasa": "Fat Loss",
+    "seCalculaTras7Días": "Calculated after 7 days",
+    "sinSuscripciónActiva": "No active subscription",
+    "elChatEstáDeshabilitado": "Chat is disabled",
+    "obligatorioAceptaciónDelContratoDe": "Required. Acceptance of the service agreement.",
+    "opcionalPermiteEnviarleCampañasYDe": "Optional. Allows sending campaigns and discounts by email.",
+    "noLeído": "Unread",
+    "tuCatálogoEstáVacíoCreaSuplementos": "Your catalog is empty. Create supplements in the Supplements section.",
+    "estásSeguroDeQueQuieresEliminarEs": "Are you sure you want to delete this assigned training program? This action cannot be undone."
+  },
+  "clientsPage": {
+    "añadirCliente": "Add Client",
+    "empiezaAñadiendoTuPrimerClientePara": "Start by adding your first client to manage their workouts, nutrition and progress.",
+    "emailDescuentoReactivación": "Reactivation discount email",
+    "confirmarEliminaciónDefinitiva": "Confirm permanent deletion"
+  },
+  "communityBenefitsPage": {
+    "elTítuloEsObligatorio": "Title is required",
+    "eliminarEsteBeneficio": "Delete this benefit?"
+  },
+  "formsPage": {
+    "discriminación": "Discrimination",
+    "elFormularioEstáActivo": "The form is active.",
+    "losClientesVeránUnaNotificaciónPers": "Clients will see a persistent notification until they complete it."
+  },
+  "nutritionPage": {
+    "añadidoAFavoritos": "Added to favorites",
+    "elAlimentoSeHaAñadidoATusFavorito": "The food has been added to your favorites",
+    "elSuplementoSeHaAñadidoATusFavori": "The supplement has been added to your favorites",
+    "porción": "portion",
+    "guardaUnaCopiaReutilizableAdemásDel": "Save a reusable copy in addition to the client's plan"
+  },
+  "clientOnboardingPage": {
+    "mínimo8CaracteresConMayúsculaMinús": "Minimum 8 characters with uppercase, lowercase and number",
+    "móvilObligatorio": "Mobile required",
+    "razónSocialObligatoria": "Company name required",
+    "direcciónObligatoria": "Address required",
+    "ciudadOPoblaciónObligatoria": "City required",
+    "poblaciónObligatoria": "City required",
+    "paísObligatorio": "Country required",
+    "códigoPostalObligatorio": "Postal code required",
+    "debesAceptarLaPolíticaDePrivacidad": "You must accept the privacy policy",
+    "año": "year",
+    "esteProductoEstáCompletoApúntateA": "This product is full. Join the waiting list and we'll notify you when a spot is available."
+  },
+  "invitationOnboardingPage": {
+    "noSePudoCargarElFormularioDeSeQur": "Could not load the SeQura form. Please try again.",
+    "teléfonoMóvilObligatorio": "Mobile phone required",
+    "tuEntrenadorLoNecesitaParaDiseñarT": "Your trainer needs it to design your custom plan.",
+    "ábreloYSigueDesdeAhíParaContinuar": "Open it and continue from there for your first questionnaire.",
+    "suscripciónRecurrente": "Recurring subscription"
+  },
+  "packagesPage": {
+    "mínimo1Sesión": "Minimum 1 session",
+    "precioInválido": "Invalid price"
+  },
+  "billingPage": {
+    "descripciónRequerida": "Description required",
+    "arrastraTuCertificadoP12PfxAquí": "Drag your .p12 / .pfx certificate here"
+  },
+  "catalogPage": {
+    "códigoRequerido": "Code required",
+    "productoFísicoNoSePuedeVincularA": "Physical product: cannot be linked to boxes, machines or team members.",
+    "servicioPuedeVincularseABoxesMáqu": "Service: can be linked to boxes, machines and team members.",
+    "editarCupón": "Edit Coupon",
+    "crearCupón": "Create Coupon"
+  },
+  "settingsPage": {
+    "vamosADarleGASNBorjaSanfélix": "Let's do this! 💪🏽\\nBorja Sanfélix",
+    "cuandoUnClienteTeEnvíaUnMensaje": "When a client sends you a message",
+    "recordatorioDeTareasPróximasASuFec": "Reminder for tasks approaching their due date",
+    "cuandoUnaAutomatizaciónFinalizaSuEj": "When an automation finishes its execution",
+    "notificaciónCuandoSeRealizaUnFichaj": "Notification when a clock-in/out occurs (within/outside schedule)",
+    "avisoCuandoNoSeHaFichadoYDebería": "Alert when clock-in was missed and should have been done",
+    "esperandoConexión": "Waiting for connection...",
+    "renovaciónInformaciónNoDisponible": "Renewal: information not available"
+  },
+  "stockPage": {
+    "mín": "Min",
+    "máx": "Max"
   }
 }
